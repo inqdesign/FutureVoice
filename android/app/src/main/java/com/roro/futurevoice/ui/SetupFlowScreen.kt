@@ -80,7 +80,7 @@ fun SetupFlowScreen(
                 OutlinedButton(
                     onClick = { if (step > 0) step -= 1 else onBackToWelcome() },
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.back_b52b36)) }
+                ) { Text(stringResource(R.string.back)) }
                 Button(
                     onClick = {
                         if (step < 3) { resolveCollision(); step += 1 }

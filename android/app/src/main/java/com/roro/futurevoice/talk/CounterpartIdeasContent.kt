@@ -36,6 +36,7 @@ Rules:
     private val fallbacks = mapOf(
         "en" to Fallback("A quick catch-up with %s", "Open with what's been on your mind lately.", "Something on your mind you've been meaning to bring up", "Pick a real-life thing you'd actually want their take on."),
         "de" to Fallback("Kurz mit %s auf den neuesten Stand kommen", "Fang damit an, was dir in letzter Zeit im Kopf herumgeht.", "Etwas, das dir auf der Seele liegt und das du ansprechen wolltest", "Nimm etwas Echtes, wozu du wirklich ihre Meinung hören willst."),
+        "ja" to Fallback("%sと軽く近況を話す", "最近気になっていることから始めてみましょう。", "ずっと言おうと思っていた、気になっていること", "相手の意見を本当に聞きたい、実際の出来事を選びましょう。"),
         "ko" to Fallback("%s와 짧게 근황 나누기", "요즘 마음에 걸리던 것부터 꺼내보세요.", "말하려고 벼르던, 마음에 걸리는 이야기", "상대의 의견이 진짜 궁금한 실제 일을 골라보세요."),
     )
 

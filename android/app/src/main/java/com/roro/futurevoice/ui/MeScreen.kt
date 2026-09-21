@@ -643,7 +643,7 @@ fun MeScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmingSignOut = false }) {
-                    Text(stringResource(R.string.back_b52b36))
+                    Text(stringResource(R.string.back))
                 }
             },
         )

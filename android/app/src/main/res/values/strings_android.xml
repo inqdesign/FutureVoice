@@ -162,7 +162,6 @@
     <string name="from_your_talks">From your talks</string>
     <string name="previous_item">Previous</string>
     <string name="next_item">Next</string>
-    <string name="you_said">You said</string>
     <string name="why_label">Why</string>
     <string name="lld_h_lld_m">%1$dh %2$dm</string>
     <string name="lld_m">%1$dm</string>
@@ -185,9 +184,6 @@
     <string name="slip">slip</string>
     <string name="slips">slips</string>
     <!-- Where a carryover was studied before it was said out loud. -->
-    <string name="your_books">Your books</string>
-    <string name="expression_notebook">Expression notebook</string>
-    <string name="in_call_suggestions">In-call suggestions</string>
     <!-- A shadow take the recognizer heard nothing in. -->
     <string name="silent_take">(silent)</string>
 
@@ -252,4 +248,6 @@
     <string name="open_google_play">Open Google Play</string>
     <string name="get_the_new_test_build">Get the new test build</string>
     <string name="android_is_blocking_the_call">Android is blocking the call. Turn on notifications for nawana in Settings, then switch it on again in Me.</string>
+    <string name="back_in_when">"Back %s"</string>
+    <string name="talk_time_used_up_call_saved">"Your talk time is used up. This call is saved — you can pick it up again any time."</string>
 </resources>

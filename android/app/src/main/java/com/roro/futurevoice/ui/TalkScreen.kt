@@ -407,7 +407,7 @@ fun TalkScreen(
                     stringResource(
                         when (wall) {
                             TalkWall.OUT_OF_MINUTES ->
-                                R.string.your_talk_time_is_used_up_this_call_is_saved_you_can_pick_it_46ade7
+                                R.string.talk_time_used_up_call_saved
                             TalkWall.ALLOWANCE_SPENT ->
                                 R.string.this_month_s_talk_time_is_used_up
                             TalkWall.SCENES_SPENT ->

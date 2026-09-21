@@ -162,7 +162,6 @@
     <string name="from_your_talks">내 대화에서</string>
     <string name="previous_item">이전</string>
     <string name="next_item">다음</string>
-    <string name="you_said">내가 한 말</string>
     <string name="why_label">왜</string>
     <string name="lld_h_lld_m">%1$d시간 %2$d분</string>
     <string name="lld_m">%1$d분</string>
@@ -176,9 +175,6 @@
     <string name="fluency_pace">유창성과 속도</string>
     <string name="slip">문법 포인트</string>
     <string name="slips">문법 포인트</string>
-    <string name="your_books">내 교재</string>
-    <string name="expression_notebook">표현 노트</string>
-    <string name="in_call_suggestions">통화 중 제안</string>
     <string name="silent_take">(무음)</string>
 
     <string name="composer_placeholder">상황을 적어 보세요 — 마이크를 눌러 말해도 돼요</string>
@@ -236,4 +232,6 @@
     <string name="open_google_play">Google Play 열기</string>
     <string name="get_the_new_test_build">새 테스트 빌드 받기</string>
     <string name="android_is_blocking_the_call">안드로이드가 전화를 막고 있어요. 설정에서 nawana 알림을 켠 뒤, 나 탭에서 다시 켜 주세요.</string>
+    <string name="back_in_when">"%s 뒤에 다시"</string>
+    <string name="talk_time_used_up_call_saved">"통화 시간을 다 썼어요. 이 통화는 저장해 뒀으니 언제든 다시 이어갈 수 있어요."</string>
 </resources>

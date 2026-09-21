@@ -162,7 +162,6 @@
     <string name="from_your_talks">これまでのトークから</string>
     <string name="previous_item">前へ</string>
     <string name="next_item">次へ</string>
-    <string name="you_said">自分が言ったこと</string>
     <string name="why_label">なぜ</string>
     <string name="lld_h_lld_m">%1$d時間%2$d分</string>
     <string name="lld_m">%1$d分</string>
@@ -176,9 +175,6 @@
     <string name="fluency_pace">流暢さとテンポ</string>
     <string name="slip">ポイント</string>
     <string name="slips">ポイント</string>
-    <string name="your_books">マイ教材</string>
-    <string name="expression_notebook">表現ノート</string>
-    <string name="in_call_suggestions">通話中の提案</string>
     <string name="silent_take">(無音)</string>
 
     <string name="composer_placeholder">状況を書いてください。マイクを押して話してもいいです</string>
@@ -236,4 +232,6 @@
     <string name="open_google_play">Google Play を開く</string>
     <string name="get_the_new_test_build">新しいテストビルドを入手</string>
     <string name="android_is_blocking_the_call">Androidが電話をブロックしています。設定でnawanaの通知をオンにしてから、マイページでもう一度オンにしてください。</string>
+    <string name="back_in_when">"%s後にまた"</string>
+    <string name="talk_time_used_up_call_saved">"通話時間を使い切りました。この通話は保存してあるので、いつでも続きからできます。"</string>
 </resources>

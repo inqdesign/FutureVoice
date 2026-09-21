@@ -90,17 +90,6 @@ enum class FeedbackContext(
     /** Only the returning-talk ask carries scores — see the type doc. */
     val rated: Boolean,
 ) {
-    /**
-     * Retired on iOS, kept wired here until the call site in `TalkScreen.kt`
-     * moves to [FeedbackPrompt.shouldShowReturningTalk]. Words only.
-     */
-    FIRST_TALK("first_talk", R.string.how_was_your_first_conversation,
-        R.string.you_just_talked_with_your_future_voice_what_felt_right_and_w_7a6d31, false),
-
-    /** Retired on iOS; see [FIRST_TALK]. Words only. */
-    FIRST_WATCH("first_watch", R.string.how_was_your_first_watch,
-        R.string.you_just_heard_yourself_handle_a_real_situation_did_it_sound_ed28b5, false),
-
     /** A learner who came BACK and had another real call. The only ask there is. */
     RETURNING_TALK("returning_talk", R.string.feedback_returning_title,
         R.string.feedback_returning_subtitle, true),

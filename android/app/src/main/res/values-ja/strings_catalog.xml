@@ -75,6 +75,7 @@
     <string name="anything_else_optional">"その他（任意）"</string>
     <string name="anything_good_today">"今日、何かいいことあった？"</string>
     <string name="anything_specific">"具体的に何かありますか？"</string>
+    <string name="anything_you_want_to_say">"言いたいこと"</string>
     <string name="app_language">"アプリの言語"</string>
     <string name="appearance">"外観モード"</string>
     <string name="applied_1_month">"%s 適用済み · 1か月"</string>
@@ -92,10 +93,7 @@
     <string name="assessing_your_level_from_everything_you_ve_said">"これまでの発話からレベルを判定中…"</string>
     <string name="assessment">"評価"</string>
     <string name="at_least_lld">"%d歳以上"</string>
-    <!-- 'Back %@' -->
-    <string name="back_2fe063">"%s後にまた"</string>
-    <!-- 'Back' -->
-    <string name="back_b52b36">"戻る"</string>
+    <string name="back">"戻る"</string>
     <string name="back_from_earlier">"後回しにしたもの"</string>
     <string name="back_in_3_days">"3日後にまた出てきます"</string>
     <string name="back_to_the_voice_your_recording_makes_on_its_own">"録音そのままの声に戻ります。"</string>
@@ -112,6 +110,7 @@
     <string name="bookmark_a_line_from_shadow_practice_and_it_ll_live_here_for_496994">"シャドーイングで気に入った文をブックマークすると、ここに残って繰り返し練習できます。"</string>
     <string name="bookmarked">"ブックマーク"</string>
     <string name="books_finished">"終えたブック"</string>
+    <string name="both_at_once">"重ねて聞く"</string>
     <string name="both_refill_every_billing_period">"どちらも請求期間ごとに補充されます。"</string>
     <string name="bright_and_upbeat">"明るくて元気"</string>
     <string name="browse_all_vocabulary">"語彙をすべて見る"</string>
@@ -176,12 +175,17 @@
     <string name="close_without_saving">"保存せずに閉じる"</string>
     <!-- 'Clothes soak up the echo, so the recording comes out clean. No closet? A curtain or a parked car works too. Start once the readings below go quiet.' -->
     <string name="clothes_soak_up_the_echo_so_the_recording_comes_out_clean_no_2e3977">"服が音を吸ってくれるので、響かずにきれいに録れます。クローゼットが難しければ、カーテンの前や停めた車の中でも大丈夫。下のメーターが静かになったら始めてください。"</string>
+    <!-- "Coach comments couldn't load — the score and highlighted words above are still accurate." -->
+    <string name="coach_comments_couldn_t_load_the_score_and_highlighted_words_ae7868">"コーチのコメントを読み込めませんでした。上のスコアと単語の表示はそのまま正確です。"</string>
     <string name="coach_s_note">"コーチのメモ"</string>
     <string name="comparing">"比較中…"</string>
+    <string name="congratulations">"おめでとうございます！"</string>
     <string name="connecting">"接続中…"</string>
     <string name="consent">"同意"</string>
     <string name="contact_us">"お問い合わせ"</string>
     <string name="continue_">"続ける"</string>
+    <string name="continue_on_your_other_devices">"ほかのデバイスで続ける"</string>
+    <string name="continue_where_you_left_off">"前回の続きから始めますか？"</string>
     <string name="continue_with_google">"Googleで続ける"</string>
     <string name="conversation">"会話"</string>
     <string name="conversational_i_get_by_on_familiar_topics">"中級 · 慣れた話題なら問題なく話せる"</string>
@@ -189,23 +193,29 @@
     <string name="corrections_and_notes_only">"修正とメモのみ"</string>
     <string name="corrections_that_stick">"頭に残る修正"</string>
     <string name="corrections_worth_keeping">"取っておきたい修正"</string>
+    <string name="couldn_t_bring_your_practice_over">"練習データを取り込めませんでした"</string>
+    <string name="couldn_t_delete">"削除できませんでした"</string>
     <string name="couldn_t_delete_account">"アカウントを削除できませんでした"</string>
     <string name="couldn_t_export">"書き出せませんでした"</string>
     <string name="couldn_t_finish_the_assessment_it_ll_try_again_shortly">"レベル判定を終えられませんでした。少ししたらもう一度試します。"</string>
     <string name="couldn_t_get_a_response">"応答を受け取れませんでした。"</string>
+    <string name="couldn_t_load_audio_for_this_line">"この文の音声を読み込めませんでした。"</string>
     <string name="couldn_t_load_it_tap_to_open_the_card_and_try_again">"読み込めませんでした。カードを開いてもう一度試してください。"</string>
     <string name="couldn_t_load_people_check_your_connection">"人の一覧を読み込めませんでした。接続を確認してください。"</string>
     <string name="couldn_t_load_stories">"記事を読み込めませんでした"</string>
     <string name="couldn_t_load_this_one">"これは読み込めませんでした。"</string>
     <string name="couldn_t_play_audio">"音声を再生できませんでした"</string>
     <string name="couldn_t_play_the_comparison">"比較を再生できませんでした"</string>
+    <string name="couldn_t_play_the_two_takes_together">"2つの音声を同時に再生できませんでした。"</string>
     <string name="couldn_t_publish_check_your_connection_and_try_again">"公開できませんでした。接続を確認してもう一度お試しください。"</string>
     <string name="couldn_t_rebuild_your_voice">"声を作り直せませんでした"</string>
     <string name="couldn_t_redeem_that_code">"コードを適用できませんでした。"</string>
     <string name="couldn_t_redeem_that_code_try_again">"コードを適用できませんでした。もう一度お試しください。"</string>
     <string name="couldn_t_remix_your_voice">"声をリミックスできませんでした"</string>
     <string name="couldn_t_send_please_try_again">"送信できませんでした。もう一度お試しください。(%s)"</string>
+    <string name="couldn_t_sync">"同期できませんでした（%s）"</string>
     <string name="couldn_t_take_it_down_check_your_connection_and_try_again">"取り下げられませんでした。接続を確認してもう一度お試しください。"</string>
+    <string name="couldn_t_turn_on_sync">"同期をオンにできませんでした"</string>
     <string name="couldn_t_write_the_scene">"シーンを作れませんでした"</string>
     <string name="country">"国"</string>
     <string name="create">"作成"</string>
@@ -229,11 +239,13 @@
     <string name="delete">"削除"</string>
     <string name="delete_account">"アカウントを削除"</string>
     <string name="delete_forever">"完全に削除"</string>
+    <string name="delete_from_icloud">"iCloudから削除"</string>
     <string name="delete_scenario">"シチュエーションを削除"</string>
     <string name="delete_talk">"通話を削除"</string>
     <string name="delete_this_scenario">"このシチュエーションを削除しますか？"</string>
     <string name="delete_this_talk">"この通話を削除しますか？"</string>
     <string name="delete_your_account">"アカウントを削除しますか？"</string>
+    <string name="delete_your_practice_from_icloud">"iCloudから練習データを削除しますか？"</string>
     <string name="delete_your_voice">"声を削除しますか？"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"保存した音声だけを消します。通話、ドリル、単語、ブックはそのままです。各文は次に聞くときにもう一度作られます。"</string>
@@ -243,10 +255,12 @@
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"これから起きることを書いておくと、流暢な自分が先に体験するのを見られます。そこで使われた表現は全部自分のものになります。"</string>
     <string name="details">"詳細"</string>
     <string name="developer">"開発者"</string>
+    <string name="devices">"デバイス"</string>
     <string name="dictate">"音声で入力"</string>
     <!-- "Dictation isn't available in this language on your device — you can still type." -->
     <string name="dictation_isn_t_available_in_this_language_on_your_device_yo_cc64a3">"この端末はこの言語の音声入力に対応していません。タイピングはできます。"</string>
     <string name="did_you_sleep_well">"よく眠れた？"</string>
+    <string name="didn_t_hear_anything_try_again_closer_to_the_mic">"何も聞こえませんでした。マイクに近づいてもう一度"</string>
     <string name="didn_t_use_a_code_when_you_signed_up">"登録のときにコードを入れませんでしたか？"</string>
     <!-- "Discover and use words you don't reach for yet — the ones at and above your level." -->
     <string name="discover_and_use_words_you_don_t_reach_for_yet_the_ones_at_a_d0a120">"まだ使えていない単語を見つけて使ってみましょう。今のレベルとその上の単語です。"</string>
@@ -258,6 +272,7 @@
     <string name="don_t_imitate_a_stranger_practice_with_the_fluent_you">"他人をまねるのではなく、流暢になった未来の自分と練習しましょう。"</string>
     <string name="done">"完了"</string>
     <string name="done_for_today">"今日はここまで"</string>
+    <string name="downloading_audio_lld_of_lld">"音声をダウンロード中 %1$d / %2$d…"</string>
     <string name="drag_the_card_into_a_folder">"カードをフォルダにドラッグしてください"</string>
     <string name="drill">"ドリル"</string>
     <string name="drill_next">"次のドリル"</string>
@@ -282,12 +297,14 @@
     <string name="echoey">"響いています"</string>
     <string name="edit">"編集"</string>
     <string name="edit_daily_goals">"1日の目標を編集"</string>
+    <string name="edit_first">"先に編集する"</string>
     <string name="edit_interests">"興味を編集"</string>
     <string name="edit_persona">"ペルソナを編集"</string>
     <string name="edit_scenario">"シチュエーションを編集"</string>
     <string name="effortless_and_nuanced_close_to_native">"力まずニュアンスまで込めて、ネイティブに近い話し方ができます。"</string>
     <string name="en">"EN"</string>
     <string name="end">"終了"</string>
+    <string name="end_the_call">"通話を終える"</string>
     <string name="ended">"通話終了"</string>
     <string name="enough_to_keep_the_habit_going">"短くても続けていけます"</string>
     <string name="enter_invite_code">"招待コードを入力"</string>
@@ -312,8 +329,18 @@
     <string name="every_word_you_say_in_a_talk_is_collected_and_graded_by_cefr_81f280">"通話で実際に話した単語を集めてCEFRレベルで採点します。知っている単語ではなく、使っている単語で読みます。"</string>
     <!-- 'Everyday topics in simple terms — routines, plans, basic needs.' -->
     <string name="everyday_topics_in_simple_terms_routines_plans_basic_needs">"日常的な話題を簡単な言葉で。日課、予定、基本的な用件。"</string>
+    <!-- 'Everything' -->
+    <string name="everything_4a66d1">"すべて"</string>
+    <!-- 'everything' -->
+    <string name="everything_d5a63c">"すべて"</string>
     <string name="everything_in_this_scenario_is_yours_now">"このシチュエーションで学ぶことは、すべて身につきました。"</string>
+    <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
+    <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"ここまでの会話は保存されています。再接続すれば続きから話せます。"</string>
+    <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"iCloudに同期したものをすべて削除し、すべてのデバイスで同期を止めます。このデバイスにあるものはそのまま残ります。"</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"この通話で学ぶことは、すべて身につきました。"</string>
+    <!-- 'Everything you read in the app — menus, buttons, corrections, notes — is in this language.' -->
+    <string name="everything_you_read_in_the_app_menus_buttons_corrections_not_493dbb">"メニュー、ボタン、修正、メモまで、アプリで読むすべてがこの言語で表示されます。"</string>
     <!-- "Everything you set aside is still waiting for its turn. Today's goals are on the Practice tab." -->
     <string name="everything_you_set_aside_is_still_waiting_for_its_turn_today_e38fdb">"あとに回した項目は、まだ順番を待っています。今日の目標は練習タブにあります。"</string>
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
@@ -324,16 +351,20 @@
     <string name="excluded_from_scoring_marked_as_misheard">"採点対象外 · 聞き間違いとしてマーク済み"</string>
     <string name="explain_in_my_language">"自分の言語で説明"</string>
     <string name="explains_what_this_level_changes">"このレベルで何が変わるかを説明します"</string>
-    <string name="explanations_and_translations_come_in_this_language">"説明と翻訳はこの言語で表示されます。"</string>
     <string name="exploring">"見て回る"</string>
     <string name="export_or_import_this_device_s_practice">"この端末での練習を書き出したり読み込んだりします"</string>
     <string name="export_practice_data">"練習データを書き出す"</string>
+    <string name="expression_notebook">"表現ノート"</string>
     <string name="expressions">"表現"</string>
     <!-- "Expressions from your calls — yours and your fluent self's — and the ones your watched scenes hand you collect here." -->
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_and_c2c203">"通話で出た表現がここに集まります。自分が使ったもの、流暢な自分が使ったもの、そして見たシーン練習が手渡してくれたものまで。"</string>
     <!-- "Expressions from your calls — yours and your fluent self's — will collect here." -->
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_wil_52f30a">"通話で出た表現がここに集まります。自分が使ったものも、流暢な自分が使ったものも。"</string>
+    <string name="expressions_you_marked_known">"「知ってる」にした表現"</string>
     <string name="expressions_you_ve_used">"これまで使った表現"</string>
+    <string name="fades_in_lld_days">"%d日後に消えます"</string>
+    <string name="fades_in_lld_weeks">"%d週間後に消えます"</string>
+    <string name="fades_tomorrow">"明日消えます"</string>
     <string name="fair_use_a_month">"適正利用 月%s回"</string>
     <string name="fair_use_lld_a_month">"適正利用 月%d回"</string>
     <string name="fair_use_lld_min_a_month">"適正利用 月%d分"</string>
@@ -342,7 +373,6 @@
     <string name="familiar_topics_fluently_enough_to_get_by_and_tell_a_simple_fa6cea">"慣れた話題なら無理なく話せて、簡単な話も語れます。"</string>
     <string name="fashion">"ファッション"</string>
     <string name="feed_4_5">"フィード 4:5"</string>
-    <string name="feedback">"ご意見を送る"</string>
     <string name="filing_this_under_a_category">"カテゴリに分類中…"</string>
     <string name="filter">"フィルター"</string>
     <string name="finance">"資産運用"</string>
@@ -357,9 +387,11 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"終えたブックです。進み具合はそのまま残り、いつでも戻せます。"</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"埋めきると待機列に並びます。すぐに席に着くわけではありません。"</string>
+    <string name="first_charge">"初回の決済 %s"</string>
     <string name="fluent_flexible_and_precise_even_on_complex_topics">"複雑な話題でも流暢に、柔軟に、正確に話せます。"</string>
     <string name="follow_the_highlight_tap_to_cancel">"ハイライトに合わせて読む · タップでキャンセル"</string>
     <string name="for_watch_scenes_without_a_saved_person">"保存した相手がいないシーン練習で使われます"</string>
+    <string name="forget_this">"忘れる"</string>
     <string name="format">"形式"</string>
     <string name="free">"無料"</string>
     <string name="free_minutes">"無料の時間"</string>
@@ -371,8 +403,8 @@
     <string name="from_your_fluent_self">"流暢な自分が使った言葉"</string>
     <string name="from_your_recent_conversations">"最近の%s回の通話をもとに判定したレベルです"</string>
     <string name="from_your_recent_sessions">"最近のセッションから"</string>
-    <!-- 'From your talks. Tap a line to fix what I misheard, or swipe to remove it.' -->
-    <string name="from_your_talks_tap_a_line_to_fix_what_i_misheard_or_swipe_t_664053">"通話の内容から書き留めたものです。聞き間違いはタップして直し、いらなければスワイプで削除してください。"</string>
+    <!-- 'From your talks. Tap a line to fix what I misheard. For each one, choose what strangers hear — nothing, just the gist, or everything. I always know the whole line.' -->
+    <string name="from_your_talks_tap_a_line_to_fix_what_i_misheard_for_each_o_9b8584">"通話の内容から書き留めたものです。聞き間違いはタップして直してください。行ごとに、ほかの人にどこまで伝えるかを選べます。非公開、だいたいだけ、すべて。私はいつも全部を知っています。"</string>
     <string name="full_immersion_pace">"どっぷり浸かるペース"</string>
     <string name="full_line">"文全体"</string>
     <string name="fully_translated">"設定や説明まで翻訳されます"</string>
@@ -389,6 +421,7 @@
     <string name="get_fluent_for_an_exam_or_interview">"流暢に、試験や面接まで"</string>
     <string name="get_started">"はじめる"</string>
     <string name="get_under_1f_and_this_reads">"。%1$.1f未満なら≈%2$sと読めます"</string>
+    <string name="getting_what_your_other_devices_did">"ほかのデバイスの記録を取得中…"</string>
     <string name="given">"同意した日: %s"</string>
     <string name="glossary">"語句解説"</string>
     <string name="go_to_practice">"復習しに行く"</string>
@@ -408,6 +441,7 @@
     <string name="grounded_in_your_relationship_with_these_appear_as_ideas_whe_d659c0">"%sとの関係をもとに作りました。シーン練習タブでこの人をタップすると、アイデアとして出てきます。"</string>
     <string name="growth">"成長"</string>
     <string name="half_price_with_your_launch_code">"ローンチコードで半額適用中"</string>
+    <string name="have_a_code">"コードをお持ちですか？"</string>
     <!-- 'Have a conversation or watch a scene, then come back to shadow any line your fluent self said.' -->
     <string name="have_a_conversation_or_watch_a_scene_then_come_back_to_shado_9066e7">"通話をするかシーン練習を見たあと、流暢な自分が話した文を選んでシャドーイングできます。"</string>
     <string name="have_an_invite_code">"招待コードをお持ちですか？"</string>
@@ -430,6 +464,7 @@
     <string name="how_comfortable_are_you_right_now">"今はどのくらい楽に話せますか？"</string>
     <string name="how_did_today_go">"今日もおつかれ。"</string>
     <string name="how_does_today_look">"今日の気分はどう？"</string>
+    <string name="how_is_it_going_so_far">"使ってみてどうですか？"</string>
     <string name="how_it_s_assessed">"判定方法"</string>
     <string name="how_it_works">"ルール"</string>
     <string name="how_long_have_you_been_there_optional">"そこにどのくらい住んでいますか？（任意）"</string>
@@ -444,8 +479,6 @@
     <string name="how_to_level_up">"レベルの上げ方"</string>
     <string name="how_was_today">"今日はどうだった？"</string>
     <string name="how_was_your_day">"今日はどんな一日だった？"</string>
-    <string name="how_was_your_first_conversation">"はじめての通話はどうでしたか？"</string>
-    <string name="how_was_your_first_watch">"はじめてのシーン練習はどうでしたか？"</string>
     <string name="how_you_met_and_how_long">"出会ったきっかけ（と、付き合いの長さ）"</string>
     <string name="how_you_sound">"自分の声を聞く"</string>
     <string name="how_your_future_self_talks">"流暢な自分がどう話すか"</string>
@@ -461,8 +494,14 @@
     <string name="i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d">"私は%d歳以上で、自分の録音を音声モデルの作成に使うことに同意します。"</string>
     <!-- "I'm practicing speaking with my own AI voice on nawana. Enter my code %@ when you sign up and we both get %lld minutes of talk time." -->
     <string name="i_m_practicing_speaking_with_my_own_ai_voice_on_nawana_enter_50926d">"nawanaで自分の声を使って話す練習をしています。登録するときにコード%1$sを入力すると、ふたりとも通話時間が%2$d分もらえます。"</string>
+    <!-- "iCloud isn't available on this device" -->
+    <string name="icloud_isn_t_available_on_this_device_2fccd1">"このデバイスではiCloudを使えません"</string>
+    <!-- "iCloud isn't available on this device." -->
+    <string name="icloud_isn_t_available_on_this_device_58fd8e">"このデバイスではiCloudを使えません。"</string>
+    <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloudの容量がいっぱいです。音声は同期されません"</string>
     <string name="if_you_can_t_talk">"出られないときは"</string>
     <string name="import_practice_data">"練習データを読み込む"</string>
+    <string name="in_call_suggestions">"通話中の提案"</string>
     <!-- 'In short: minutes buy speaking time with your fluent self. Practicing with what already exists is always free.' -->
     <string name="in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac">"まとめると、時間が減るのは流暢な自分と話すときだけです。すでに集まったもので復習するのはいつでも無料です。"</string>
     <string name="in_the_core">"コア"</string>
@@ -474,6 +513,7 @@
     <string name="independent_i_discuss_most_things_with_some_ease">"中上級 · たいていの話題なら難なく話せる"</string>
     <!-- 'Inline fixes become spaced-repetition drills, tuned to your mistakes.' -->
     <string name="inline_fixes_become_spaced_repetition_drills_tuned_to_your_m_00ebe4">"通話中に受けた修正が、自分のミスに合わせた間隔反復ドリルになります。"</string>
+    <string name="instagram_dm">"Instagram DM"</string>
     <!-- 'Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went.' -->
     <string name="instead_of_a_reminder_your_fluent_self_phones_you_once_a_day_30a288">"通知の代わりに、流暢な自分が1日1回電話をかけてきて、声に出して答える質問をひとつ投げかけます。前回の通話がどうだったかも覚えています。"</string>
     <string name="interests">"興味"</string>
@@ -507,6 +547,7 @@
     <string name="joined_with_your_code">"%sさんが招待コードで登録しました"</string>
     <string name="joined_with_your_code_lld_minutes_are_yours">"%1$sさんが招待コードで登録しました。%2$d分が追加されました。"</string>
     <string name="just_starting_a_few_words_and_set_phrases">"入門 · 単語いくつかと決まり文句くらい"</string>
+    <string name="just_the_gist">"だいたいだけ"</string>
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"通話中に単語を保存するか、シーンを見てみてください。そこで出てきた単語がここに集まります。"</string>
     <string name="keep_going_llds_more">"続けて読んでください。あと%d秒です"</string>
@@ -557,10 +598,10 @@
     <string name="lld_17887f">"×%d"</string>
     <!-- '%lld%%' -->
     <string name="lld_197eb0">"%d%%"</string>
-    <!-- '%@ %lld' -->
-    <string name="lld_443824">"%1$s %2$d"</string>
     <string name="lld_active_days_lld_min">"活動%1$d日 · %2$d分"</string>
     <string name="lld_active_days_lld_min_this_year">"今年は活動%1$d日 · %2$d分"</string>
+    <string name="lld_audio_files_to_download">"ダウンロード待ちの音声 %d件"</string>
+    <string name="lld_audio_files_to_upload">"アップロード待ちの音声 %d件"</string>
     <string name="lld_books_finished">"読み終えたブック%d冊"</string>
     <!-- '%lld day streak' -->
     <string name="lld_day_streak_94de2a">"%d日連続"</string>
@@ -577,14 +618,14 @@
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"友達%1$d人が招待コードで登録しました。%2$d分が追加されました。"</string>
     <string name="lld_invite_min">" + 招待%d分"</string>
     <string name="lld_lld">"%1$d/%2$d"</string>
-    <string name="lld_lld_mastered">"%1$d/%2$d 習得"</string>
+    <string name="lld_lld_mastered">"%1$d/%2$d 完了"</string>
     <!-- '%lld / %lld min' -->
     <string name="lld_lld_min_52d99e">"%1$d / %2$d分"</string>
     <!-- '%lld/%lld min' -->
     <string name="lld_lld_min_7abd2a">"%1$d/%2$d分"</string>
     <string name="lld_lld_min_new_talk">"新しい通話 %1$d/%2$d分"</string>
     <string name="lld_lld_min_so_far">"ここまで%1$d / %2$d分。"</string>
-    <string name="lld_mastered">"%1$s · 習得%2$d · %3$s"</string>
+    <string name="lld_mastered">"%1$s · 完了%2$d · %3$s"</string>
     <!-- '+%lld min' -->
     <string name="lld_min_7c4bb6">"+%d分"</string>
     <string name="lld_min_a_day">"1日%d分"</string>
@@ -602,12 +643,13 @@
     <string name="lld_more_meanings">"ほかの意味 +%d"</string>
     <string name="lld_new_members_joined_lld_seats_taken">"新しいメンバーが%1$d人加わりました。これで%2$d席が埋まっています。"</string>
     <string name="lld_of_lld">"%1$d / %2$d"</string>
-    <string name="lld_of_lld_mastered">"%1$d / %2$d 習得"</string>
+    <string name="lld_of_lld_mastered">"%1$d / %2$d 完了"</string>
     <string name="lld_of_lld_min_talked">"%2$d分のうち%1$d分通話"</string>
     <string name="lld_of_lld_min_talked_this_month">"今月%2$d分のうち%1$d分通話"</string>
     <string name="lld_of_lld_min_today">"今日 %1$d / %2$d分"</string>
     <string name="lld_of_lld_seats_taken">"%2$d席のうち%1$d席が埋まりました。"</string>
     <string name="lld_of_your_turns_lld_min">"自分の発話%1$d回 · %2$d分"</string>
+    <string name="lld_out_of_5">"5点中%d点"</string>
     <string name="lld_scenes">"%d回"</string>
     <!-- '%lld seats. One opens only when the person in it stops — never because someone new arrived.' -->
     <string name="lld_seats_one_opens_only_when_the_person_in_it_stops_never_b_60a60d">"%d席。空くのは座っている人がやめたときだけ。新しく来た人のために誰かを押し出すことはありません。"</string>
@@ -617,6 +659,7 @@
     <string name="lld_talks_tap_for_calendar">"通話%d回 · タップでカレンダー"</string>
     <string name="lld_this_session">"このセッションの%2$s %1$d個"</string>
     <string name="lld_this_week">"今週+%d"</string>
+    <string name="lld_to_send">"送信待ち %d件"</string>
     <string name="lld_total">"合計%d個"</string>
     <string name="lld_turns">"%dターン"</string>
     <!-- '%lld turns spoken' -->
@@ -639,6 +682,7 @@
     <string name="long_time_where_were_we">"久しぶりだね。どこまで話したっけ？"</string>
     <string name="longest">"最長"</string>
     <string name="looking_it_up">"調べています…"</string>
+    <string name="looking_through_your_practice">"練習データを確認中…"</string>
     <string name="looking_through_your_practice_data">"練習データを確認しています…"</string>
     <string name="loop">"%1$s–%2$sをループ"</string>
     <string name="make_a_situation">"シチュエーションを作る"</string>
@@ -651,6 +695,7 @@
     <string name="mark_as_mastered">"完了にする"</string>
     <string name="mark_expressions_you_ve_got_down_as_known">"すっかり身についた表現は「知ってる」にしておきましょう。"</string>
     <string name="marked_as_known">"「知ってる」にしました"</string>
+    <string name="marked_known">"「知ってる」にした"</string>
     <!-- "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed." -->
     <string name="marks_a_deterministic_proxy_a_real_measurement_mapped_to_a_c_729797">"≈はAIの判断ではなく、実際に測った値を決まった基準でCEFRの段階に当てはめたものです。各段階はひとつの測定値から出した上限なので、速く話したり長く話したりするだけでレベルになるわけではありません。そのため実際の判定レベルは、ここで一番高い段階と同じか、それより下になるのが普通です。判定では、ミスの多さや、考えをどこまで展開できているかも一緒に見ています。"</string>
     <!-- 'Master every word and line in a book — from a talk or a scene — and it lands here for good.' -->
@@ -662,6 +707,7 @@
     <string name="mastery_effortless_near_native">"最上級 · ほぼネイティブのように楽に"</string>
     <string name="me">"マイページ"</string>
     <string name="meaning">"意味"</string>
+    <string name="meet_other_learners">"ほかの学習者と出会う"</string>
     <string name="meet_your_fluent_self">"流暢な自分に会う"</string>
     <string name="met_on_nawana">"nawanaで出会った"</string>
     <string name="mic_check">"マイクの確認"</string>
@@ -693,6 +739,7 @@
     <string name="more_natural">"もっと自然に"</string>
     <string name="more_natural_alternatives">"もっと自然な表現"</string>
     <string name="more_precisely_e_g_college_roommate">"もう少し具体的に（例：大学のルームメイト）"</string>
+    <string name="move_audio_over_cellular_too">"音声はモバイル通信でも転送"</string>
     <string name="move_to_plus">"プラスに変更"</string>
     <!-- 'Multi-word phrases you actually said, collected automatically.' -->
     <string name="multi_word_phrases_you_actually_said_collected_automatically">"実際に話した表現が自動で集まります。"</string>
@@ -702,6 +749,9 @@
     <string name="my_expressions_lld">"自分の表現 · %d"</string>
     <string name="my_recording">"録音した自分の声"</string>
     <string name="my_words_lld">"自分の単語 · %d"</string>
+    <string name="nailed_it_matched_the_line_almost_word_for_word">"完璧。ほぼ一語一句そのまま言えました。"</string>
+    <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
+    <string name="nailed_it_matched_the_line_almost_word_for_word_on_the_beat">"完璧。ほぼ一語一句そのまま、リズムもぴったりでした。"</string>
     <string name="name">"名前"</string>
     <string name="name_interests_place">"名前、興味、住んでいる場所…"</string>
     <!-- 'Names your clone here and on ElevenLabs. Leave it empty to go back to the default.' -->
@@ -722,6 +772,7 @@
     <string name="next_assessment">"次の評価"</string>
     <string name="next_assessment_after_lld_more_min_of_new_talk">"新しい通話をあと%d分すると、次の評価が行われます。"</string>
     <string name="next_assessment_in_lld_day">"次の評価まで%1$d日。"</string>
+    <string name="next_charge">"次回の決済 %s"</string>
     <string name="next_lld">"次の%d件"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"次のレポートまで%1$d日 · 練習あと%2$d分。"</string>
     <string name="nice">"いいですね"</string>
@@ -754,6 +805,7 @@
     <string name="not_happy_with_a_take_you_can_re_record">"録音が気に入らなければ、やり直せます。"</string>
     <string name="not_me_record_again">"自分の声じゃない、録音し直す"</string>
     <string name="not_now">"今はしない"</string>
+    <string name="not_rated">"未評価"</string>
     <!-- 'Not their real voice — an AI speaks their words in a voice you pick.' -->
     <string name="not_their_real_voice_an_ai_speaks_their_words_in_a_voice_you_e838ec">"本人の声ではありません。選んだ声で、AIがこの人の言葉を読みます。"</string>
     <string name="not_today">"今日はやめる"</string>
@@ -762,6 +814,10 @@
     <string name="not_what_you_said_swipe_a_slip_left_and_mark_it_misheard_the_c3f9cf">"話した内容と違いますか？ その項目を左にスワイプして「聞き間違い」にしてください。そのターンは採点から外れ、文法スコアを計算し直します。"</string>
     <string name="not_yet">"まだ"</string>
     <string name="note">"メモ"</string>
+    <!-- 'nothing' -->
+    <string name="nothing_0feca7">"非公開"</string>
+    <!-- 'Nothing' -->
+    <string name="nothing_448194">"非公開"</string>
     <string name="nothing_due_right_now">"今は復習するものがありません"</string>
     <string name="nothing_finished_yet">"まだ終えたものがありません"</string>
     <string name="nothing_in_progress">"進行中のものはありません"</string>
@@ -780,14 +836,19 @@
     <string name="nothing_to_study_yet">"まだ学ぶものがありません"</string>
     <!-- 'Nothing to study yet — have a talk or watch a scene first; the words it surfaces get dealt here.' -->
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first_the_0fc601">"まだ学ぶ単語がありません。まず通話をするか、シーン練習を見てみてください。そこで出てきた単語がここに届きます。"</string>
+    <string name="nothing_yet">"まだありません"</string>
     <string name="nutrition">"栄養"</string>
     <string name="of_lld_min_talked_this_month">"今月の通話は%2$d分中%1$s"</string>
     <string name="off">"オフ"</string>
+    <string name="offline_will_sync_when_you_re_back">"オフラインです。接続したら同期します"</string>
     <string name="ok">"OK"</string>
     <string name="on_call_tap_to_stop">"通話中 · タップで終了"</string>
+    <string name="on_icloud">"オン · iCloud"</string>
     <string name="once_you_re_in_one_missed_day_a_month_is_forgiven">"入ったあとは、月に1日までなら休んでも大丈夫です。"</string>
     <!-- "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book." -->
     <string name="one_dialogue_for_exactly_this_situation_its_words_expression_8c1495">"ちょうどこの状況に合わせた会話がひとつ。そこに出てきた単語・表現と自分のセリフがチェックリストになります。一度作られれば、自分のブックになります。"</string>
+    <!-- "One person builds this app, and reads every message. Tell me what's missing, what broke, or what you wish it did." -->
+    <string name="one_person_builds_this_app_and_reads_every_message_tell_me_w_bd3eae">"このアプリは一人で作っています。メッセージはすべて読んでいます。足りないもの、うまくいかないもの、あったらいいなと思うもの、何でも教えてください。"</string>
     <string name="one_point_per_talk_down_is_progress">"通話1回が点ひとつ。下がるほど上達です。"</string>
     <string name="one_point_per_talk_with_cefr_bands_behind_the_curve">"通話1回が点ひとつ。曲線の背景は≈CEFRの帯です。"</string>
     <string name="one_point_per_talk_with_cefr_pace_bands_behind_the_curve">"通話1回が点ひとつ。曲線の背景は≈CEFRの速さの帯です。"</string>
@@ -811,11 +872,14 @@
     <string name="or_describe_who_custom">"または相手を自分で説明…"</string>
     <string name="or_write_your_own">"自分で書く"</string>
     <string name="other_free_activity">"そのほかの無料の活動"</string>
+    <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
+    <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"ほかの%s学習者が、この紹介文を演じるAIと練習できます。声は標準ボイスで、自分の声は使われません。相手の会話がこちらに届くことはありません。トークでロックした行は含まれません。"</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"自己紹介を公開している他の学習者です。話しても相手に通知は届きません。その人の自己紹介をAIが標準の声で話すもので、本人の声は使われません。"</string>
     <string name="overall">"全体"</string>
     <string name="overview">"概要"</string>
     <string name="pace">"話す速さ"</string>
+    <string name="pacing">"ペース"</string>
     <string name="packing_lld_of_lld_files">"ファイル%2$d件中%1$d件をまとめています…"</string>
     <string name="parenting">"育児"</string>
     <string name="past_attempts">"過去の挑戦"</string>
@@ -857,7 +921,10 @@
     <string name="practice">"練習"</string>
     <string name="practice_data">"練習データ"</string>
     <string name="practice_language">"練習する言語: %s"</string>
+    <string name="practicing_the_selected_phrase">"選択したフレーズを練習中"</string>
     <string name="practicing_your_rhythm">"話すリズムを練習しています…"</string>
+    <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
+    <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"iPhoneで練習して、iPadで続きから。音声も含めてすべて自分のiCloudに保存されるので、数GBを使うことがあります。"</string>
     <string name="preparing_the_file">"ファイルを準備しています…"</string>
     <string name="preview">"%sを試聴"</string>
     <string name="previous_selection">"前回の選択"</string>
@@ -911,12 +978,15 @@
     <!-- 'Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing.' -->
     <string name="rebuilds_your_voice_from_your_saved_recording_which_takes_a_90f303">"保存してある録音から声を作り直します。少し時間がかかり、アクセント付きの声は削除されます。すでに作られた音声はそのまま聞けます。"</string>
     <string name="recent_days">"最近の記録"</string>
+    <string name="reconnect">"再接続"</string>
     <string name="record_again">"もう一度録音"</string>
     <string name="record_here">"ここで録音してください。"</string>
     <string name="record_my_voice">"自分の声を録音"</string>
     <string name="record_your_voice_again">"声をもう一度録音しますか？"</string>
     <!-- 'Recording again during setup is free, and the voice you have now is only replaced if you keep the new one.' -->
     <string name="recording_again_during_setup_is_free_and_the_voice_you_have_75a508">"設定中は録音し直しても無料です。新しい声を選んだときだけ、今の声が置き換わります。"</string>
+    <string name="recording_file_missing">"録音ファイルがありません。"</string>
+    <string name="recording_isn_t_available">"録音が見つかりません。"</string>
     <string name="redeem">"適用"</string>
     <string name="redeemed_is_on_your_account">"適用しました。アカウントが%sになりました。"</string>
     <string name="redeemed_lld_minutes_added">"適用しました。%d分増えました。"</string>
@@ -977,7 +1047,7 @@
     <string name="review_what_this_month_left_you_or_move_to_plus_to_keep_goin_a63865">"今月出てきたものを復習するか、今すぐもっと話したいならプラスに変えましょう。"</string>
     <string name="review_your_slips">"ミスを復習する"</string>
     <string name="reviews">"復習"</string>
-    <string name="rhythm">"リズム"</string>
+    <string name="right_now">"いま"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"文字起こしが粗いです。ネットワークのせいで最終認識が終わりませんでした。今回のスコアは正確でないかもしれません。"</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100席 · 入るには30日連続"</string>
@@ -1012,6 +1082,7 @@
     <string name="saved_to_expressions">"表現に保存済み"</string>
     <!-- 'Saving wraps up the talk and keeps the transcript, feedback, and drills.' -->
     <string name="saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079">"保存すると通話が終了し、記録・フィードバック・ドリルが残ります。"</string>
+    <string name="say_hello">"作った人へ"</string>
     <string name="say_it_better">"もっと良い言い方に"</string>
     <string name="say_it_out_loud">"声に出して言ってみましょう"</string>
     <string name="say_it_out_loud_do_you_know_it">"声に出して言ってみましょう。知っていますか？"</string>
@@ -1036,6 +1107,7 @@
     <string name="see_where_it_went">"使い道を見る"</string>
     <string name="see_words">"%sの単語を見る"</string>
     <string name="send">"送信"</string>
+    <string name="sending_lld_of_lld">"送信中 %1$d / %2$d…"</string>
     <string name="sentences">"文"</string>
     <string name="serious_about_this">"本気で取り組むくらい"</string>
     <!-- 'Session scorecards, weekly reports, and the daily call are on the house.' -->
@@ -1045,8 +1117,6 @@
     <string name="sets_how_your_future_self_speaks_and_how_scenes_are_written_042a3e">"流暢な自分の話し方と、シーン練習の書き方を決めます。成長タブの測定レベルは次の評価まで変わらず、その評価のときに実際の通話が示した値で上書きされます。"</string>
     <string name="setting_the_scene">"シーン練習を準備中…"</string>
     <string name="settings">"設定"</string>
-    <!-- "Settings, explanations, corrections and notes all come in this language. Tabs and the buttons inside practice stay in the language you're learning." -->
-    <string name="settings_explanations_corrections_and_notes_all_come_in_this_a3d7ac">"設定や説明、修正やメモはこの言語で表示されます。タブと練習画面のボタンは学習中の言語のままです。毎日目にすること自体が練習になるからです。"</string>
     <!-- 'Setup is free, including re-records in the first day. Later re-records cost a little.' -->
     <string name="setup_is_free_including_re_records_in_the_first_day_later_re_d175df">"最初に作るときは無料です。初日のうちの録り直しも。その後の作り直しは少しかかります。"</string>
     <string name="shadow">"シャドーイング"</string>
@@ -1070,13 +1140,17 @@
     <string name="share_card">"カードを共有"</string>
     <string name="share_invite">"招待を共有"</string>
     <string name="shared_context_memories_inside_jokes">"共通の話題、思い出、内輪のジョーク"</string>
+    <string name="show_the_talk">"その通話を見る"</string>
     <string name="showing_earlier_stories">"以前の記事を表示しています"</string>
+    <string name="sign_in_to_icloud_in_settings_first_then_try_again">"先に「設定」でiCloudにサインインしてから、もう一度お試しください。"</string>
+    <string name="sign_in_to_icloud_in_settings_to_sync">"同期するには「設定」でiCloudにサインインしてください"</string>
+    <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"サインインすると、iPhoneとiPadの間で練習データを同期できます。"</string>
     <!-- 'Sign out?' -->
     <string name="sign_out_b11555">"ログアウトしますか？"</string>
     <!-- 'Sign out' -->
     <string name="sign_out_dc1649">"ログアウト"</string>
     <string name="sign_out_go_back">"ログアウトして戻る"</string>
-    <string name="signed_in_with_apple">"Appleでログインしました"</string>
+    <string name="silent">"（無音）"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"身近で慣れたことについて、簡単な単語と表現で。"</string>
     <string name="since">"%sから"</string>
     <string name="situation">"シチュエーション"</string>
@@ -1125,6 +1199,14 @@
     <string name="stop_review">"止めて聞いてみる"</string>
     <string name="stop_your_recording">"録音を停止"</string>
     <string name="strangers">"知らない人"</string>
+    <!-- 'Strangers hear:' -->
+    <string name="strangers_hear_a8bfc4">"ほかの人には："</string>
+    <!-- 'Strangers hear everything — may appear in your Find people intro' -->
+    <string name="strangers_hear_everything_may_appear_in_your_find_people_int_8d80de">"すべて公開・人を探す の自己紹介に載ることがあります"</string>
+    <!-- 'Strangers hear' -->
+    <string name="strangers_hear_f096bb">"ほかの人には"</string>
+    <string name="strangers_hear_nothing_only_your_fluent_self_knows_this">"非公開・流暢な自分だけが知っています"</string>
+    <string name="strangers_hear_the_gist_the_outline_not_the_details">"だいたいだけ公開・詳しいことは伏せます"</string>
     <string name="streak">"連続"</string>
     <string name="streaming_shows">"動画・ドラマ"</string>
     <string name="studied">"%sを学習"</string>
@@ -1139,6 +1221,9 @@
     <string name="subscription">"サブスクリプション"</string>
     <string name="suggested_for_you">"おすすめ"</string>
     <string name="summaries_reports">"要約とレポート"</string>
+    <string name="sync_now">"今すぐ同期"</string>
+    <string name="sync_was_turned_off_from_another_device">"ほかのデバイスから同期がオフにされました"</string>
+    <string name="syncing">"同期中…"</string>
     <string name="system">"システム設定"</string>
     <string name="take_a_photo">"写真を撮る"</string>
     <string name="take_down">"取り下げる"</string>
@@ -1163,6 +1248,7 @@
     <string name="talked_this_month">"今月の通話は%s"</string>
     <string name="talking">"通話"</string>
     <string name="talking_needs_a_plan">"通話にはプランが必要です"</string>
+    <string name="talking_to_your_future_self">"未来の自分との通話"</string>
     <string name="talks">"通話"</string>
     <string name="talks_get_more_real_when_i_know_your_life">"日常を教えてもらうほど、会話が本物に近づきます。"</string>
     <!-- 'Tap a card to review or tweak it, then watch — every watch writes a fresh take. Past takes live in Practice.' -->
@@ -1182,6 +1268,7 @@
     <string name="tap_one_to_fill_your_scenario_above_then_edit_it_freely">"ひとつタップすると上のシチュエーションが埋まります。自由に直してください。"</string>
     <string name="tap_refresh_to_generate_scenarios">"「更新」をタップするとシチュエーションを作ります。"</string>
     <string name="tap_to_check_the_meaning">"タップして意味を確認"</string>
+    <string name="tap_to_complete_your_profile">"タップしてプロフィールを完成させましょう"</string>
     <string name="tap_to_hear_a_sample_in">"▶をタップすると%sのサンプルが聞けます。"</string>
     <string name="tap_to_reveal">"タップして表示"</string>
     <string name="tap_to_shadow_the_selected_phrase">"タップで選んだ部分をシャドーイング"</string>
@@ -1193,7 +1280,10 @@
     <string name="tap_to_try_again">"もう一度やるにはタップ"</string>
     <!-- 'Tap what fits — these pick your news stories and fuel conversations.' -->
     <string name="tap_what_fits_these_pick_your_news_stories_and_fuel_conversa_369fbd">"当てはまるものを選びましょう。ここで選んだものからニュースの話題を選び、会話のネタもここから取ります。"</string>
+    <string name="tap_words_to_pick_a_phrase">"単語をタップしてフレーズを選択"</string>
+    <string name="target">"お手本"</string>
     <string name="target_line">"元の文"</string>
+    <string name="telegram">"Telegram"</string>
     <string name="tell_me_about_them">"その人について教えてください"</string>
     <string name="tell_me_more_about_you">"自分についてもっと伝える"</string>
     <string name="terms_of_use">"利用規約"</string>
@@ -1205,15 +1295,18 @@
     <string name="that_s_a_lot_of_scenes_this_month">"今月はシーン練習を本当にたくさん見ました"</string>
     <string name="that_s_a_lot_of_talking_this_month">"今月は本当にたくさん話しました"</string>
     <string name="that_s_enough_stop_whenever_you_re_ready">"もう十分です。いつでも止めて大丈夫です"</string>
+    <string name="that_s_over_now">"もう終わった"</string>
     <string name="that_s_this_month_s_scenes">"今月のシーン練習はここまで"</string>
     <string name="that_s_this_month_s_talk_time">"今月の通話時間はここまで"</string>
     <string name="that_s_your_session">"今日のセッションは終了"</string>
+    <string name="the_app_overall">"アプリ全体"</string>
     <string name="the_avatar_will_play_this_role_you_practice_your_side">"アバターがこの役を演じます。自分は自分の側を練習します。"</string>
     <!-- 'The better the mic, the better the voice that comes out. A wired mic is best if you have one.' -->
     <string name="the_better_the_mic_the_better_the_voice_that_comes_out_a_wir_e9b3eb">"マイクが良いほど、できあがる声も良くなります。有線マイクがあればそれが一番です。"</string>
     <string name="the_book_couldn_t_be_written_to_a_file_try_again">"ブックをファイルに保存できませんでした。もう一度お試しください。"</string>
     <!-- 'The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.' -->
     <string name="the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450">"通話した時間がそのまま使った時間です。10分通話すれば10分。電話と同じで、考えて止まった時間も同じように数えます。"</string>
+    <string name="the_call_dropped">"通話が切れました"</string>
     <!-- 'The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.' -->
     <string name="the_conversation_its_score_review_cards_and_audio_are_remove_1fe16e">"会話とスコア、復習カード、音声が完全に削除されます。残したまま統計からだけ外すには、削除ではなくアーカイブしてください。"</string>
     <!-- "The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now." -->
@@ -1223,6 +1316,9 @@
     <string name="the_core_is_unavailable_right_now">"今はコアを読み込めません。"</string>
     <string name="the_curriculum_and_its_progress_go_with_it">"カリキュラムと進捗も一緒に削除されます。"</string>
     <string name="the_estimated_level">"推定レベル"</string>
+    <string name="the_gist_in_a_few_words">"だいたいの内容を短く"</string>
+    <!-- "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." -->
+    <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f">"人を探す で、ほかの学習者のスマホが自分として話す自己紹介です。マイページ → 人を探す で直したり取り下げたりできます。"</string>
     <string name="the_made_voice">"作られた声"</string>
     <!-- 'The message stays on your Talk tab either way — you can listen whenever.' -->
     <string name="the_message_stays_on_your_talk_tab_either_way_you_can_listen_79d056">"メッセージはどちらにしてもトークタブに残ります。いつでも聞けます。"</string>
@@ -1272,6 +1368,8 @@
     <string name="thinking">"考え中…"</string>
     <string name="thinking_about_tomorrow">"明日は何するの？"</string>
     <string name="thinking_tap_to_stop">"考え中 · タップで終了"</string>
+    <!-- 'This backup file is damaged or incomplete. Export it again from the other install.' -->
+    <string name="this_backup_file_is_damaged_or_incomplete_export_it_again_fr_14bf7c">"このバックアップファイルは壊れているか、途中までしかありません。もう一方のインストールからもう一度書き出してください。"</string>
     <string name="this_conversation_isn_t_saved_yet">"この会話はまだ保存されていません"</string>
     <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"アプリとElevenLabsの両方から音声モデルを削除します。すでに作られた音声は、アカウントを削除するまでそのまま再生されます。声がないと通話ができないので、新しく録音するよう求められます。アカウントごと削除することもできます。"</string>
@@ -1305,10 +1403,13 @@
     <string name="travel_f7956b">"旅行"</string>
     <string name="trend">"推移"</string>
     <string name="trial">"%sトライアル"</string>
+    <!-- "True for a while. I forget these on my own after a month — or tell me when it's over." -->
+    <string name="true_for_a_while_i_forget_these_on_my_own_after_a_month_or_t_f0cb67">"しばらくの間だけの話です。ひと月たてば自然に忘れます。終わったら教えてください。"</string>
     <string name="try_again">"もう一度"</string>
     <string name="try_for_free">"無料で始める"</string>
     <string name="try_now">"今すぐもう一度"</string>
     <string name="try_saying">"こう言ってみましょう"</string>
+    <string name="try_this">"次はこう"</string>
     <string name="turn_on_reminders">"通知をオンにする"</string>
     <string name="turn_them_on_in_settings">"設定でオンにできます"</string>
     <string name="type_a_topic">"トピックを入力"</string>
@@ -1317,8 +1418,10 @@
     <string name="unlimited">"無制限"</string>
     <string name="unsave">"保存を取り消す"</string>
     <string name="until_then_the_regular_price">"%sまで、その後は通常価格"</string>
+    <string name="up_to_date">"最新 · %s"</string>
     <string name="update">"アップデート"</string>
     <string name="update_to_keep_going">"続けるにはアップデートしてください"</string>
+    <string name="uploading_audio_lld_of_lld">"音声をアップロード中 %1$d / %2$d…"</string>
     <string name="usage">"利用状況"</string>
     <string name="use_more_level_words_in_your_talks">"通話で%sレベルの単語をもっと使ってみましょう。"</string>
     <string name="use_the_iphone_s_mic_or_a_better_one">"iPhoneのマイクか、もっと良いマイクで録音してください。"</string>
@@ -1328,8 +1431,10 @@
     <string name="use_this_topic">"このトピックで"</string>
     <string name="use_this_voice">"この声にする"</string>
     <string name="used">"使いました"</string>
+    <string name="used_in_a_talk">"トークで使った"</string>
     <string name="used_lld_time">"%1$d回使用 · %3$s"</string>
     <string name="uses_talk_time">"通話時間を使います"</string>
+    <string name="uses_your_icloud">"自分のiCloudを使用"</string>
     <string name="variants">"言い換えると"</string>
     <string name="view">"表示"</string>
     <string name="vocabulary">"語彙"</string>
@@ -1354,6 +1459,7 @@
     <string name="voiced_by_0ed8e5">"声: %s"</string>
     <!-- '%@ · voiced by %@' -->
     <string name="voiced_by_2de8fa">"%1$s · 声: %2$s"</string>
+    <string name="waiting_for_the_first_sync">"最初の同期を待っています"</string>
     <string name="warm_and_chatty">"あたたかくて話し好き"</string>
     <string name="watch">"シーン練習"</string>
     <string name="watch_again">"もう一度見る"</string>
@@ -1382,8 +1488,8 @@
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"その日を何で満たしたか。会話のターン、シャドーイング、ドリルの復習。"</string>
     <string name="what_i_heard">"聞こえた内容"</string>
+    <string name="what_i_know_about_you">"知っていること"</string>
     <string name="what_i_noticed_lately">"最近気づいたこと"</string>
-    <string name="what_i_ve_picked_up">"通話でわかったこと"</string>
     <string name="what_never_moves_the_level">"レベルを動かさないもの"</string>
     <string name="what_s_measured">"測定項目"</string>
     <string name="what_s_new">"新しくなったこと"</string>
@@ -1397,6 +1503,8 @@
     <string name="what_s_the_plan_today">"今日は何するの？"</string>
     <string name="what_s_your_native_language">"普段どの言葉を使っていますか？"</string>
     <string name="what_should_i_call_you">"なんと呼べばいいですか？"</string>
+    <string name="what_strangers_can_see">"ほかの人に見えること"</string>
+    <string name="what_they_d_hear">"相手に聞こえる内容"</string>
     <string name="what_to_practice">"練習するもの"</string>
     <string name="what_uses_talk_time">"通話時間は何に使われますか？"</string>
     <string name="what_you_do">"仕事"</string>
@@ -1404,6 +1512,7 @@
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"ここで選んだものが目標になり、練習もそれに合わせます。"</string>
     <string name="what_you_usually_talk_about">"よく話すこと"</string>
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"こことElevenLabsでこの声を呼ぶ名前"</string>
+    <string name="what_your_fluent_self_knows_about_you">"流暢な自分が知っていること"</string>
     <string name="what_your_plan_holds">"プランに含まれるもの"</string>
     <string name="when_should_i_call">"いつかけ直そうか？"</string>
     <string name="when_should_it_come_back">"いつまた見ますか？"</string>
@@ -1431,8 +1540,6 @@
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"通話とシーン練習で生まれた%d個のうち覚えました"</string>
     <string name="word_phrase_playback">"単語・文を聞く"</string>
-    <!-- "Word starts, speed-matched — orange landed off the target's beat." -->
-    <string name="word_starts_speed_matched_orange_landed_off_the_target_s_bea_b05bf8">"速度を合わせたうえでの、各単語の始まりの位置です。オレンジは元のリズムから外れた部分です。"</string>
     <string name="words_and_expressions_you_used">"使った単語・表現"</string>
     <!-- 'words and lines mastered, out of %lld your talks and watches have made' -->
     <string name="words_and_lines_mastered_out_of_lld_your_talks_and_watches_h_4f4924">"通話とシーン練習で生まれた%d個のうち覚えました"</string>
@@ -1441,11 +1548,13 @@
     <!-- 'words' -->
     <string name="words_efb893">"単語"</string>
     <string name="words_from_your_notebook_to_keep_studying">"ノートにためた、続けて学ぶ単語。"</string>
+    <string name="words_only">"単語のみ"</string>
     <!-- "Words per minute of voiced speech — pauses and think-time don't drag it down." -->
     <string name="words_per_minute_of_voiced_speech_pauses_and_think_time_don_e12672">"実際に声を出した時間で数えた、1分あたりの単語数です。詰まった時間は除いて測ります。"</string>
     <string name="words_per_turn">"1ターンで話す長さ"</string>
     <!-- "Words you kept from a talk, plus the ones your watched scenes still ask for. Mark the ones you've got down as known." -->
     <string name="words_you_kept_from_a_talk_plus_the_ones_your_watched_scenes_c0f27c">"通話で残した単語と、見たシーン練習がまだ求めている単語です。覚えたものは「知ってる」にしてください。"</string>
+    <string name="words_you_marked_known">"「知ってる」にした単語"</string>
     <!-- 'Words you say in a talk land here on their own; you can also mark one known from its card.' -->
     <string name="words_you_say_in_a_talk_land_here_on_their_own_you_can_also_d9bbe4">"通話で話した単語は自動でここに入ります。単語カードから「知ってる」にすることもできます。"</string>
     <string name="words_you_use_by_level">"使った単語、レベル別"</string>
@@ -1461,6 +1570,7 @@
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"同意した日付を含め、保管中の情報の確認や修正はお問い合わせください。"</string>
     <string name="writing_down_what_you_said">"いま話した内容を書き起こし中…"</string>
+    <string name="writing_feedback">"フィードバックを書いています…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
     <string name="writing_the_backup_file_this_is_the_slow_part_keep_the_app_o_5ceb52">"バックアップファイルを書き込んでいます。ここがいちばん時間がかかるので、アプリを開いたままお待ちください。"</string>
     <string name="writing_the_dialogue">"会話を書いています…"</string>
@@ -1475,7 +1585,11 @@
     <string name="you">"自分"</string>
     <string name="you_asked_to_see_these_again">"もう一度見ることにした項目です"</string>
     <string name="you_but_fluent">"流暢な自分"</string>
+    <!-- 'You can change or take this down any time in Me → Find people.' -->
+    <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"いつでも マイページ → 人を探す で変更や取り下げができます。"</string>
     <string name="you_can_t_use_your_own_code">"自分のコードは使えません。"</string>
+    <!-- "You can talk with your fluent self for %lld minutes. Once they're used up, choose a plan." -->
+    <string name="you_can_talk_with_your_fluent_self_for_lld_minutes_once_they_357104">"流暢な自分と%d分間話せます。使い切ったら、プランを選んでください。"</string>
     <!-- 'You carried the whole story yourself and only stalled on tenses when it moved back in time. Next talk, try setting the scene in the past first.' -->
     <string name="you_carried_the_whole_story_yourself_and_only_stalled_on_ten_a5f45e">"話を最初から最後まで自分で運びました。過去の話に移るときだけ、時制で止まりましたね。次の通話では、先に過去の背景を置いてから始めてみてください。"</string>
     <!-- "You finished %lld card%@. They'll surface again on the Leitner schedule." -->
@@ -1484,10 +1598,6 @@
     <string name="you_finished_lld_cards_lld_more_are_waiting_when_you_re_read_985087">"カードを%1$d枚終えました。準備ができたら、あと%2$d枚が待っています。"</string>
     <string name="you_haven_t_used_any_talk_time_yet_this_month">"今月はまだ通話時間を使っていません。"</string>
     <string name="you_hit_today_s_goal">"今日の目標、達成したね。"</string>
-    <!-- 'You just heard yourself handle a real situation. Did it sound like you?' -->
-    <string name="you_just_heard_yourself_handle_a_real_situation_did_it_sound_ed28b5">"いま、実際の状況を自分がこなすのを聞きました。自分の声に聞こえましたか？"</string>
-    <!-- 'You just talked with your future voice. What felt right — and what felt off?' -->
-    <string name="you_just_talked_with_your_future_voice_what_felt_right_and_w_7a6d31">"いま、流暢になった自分の声と話しました。どこがよくて、どこに違和感がありましたか？"</string>
     <string name="you_ll_both_get_lld_minutes_of_talk_time_when_you_sign_in">"ログインすると、ふたりとも通話時間を%d分もらえます。"</string>
     <!-- "You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one." -->
     <string name="you_ll_read_the_script_once_more_about_a_minute_recording_ag_281d84">"台本をもう一度読むだけです。1分ほどかかります。設定中の再録音は無料で、新しい声を選んだときだけ今の声が置き換わります。"</string>
@@ -1504,10 +1614,13 @@
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"プールに登録されました。ほかの%sの学習者が、このペルソナを見つけて話せます。"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"%s中です。解約しなければ、そのまま有料に移行します。"</string>
+    <string name="you_re_on_the_it_ends_on">"%1$s中です。%2$sに終了し、請求はありません。"</string>
     <string name="you_re_out_of_credits_so_your_future_self_can_t_reply">"クレジットが切れたので、流暢な自分が答えられません。"</string>
+    <string name="you_re_signed_out_sign_in_again_then_try_once_more">"サインアウトされています。もう一度サインインしてから試してください。"</string>
     <string name="you_re_subscribed_to">"%sを利用中です。"</string>
     <!-- 'You reached for "straightforward" and "follow-up" unprompted.' -->
     <string name="you_reached_for_straightforward_and_follow_up_unprompted">"\"straightforward\"、\"follow-up\"を自分から使いました。"</string>
+    <string name="you_said">"「%s」と言っていました"</string>
     <string name="you_said_these">"使った言葉"</string>
     <!-- "You skipped every line. They'll be waiting whenever you want to say them." -->
     <string name="you_skipped_every_line_they_ll_be_waiting_whenever_you_want_325e6d">"すべての文をスキップしました。話したくなったら、そのまま待っています。"</string>
@@ -1516,6 +1629,8 @@
     <string name="you_used_what_you_practiced">"練習したことを実際に使いました"</string>
     <string name="you_ve_already_used_a_code">"すでにコードを使っています。"</string>
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"しばらく休んでいたので、連続記録を最初からやり直す必要があります。"</string>
+    <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
+    <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"また戻ってきて話してくれましたね。短い質問が二つと、言いたいことがあれば何でも。"</string>
     <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"%d日を満たしました。今夜、順番待ちに並びます。"</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"今期のフェアユース基準の%d分を超えました。"</string>
@@ -1526,6 +1641,7 @@
     <!-- "You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free." -->
     <string name="you_ve_watched_today_s_scenes_new_ones_unlock_at_midnight_re_9d0b64">"今日のシーン練習は見終わりました。新しいシーンは深夜0時に開き、見たものはいつでも見直せます。"</string>
     <string name="your">"自分の%s"</string>
+    <string name="your_books">"自分のブック"</string>
     <!-- 'Your clone speaks with whatever accent the AI guesses. Pick one instead: same voice, your chosen accent. Takes about half a minute to prepare.' -->
     <string name="your_clone_speaks_with_whatever_accent_the_ai_guesses_pick_o_a36d21">"今はAIが推測したアクセントで話しています。自分で選べば、声はそのままにアクセントだけ変わります。準備に30秒ほどかかります。"</string>
     <!-- 'Your cloned voice already speaks %@ — no new recording needed. Your %@ progress stays untouched.' -->
@@ -1536,7 +1652,6 @@
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"修正やメモ、単語の意味がこの言語で返ってきます。アプリの画面自体は英語のままです。"</string>
     <string name="your_daily_goal">"1日の目標は？"</string>
-    <string name="your_feedback">"ご意見"</string>
     <string name="your_feedback_goes_straight_to_the_person_building_this">"いただいたご意見は、これを作っている本人にそのまま届きます。"</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"通話%d分に達すると、最初の評価が開きます。"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"練習%d分に達すると、最初のレポートが開きます。"</string>
@@ -1549,6 +1664,7 @@
     <string name="your_fluent_self_speaks_this_language_in_your_own_voice_you_0a47cf">"流暢な自分が、この言語を自分の声で話します。あとで言語を追加しても声はそのままなので、録音し直す必要はありません。"</string>
     <string name="your_fluent_self_used_this_you_didn_t">"流暢な自分が使った表現です。自分はまだ使っていません。"</string>
     <string name="your_fluent_self_wants_to_know_you">"自分を知ってこそ、自分らしく話せます"</string>
+    <string name="your_free_talk_time_is_used_up">"無料通話の時間を使い切りました"</string>
     <string name="your_free_trial_ends_soon">"無料トライアルがもうすぐ終わります"</string>
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"友だちが登録時にこのコードを入れると、ふたりとも%1$d分もらえます。自分の分は最初の%2$d人までです。"</string>
@@ -1607,6 +1723,8 @@
     <string name="your_pool_refills_on">"%sに補充されます。"</string>
     <!-- 'Your practice data stays on this device. Your voice clone and talk time stay with your account.' -->
     <string name="your_practice_data_stays_on_this_device_your_voice_clone_and_2c4c4e">"練習データはこの端末に残り、声のクローンと通話時間はアカウントに残ります。"</string>
+    <!-- 'Your practice from your other device is in your iCloud — talks, cards, words, recordings. Bring it here and keep both in step from now on.' -->
+    <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"ほかのデバイスの練習データがiCloudにあります。トーク、カード、単語、録音まで。ここに取り込んで、これからは両方を揃えておきます。"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
     <string name="your_recent_conversations_measure_at_a_higher_level_scoring_8861e0">"最近の会話が、より高いレベルと測定されました。採点と教材の難しさは、これから新しいレベルに従います。"</string>
     <string name="your_scenario">"自分のシチュエーション"</string>
@@ -1615,12 +1733,17 @@
     <string name="your_subscription_is_active_your_talk_time_lands_on_your_acc_75b9a5">"サブスクリプションが有効になりました。Appleが購入を確認しだい、通話時間がアカウントに入ります。"</string>
     <!-- 'Your subscription starts. Cancel any time before then in the App Store.' -->
     <string name="your_subscription_starts_cancel_any_time_before_then_in_the_2808aa">"サブスクリプションが始まります。それまではApp Storeでいつでも解約できます。"</string>
-    <!-- 'Your talk time is used up. This call is saved — you can pick it up again any time.' -->
-    <string name="your_talk_time_is_used_up_this_call_is_saved_you_can_pick_it_46ade7">"通話時間を使い切りました。この通話は保存してあるので、いつでも続きからできます。"</string>
+    <string name="your_take">"今回の挑戦"</string>
+    <!-- 'Your take over the line, both starting on their first word — hear where you drift.' -->
+    <string name="your_take_over_the_line_both_starting_on_their_first_word_he_891e29">"お手本に自分の録音を重ねて、どちらも最初の単語から再生します。どこからずれるか聞いてみてください。"</string>
+    <string name="your_talk_time_is_used_up">"通話時間を使い切りました"</string>
+    <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"トーク、カード、単語、録音が、音声も含めて、このアカウントとiCloudにサインインしたすべてのデバイスで同じに保たれます。オフにしても同期が止まるだけで、何も削除されません。"</string>
     <string name="your_talks_together">"一緒にした通話"</string>
     <!-- 'Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store.' -->
     <string name="your_trial_becomes_a_paid_subscription_in_lld_days_you_can_c_3e05d0">"%d日後にトライアルが有料サブスクリプションに変わります。App Storeでいつでも解約できます。"</string>
     <string name="your_trial_becomes_paid_on">"%sにトライアルが有料に変わります"</string>
+    <string name="your_trial_ends_on">"%sにトライアルが終了します"</string>
     <!-- "Your trial starts — a week's worth of talk, and all the review it produces." -->
     <string name="your_trial_starts_a_week_s_worth_of_talk_and_all_the_review_18afb8">"トライアルが始まります。1週間分の通話と、そこから生まれる復習のすべてが一緒です。"</string>
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->

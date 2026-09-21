@@ -87,7 +87,7 @@ fun PersonaIntakeScreen(
                 OutlinedButton(
                     onClick = { if (step > 0) step -= 1 else onBackToSetup() },
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.back_b52b36)) }
+                ) { Text(stringResource(R.string.back)) }
                 Button(
                     enabled = canAdvance,
                     onClick = {

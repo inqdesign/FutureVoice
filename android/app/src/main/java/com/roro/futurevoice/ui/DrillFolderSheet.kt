@@ -95,6 +95,6 @@ fun DrillFolderSheet(
  *  system formatter follows the default locale, which the app language sets. */
 @Composable
 private fun returnLabel(at: Long): String = stringResource(
-    R.string.back_2fe063,
+    R.string.back_in_when,
     android.text.format.DateUtils.getRelativeTimeSpanString(
         at, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString())
