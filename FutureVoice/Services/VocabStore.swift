@@ -15,6 +15,13 @@ final class VocabStore: ObservableObject {
         var firstAt: Date
         var lastAt: Date
         var count: Int
+        /// A `.known` verdict given while the item was IN the notebook — the
+        /// learner studied it and then said "I know it". Only those are a
+        /// claim worth checking in a call; a word ticked while browsing a
+        /// level list, or a core-list top-up waved off the first time it was
+        /// dealt, was never studied. Optional so records on disk (and from an
+        /// older build over sync) decode as nil = not from the notebook.
+        var fromStudying: Bool? = nil
     }
 
     /// lemma → record. Absent = not yet used/known.
@@ -252,12 +259,18 @@ final class VocabStore: ObservableObject {
 
     /// Marked known by hand and never yet said in a talk — what the next
     /// call can confirm.
+    /// Only verdicts given on something the learner was studying count
+    /// (`Record.fromStudying`): the call's chip row and the wrap-up both read
+    /// these, and neither may put a word in front of the learner that they
+    /// never kept.
     var unconfirmedKnownWords: [String] {
-        records.filter { $0.value.state == .known }.map(\.key)
+        records.filter { $0.value.state == .known && $0.value.fromStudying == true }.map(\.key)
     }
 
     var unconfirmedKnownExpressions: [String] {
-        expressionRecords.filter { $0.value.state == .known && $0.value.count == 0 }.map(\.key)
+        expressionRecords.filter {
+            $0.value.state == .known && $0.value.count == 0 && $0.value.fromStudying == true
+        }.map(\.key)
     }
 
     /// Mark / unmark an expression as known. Unmarking falls back to `.used`
@@ -265,12 +278,15 @@ final class VocabStore: ObservableObject {
     func setKnownExpression(_ phrase: String, _ known: Bool) {
         let k = exprKey(phrase)
         guard !k.isEmpty else { return }
+        let fromStudying: Bool? = known && studyingExpressions.contains(k) ? true : nil
         if var r = expressionRecords[k] {
             r.state = known ? .known : .used
             r.lastAt = Date()
+            r.fromStudying = fromStudying
             expressionRecords[k] = r
         } else if known {
-            expressionRecords[k] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0)
+            expressionRecords[k] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0,
+                                          fromStudying: fromStudying)
         }
         if known { PracticeLog.shared.record(.expression, finished: true) }
         saveExpressions()
@@ -454,22 +470,13 @@ final class VocabStore: ObservableObject {
     }
 
     /// Manually save an expression/phrase the user picked to study later
-    /// (e.g. a "common phrase" or example from a word card). Unlike
-    /// `ingestExpressions`, there's no session — this is a deliberate save.
-    /// Returns false if it was already in the pool.
+    /// (e.g. a "common phrase" or example from a word card). It is a
+    /// BOOKMARK — it used to write a `.known` row, which filed "study this
+    /// later" as "I already know this". Returns false if already bookmarked.
     @discardableResult
-    func addExpression(_ phrase: String, at date: Date = Date()) -> Bool {
-        let display = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = display.lowercased()
-        guard !key.isEmpty else { return false }
-        if var r = expressionRecords[key] {
-            r.lastAt = date
-            expressionRecords[key] = r
-            saveExpressions()
-            return false
-        }
-        expressionRecords[key] = Record(state: .known, firstAt: date, lastAt: date, count: 0)
-        saveExpressions()
+    func addExpression(_ phrase: String) -> Bool {
+        guard !exprKey(phrase).isEmpty, !isStudyingExpression(phrase) else { return false }
+        setStudyingExpression(phrase, true)
         return true
     }
 
@@ -561,7 +568,8 @@ final class VocabStore: ObservableObject {
     /// User self-marks a word as known — it also leaves the study notebook.
     func markKnown(_ lemma: String) {
         if records[lemma] == nil {
-            records[lemma] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0)
+            records[lemma] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0,
+                                    fromStudying: studying.contains(lemma) ? true : nil)
             save()
         }
         removeStudying(lemma)
@@ -948,6 +956,7 @@ final class VocabStore: ObservableObject {
         if let data = try? JSONEncoder().encode(Array(autoKept)) {
             try? data.write(to: autoKeptURL, options: [.atomic])
         }
+        SyncEngine.noteChanged(.vocabAutoKept)
     }
 
     /// Notebook words the learner has actually PRACTICED — kept by hand, or
@@ -966,6 +975,8 @@ final class VocabStore: ObservableObject {
         if let data = try? JSONEncoder().encode(ingestedTextCounts) {
             try? data.write(to: metaURL, options: [.atomic])
         }
+        SyncEngine.noteChanged(.vocabRecord)
+        SyncEngine.noteChanged(.vocabIngested)
     }
 
     private func saveStudying() {
@@ -974,6 +985,7 @@ final class VocabStore: ObservableObject {
         }
         // Notebook words show on the home-screen widget — refresh its snapshot.
         StudyWidgetRefresher.schedule()
+        SyncEngine.noteChanged(.vocabStudying)
     }
 
     private func saveStudyingExpressions() {
@@ -982,6 +994,7 @@ final class VocabStore: ObservableObject {
         }
         // The Expressions widget shows only bookmarked phrases — refresh it.
         StudyWidgetRefresher.schedule()
+        SyncEngine.noteChanged(.vocabStudyingExpression)
     }
 
     private func saveDismissedExpressions() {
@@ -990,12 +1003,14 @@ final class VocabStore: ObservableObject {
         }
         // A dismissed phrase may have been on the Expressions widget.
         StudyWidgetRefresher.schedule()
+        SyncEngine.noteChanged(.vocabDismissed)
     }
 
     private func saveRemovedByHand() {
         if let data = try? JSONEncoder().encode(Array(removedByHand)) {
             try? data.write(to: removedByHandURL, options: [.atomic])
         }
+        SyncEngine.noteChanged(.vocabRemovedByHand)
     }
 
     private func saveExpressions() {
@@ -1007,5 +1022,7 @@ final class VocabStore: ObservableObject {
             legacySessions: legacyExpressionSessions)) {
             try? data.write(to: expressionsMetaURL, options: [.atomic])
         }
+        SyncEngine.noteChanged(.vocabExpression)
+        SyncEngine.noteChanged(.vocabExpressionIngested)
     }
 }

@@ -764,7 +764,7 @@ struct WordCard: View {
     /// text to study later, or shadow-practice it right now.
     @ViewBuilder
     private func saveActions(for text: String) -> some View {
-        if store.hasExpression(text) {
+        if store.isStudyingExpression(text) {
             Label("Saved to expressions", systemImage: "checkmark")
         } else {
             Button {
