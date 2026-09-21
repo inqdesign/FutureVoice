@@ -172,6 +172,80 @@ final class AudioPlayer: NSObject, ObservableObject {
         self.currentTime = 0
     }
 
+    // MARK: - Duet (two takes, one clock)
+
+    /// Decode and prepare for a start SHARED with another player, mixed to sit
+    /// beside it. Nothing sounds until `startDuet(at:)`.
+    ///
+    /// Shadow plays the model line and the learner's own take at once, so they
+    /// can hear where they fell behind — the audible form of the rhythm card.
+    /// Two things make that a comparison rather than a mess:
+    ///
+    /// - **`offset` trims each take to its FIRST WORD.** Aligning the files
+    ///   would be wrong: the attempt's recording opens on the go beat plus a
+    ///   deliberate 350 ms, and a learner who took a moment to start would
+    ///   then hear themselves trailing the whole way when only the entry was
+    ///   late.
+    /// - **`volume` + `pan` separate the voices.** Loudness is already equal
+    ///   by the time it gets here (every path through this class runs
+    ///   `AudioLoudness.normalized`), which is what makes "put the model
+    ///   further back" a choice rather than a correction — a phone-mic take is
+    ///   otherwise far quieter than ElevenLabs speech.
+    ///
+    /// Pace is deliberately NOT matched. The drift IS the information; a
+    /// time-stretch would erase the one thing this is for.
+    @discardableResult
+    func armDuet(_ data: Data,
+                 skipping offset: TimeInterval,
+                 volume: Float,
+                 pan: Float,
+                 configureSession: Bool) -> Bool {
+        // Only the FIRST player may touch the session, and it force-cycles it
+        // for the same reason the target preview does: a just-finished attempt
+        // leaves the session in `.measurement`, which plays back noticeably
+        // quieter. Force-cycling is safe HERE and nowhere else in a duet —
+        // the first half arms before either player holds anything, whereas
+        // deactivating under an already-prepared `AVAudioPlayer` is exactly
+        // what would silence the other half.
+        if configureSession { configureForPlayback(forceSessionReset: true) }
+        let playData = AudioLoudness.normalized(
+            data, extraGainDB: AudioSessionRouting.playbackBoostDB()) ?? data
+        guard let p = try? AVAudioPlayer(data: playData) else { return false }
+        p.volume = volume
+        p.pan = pan
+        p.enableRate = true
+        p.rate = rate
+        p.delegate = self
+        p.currentTime = max(0, min(offset, max(0, p.duration - 0.05)))
+        p.prepareToPlay()
+        self.player = p
+        self.completion = nil
+        self.duration = p.duration
+        self.segmentStart = 0
+        self.segmentEnd = nil
+        self.loopEnabled = false
+        self.isPlaying = false
+        self.currentTime = p.currentTime
+        return true
+    }
+
+    /// The shared output-device clock both halves of a duet are scheduled
+    /// against. 0 when nothing is armed — `AVAudioPlayer` only exposes it per
+    /// instance, though every instance reads the same device.
+    var deviceTimeNow: TimeInterval { player?.deviceCurrentTime ?? 0 }
+
+    /// Start an armed player at `deviceTime`. Caller passes ONE time to both
+    /// halves; `play(atTime:)` is what makes the start sample-accurate rather
+    /// than "two `play()` calls in a row", which drifts by however long the
+    /// first one took to return.
+    func startDuet(at deviceTime: TimeInterval, completion: (() -> Void)? = nil) {
+        guard let p = player else { completion?(); return }
+        guard p.play(atTime: deviceTime) else { completion?(); return }
+        self.completion = completion
+        isPlaying = true
+        startTicker()
+    }
+
     /// Play a region `[from, to]` (to == nil → to the end), optionally looping
     /// it. Requires a prior `prepare`/`play`. Used by the shadow timeline to
     /// hear just a phrase and repeat it.

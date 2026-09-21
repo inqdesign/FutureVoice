@@ -22,7 +22,7 @@ import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
 import { verifyUser, ownsVoice, type Env } from "./supabase"
-import { TalkBilling } from "./billing"
+import { TalkBilling, type WallCode } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
 const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
@@ -51,6 +51,10 @@ export class CallSession implements DurableObject {
   /** Server-side meter — the gateway charges the call itself (see billing.ts);
    *  the app's TalkMeter stays local-only on this path. */
   private billing: TalkBilling | null = null
+  /** A spent allowance that arrived while a line was still playing — held
+   *  until that line ends, then the session ends for it (`wall`). */
+  private pendingWall: WallCode | null = null
+  private wallTimer: number | null = null
 
   /** A reply generation fired BEFORE the transcriber committed the turn —
    *  the same trick the app's SpeculativeReply plays on its VAD, moved
@@ -101,6 +105,7 @@ export class CallSession implements DurableObject {
   /** Has the learner said anything yet in this call? The meter waits for
    *  it — see the billing predicate. */
   private learnerSpoke = false
+  private language = "en"
   private lastClientFrameAt = Date.now()
   /** Nothing from the phone for this long → the socket is dead; hang up. */
   private static readonly clientGoneMs = 45_000
@@ -114,7 +119,41 @@ export class CallSession implements DurableObject {
   private static readonly maxContextMs = 90_000
   private sessionStartedAt = Date.now()
   private watchTimer: number | null = null
+
+  /** Why the session ended — set by whoever ends it, reported in `ended`.
+   *  A session that closes without one was closed by the phone. */
+  private endReason: string | null = null
+  /** Non-fatal problems the call survived (see `warn`). */
+  private warnings = 0
+  /** Per turn: commit → first PCM byte sent for its context. The number the
+   *  learner feels as "the pause before it answers". */
+  private commitAtByContext = new Map<string, number>()
+  private voiceFirstMs: number[] = []
+  /** Turn-taking evidence — see `handleUtterance` and `interrupt`. None of
+   *  it changes the call; all of it is what the next decision about the hold
+   *  windows has to be made from. Until 2026-09-15 there was NO record of how
+   *  often the fluent self spoke over a learner mid-sentence, and the 0.8 s
+   *  continuation window was set from one fluent speaker's device. */
+  private lastCommitAt = 0
+  /** Barge-ins landing within `cutoffWindowMs` of a commit: the learner was
+   *  still talking and we answered anyway. A proxy — a fast second thought
+   *  counts too — but it is the only signature a cut-off leaves. */
+  private cutoffs = 0
+  private static readonly cutoffWindowMs = 2500
+  /** Finals that merged into a held one — continuations the window caught. */
+  private merges = 0
+  /** final → next interim, for every hold that saw the learner continue.
+   *  This is a learner's own pause, measured, which is the number an
+   *  adaptive window would have to be built from. */
+  private mergeGapMs: number[] = []
+  private pendingSince = 0
+  /** One retry per turn on a failed reply generation; the second failure
+   *  is spoken as an apology instead of ending the call. */
+  private replyRetried = new Set<string>()
   private watchSeenContext: { context: string; at: number } | null = null
+  /** A `say` that arrived before the session finished starting — see the
+   *  handler. Spoken the moment `ready` goes out. */
+  private pendingSay: { text: string; alreadySpoken: boolean } | null = null
 
   /** Sliding window of what the fluent self RECENTLY said out loud — the
    *  reference the echo judgement compares against. The server is the one
@@ -236,22 +275,187 @@ export class CallSession implements DurableObject {
    *  final. The reply the speculation already wrote waits with it, so the
    *  cost is this window on the VOICE, not on the thinking. */
   private static readonly continuationMs = 800
+  /** A final with NO terminal punctuation. The transcriber punctuates a
+   *  finished sentence and leaves a cut-off clause bare — probed 2026-09-15
+   *  (test/probe-language-pin.mjs on hello16k.wav truncated mid-clause):
+   *  "…and had a" and "…yester" came back without a period 6 times out of
+   *  6, the whole sentence with one. That is a language-independent "not
+   *  done" the hanging-word list cannot give (it can only name words it
+   *  knows), so it earns a middle window — longer than a plain
+   *  continuation, shorter than a conjunction, because a bare noun can
+   *  still be the end of a thought. */
+  private static readonly unfinishedMs = 2000
 
-  /** Words a spoken thought does not END on. The app's lists, verbatim
+  /** Words a spoken thought does not END on, per target language. The
+   *  English set is the app's own lists verbatim
    *  (ConversationView.trailingConjunctions / trailingFunctionWords /
-   *  fillerWords). */
-  private static readonly hangingWords = new Set([
-    "and", "but", "or", "so", "because", "cause",
-    "if", "when", "while", "that", "which", "though", "although",
-    "the", "a", "an", "to", "in", "on", "at", "of",
-    "for", "with", "by", "from", "into", "about",
-    "uh", "um", "er", "ah", "hmm", "mm", "well",
-  ])
+   *  fillerWords). Until 2026-09-15 it was the ONLY set, keyed to nothing —
+   *  so a German learner never once earned the long hold ("und", "weil",
+   *  "äh" matched nothing) and got the 0.8 s window on every turn, which is
+   *  the "it cuts me off mid-sentence" reported that week.
+   *
+   *  Every list errs toward NOT matching: a false hanging word costs a
+   *  finished sentence up to 4 s of silence, so anything that can END a
+   *  sentence in that language stays out — German separable prefixes (an,
+   *  auf, mit, zu, ein: "ich rufe dich an") and "das" ("ich weiß das"),
+   *  French "en"/"avec"/"si"/"voilà" ("j'en ai", "je viens avec", "si !"),
+   *  Spanish "bueno"/"pues"/"este", Japanese て (a request), Chinese
+   *  那个/这个 (an object as well as a filler). */
+  private static readonly hangingWords: Record<string, Set<string>> = {
+    en: new Set([
+      "and", "but", "or", "so", "because", "cause",
+      "if", "when", "while", "that", "which", "though", "although",
+      "the", "a", "an", "to", "in", "on", "at", "of",
+      "for", "with", "by", "from", "into", "about",
+      "uh", "um", "er", "ah", "hmm", "mm", "well",
+    ]),
+    de: new Set([
+      "und", "aber", "oder", "weil", "dass", "wenn", "ob", "denn", "sondern",
+      "obwohl", "während", "bevor", "nachdem", "damit", "als",
+      "der", "die", "den", "dem", "des", "eine", "einen", "einem", "einer",
+      "zum", "zur", "im", "am", "vom", "beim", "für", "von", "bei",
+      "äh", "ähm", "hm", "hmm", "naja",
+    ]),
+    es: new Set([
+      "y", "e", "o", "u", "pero", "porque", "que", "si", "cuando", "aunque",
+      "mientras", "como", "donde",
+      "el", "la", "los", "las", "un", "una", "unos", "unas",
+      "de", "del", "a", "al", "en", "con", "por", "para", "sin", "sobre",
+      "entre", "hasta", "desde",
+      "eh", "em", "mmm",
+    ]),
+    fr: new Set([
+      "et", "ou", "mais", "donc", "car", "que", "quand", "comme", "lorsque",
+      "puisque", "parce",
+      "le", "la", "les", "un", "une", "des", "du", "de", "à", "au", "aux",
+      "dans", "sur", "pour", "par", "chez", "vers",
+      "euh", "ben", "bah",
+    ]),
+    // Korean fillers and connectives that stand as their own word. The
+    // real signal in Korean is the verb ENDING — see `hangingSuffixes`.
+    ko: new Set([
+      "그", "저", "음", "어", "아", "근데", "그런데", "그래서", "그리고",
+      "그러니까", "그니까", "그러면", "약간", "이제", "막", "뭔가",
+    ]),
+  }
 
-  private static endsHanging(text: string): boolean {
+  /** Clause endings that keep a sentence open, for languages where the
+   *  signal is a suffix rather than a word — agglutinative Korean, and
+   *  Japanese/Chinese written without spaces (there the "last word" is the
+   *  whole utterance). Matched against the end of the last token with its
+   *  punctuation stripped. Korean 면 is deliberately absent: too many nouns
+   *  end on it (라면, 화면, 장면); Japanese が too, since a polite sentence
+   *  ends on 〜ですが as often as it continues from it. */
+  private static readonly hangingSuffixes: Record<string, string[]> = {
+    // 서 is the contracted -아/어서 (가서, 만나서, 해서) and cannot be
+    // enumerated; 에서 is the one common ending it must not catch. 고 stays
+    // narrow (하고/이고): 최고, 사고, 광고 end answers all day.
+    ko: ["는데", "은데", "니까", "지만", "서", "려고", "면서", "하고", "이고"],
+    ja: ["けど", "けれど", "から", "ので", "のに", "たら", "なら", "でも",
+         "えっと", "えー", "あの", "あのー", "その"],
+    zh: ["然后", "然後", "但是", "可是", "因为", "因為", "所以", "如果",
+         "虽然", "雖然", "而且", "就是", "的话", "的話", "的时候", "的時候",
+         "嗯", "呃"],
+  }
+
+  /** Endings a suffix above would otherwise swallow. */
+  private static readonly hangingSuffixExceptions: Record<string, string[]> = {
+    ko: ["에서"],
+  }
+
+  /** Languages written without spaces, where a whitespace split sees one
+   *  "word" per utterance however long it is. */
+  private static writesSpaces(language: string): boolean {
+    const lang = language.toLowerCase().split("-")[0]
+    return lang !== "ja" && lang !== "zh"
+  }
+
+  /** "A scrap of a word": one word where words are spaced; where they
+   *  aren't, a few letters (はい, うん, ね) — counted as one word, EVERY
+   *  Japanese answer was a scrap, and a learner who answered within the
+   *  echo window lost the whole sentence without a trace. */
+  private static isScrap(text: string, language: string): boolean {
+    if (CallSession.writesSpaces(language)) {
+      return text.trim().split(/\s+/).filter(Boolean).length <= 1
+    }
+    return (text.match(/\p{L}/gu)?.length ?? 0) <= 3
+  }
+
+  /** A question mark outranks the last word. The transcriber writes it from
+   *  the rising pitch of a finished question, and a question is the one
+   *  sentence that is over the moment it is asked — yet "Where are you
+   *  from?", "What are you thinking about?", "그래서?" and 好きだから？ all
+   *  end on a listed word or suffix, and each held the learner's question
+   *  for the full 4 s before the fluent self answered (2026-09-19, found
+   *  on hand-written cases while evaluating a turn-end classifier). A
+   *  PERIOD does not get the same pass: "그냥 재밌어서." is often an
+   *  answer and just as often the first half of one, and a cut-off costs
+   *  more than a wait. */
+  private static endsHanging(text: string, language: string): boolean {
+    if (/[?？][!！]*$/u.test(text.trim().replace(/["'”’」』)\]]+$/u, ""))) return false
+    const lang = language.toLowerCase().split("-")[0]
     const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
     const last = words.at(-1)?.replace(/[^\p{L}\p{N}']+/gu, "")
-    return last !== undefined && CallSession.hangingWords.has(last)
+    if (!last) return false
+    if (CallSession.hangingWords[lang]?.has(last)) return true
+    if (CallSession.hangingSuffixExceptions[lang]?.some((e) => last.endsWith(e))) return false
+    const suffixes = CallSession.hangingSuffixes[lang]
+    return suffixes !== undefined && suffixes.some((s) => last.endsWith(s))
+  }
+
+  /** Is this text written in the target language's SCRIPT? The transcriber
+   *  has to pick a writing system off the first ~200 ms of an utterance,
+   *  and it guesses wrong often enough that the learner watches their
+   *  English open in Thai or Devanagari and get rewritten a word later —
+   *  still, after the language pin (reported on the pinned build,
+   *  2026-09-16). The pin is a request; the first phonemes are a guess no
+   *  prompt reaches. So a wrong-script INTERIM is simply not shown: the
+   *  next interim replaces it and the bubble never flashes. Barge-in,
+   *  speculation and the hold clock still see every interim — this gates
+   *  the screen and nothing else. Same-script errors (German heard as
+   *  English) are invisible here by construction; that is the pin's job.
+   *
+   *  The test is "any letter of the target script at all", not a majority:
+   *  the failure being hidden is a line written ENTIRELY in the wrong
+   *  system, and a majority rule threw away "어제 Netflix 봤어" — one Hangul
+   *  syllable is a whole word against seven Latin letters. */
+  private static inTargetScript(text: string, language: string): boolean {
+    const lang = language.toLowerCase().split("-")[0]
+    const want = CallSession.targetScript[lang]
+    if (!want) return true
+    if (!/\p{L}/u.test(text)) return true
+    return want.test(text)
+  }
+
+  /** A final with no letter of the target script that is too short to be a
+   *  sentence: one or two words, a handful of letters (marks like Devanagari
+   *  vowel signs don't count). That is the shape of a filler the transcriber
+   *  mis-scripted — "अह", "उम" — and not of a learner who answered in
+   *  another language, which still goes through as before. */
+  private static isForeignScriptHesitation(text: string, language: string): boolean {
+    if (CallSession.inTargetScript(text, language)) return false
+    const words = text.trim().split(/\s+/).filter(Boolean)
+    const letters = text.match(/\p{L}/gu)?.length ?? 0
+    return words.length <= 2 && letters <= 6
+  }
+
+  private static readonly targetScript: Record<string, RegExp> = {
+    en: /\p{Script=Latin}/u, de: /\p{Script=Latin}/u, es: /\p{Script=Latin}/u,
+    fr: /\p{Script=Latin}/u, it: /\p{Script=Latin}/u, pt: /\p{Script=Latin}/u,
+    ko: /\p{Script=Hangul}/u,
+    // Kanji are Han: a Japanese line is kana and Han together.
+    ja: /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u,
+    zh: /\p{Script=Han}/u,
+  }
+
+  /** No terminal punctuation on the final — see `unfinishedMs`. A closing
+   *  quote or bracket after the mark is still an ending; an ellipsis is a
+   *  trail-off and is not — written as "…" OR as three periods, which the
+   *  last-character test alone read as a full stop and closed in 0.8 s. */
+  private static endsUnfinished(text: string): boolean {
+    const t = text.trim().replace(/["'”’」』)\]]+$/u, "")
+    if (/(\.\.|…)$/u.test(t)) return true
+    return !/[.?!。？！]$/u.test(t)
   }
 
   constructor(private state: DurableObjectState, private env: Env) {}
@@ -293,7 +497,14 @@ export class CallSession implements DurableObject {
             ? await (raw as Blob).arrayBuffer()
             : null
         if (!pcm) return
-        this.transcriber.sendAudio(pcm)
+        // Forwarding a frame must never end the call: a rejection here lands
+        // in the listener's catch as `internal`, and that is exactly how a
+        // transcriber rotation dropped a 19-turn call on 2026-09-17.
+        try {
+          this.transcriber.sendAudio(pcm)
+        } catch (e) {
+          this.warn("transcriber", `frame dropped: ${String(e).slice(0, 120)}`)
+        }
         if (Date.now() - this.lastInterimAt < 2000) {
           this.speechSeconds += pcm.byteLength / 2 / 16000
         }
@@ -305,18 +516,30 @@ export class CallSession implements DurableObject {
     try { msg = JSON.parse(ev.data) } catch { return this.fail("bad_json", "unparseable control message") }
 
     if (msg.type === "end") {
+      this.endReason ??= "hangup"
       this.teardown()
+      return
+    }
+    if (msg.type === "say") {
+      const text = (msg.text ?? "").trim()
+      if (this.ended || text.length === 0) return
+      // It can arrive BEFORE the session has finished starting — that is the
+      // whole point of overlapping the two, and on 2026-09-13 the app wrote
+      // its greeting 0.7 s faster than this side could open the call, so the
+      // line was dropped by a guard and the call sat silent. Hold it and say
+      // it as soon as the session is up.
+      if (!this.started) {
+        this.pendingSay = { text, alreadySpoken: msg.alreadySpoken === true }
+        return
+      }
+      this.applySay({ text, alreadySpoken: msg.alreadySpoken === true })
       return
     }
     if (msg.type !== "start" || this.started) return
 
     // --- Session-start gate: the ONE place auth and ownership are paid. ---
+    const startAt = Date.now()
     if (this.env.DEV_ALLOW_ANON !== "1") {
-      const userId = msg.token ? await verifyUser(this.env, msg.token) : null
-      if (!userId) return this.fail("unauthorized", "invalid session token")
-      if (!(await ownsVoice(this.env, userId, msg.voiceId))) {
-        return this.fail("voice_forbidden", "voice_id not permitted")
-      }
       // The gateway meters the call itself — a client that never ticks
       // still pays (the classic path's talk-tick is client-driven, which
       // was the one bypass left on this path). Same billable rule as
@@ -337,19 +560,39 @@ export class CallSession implements DurableObject {
           && (this.activeContext !== null
             || Date.now() - this.lastSpokeAt < 2000
             || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
-        (code) => {
-          // Out of minutes: say WHICH wall (the client shows the paywall for
-          // a spent free pool, "see you tomorrow" for a subscriber's day)
-          // and put the call down. Mid-sentence audio is allowed to finish
-          // client-side; nothing new is generated.
-          this.emit({ type: "error", code, message: "talk allowance spent" })
-          this.teardown()
-        },
+        (code) => this.wall(code),
+        // Rides on each tick as `learner_seconds` so the ledger can say how
+        // much of a billed minute was the learner's own voice.
+        () => this.speechSeconds,
       )
-      // Preflight 1 s — an empty allowance must surface BEFORE the greeting
-      // speaks, not a free minute later (same rule as the classic path).
-      const wall = await this.billing.preflight()
+      // Preflight — an empty allowance must surface BEFORE the greeting
+      // speaks, not a free minute later (same rule as the classic path). It
+      // is the single longest hop in front of the first word (measured on
+      // prod 2026-09-13: 0.5–1.2 s, against 0.5 s for the token and 0–0.5 s
+      // for the voice), so it is fired FIRST and awaited last — it needs
+      // nothing but the token it carries, and `talk-tick` authenticates that
+      // itself, so an unverified token can only ever be refused there.
+      // Everything on this path is in front of the greeting, and every serial
+      // hop here is a second of silence after the tap.
+      const gateAt = Date.now()
+      const preflight = this.billing.preflight()
+        .then((r) => { console.log(`start: preflight ${Date.now() - gateAt}ms`); return r })
+      const userId = msg.token ? await verifyUser(this.env, msg.token) : null
+      console.log(`start: verify ${Date.now() - gateAt}ms`)
+      if (!userId) {
+        void preflight.catch(() => null)
+        return this.fail("unauthorized", "invalid session token")
+      }
+      const [owns, wall] = await Promise.all([
+        ownsVoice(this.env, userId, msg.voiceId)
+          .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
+        preflight,
+      ])
+      if (!owns) {
+        return this.fail("voice_forbidden", "voice_id not permitted")
+      }
       if (wall) {
+        this.endReason ??= wall
         this.emit({ type: "error", code: wall, message: "talk allowance spent" })
         return this.teardown()
       }
@@ -357,9 +600,14 @@ export class CallSession implements DurableObject {
     }
 
     this.history = msg.history ? [...msg.history] : []
+    this.language = msg.language || "en"
     this.replyEngine = new ReplyEngine({
       apiKey: this.env.GEMINI_API_KEY,
-      model: DEFAULT_REPLY_MODEL,
+      // An env var, so a bad model release can be rolled back without a
+      // deploy — and so the reply-failure path can be exercised on purpose
+      // (point it at a model that does not exist and every generation
+      // fails while the transcriber keeps working).
+      model: this.env.GEMINI_REPLY_MODEL ?? DEFAULT_REPLY_MODEL,
       system: msg.system,
     })
 
@@ -386,13 +634,26 @@ export class CallSession implements DurableObject {
           // playback by its own duration.
           const ms = pcm.byteLength / 2 / (this.eleven?.sampleRate ?? 22050) * 1000
           this.playoutEndAt = Math.max(this.playoutEndAt, Date.now()) + ms
+          const committedAt = this.commitAtByContext.get(contextId)
+          if (committedAt !== undefined) {
+            this.commitAtByContext.delete(contextId)
+            this.voiceFirstMs.push(Date.now() - committedAt)
+          }
           this.client.send(pcm)
         },
         onContextDone: (contextId) => {
           console.log(`tts: context ${contextId} final (active=${this.activeContext})`)
           this.endLine(contextId)
         },
-        onError: (message) => this.emit({ type: "error", code: "tts", message }),
+        // One line's voice failing is not the end of the call: the text is
+        // already on the learner's screen, the socket reopens lazily on the
+        // next line, and the line is ended here so the client's turn comes
+        // back to the learner instead of waiting on audio that never comes.
+        onError: (message) => {
+          this.warn("tts", message)
+          const context = this.activeContext
+          if (context !== null) this.endLine(context)
+        },
       },
     )
 
@@ -405,6 +666,12 @@ export class CallSession implements DurableObject {
           this.lastInterimAt = Date.now()
           this.armIdleHangUp()
           if (this.pendingUtterance !== null) {
+            // First interim after the final: the pause this learner actually
+            // took before going on. Once per hold.
+            if (this.pendingSince !== 0) {
+              this.mergeGapMs.push(Date.now() - this.pendingSince)
+              this.pendingSince = 0
+            }
             // The held line is not over: the next final merges into it, so
             // the hold waits for that final instead of its own clock. The
             // clock is re-armed, not cleared — an interim the transcriber
@@ -414,8 +681,10 @@ export class CallSession implements DurableObject {
             // saw as their sentence vanishing mid-thought ("I don't know
             // why it's overwriting what I said", 2026-09-04).
             this.armPending(CallSession.pendingHoldMs)
-            this.emit({ type: "user_partial", text: this.pendingUtterance + " " + text })
-          } else {
+            if (CallSession.inTargetScript(text, this.language)) {
+              this.emit({ type: "user_partial", text: this.pendingUtterance + " " + text })
+            }
+          } else if (CallSession.inTargetScript(text, this.language)) {
             this.emit({ type: "user_partial", text })
           }
           // The learner is audibly speaking. If the fluent self is mid-reply,
@@ -438,13 +707,54 @@ export class CallSession implements DurableObject {
           this.specTimer = setTimeout(() => this.fireSpec(specText),
                                       CallSession.specSettleMs) as unknown as number
         },
-        onUtterance: (text) => this.handleUtterance(text),
-        onRotating: () => this.emit({ type: "rotating" }),
+        onUtterance: (text) => {
+          // A hesitation the transcriber wrote in a foreign script is not a
+          // turn. Reported 2026-09-18 in Korean AND German: every utterance
+          // opening on 어/음 or äh/ähm came back as Devanagari ("अह", "उम")
+          // and was answered on its own, so the learner's sentence split into
+          // a filler bubble, a reply to nobody ("천천히 생각하고 말해봐") and
+          // the rest. A filler is exactly the moment a learner is composing —
+          // answering it is cutting them off. It moves the hold's clock like
+          // an interim does (they are still going) and adds nothing to it.
+          if (CallSession.isForeignScriptHesitation(text, this.language)) {
+            this.warn("script_mismatch", `hesitation dropped: ${text.slice(0, 40)}`)
+            if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+            return
+          }
+          // A FINAL in the wrong script is not hidden — it is what the turn
+          // will be answered from, and silence would be worse than a wrong
+          // answer the learner can see. It is recorded, because until now
+          // nothing said how often the pin fails outright.
+          if (!CallSession.inTargetScript(text, this.language)) {
+            this.emit({ type: "warning", code: "script_mismatch",
+                        message: `final not in target script: ${text.slice(0, 80)}` })
+          }
+          this.handleUtterance(text)
+        },
+        // Survived: the socket is being replaced and mic audio is buffered
+        // meanwhile. Recorded as a warning so the console can count how often
+        // a call rides through one (and whether the ~10 min ceiling is the
+        // usual reason), never shown to the learner.
+        onRotating: (why) => {
+          this.warn("transcriber", `rotating: ${why}`)
+          this.emit({ type: "rotating" })
+        },
+        // Fatal: the socket could not be REPLACED, so the call is deaf. The
+        // client offers a reconnect that carries the history, so the talk
+        // itself survives.
         onError: (message) => this.fail("transcriber", message),
       },
     )
 
-    await this.transcriber.connect()
+    // The transcriber's handshake is NOT awaited before the greeting. It is
+    // the last serial hop in front of the first word (measured from the app,
+    // 2026-09-13: `start` → `ready` was 2.7–3.6 s, and the opener follows it),
+    // and the greeting does not need it — nobody can answer a question that
+    // has not been asked yet, and the line takes seconds to play. So it
+    // handshakes while ElevenLabs is rendering the opener.
+    const transcriberAt = Date.now()
+    const transcriberReady = this.transcriber.connect()
+      .then(() => console.log(`start: transcriber ${Date.now() - transcriberAt}ms`))
     // The first reply's TTS must not pay the ElevenLabs TLS + WS handshake
     // mid-turn — open the socket now, while the learner is still greeting.
     this.eleven.warm()
@@ -452,13 +762,27 @@ export class CallSession implements DurableObject {
     this.sessionStartedAt = Date.now()
     this.armIdleHangUp()
     this.startWatchdog()
+    // `ready` still goes out BEFORE `audio_start`: the app reads it as
+    // "connecting → listening" and would otherwise overwrite the speaking
+    // state the opener just set, leaving the line with no hand-off.
     this.emit({ type: "ready" })
     // The fluent self speaks first, exactly as a phone call does. Sent
     // through the normal reply path so the client needs no special case,
     // and recorded in history so the model knows what it just said.
+    console.log(`start: ready at ${Date.now() - startAt}ms (opener=${msg.opener ? "gateway" : "client"})`)
     if (msg.opener && msg.opener.trim().length > 0) {
       this.speakOpener(msg.opener.trim())
     }
+    // A greeting that landed while this was still starting up.
+    if (this.pendingSay) {
+      const held = this.pendingSay
+      this.pendingSay = null
+      this.applySay(held)
+    }
+    // Mic audio arriving before this resolves is BUFFERED by the transcriber
+    // (`pendingAudio`, 50 chunks ≈ 5 s) and flushed when its setup lands, so
+    // nothing the learner says over the greeting is lost.
+    await transcriberReady
 
     this.statsTimer = setInterval(() => {
       this.emit({
@@ -467,6 +791,19 @@ export class CallSession implements DurableObject {
         turns: this.turnCount,
       })
     }, 15000) as unknown as number
+  }
+
+  /** The app's own first line (see `SayMessage`). `alreadySpoken` means the
+   *  app played its cached take: record it, say nothing. Otherwise speak it —
+   *  but never on top of a conversation already under way, since this is only
+   *  ever the FIRST line. */
+  private applySay(say: { text: string; alreadySpoken: boolean }): void {
+    if (say.alreadySpoken) {
+      this.history.push({ role: "model", text: say.text })
+      return
+    }
+    if (this.activeContext !== null || this.turnCount > 0) return
+    this.speakOpener(say.text)
   }
 
   /** Speak a line the app chose, with no model call at all. */
@@ -515,10 +852,9 @@ export class CallSession implements DurableObject {
     }).catch((e) => {
       if (abort.signal.aborted || this.ended) return
       if (spec.context) {
-        // Already adopted and partially voiced — same surface as a live
-        // reply failure.
-        this.activeContext = null
-        this.emit({ type: "error", code: "reply", message: String(e) })
+        // Already adopted and partially voiced — same recovery as a live
+        // reply failure: retry the generation once, then apologise aloud.
+        this.recoverReply(spec.context, String(e))
       } else if (this.spec === spec) {
         // Died while still speculative: forget it, the utterance path will
         // simply run a fresh generation.
@@ -562,27 +898,37 @@ export class CallSession implements DurableObject {
     // that short — "yeah", "wait" — arrives with the learner's own volume
     // behind it and passes the client's gate, so it never gets this far
     // silently; what lands here is the room.
-    const words = text.trim().split(/\s+/).filter(Boolean)
     const sinceSpoke = Date.now() - this.lastSpokeAt
-    if (words.length <= 1 && sinceSpoke < CallSession.echoSuspicionMs
+    if (CallSession.isScrap(text, this.language) && sinceSpoke < CallSession.echoSuspicionMs
         && this.pendingUtterance === null) {
       return
     }
 
     // A held fragment absorbs whatever follows it — the learner was
     // mid-thought, and this is the rest of the thought.
+    if (this.pendingUtterance !== null) this.merges += 1
+    // Joined as written: a space between two Japanese pieces is one the
+    // learner never said, and it reaches the bubble and the model both.
+    const joint = CallSession.writesSpaces(this.language) ? " " : ""
     const merged = this.pendingUtterance !== null
-      ? this.pendingUtterance + " " + text.trim()
+      ? this.pendingUtterance + joint + text.trim()
       : text.trim()
     this.clearPending()
     // Held, always. A hanging word says "still composing" and earns the
-    // long hold; anything else gets the continuation window, because a
-    // final alone never proved the learner stopped (see `continuationMs`).
-    const hanging = CallSession.endsHanging(merged)
+    // long hold; a final the transcriber didn't close with a mark gets the
+    // middle one (see `unfinishedMs`); anything else gets the continuation
+    // window, because a final alone never proved the learner stopped (see
+    // `continuationMs`).
+    const hanging = CallSession.endsHanging(merged, this.language)
+    const unfinished = !hanging && CallSession.endsUnfinished(merged)
     this.pendingUtterance = merged
+    this.pendingSince = Date.now()
     this.emit({ type: "user_partial", text: merged })
-    console.log(`holding (${hanging ? "ends hanging" : "continuation"}): "${merged.slice(-30)}"`)
-    this.armPending(hanging ? CallSession.pendingHoldMs : CallSession.continuationMs)
+    const kind = hanging ? "ends hanging" : unfinished ? "unpunctuated" : "continuation"
+    console.log(`holding (${kind}): "${merged.slice(-30)}"`)
+    this.armPending(hanging ? CallSession.pendingHoldMs
+                    : unfinished ? CallSession.unfinishedMs
+                    : CallSession.continuationMs)
   }
 
   /** (Re)start the clock on the held utterance. When it fires the pause was
@@ -600,12 +946,14 @@ export class CallSession implements DurableObject {
   private clearPending(): void {
     if (this.pendingTimer !== null) { clearTimeout(this.pendingTimer); this.pendingTimer = null }
     this.pendingUtterance = null
+    this.pendingSince = 0
   }
 
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string): void {
     console.log(`commit: "${text.slice(0, 80)}"`)
     this.learnerSpoke = true
+    this.lastCommitAt = Date.now()
     this.emit({ type: "user_turn", text })
     this.history.push({ role: "user", text })
     // A stale reply still going (e.g. utterance finalized right behind a
@@ -621,6 +969,10 @@ export class CallSession implements DurableObject {
       this.spec = null
       this.turnCount += 1
       const context = `t${this.turnCount}`
+      // Same clock as the non-speculative path — an adopted speculation is
+      // the COMMON case (it is the whole point of speculating), so leaving
+      // it out meant the latency sample was empty on almost every turn.
+      this.commitAtByContext.set(context, Date.now())
       this.activeContext = context
       this.activeReplyAbort = spec.abort
       this.emit({
@@ -639,6 +991,13 @@ export class CallSession implements DurableObject {
 
     this.turnCount += 1
     const context = `t${this.turnCount}`
+    this.commitAtByContext.set(context, Date.now())
+    this.generateReply(context)
+  }
+
+  /** Write and voice the reply for the history as it stands. Separate from
+   *  `commitTurn` so a failed generation can run again for the SAME turn. */
+  private generateReply(context: string): void {
     const abort = new AbortController()
     this.activeReplyAbort = abort
     this.activeContext = context
@@ -660,9 +1019,72 @@ export class CallSession implements DurableObject {
       this.finishReply(context, full)
     }).catch((e) => {
       if (abort.signal.aborted || this.ended) return
-      this.activeContext = null
-      this.emit({ type: "error", code: "reply", message: String(e) })
+      this.recoverReply(context, String(e))
     })
+  }
+
+  /** A reply generation failed for a committed turn. Until 2026-09-12 this
+   *  was `error` → the client tore the call down, silently: the learner had
+   *  just said something and the fluent self went quiet for good. That was
+   *  the single most common way a launch-week call ended. Now: one fresh
+   *  generation for the same turn; if that fails too, the fluent self SAYS
+   *  so, in the learner's language, and the call goes on. */
+  private recoverReply(context: string, message: string): void {
+    if (this.ended) return
+    if (!this.replyRetried.has(context)) {
+      this.replyRetried.add(context)
+      this.warn("reply", `retrying: ${message}`)
+      // Whatever was voiced of the failed attempt is gone from the learner's
+      // point of view; close its context so the retry starts a clean line.
+      this.voiceBuffer.delete(context)
+      this.eleven?.closeContext(context)
+      this.generateReply(context)
+      return
+    }
+    this.warn("reply", `gave up: ${message}`)
+    this.voiceBuffer.delete(context)
+    this.eleven?.closeContext(context)
+    const line = CallSession.apologyLine(this.language)
+    // The apology becomes the model's turn so the next reply knows it
+    // asked the learner to repeat — otherwise it answers a question it
+    // never heard the answer to.
+    this.history.push({ role: "model", text: line })
+    const retryContext = `${context}r`
+    this.activeContext = retryContext
+    this.commitAtByContext.set(retryContext, Date.now())
+    this.emit({
+      type: "audio_start",
+      context: retryContext,
+      sampleRate: this.eleven?.sampleRate ?? 22050,
+    })
+    this.routeDelta(retryContext, line)
+    this.finishVoice(retryContext)
+    this.emit({ type: "reply", context: retryContext, text: line })
+  }
+
+  /** What the fluent self says when it could not answer. Informal — it is
+   *  the learner's own future self, and the app's rule is that it never
+   *  speaks to them formally (CLAUDE.md, hero-greeting-banmal). */
+  private static apologyLine(language: string): string {
+    const lines: Record<string, string> = {
+      en: "Sorry, I lost you for a second. Could you say that again?",
+      de: "Sorry, ich hab dich kurz verloren. Sagst du das noch mal?",
+      ko: "미안, 잠깐 놓쳤어. 다시 한 번 말해 줄래?",
+      ja: "ごめん、ちょっと聞き逃した。もう一回言ってくれる？",
+      es: "Perdona, te perdí un segundo. ¿Me lo repites?",
+      fr: "Pardon, je t'ai perdu une seconde. Tu peux répéter ?",
+      zh: "抱歉，我刚才没跟上。你能再说一遍吗？",
+    }
+    return lines[language.toLowerCase().split("-")[0]] ?? lines.en
+  }
+
+  /** A problem the call survives. Counted and forwarded; the client writes
+   *  it to telemetry so the console can see what a "fine" call went
+   *  through. */
+  private warn(code: string, message: string): void {
+    this.warnings += 1
+    console.log(`warning ${code}: ${message.slice(0, 200)}`)
+    this.emit({ type: "warning", code, message: message.slice(0, 300) })
   }
 
   private routeDelta(context: string, delta: string): void {
@@ -683,7 +1105,19 @@ export class CallSession implements DurableObject {
     const chunk = text.replace(/\s+$/, "") + " "
     if (chunk.trim().length === 0) return
     this.eleven?.sendText(context, chunk)
-      .catch((e) => this.emit({ type: "error", code: "tts", message: String(e) }))
+      .catch((e) => {
+        // The voice could not be reached for this line — the socket
+        // upgrade was refused (a 429 on the plan's concurrency, a 5xx), or
+        // it dropped mid-line. This used to be `error`, and the client
+        // tore the call down on it: the greeting's text appeared, no voice
+        // came, and the call was over before the learner said a word —
+        // the shape of 25 of the 42 launch-week sessions. Now the line is
+        // ended without audio (its text is on screen), the connection
+        // handle is dropped so the NEXT line reconnects, and the call goes
+        // on. `warn` records it so the console can count how often.
+        this.warn("tts", String(e))
+        if (this.activeContext === context) this.endLine(context)
+      })
   }
 
   /** The reply is fully written: voice whatever sentence tail is still
@@ -697,13 +1131,53 @@ export class CallSession implements DurableObject {
     this.armLineEndFallback(context)
   }
 
+  /** Out of minutes. Says WHICH wall (the client wraps a spent free pool
+   *  up into its book and then the paywall, and shows "see you tomorrow"
+   *  for a subscriber's day) and puts the call down — but a line still
+   *  playing is allowed to FINISH first. The old comment here claimed the
+   *  client let mid-sentence audio finish; it doesn't — `error` is its
+   *  teardown, and teardown stops the player — so a wall landing mid-line
+   *  cut the fluent self off mid-word, and that was the last thing a free
+   *  caller heard before being asked to pay. Held until the line's
+   *  `audio_end` (or a barge-in, or the cap), and nothing new is generated
+   *  meanwhile: `activeContext` stays set for the whole hold, which is what
+   *  gates a reply, and billing already stopped at the 402. */
+  private wall(code: WallCode): void {
+    if (this.ended || this.pendingWall !== null) return
+    if (this.activeContext === null) return this.settleWall(code)
+    console.log(`wall ${code}: holding for line ${this.activeContext}`)
+    this.pendingWall = code
+    this.wallTimer = setTimeout(() => this.settleWall(code),
+                                CallSession.wallHoldMs) as unknown as number
+  }
+  /** Longer than any line the turn ceiling allows (three sentences), short
+   *  enough that a line whose end never reports still ends the call. */
+  private static readonly wallHoldMs = 20_000
+
+  private settleWall(code: WallCode): void {
+    if (this.wallTimer !== null) { clearTimeout(this.wallTimer); this.wallTimer = null }
+    this.pendingWall = null
+    if (this.ended) return
+    this.endReason ??= code
+    this.emit({ type: "error", code, message: "talk allowance spent" })
+    this.teardown()
+  }
+
   /** The line is over: tell the client, and free the turn. Idempotent —
    *  the TTS final and the play-out fallback below can both land. */
   private endLine(context: string): void {
     if (context !== this.activeContext) return
     if (this.lineEndTimer !== null) { clearInterval(this.lineEndTimer); this.lineEndTimer = null }
+    // Give the context's SLOT back. One socket holds five at a time, and a
+    // line ended locally (the play-out fallback, which is the usual case —
+    // ElevenLabs' `isFinal` frequently never comes) used to leave its context
+    // open forever: the sixth line of a call was refused, the socket errored,
+    // and the rest of the call had no voice at all (prod, 2026-09-13).
+    // No-op for a context that went final on its own.
+    this.eleven?.closeContext(context)
     this.emit({ type: "audio_end", context })
     this.activeContext = null
+    if (this.pendingWall !== null) this.settleWall(this.pendingWall)
   }
 
   /** `audio_end` used to ride on ElevenLabs' `isFinal` alone, and on
@@ -765,7 +1239,22 @@ export class CallSession implements DurableObject {
   private interrupt(): void {
     const context = this.activeContext
     if (!context) return
+    const sinceCommit = Date.now() - this.lastCommitAt
+    if (sinceCommit < CallSession.cutoffWindowMs) {
+      this.cutoffs += 1
+      console.log(`cutoff: barge-in ${sinceCommit}ms after commit`)
+      // Rides the `warning` channel because that is the one message a
+      // shipped client already forwards verbatim to client_events (build 48
+      // logs code + message and nothing else); the count on `ended` needs
+      // the next app build to be read at all. Not `warn()`: the call
+      // survived nothing here — it talked over someone.
+      this.emit({ type: "warning", code: "cutoff",
+                  message: `barge-in ${sinceCommit}ms after commit` })
+    }
     this.activeContext = null
+    // Talked over the last line the allowance covered: nothing can answer
+    // what they are saying, so the held wall lands now.
+    if (this.pendingWall !== null) this.settleWall(this.pendingWall)
     // The client stops playback NOW — the projected play-out is void, and
     // leaving it running would hold the echo window open over the learner's
     // own next words.
@@ -785,6 +1274,7 @@ export class CallSession implements DurableObject {
   private armIdleHangUp(): void {
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
     this.idleTimer = setTimeout(() => {
+      this.endReason ??= "idle"
       this.emit({ type: "error", code: "idle", message: "Call ended — no one was talking." })
       this.teardown()
     }, CallSession.idleHangUpMs) as unknown as number
@@ -803,11 +1293,13 @@ export class CallSession implements DurableObject {
       if (this.ended) return
       if (!this.clientPresent(CallSession.clientGoneMs)) {
         console.log("watchdog: no client frames — hanging up")
+        this.endReason ??= "client_gone"
         this.teardown()
         return
       }
       if (Date.now() - this.sessionStartedAt > CallSession.maxSessionMs) {
         console.log("watchdog: session ceiling reached — hanging up")
+        this.endReason ??= "session_ceiling"
         this.emit({ type: "error", code: "idle", message: "Call ended." })
         this.teardown()
         return
@@ -831,16 +1323,34 @@ export class CallSession implements DurableObject {
   }
 
   private fail(code: string, message: string): void {
+    console.log(`fail ${code}: ${message.slice(0, 200)}`)
+    this.endReason ??= code
     this.emit({ type: "error", code, message })
     this.teardown()
   }
 
   private teardown(): void {
     if (this.ended) return
+    // The session's last word goes out BEFORE `ended` flips, on the socket
+    // as it still is. A close initiated by the phone reaches here with no
+    // reason set — that is its reason.
+    this.emit({
+      type: "ended",
+      reason: this.endReason ?? "socket_closed",
+      turns: this.turnCount,
+      speechSeconds: Math.round(this.speechSeconds),
+      durationMs: Date.now() - this.sessionStartedAt,
+      voiceFirstMs: this.voiceFirstMs.slice(0, 200),
+      warnings: this.warnings,
+      cutoffs: this.cutoffs,
+      merges: this.merges,
+      mergeGapMs: this.mergeGapMs.slice(0, 200),
+    })
     this.ended = true
     this.billing?.stop()   // final flush — the last partial batch still bills
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
+    if (this.wallTimer !== null) clearTimeout(this.wallTimer)
     if (this.watchTimer !== null) clearInterval(this.watchTimer)
     this.clearPending()
     this.dropSpec()

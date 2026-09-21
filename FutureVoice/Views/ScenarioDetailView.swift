@@ -74,7 +74,7 @@ struct ScenarioDetailView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
         .bookExport(exporter)
-        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .sheet(isPresented: $showingPaywall) { PaywallView(source: "scenario_book") }
         .fullScreenCover(isPresented: $talkPresented, onDismiss: refreshMastery) {
             if let s = scenario {
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
@@ -618,7 +618,9 @@ struct ScenarioDetailView: View {
     }
 
     private func bestShadowScore(for lineId: UUID) -> Int? {
-        let scores = appState.shadowAttempts.filter { $0.turnId == lineId }.map(\.matchScore)
+        let scores = appState.shadowAttempts
+            .filter { $0.turnId == lineId && !$0.isPartial }
+            .map(\.overallScore)
         return scores.max()
     }
 

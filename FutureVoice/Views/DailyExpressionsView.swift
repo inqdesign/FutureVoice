@@ -104,7 +104,7 @@ struct DailyExpressionsView: View {
         // Bookmarked phrases, honoring the deck's schedule — same rule as the
         // words session: snoozed-and-not-due stays out, overdue comes first.
         let studying = store.studyingExpressions
-            .filter { !store.isKnownExpression($0) && schedule.isDue(.expression, $0, now: now) }
+            .filter { !store.hasUsedExpression($0) && schedule.isDue(.expression, $0, now: now) }
         let scheduled = studying
             .compactMap { p in schedule.nextReview(.expression, p).map { (p, $0) } }
             .sorted { $0.1 < $1.1 }
@@ -123,7 +123,7 @@ struct DailyExpressionsView: View {
             // hasn't refreshed its mastery yet can still list them unmastered.
             for sc in appState.scenarios where !sc.isArchived {
                 for item in sc.curriculum?.expressions ?? []
-                where item.masteredAt == nil && !store.isKnownExpression(item.text) {
+                where item.masteredAt == nil && !store.hasUsedExpression(item.text) {
                     add(item.text)
                 }
             }
@@ -131,7 +131,7 @@ struct DailyExpressionsView: View {
 
         if out.count < goal {
             for item in ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
-            where !store.isKnownExpression(item.text) {
+            where !store.hasUsedExpression(item.text) {
                 // Heard-in-a-call first, then the ones they said — `all` is
                 // already newest-first within each group.
                 if case .heard = item.origin { add(item.text) }
@@ -139,7 +139,7 @@ struct DailyExpressionsView: View {
         }
 
         if out.count < goal {
-            for e in store.expressionEntries() where !store.isKnownExpression(e.text) {
+            for e in store.expressionEntries() where !store.hasUsedExpression(e.text) {
                 add(e.text)
             }
         }

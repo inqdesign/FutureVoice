@@ -1186,17 +1186,6 @@ struct VoiceCloneOnboardingView: View {
 
     // MARK: - Script language
 
-    /// Below B2, reading English aloud for 90 seconds is work — the take
-    /// comes out halting and the clone inherits it. At B2 and up the English
-    /// take wins instead, so it stays the default there. Self-rating is
-    /// noisy, which is exactly why the switch sits next to the text.
-    private static func prefersNativeScript(_ level: CEFRLevel) -> Bool {
-        switch level {
-        case .a1, .a2, .b1: return true
-        case .b2, .c1, .c2: return false
-        }
-    }
-
     private func prepareNativeScript() async {
         let code = appState.nativeLanguage
         guard code != appState.targetLanguage, nativeScript == nil else { return }
@@ -1206,10 +1195,22 @@ struct VoiceCloneOnboardingView: View {
         if script == nil { script = await CloneScriptStore.shared.ensure(for: code) }
         guard let script else { return }
         nativeScript = script
+        // The NATIVE script is always the pre-selection — the picker above the
+        // text is how anyone changes it.
+        //
+        // It used to default by self-rated level: native below B2, target at
+        // B2 and up, on the theory that a confident reader gets a better clone
+        // from their own target-language phonemes. The theory is still true
+        // and the default was still wrong. A self-rating made sixty seconds
+        // earlier is the noisiest input in the app, and it was deciding the
+        // ONE take the whole product is built on: a halting read is a halting
+        // clone, and that damage is permanent in a way a too-safe default
+        // never is. The native script is the choice that cannot go badly, so
+        // it is the one that should be sitting there.
+        //
         // Only pre-select while the choice is still ahead of them — never
         // swap the text out from under someone mid-read.
-        if status.rawValue < Status.script.rawValue,
-           Self.prefersNativeScript(appState.proficiency) {
+        if status.rawValue < Status.script.rawValue {
             readInNative = true
         }
     }
@@ -1537,12 +1538,12 @@ struct VoiceCloneOnboardingView: View {
     /// data — no mic, no network.
     private func debugSeed() {
         #if DEBUG
-        // `-cloneScript native` forces the native-language script on stage —
-        // the level default only applies before the script step, which a
-        // stage jump lands past.
-        if UserDefaults.standard.string(forKey: "cloneScript") == "native" {
-            readInNative = true
-        }
+        // A stage jump lands PAST the moment the real flow pre-selects the
+        // native script, so a capture of the script step would show the
+        // target one and misrepresent what a learner actually sees. Apply the
+        // same default here; `-cloneScript target` opts out for the shot that
+        // needs the other side.
+        readInNative = UserDefaults.standard.string(forKey: "cloneScript") != "target"
         guard let stage = UserDefaults.standard.string(forKey: "cloneStage") else { return }
         switch stage {
         case "spot":      status = .spot

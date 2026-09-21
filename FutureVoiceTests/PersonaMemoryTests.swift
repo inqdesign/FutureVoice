@@ -94,11 +94,128 @@ final class PersonaMemoryTests: XCTestCase {
     func testSummaryPayloadReadsAboutUser() throws {
         let p = try JSONDecoder().decode(
             ClaudeSummaryPayload.self,
-            from: Data(#"{"overall_note":"x","about_user":["누나가 서울에 산다",""]}"#.utf8))
-        XCTAssertEqual(p.about_user, ["누나가 서울에 산다", ""])
+            from: Data(#"""
+            {"overall_note":"x","about_user":[
+               {"text":"누나가 서울에 산다","private":true},
+               {"text":"주말마다 등산을 한다","private":false},
+               {"text":""}]}
+            """#.utf8))
+        XCTAssertEqual(p.about_user.map(\.text), ["누나가 서울에 산다", "주말마다 등산을 한다", ""])
+        XCTAssertEqual(p.about_user.map(\.isPrivate), [true, false, true])
     }
 
-    /// What the summary call is told not to hand back as a discovery.
+    /// A model that ignores the `{text, private}` schema still returns bare
+    /// strings — the shape this field had until 2026-09-15. They must decode,
+    /// and they must land PRIVATE: a line nobody judged is hidden, never shown.
+    func testSummaryPayloadReadsLegacyStringAboutUser() throws {
+        let p = try JSONDecoder().decode(
+            ClaudeSummaryPayload.self,
+            from: Data(#"{"overall_note":"x","about_user":["누나가 서울에 산다"]}"#.utf8))
+        XCTAssertEqual(p.about_user.map(\.text), ["누나가 서울에 산다"])
+        XCTAssertEqual(p.about_user.map(\.isPrivate), [true])
+    }
+
+    /// Same rule one layer down: an object that omits the key is private.
+    func testAboutUserWithoutPrivateKeyIsPrivate() throws {
+        let p = try JSONDecoder().decode(
+            ClaudeSummaryPayload.self,
+            from: Data(#"{"overall_note":"x","about_user":[{"text":"아들이 둘이다"}]}"#.utf8))
+        XCTAssertEqual(p.about_user.map(\.isPrivate), [true])
+    }
+
+    /// Every note already on a learner's phone predates the lock and has no
+    /// key for it. Decoding must keep the note AND hide it — the field lands
+    /// in `UserPersona`'s lenient decoder, where a throw empties the whole
+    /// notebook.
+    func testPersonaNoteWithoutPrivacyKeyDecodesAsPrivate() throws {
+        let dec = JSONDecoder()
+        dec.dateDecodingStrategy = .iso8601
+        let notes = try dec.decode([PersonaNote].self, from: Data(#"""
+        [{"id":"6B6D6B4C-1111-4444-8888-000000000001","text":"뮌헨에 15년째 산다",
+          "learnedAt":"2026-08-20T10:00:00Z"}]
+        """#.utf8))
+        XCTAssertEqual(notes.map(\.text), ["뮌헨에 15년째 산다"])
+        XCTAssertTrue(notes[0].isPrivate)
+    }
+
+    /// The ONLY set any stranger-facing surface may read: the text of an
+    /// "all" line, the GIST of a "gist" line, nothing of a "nothing" one —
+    /// and nothing of a "gist" line whose gist is missing.
+    func testStrangerLinesFollowTheRung() {
+        var p = UserPersona.empty
+        p.absorb(notes: [
+            PersonaNote(text: "주말마다 이자르 강변에서 달린다", learnedAt: Date(), share: .all),
+            PersonaNote(text: "유치원생 딸이 하나 있다", learnedAt: Date(), share: .gist,
+                        gist: "어린 아이를 키우는 부모"),
+            PersonaNote(text: "아이가 적응을 힘들어해 걱정이 많다", learnedAt: Date(), share: .nothing,
+                        gist: "아이가 있다"),
+            PersonaNote(text: "회사 자금이 빠듯하다", learnedAt: Date(), share: .gist, gist: nil),
+        ])
+        XCTAssertEqual(p.strangerLines, ["주말마다 이자르 강변에서 달린다", "어린 아이를 키우는 부모"])
+    }
+
+    /// The two-way lock every note on a phone carried until 2026-09-16 maps
+    /// onto the rungs: locked → nothing, unlocked → everything. And a build
+    /// from before the rungs must never read a gist line as unlocked, so
+    /// `isPrivate` is not written back.
+    func testLegacyLockMapsOntoShare() throws {
+        let dec = JSONDecoder()
+        dec.dateDecodingStrategy = .iso8601
+        let notes = try dec.decode([PersonaNote].self, from: Data(#"""
+        [{"text":"a","learnedAt":"2026-08-20T10:00:00Z","isPrivate":true},
+         {"text":"b","learnedAt":"2026-08-20T10:00:00Z","isPrivate":false},
+         {"text":"c","learnedAt":"2026-08-20T10:00:00Z","share":"gist","gist":"g","isPrivate":false}]
+        """#.utf8))
+        XCTAssertEqual(notes.map(\.share), [.nothing, .all, .gist])
+        let enc = JSONEncoder()
+        let out = String(data: try enc.encode(notes[2]), encoding: .utf8)!
+        XCTAssertFalse(out.contains("isPrivate"))
+        XCTAssertTrue(out.contains("\"share\":\"gist\""))
+    }
+
+    /// The summary payload's new shape, and its fallbacks: `share` wins,
+    /// then the old `private` boolean, then nothing.
+    func testSummaryPayloadReadsShareAndGist() throws {
+        let p = try JSONDecoder().decode(
+            ClaudeSummaryPayload.self,
+            from: Data(#"""
+            {"overall_note":"x","about_user":[
+               {"text":"유치원생 딸이 하나 있다","heard":"I dropped my daughter off at Kita","share":"gist","gist":"어린 아이를 키우는 부모","why":"가족"},
+               {"text":"주말마다 달린다","private":false},
+               {"text":"자금이 빠듯하다"}]}
+            """#.utf8))
+        XCTAssertEqual(p.about_user.map(\.share), [.gist, .all, .nothing])
+        XCTAssertEqual(p.about_user[0].gist, "어린 아이를 키우는 부모")
+        XCTAssertEqual(p.about_user[0].heard, "I dropped my daughter off at Kita")
+        XCTAssertEqual(p.about_user[0].why, "가족")
+    }
+
+    /// Only a CHANGED rung is a correction, and the list is capped.
+    func testShareCorrectionsRecordOnlyHandMoves() {
+        var before = UserPersona.empty
+        before.absorb(notes: [
+            PersonaNote(text: "a", learnedAt: Date(), share: .nothing),
+            PersonaNote(text: "b", learnedAt: Date(), share: .all),
+        ])
+        var after = before
+        after.learnedNotes[0].share = .gist
+        after.recordShareCorrections(from: before.learnedNotes)
+        XCTAssertEqual(after.shareCorrections.count, 1)
+        XCTAssertEqual(after.shareCorrections[0].text, "a")
+        XCTAssertEqual(after.shareCorrections[0].from, .nothing)
+        XCTAssertEqual(after.shareCorrections[0].to, .gist)
+        for _ in 0..<12 {
+            var again = after
+            again.learnedNotes[1].share = again.learnedNotes[1].share == .all ? .nothing : .all
+            again.recordShareCorrections(from: after.learnedNotes)
+            after = again
+        }
+        XCTAssertEqual(after.shareCorrections.count, UserPersona.maxShareCorrections)
+    }
+
+    /// What the summary call is told not to hand back as a discovery. The
+    /// remembered lines are NOT in here: they go to the same call separately,
+    /// numbered, because those are the ones it may also update.
     func testKnownFactsCoverTypedProfileAndNotes() {
         var p = UserPersona.empty
         p.city = "Munich"
@@ -107,6 +224,39 @@ final class PersonaMemoryTests: XCTestCase {
         p.absorb(notes: [PersonaNote(text: "화요일마다 클라이밍을 간다", learnedAt: Date())])
         XCTAssertTrue(p.knownFacts.contains("Lives in Munich, Germany"))
         XCTAssertTrue(p.knownFacts.contains("Solo founder"))
-        XCTAssertTrue(p.knownFacts.contains("화요일마다 클라이밍을 간다"))
+        XCTAssertFalse(p.knownFacts.contains("화요일마다 클라이밍을 간다"))
+    }
+
+    /// The whole privacy guarantee in one assertion: what a stranger's phone
+    /// speaks as "you" is work, town, situations and the UNLOCKED remembered
+    /// lines — and nothing the learner wrote for their own fluent self.
+    /// Until 2026-09-15 this paragraph carried `household` and `freeNotes`,
+    /// and it was published on first launch without the author ever seeing it.
+    func testComposedIntroLeavesPrivateFieldsAndLockedNotesBehind() {
+        var p = UserPersona.empty
+        p.displayName = "Eunggyu"
+        p.city = "Munich"
+        p.country = "Germany"
+        p.lengthOfStay = "15 years"
+        p.occupation = "Solo founder"
+        p.household = "Wife and two boys, 5 and 7"
+        p.freeNotes = "Thinking about moving back next year."
+        p.situations = ["Kita / school"]
+        p.absorb(notes: [
+            PersonaNote(text: "주말마다 이자르 강변에서 달린다", learnedAt: Date(), share: .all),
+            PersonaNote(text: "유치원생 딸이 하나 있다", learnedAt: Date(), share: .gist,
+                        gist: "어린 아이를 키우는 부모"),
+            PersonaNote(text: "자금 압박이 있다", learnedAt: Date(), share: .nothing),
+        ])
+        let intro = PublicPersonaService.composedIntro(p)
+        XCTAssertTrue(intro.contains("Solo founder"))
+        XCTAssertTrue(intro.contains("Munich"))
+        XCTAssertTrue(intro.contains("Kita / school"))
+        XCTAssertTrue(intro.contains("주말마다 이자르 강변에서 달린다"))
+        XCTAssertTrue(intro.contains("어린 아이를 키우는 부모"))
+        XCTAssertFalse(intro.contains("유치원생"))
+        XCTAssertFalse(intro.contains("Wife"))
+        XCTAssertFalse(intro.contains("moving back"))
+        XCTAssertFalse(intro.contains("자금 압박"))
     }
 }

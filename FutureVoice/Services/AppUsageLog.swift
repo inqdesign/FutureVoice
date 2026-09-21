@@ -42,6 +42,7 @@ enum AppUsageLog {
             map = map.filter { $0.key >= cutoff }
         }
         UserDefaults.standard.set(map, forKey: key)
+        SyncEngine.noteChanged(.usageDay)
     }
 
     private static func load() -> [String: Int] {

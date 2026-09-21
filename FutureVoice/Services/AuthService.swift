@@ -359,10 +359,26 @@ final class AuthService: NSObject, ObservableObject {
     /// from auth.users. On success the server-side user no longer exists, so
     /// we only clear the LOCAL session; a server sign-out would just 401.
     /// Throws on failure so the UI can show the error and keep the account.
+    ///
+    /// The token is attached BY HAND (`authorizedHeaders`). A bare `invoke`
+    /// can go out on the anon key when the session won't resolve, and the
+    /// function answers that with the same 401 it gives a real refusal — so
+    /// the one button a learner can't work around reported "Edge Function
+    /// returned a non-2xx status code: 401" and left them stuck. A 401 that
+    /// survives an explicitly-attached token is a session that is genuinely
+    /// dead, and says so in words the learner can act on.
     func deleteAccount() async throws {
         isWorking = true
         defer { isWorking = false }
-        try await SupabaseProvider.shared.functions.invoke("account-delete")
+        let headers = try await SupabaseProvider.authorizedHeaders()
+        do {
+            try await SupabaseProvider.shared.functions.invoke(
+                "account-delete",
+                options: FunctionInvokeOptions(headers: headers)
+            )
+        } catch FunctionsError.httpError(401, _) {
+            throw NotSignedInError()
+        }
         try? await SupabaseProvider.shared.auth.signOut(scope: .local)
         session = nil
         Analytics.reset()   // drop identity on account deletion

@@ -110,7 +110,32 @@ func chrome(_ key: String.LocalizationValue) -> String {
     String(localized: key, bundle: .chrome)
 }
 
+/// Marks a string as MATERIAL — a line the FLUENT SELF says on screen, not a
+/// label the app writes. Resolves in the TARGET language, whatever the app
+/// language is.
+///
+/// The hero greeting above the Talk ring is the one such line drawn as UI.
+/// It rode along with `chrome()` when chrome moved to the app language
+/// (2026-08-17), which turned the fluent self's own greeting into the app's
+/// voice: a learner practising Korean with the app in English read
+/// "What's on your mind?" above a ring whose call opens in Korean, and the
+/// line stopped following the language switcher at all. It is the same kind
+/// of text as the free-talk opener and the daily call's script — see "Two
+/// languages" in CLAUDE.md — so it resolves the way they do (2026-09-15).
+func material(_ key: String.LocalizationValue) -> String {
+    String(localized: key, bundle: .material)
+}
+
 extension Bundle {
+
+    /// The bundle whose `.lproj` holds the TARGET language. A target with no
+    /// UI column (Italian, Portuguese) falls back to English, never to
+    /// `.main`: `.main` resolves in the phone's language, which is a third
+    /// language the line has no business being in.
+    static var material: Bundle {
+        let code = LanguageCatalog.normalizedNative(LanguageScope.active)
+        return lproj(code) ?? lproj("en") ?? .main
+    }
 
     /// The bundle whose `.lproj` holds explanatory copy for this learner.
     ///

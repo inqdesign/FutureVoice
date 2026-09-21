@@ -51,8 +51,14 @@ struct ScorecardMetrics: Codable {
             acc + selfCorrectionMatches(in: turn.transcript)
         }
 
+        // Graded per HEADWORD. A spaced language's surface tokens grade
+        // directly; Japanese segments carry their inflection separately, so
+        // the headwords are read off the turns whole (行き + ました → 行く).
+        let gradable = WordSplitter.spaced
+            ? uniqueWords
+            : VocabStore.lemmas(in: userTurns.map(\.transcript))
         var levelCounts: [String: Int] = [:]
-        for word in uniqueWords {
+        for word in gradable {
             if let lv = CoreVocabulary.level(ofSurface: word) {
                 levelCounts[lv.rawValue, default: 0] += 1
             }
@@ -111,8 +117,12 @@ struct ScorecardMetrics: Codable {
 
     // MARK: - Helpers
 
+    /// Japanese is segmented (particles count as words, which is what
+    /// "words per minute" can mean without spaces); everything else splits
+    /// on non-letters.
     private static func tokens(in text: String) -> [String] {
-        text
+        guard WordSplitter.spaced else { return JapaneseMorph.segments(in: text) }
+        return text
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
     }

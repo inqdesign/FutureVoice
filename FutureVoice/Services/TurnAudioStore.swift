@@ -42,6 +42,7 @@ final class TurnAudioStore {
             if !timings.isEmpty {
                 saveTimings(timings, for: turnId)
             }
+            SyncEngine.noteChanged(.blobTurn)
             return url
         } catch {
             return nil
@@ -85,6 +86,7 @@ final class TurnAudioStore {
         let url = timingsURL(for: turnId)
         guard let data = try? JSONEncoder().encode(timings) else { return }
         try? data.write(to: url, options: [.atomic])
+        SyncEngine.noteChanged(.blobTurn)
     }
 
     private func timingsURL(for turnId: UUID) -> URL {

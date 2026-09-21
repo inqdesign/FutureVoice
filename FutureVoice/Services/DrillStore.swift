@@ -44,14 +44,59 @@ final class DrillStore: LanguageScopedStore {
         // cards ingested before the one-sentence prompt rule carry whole-turn
         // rewrites. Read-time so the backlog is fixed everywhere at once
         // (card UI, TTS, shadow, widget) without a disk migration.
-        return cards
-            .filter { !Self.looksLikeMetaRule($0.targetPhrase) }
-            .map { card in
-                var c = card
-                c.targetPhrase = Self.coreSentence(of: c.targetPhrase,
-                                                   pairedWith: c.sourcePhrase)
-                return c
+        // And collapse copies of the SAME sentence. `ingest` has always
+        // deduped on the normalized target, but `save` replaces by `id`
+        // only — so every mint path outside ingest could put the same line
+        // on file again. Read-time like the rest, so the duplicates already
+        // sitting in a learner's store disappear from the deck, the
+        // Sentences list and the widget at once; the next write persists it.
+        return Self.deduplicated(
+            cards
+                .filter { !Self.looksLikeMetaRule($0.targetPhrase) }
+                .map { card in
+                    var c = card
+                    c.targetPhrase = Self.coreSentence(of: c.targetPhrase,
+                                                       pairedWith: c.sourcePhrase)
+                    // Cards that reached the top rung while it still meant
+                    // "back in 30 days" still carry that date. Known is an
+                    // END now, so retire them where they sit — read-time
+                    // like the store's other repairs, and the next write
+                    // persists it.
+                    if c.box >= Self.maxBox { c.nextReviewAt = Self.retiredReviewDate }
+                    return c
+                }
+        )
+    }
+
+    /// One card per sentence, keeping the copy the learner has actually
+    /// worked on. Order is preserved so every caller's own sort still
+    /// decides what it sees.
+    static func deduplicated(_ cards: [DrillCard]) -> [DrillCard] {
+        var keepers: [String: DrillCard] = [:]
+        var order: [String] = []
+        for card in cards {
+            let key = matchKey(card.targetPhrase)
+            guard let rival = keepers[key] else {
+                keepers[key] = card
+                order.append(key)
+                continue
             }
+            keepers[key] = keeper(rival, card)
+        }
+        return order.compactMap { keepers[$0] }
+    }
+
+    /// Progress wins: a card carrying Leitner history must never be dropped
+    /// in favour of a fresh copy of the same line. Between two untouched
+    /// copies the older one survives, so `createdAt` keeps pointing at the
+    /// talk that first taught the sentence.
+    static func keeper(_ a: DrillCard, _ b: DrillCard) -> DrillCard {
+        if a.box != b.box { return a.box > b.box ? a : b }
+        if (a.lastReviewedAt != nil) != (b.lastReviewedAt != nil) {
+            return a.lastReviewedAt != nil ? a : b
+        }
+        if a.timesSeen != b.timesSeen { return a.timesSeen > b.timesSeen ? a : b }
+        return a.createdAt <= b.createdAt ? a : b
     }
 
     func save(_ card: DrillCard) {
@@ -60,6 +105,40 @@ final class DrillStore: LanguageScopedStore {
         all.append(card)
         write(all)
     }
+
+    /// Mint a card unless the store already drills that sentence — returns
+    /// whatever is on file afterwards, so a caller that wants to open the
+    /// card gets one either way, and nil when the phrase can't be a card at
+    /// all. **Every mint path outside `ingest` goes through here.** `save`
+    /// replaces by `id`, so a fresh `DrillCard` always carried a fresh UUID
+    /// and always appended: tapping "Save phrase" on the same scene line in
+    /// two sittings, or re-running a debug seed, quietly stacked copies of
+    /// one sentence into the deck.
+    @discardableResult
+    func saveIfNew(_ card: DrillCard) -> DrillCard? {
+        let key = Self.matchKey(card.targetPhrase)
+        guard !key.isEmpty, Self.isDrillable(card.targetPhrase) else { return nil }
+        var all = load()
+        if let existing = all.first(where: { Self.matchKey($0.targetPhrase) == key }) {
+            return existing
+        }
+        all.append(card)
+        write(all)
+        return card
+    }
+
+    #if DEBUG
+    /// Debug seeding only: the sample card IS the truth, so a copy left by an
+    /// earlier capture run is replaced rather than kept — otherwise a
+    /// screenshot inherits last week's box and due date.
+    func seed(_ card: DrillCard) {
+        var all = load()
+        let key = Self.matchKey(card.targetPhrase)
+        all.removeAll { Self.matchKey($0.targetPhrase) == key }
+        all.append(card)
+        write(all)
+    }
+    #endif
 
     func upsertMany(_ cards: [DrillCard]) {
         guard !cards.isEmpty else { return }
@@ -124,7 +203,6 @@ final class DrillStore: LanguageScopedStore {
         }
     }
 
-    /// Promote the card one Leitner box and reschedule.
     /// "Got it" — the learner asserting they know this line. It GRADUATES the
     /// card to the top rung rather than climbing one, which is what the word
     /// and expression decks have always meant by the same bin: drop on Got it,
@@ -134,14 +212,14 @@ final class DrillStore: LanguageScopedStore {
     /// before a card left the to-study pile, so the pile never visibly
     /// shrank and the To study / Known filter looked broken. The three delay
     /// bins are the "not yet" answers and still carry the spacing; the top
-    /// rung's own 30-day interval brings a known card back once, much later.
+    /// rung RETIRES the card (see `retiredReviewDate`).
     func markKnown(_ card: DrillCard, at now: Date = Date()) {
         var c = card
         c.timesSeen += 1
         c.timesCorrect += 1
         c.lastReviewedAt = now
         c.box = Self.maxBox
-        c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
+        c.nextReviewAt = Self.nextReview(after: c.box, from: now)
         save(c)
         Analytics.capture("drill_reviewed", ["correct": true, "box": c.box])
     }
@@ -152,7 +230,7 @@ final class DrillStore: LanguageScopedStore {
         c.timesSeen += 1
         c.lastReviewedAt = now
         c.box = max(c.box - 1, 0)
-        c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
+        c.nextReviewAt = Self.nextReview(after: c.box, from: now)
         save(c)
         Analytics.capture("drill_reviewed", ["correct": false, "box": c.box])
     }
@@ -169,7 +247,9 @@ final class DrillStore: LanguageScopedStore {
         var c = card
         c.timesSeen += 1
         c.lastReviewedAt = now
-        c.box = min(max(box, 0), Self.maxBox)
+        // Never the top rung: a delay is by definition "not yet known", and
+        // the top rung means retired.
+        c.box = min(max(box, 0), Self.maxBox - 1)
         c.nextReviewAt = date
         save(c)
         Analytics.capture("drill_snoozed", [
@@ -189,13 +269,18 @@ final class DrillStore: LanguageScopedStore {
         var all = load()
         var touched = false
         for index in all.indices where wanted.contains(all[index].id) {
-            let promoted = min(max(all[index].box + 2, 3), Self.maxBox)
-            guard promoted > all[index].box else { continue }
-            all[index].box = promoted
-            all[index].lastReviewedAt = now
-            all[index].nextReviewAt = now.addingTimeInterval(Self.interval(for: promoted))
+            // Produced in a real talk outranks every flashcard verdict: the
+            // card goes straight to the top rung and retires, and the date
+            // marks it CONFIRMED — "Got it" is the learner's opinion, this
+            // is the evidence. Saying a confirmed card again refreshes it.
+            all[index].usedInTalkAt = now
+            if all[index].box < Self.maxBox {
+                all[index].box = Self.maxBox
+                all[index].lastReviewedAt = now
+                all[index].nextReviewAt = Self.nextReview(after: Self.maxBox, from: now)
+                Analytics.capture("drill_used_in_conversation", ["box": Self.maxBox])
+            }
             touched = true
-            Analytics.capture("drill_used_in_conversation", ["box": promoted])
         }
         if touched { write(all) }
     }
@@ -279,8 +364,27 @@ final class DrillStore: LanguageScopedStore {
     /// drill deck's folder chips read this to bucket graduated cards.
     static let maxBox = 5
 
+    /// The top rung's "return": there isn't one. "Got it" is the learner
+    /// saying they know this line, and the word and expression decks have
+    /// always treated that as an END (`ReviewQueue.retire` clears the date
+    /// outright). Here it used to be a 30-day interval, which quietly made
+    /// Known a waiting room instead of a door — every known card came back,
+    /// was marked known again, and came back again, so nothing ever left the
+    /// store and the deck filled with sentences the learner had already
+    /// retired several times over. A card is still LISTED under Known (the
+    /// deck's folder, the Sentences page), and re-filing it from that folder
+    /// is what brings it back — the learner's call, not the ladder's.
+    static let retiredReviewDate = Date.distantFuture
+
+    /// When a card at `box` comes back. Everything below the top rung climbs
+    /// the interval table; the top rung retires.
+    private static func nextReview(after box: Int, from now: Date) -> Date {
+        box >= maxBox ? retiredReviewDate : now.addingTimeInterval(interval(for: box))
+    }
+
     /// Leitner intervals (in seconds) per box. Box 0 stays due immediately so
-    /// new cards surface in the next session.
+    /// new cards surface in the next session. The top rung never asks — it
+    /// retires instead.
     private static func interval(for box: Int) -> TimeInterval {
         let days: TimeInterval
         switch box {
@@ -300,6 +404,7 @@ final class DrillStore: LanguageScopedStore {
         // Every mutation funnels through here — keep the home-screen widget's
         // snapshot of the due queue in sync.
         StudyWidgetRefresher.schedule()
+        SyncEngine.noteChanged(.drill)
     }
 
     /// Lowercased, punctuation stripped, whitespace collapsed — so a summary
@@ -316,10 +421,10 @@ final class DrillStore: LanguageScopedStore {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > maxChars else { return trimmed }
         let sentences = trimmed
-            .split(whereSeparator: { ".!?\n".contains($0) })
+            .split(whereSeparator: { ".!?。！？\n".contains($0) })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        let targetWords = Set(normalizedForMatch(target).split(separator: " "))
+        let targetWords = Set(WordSplitter.words(normalizedForMatch(target)))
         if sentences.count > 1, !targetWords.isEmpty,
            let best = sentences.max(by: { overlap($0, targetWords) < overlap($1, targetWords) }),
            overlap(best, targetWords) > 0 {
@@ -341,17 +446,17 @@ final class DrillStore: LanguageScopedStore {
         let trimmed = target.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > maxChars else { return trimmed }
         let sentences = trimmed
-            .split(whereSeparator: { ".!?\n".contains($0) })
+            .split(whereSeparator: { ".!?。！？\n".contains($0) })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        let sourceWords = Set(normalizedForMatch(source).split(separator: " "))
+        let sourceWords = Set(WordSplitter.words(normalizedForMatch(source)))
         guard sentences.count > 1, !sourceWords.isEmpty,
               let best = sentences.max(by: { overlap($0, sourceWords) < overlap($1, sourceWords) }),
               overlap(best, sourceWords) > 0 else { return trimmed }
         // Splitting ate the terminal punctuation — restore it so TTS keeps
         // the sentence's intonation (a dropped "?" flattens a question).
         if let range = trimmed.range(of: best), range.upperBound < trimmed.endIndex,
-           ".!?".contains(trimmed[range.upperBound]) {
+           ".!?。！？".contains(trimmed[range.upperBound]) {
             return best + String(trimmed[range.upperBound])
         }
         return best
@@ -361,8 +466,8 @@ final class DrillStore: LanguageScopedStore {
     /// keys on — how the drill card's playback trim locates its quoted
     /// fragment inside the turn recording's word timings.
     static func matchWords(of text: String) -> [String] {
-        text.split(whereSeparator: { $0.isWhitespace })
-            .map { LocalAlignment.normalized(String($0)) }
+        WordSplitter.timingWords(text)
+            .map { LocalAlignment.normalized($0) }
             .filter { !$0.isEmpty }
     }
 
@@ -386,9 +491,13 @@ final class DrillStore: LanguageScopedStore {
         return nil
     }
 
-    private static func overlap(_ sentence: String, _ targetWords: Set<Substring>) -> Int {
-        Set(normalizedForMatch(sentence).split(separator: " ")).intersection(targetWords).count
+    private static func overlap(_ sentence: String, _ targetWords: Set<String>) -> Int {
+        Set(WordSplitter.words(normalizedForMatch(sentence))).intersection(targetWords).count
     }
+
+    /// A card's content identity: two cards with the same key drill the same
+    /// sentence, whatever casing or punctuation the model wrote it with.
+    static func matchKey(_ phrase: String) -> String { normalizedForMatch(phrase) }
 
     private static func normalizedForMatch(_ text: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(.whitespaces)

@@ -53,5 +53,6 @@ final class SavedLineStore: LanguageScopedStore {
     private func write(_ lines: [SavedLine]) {
         guard let data = try? encoder.encode(lines) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.savedLine)
     }
 }

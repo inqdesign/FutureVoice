@@ -60,5 +60,6 @@ final class WeeklyReportStore: LanguageScopedStore {
     private func write(_ list: [WeeklyReport]) {
         guard let data = try? encoder.encode(list) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.weekly)
     }
 }

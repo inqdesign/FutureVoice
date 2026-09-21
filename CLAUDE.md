@@ -16,6 +16,96 @@ Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`) — do → 
 - **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages behind swipeable chip tabs, plus the activity/effort panel (14-day rep bars).
 - **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app language, not the phone's — see "UI text has ONE language" below.
 
+## Sync between the learner's own devices (iCloud, opt-in) — 2026-09-18
+
+A phone and a tablet must feel like ONE app: a talk on the phone is on the
+tablet's Practice shelf, its cards in the tablet's deck, the ring reads the
+same, and a review on the tablet moves the phone's deck. Everything under
+`FutureVoice/Services/Sync/`. Decided the same day it was built, and the
+reasons are the design:
+
+- **CloudKit, the learner's OWN iCloud** — not Supabase. Audio is a
+  gigabyte per learner and it's their storage, not ours; nothing they said to
+  their future self lands on our servers. iPhone people own Apple devices;
+  Android gets its own transport later on the SAME merge rules.
+- **Opt-in, default OFF**, Me → Devices (`SyncSection`). It spends their
+  iCloud and a sync bug can damage data, so single-device learners are
+  untouched. `SyncStore.isEnabled` is keyed per APP ACCOUNT (a family iPad
+  can hold two). Never sync an anonymous session. **Turning it off deletes
+  nothing anywhere**; "Delete from iCloud" is a separate confirmed button.
+- **Audio goes too** (user: "a few GB of iCloud is fine"). Items first, audio
+  after, so a second device is useful within a minute. Blob uploads are
+  Wi-Fi only unless the Me toggle says otherwise.
+- **The second device asks** (`SyncContinuePromptView`, `RootView` after the
+  auth gate and before setup): a signed-in, un-set-up install whose account
+  already has a zone is offered "Continue where you left off?" once per
+  account per install. Yes = enable + first pull, then `setupComplete`
+  from the pulled persona; no = the toggle waits in Me.
+- **`BackupService` stays for dev↔release moves only.** It overwrites whole
+  files; alternating two devices through it loses whatever overlapped.
+
+**How it works — read this before touching any store's write path.**
+
+- **One record per ITEM, one merge rule per KIND** (`SyncKindRegistry`).
+  Never a whole file: two devices rewriting `sessions.json` would overwrite
+  each other. Talks union by id (newer edit wins, deletion wins outright and
+  cascades to cards + turn audio); cards take the HIGHER progress per field
+  (`mergeCards`: box, timesSeen, usedInTalkAt) then `DrillStore.keeper`
+  collapses duplicate sentences; word/expression records climb only
+  (used > known, count = max); notebook membership, snoozes, hand-removals
+  are last-writer-wins; dismissed expressions are a permanent union;
+  per-day counters take the MAX per day, never the sum; persona scalars LWW
+  on `updatedAt`, its notes union on `dedupeKey`; `enrolledLanguages` is a
+  union. `SyncMerge` holds the four shapes (lww / tombstoneWins /
+  combineOrNewerDelete / union) — add a kind by picking one, not by writing
+  a fifth.
+- **Change detection is a DIFF, not instrumentation.** Stores rewrite whole
+  files; the engine fingerprints each item (`SyncCanonical` — sorted keys,
+  ISO dates; the stores' own encoders are NOT stable across launches) and
+  compares against `SyncIndex` (`Documents/sync/<userId>/`, excluded from
+  backups). A key in the index but not in the file is a deletion → a
+  TOMBSTONE record (`deletedAt`), kept forever; a missing record is never
+  a deletion. Write funnels only call `SyncEngine.noteChanged(.kind)` to
+  debounce a push (3 s); the foreground pass diffs everything anyway, so a
+  forgotten hook self-heals.
+- **Loop guard:** a pull updates the index to the MERGED result BEFORE
+  writing the file, so the next diff sees nothing to push; `needsPush` is
+  the one flag that forces a push when the merge produced something the
+  server lacks. Tested: `testPullDoesNotPingPong`.
+- **Reads and writes go by PATH** (`Documents/lang/<code>/…`), never through
+  the singletons — those are pinned to the active language, and a pull for
+  another language still has to land. After a write the handler pokes the
+  store (`SessionStore.invalidateCache`, `VocabStore.languageScopeDidChange`,
+  `PracticeLog.reloadFromDisk`) and `AppState.adoptSyncedChanges` re-reads
+  the published copies. `Turn.audioURL` (an absolute sandbox path) is
+  stripped from the payload; every reader falls back to `TurnAudioStore`.
+- **CloudKit facts baked in** (`CloudKitTransport`, the only file that sees
+  `CKRecord`): one custom zone per account (`nawana-<supabaseUserId>`);
+  `recordName` hashes the key because a lemma isn't ASCII; two record types
+  (`Item` / `Blob`) so a change fetch can list blobs with `desiredKeys`
+  minus the asset — otherwise the second device's first pull downloads the
+  whole gigabyte before showing a single talk; payloads over 900 KB ride in
+  an asset; `systemFields` (the change tag) is carried in the index and
+  re-saved with `.ifServerRecordUnchanged` — a stale tag is `.conflict`, never
+  resolved inline: the next pull merges the server's copy. `zoneMissing`
+  (deleted from another device or Settings) switches sync OFF locally and
+  keeps every file; `quotaExceeded` pauses only the blobs. Dev and release
+  use DIFFERENT containers (`$(ICLOUD_CONTAINER)` per config, mirrored into
+  Info.plist as `FVICloudContainer`) for the same reason the bundle ids
+  differ. Before a release the `Item`/`Blob` schema must be deployed to
+  Production in CloudKit Dashboard — Development is JIT, Production is not.
+- **`SyncSchema.version`**: bump it on any payload change an older build
+  could not read harmlessly. A record from a newer build is applied if it
+  decodes and FROZEN in the index either way (never pushed back, never
+  tombstoned) — the day an old phone quietly deletes what a new one wrote is
+  the day sync is uninstalled.
+- **Never synced:** every cache (PhraseAudio, DrillEnrichment, topics, news,
+  translations, openers), the daily call (two devices must not ring at once),
+  consent, `voice_sample.wav`, and `BackupService.excludedDefaults`.
+- Tests: `SyncTests` runs two engines over `InMemorySyncTransport` as two
+  devices (`SyncFiles.documentsOverride`) — convergence, deletion cascade,
+  conflict → next pass, no ping-pong, blobs as assets.
+
 ## Find people (shared persona pool)
 
 Watch's People row is your OWN people. The tab header's `person.2` opens the
@@ -25,7 +115,7 @@ top, and below them strangers you can practice with, like meeting someone at
 a language school. Rows come from the Supabase table `public_personas`, read anonymously, written only by their owner (RLS).
 
 - A row is either **curated** (`owner_user_id` null — seeded by migration, deliberately diverse in job/place/register) or a **real user's** self-introduction. Same pool, same shape; the pool self-mixes as users join.
-- The user's own row is auto-published from their onboarding `UserPersona` at app start (`PublicPersonaService.autoSyncMyPersona`) so existing users appear without doing anything. Editing or taking it down by hand in Me → Find people sets `manualIntroKey`, after which auto-sync never touches that row again — an explicit choice always wins. Your own row is filtered out of your own pool.
+- The user's own row is a MIRROR of their onboarding `UserPersona` (`PublicPersonaService.autoSyncMyPersona`) — but **nothing is published until they have seen the paragraph once** (2026-09-15, `PublicIntroPreviewSheet`, raised on the Watch tab via `needsIntroDecision`). Until then the profile was written for the fluent self, not for strangers, and it went out on first launch with "wife and 4yo daughter at Kita" in it and the author never saw the text. Three exits: **Publish** sets `autoApprovedKey` and the mirror follows profile edits from then on; **Edit first** lands in `PublicIntroView` seeded with the same paragraph (publishing there sets `manualIntroKey`, as before); **Not now** sets `manualIntroKey` and withdraws any row an older build put up unasked. While undecided, an existing unconsented row is rewritten to the current composition (`trimUnapprovedRow`) — never inserted, never left carrying the old lines. `composedIntro` reads **occupation · city+stay · situations · the remembered lines at the rung the learner set** (`strangerLines` — the line, its gist, or nothing) and deliberately NOT `household` or `freeNotes`. Your own row is filtered out of your own pool.
 - A remote persona materializes as a normal `Counterpart` with `remoteId` set (`asCounterpart`). `remoteId != nil` is what keeps strangers OUT of the Watch stories row and the People sheet — they live in the Find sheet's "People you've met" instead, so the row never crowds out people you actually know.
 - **The pool section is named "Strangers" and shows EVERYONE unmet**
   (2026-08-31, was "People today", six a day on a daily seed): that they're
@@ -128,6 +218,21 @@ that every learner reads 0 each morning and the 00:05 UTC settlement sees
 nobody qualified at all. The UI shows numbers only — no grid; don't bring one
 back to "show progress", the progress is the number.
 
+**The Home streak is NOT the Core's streak** (2026-09-19, user decision). From
+2026-08 to this date they were one rule (Core bar, active language, metered
+talk only), so the two numbers couldn't disagree — and on Home that rule read
+as a punishment: a day of reviews, shadowing and a scene, or a day in the other
+language, reset it to 0. Now `PracticeStats.activeDays` is the whole
+definition: metered talk in ANY language, a talk the learner spoke in, or any
+`PracticeLog` rep (cards, words, phrases, shadow takes, and Watch scenes via
+`sceneReps`, logged on a scene's first heard line). Opening the app is not
+enough — `AppUsageLog` is deliberately left out. Home, the widget
+(`metToday` = `PracticeStats.studied()`), the day card and the Activity
+calendar all read it; the calendar's lit run IS the streak. The Core keeps
+its hard bar and its own server-computed number on its own page — don't
+re-merge them, and don't harden the Home one back toward the bar. No grace day
+yet; add one here, not in the Core.
+
 - **The badge IS the seat** (`CoreSeal`, 2026-08-18): one glyph, `seal.fill`,
   drawn only for a member seated right now. It used to have a second state —
   outlined `seal` for qualified-but-seatless, so the thirty days could never be
@@ -226,6 +331,22 @@ talk is spent meeting them, and what it hears is written down.
   order above it is load-bearing for `SessionSummarizer.Progress.absorb`;
   appending is safe, inserting is not. Being last also means a response cut off
   at the token ceiling loses this and nothing else.
+- **Every remembered line is a STANDING TRUTH with its evidence under it, and carries a three-way lock** (2026-09-16; the two-way `isPrivate` lock dated from 2026-09-15). Reported from the founder's own notebook: "dropped the kids off at kindergarten this morning" sat there as a line, and what does anyone learn from that? The prompt's blanket "never infer" had made the model file the EPISODE instead of what it teaches. The rule is now one step of distillation — from what they said to what it plainly means about their life, never from HOW they speak — and an episode with no standing truth in it is no line at all. `about_user` comes back as `{text, heard, kind, share, gist, why, replaces}`: `text` is the fact ("two kids, kindergarten age"), `heard` the sentence it came from in their words (shown under the line in Me → Profile as "You said …"), and `share` is how much a STRANGER gets — `nothing` · `gist` · `all`. The middle rung is the point: in real life the details of a story are private while its shape is not, so the model writes `gist` beside the fact ("a parent of young kids", "looking for a new job") and a `.gist` line hands out that and nothing else; a line with no honest gist (health, money, someone else's private life) can only be nothing or all. The model SORTS at write time — the rubric is in the prompt, it must give a one-clause `why` the learner reads beside the pick, and it is shown the learner's last hand moves (`UserPersona.shareCorrections`, recorded on profile save) so it sorts the way this person draws the line. `nothing` is the FALLBACK, not the default: old string shape, missing key, a note on disk from before the field, and `isPrivate: true` all land there; `isPrivate: false` maps to `all`, and `isPrivate` is never written back (a pre-2026-09-16 build would read a gist line as unlocked and put the whole line in the intro). Every line still rides into the fluent self's own prompt whatever the rung — that is what the notebook is for — but `UserPersona.strangerLines` is the ONLY set any stranger-facing surface may read: `composedIntro`, and since the same day a cast counterpart's prompt too (`personaBlock(forStranger:)` — until then a Find-people stranger was handed the whole notebook, private lines included). The profile page shows two lists by `kind` ("What I know about you" / "Right now", the latter with "fades in N weeks"), a "Strangers hear:" line per row, the rung on the trailing button and in the long-press menu (with "Show the talk" and "That's over now"), and the composed intro live at the bottom so a moved rung is visible on the same screen.
+- **The notebook has a sense of time** (2026-09-15). Reported: "planning a
+  trip to Seoul" sat on file for weeks after the trip, beside a newer "back
+  and jet-lagged", and the fluent self asked about the packing. Three things,
+  all in one pass: every line is DATED in both prompts (`ConversationEngine.age`,
+  coarse — "3 weeks ago"); each line has a `PersonaNote.Kind` — `fact` never
+  expires, `now` (a trip, a deadline, a cold) is shown as recent news under
+  the durable lines and is dropped a month after it was heard
+  (`isExpired`, pruned in `absorb`, filtered by `currentNotes`, which every
+  reader goes through); and the summary call can UPDATE a line — the on-file
+  notes go to it numbered, and an `about_user` entry carrying `replaces: n`
+  swaps line n for the new truth (`UserPersona.NoteUpdate`). The talk prompt
+  says the rule out loud: a later line wins, a plan whose date has passed is
+  something that happened. `SessionSummarizer` snapshots the numbered list
+  once at prompt time and maps `replaces` onto ids — never re-read the
+  persona after the call. Lines are editable in Me → Profile, with their date.
 - **`rememberAboutUser` is not `savePersona`** — it must not wipe topic
   suggestions or re-sync the public intro on every talk end, and these lines
   must never reach the Find-people pool: `composedIntro` reads only fields the
@@ -361,7 +482,142 @@ conversation → summary (+ scorecard metrics) → DrillStore.ingest (SRS cards)
             ↘ WeeklyReportEngine (unlocks on accumulated speaking time)
 ```
 
+**Three states, and USED outranks KNOWN** (2026-09-15, user decision). Every
+review item — a word, an expression, a sentence card — is in one of three
+states, in order: **studying** (the deck's 10 min / tomorrow / 3 days),
+**known** (the learner's OWN verdict: "Got it" on a card, "I know it" on a
+word or phrase — a claim, nothing more), and **used in a talk** (the learner
+produced it in a real conversation — evidence, and the strongest state there
+is). Producing an item live moves it to the top from ANY state: a studying
+word leaves the notebook and its schedule (`VocabStore.ingest`, same for
+`ingestExpressions` and the bookmark), a known one becomes CONFIRMED (word
+record `.known` → `.used`; expression count > 0; `DrillCard.usedInTalkAt`,
+which `markUsedInConversation` stamps while taking the card straight to the
+top rung, retired), and a `.suggestion` adopted later in the same call
+confirms the card that call just minted. `CarryoverDetector` is therefore
+given the known-but-unconfirmed items too (`knownWords` /
+`knownExpressions`, sources `.knownWord` / `.knownExpression`), read from a
+SNAPSHOT taken before `ingest` graduates anything, because the wrap-up still
+has to say it was a notebook word they used. "Known" on every list means
+known OR confirmed (`hasUsedExpression`, a non-nil word record, box 5), and
+the row badge tells them apart: a plain check is the claim, a filled check is
+the talk. The manual verdict stays — it is how a learner retires something
+the app has no evidence for — but it never outranks their own mouth, and the
+old rule (used once → +2 boxes, minimum 3) is gone: a spoken line is not
+"probably known", it is known. Don't re-add a partial credit. **The call's
+chip row leads with the known-but-unconfirmed items** (`TalkGoalPicker.pick`,
+`claimedKnown`, drawn as an empty checked circle): a claim is what the call is
+there to check, so it goes in front of the notebook. **Only a claim made on a NOTEBOOK item
+counts** (2026-09-21, user decision, `Record.fromStudying`): "I know it" on a
+word browsed in a level list, or "Got it" on a core-list top-up dealt for the
+first time, was never studied and is not worth a chip — the user: "just saying
+I know it in the word list means nothing". `markKnown` / `setKnownExpression`
+stamp the flag when the item is in `studying` / `studyingExpressions` at that
+moment; `unconfirmedKnownWords/Expressions` require it, so the chip row and the
+wrap-up's known-word carryovers agree. Verdicts from before the flag read as
+not-from-the-notebook. Same day: `addExpression` ("Save to expressions")
+wrote a `.known` row, filing "study this later" as "I know this" — it is a
+bookmark now.
+
+**"You used what you practiced" may only list what was PRACTICED**
+(2026-09-16, from a real wrap-up that read "nawana · app · english · setup ·
+give me feedback"). Three things had gone wrong at once, and each has its own
+guard now. ① `keepFromTalk` was filling the notebook with the learner's OWN
+words: the fluent self answers about whatever the learner brought up, so its
+turns echo their vocabulary, and nothing excluded it — `pickupCandidates`
+takes `excludingLemmas` (the learner's turns in that talk) in both the
+summarizer and the book chapter, and `offListContentWords` treats a capital
+letter mid-sentence as a name, because NLTagger passes "Nawana" and
+"English" as `OtherWord` (measured). ② A word the app kept by itself and the
+learner never touched is not something they studied: `VocabStore.autoKept`
+is a PROVENANCE mark (cleared by a hand bookmark, a deck snooze, a removal,
+or graduation), `practicedStudyingWords` is what the detector and the call's
+chip row read, and on first run every notebook word without a schedule
+entry is treated as auto-kept — the conservative reading, since the only
+thing it costs is a row that must never lie. ③ The phrase matcher tolerates
+inserted words (right for padding), so "give me a feedback" satisfied the
+card "give me feedback" — the learner repeated the exact mistake and was
+credited, and under the used-outranks-known rule that retired the card as
+confirmed. `firstMatch(rejectingMistake:)` now checks the matched SPAN
+against the card's `sourcePhrase`: every token the correction added must be
+present, every token it removed must be absent (`showsTheFix`). Cards with
+no source line are unchanged. Don't relax the span to the whole turn — an
+"a" three clauses later would reject a real fix.
+
+**One card per sentence, enforced by the STORE** (2026-09-13). `ingest` had
+deduped on the normalized target since the beginning, so the loop above could
+not repeat itself — but `DrillStore.save` replaces by `id` only, and every
+mint path outside ingest hands it a freshly minted `DrillCard` with a fresh
+UUID: Watch's "Save phrase" on a scene played twice, the book page's
+correction tap, the debug seeds a capture run re-plants (which is where it was
+caught — one sample sentence sitting in the deck twelve times). `saveIfNew` is
+now the one door for those paths: same `matchKey` ingest uses, plus the
+`isDrillable` check, returning whatever is on file so a caller can still open
+the card. `load()` collapses the copies already on learners' phones, keeping
+the one with Leitner progress on it (read-time like the store's other repairs,
+so deck, Sentences list and widget agree at once and the next write persists
+it). A card the read filter would drop is never minted at all — a card no
+lookup can find is what made every visit mint another one.
+
+**"Got it" RETIRES a sentence card** (2026-09-14). The top Leitner rung used
+to carry a 30-day interval, so a card marked known came back a month later,
+was marked known again, and came back again — for as long as the app was
+installed. Nothing else ever removed a card either (`DrillStore` has no cap,
+no pruning, and the only deletes are "this talk was deleted" and "that turn
+was misheard"), so Known was a waiting room rather than a door and the store
+could only grow. `DrillStore.retiredReviewDate` is the top rung's return date
+now, which is the rule the word and expression decks have always had
+(`ReviewQueue.retire` clears the date outright) — the two decks agree again.
+Three things hold it: the card is still LISTED under Known (the deck's folder,
+the Sentences page's Known filter), re-filing it from that folder is what
+brings it back, and `snooze` can no longer land on the top rung, because a
+delay is by definition "not yet known". Cards that reached rung 5 under the
+old rule are retired where they sit on read, so the backlog they built stops
+returning. `DrillReminder` skips retired cards: their date is
+`distantFuture`, and a reminder must never promise a card the deck won't
+deal.
+
+**And that is the ONLY way a card leaves** (decided 2026-09-14, when the
+accumulation was raised). Nothing expires, nothing is pruned by age, no
+backlog is swept: a card the learner never got to is still a sentence they
+once said wrong, and an app that quietly deletes it has decided something
+they didn't. Do not add a retention window, a card cap, or an "old cards"
+cleanup to `DrillStore` — the store grows, and the exit is the learner
+pressing Got it. The two deliberate exceptions stay what they are: deleting
+the talk deletes its cards, and flagging a turn as misheard deletes the
+cards minted from it.
+
+**A talk book is finished when its CHAPTERS are** (2026-09-15).
+`TalkCurriculum.Snapshot` counted two things — pickup words and the
+turn-suggestion corrections — while the book page offered four chapters:
+Words, Expressions, Shadow, Drill. So the Shadow chapter, the Expressions
+chapter and every correction the SUMMARY produced (`phrasesUsed`, which is
+most of them on many talks) counted for nothing, and a book reached 100%,
+left Studying and landed on the finished shelf with the learner having
+shadowed nothing and cleared no card. The chapter tabs said it out loud:
+only Words carried a `done/total`. The snapshot is now one array per chapter
+(`words` · `expressions` · `shadowLines` · `corrections`) and every one of
+them counts — **anything the page asks for has to be in the snapshot**, or
+the cover is measuring a different book from the one being read. Three
+things that follow: the old `shadowLines` (corrections) is now `corrections`
+and `shadowLineId` is `correctionId`, while `shadowLines` means the Shadow
+chapter's fluent-self lines (`shadowPicks`, so page and count can't ask for
+different things); the pages render the snapshot rather than building their
+own filtered lists, because the Expressions page dropped a phrase once it
+was known and a chapter that empties as you learn can never read as finished
+(the same trap `pickupCandidates` avoids for words); and mastery keeps each
+chapter's own rule — a word through `VocabStore`, an expression through the
+expression pool, a shadow line only by a take at or above the bar, a
+correction by its card reaching the top box. Books already showing as
+finished go back to in progress, which is the truth: mastery is computed,
+never stored. Watch books were always consistent this way — `ScenarioCurriculum`
+holds exactly the three chapters `ScenarioDetailView` shows.
+
 **A call's expressions come from BOTH mouths** (`expressions_offered`, 2026-08-19). `expressions_used` is what the learner said, verified verbatim against their own turns — that is EVIDENCE. For a long time it was the only expression a talk produced, so the whole class of "the fluent self said something good and I want it" was dropped: the only survivors were single lemmas (`TalkCurriculum.pickupCandidates`, which needs the word to be in `CoreVocabulary` at or above the learner's level, so phrasal verbs built from A1 words — `push back`, `end up -ing` — were filtered out by construction) and four shadow lines. The reusable chunk in between, which is the unit people actually learn, had no home. The summary call now also returns `expressions_offered` — up to 6 reusable phrases the FLUENT SELF used and the learner didn't — in the SAME call (no new request, no new spend), verified against the fluent-self turns and de-duped against `expressions_used` and against the learner's own words. It is MATERIAL, so it lives on `SessionSummary` and is merged at read time by `ExpressionCatalog` as `Origin.heard`, exactly as scene expressions are: never copied into `VocabStore`, whose rows count times SAID and would have to lie about a phrase nobody has spoken yet. Everything downstream is that merge — the Expressions library, the Practice tile, the talk book's Expressions chapter (offered above used), the book export, and the daily deck, which deals heard-in-a-call BEFORE said-it because a deck exists to teach what you can't say yet. The verbatim check is cheaper on this side than on the other: fluent-self text is model-written, so no transcriber sits between the phrase and the check.
+
+**A word the graded list doesn't carry is still a word** (2026-09-13). The same gap, one size down. The pools are content-word CEFR profiles and small — English is 8,424 entries — so ordinary vocabulary simply isn't in them, and `pickupCandidates` dropped anything `CoreVocabulary.level(of:)` couldn't grade. Reported from a real talk: *chore* was said four times and was what the call was ABOUT, and the app never mentioned it once — not in the book's word chapter, not in the day's hand, not even highlighted in the transcript it was said in. `VocabStore.offListContentWords` now admits them from the FLUENT SELF's turns, which is the one place it is safe: that text is model-written, so no transcriber sits between the word and the check — the identical argument `expressions_offered` rests on. Four filters stand in for the pool (NLTagger content class, so no articles or "oh/wow"; not a name, so not Berlin or Jenny; ≥3 letters; and `CoreVocabulary.isUngraded`, a small hand-checked set that separates a word the list OMITS ON PURPOSE — auxiliaries, modals, indefinite pronouns, spoken fillers — from one it merely lacks, because without it "have" and "chore" are the same kind of missing). **They are NOT capped, and the first version's cap of 8 is the mistake worth remembering.** Its stated reason was that the graded half would otherwise be pushed out of the 24-item chapter — which never said why graded words deserve reserved slots, and they don't: both halves are words the fluent self chose. Worse, a cap has to decide which ones die, and with most of them said once there was nothing to decide it by, so spelling broke the tie and `sublet` lost to `boiler`. That is this section's own complaint re-made one level down. What orders them instead is evidence, in two grades: a word the fluent self came back to across SEVERAL TURNS is what the call was about and no graded list can see it, so those lead outright; a word said once is a weaker claim than a curated level match, so those fill whatever the graded words left. `offListContentWords` therefore counts TURNS, not occurrences — three times in one sentence is a verbal tic, not a thread. The mix balances itself with no quota: at A2 the graded words are plentiful and the singletons wait past the prefix, at B2 there are few and the singletons fill in. Three consequences to keep: `lookupKey` now resolves an ungraded surface form to its lemma ("chores" → *chore*) or the pickup list and the transcript's own tokens never line up and the word is collected without being highlighted where it was said; `ingest` keeps the pool gate on the LEARNER's side but lets their speech credit an ungraded word already in `studying` or `records`, so a kept word can leave the deck instead of being dealt back forever, while a mishearing still cannot MINT one; and Korean is empty by construction, since `koreanLemmas` can only return lexicon hits and an unconfirmable dictionary form is a guess, not a word to track. The fix is RETROACTIVE — talk books are derived at read time, never persisted — so the talk that prompted this shows *chore* without re-summarizing. `shadowPicks`' `teachScore` was deliberately left alone: re-scoring would reshuffle the shadow chapter of every existing book to fix a complaint about a different surface.
+
+**And the notebook fills itself** (`VocabStore.keepFromTalk`, same day). Admitting the word was only half of it: the words a talk taught still stopped at the book page waiting to be tapped, so a word the whole call was about entered review only if the learner went looking for it — the same "it was never mentioned", one step further along. `SessionSummarizer` now keeps them automatically. Four rules hold it: it keeps **exactly the set the book's word chapter shows** (`pickupCandidates` under `TalkCurriculum.maxWords`), so the page and the notebook can never disagree about what a talk taught and no second ceiling is invented; it is **not `addStudying` in a loop**, because that logs a practice rep and fires `word_saved` — keeping a word by hand IS effort, and counting a machine's pick as the learner's would inflate the daily goal with work nobody did; it skips anything already known, used or kept; and it obeys `removedByHand`, a new persisted set written by `removeStudying`, because a talk that puts an unbookmarked word straight back every time is the app overruling a decision the learner made. Bookmarking the word again clears that verdict, so nothing about it is permanent.
 
 **The notebook is spent in the call** (`TalkGoalChips.swift`, 2026-08-19). A talk is the only place a saved word can actually be used, and nobody remembers mid-sentence what they saved on Tuesday — so today's due studying items ride along the call as one pinned line of chips above the transcript, and a chip ticks the moment the learner says it. Three rules hold it together: the judge is `CarryoverDetector` and nothing else (the same matcher writes the wrap-up's carryovers, so the live tick and the summary can never disagree); ticks are ADDITIVE — every version of a user turn's text is checked, from the recognizer's first line to Gemini's audio-grounded rewrite, and a tick is never taken back; and the row writes nothing to disk, because `VocabStore.ingest` + `CarryoverDetector.detect` already credit the word for real at session end. Items come from `StudyScheduleStore` due-ness, the same schedule the daily words/expressions sessions deal from, so the app never asks for the same thing twice in one day — and a phrase that can't clear `CarryoverDetector.isCreditable` is never offered, since a checkbox that cannot tick teaches the learner the whole row is decorative. **Tapping a chip opens `TalkGoalSheet`** — "Use this in the call", the word, ONE sense, ONE example. The header is an instruction to SPEND the word, not to repeat a line after the app: it's material the learner chose to study, and the call is the only place it gets used. A chip that couldn't be tapped was demanding a word the learner may no longer remember the meaning of. It stays thin on purpose: the full entry belongs to the notebook, and the call is still running underneath (nothing pauses, and `WordLore` is free + globally cached, so a mid-call tap costs nothing metered).
 
@@ -380,6 +636,85 @@ Every feature should feed this loop. Per-turn suggestions come back in the SAME 
 - **`highlightedCorrection`** diffs through the same `spokenWords`, so "I'm" and "I am" align instead of lighting up as the fixed part. It expands one display token into several comparison words, so a token is painted only when EVERY word inside it went unmatched.
 
 The narrowness is the point in both directions: a mixed suggestion that fixes something real AND happens to contract still survives the filter, and now highlights only the real fix.
+
+**And a SCORE may never be built on it either** (2026-09-13, `ShadowTranscriber`). Shadowing was the last surface still resting on Apple's recognizer alone, and there a transcript is not context for a model — it IS the grade: the diff, the score, the coach bullets and the rhythm card are all computed from it. Reported that day: *"Soak it all in, right?"* came back as **"So right"**, every attempt. Connected speech (`[soʊkɪɾɔlɪn]`) is exactly what an on-device pass collapses, and the learner was told they had skipped three words they said perfectly well. Three layers, in order, all of them in the one new door every shadow score walks through:
+
+- **The audio is levelled before anyone reads it** (`AudioLoudness.peakNormalizedWAV`, boost-only) and the SAME file goes to both readers, so they are judging the same thing. The learner's own playback still uses the ORIGINAL — the take is theirs, the levelling is for the machines.
+- **The words come from the audio** — Gemini on the DEFAULT model, not the cheap tier the live talk path uses: nobody is waiting to hear this one, and the words it writes are the learner's grade. **It is never shown the target sentence.** It could only copy it, and a word the model supplies is a mark the learner did not earn; the prompt's own rule says so out loud. Apple's pass keeps its `contextualStrings` bias, because its text is now the FALLBACK and its real job is timestamps.
+- **The times come from Apple, realigned onto Gemini's words** (`ShadowTranscriber.realigned` → `LocalAlignment.align`/`fill`). `ShadowEngine.analyzeRhythm` demands exactly one timing per word of the SCORED text, so swapping the transcript without this would have silently killed the rhythm card on every attempt. Under `minAnchorRatio` (0.5) of the words anchoring, the timeline is mostly interpolation and [] is returned — the card hides instead of grading a guess. **That is the reported case's own outcome**, and it is an improvement: two timestamps used to be graded against "So right", which is a rhythm number about a sentence nobody said.
+
+`Source` is `audioGrounded` · `onDevice` · `rough`, worst-first fallback, and only `rough` (nothing read the file) raises the UI's warning — the old behaviour is still a real final pass, just a weaker one. `shadow_transcript` logs the source plus whether the two readers described DIFFERENT sentences, which is the only measure there has ever been of how wrong the single-reader path was.
+
+**The result never waits on the slower reader, and never on the coach**
+(2026-09-17). Telemetry from a real take: Apple's pass had the 18-word line
+in 4 s, and the learner then sat on "Comparing…" for exactly 60 s more —
+the Gemini transcribe request (the whole take as base64, on cellular) had
+stalled without failing, and nothing declared it dead before
+`URLSession.edgeFunctions`' ceiling; no ledger row, so it never reached the
+edge function. Two braces now: once the device pass has landed, the
+audio-grounded read gets `ShadowTranscriber.audioGraceAfterDevice` (6 s — a
+healthy call lands in ~2 s) and is then CANCELLED and the take scored
+on-device (`AudioOutcome.abandoned`); with no device text it keeps a 20 s
+leash, and the request carries its own 25 s timeout under both. The
+transcribe call runs `fastThinking` — perception, not reasoning, and the
+ledger showed ~95 thought tokens on a six-word line. And the coach call
+left the critical path: `analyze` puts the score, diff and recording up
+and SAVES the attempt as soon as the deterministic half is done, then
+fetches the bullets behind a "Writing feedback…" row and
+`updateShadowAttempt`s the same record (never `saveShadowAttempt` twice —
+that counts an attempt). `shownAttemptId` keeps a late reply off a newer
+take's screen. `shadow_transcript` now carries `audio` / `device_ms` /
+`audio_ms` and `shadow_coach` its `ms`, so the next "it takes long" can be
+read off a row instead of reproduced.
+
+**A phrase take is not the line** (2026-09-17, from a full review of the
+surface). Tapping two words and shadowing "the bank" saved a `ShadowAttempt`
+under the line's `turnId` with nothing to say it was partial, and every
+reader — Talk and Watch mastery, the Practice retry pick, the book pages'
+best score — filtered on `turnId` alone, so a two-word take checked off the
+sentence. `ShadowAttempt.phraseRange` (optional, old records decode) marks
+it; `isPartial` takes are listed, replayable and counted as reps, and
+excluded from everything that judges the LINE. Same pass: Watch mastery
+read `matchScore` while Talk read `overallScore` — one bar now
+(`overallScore`, the number the take is judged by everywhere); a take with
+NO speech is not a 0 — it is `heardNothing`, one line under the target,
+nothing saved, counted or coached (the auto-stop fires at the line's length
+with nobody talking, so this is an ordinary path); the whole-line pace
+ratio measures first word → last word like the phrase path always did,
+instead of the file length with its silent tail (0.83× and "rushed" for a
+take that matched the voice); `expandForDiff` folds typographic
+apostrophes so a model-written "I’m" isn't a substitution against the
+recognizer's "I'm"; `interactiveDismissDisabled` while recording (a swipe
+left the mic hot and let the auto-stop save a take for a screen that was
+gone); the karaoke highlight outranks the diff colours while the target
+plays, so "Hear target" moves after a result; the free timing recovery is
+re-armed once per visit and two seconds late, so a quick retry cancels a
+sleep rather than a recognizer. Japanese timelines are cut into words
+since 2026-09-18 — see "Japanese as a TARGET language". Chinese is not a
+selectable target, but `WordSplitter` already counts it as unspaced and
+would cut it with the JAPANESE tokenizer — give `zh` its own segmenter
+before it gets a wordlist.
+
+**"Both at once" lines the takes up by EAR, not by timings** (2026-09-18).
+The duet skips each file to its first word, and both leads came from word
+timings: the learner's from `ShadowTranscriber.realigned`, which is empty on
+every take the aligner couldn't anchor (~11% of takes, plus the abandoned
+audio read), and the target's from a timeline that is a character-count
+estimate on any line that came from a call — an estimate starts at 0 and a
+render always opens on silence. A missing lead read as 0, so the take played
+from the top of the file and the learner heard their own voice arrive a beat
+late ("내 목소리 앞쪽에 여백이 너무 심해"). `AudioLoudness.firstVoiceOnset`
+now reads the onset off the audio that is about to play — peak-relative gate,
+same `speechGateRatio` the level measurement uses, so a quiet take and a loud
+one are judged alike. A PHRASE selection still comes from timings, because
+its start is mid-file rather than the first sound in it. It measures an
+ENVELOPE (10 ms block RMS), not samples: speech crosses zero every few
+hundred microseconds, so a sample-wise "loud for 40 ms" run never completes
+and reports silence for every file — `AudioOnsetTests` caught exactly that
+before it shipped, which is the reason those tests build their own WAVs
+instead of mocking the reader.
+
+**The rhythm card may only grade a beat somebody MEASURED** (2026-09-16, `WordTiming.isMeasured`). The Target row had no such rule: every live-call line is saved with `timings: []` (the streaming TTS returns none), so the shadow view opens on `estimatedTimings` — character-count proportions — while the free `LocalAlignment` pass runs behind it; `startSync` kills that pass (two recognizers on one mic truncate the take) and nothing re-armed it, so a learner who pressed record first had EVERY attempt of that visit coloured against a made-up beat. Both alignments (`LocalAlignment.fill`, `ShadowTranscriber.realigned`) also share out up to half their words across gaps a recognizer never placed, indistinguishable from a measurement. Now every timing source marks its spans — ElevenLabs and Apple segments measured, the estimate and every filled gap not (old caches decode as measured; they passed the anchor gate when written) — and `analyzeRhythm` pins the normalization on measured pairs only, credits only those, needs `minMeasuredPairs` (4: the pinned two score 1.0 whatever happened, so three left one word judged) and returns nil for an estimated target, which `overallScore` already reads as "not measured". `rearmTimingRecovery` restarts the free pass once the mic is down. **The verdict is drawn ON the target line, and there is no rhythm card** (same day, two passes): `beatMark` puts a dot under each word the attempt was timed on, where the learner started — under the centre on the beat, pushed right if late, left if early, in the score's own colour scale — and nothing under a word unmeasured or skipped; the score sits in the target section's header where the word count was, with `6/10` beside it when it stands on fewer than all the words. Two things it replaced: bar timelines (Target / You) whose bars carried WIDTH, a duration the score never reads and one the two sources disagree on by construction (ElevenLabs leaves gaps, Apple's segments abut), so the rows looked different for reasons unrelated to rhythm and a grey interpolated bar still invited comparison ("Target and You look nothing alike, how is that 100"); then a per-word card with `+0.2s` labels, correct but a third of the screen (user: too much space, put it on the sentence, no seconds needed). Colouring the word itself was rejected — text colour already means "wrong word". Don't bring a second timeline or a card back. Known, deliberately untouched: the dot turns green at ±120 ms while credit starts fading at ±60 ms, so an all-green row can read 85.
 
 **The correction card never precedes the voice** (2026-08-21, two iterations). Holding the bubble's TEXT swaps until `voiceDidStart` was not enough: the card itself is a correction the learner READS, and the payload usually closes while the TTS is still loading, so it kept appearing before the voice — "it corrects me, then answers" every turn. It was removed from the live call outright, then restored the same day with its DISPLAY deferred: `requestReply` parks the suggestion on `DeferredTurnWork` while the turn is still held, and `flushDeferredTurnWork` (voice audible) is what sets `turns[idx].suggestion` — so the card appears with the voice, never ahead of it, and nothing ever waits on it (display timing only, zero latency cost). A payload landing after the flush applies directly, which is fine — the voice is already out.
 
@@ -405,6 +740,204 @@ Three consequences to preserve when touching this: the failure path in `requestR
 - **`deferredTurnWork` is armed in `stopAndSend`, the moment the turn is appended** — not in `requestReply`. The chunk wait sits between the two, and while nothing was armed the recognizer's rescored pass (2.0 s timeout, so it routinely lands inside a 1.5 s chunk wait) sailed through `applyRecognizerUpgrade`'s hold branch and painted a second correction. `requestReply` only arms when the turn isn't already held, which is the Retry path.
 
 Any future work that improves the learner's line has the same obligation: improve what the MODEL gets, never what the SCREEN shows, until `voiceDidStart`.
+
+## Japanese as a TARGET language (2026-09-18)
+
+Japanese was wired for STT, shadow scoring and the clone script from the
+start, and hidden from the picker because it had no graded wordlist. It now
+has one, and the harder half was everything that assumed spaces.
+
+- **The pool** (`cefr_words_ja.tsv`, built by `scripts/build-ja-wordlist.py`):
+  Waller's JLPT N5–N1 (CC BY, via open-anki-jlpt-decks) mapped N5→A1 …
+  N1→C1, C2 empty. The attribution is the file's first line — the loaders
+  skip a line with no tab, and there is no credits screen. **The headword is
+  what the learner SEES**, so its spelling is settled against JMdict (CC
+  BY-SA): kana where nobody writes the kanji (ください, not 下さい; ちょうど,
+  not 丁度), today's okurigana (落ち着く, not 落着く), and a hand-checked
+  list for the rest — JMdict's "usually kana" flag alone is NOT trusted (it
+  marks 犬 and 行く). A third column carries the READING(S) (からい・つらい),
+  which the word card prints under a kanji headword; `ja_forms.tsv` maps
+  every other spelling (わかる, 判る, 朝御飯) onto the headword, skipping any
+  spelling that names two words and any one-kana form (that is inflection).
+- **`JapaneseMorph`** segments (CFStringTokenizer — NLTagger has no lemma and
+  no part of speech for Japanese, measured) and maps stems to headwords,
+  lexicon hits only, like `KoreanMorph`. A stem before inflection is the verb
+  (行き+ました → 行く, not the noun 行き); a kanji-only surface never grows
+  a verb ending (語 is not 語る, 箸 is not 走る); particles, auxiliaries and
+  spoken contractions (てる, ちゃう) are grammar and never a word. Read a
+  CHUNK, not a segment, wherever a level or key is wanted — 疲れ alone can't
+  say it is 疲れる.
+- **`WordSplitter` is the one question "where are the words?"** Every
+  `split(separator: " ")` over target-language text asks it instead —
+  highlights, phrase matching, word counts, titles, sentence ends (。！？).
+  Two of those were silent failures: the realtime path requested a
+  correction only for `>= 3` space-separated words, so no Japanese turn ever
+  got one, and the gateway dropped any ONE-word utterance inside the 1.2 s
+  echo window, which was every Japanese answer (`isScrap`, gateway). Never
+  count words on " " again.
+- **The script is the transcriber's, like punctuation.** 分かった / わかった
+  is a choice no mouth makes, so `saysTheSameThing` compares READINGS for
+  Japanese and both correction prompts carry an ASR SCRIPT GUARD (appended
+  at a line end so every other language's prompt is byte-identical). The
+  correction highlight is per CHARACTER — segments are cut differently on
+  either side of a fix — so it reads くさ[かっ]た. The shadow diff and the
+  character timing alignment follow the same rule (`JapaneseMorph.soundSpelling`,
+  2026-09-18): a romaji name in the target (nawana) comes back from ja-JP as
+  ナワナ, so Latin runs are cut into kana and katakana/hiragana compare
+  equal — before this the app's own name was scored as a miss on every take.
+- **Shadowing cuts its timeline into WORDS too** (`WordSplitter.timingWords`
+  — punctuation rides on the word before, an opening bracket on the word
+  after, so the words joined give the line back, which is what the screen
+  draws). ElevenLabs' per-character alignment is grouped into those words;
+  Apple's segments, cut wherever the recognizer likes, are aligned to them
+  LETTER by letter (`LocalAlignment.alignByCharacters`, used by the free
+  karaoke pass and by `ShadowTranscriber.realigned`), and a word counts as
+  MEASURED only when its first letter lands on a real segment start — the
+  onset is all the rhythm grade reads. A timeline stored as one run is
+  refused on load (`cutMatches`) and rebuilt. Karaoke draws the words flush
+  for an unspaced language — gaps between them read as spaces Japanese
+  doesn't have.
+- Captures: `-capture transcript-ja` / `talkdetail-ja` / `wordcard-ja` /
+  `shadow-ja` with `-futurevoice.targetLanguage ja`.
+
+## A call does not die quietly (2026-09-13)
+
+Talk runs on the realtime gateway (`gateway/`, a Worker + Durable Object) —
+and until this date that path could end a call for nine different reasons
+without leaving a single record, on either side. The reply and the voice go
+straight to their providers, so `usage_ledger` sees only the meter's ticks;
+the app's `RealtimeTalkClient` wrote nothing at all; the gateway had
+`console.log`. On 2026-09-12 that produced an admin console reporting zero
+errors on a day when **25 of 42 real sessions ended before the learner
+finished a sentence**, and the day's two trial cancellations had to be found
+by joining `user_subscriptions` by hand. One of them cancelled two minutes
+after a summary timed out; the other wrote "좋은데 중간에 끊긴다" and re-dialled
+seventeen times.
+
+**Only being unable to HEAR is fatal.** Everything else the call survives:
+
+- **A failed reply is retried once, then apologised for out loud**
+  (`CallSession.recoverReply`). It used to emit `error`, which the client
+  turns into a teardown. The apology line is the learner's language,
+  informal, and is pushed into `history` — otherwise the next reply answers a
+  question it never heard the answer to.
+- **A refused or dropped ElevenLabs socket ends the LINE** (`warn("tts")` →
+  `endLine`): the text is already on screen and the socket reopens lazily.
+- **A transcriber failure stays fatal — but only once the socket could not
+  be REPLACED** (2026-09-16). Gemini's transcribe socket ends every ~10 min
+  and on any upstream hiccup, and `GeminiTranscriber` rotates it (resumption
+  handle, mic audio buffered meanwhile). Until 2026-09-16 the socket's
+  `error` event skipped that path and ended the call outright, while `close`
+  — which always follows an error — would have rotated: three of that day's
+  six drops, one exactly 10 min 4 s after the previous connect. Both events
+  now go through `rotateFrom`, idempotent per socket generation (the old
+  socket's own close, and a second event for the same end, can't start a
+  second rotation); a rotation is a `warning` (`transcriber`, "rotating: …"),
+  and only a refused reconnect or >4 rotations a minute is `fail`. **The
+  rotation itself dropped a call the day after it shipped** (2026-09-17, a
+  19-turn call, `internal`: "Can't call WebSocket send() after close()"):
+  `rotate` closed the old socket and awaited the new upgrade while
+  `setupDone` stayed true and `ws` still pointed at the closed socket, so
+  the next mic frame was a `send()` on a dead socket, and that TypeError
+  escaped through `handleClientMessage`'s catch — which is `fail`. Now
+  `rotate` nulls `ws` and drops `setupDone` BEFORE the await (frames buffer
+  in `pendingAudio`, newest-kept, flushed on setupComplete),
+  `sendAudioB64` never throws (a refused send buffers the frame and starts
+  the rotation itself), and the session wraps the forward in its own
+  try/catch as a `warning` — a frame that could not be forwarded is never a
+  reason to end a call. The app
+  answers that with **Reconnect** (`ConversationView.reconnectRealtimeCall`)
+  — same voice, the turns so far as history, no opener. Before this a dropped
+  call had no message at all: the screen went quiet and the only move was to
+  hang up.
+
+**Every failure now leaves a record, and that is the point.** The gateway
+sends two new messages (`gateway/src/protocol.ts`): `warning` (survived) and
+`ended` (the session's last word — reason, turns, speech seconds,
+commit→voice latencies, warnings). `RealtimeTalkClient.fail(_:_:)` is the ONE
+door every client-side failure goes through, and it writes
+`talk_rt_failed`; the two gateway messages become `talk_rt_warning` and
+`talk_rt_session`. All of it lands in `client_events`, which is where the
+admin console's 통화가 어떻게 끝났나 panel reads it from (`rt_sessions` /
+`rt_reasons` in `admin_raw()`, `20260913080000`). An older client ignores the
+new messages, so the gateway can deploy ahead of an app build.
+
+**A finished line must give its ElevenLabs CONTEXT back** (2026-09-13,
+`gateway/src/eleven-tts.ts`). One multi-context socket allows FIVE at a time,
+a line is one context, and a context lives until it is closed or goes final.
+`isFinal` is not reliable — the play-out fallback exists precisely because it
+usually never arrives — so a call that only ever ended lines locally leaked one
+context per line: the SIXTH line was refused
+(`Maximum simultaneous contexts per WebSocket connection exceeded (5)`), the
+socket errored, and the rest of the call had no voice at all while the text
+kept appearing. Prod log 2026-09-13 shows it at turn 7 of a real call, and it
+is the likeliest reading of launch week's "좋은데 중간에 끊긴다". `endLine` now
+closes the context; `closeContext` is idempotent and a context that went final
+on its own is dropped from `openContexts` when the final lands, so nothing is
+closed twice.
+
+**The app's first line can arrive before the gateway has finished starting,
+and must be HELD, not dropped** (2026-09-13). `say` exists so a written
+greeting (a scenario, a Find-people call) can be generated while the call
+opens — which means the two race, and on the first device test the app won by
+0.7 s: the message hit a `!this.started` guard, was dropped, and the call sat
+silent. `pendingSay` holds it and `applySay` runs the moment `ready` goes out.
+A `say` is only ever the FIRST line: it is ignored once a turn has happened, so
+a late greeting can never talk over a conversation already under way.
+
+**The greeting is played from the phrase cache, and the gateway is never
+asked for it** (2026-09-13). The Talk launcher already synthesizes every pool
+opener into `PhraseAudioStore` (`FreeTalkOpeners.warmAudio`) — and the realtime
+path ignored all of it, so the first word waited on the gateway's own
+ElevenLabs round trip for a line the phone had had on disk since the tab was
+opened. `connect(openerAudio:)` decodes that take and `playLocalOpener` speaks
+it the moment `ready` lands; the text goes up in `history` instead of
+`start.opener`, so the gateway records what was said and stays silent — no
+protocol change. A cache miss or an undecodable file is a nil and the gateway
+speaks it exactly as before. The line is otherwise identical to a streamed one
+(same echo gate, same `AudioLoudness` levelling, same hand-off with audio), so
+Replay and the book can't tell. **It waits for `ready` on purpose**: the
+allowance pre-flight runs in front of that, and a spent month must be told
+before the fluent self says a word. Measured on device: tap → first word 4.4 s
+→ 2.8 s, and the remaining wait is now almost entirely the gateway's
+`start` → `ready`.
+
+**Nothing in front of the first word may be serial if it doesn't have to be**
+(2026-09-13, `gateway/src/session.ts`). `start` ran verify → ownsVoice →
+allowance pre-flight (~1 s) → the transcriber's Gemini Live handshake → `ready`
+→ opener, and every hop of it was silence the learner sat through. The voice
+check and the pre-flight are independent round trips (`Promise.all`), and the
+transcriber's handshake is no longer awaited before the greeting — nobody can
+answer a question that hasn't been asked, mic audio arriving meanwhile is
+buffered (`pendingAudio`, ~5 s) and flushed on setup. `ready` still goes out
+BEFORE `audio_start`: the app reads it as connecting → listening and would
+otherwise overwrite the speaking state the opener just set, leaving the line
+with no hand-off.
+
+**The audio stack is never rebuilt while the fluent self is AUDIBLE, and
+exactly one thing may rebuild it** (2026-09-13). Two watchdogs were restarting
+it on two clocks — `startMicWatchdog` at 1.5 s and 3 s from connect, the
+per-build `armTapWatchdog` every 2 s — and a restart drops every reply chunk
+that lands while the engine is down (`playReplyChunk` guards on
+`engineRunning`; the bytes are kept for Replay, not for the speaker). So the
+churn ate the one line a call opens with: the learner got the opener's TEXT,
+no voice at all, then "the call dropped" five seconds in (three times on
+build 45, every one `mic_bytes=0`). A cold voice-processing unit needing more
+than 1.5 s for its first buffer was killed twice before it could deliver one.
+Now `armTapWatchdog` owns recovery alone (first check at 3 s, then 2 s, three
+restarts, then `mic_silent`), `startMicWatchdog` is a passive 12 s deadline,
+and both DEFER while audio is playing — measured as `playedBuffers`, buffers
+that finished playing, never as queue depth, because a wedged engine accepts
+buffers forever and plays none. `fail(_:_:)` now ships `audioFacts()` with
+every failure (route in/out, input channels, engine running, tap buffers,
+builds, played/queued) — the three `mic_silent` rows could say no byte went
+upstream and nothing whatsoever about why.
+
+**The end-of-talk summary gets its own URLSession** (`edgeFunctionsLong`, 240 s
+ceiling) and retries once on a timeout. `edgeFunctions` caps every attempt at
+60 s; on 2026-09-12 a summary finished server-side at **63 s**, the app called
+it a failure, and that learner cancelled her trial two minutes later. The idle
+timeout stays 40 s — only the ceiling moved, and only for this one call.
 
 ## A call outlives the screen (2026-08-18)
 
@@ -476,6 +1009,38 @@ screen and stone deaf.
   hint under the pill can say "paused" rather than leaving a quiet screen
   unexplained.
 
+## The accent is a remix, and the remix must stay the speaker (2026-09-18)
+
+`VoiceAccentSheet` remixes the clone upstream (`elevenlabs-voice-remix` →
+`/v1/text-to-voice/{id}/remix`) and saves the picked take as a NEW voice; the
+clone it came from is then deleted like any outgoing voice. Three rules,
+each from a way the voice stopped sounding like the learner:
+
+- **`prompt_strength` is sent, and it is low** (`VoiceAccentCatalog.promptStrength`).
+  It is the upstream knob for how far a remix may leave the reference audio
+  (0 keeps the recording, 1 keeps the prompt); the first version sent nothing
+  and let upstream choose, while the prompt text asked for "this exact same
+  voice" — a request, against a parameter. Retune it by ear with
+  `scripts/voice-remix-probe.sh` (same prompt and sample text as the app, one
+  file per strength), never by feel, and probe an UN-remixed clone or the
+  probe measures drift on drift. The value rides into the ledger row's
+  metadata so a complaint can be read against the strength it was made with.
+- **Takes always come from the un-accented clone.** A second pick used to
+  remix the live voice, i.e. the previous remix, and the learners who tried
+  hardest to find themselves (three and four saves in a row in the ledger)
+  drifted furthest. With an accent live, `choose` first rebuilds the clone
+  from the phone's saved recording (`regenerateVoiceClone`, the same path as
+  "Remove accent"), then remixes that. Leaving without applying leaves the
+  learner on the un-accented voice — `rebuiltWithoutApply` makes the sheet
+  tell its presenter so on ANY exit, because onboarding's greeting audio still
+  belongs to the old voice.
+- **The recording is the only way back, and it lives on the phone.**
+  `VoiceSampleStore` (Documents, so it rides in the backup) is what "Remove
+  accent" and the rebuild above read. The server copy in `voice-originals`
+  is NOT a fallback for this: it is kept for 24 h to listen to a clone that
+  came out wrong, and the consent screen says exactly that. A remixed voice's
+  `voice_clones` row has no `original_path` of its own.
+
 ## The voice is heard BEFORE the sign-up (2026-08-18)
 
 Onboarding used to ask for an account between "use this voice" and the clone —
@@ -516,7 +1081,7 @@ had never heard. What the server needs is a **session**, not an account.
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
-- **Billing** → minutes-NATIVE since 2026-08-11 (**pool SHAPE and tier NAMES in this paragraph are superseded by the two bullets below** — daily allowances became monthly pools on 2026-08-20, and Plus's talk pool was removed entirely on 2026-08-21; kept because the metering, the 402s and the idle rule are all still exactly as described) (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → NEVER a paywall. **Since 2026-08-18 those two cap alerts split by TIER**: a **Daily** subscriber is offered Unlimited ("keep going today"), an **Unlimited** one is told to come back tomorrow — there is nothing left to sell them, so for that account the answer really is tomorrow. The 402 body carries no tier, so the branch is `AccountStatus.isLightPlan`, resolved client-side (`canUpgradePlan` in `ConversationView` / `WatchView`); both live in their OWN alert, never the error one, because a finished day is not a failure. Keep plan SIZES out of that copy — the client doesn't know Unlimited's numbers and a hardcoded "20 scenes" goes stale silently. **Enrolling extra practice languages is NOT gated** (decided 2026-08-17, after a gate was built and reverted): every pool — `consume_metered_seconds` `(user_id, day, action)`, `record_free_usage` `(user_id, day, purpose)` — is keyed per ACCOUNT with no language in it, so a second language adds zero cost; someone splitting 5 minutes across three languages is spending their own time, and the day's cap is what converts them. Don't put a plan check on `AddLanguageSheet`. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
+- **Billing** → minutes-NATIVE since 2026-08-11 (**pool SHAPE and tier NAMES in this paragraph are superseded by the two bullets below** — daily allowances became monthly pools on 2026-08-20, and Plus's talk pool was removed entirely on 2026-08-21; kept because the metering, the 402s and the idle rule are all still exactly as described) (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → NEVER a paywall. **Since 2026-08-18 those two cap alerts split by TIER**: a **Daily** subscriber is offered Unlimited ("keep going today"), an **Unlimited** one is told to come back tomorrow — there is nothing left to sell them, so for that account the answer really is tomorrow. The 402 body carries no tier, so the branch is `AccountStatus.isLightPlan`, resolved client-side (`canUpgradePlan` in `ConversationView` / `WatchView`); both live in their OWN alert, never the error one, because a finished day is not a failure. Keep plan SIZES out of that copy — the client doesn't know Unlimited's numbers and a hardcoded "20 scenes" goes stale silently. **Enrolling extra practice languages is NOT gated** (decided 2026-08-17, after a gate was built and reverted): every pool — `consume_metered_seconds` `(user_id, day, action)`, `record_free_usage` `(user_id, day, purpose)` — is keyed per ACCOUNT with no language in it, so a second language adds zero cost; someone splitting 5 minutes across three languages is spending their own time, and the day's cap is what converts them. Don't put a plan check on `AddLanguageSheet`. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals. **The FIRST CALL is free since 2026-09-18** (`20260918100000_first_call_is_free`): the signup grant is 300 s — one conversation, never refilled — because the launch week measured the wall in the wrong place. Of 37 signups, 37 cloned their voice and 36 reached the Talk tab, but only 23 ever started a call; 13 of the 14 who stopped had no subscription row and left within two minutes, having never heard the fluent self answer them. The trial rows said it from the other side: median talk of the people who turned auto-renew off was ~2 min against ~25 min for those who left it on. So the paywall now arrives AFTER that call's summary (`ConversationView.firstCallPitchShown`, asked at most once per install and skipped for an entitled account), and `OnboardingPaywallView` steps aside on its own while the grant is unspent — it already declines to pitch anyone `BillingGate` doesn't block. This is not the old free pool coming back: 300 s buys one call at the measured 3.5-minute mean, and every other free surface is unchanged. **When the pool runs out MID-CALL, the call wraps ITSELF up** (2026-09-18, `handleTalkPoolSpent`): the 300 s are SPOKEN seconds — silence is free (see the idle rule), so on the clock the free call runs 10–18 min (one caller: 23:39→23:57, 288 s billed) — and on its first day the wall raised the error alert and waited for End; a 42-turn first caller never pressed it, so no summary, no book, no pitch (the pitch hangs off the summary sheet's Done), and they left for Watch and never subscribed. Now the gateway HOLDS the wall until the playing line's `audio_end` (`CallSession.wall`, 20 s cap) and the client holds it again until the player drains (`RealtimeTalkClient.heldWall`, 15 s cap) — "sent" is not "heard", and `error` is the client's teardown, which stops the player — then `endSession()` runs by itself with the board's banner saying why, and the summary sheet's Done pitches the plans EVEN IF the pitch was made once (`freeCallSpent`): this time it is the answer to "what now". A wall with no learner turn behind it keeps the old alert; there is nothing to wrap up.
 - **Allowances are MONTHLY POOLS, and the tiers are Light / Plus** (2026-08-20, `20260820180000_monthly_pools_light_and_plus`). Like a mobile data plan: **Light 150 min talk + 60 Watch scenes per billing period, Plus 120 scenes and no talk ceiling** (Plus's scene pool was 600 until `20260823140000_plus_scene_count` — 20 a day, $114/mo of upstream cost against $17 net; its `monthly_seconds` is descriptive since `20260821120000`), and **no daily limit of any kind** — spend the month in one call if you want. `daily_seconds`/`daily_scenes` are DESCRIPTIVE only now (the "5 minutes a day" figure the cards print); `monthly_seconds`/`monthly_scenes` are enforced, counted from `billing_period_start()` — the BILLING period, not the calendar month, because that's the month they paid for. Trial is pro-rated 7/30 so a week's sample can't spend a month. **Four designs shipped and were replaced in one day getting here** (daily-only → a bank of unused days → a rolling 7-day window → this); the bank double-spent idle days by +40% because nothing debited them, and the window was correct but took three migrations and still couldn't be explained in a sentence. **Do not re-derive a daily cap, a bank, or a rolling window.** The old objection to a monthly pool — fill rate, since this tier's margin came from unspent allowance — was retired by the pricing principle, not out-argued. What survives from it: a month-long balance must not become a meter, so the figures live one tap away in Me and the home shows an arc with no digits.
 - **Plus has NO talk pool at all** (2026-08-21, `20260821120000_plus_talk_unlimited`). Watch keeps its count on every tier; talking is uncapped on Plus and only on Plus. **The two sides differ for one reason and it is not a compromise: a scene plays itself on a TAP, so an idle afternoon can farm a month of them — and each is billed to us on `fidelityModelId` at ~2x per character — whereas talking costs the learner EFFORT, and nobody speaks for six hours.** Effort is a limiter no ceiling improves on, so the 1,800-minute pool was doing no work while charging us the thing it was meant to protect: a subscriber rationing the one activity the product exists for. `subscription_plans.talk_unlimited` is the switch (a COLUMN, so restoring the ceiling is one `UPDATE`, not a migration); `consume_metered_seconds` gained an entitled-and-uncapped path, because nulling `monthly_seconds` means "no plan" and would have dropped Plus into `charge_credits` against a balance it doesn't have. **The effort argument holds only while the meter charges for SPEECH** — `TalkMeter.isBillable` + `ConversationView.someoneIsTalkingHere()` are what make that true; weaken them and this becomes an open tab. A TRIAL is never uncapped. Usage is still recorded in full, deliberately: no account has ever run without a talk ceiling, so the number can be re-derived from behaviour instead of estimated. **`monthly_seconds` on Plus is now descriptive only** — nothing enforces it, and nothing user-facing prints it.
 - **Plus never counts anything DOWN** (2026-08-21). A remainder is a monthly receipt for time NOT used; it reads as money wasted and is the likeliest thing to end the subscription. So: no avatar ring on Home (`ConversationHome.headerControl`, and the accessibility label follows it — never announce a gauge that isn't drawn), and Me reports what was SPENT (`AccountStatus.talkTimeLabel` → "55 min talked this month"). Light keeps the fraction, because 150 minutes is a number that account actually meets, and how they spend it — all today or across the month — is their business.
@@ -532,6 +1097,8 @@ had never heard. What the server needs is a **session**, not an account.
 - **The paywall is asked BEFORE the spending, at the tap** (2026-08-18, `BillingGate`). A hard paywall met only as a 402 arrives too late to be an answer: the call screen was already up, and on Watch a whole scene had been written and watched being written before the learner was told it wasn't theirs to play. Every metered launcher now runs its action through `BillingGate.start(orShow:)` — the free-talk ring and the widget deep link (one gate, in `RootTabView.startFreeTalk`, where both paths meet), Talk's news/scenario cards, the composer's CTA (`ScenarioComposerSheet.commit`, before the categorize call and before any scenario is minted), Find people's Talk/Watch, and the Talk/Continue buttons on the book pages. Two rules keep it honest: it gates on `AccountStatus.needsSubscription` ONLY — a daily cap is not this, that learner already paid and the client's copy of today's usage is stale often enough to refuse a call the server would allow — and a "no" is never given from cache (a purchase or invite that landed a minute ago must not be paywalled again), while a "yes" always is, so the app's primary button never waits on the network. **A sheet hosting a paid button owns its own `PaywallView`**; a paywall raised by the host underneath never appears. Onboarding offers the plans once at the end (`OnboardingPaywallView`, after the daily-call step, flag on every exit, skipped silently for anyone with nothing to buy) — so the first tap on Talk stops being where the hard paywall introduces itself.
 - **`apple-webhook` verifies Apple's JWS BY HAND, and must keep doing so** (2026-08-20). Apple's official `@apple/app-store-server-library` cannot run here: `SignedDataVerifier` validates the certificate chain through `node:crypto`'s `X509Certificate.verify()` / `.checkIssued()`, and the Supabase edge runtime implements **neither** — it throws `Not implemented: crypto.X509Certificate.prototype.verify` with an EMPTY message, so every notification failed identically and silently. The webhook had never once succeeded; it was found the day before launch by a runtime self-test, not by reading the code. The replacement uses `@peculiar/x509` on Web Crypto and does four things in order: read the header's `x5c` chain, verify each link against the next one's public key, require the last to be **byte-identical** to a pinned Apple root, then verify the body with the leaf's key — followed by checking the payload's own `bundleId`/`appAppleId`/`environment`. **Step 2 is not optional**: Apple's root is public, so pinning alone would let anyone append it to their own leaf. The nested `signedTransactionInfo`/`signedRenewalInfo` go through the same path — they carry the product, the price and the `appAccountToken`, so decoding them unverified would make a forgery inside a genuine envelope. Verified end-to-end on 2026-08-20 (Sandbox: `2000001224361429` → `light_monthly`, active).
 - **A subscription the app didn't sell still has to reach the server** (2026-09-11, `apple-claim`). The webhook attributes a notification through the `appAccountToken` that only `StoreKitService.purchase()` stamps; an App Store **offer code** redeemed from a link, a restore on a new phone, or a purchase from the store's own page has none, and until this every one of those was logged and dropped — the person paid Apple and the app said "No plan". Now `StoreKitService.claimCurrentEntitlements()` (every foreground, and on each `Transaction.updates` delivery) POSTs the transaction's `jwsRepresentation` to `apple-claim`, which verifies Apple's signature with the SAME chain check as the webhook (`_shared/apple-jws.ts`, moved there for exactly this) and files the row with `apple_original_tx_id`; the webhook's token-less fallback then looks the owner up by that id, so renewals and expiries follow. Rules on the claim side: one original transaction → one account (409 otherwise), a dead transaction never downgrades a live row, and a live Apple transaction DOES replace a comp — redeeming the code is how a beta tester leaves the comp. `PaywallView` has a "Have a code?" button (`AppStore.presentOfferCodeRedeemSheet`), but the mail's redeem link works without it. Half-price launch codes and how they are dealt: `docs/launch-billing.md` §7.
+- **A subscription is TWO facts, and the app used to hold only one** (2026-09-18, `20260918100000`). What was charged is a transaction; what will be charged next is `signedRenewalInfo`, which rides on every Apple notification and was decoded for `autoRenewStatus` alone. That gap is visible the moment an offer code is involved: **Apple runs the intro trial first and applies the code from the first RENEWAL**, so for the whole trial week every transaction on file says `offer_type = 1 / FREE_TRIAL`, nothing anywhere mentions the code, and Me → Usage showed the regular price to someone who had just discounted their plan. The first redeemer wrote in the next day asking whether it had worked; three of the first four did the same week. `user_subscriptions` now carries `renewal_offer_type` / `renewal_offer_id` / `renewal_price_milliunits` / `renewal_currency` / `renewal_product_id`, written from renewal info ONLY (a notification without it must never blank a still-true answer), and `AccountStatus.offerCodeUntil` counts the 12 months from the renewal when the code has not started yet. Three rules the surface keeps: the app reads those columns in a **query of their own** — a `.select()` naming a column the database hasn't got fails the WHOLE query, and folding them in beside `plan_id` would show "No plan" to paying subscribers on any build that shipped ahead of the migration; the next-charge row appears only where it is NEWS (a trial, or an amount that is about to CHANGE), because on a steady subscription the figure is already on screen as the last charge and the date as the refill; and the code row sits UNDER the charge it explains. `scripts/apple-subscription.sh <originalTransactionId>` prints Apple's own answer for any subscription — cancelled or not, which storefront, what renews — and is the first thing to run on a billing question, because our tables can only ever agree with themselves.
+- **One account can hold TWO live Apple subscriptions** (2026-09-17, same case). Two Apple IDs, or one that changed storefront — a plan change *inside* a subscription group keeps its original transaction id, so a second `apple_original_tx_id` means a genuinely separate subscription. `apple-claim` and `apple-webhook` both keep the row on the one that ends LATER and record the other as a transaction only; before that, a fresh sign-in re-claimed a cancelled-but-still-running trial and buried the subscription the learner was actually on.
 - **The update sheet has two audiences** (2026-09-11, `20260911140000_app_release_testflight`). `beta.sh` moves `app_release.latest_testflight_build` on upload; `latest_build` — what an App Store install compares against — moves only with `./scripts/beta.sh released`, which first checks the store's own lookup shows the version. Before the split every App Store user was told about a build the store didn't have yet. **Release notes are part of the build**: `beta.sh` prints `fastlane/metadata/*/release_notes.txt`, refuses the generic placeholder and refuses notes unchanged since the last published row (`FORCE_SAME_NOTES=1` to override), because those files are what the sheet shows AND what App Store Connect gets.
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
 
@@ -574,6 +1141,8 @@ Four string catalogs (+ `SWIFT_EMIT_LOC_STRINGS`) hold every UI string, and the 
 
 **The pixel display face must carry every UI language's script.** `UIFont.appPixel` cascades Geist Pixel → a bundled Galmuri14 SUBSET (`Resources/Fonts/.galmuri-subset.txt` lists exactly what is in it); a script missing from the subset drops titles to the system font mid-line, which is how Japanese looked until 2026-09-12. The subset now holds Latin + Hangul + all kana + the kanji the ja catalog actually uses; when a new UI language lands, or new kanji enter the ja column, regenerate with `pyftsubset` from the upstream Galmuri release (`--text-file` = that list, `--name-IDs='*'` so the PostScript name the cascade looks up survives).
 
+**One line on the Talk tab is NOT chrome: the greeting above the ring** (`HeroGreeting`, 2026-09-15). It is the fluent self speaking, so it is MATERIAL and resolves in the TARGET language through `material(…)` (`UILanguage.swift`), following the language switcher the moment it moves. It rode along with `chrome()` when chrome moved to the app language and spent a month as the app's voice, reported as "the line above the ring doesn't change when I switch languages". Any future on-screen line the fluent self says goes through `material`, never `chrome`.
+
 Two things survive the collapse and still matter:
 
 - **`explain(…)` / `chrome(…)` are how a `String` gets localized at all.** `Text("literal")` follows the environment locale; a `String` never sees it. So any literal that flows through a `String` first — a computed nav title, a `switch` returning a label, a function parameter — has to go through one of them or it is frozen English in every language. This is not a style rule: `MeTab.row(icon:title:subtitle:)` takes `String`, and ~35 settings rows sat untranslated behind it until 2026-08-17, as did most of onboarding until 2026-08-16. The two helpers are now interchangeable; prefer `explain(…)` for new code.
@@ -585,9 +1154,11 @@ Two things survive the collapse and still matter:
 
 Nothing here names a language. Adding German is a `de` column in the catalogs plus its code in `project.yml`'s `knownRegions` — no other code change.
 
-**Chinese is listed BY SCRIPT, and that took real code** (2026-09-13, `zh-Hant`). Traditional (Taiwan/HK/Macau) and Simplified are different vocabularies, not just different glyphs, and every Foundation API resolves a bare `zh` to Simplified — so `nativeLanguages` now carries `zh-Hant`/`zh-Hans` and `LanguageCatalog` gained the four helpers that a script-qualified code needs: `normalizedNative` (a stored bare `zh` from before this migrates to `zh-Hans`), `nativeCode(matching:)` (device locale → the list entry, keeping the script), `sameLanguage` (target/native collision checks that used `==` and would have let `zh-Hant` sit opposite `zh`), and `name(_:in:)` — `localizedString(forLanguageCode:)` DROPS the script, so both scripts came back as plain 中文 / "Chinese"; every on-screen language name goes through `name`, and `englishName` spells out "Traditional Chinese" so a prompt can't quietly write Simplified. `translatedLanguages` now matches `Bundle.main.localizations` verbatim (a `.lproj` is called `zh-Hant`, never `zh`), and `sttLocale` maps the scripts to `zh-TW` / `zh-CN`. **Mainland China is not the market here** — the App Store there requires ICP registration a German entity can't get — so Traditional is the one that ships; a `zh-Hans` column would be a separate translation, never a conversion.
+**Chinese is listed BY SCRIPT, and that took real code** (2026-09-13, `zh-Hant` + `zh-Hans`). Traditional (Taiwan/HK/Macau) and Simplified are different vocabularies, not just different glyphs, and every Foundation API resolves a bare `zh` to Simplified — so `nativeLanguages` now carries `zh-Hant`/`zh-Hans` and `LanguageCatalog` gained the four helpers that a script-qualified code needs: `normalizedNative` (a stored bare `zh` from before this migrates to `zh-Hans`), `nativeCode(matching:)` (device locale → the list entry, keeping the script), `sameLanguage` (target/native collision checks that used `==` and would have let `zh-Hant` sit opposite `zh`), and `name(_:in:)` — `localizedString(forLanguageCode:)` DROPS the script, so both scripts came back as plain 中文 / "Chinese"; every on-screen language name goes through `name`, and `englishName` spells out "Traditional Chinese" so a prompt can't quietly write Simplified. `translatedLanguages` now matches `Bundle.main.localizations` verbatim (a `.lproj` is called `zh-Hant`, never `zh`), and `sttLocale` maps the scripts to `zh-TW` / `zh-CN`. **Both Chinese columns ship.** `zh-Hant` was written first (Taiwanese Mandarin) and `zh-Hans` was DERIVED from it, which is the honest record: OpenCC `tw2sp` for script + idiom, then a review pass that fixed ~255 keys the converter got wrong or left Taiwanese. Three classes of error, and they recur if this is ever redone — **domain words the converter destroys** (核心, the club, became 内核 "kernel"; 登出 became 注销, which in the mainland reads as DELETE ACCOUNT; 複製 became 拷贝 where a voice clone is 克隆), **Taiwan terms it doesn't know are Taiwan terms** (單字→单词, 字彙→词汇, 文法→语法, 程度→水平 for proficiency but NOT for 私密程度/認真的程度, 口說→口语, 分頁→页, 畫面→界面, 回饋→反馈, 音檔→音频), and **dated jargon it prefers** (預設→缺省 instead of 默认). Verify with OpenCC in both directions: no character may survive `s2t`, and every word-level substitution the converter made should be eyeballed (diff against a `t2s` character-only conversion to isolate them). ICP filing is about listing the app in the mainland App Store — a separate, later business decision — and was never a reason to withhold the language; Simplified readers are in Singapore, Malaysia and everywhere Chinese people live abroad.
 
-**The pixel display face gives up on a script it can't spell.** `UILanguage.pixelFaceCoversChrome` is false for Chinese, and BOTH pixel entry points check it — `Font.geistPixel` and `RootView.roundedNavFont`, which is UIKit's nav-bar path and does NOT go through the SwiftUI Font (that's how the first fix half-worked). Galmuri is a Hanja font, so it has thousands of CJK ideographs but not the Traditional forms of common ones (說, 錄, 每 are missing while 説, 録, 毎 are present), and a missing glyph falls back PER CHARACTER — a title half pixel, half SF. Whole-title system font is the lesser evil. `DayCardView` uses `brandPixel` instead, because the day card is pinned to English. `Localizable.xcstrings` is fully translated for **ko** (verified 2026-08-17, 1302 keys, zero gaps) and **ja** (2026-09-12, every key in all four catalogs — drafted from the ko column as the tone reference, with a fixed glossary: Talk→トーク, Watch→シーン練習, Progress→成長, fluent self→流暢な自分; chrome in です・ます, the fluent self's own lines in タメ口, never あなた; second pass 2026-09-12 rewrote ~150 lines as Japanese product copy rather than translation: no mid-sentence “—” (Japanese uses 。/、/·), sentence “Got it” = 覚えた vs word/phrase “Known” = 知ってる, appearance modes use iOS's own ライト/ダーク/システム設定, plural-suffix `%2$@` args dropped the way ko drops them — still not read by a native speaker); **zh-Hant** (2026-09-13, same pipeline and the same second review pass — Taiwanese Mandarin, not a Simplified conversion: 軟體/影片 vocabulary, 點一下 not 点击, verified character-by-character with OpenCC so not one Simplified glyph ships); **de has drifted** — 170 keys were already missing before the settings work and it is now ~225, which is knowingly deferred (German UI isn't a launch requirement; German is a target language, not a native one). Verify with a re-export: extracted count == repo count, and no entry missing a language unless it carries `shouldTranslate: false`, which marks punctuation, format shells and dev samples. One gap remains: outside Settings and onboarding, most explanatory strings are still unwrapped, so they read as chrome. Literals that flow through a `String` variable (`source = "Free talk"`) still neither extract nor localize until they go through `chrome(…)`/`explain(…)`.
+
+**One badge, two words — the failure mode of chunked translation** (2026-09-13). `BookCards` renders `"Mastered"` OR `"%lld/%lld mastered"` in the SAME pill, and because the two keys land in different chunks of the extract, all five languages added in 2026-09 translated them with different words: 完了/習得, 完成/已掌握, Terminé/maîtrisés, Completado/dominados. Korean was the only consistent column (완료/완료) because it was written by hand in one pass. All four counter keys now match their own short label. **When a language is added, diff the keys that share a call site** — a per-key validator can't see it, and neither can a reader of one chunk. The same applies across CATALOGS: the four literals in `Shared/StudyWidgetShared.swift` extract into BOTH `Localizable.xcstrings` files and render through one view, so their values must be byte-identical (`mastered`, `left`, `Done for today`, `Nothing in progress` had drifted in fr/es/zh). A key that merely happens to appear in both files — the widget gallery's `Streak`, say — is a different surface and may legitimately differ.
+**The pixel display face gives up on a script it can't spell.** `UILanguage.pixelFaceCoversChrome` is false for Chinese, and BOTH pixel entry points check it — `Font.geistPixel` and `RootView.roundedNavFont`, which is UIKit's nav-bar path and does NOT go through the SwiftUI Font (that's how the first fix half-worked). Galmuri is a Hanja font, so it has thousands of CJK ideographs but not the Traditional forms of common ones (說, 錄, 每 are missing while 説, 録, 毎 are present), and a missing glyph falls back PER CHARACTER — a title half pixel, half SF. Whole-title system font is the lesser evil. `DayCardView` uses `brandPixel` instead, because the day card is pinned to English. `Localizable.xcstrings` is fully translated for **ko** (verified 2026-08-17, 1302 keys, zero gaps) and **es** (2026-09-13 — ONE neutral column for Spain, Latin America and US Hispanics, which is a real constraint and not a shrug: **tú** throughout, never usted/vos, never **vosotros**, and never the verb **coger** (vulgar across most of Latin America — "contestar la llamada", never "coger"). Region-locked nouns are avoided rather than picked: **teléfono** (not móvil/celular), **auriculares**, **la app**, and "un coche estacionado" because both halves travel. Apple's own `es` terms carry the OS-facing words — **Ajustes**, **Toca**, **Cuenta de Apple**. Glossary: Talk→Hablar, Watch→Escenas, Progress→Progreso, Me→Mi perfil, fluent self→tu yo fluido, Streak→Racha, books→cuadernos but the word notebook→libreta, Got it (a sentence)→Memorizado vs Known (a word)→Ya lo sé. Spanish runs 20–25% longer than English, so labels were cut rather than crammed) and **ja** (2026-09-12, every key in all four catalogs — drafted from the ko column as the tone reference, with a fixed glossary: Talk→トーク, Watch→シーン練習, Progress→成長, fluent self→流暢な自分; chrome in です・ます, the fluent self's own lines in タメ口, never あなた; second pass 2026-09-12 rewrote ~150 lines as Japanese product copy rather than translation: no mid-sentence “—” (Japanese uses 。/、/·), sentence “Got it” = 覚えた vs word/phrase “Known” = 知ってる, appearance modes use iOS's own ライト/ダーク/システム設定, plural-suffix `%2$@` args dropped the way ko drops them — still not read by a native speaker); **zh-Hant** (2026-09-13, same pipeline and the same second review pass — Taiwanese Mandarin, not a Simplified conversion: 軟體/影片 vocabulary, 點一下 not 点击, verified character-by-character with OpenCC so not one Simplified glyph ships); **fr** (2026-09-13, same pipeline, read line by line afterwards — **tu** throughout, never vous, because the fluent self IS the learner; apostrophes are always the typographic ’ and every « »,  :,  ?,  ! carries a NO-BREAK SPACE (184 lines were normalized); glossary Talk→Parler, Watch→Scènes, Practice→Pratique, Progress→Progression, Me→Mon profil, fluent self→ton moi fluide, books→carnets, Settings→Réglages, Unlimited→Illimité — « Passer à Plus » for "Go Unlimited" named the wrong tier and was caught in that read-through); **de has drifted** — 606 of 1728 keys are missing (2026-09-13; it was ~225 against a smaller catalog, and every language added since widened the gap), which is knowingly deferred (German UI isn't a launch requirement; German is a target language, not a native one). **It is therefore NOT in the "Fully translated" group**: `LanguageCatalog.partialUILanguages` subtracts it from `translatedLanguages`, so the picker offers it under "Corrections and notes only", whose footer says the app's own screens stay English — an under-promise a 65% column can keep. Empty that set as a column is finished; never widen `translatedLanguages` to mean "has a `.lproj`" again. Verify with a re-export: extracted count == repo count, and no entry missing a language unless it carries `shouldTranslate: false`, which marks punctuation, format shells and dev samples. One gap remains: outside Settings and onboarding, most explanatory strings are still unwrapped, so they read as chrome. Literals that flow through a `String` variable (`source = "Free talk"`) still neither extract nor localize until they go through `chrome(…)`/`explain(…)`.
 
 ## Hard rules
 
@@ -627,6 +1198,7 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
   - `fidelityModelId` bills ~2x per character upstream while `priceFor("tts")` in the edge function is model-BLIND, so that 2x is pure margin we absorb. Only put a path on it when `PhraseAudioStore` caches the result (making the 2x one-time per unique line) or when it fires once per user, ever. NEVER for live conversation turns.
   - Voice settings are fixed server-side in `supabase/functions/elevenlabs-tts/`. `style` MUST stay `0` — any style exaggeration pulls the output away from the reference speaker.
   - **The level changes WHICH WORDS, not HOW MUCH** (2026-08-20, `ConversationEngine.SpeechScale`). Turn length used to scale with the band (2 sentences at A1, 4 at C1); it now stops at 3 for everyone and says one thing — this is a phone call, nobody monologues. A learner doesn't need shorter turns than a fluent speaker gets, they need easier ones, so the band drives vocabulary + sentence SHAPES and nothing else. The old ceiling made replies stop mid-thought and pushed the model to satisfy the count by writing longer sentences, which is how a rule meant to keep the call spoken made it read written. Keep the ceiling COUNTABLE though — the qualitative version lost to the concrete REACT/VARY bullets and an A1 turn came back at four sentences.
+  - **Punctuation is the breath** (2026-09-15, rewritten 2026-09-16, `CoachingLanguage.breathPunctuation`). Reported as "when it speaks Korean it reads without breathing". Measured on both TTS models and on the gateway's per-sentence path: the synthesizer pauses at punctuation and nowhere else — a Korean turn with no commas got ~1.1 s of internal pause in 12 s, the same text with a comma at each clause boundary ~1.7 s, and the gap BETWEEN sentences was ~400 ms on every path, so the text never asked. `speed: 0.9` slowed the words and REDUCED the pauses — wrong axis. **The first wording ("a comma between two clauses") made the model end finished sentences on a comma** ("나 방금 너랑 비슷한 사람 봤다, 어찌나 반갑던지, 뭐 하고 지내?"), which keeps the voice suspended on a sentence that is over — 10 of 18 opener lines against 2–6 with no rule. It is now stated as INTONATION: a period finishes, a comma hangs, a comma only after an ending that leaves the sentence open (~는데/~서/~니까/~고/~던지/~면), never after a sentence-final ending (0 wrong commas on both models after the rewrite). Don't delete it to fix choppiness — that brings the breathless reading back. It also carries the other half of the fix: **don't stack three short sentences** — two clauses that are one thought (a reason and what it led to) join with a connective and a comma, which is the take the learner picked by ear from four synthesized voicemails. That is not a licence to merge past the turn ceiling; over it, an idea is still dropped. The older choppiness (short lines on an English skeleton, "지금 괜찮아? 목소리 듣고 싶어서.", in ElevenLabs history since August) is a separate problem this rule doesn't address.
 
 ## Audio format
 

@@ -1,22 +1,33 @@
 #!/usr/bin/env bash
-# Rebuild the admin console's page from production.
+# Build the admin console's page.
 #
 #   ./scripts/admin/refresh.sh
 #
-# The console itself is LIVE now (admin/ — a Worker that reads production on
-# every load), so this is no longer how the numbers get updated. What it still
-# does is rebuild the PAGE: base.html + merge_admin.py produce the page, and
-# make_shell.py strips the data out of it to give the Worker its shell. Run
-# this after editing base.html or merge_admin.py, then `bash admin/deploy.sh`.
+# The page is ONE file — `scripts/admin/page.html` — and the Worker serves it
+# with the data blob substituted for `__ADMIN_DATA__` at request time. So this
+# script is a copy plus two guards.
 #
-# It also leaves build/admin.html, a self-contained snapshot with the numbers
-# baked in — the offline fallback, and what the old artifact was.
+# It used to be four Python steps over `base.html` plus 1,165 lines of string
+# surgery in `merge_admin.py`; that pipeline is what let the page grow to five
+# tabs and twenty-five sections nobody could see at once. Both files were
+# retired on 2026-09-14 and live in git history.
+#
+# There is no offline snapshot any more either. It existed because the console
+# used to be a static artifact someone had to remember to republish, which is
+# the exact failure the live Worker was built to end.
 set -euo pipefail
 cd "$(dirname "$0")"
-python3 derive_cost.py
-python3 gather_admin.py
-python3 merge_admin.py
-python3 make_shell.py
+SRC=page.html
+DEST=../../admin/src/shell.html
+
+grep -q '__ADMIN_DATA__' "$SRC" || { echo "!! $SRC has no __ADMIN_DATA__ placeholder" >&2; exit 1; }
+# The shell is committed, so a real address in it would be a leak in git.
+if grep -oE '[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}' "$SRC" | grep -v '@example\.com' | head -1 | grep -q .; then
+  echo "!! $SRC contains an email address — the page must hold no data" >&2; exit 1
+fi
+
+cp "$SRC" "$DEST"
+echo "wrote $DEST ($(wc -c < "$DEST" | tr -d ' ') bytes, no data)"
+
 echo
-echo "→ live:     bash admin/deploy.sh   (serves admin/src/shell.html)"
-echo "→ snapshot: $(cd build && pwd)/admin.html"
+echo "→ live: bash admin/deploy.sh"

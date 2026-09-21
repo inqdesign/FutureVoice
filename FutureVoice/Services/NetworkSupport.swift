@@ -123,6 +123,21 @@ extension URLSession {
         return URLSession(configuration: config)
     }()
 
+    /// The one Gemini call that legitimately runs past a minute: the
+    /// end-of-talk summary. `edgeFunctions` caps every attempt at 60 s, and
+    /// on 2026-09-12 a four-turn talk's summary finished server-side at 63 s
+    /// — the app had given up at 60, showed a timeout, and the learner
+    /// cancelled her trial two minutes later. The idle timeout stays at 40 s
+    /// (a stream that sends nothing for 40 s is dead); only the ceiling is
+    /// lifted, and only for callers who ask for this session.
+    static let edgeFunctionsLong: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.waitsForConnectivity = true
+        config.timeoutIntervalForRequest = 40
+        config.timeoutIntervalForResource = 240
+        return URLSession(configuration: config)
+    }()
+
     /// Voice-clone sample upload: ~1–2 MB of WAV on a possibly-slow cellular
     /// uplink. Same connectivity behavior, roomier ceiling.
     static let edgeFunctionUploads: URLSession = {
@@ -189,5 +204,14 @@ extension Error {
         default:
             return false
         }
+    }
+
+    /// A request that ran out of time. Kept apart from `isTransientNetworkError`
+    /// because a timeout is not a blip to re-dial at once — it is a call that
+    /// was already given long enough, and only a caller whose retry is free
+    /// (an idempotency key) and whose wait is already on screen should try
+    /// again.
+    var isTimeout: Bool {
+        (self as? URLError)?.code == .timedOut
     }
 }

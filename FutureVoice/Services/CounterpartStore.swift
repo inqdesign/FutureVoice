@@ -84,5 +84,6 @@ final class CounterpartStore {
     private func write(_ list: [Counterpart]) {
         guard let data = try? encoder.encode(list) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.counterpart)
     }
 }

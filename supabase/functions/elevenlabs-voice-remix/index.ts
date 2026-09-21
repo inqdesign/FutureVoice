@@ -43,9 +43,25 @@ Deno.serve(async (req) => {
     text?: string
     generated_voice_id?: string
     voice_name?: string
+    prompt_strength?: number
+    guidance_scale?: number
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_description) return errorResponse(400, "voice_description required")
+  // How far the remix may drift from the reference audio. Upstream: 0 is
+  // "almost no prompt influence", 1 "almost no reference audio influence".
+  // For an accent pick the reference IS the product — the learner has to
+  // still hear themselves — so the client sends a low value; omitted, the
+  // upstream default applies (which is what every accent before 2026-09-18
+  // was made with, and is where "it stopped sounding like me" came from).
+  if (body.prompt_strength !== undefined
+      && !(typeof body.prompt_strength === "number" && body.prompt_strength >= 0 && body.prompt_strength <= 1)) {
+    return errorResponse(400, "prompt_strength must be a number in 0...1")
+  }
+  if (body.guidance_scale !== undefined
+      && !(typeof body.guidance_scale === "number" && body.guidance_scale > 0 && body.guidance_scale <= 100)) {
+    return errorResponse(400, "guidance_scale must be a number in 0...100")
+  }
 
   // ---- SAVE: promote the picked preview into a permanent voice ------------
   if (body.generated_voice_id) {
@@ -117,7 +133,7 @@ Deno.serve(async (req) => {
   const free = await recordFreeUsage({
     supabase, userId: user.id, action: "voice_remix", purpose: "accent_previews",
     dailyCap: 12, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { voice_id: body.voice_id },
+    metadata: { voice_id: body.voice_id, prompt_strength: body.prompt_strength ?? null },
   })
   if (!free.ok) {
     if (free.reason === "rate_limited") return rateLimitedResponse(cors())
@@ -133,6 +149,8 @@ Deno.serve(async (req) => {
         voice_description: body.voice_description,
         text: body.text,
         output_format: "mp3_44100_128",
+        ...(body.prompt_strength !== undefined ? { prompt_strength: body.prompt_strength } : {}),
+        ...(body.guidance_scale !== undefined ? { guidance_scale: body.guidance_scale } : {}),
       }),
     },
   )

@@ -336,9 +336,12 @@ enum WeeklyReportEngine {
         var counts: [CEFRLevel: Int] = [:]
         var seen = Set<String>()
         for line in utterances {
-            for token in line.lowercased()
-                .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                where !token.isEmpty && !seen.contains(token) {
+            // Headwords for Japanese — a segment on its own can't tell 行き
+            // the noun from 行き + ました (see ScorecardMetrics).
+            let tokens = WordSplitter.spaced
+                ? line.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+                : Array(VocabStore.lemmas(in: [line]))
+            for token in tokens where !token.isEmpty && !seen.contains(token) {
                 seen.insert(token)
                 if let lv = CoreVocabulary.level(ofSurface: token) {
                     counts[lv, default: 0] += 1

@@ -37,13 +37,21 @@ Deno.serve(async (req) => {
   const idemKey = req.headers.get("X-Idempotency-Key")
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
 
-  let body: { seconds?: number; session_id?: string; language?: string }
+  let body: { seconds?: number; session_id?: string; language?: string; preflight?: boolean
+              learner_seconds?: number }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const seconds = body.seconds
   if (typeof seconds !== "number" || !Number.isInteger(seconds) ||
       seconds < 1 || seconds > 600) {
     return errorResponse(400, "seconds must be an integer in 1...600")
   }
+  // How much of this tick the LEARNER was speaking, as the gateway measured
+  // it (mic audio while the transcriber was hearing words). A record, not a
+  // price: billing is `seconds` and nothing else. So a malformed value is
+  // dropped rather than refused — this field must never be why a tick fails.
+  const learner = body.learner_seconds
+  const learnerSeconds = typeof learner === "number" && Number.isInteger(learner) &&
+    learner >= 0 && learner <= 600 ? learner : null
 
   const { data, error } = await billingClient().rpc("charge_talk_seconds", {
     p_user_id: user.id,
@@ -55,7 +63,17 @@ Deno.serve(async (req) => {
     // account falls through to charge_credits, which records the spend only as
     // `delta` — so cost-per-minute had no denominator for exactly the accounts
     // that have one. Cheap, and it makes every talk_time row self-describing.
-    p_metadata: { session_id: body.session_id ?? null, seconds },
+    // `preflight` marks the tick that OPENS a call. It is the only tick
+    // judged against the minimum-call floor: a free pool with under a minute
+    // left is closed there, so the tap answers with the paywall instead of a
+    // call that dies in seconds (20260920180000). A mid-call tick must never
+    // be judged that way — it would throw away time the learner still has.
+    // `learner_seconds` is absent (not 0) when the caller didn't measure it —
+    // the classic path and every build before the gateway sent it — so the
+    // admin can tell "said nothing" from "unknown".
+    p_metadata: { session_id: body.session_id ?? null, seconds,
+                  preflight: body.preflight === true,
+                  ...(learnerSeconds !== null ? { learner_seconds: learnerSeconds } : {}) },
     // The Core is one club per target language and this tick is the only
     // place the server hears which language was spoken. Absent on older
     // builds — those seconds bill normally and count toward no club, which
@@ -76,6 +94,13 @@ Deno.serve(async (req) => {
       return fairUseLimitResponse(cors())
     }
     return errorResponse(500, "talk tick failed", error.message)
+  }
+  // The free pool closing is a SUCCESS in the database — the last few seconds
+  // are thrown away and the balance is set to zero, which a raise would have
+  // rolled back (20260920110000, threshold raised to a whole tick in
+  // 20260920130000). It is still the wall, so it answers as one.
+  if ((data as { wall?: string } | null)?.wall === "insufficient_credits") {
+    return insufficientCreditsResponse(cors())
   }
 
   const parsed = data as {

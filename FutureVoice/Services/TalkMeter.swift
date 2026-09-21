@@ -51,6 +51,14 @@ final class TalkMeter: ObservableObject {
     /// Set it before `start`; nil means "count everything".
     var isBillable: (() -> Bool)?
 
+    /// This call's talk time, counted by the same `isBillable` poll that
+    /// bills it — the clock in the call's title. A wall clock ran through
+    /// every silence while the learner was thinking of an answer, so the
+    /// header said the call was costing them seconds the meter never
+    /// charged (reported 2026-09-19). Its own object so a tick redraws the
+    /// clock, not the whole call screen.
+    let clock = TalkClock()
+
     static let tickSeconds = 30
 
     /// How long after the learner's last voiced frame still counts as them
@@ -96,6 +104,7 @@ final class TalkMeter: ObservableObject {
         stop()
         Self.isRunning = true
         sessionKey = sessionId.uuidString
+        clock.reset()
         task = Task { [weak self] in
             // Preflight before the first sleep — see type comment.
             await self?.tick(seconds: 1, label: "pre")
@@ -109,6 +118,7 @@ final class TalkMeter: ObservableObject {
                 let elapsed = min(now.timeIntervalSince(lastPoll), Self.maxSecondsPerPoll)
                 lastPoll = now
                 guard self.isBillable?() ?? true else { continue }
+                self.clock.add(elapsed)
                 live += elapsed
                 guard live >= Double(Self.tickSeconds) else { continue }
                 live -= Double(Self.tickSeconds)
@@ -118,6 +128,8 @@ final class TalkMeter: ObservableObject {
         }
     }
 
+    /// Stops counting; the clock keeps its figure until the next `start`,
+    /// so the wrap-up can still read how long the call ran.
     func stop() {
         task?.cancel()
         task = nil
@@ -189,5 +201,23 @@ final class TalkMeter: ObservableObject {
             // Transient failure: skip this tick. The idempotency key was
             // unique to it, so nothing double-bills when the next one lands.
         }
+    }
+}
+
+/// Whole seconds of talk in the current call — see `TalkMeter.clock`.
+@MainActor
+final class TalkClock: ObservableObject {
+    @Published private(set) var seconds = 0
+    private var exact: Double = 0
+
+    func reset() {
+        exact = 0
+        if seconds != 0 { seconds = 0 }
+    }
+
+    func add(_ interval: Double) {
+        exact += interval
+        let whole = Int(exact)
+        if whole != seconds { seconds = whole }
     }
 }

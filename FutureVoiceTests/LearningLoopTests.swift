@@ -104,6 +104,45 @@ final class DrillStoreTests: XCTestCase {
         XCTAssertEqual(store.load().count, 1)
     }
 
+    /// `save` replaces by `id`, so every mint path outside `ingest` used to
+    /// append a fresh UUID for a sentence already on file — Watch's "Save
+    /// phrase" on a replayed scene, the book's correction tap, a debug seed.
+    func testSaveIfNewKeepsOneCardPerSentence() {
+        let make = { (target: String) in
+            DrillCard(sourcePhrase: "", targetPhrase: target, reason: "",
+                      createdAt: Date(), nextReviewAt: Date(), box: 0)
+        }
+        XCTAssertNotNil(store.saveIfNew(make("That works for me.")))
+        // Same sentence, different punctuation and casing — one card.
+        XCTAssertNotNil(store.saveIfNew(make("that works for me")))
+        XCTAssertEqual(store.load().count, 1)
+        // A phrase the read filter would drop is never minted at all: a card
+        // no lookup can find is what made every visit mint another one.
+        XCTAssertNil(store.saveIfNew(make("using articles correctly")))
+        XCTAssertEqual(store.load().count, 1)
+    }
+
+    /// Duplicates already sitting in a learner's store collapse on read, and
+    /// the copy carrying Leitner progress is the one that survives.
+    func testLoadCollapsesExistingDuplicatesKeepingProgress() {
+        let now = Date()
+        let fresh = DrillCard(sourcePhrase: "", targetPhrase: "It went really well.",
+                              reason: "", createdAt: now,
+                              nextReviewAt: now, box: 0)
+        var studied = fresh
+        studied.id = UUID()
+        studied.box = 3
+        studied.timesSeen = 4
+        studied.lastReviewedAt = now
+        studied.nextReviewAt = now.addingTimeInterval(7 * 24 * 60 * 60)
+        store.upsertMany([fresh, studied])
+
+        let cards = store.load()
+        XCTAssertEqual(cards.count, 1)
+        XCTAssertEqual(cards.first?.box, 3)
+        XCTAssertEqual(cards.first?.id, studied.id)
+    }
+
     func testIngestFiltersMetaRules() {
         let count = store.ingest(
             summary: summary(drills: ["using articles correctly", "Could you pass the salt?"]),
@@ -134,14 +173,73 @@ final class DrillStoreTests: XCTestCase {
         // "Got it" GRADUATES — the learner said they know it, so the card goes
         // to the top rung in one drop (it used to climb one box at a time,
         // which meant five Got-its before anything left the to-study pile).
-        // Back in ~30 days, the top rung's own interval.
+        // And the top rung RETIRES it: it used to come back in 30 days, be
+        // marked known again, and come back again — so nothing ever left the
+        // store.
         store.markKnown(card, at: now)
         XCTAssertTrue(store.due(now: now).isEmpty)
         card = store.load().first!
         XCTAssertEqual(card.box, DrillStore.maxBox)
         XCTAssertEqual(card.timesCorrect, 1)
-        let thirtyDays: TimeInterval = 30 * 24 * 60 * 60
-        XCTAssertEqual(card.nextReviewAt.timeIntervalSince(now), thirtyDays, accuracy: 1)
+        XCTAssertEqual(card.nextReviewAt, DrillStore.retiredReviewDate)
+        // A year later it is still gone.
+        XCTAssertTrue(store.due(now: now.addingTimeInterval(365 * 24 * 60 * 60)).isEmpty)
+    }
+
+    /// Saying the card's line in a real talk outranks every flashcard verdict:
+    /// top rung, retired, and stamped CONFIRMED — which "Got it" never is,
+    /// because that one is the learner's own claim.
+    func testSayingACardInATalkConfirmsIt() {
+        let now = Date()
+        store.ingest(summary: summary(drills: ["Could you say that again?"]),
+                     turns: [], sessionId: UUID(), now: now)
+        let fresh = store.load().first!
+        XCTAssertNil(fresh.usedInTalkAt)
+
+        store.markUsedInConversation(ids: [fresh.id], at: now)
+        let used = store.load().first!
+        XCTAssertEqual(used.box, DrillStore.maxBox)
+        XCTAssertEqual(used.nextReviewAt, DrillStore.retiredReviewDate)
+        // The store writes ISO 8601, which keeps whole seconds only.
+        XCTAssertEqual(used.usedInTalkAt?.timeIntervalSince1970 ?? 0, now.timeIntervalSince1970, accuracy: 1)
+        XCTAssertTrue(store.due(now: now).isEmpty)
+
+        // "Got it" on another card reaches the same rung without the stamp.
+        store.ingest(summary: summary(drills: ["We're on the same page."]),
+                     turns: [], sessionId: UUID(), now: now)
+        let other = store.due(now: now).first!
+        store.markKnown(other, at: now)
+        XCTAssertNil(store.load().first { $0.id == other.id }?.usedInTalkAt)
+    }
+
+    /// Known is a door, not a waiting room — but only the ladder is barred
+    /// from reopening it. Re-filing from the Known folder is the learner's
+    /// own call and must still work.
+    func testRetiredCardComesBackWhenTheLearnerFilesItAgain() {
+        let now = Date()
+        store.ingest(summary: summary(drills: ["Could you say that again?"]),
+                     turns: [], sessionId: UUID(), now: now)
+        store.markKnown(store.due(now: now).first!, at: now)
+
+        let retired = store.load().first!
+        store.snooze(retired, box: 1, until: now.addingTimeInterval(24 * 60 * 60), at: now)
+        let back = store.load().first!
+        XCTAssertLessThan(back.box, DrillStore.maxBox)
+        XCTAssertNotEqual(back.nextReviewAt, DrillStore.retiredReviewDate)
+    }
+
+    /// Cards that reached the top rung while it still meant "back in 30 days"
+    /// are retired where they sit, so the backlog they built stops returning.
+    func testTopRungCardsFromBeforeRetirementAreRetiredOnRead() {
+        let now = Date()
+        store.upsertMany([
+            DrillCard(sourcePhrase: "", targetPhrase: "We're on the same page.",
+                      reason: "", createdAt: now, lastReviewedAt: now,
+                      nextReviewAt: now.addingTimeInterval(13 * 60 * 60),
+                      box: DrillStore.maxBox)
+        ])
+        XCTAssertEqual(store.load().first?.nextReviewAt, DrillStore.retiredReviewDate)
+        XCTAssertTrue(store.due(now: now.addingTimeInterval(14 * 60 * 60)).isEmpty)
     }
 
     func testIncorrectDropsARungAndComesBackNow() {

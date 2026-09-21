@@ -9,6 +9,18 @@
             "value" : "/ %lld Min."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld min"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld min"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19,6 +31,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "/ %lld분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld分"
           }
         },
         "zh-Hant" : {
@@ -37,6 +55,18 @@
             "value" : "%lld"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -44,6 +74,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld"
@@ -82,6 +118,18 @@
             "value" : "%1$lld/%2$lld"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -89,6 +137,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$lld/%2$lld"
@@ -116,6 +170,18 @@
             "value" : "Markiere hier Sätze zum Lernen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda frases para estudiarlas aquí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistre des phrases pour les travailler ici"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -126,6 +192,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "여기서 공부할 문장을 북마크하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把想在这里学的句子加入书签"
           }
         },
         "zh-Hant" : {
@@ -144,6 +216,18 @@
             "value" : "Weiterlernen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir estudiando"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer à réviser"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -154,6 +238,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이어서 공부하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续学习"
           }
         },
         "zh-Hant" : {
@@ -172,6 +262,18 @@
             "value" : "Tage-Serie"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "días de racha"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jours de série"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -182,6 +284,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "일 연속"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天连续"
           }
         },
         "zh-Hant" : {
@@ -203,6 +311,18 @@
             "value" : "Für heute geschafft"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listo por hoy"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fini pour aujourd’hui"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -213,6 +333,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘은 여기까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天到这里"
           }
         },
         "zh-Hant" : {
@@ -231,6 +357,18 @@
             "value" : "Wendungen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expresiones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expressions"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -241,6 +379,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "표현"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用语"
           }
         },
         "zh-Hant" : {
@@ -259,6 +403,18 @@
             "value" : "Freies Gespräch"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversación libre"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversation libre"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -269,6 +425,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "자유 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由聊天"
           }
         },
         "zh-Hant" : {
@@ -287,6 +449,18 @@
             "value" : "Spring zurück in das Buch, das du gerade durcharbeitest."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve al cuaderno que tienes entre manos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reviens directement au carnet en cours."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -299,6 +473,12 @@
             "value" : "보고 있던 책으로 바로 돌아가요."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接回到正在看的复习本。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -307,30 +487,48 @@
         }
       }
     },
-    "Keep your daily talking streak alive." : {
+    "Keep your daily streak alive." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Halte deine tägliche Sprech-Serie am Leben."
+            "value" : "Halte deine tägliche Serie am Leben."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén viva tu racha diaria."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne casse pas ta série quotidienne."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "毎日話す連続記録を続けましょう。"
+            "value" : "毎日の連続記録を続けましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "매일 말하기 연속 기록을 이어가세요."
+            "value" : "매일 연속 기록을 이어가세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天学一点，让连续天数延续下去。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每天說一說，讓連續天數延續下去。"
+            "value" : "每天學一點，讓連續天數延續下去。"
           }
         }
       }
@@ -341,6 +539,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "übrig"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "restante"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "restant"
           }
         },
         "ja" : {
@@ -355,10 +565,16 @@
             "value" : "남음"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "剩下"
+            "value" : "剩餘"
           }
         }
       }
@@ -371,6 +587,18 @@
             "value" : "Sprechen wir"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hablemos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On parle ?"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -381,6 +609,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "대화하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始说"
           }
         },
         "zh-Hant" : {
@@ -399,6 +633,18 @@
             "value" : "gemeistert"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "completado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "terminé"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -409,6 +655,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "완료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
           }
         },
         "zh-Hant" : {
@@ -430,6 +682,18 @@
             "value" : "Nichts in Arbeit"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada en curso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien en cours"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -440,6 +704,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "진행 중인 게 없어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有进行中的项目"
           }
         },
         "zh-Hant" : {
@@ -458,6 +728,18 @@
             "value" : "Ein Tipp — und du rufst dein fließendes Ich an."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un toque para llamar a tu yo fluido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appelle ton moi fluide d’un seul geste."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -468,6 +750,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "한 번 눌러 유창한 나에게 전화하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击，打给流利的自己。"
           }
         },
         "zh-Hant" : {
@@ -486,6 +774,18 @@
             "value" : "Wendungen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "expresiones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "expressions"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -496,6 +796,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "표현"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用语"
           }
         },
         "zh-Hant" : {
@@ -514,6 +820,18 @@
             "value" : "Sätze"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frases"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrases"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -524,6 +842,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "문장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "句子"
           }
         },
         "zh-Hant" : {
@@ -542,6 +866,18 @@
             "value" : "Sätze, die du in deinen Gesprächen aufgeschnappt hast."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frases que has recogido en tus llamadas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les phrases que tu as récoltées dans tes appels."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -552,6 +888,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "대화에서 주워 온 문장들."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从通话里捡来的句子。"
           }
         },
         "zh-Hant" : {
@@ -570,6 +912,18 @@
             "value" : "Fortschritt"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progreso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progression"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -580,6 +934,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "성장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成长"
           }
         },
         "zh-Hant" : {
@@ -598,6 +958,18 @@
             "value" : "Speichere hier Wörter zum Lernen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda palabras para estudiarlas aquí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistre des mots pour les travailler ici"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -608,6 +980,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "여기서 공부할 단어를 저장하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把想在这里学的单词存下来"
           }
         },
         "zh-Hant" : {
@@ -629,6 +1007,18 @@
             "value" : "Starte deine Serie"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empieza tu racha"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lance ta série"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -639,6 +1029,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "연속 기록을 시작하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始累积连续天数"
           }
         },
         "zh-Hant" : {
@@ -657,6 +1053,18 @@
             "value" : "Serie"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Racha"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Série"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -667,6 +1075,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "연속 기록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续天数"
           }
         },
         "zh-Hant" : {
@@ -685,6 +1099,18 @@
             "value" : "Wird gelernt"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En estudio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En cours"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -695,6 +1121,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "학습 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学习中"
           }
         },
         "zh-Hant" : {
@@ -713,6 +1145,18 @@
             "value" : "Heutiges Ziel, Serie und was noch zu lernen ist."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El objetivo de hoy, la racha y lo que queda por estudiar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’objectif du jour, la série et ce qu’il reste à réviser."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -723,6 +1167,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘 목표와 연속 기록, 남은 학습량이 한눈에."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天的目标、连续天数和剩下的学习量，一目了然。"
           }
         },
         "zh-Hant" : {
@@ -741,6 +1191,18 @@
             "value" : "Vokabeln"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vocabulario"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vocabulaire"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -751,6 +1213,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "어휘"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "词汇"
           }
         },
         "zh-Hant" : {
@@ -769,6 +1237,18 @@
             "value" : "Wörter"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "palabras"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mots"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -779,6 +1259,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "단어"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词"
           }
         },
         "zh-Hant" : {
@@ -797,6 +1283,18 @@
             "value" : "Wörter"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palabras"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mots"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -807,6 +1305,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "단어"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词"
           }
         },
         "zh-Hant" : {
@@ -825,6 +1329,18 @@
             "value" : "Wörter aus deinem Notizbuch zum Weiterlernen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palabras de tu libreta para seguir estudiando."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Des mots de ton carnet à continuer de travailler."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -835,6 +1351,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "노트에 모아 둔, 계속 공부할 단어들."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收在笔记里、要继续学的单词。"
           }
         },
         "zh-Hant" : {

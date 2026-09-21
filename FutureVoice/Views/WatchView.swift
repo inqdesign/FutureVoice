@@ -102,7 +102,7 @@ struct WatchSetupSheet: View {
                 }
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+                PaywallView(source: "watch")
             }
             .navigationTitle("Watch")
             .navigationBarTitleDisplayMode(.inline)
@@ -239,7 +239,6 @@ struct WatchView: View {
     @State private var currentIndex: Int? = nil
     @State private var isPlaying = false
     /// Unified beta feedback modal — presented after the first full listen-through.
-    @State private var feedbackContext: FeedbackSheet.Context?
     @State private var loading = true
     @State private var error: String?
     @State private var outOfCredits = false
@@ -302,6 +301,10 @@ struct WatchView: View {
     /// (a replay, a new take) mints a new key, but a fully cached scene never
     /// reaches the server and so never spends one.
     @State private var sceneRunKey = UUID().uuidString
+    /// This run has put a scene in `PracticeLog` — once per view, on the
+    /// first line actually heard, so watching counts toward the streak
+    /// (`PracticeStats.activeDays`) whether or not the scene is finished.
+    @State private var loggedScene = false
 
     /// Today's Watch allowance is spent. Not a paywall: they already paid,
     /// and the answer is tomorrow.
@@ -415,9 +418,6 @@ struct WatchView: View {
         }
         .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
-        .sheet(item: $feedbackContext) { ctx in
-            FeedbackSheet(context: ctx)
-        }
         .alert("Something went wrong", isPresented: errorBinding) {
             if outOfCredits {
                 Button("See plans") { error = nil; showingPaywall = true }
@@ -445,14 +445,14 @@ struct WatchView: View {
             capSheet
         }
         .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
-            PaywallView(preselectTier: paywallTier)
+            PaywallView(source: "watch_spent_month", preselectTier: paywallTier)
         }
         .sheet(item: $bridge) { b in
             ShadowDrillView(turn: b.turn, targetLanguage: appState.targetLanguage)
                 .environmentObject(appState)
         }
         .task {
-            savedPhraseKeys = Set(DrillStore.shared.load().map { $0.targetPhrase.lowercased() })
+            savedPhraseKeys = Set(DrillStore.shared.load().map { DrillStore.matchKey($0.targetPhrase) })
             guard feed == nil else { return }   // fed views mirror, never generate
             if turns.isEmpty {
                 if let saved = savedDialogue {
@@ -585,7 +585,10 @@ struct WatchView: View {
                     Label("Saved", systemImage: "checkmark")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else {
+                } else if DrillStore.isDrillable(turn.text) {
+                    // Offered only for a line the store can actually read
+                    // back: a card it drops on the next read would leave a
+                    // button that never turns into "Saved".
                     Button {
                         savePhrase(turn.text)
                     } label: {
@@ -599,8 +602,11 @@ struct WatchView: View {
         }
     }
 
+    /// Keyed the way the store itself dedupes, so a line already on file
+    /// under different punctuation reads as saved instead of offering a tap
+    /// that mints nothing.
     private func isPhraseSaved(_ text: String) -> Bool {
-        savedPhraseKeys.contains(text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+        savedPhraseKeys.contains(DrillStore.matchKey(text))
     }
 
     private func savePhrase(_ text: String) {
@@ -614,8 +620,8 @@ struct WatchView: View {
             nextReviewAt: Date(),
             box: 0
         )
-        DrillStore.shared.save(card)
-        savedPhraseKeys.insert(trimmed.lowercased())
+        guard DrillStore.shared.saveIfNew(card) != nil else { return }
+        savedPhraseKeys.insert(DrillStore.matchKey(trimmed))
         HapticEngine.drillCorrect()
     }
 
@@ -813,6 +819,10 @@ struct WatchView: View {
                     // Streaming unavailable — classic fetch-then-play.
                     try await playAndWait(try await loadOrSynthesize(request))
                 }
+                if !loggedScene {
+                    loggedScene = true
+                    PracticeLog.shared.record(.scene)
+                }
             } catch let capped where capped.isDayCapped {
                 // Out of today's allowance. Say so where the scene was going
                 // to play. Resolve the plan first so the sheet opens with its
@@ -844,11 +854,6 @@ struct WatchView: View {
         // offering only "watch it again" and start offering the book.
         if reachedEnd, !didFinishScene {
             withAnimation(.easeOut(duration: 0.25)) { didFinishScene = true }
-        }
-        // Completed the whole dialogue for the first time → ask for feedback.
-        if reachedEnd && FeedbackPrompt.shouldShow(.firstWatch) {
-            FeedbackPrompt.markShown(.firstWatch)
-            feedbackContext = .firstWatch
         }
     }
 

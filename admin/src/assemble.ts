@@ -12,7 +12,13 @@
 // merely marked. Only the synthetic device-test account is filtered, and that
 // one is genuinely not a person.
 const OWNER_ID = "72bcaa7e-3dd2-4364-b197-078ba59c1ce4";
-const TEST_IDS = new Set(["ecd78251-49c4-4e18-a156-6fbe90fd6e3b"]);
+const TEST_IDS = new Set([
+  "ecd78251-49c4-4e18-a156-6fbe90fd6e3b",
+  // The owner's own Google test accounts (2026-09-21) — signed up like a
+  // stranger to walk the onboarding and the free first call.
+  "c5a85f25-a631-47c5-b32b-fb5bc89c551e",
+  "5692cfc2-13ec-4f7e-a3bc-31daee02e28f",
+]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
@@ -65,8 +71,11 @@ export function assemble(raw: any) {
   const idx = (r: any) => uidx.get(r.id);
   const keep = (r: any) => uidx.has(r.id) && dayIdx.has(r.d);
 
+  // [user, day, rows, turns, talk secs, learner-speech secs | null]. The last
+  // is null wherever no tick measured it (before 2026-09-21, or the classic
+  // path) — never 0, which would claim they said nothing.
   const cells = raw.cells.filter(keep).map((r: any) =>
-    [idx(r), dayIdx.get(r.d), r.rows, r.turns, r.secs]);
+    [idx(r), dayIdx.get(r.d), r.rows, r.turns, r.secs, r.spoke ?? null]);
   const sceneCells = raw.scenes.filter(keep).map((r: any) =>
     [idx(r), dayIdx.get(r.d), r.n]);
   const sessions = raw.sessions.filter(keep).map((r: any) =>
@@ -76,10 +85,16 @@ export function assemble(raw: any) {
     .map((r: any) => [dayIdx.get(r.d), r.n]);
 
   // ---------------------------------------------------------------- users
-  const agg = new Map<number, { days: Set<number>; turns: number; secs: number }>();
+  const agg = new Map<number, { days: Set<number>; turns: number; secs: number;
+                                spoke: number | null; spokeOf: number }>();
   for (const c of cells) {
-    const a = agg.get(c[0]) ?? { days: new Set<number>(), turns: 0, secs: 0 };
+    const a = agg.get(c[0]) ?? { days: new Set<number>(), turns: 0, secs: 0,
+                                 spoke: null, spokeOf: 0 };
     a.days.add(c[1]); a.turns += c[3]; a.secs += c[4];
+    // `spokeOf` is the talk time on the SAME days speech was measured, so a
+    // share is never learner seconds from one week over billed seconds from
+    // three.
+    if (c[5] !== null) { a.spoke = (a.spoke ?? 0) + c[5]; a.spokeOf += c[4]; }
     agg.set(c[0], a);
   }
   const sceneTot = new Map<number, number>();
@@ -91,11 +106,13 @@ export function assemble(raw: any) {
     raw.langs.map((l: any) => [l.id, l.langs]));
 
   const users = raw.users.map((u: any, i: number) => {
-    const a = agg.get(i) ?? { days: new Set<number>(), turns: 0, secs: 0 };
+    const a = agg.get(i) ?? { days: new Set<number>(), turns: 0, secs: 0,
+                              spoke: null, spokeOf: 0 };
     const ds = [...a.days].sort((x, y) => x - y);
     const rv = raw.reviews
       .filter((r: any) => r.id === u.id)
-      .map((r: any) => ({ context: r.context, rating: r.rating, body: r.body, d: r.d }));
+      .map((r: any) => ({ context: r.context, rating: r.rating, body: r.body,
+                          d: r.d, at: r.at ?? null }));
     // Someone who signed up before the cutover is only observed from it, so
     // streaks and week-N retention must be counted from there — not from a
     // signup date whose first weeks this page cannot see.
@@ -115,12 +132,18 @@ export function assemble(raw: any) {
       firstActive: ds.length ? days[ds[0]] : null,
       lastActive: ds.length ? days[ds[ds.length - 1]] : null,
       turns: a.turns, talkSecs: a.secs,
+      spokeSecs: a.spoke, spokeOfSecs: a.spokeOf,
       talkSessions: sessCt.get(i) ?? 0, scenes: sceneTot.get(i) ?? 0,
       reviewCount: rv.length, langs: langByUser.get(u.id) ?? [],
       name: u.display_name, realEmail: u.real_email,
       occupation: u.occupation, location: u.location,
       interests: u.interests, intro: u.intro,
       channel: u.channel, device: deviceOf(u.user_agent),
+      // The clone they are USING — its ElevenLabs name and id, which is the
+      // only handle that matches a row here to the ElevenLabs dashboard.
+      voiceName: u.voice_name ?? null,
+      voiceId: u.voice_id ?? null,
+      voiceAt: u.voice_at ?? null,
       waitlistAt: u.waitlist_at, reviews: rv,
       // launch watch (2026-09-12) — timestamps, not dates, because on a
       // launch day "when" is an hour, not a date
@@ -151,6 +174,40 @@ export function assemble(raw: any) {
   const recentSessions = withIdx(raw.recent_sessions);
   const recentEvents = withIdx(raw.recent_events);
   const freeRecent = withIdx(raw.free_recent);
+  // One row per finished realtime call. This is the only per-call record
+  // that path produces — its reply and voice never touch the usage ledger.
+  const rtSessions = withIdx(raw.rt_sessions);
+  // What each plan has actually spent, counted the way the server counts it.
+  const planUsage = withIdx(raw.plan_usage);
+  // One row per (user, language) with the seconds spoken and which sources
+  // know about it. `users[].langs` is still the plain code list.
+  const userLangs = withIdx(raw.user_langs);
+  // The onboarding CHOICE, only for rows a build has actually written.
+  const setup = withIdx(raw.setup);
+  // Talk seconds by UTC hour-of-day, per user. The page rotates them.
+  const hours = withIdx(raw.hours);
+  // One row per (user, UTC day, UTC hour): [user idx, "YYYY-MM-DD", hour,
+  // talk seconds, server calls]. The page folds it into weekdays, weeks and
+  // months — in the READER's zone, which is why the hour is still here and
+  // why nothing is pre-bucketed by day. Absent on a Worker talking to a
+  // database that has not had the day_hours migration yet, and the page
+  // falls back to the launch-window cells.
+  const dayHours = (raw.day_hours ?? [])
+    .filter((r: any) => uidx.has(r.id))
+    .map((r: any) => [uidx.get(r.id), r.d, r.h, r.secs, r.events, r.spoke ?? null]);
+  // The last 8 days, one row per ledger row: [user idx, epoch ms, talk
+  // seconds or -1 for a non-talk row]. Same seconds rule as
+  // `talk_row_seconds`: metadata.seconds when present, else a negative delta.
+  const recentActivity = (raw.recent_ledger ?? [])
+    .filter((r: any) => uidx.has(r.user_id))
+    .map((r: any) => [
+      uidx.get(r.user_id),
+      Date.parse(r.created_at),
+      r.action !== "talk_time" ? -1
+        : typeof r.seconds === "number" ? r.seconds
+        : r.delta < 0 ? -r.delta : 0,
+    ]);
+  const rtReasons = raw.rt_reasons ?? [];
 
   // ---------------------------------------------------------------- cost
   const m = raw.mech;
@@ -226,6 +283,44 @@ export function assemble(raw: any) {
     builds: raw.builds,
   };
 
+  // ------------------------------------------------------------- revenue
+  // Every price is monthly-equivalent (an annual plan divided by 12) so one
+  // number can be added up. `comp` is excluded everywhere — a hand-given plan
+  // is not revenue and never becomes any.
+  const priceOf = (planId: string | null) =>
+    planId ? (MONTHLY_PRICE[planId] ?? 0) : 0;
+  const revenue = (() => {
+    let paid = 0, trialLive = 0, trialLost = 0;
+    let paidN = 0, trialLiveN = 0, trialLostN = 0, compN = 0;
+    for (const u of users) {
+      // The owner's own subscription is not revenue — it is the founder paying
+      // himself to watch real burn. Counting it printed "결제 구독 0 · 월 $19.99"
+      // on the same tile, which is the contradiction that gave it away.
+      if (u.dev || u.owner) continue;
+      const price = priceOf(u.plan);
+      switch (u.subState) {
+        case "paid":            paid += price; paidN++; break;
+        case "cancelling":      paid += price; paidN++; break;
+        case "trial":           trialLive += price; trialLiveN++; break;
+        case "trial_cancelled": trialLost += price; trialLostN++; break;
+        case "comp":            compN++; break;
+      }
+    }
+    const trials = trialLiveN + trialLostN;
+    return {
+      mrr: round(paid, 2), mrrCount: paidN,
+      trialLive: round(trialLive, 2), trialLiveCount: trialLiveN,
+      trialLost: round(trialLost, 2), trialLostCount: trialLostN,
+      compCount: compN,
+      trials,
+      // Of the trials that have been STARTED, how many still intend to bill.
+      keepRate: trials ? round((trialLiveN / trials) * 100) : null,
+      commission: raw.commission,
+      // What lands in the bank if every running trial converts.
+      netIfAllConvert: round((paid + trialLive) * (1 - raw.commission), 2),
+    };
+  })();
+
   return {
     asOf: raw.today,
     liveAt: raw.liveAt,
@@ -241,5 +336,8 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
+    rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours, recentActivity,
+    dayHours,
+    prices: MONTHLY_PRICE,
   };
 }

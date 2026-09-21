@@ -490,7 +490,7 @@ struct WordCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(word).font(.system(size: 30, weight: .bold, design: .rounded))
                         .lineLimit(1).minimumScaleFactor(0.6)
-                    Text(entry?.pos ?? nlPos ?? " ")
+                    Text(subtitle)
                         .font(.subheadline).foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -549,7 +549,7 @@ struct WordCard: View {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(word).font(.system(size: 34, weight: .bold, design: .rounded))
-                        Text(entry?.pos ?? nlPos ?? " ")
+                        Text(subtitle)
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
@@ -764,7 +764,7 @@ struct WordCard: View {
     /// text to study later, or shadow-practice it right now.
     @ViewBuilder
     private func saveActions(for text: String) -> some View {
-        if store.hasExpression(text) {
+        if store.isStudyingExpression(text) {
             Label("Saved to expressions", systemImage: "checkmark")
         } else {
             Button {
@@ -921,6 +921,18 @@ struct WordCard: View {
         }
     }
 
+    /// The line under the headword: part of speech — and, for a Japanese
+    /// word with kanji in it, how it is READ, first. A kanji headword with no
+    /// reading is a word the learner can't say, on a card whose job is to
+    /// get it said. The reading comes from the JLPT list (all of them, for a
+    /// word that has several: からい・つらい), else the system tokenizer.
+    private var subtitle: String {
+        let pos = entry?.pos ?? nlPos
+        guard appState.targetLanguage == "ja", let reading = JapaneseMorph.reading(ofHeadword: word)
+        else { return pos ?? " " }
+        return [reading, pos].compactMap { $0 }.joined(separator: " · ")
+    }
+
     private func load() async {
         // `loading` FIRST, same as the expression card: clearing the entry
         // before flipping it shows the no-entry state for a frame every time
@@ -1041,10 +1053,15 @@ enum WordLore {
 
     /// On-device fallback part of speech (used only if generation fails).
     static func partOfSpeech(_ word: String) -> String? {
+        // The tagger is English-only here; on anything else it answers
+        // "OtherWord", which is a tag name, not a part of speech — and it was
+        // drawn under every Japanese headword while the entry loaded.
+        guard LanguageCatalog.writesSpaces(LanguageScope.active) else { return nil }
         let tagger = NLTagger(tagSchemes: [.lexicalClass])
         tagger.string = word
         tagger.setLanguage(.english, range: word.startIndex..<word.endIndex)
-        return tagger.tag(at: word.startIndex, unit: .word, scheme: .lexicalClass).0?.rawValue
+        let tag = tagger.tag(at: word.startIndex, unit: .word, scheme: .lexicalClass).0?.rawValue
+        return tag == NLTag.otherWord.rawValue ? nil : tag
     }
 
     private struct EntryRow: Decodable { let data: WordEntry }

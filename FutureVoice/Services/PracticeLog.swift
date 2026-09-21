@@ -28,7 +28,14 @@ final class PracticeLog {
         var shadowDone: Int = 0
         var wordDone: Int = 0
         var expressionDone: Int = 0
+        /// Watch scenes heard that day. Kept OUT of `total`: the rep bars on
+        /// Progress and Activity count handling review material, and a scene
+        /// is watching, not a rep. It exists for `showedUp` — the streak.
+        var sceneReps: Int = 0
         var total: Int { drillReps + shadowReps + wordReps + expressionReps }
+        /// Anything at all was studied or used this day — the streak's
+        /// question (`PracticeStats.studied(on:)`), not the goal's.
+        var showedUp: Bool { total > 0 || sceneReps > 0 }
 
         func done(_ kind: Kind) -> Int {
             switch kind {
@@ -36,6 +43,7 @@ final class PracticeLog {
             case .shadow:     return shadowDone
             case .word:       return wordDone
             case .expression: return expressionDone
+            case .scene:      return sceneReps
             }
         }
     }
@@ -45,10 +53,16 @@ final class PracticeLog {
         case shadow
         case word
         case expression
+        case scene
     }
 
     private var days: [String: Day]
     private let fileURL: URL
+    /// Guards `days`. Writes come from the main actor, but the streak
+    /// (`PracticeStats.activeDays`) is also read from `ProgressTab`'s
+    /// detached reload, and an unguarded Dictionary read racing a write is a
+    /// crash, not a stale number.
+    private let lock = NSLock()
 
     init(filename: String = "practice-log.json") {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -66,12 +80,9 @@ final class PracticeLog {
     /// life, so a restore that replaced the file on disk would be erased by
     /// the very next `record()` writing the stale map back out.
     func reloadFromDisk() {
-        if let data = try? Data(contentsOf: fileURL),
-           let decoded = try? JSONDecoder().decode([String: Day].self, from: data) {
-            days = decoded
-        } else {
-            days = [:]
-        }
+        let fresh = (try? Data(contentsOf: fileURL))
+            .flatMap { try? JSONDecoder().decode([String: Day].self, from: $0) } ?? [:]
+        lock.lock(); days = fresh; lock.unlock()
     }
 
     /// - Parameter finished: the item is done with (mastered / known /
@@ -79,12 +90,14 @@ final class PracticeLog {
     ///   work counts toward a daily goal.
     func record(_ kind: Kind, finished: Bool = false, on date: Date = Date()) {
         let key = Self.key(for: date)
+        lock.lock()
         var day = days[key] ?? Day()
         switch kind {
         case .drill:      day.drillReps += 1
         case .shadow:     day.shadowReps += 1
         case .word:       day.wordReps += 1
         case .expression: day.expressionReps += 1
+        case .scene:      day.sceneReps += 1
         }
         if finished {
             switch kind {
@@ -92,13 +105,30 @@ final class PracticeLog {
             case .shadow:     day.shadowDone += 1
             case .word:       day.wordDone += 1
             case .expression: day.expressionDone += 1
+            case .scene:      break
             }
         }
         days[key] = day
-        save()
+        let snapshot = days
+        lock.unlock()
+        save(snapshot)
     }
 
-    func day(_ date: Date) -> Day? { days[Self.key(for: date)] }
+    func day(_ date: Date) -> Day? {
+        let key = Self.key(for: date)
+        lock.lock(); defer { lock.unlock() }
+        return days[key]
+    }
+
+    /// Every day that `showedUp`, as local start-of-day dates. The log is
+    /// never pruned, so this reaches back to the first rep ever recorded.
+    func activeDays(calendar: Calendar = .current) -> Set<Date> {
+        lock.lock(); let all = days; lock.unlock()
+        return Set(all.compactMap { key, day -> Date? in
+            guard day.showedUp, let date = Self.keyFormatter.date(from: key) else { return nil }
+            return calendar.startOfDay(for: date)
+        })
+    }
 
     /// Total reps in the 7 days ending today (inclusive).
     func repsThisWeek(now: Date = Date(), calendar: Calendar = .current) -> Int {
@@ -108,9 +138,10 @@ final class PracticeLog {
         }
     }
 
-    private func save() {
+    private func save(_ days: [String: Day]) {
         guard let data = try? JSONEncoder().encode(days) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.practiceDay)
     }
 
     private static let keyFormatter: DateFormatter = {
@@ -133,6 +164,7 @@ extension PracticeLog.Day {
     private enum CodingKeys: String, CodingKey {
         case drillReps, shadowReps, wordReps, expressionReps
         case drillDone, shadowDone, wordDone, expressionDone
+        case sceneReps
     }
 
     init(from decoder: Decoder) throws {
@@ -149,5 +181,22 @@ extension PracticeLog.Day {
         shadowDone     = try c.decodeIfPresent(Int.self, forKey: .shadowDone) ?? shadowReps
         wordDone       = try c.decodeIfPresent(Int.self, forKey: .wordDone) ?? 0
         expressionDone = try c.decodeIfPresent(Int.self, forKey: .expressionDone) ?? 0
+        sceneReps      = try c.decodeIfPresent(Int.self, forKey: .sceneReps) ?? 0
+    }
+
+    /// `sceneReps` is written only when non-zero. Sync fingerprints each day
+    /// from its encoding (`SyncCanonical`), so a `"sceneReps":0` on every
+    /// existing day would re-upload the whole log once for nothing.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(drillReps, forKey: .drillReps)
+        try c.encode(shadowReps, forKey: .shadowReps)
+        try c.encode(wordReps, forKey: .wordReps)
+        try c.encode(expressionReps, forKey: .expressionReps)
+        try c.encode(drillDone, forKey: .drillDone)
+        try c.encode(shadowDone, forKey: .shadowDone)
+        try c.encode(wordDone, forKey: .wordDone)
+        try c.encode(expressionDone, forKey: .expressionDone)
+        if sceneReps > 0 { try c.encode(sceneReps, forKey: .sceneReps) }
     }
 }

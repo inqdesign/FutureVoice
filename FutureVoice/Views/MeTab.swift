@@ -54,6 +54,7 @@ struct MeTab: View {
     @State private var voiceRegenerateError: String?
     @State private var pickingAccent = false
     @State private var comparingVoice = false
+    @ObservedObject private var syncEngine = SyncEngine.shared
     @State private var importingBackup = false
     @State private var backupResult: String?
     /// Non-nil while an export or import is running — it's both the progress
@@ -67,6 +68,7 @@ struct MeTab: View {
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
+    @State private var previewFeedback: FeedbackSheet.Context?
     #endif
     var body: some View {
         NavigationStack {
@@ -178,6 +180,13 @@ struct MeTab: View {
                             subtitle: appState.appearance.label)
                     }
                     NavigationLink {
+                        syncPage
+                    } label: {
+                        row(icon: "icloud",
+                            title: explain("Continue on your other devices"),
+                            subtitle: syncEngine.isEnabled ? explain("On · iCloud") : explain("Off"))
+                    }
+                    NavigationLink {
                         dataPage
                     } label: {
                         row(icon: "externaldrive",
@@ -192,6 +201,8 @@ struct MeTab: View {
                             subtitle: privacySummary)
                     }
                 }
+
+                contactSection
 
                 Section {
                     Button(role: .destructive) {
@@ -237,6 +248,16 @@ struct MeTab: View {
                             title: explain("Clear voice cache"),
                             subtitle: explain("Re-synthesize every line — learning data untouched"))
                     }
+                    // The feedback ask happens once, after a minute-long call
+                    // on a return visit — a moment that cannot be reached on
+                    // demand. This is how it gets LOOKED at before it ships.
+                    Button {
+                        previewFeedback = .returningTalk
+                    } label: {
+                        row(icon: "star.bubble",
+                            title: explain("Preview feedback sheet"),
+                            subtitle: explain("The ask that follows a return visit's call"))
+                    }
                 } header: {
                     Text("Developer")
                 } footer: {
@@ -255,7 +276,7 @@ struct MeTab: View {
                 Task { account = await AccountStatus.fetch() }
             }) {
                 // Trial pitch only while the free credits last.
-                PaywallView()
+                PaywallView(source: "me")
             }
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
@@ -315,6 +336,7 @@ struct MeTab: View {
                 Text(accountDeleteError ?? "")
             }
             #if DEBUG
+            .sheet(item: $previewFeedback) { FeedbackSheet(context: $0) }
             // Extracted into a modifier: inline, these two tipped `body` past
             // what the type-checker will solve in reasonable time.
             .modifier(DeveloperAlerts(
@@ -869,6 +891,38 @@ struct MeTab: View {
     /// say everything ("Talk time … 132 / 150 min") must not be given a line
     /// of prose to fill the slot. Existing callers pass a plain `String` and
     /// promote for free.
+    /// Write to the person building this — one tap, no compose window.
+    ///
+    /// It sits in the main Settings list rather than three levels down inside
+    /// Privacy (where the only contact row used to live, and where it reads as
+    /// a data-request address, because that is what it is there for). The
+    /// footer names who is on the other end: a learner will not write to a
+    /// support desk about a feature they wish existed, and they will write to
+    /// a person.
+    ///
+    /// Absent entirely until a handle is filled in (`SupportChannel.handle`).
+    @ViewBuilder
+    private var contactSection: some View {
+        let channels = SupportChannel.available
+        if !channels.isEmpty {
+            Section {
+                ForEach(channels) { channel in
+                    Button {
+                        if let url = channel.url { openURL(url) }
+                    } label: {
+                        row(icon: channel.icon,
+                            title: channel.title,
+                            subtitle: channel.subtitle)
+                    }
+                }
+            } header: {
+                Text(explain("Say hello"))
+            } footer: {
+                Text(explain("One person builds this app, and reads every message. Tell me what's missing, what broke, or what you wish it did."))
+            }
+        }
+    }
+
     private func row(icon: String, title: String, subtitle: String?,
                      value: String? = nil) -> some View {
         HStack(spacing: 12) {
@@ -1017,6 +1071,12 @@ struct MeTab: View {
             .navigationBarTitleDisplayMode(.inline)
     }
 
+    private var syncPage: some View {
+        List { SyncSection() }
+            .navigationTitle("Devices")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
     // MARK: - Privacy
 
     private var privacySummary: String {
@@ -1121,11 +1181,7 @@ struct MeTab: View {
                      : explain("Set up your profile"))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
-                // Apple often returns no email (private relay, or the email
-                // scope only arrives on first sign-in), so account.email can
-                // be nil OR an empty string — coalesce both to a label instead
-                // of rendering a blank line.
-                Text(accountSubtitle)
+                Text(profileSubtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -1137,9 +1193,18 @@ struct MeTab: View {
         .padding(.vertical, 6)
     }
 
-    private var accountSubtitle: String {
-        let email = account.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return email.isEmpty ? explain("Signed in with Apple") : email
+    /// An invitation, not an account label. "Signed in with Apple" (or a
+    /// private-relay address) told the learner nothing they could act on;
+    /// what this row can actually do is make the fluent self know them
+    /// better, so it asks for the missing parts until there are none.
+    private var profileSubtitle: String {
+        guard let persona = appState.persona else { return explain("Tap to complete your profile") }
+        let blank = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let complete = !blank(persona.displayName) && !blank(persona.city)
+            && !blank(persona.occupation)
+            && !persona.interests.isEmpty && !persona.situations.isEmpty
+        return complete ? explain("What your fluent self knows about you")
+                        : explain("Tap to complete your profile")
     }
 }
 
@@ -1217,7 +1282,10 @@ private struct AppLanguagePage: View {
             } header: {
                 Text(explain("Fully translated"))
             } footer: {
-                Text(explain("Settings, explanations, corrections and notes all come in this language. Tabs and the buttons inside practice stay in the language you're learning."))
+                // The old copy promised tabs stayed in the TARGET language. That rule
+                // was retired 2026-08-17 — the app has ONE UI language now — so the
+                // screen was describing behaviour it no longer has.
+                Text(explain("Everything you read in the app — menus, buttons, corrections, notes — is in this language."))
             }
             Section {
                 ForEach(groups.coachingOnly, id: \.self, content: choice)

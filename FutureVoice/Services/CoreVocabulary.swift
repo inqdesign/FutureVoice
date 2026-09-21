@@ -49,19 +49,63 @@ enum CoreVocabulary {
 
     static func level(of word: String) -> CEFRLevel? { current.levelByWord[word.lowercased()] }
 
-    /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
-    /// is a direct lookup; Korean surface forms carry particles/conjugation,
-    /// so they route through the KoreanMorph headword heuristic first.
-    static func level(ofSurface token: String) -> CEFRLevel? {
-        if isKorean {
-            guard let head = KoreanMorph.dictionaryForm(of: token, in: set) else { return nil }
-            return level(of: head)
-        }
-        return level(of: token)
+    /// Words the graded list leaves out ON PURPOSE, as opposed to the ones it
+    /// simply doesn't carry.
+    ///
+    /// The pools are content-word profiles, so the commonest auxiliaries and
+    /// modals were never candidates for a level — and the spoken fillers the
+    /// fluent self writes ("gonna", "kinda", "hmm") were never words at all.
+    /// Absence therefore means two different things, and anything that treats
+    /// an off-list word as teachable material has to be able to tell them
+    /// apart: without this, "have" and "chore" are the same kind of missing.
+    ///
+    /// Deliberately tiny and hand-checked against each pool — it names only
+    /// what a part-of-speech tagger still calls a content word. A language
+    /// with no entry here loses nothing that was working before; its own
+    /// auxiliaries just ride along as candidates until someone lists them.
+    private static let ungradedByLanguage: [String: Set<String>] = [
+        "en": ["be", "have", "do", "go", "will", "would", "shall", "should",
+               "can", "could", "may", "might", "must", "other", "such",
+               "many", "much", "lot",
+               // Indefinite pronouns — a tagger calls every one of these a
+               // noun, so nothing else keeps them out.
+               "everything", "something", "anything", "nothing",
+               "everyone", "someone", "anyone", "none",
+               "everybody", "somebody", "anybody", "nobody",
+               "gonna", "wanna", "gotta", "kinda", "sorta", "dunno",
+               "lemme", "gimme", "yeah", "yep", "yup", "nope", "nah",
+               "hmm", "mmm", "uh", "um", "umm", "ah", "oh", "ooh", "huh",
+               "hey", "ok", "okay", "alright"],
+        "de": ["können", "müssen", "sollen", "dürfen", "mögen",
+               "alles", "etwas", "nichts", "jemand", "niemand", "jeder",
+               "halt", "eben", "ja", "nee", "naja", "ähm", "hmm", "okay"]
+    ]
+
+    /// True when the word's absence from the pool is a decision rather than a
+    /// gap — see `ungradedByLanguage`.
+    static func isUngraded(_ word: String) -> Bool {
+        ungradedByLanguage[LanguageScope.active]?.contains(word.lowercased()) ?? false
     }
 
-    private static var isKorean: Bool {
-        LanguageCatalog.language(LanguageScope.active)?.code == "ko"
+    /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
+    /// is a direct lookup; Korean and Japanese surface forms carry
+    /// particles/conjugation, so they route through their headword
+    /// heuristic first.
+    static func level(ofSurface token: String) -> CEFRLevel? {
+        switch LanguageCatalog.language(LanguageScope.active)?.code {
+        case "ko":
+            guard let head = KoreanMorph.dictionaryForm(of: token, in: set) else { return nil }
+            return level(of: head)
+        case "ja":
+            // Read as a chunk — 行きました needs its ました to be 行く rather
+            // than the noun 行き — so callers hand whole text or headwords.
+            guard let head = JapaneseMorph.headwords(in: token, lexicon: set,
+                                                     forms: JapaneseMorph.bundledForms).first?.headword
+            else { return nil }
+            return level(of: head)
+        default:
+            return level(of: token)
+        }
     }
 
     /// Words per CEFR level — for filter-scoped counts in the UI.
@@ -81,7 +125,9 @@ enum CoreVocabulary {
         var out: [Entry] = []
         for line in text.split(whereSeparator: \.isNewline) {
             let parts = line.split(separator: "\t")
-            guard parts.count == 2,
+            // Two columns, or three: Japanese carries each headword's
+            // reading after its level (`JapaneseMorph.reading(ofHeadword:)`).
+            guard parts.count >= 2,
                   let level = CEFRLevel(rawValue: parts[1].lowercased()) else { continue }
             out.append(Entry(word: String(parts[0]), level: level))
         }

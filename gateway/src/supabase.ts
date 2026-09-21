@@ -13,6 +13,9 @@ export interface Env {
   ELEVENLABS_API_KEY: string
   /** Half-cascade Live model ("models/..."); see README before changing. */
   GEMINI_LIVE_MODEL?: string
+  /** Reply model override. Exists so a bad model release rolls back without
+   *  a deploy, and so the reply-failure path can be exercised on purpose. */
+  GEMINI_REPLY_MODEL?: string
   /** ElevenLabs streaming output format; pcm_44100 needs a Pro plan. */
   ELEVEN_OUTPUT_FORMAT?: string
   /** "1" allows unauthenticated sessions — `wrangler dev` ONLY, never set

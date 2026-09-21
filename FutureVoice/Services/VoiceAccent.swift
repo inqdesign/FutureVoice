@@ -36,6 +36,16 @@ enum VoiceAccentCatalog {
         return samples[code] ?? samples["en"]!
     }
 
+    /// How far the remix may drift from the reference audio (upstream
+    /// `prompt_strength`: 0 keeps almost everything of the recording, 1 keeps
+    /// almost nothing). The prompt below ASKS for the same person, but this
+    /// is the parameter that decides it — the first version sent nothing and
+    /// let upstream choose, and every accent picked before 2026-09-18 came
+    /// back recognisably less like the speaker. Low on purpose: an accent
+    /// that sounds like someone else is worse than no accent. Chosen by ear
+    /// with `scripts/voice-remix-probe.sh`; retune there, not by feel.
+    static let promptStrength: Double = 0.3
+
     /// One shared shape so every option pulls equally hard toward "same
     /// person, different accent" — the remix must never drift into a new
     /// character, because speaker similarity is the product.

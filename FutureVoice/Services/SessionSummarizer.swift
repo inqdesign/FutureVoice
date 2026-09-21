@@ -110,11 +110,17 @@ enum SessionSummarizer {
             onProgress?(progress)
         }
 
+        // The notebook as the summary call sees it, numbered in this order.
+        // A `replaces` in the payload is an index into THIS list, so it is
+        // captured once here and never re-read from the persona afterwards.
+        let rememberedNotes = appState.persona?.currentNotes() ?? []
         let systemP = ConversationEngine.summarySystemPrompt(
             targetLanguage: session.targetLanguage,
             nativeLanguage: appState.nativeLanguage,
             profile: appState.learnerProfile,
             knownAboutUser: appState.persona?.knownFacts ?? [],
+            rememberedNotes: rememberedNotes,
+            shareCorrections: appState.persona?.shareCorrections ?? [],
             // What a talk is allowed to yield follows how much was said in it.
             expressionBudget: ConversationEngine.expressionBudget(
                 fluentTurns: turns.filter { $0.role == .fluentSelf }.count)
@@ -141,7 +147,10 @@ enum SessionSummarizer {
         // finishes at once. A deploy without SSE degrades to buffering, and
         // then `onPartial` simply never fires.
         func request() async throws -> ClaudeSummaryPayload {
-            try await GeminiClient.shared.sendJSONStreamAccumulating(
+            // `longRunning`, not `shared`: this is the one call allowed past
+            // the 60 s ceiling — a summary that finishes at 63 s is a summary,
+            // not a failure (2026-09-12, and the learner cancelled over it).
+            try await GeminiClient.longRunning.sendJSONStreamAccumulating(
                 system: systemP,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
                 // The schema's worst case is big: up to 15 grammar_errors (quote +
@@ -169,6 +178,15 @@ enum SessionSummarizer {
 
         let payload: ClaudeSummaryPayload
         do {
+            payload = try await request()
+        } catch let error where error.isTimeout || error.isTransientNetworkError {
+            // The clock ran out or the connection dropped — nothing about the
+            // talk is wrong, and the idempotency key makes the second attempt
+            // free. Ask once more before the wrap-up becomes an error alert.
+            Telemetry.log("talk_summary_retry", [
+                "detail": error.isTimeout ? "timeout" : "network",
+                "turns": String(turns.count),
+            ])
             payload = try await request()
         } catch let error where error.isMalformedModelOutput {
             // The learner did nothing wrong and has nothing to fix — the model
@@ -199,6 +217,15 @@ enum SessionSummarizer {
         let userTexts = turns
             .filter { $0.role == .user && !$0.excludedFromScoring }
             .map { $0.transcript }
+        // What they had been studying, and what they had marked known, as it
+        // stood BEFORE this talk is credited: producing a word takes it out of
+        // the notebook, and the wrap-up still has to say it was a notebook
+        // word they used.
+        let vocab = VocabStore.shared
+        let studyingWordsBefore = vocab.practicedStudyingWords
+        let knownWordsBefore = vocab.unconfirmedKnownWords
+        let studyingExpressionsBefore = vocab.studyingExpressions
+        let knownExpressionsBefore = vocab.unconfirmedKnownExpressions
         let freshWords = VocabStore.shared.ingest(
             sessionId: sessionId, userTexts: userTexts)
         let priorWords = session.summary?.newWordsUsed ?? []
@@ -260,6 +287,25 @@ enum SessionSummarizer {
         }
         report { $0.offered = computed.expressionsOffered.count }
 
+        // The words the fluent self taught go into the notebook BY
+        // THEMSELVES. They used to stop at the talk's book page and wait to
+        // be tapped, so a word the whole call was about only entered review
+        // if the learner went looking for it — which is the same "it was
+        // never mentioned" the ungraded-word fix answers, one step further
+        // along. `keepFromTalk` skips anything they already know, already
+        // keep, or took out by hand, and logs no practice rep: nothing here
+        // was their effort.
+        // EXACTLY the set the book's word chapter shows, so the page and the
+        // notebook can never disagree about what this talk taught — same
+        // order, same `TalkCurriculum.maxWords` ceiling, no second number
+        // invented here. `keepFromTalk` drops the ones already mastered,
+        // which is what the chapter draws as ticked.
+        VocabStore.shared.keepFromTalk(
+            Array(VocabStore.shared.pickupCandidates(
+                fromFluentTexts: turns.filter { $0.role == .fluentSelf }.map(\.transcript),
+                atOrAbove: appState.proficiency,
+                excludingLemmas: VocabStore.lemmas(in: userTexts)).prefix(TalkCurriculum.maxWords)))
+
         // Same guard for grammar evidence: a quote the user can't find in
         // their own words destroys trust in the whole list. Compare with
         // punctuation/casing stripped — STT and the LLM disagree on those
@@ -288,11 +334,24 @@ enum SessionSummarizer {
         let carryovers = CarryoverDetector.detect(
             in: turns, cards: DrillStore.shared.load(),
             curriculumItems: appState.openCurriculumItems,
-            studyingExpressions: VocabStore.shared.studyingExpressions,
-            studyingWords: VocabStore.shared.studying,
+            studyingExpressions: studyingExpressionsBefore,
+            studyingWords: studyingWordsBefore,
+            knownExpressions: knownExpressionsBefore,
+            knownWords: knownWordsBefore,
             sessionId: sessionId, sessionStartedAt: session.startedAt)
         computed.carryovers = carryovers
         report { $0.carryovers = carryovers.count }
+        // Bookmarked or self-marked expressions said out loud: credit the pool
+        // the way the summary's own list is credited, so the record, the
+        // bookmark and the schedule all move — not just the receipt. Words
+        // need nothing here: `ingest` above already credits every tracked
+        // word the learner said. `ingestExpressions` dedupes per session, so
+        // a phrase the model ALSO listed is counted once.
+        VocabStore.shared.ingestExpressions(
+            sessionId: sessionId,
+            phrases: carryovers
+                .filter { $0.source == .studyingExpression || $0.source == .knownExpression }
+                .map(\.item))
 
         // Free-talk sessions (no picked topic) take the summary's generated
         // title so History/Practice lists don't fill with identical
@@ -319,6 +378,17 @@ enum SessionSummarizer {
         // it against the SRS schedule, not just the wrap-up.
         DrillStore.shared.markUsedInConversation(
             ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
+        // A suggestion adopted later in the SAME call: the card it just
+        // minted is born confirmed — they already said the corrected line.
+        let adopted = Set(carryovers.filter { $0.source == .suggestion }
+            .map { CarryoverDetector.normalized($0.item) })
+        if !adopted.isEmpty {
+            DrillStore.shared.markUsedInConversation(
+                ids: DrillStore.shared.load()
+                    .filter { $0.sourceSessionId == sessionId
+                        && adopted.contains(CarryoverDetector.normalized($0.targetPhrase)) }
+                    .map(\.id))
+        }
         // Same principle for book material: producing it live masters it,
         // wherever the book lives.
         appState.markCurriculumItemsUsedInConversation(
@@ -340,19 +410,51 @@ enum SessionSummarizer {
         // `personaBlock`. Capped at 3 a session: this is a notebook, not a
         // transcript, and the model volunteers more than it should when a talk
         // ran long.
-        let learned = payload.about_user
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && $0.count <= 140 }
-            .prefix(3)
-            .map { PersonaNote(text: $0, sessionId: sessionId, learnedAt: Date()) }
+        // Each line carries the model's verdict on how much of it a stranger
+        // may hear (`share`), the gist that rung hands out, the reason, and
+        // the sentence it was distilled from; the learner overturns the
+        // verdict in Me → Profile. The gist is kept whatever the rung, so a
+        // learner moving a line to "the gist" later has one to hand out.
+        // A line naming a remembered line's number is an UPDATE — the old
+        // line has changed or ended and this is the new truth — and takes
+        // its place instead of counting against the three new ones. A
+        // number that doesn't match anything is treated as a new line
+        // rather than dropped: the fact is still worth keeping, only its
+        // predecessor was misnamed.
+        let usable = payload.about_user
+            .map { ($0, $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .filter { !$0.1.isEmpty && $0.1.count <= 140 }
+        func clip(_ raw: String?, _ limit: Int) -> String? {
+            guard let t = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !t.isEmpty, t.count <= limit else { return nil }
+            return t
+        }
+        func note(_ entry: ClaudeSummaryPayload.AboutUser, _ text: String) -> PersonaNote {
+            let gist = clip(entry.gist, 140)
+            // "The gist" with no gist to hand out is an empty promise; the
+            // safe rung is the one below it.
+            let share: PersonaNote.Share = (entry.share == .gist && gist == nil) ? .nothing : entry.share
+            return PersonaNote(text: text, sessionId: sessionId, learnedAt: Date(),
+                               share: share, kind: entry.kind,
+                               heard: clip(entry.heard, 240), gist: gist, why: clip(entry.why, 140))
+        }
+        var updates: [UserPersona.NoteUpdate] = []
+        var learned: [PersonaNote] = []
+        for (entry, text) in usable {
+            if let n = entry.replaces, n >= 1, n <= rememberedNotes.count, updates.count < 3 {
+                updates.append(.init(replacing: rememberedNotes[n - 1].id, note: note(entry, text)))
+            } else if learned.count < 3 {
+                learned.append(note(entry, text))
+            }
+        }
         // A plain free talk is where the fluent self gets to know someone —
         // a scenario casts it as a barista and a Find-people call as a
         // stranger, and neither of those met the learner. Stamping this is
         // what retires the first-call framing.
         let wasIntroTalk = session.counterpartId == nil && existingTopic.isEmpty
-        if !learned.isEmpty || (wasIntroTalk && appState.persona?.metAt == nil) {
+        if !learned.isEmpty || !updates.isEmpty || (wasIntroTalk && appState.persona?.metAt == nil) {
             appState.rememberAboutUser(
-                Array(learned),
+                learned, updates: updates,
                 metAt: wasIntroTalk ? (session.endedAt ?? Date()) : nil)
         }
         // Kick off async weekly-report generation if unlock conditions are

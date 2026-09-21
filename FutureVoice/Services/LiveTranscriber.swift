@@ -264,6 +264,7 @@ final class LiveTranscriber: ObservableObject {
                voiceProcessing: Bool = false) throws {
         guard !isRunning else { return }
         self.contextualStrings = Array(contextualStrings.prefix(50))
+        joinSeparator = LanguageCatalog.writesSpaces(locale) ? " " : ""
         let rec = SFSpeechRecognizer(locale: Locale(identifier: LanguageCatalog.sttLocale(locale)))
         guard let rec = rec, rec.isAvailable else { throw LiveError.unavailable }
         rec.defaultTaskHint = .dictation
@@ -683,10 +684,16 @@ final class LiveTranscriber: ObservableObject {
 
     /// Rebuilds the published transcript from committed chunks + the live
     /// segment's current partial.
+    /// What goes between two committed segments: a space, or nothing for a
+    /// language written without spaces — set from the locale this run
+    /// listens in, which may be the learner's NATIVE language (dictation),
+    /// not the target.
+    private var joinSeparator = " "
+
     private func rebuildTranscript() {
         var parts = chunks.map(\.text)
         parts.append(lastSegmentText)
-        transcript = parts.filter { !$0.isEmpty }.joined(separator: " ")
+        transcript = parts.filter { !$0.isEmpty }.joined(separator: joinSeparator)
     }
 
     private func startQuietWatcher() {

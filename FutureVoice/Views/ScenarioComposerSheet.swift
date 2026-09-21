@@ -146,7 +146,7 @@ struct ScenarioComposerSheet: View {
             // sheet, never from the host behind it: a sheet raised underneath
             // an open sheet doesn't appear, and the composer staying up means
             // the situation they just wrote is still there afterwards.
-            .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .sheet(isPresented: $showingPaywall) { PaywallView(source: "composer") }
             .sheet(isPresented: $showingPartnerPicker) {
                 PartnerPickerSheet(host: host, current: partner) { partner = $0 }
                     .environmentObject(appState)

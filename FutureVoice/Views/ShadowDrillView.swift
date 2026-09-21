@@ -1,16 +1,15 @@
 import AVFoundation
 import SwiftUI
 
-/// Sync-mode shadow practice — Guitar-Hero-style for speech.
+/// Sync-mode shadow practice — karaoke for speech.
 ///
-/// Tap the big mic → 3-2-1 countdown → target audio plays AND user records
-/// simultaneously. Two horizontal timelines render in parallel:
-///   • Target row: a dot for each word at its actual `startMs`
-///   • Your row: a dot appears at the wall-clock moment each word lands in
-///     the live STT transcript
-/// After playback ends, the visual gap between rows shows exactly where you
-/// were ahead or behind. Gemini still gives the qualitative pronunciation /
-/// pacing / fix bullets, anchored to the diff.
+/// Tap the mic → 3-2-1 countdown → the target line's words light up on the
+/// original rhythm while the learner says it along (nothing plays — speaker
+/// audio would bleed into the mic). The take is then read by
+/// `ShadowTranscriber`, diffed against the line (`ShadowEngine`), its beat
+/// drawn as dots under the words, and Gemini writes three coaching bullets
+/// anchored to that diff. Words are tappable: two taps pick a phrase to loop
+/// and shadow on its own.
 struct ShadowDrillView: View {
     let turn: Turn
     let targetLanguage: String
@@ -31,18 +30,39 @@ struct ShadowDrillView: View {
     @State private var phase: Phase = .idle
     @State private var countdownValue: Int = 0
     @State private var syncStartedAt: Date?
-    @State private var userWordTimings: [UserWordHit] = []
     @State private var prevTranscript: String = ""
+    /// The take had no speech in it — shown as a line under the target, not
+    /// scored: a silent take is not a 0, it is nothing, and it must not be
+    /// saved, counted as practice or handed to the coach.
+    @State private var heardNothing = false
     /// True when scoring had to use the live partial hypothesis because the
     /// file re-recognition pass failed (usually network) — shown as a
     /// trust-calibrating footnote on the result.
     @State private var usedRoughTranscript = false
     @State private var recordingFileURL: URL?
     @State private var feedback: ShadowFeedback?
+    /// The coach call is still writing its bullets for the attempt on
+    /// screen. The score, diff and recording are already up — the result
+    /// no longer waits for the garnish.
+    @State private var coachPending = false
+    /// The attempt the result screen is showing. A coach reply that lands
+    /// after the learner has started another take updates that attempt's
+    /// RECORD and nothing on screen.
+    @State private var shownAttemptId: UUID?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
     /// Word-onset timing comparison for the last attempt — nil whenever the
     /// timing data wasn't trustworthy (see ShadowEngine.analyzeRhythm guards).
     @State private var rhythm: ShadowEngine.RhythmAnalysis?
+    /// `diffSteps` and `rhythm` folded onto word indices, computed ONCE when
+    /// a result lands (`refreshWordVerdicts`). The karaoke line redraws at
+    /// 30 Hz whenever the target plays, and both of these ran the tokenizer
+    /// (regex, NumberFormatter) per word per frame when they were computed
+    /// in the body.
+    @State private var wordOps = PositionAlignment()
+    @State private var wordBeats: [Int: ShadowEngine.RhythmWord] = [:]
+    /// Word onsets of the SCORED attempt, kept past `analyze` so the duet can
+    /// line the take up on its first word instead of on the file's start.
+    @State private var attemptWordTimings: [WordTiming] = []
     @State private var error: String?
     /// The last failure was the 402 credit gate — the error alert then leads
     /// with the paywall instead of a dead-end OK.
@@ -57,6 +77,13 @@ struct ShadowDrillView: View {
     /// before a live mic session starts — two speech recognizers running at
     /// once break the recording (it cut off after the first line).
     @State private var recoverTask: Task<Void, Never>?
+    /// The free target alignment was re-run once after a take this visit.
+    /// One re-run is the whole benefit; one per attempt is a recognizer
+    /// winding down under the next take's scoring pass.
+    @State private var recoveryRearmed = false
+    /// The target was played since the last attempt — logged with the attempt
+    /// so "rhythm goes missing after I press play" can be checked against data.
+    @State private var playedSinceLastAttempt = false
     /// Word-index range selected for loop practice, shared between the target
     /// line text and the timeline player (both read/write it).
     @State private var selectedWordRange: ClosedRange<Int>?
@@ -74,11 +101,6 @@ struct ShadowDrillView: View {
     @State private var askingMicChoice = false
     @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
 
-    struct UserWordHit: Hashable {
-        let word: String
-        let ms: Int
-    }
-
     enum Phase: Equatable {
         case idle
         case loadingAudio
@@ -94,7 +116,11 @@ struct ShadowDrillView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     targetSection
                     durationCard
-                    rhythmCard
+                    if heardNothing {
+                        Label("Didn't hear anything — try again closer to the mic", systemImage: "mic.slash")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     if let fb = feedback {
                         feedbackSection(fb)
                     }
@@ -108,7 +134,13 @@ struct ShadowDrillView: View {
             .navigationTitle("Shadow")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // "Close", not "Done": nothing here gets finished by leaving —
+                // "Done" read as "mark this line complete".
                 ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .disabled(phase == .syncing || phase == .countdown)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     // Archive this line for repeat practice — saved lines
                     // live under Practice → Saved lines.
                     Button {
@@ -117,10 +149,6 @@ struct ShadowDrillView: View {
                         Image(systemName: appState.isLineSaved(turn.id) ? "bookmark.fill" : "bookmark")
                     }
                     .accessibilityLabel(appState.isLineSaved(turn.id) ? "Remove from saved lines" : "Save line")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .disabled(phase == .syncing || phase == .countdown)
                 }
             }
             .safeAreaInset(edge: .bottom) { bottomBar }
@@ -134,13 +162,22 @@ struct ShadowDrillView: View {
                 Text(error ?? "")
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+                PaywallView(source: "shadow")
             }
             .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
                 MicChoiceSheet { _ in }
             }
-            .onChange(of: live.currentWordTimings) { _, new in
-                applyWordTimings(new)
+            // A swipe-down mid-take used to leave the mic hot and let the
+            // auto-stop score, save and count a take for a screen that was
+            // gone — and the next line's recognizer collided with it. Done is
+            // already disabled in these phases; the gesture now is too.
+            .interactiveDismissDisabled(phase == .syncing || phase == .countdown)
+            .onDisappear {
+                cancelSync()
+                recoverTask?.cancel()
+                recoverTask = nil
+                player.stop()
+                attemptPlayer.stop()
             }
             .task { await prepareAudio() }
         }
@@ -183,9 +220,37 @@ struct ShadowDrillView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(timings.isEmpty ? "no timings" : "\(timings.count) words")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                if let r = rhythm {
+                    // How many words the score stands on, when not all of
+                    // them — the header is the only place the number lives.
+                    let total = activeRange?.count ?? timings.count
+                    let judged = r.words.filter(\.isMeasured).count
+                    HStack(spacing: 6) {
+                        if judged < total {
+                            Text(verbatim: "\(judged)/\(total)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Label("\(r.score)", systemImage: "metronome")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(scoreColor(r.score))
+                    }
+                } else if timings.isEmpty {
+                    Text("no timings")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else if practiceRange != nil {
+                    Text("Practicing the selected phrase")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else {
+                    // The one thing this screen never said out loud: the
+                    // words can be tapped. It replaced a word count nobody
+                    // needed.
+                    Text("Tap words to pick a phrase")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
             // Re-render at 30 Hz whenever a time-driven highlight is needed:
             // live sync (clock running) OR preview playback.
@@ -205,23 +270,85 @@ struct ShadowDrillView: View {
     /// Tappable target words: karaoke color from `wordColor`, plus a selection
     /// background for the loop range (shared with the timeline player).
     private var karaokeWords: some View {
-        let alignment = positionAlignment()
-        return FlowLayout(spacing: 1, lineSpacing: 6) {
+        // A language written without spaces reads as one run: the words sit
+        // flush, or the gaps between them read as spaces Japanese never has
+        // (慌て て, 一 つ ずつ). Selection and colour still go per word.
+        let spaced = LanguageCatalog.writesSpaces(targetLanguage)
+        return FlowLayout(spacing: spaced ? 1 : 0, lineSpacing: 4) {
             ForEach(Array(timings.enumerated()), id: \.offset) { i, wt in
                 let selected = selectedWordRange?.contains(i) ?? false
-                Text(wt.word)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(wordColor(at: i, wt: wt, alignment: alignment, offset: 0))
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 1)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture { tapWord(i) }
+                VStack(spacing: 0) {
+                    Text(wt.word)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(wordColor(at: i, wt: wt))
+                        .padding(.horizontal, spaced ? 2 : 0)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
+                        )
+                    beatMark(wordBeats[i])
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { tapWord(i) }
             }
         }
+    }
+
+    // MARK: - Beat marks
+
+    /// Fold the result onto word indices — once per result, never per frame.
+    private func refreshWordVerdicts() {
+        wordOps = positionAlignment()
+        guard let rhythm else { wordBeats = [:]; return }
+        // The practiced range's words are re-based onto the whole line.
+        let base = activeRange?.lowerBound ?? 0
+        wordBeats = Dictionary(rhythm.words.map { ($0.targetIndex + base, $0) },
+                               uniquingKeysWith: { first, _ in first })
+    }
+
+    /// 300 ms — the edge of "slightly off" — is 18 pt: visible under a short
+    /// word without walking into its neighbour.
+    private static let beatPointsPerMs: CGFloat = 0.06
+    private static let beatMaxOffset: CGFloat = 24
+
+    /// The rhythm verdict, drawn ON the target line rather than in a card of
+    /// its own (2026-09-16): a dot under each word the attempt was timed on,
+    /// sitting where the learner started — under the word's centre on the
+    /// beat, pushed right if late, left if early — in the same colour scale
+    /// the score is built from. A word nobody measured, or the learner
+    /// skipped, gets no dot; the header's `6/10` says how many did. The row
+    /// is always reserved so the line doesn't jump when a result lands.
+    ///
+    /// Two things this replaced, same day: bar timelines (Target / You) whose
+    /// bar WIDTHS were durations the score never reads and the two sources
+    /// couldn't agree on, and a per-word card with `+0.2s` labels that was
+    /// right but took a third of the screen for one number per word. Colour
+    /// on the word ITSELF was considered and rejected: text colour already
+    /// means "wrong word" (orange for a substitution), and one channel can't
+    /// carry two verdicts.
+    @ViewBuilder
+    private func beatMark(_ w: ShadowEngine.RhythmWord?) -> some View {
+        ZStack {
+            if let w, w.isMeasured {
+                let offset = min(Self.beatMaxOffset, max(-Self.beatMaxOffset,
+                                 CGFloat(w.deviationMs) * Self.beatPointsPerMs))
+                let color = rhythmColor(deviationMs: w.deviationMs)
+                let onBeat = ShadowEngine.rhythmGrade(deviationMs: w.deviationMs) == 2
+                if !onBeat {
+                    // A trace back to where the beat was.
+                    Rectangle()
+                        .fill(color.opacity(0.5))
+                        .frame(width: abs(offset), height: 1)
+                        .offset(x: offset / 2)
+                }
+                Circle()
+                    .fill(onBeat ? color.opacity(0.55) : color)
+                    .frame(width: 5, height: 5)
+                    .offset(x: offset)
+            }
+        }
+        .frame(height: 6)
     }
 
     /// Tap a target word to build the loop range: first tap sets an anchor
@@ -259,63 +386,36 @@ struct ShadowDrillView: View {
 
     private var practiceText: String {
         guard let r = practiceRange else { return turn.transcript }
-        return timings[r].map(\.word).joined(separator: " ")
+        return timings[r].map(\.word).joined(separator: WordSplitter.spaced ? " " : "")
     }
 
+    /// First word to last word — the span the learner's own duration is
+    /// measured over (`analyze`). The whole line used to be the FILE length,
+    /// lead-in and silent tail included, so a take that matched the voice
+    /// exactly read 0.83× and was called rushed by the pace cell and the
+    /// coach both; the phrase path always measured it right.
     private var practiceDurationMs: Int {
-        guard let r = practiceRange else { return targetDurationMs }
-        return max(0, timings[r.upperBound].endMs - timings[r.lowerBound].startMs)
-    }
-
-    /// During live sync, the karaoke follows the ORIGINAL rhythm — once the
-    /// learner starts speaking, words highlight at their target [startMs,
-    /// endMs] just like a real karaoke machine. The learner uses this as a
-    /// tempo guide. After analysis, each text word recolors by per-word
-    /// timing accuracy (green = on, yellow = slight, orange = off).
-    private var karaokeText: Text {
-        guard !timings.isEmpty else {
-            return Text(turn.transcript).foregroundStyle(.primary)
+        if let r = practiceRange {
+            return max(0, timings[r.upperBound].endMs - timings[r.lowerBound].startMs)
         }
-        let alignment = positionAlignment()
-        let offset = 0   // unused now (per-word timing accuracy was dropped)
-
-        var out = Text("")
-        for (i, wt) in timings.enumerated() {
-            let color = wordColor(at: i, wt: wt, alignment: alignment, offset: offset)
-            let word = Text(wt.word).foregroundStyle(color)
-            out = i == 0 ? word : out + Text(" ") + word
+        if let first = timings.first, let last = timings.last {
+            return max(0, last.endMs - first.startMs)
         }
-        return out
+        return targetDurationMs
     }
 
     /// Picks the color for one target word.
     /// Order of precedence:
-    ///   1. Post-attempt analysis → accuracy grading (green / yellow / orange).
-    ///   2. Live sync (clock running) → karaoke by elapsed user-time.
-    ///   3. Preview playback (Hear it) → karaoke by audio current-time.
+    ///   1. Live sync (clock running) → karaoke by elapsed user-time.
+    ///   2. Target playback → karaoke by audio current-time. This outranks the
+    ///      result: after the first take the line used to freeze on its diff
+    ///      colours, so "Hear target" and the timeline's play had no moving
+    ///      highlight and the listen→retry half of the loop lost its tempo
+    ///      guide.
+    ///   3. Post-attempt analysis → content accuracy (orange = said a
+    ///      different word, dimmed = skipped).
     ///   4. Otherwise → secondary (waiting).
-    private func wordColor(
-        at i: Int,
-        wt: WordTiming,
-        alignment: PositionAlignment,
-        offset: Int
-    ) -> Color {
-        if !diffSteps.isEmpty {
-            // Post-analysis: text color = content accuracy only. No
-            // per-word timing color (SFSpeechRecognizer streaming timestamps
-            // aren't reliable enough to grade against ms thresholds).
-            // Phrase attempts: diff indices are relative to the practiced
-            // range; words outside it weren't attempted → stay quiet.
-            if let r = activeRange, !r.contains(i) { return .secondary }
-            let diffIndex = i - (activeRange?.lowerBound ?? 0)
-            switch alignment.targetOp[diffIndex] {
-            case .sub:   return .orange      // user said a different word here
-            case .del:   return .secondary   // user skipped this word
-            case .match: return .primary
-            default:     return .primary
-            }
-        }
-
+    private func wordColor(at i: Int, wt: WordTiming) -> Color {
         if phase == .syncing, let start = syncStartedAt {
             // Phrase attempts: the sync clock's zero IS the phrase's first
             // word, so shift elapsed time to the phrase's position in the
@@ -330,6 +430,17 @@ struct ShadowDrillView: View {
         if player.isPlaying {
             return positionalColor(wt: wt, nowMs: Int(player.currentTime * 1000))
         }
+        if !diffSteps.isEmpty {
+            // Phrase attempts: diff indices are relative to the practiced
+            // range; words outside it weren't attempted → stay quiet.
+            if let r = activeRange, !r.contains(i) { return .secondary }
+            let diffIndex = i - (activeRange?.lowerBound ?? 0)
+            switch wordOps.targetOp[diffIndex] {
+            case .sub:   return .orange      // user said a different word here
+            case .del:   return .secondary   // user skipped this word
+            default:     return .primary
+            }
+        }
         return .secondary
     }
 
@@ -339,15 +450,9 @@ struct ShadowDrillView: View {
         return .secondary                                // upcoming
     }
 
-    /// Two parallel horizontal timelines (target on top, you on bottom).
-    /// Width corresponds to the target audio duration so positions are
-    /// comparable at a glance.
-    /// After analysis only — shows the two durations side-by-side and the
-    /// resulting pace ratio. Per-word timing dots were removed because iOS
-    /// SFSpeechRecognizer doesn't expose reliable per-word timestamps for
-    /// streaming recognition, so the previous green/yellow/orange dots were
-    /// effectively guesses. Pacing is now (a) this honest duration card and
-    /// (b) the Gemini-judged "Pacing" bullet below.
+    /// After analysis only — the two spoken durations side by side and the
+    /// pace ratio between them. Overall speed lives here; the SHAPE of the
+    /// timing is the beat dots under the line.
     @ViewBuilder
     private var durationCard: some View {
         if !diffSteps.isEmpty, attemptTargetDurationMs > 0 {
@@ -364,7 +469,7 @@ struct ShadowDrillView: View {
         }
     }
 
-    private func durationCell(label: String, value: String, color: Color = .primary) -> some View {
+    private func durationCell(label: LocalizedStringKey, value: String, color: Color = .primary) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
@@ -403,72 +508,6 @@ struct ShadowDrillView: View {
         (phase == .syncing && syncStartedAt != nil) || player.isPlaying
     }
 
-    // MARK: - Rhythm card
-
-    /// Two parallel word-onset timelines — target rhythm on top, the
-    /// learner's (pace-normalized) below. Because both rows are re-zeroed
-    /// and the learner row is scaled to the same span, a vertical offset
-    /// between a pair of bars reads directly as "you were early/late on this
-    /// word", independent of overall speed (which the duration card owns).
-    @ViewBuilder
-    private var rhythmCard: some View {
-        if let r = rhythm, !diffSteps.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Rhythm")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Label("\(r.score)", systemImage: "metronome")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(scoreColor(r.score))
-                }
-                VStack(spacing: 6) {
-                    rhythmRow(label: "Target", analysis: r, learner: false)
-                    rhythmRow(label: "You", analysis: r, learner: true)
-                }
-                Text(explain("Word starts, speed-matched — orange landed off the target's beat."))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(12)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    private func rhythmRow(
-        label: String,
-        analysis: ShadowEngine.RhythmAnalysis,
-        learner: Bool
-    ) -> some View {
-        HStack(spacing: 8) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(width: 44, alignment: .leading)
-            GeometryReader { geo in
-                let span = CGFloat(max(1, analysis.targetSpanMs))
-                ZStack(alignment: .topLeading) {
-                    ForEach(analysis.words, id: \.self) { w in
-                        let onsetMs = learner ? w.learnerOnsetMs : w.targetOnsetMs
-                        let durMs = learner ? w.learnerDurationMs : w.targetDurationMs
-                        let x = min(1, max(0, CGFloat(onsetMs) / span)) * geo.size.width
-                        let width = min(geo.size.width - x,
-                                        max(4, CGFloat(durMs) / span * geo.size.width))
-                        Capsule()
-                            .fill(learner
-                                  ? rhythmColor(deviationMs: w.deviationMs)
-                                  : Color.secondary.opacity(0.35))
-                            .frame(width: width, height: 8)
-                            .offset(x: x)
-                    }
-                }
-            }
-            .frame(height: 8)
-        }
-    }
-
     private func rhythmColor(deviationMs: Int) -> Color {
         switch ShadowEngine.rhythmGrade(deviationMs: deviationMs) {
         case 2:  return .green
@@ -480,10 +519,8 @@ struct ShadowDrillView: View {
 
     // MARK: - Position alignment (diff-only)
 
-    /// Maps each target word position to its diff op (.match / .sub / .del).
-    /// Per-word timing comparisons were removed because iOS SFSpeechRecognizer
-    /// doesn't give reliable streaming timestamps — pacing is now expressed at
-    /// the WHOLE-attempt level via `durationCard` and Gemini's Pacing bullet.
+    /// Maps each target word position to its diff op (.match / .sub / .del) —
+    /// the WORDS verdict. The timing verdict is `wordBeats`.
     private struct PositionAlignment {
         var targetOp: [Int: ShadowEngine.DiffOp] = [:]
     }
@@ -520,13 +557,26 @@ struct ShadowDrillView: View {
     private func feedbackSection(_ fb: ShadowFeedback) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Feedback")
+                // Not "Feedback": that key is Settings' "Send feedback" row,
+                // so the score header read as a mail link in every language.
+                Text("Your take")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Label("\(fb.matchScore)", systemImage: "gauge.with.dots.needle.67percent")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(scoreColor(fb.matchScore))
+                // The headline is words AND beat (`overallScore`). When the
+                // take could not be timed it is words alone, and the badge
+                // says so — a number that quietly changes what it measures
+                // is worse than one that admits what it missed.
+                HStack(spacing: 6) {
+                    if fb.rhythmScore == nil {
+                        Text("words only")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Label("\(fb.overallScore)", systemImage: "gauge.with.dots.needle.67percent")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(scoreColor(fb.overallScore))
+                }
             }
 
             if !diffSteps.isEmpty {
@@ -534,6 +584,15 @@ struct ShadowDrillView: View {
             }
             if recordingFileURL != nil {
                 playbackRow
+            }
+            if coachPending {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Writing feedback…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             // Empty bullets happen when the coach call failed — the score,
             // diff and recording above are still shown/saved.
@@ -554,8 +613,10 @@ struct ShadowDrillView: View {
     /// a play button that re-plays the recorded WAV.
     @ViewBuilder
     private var pastAttemptsSection: some View {
+        // The take on screen is the card above; listing it again as row one
+        // read as a duplicate.
         let past = appState.shadowAttempts
-            .filter { $0.turnId == turn.id }
+            .filter { $0.turnId == turn.id && $0.id != shownAttemptId }
             .sorted { $0.createdAt > $1.createdAt }
         if !past.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
@@ -578,9 +639,9 @@ struct ShadowDrillView: View {
     private func pastAttemptRow(_ a: ShadowAttempt) -> some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 2) {
-                Text("\(a.matchScore)")
+                Text("\(a.overallScore)")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(pastAttemptScoreColor(a.matchScore))
+                    .foregroundStyle(scoreColor(a.overallScore))
                     .monospacedDigit()
                 Text(a.createdAt, style: .relative)
                     .font(.caption2)
@@ -588,10 +649,32 @@ struct ShadowDrillView: View {
             }
             .frame(width: 56)
             VStack(alignment: .leading, spacing: 2) {
-                Text(a.learnerTranscript.isEmpty ? "(silent)" : a.learnerTranscript)
-                    .font(.footnote)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
+                if a.isPartial {
+                    // A phrase take, scored on part of the line — say which
+                    // part, or its score reads as the line's.
+                    Text(a.targetText)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                if a.learnerTranscript.isEmpty {
+                    Text("(silent)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(a.learnerTranscript)
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+                // The one bullet worth keeping: what to try next time. It
+                // was saved with every attempt and never shown again.
+                if !a.fix.isEmpty {
+                    Text(a.fix)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
             }
             Spacer(minLength: 8)
             Button {
@@ -605,18 +688,18 @@ struct ShadowDrillView: View {
             }
             .buttonStyle(.plain)
             .disabled(a.recordingFilename == nil)
+            .accessibilityLabel("Hear my attempt")
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func pastAttemptScoreColor(_ score: Int) -> Color {
-        switch score {
-        case 80...:    return .green
-        case 50..<80:  return .accentColor
-        default:       return .orange
+        .contextMenu {
+            Button(role: .destructive) {
+                appState.deleteShadowAttempt(id: a.id)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 
@@ -638,31 +721,47 @@ struct ShadowDrillView: View {
         let url = recordingFileURLForFilename(filename)
         guard FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
-            self.error = "Recording file missing."
+            self.error = explain("Recording file missing.")
             return
         }
         playAttempt(data)
     }
 
     private var playbackRow: some View {
-        // lineLimit(1) + scale-down keeps both labels single-line so the two
-        // bordered buttons render the same height ("Hear my attempt" used to
-        // wrap to two lines and grow taller than its sibling).
-        HStack(spacing: 10) {
-            Button { Task { await previewTarget() } } label: {
-                Label("Hear target", systemImage: "play.circle")
+        VStack(spacing: 8) {
+            // lineLimit(1) + scale-down keeps both labels single-line so the
+            // two bordered buttons render the same height ("Hear my attempt"
+            // used to wrap to two lines and grow taller than its sibling).
+            HStack(spacing: 10) {
+                Button { Task { await previewTarget() } } label: {
+                    Label("Hear target", systemImage: "play.circle")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                Button { Task { await playMyAttempt() } } label: {
+                    Label("Hear my attempt", systemImage: "person.wave.2")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            // Its own row, not a third of the one above: hearing the two takes
+            // over each other is the thing worth doing here, and it does not
+            // belong squeezed beside the two halves it is made of.
+            Button { Task { await playTogether() } } label: {
+                Label("Both at once", systemImage: "person.2.wave.2")
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            Button { Task { await playMyAttempt() } } label: {
-                Label("Hear my attempt", systemImage: "person.wave.2")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
+            Text("Your take over the line, both starting on their first word — hear where you drift.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .controlSize(.regular)
     }
@@ -671,7 +770,7 @@ struct ShadowDrillView: View {
         guard let url = recordingFileURL,
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
-            self.error = "Recording isn't available."
+            self.error = explain("Recording isn't available.")
             return
         }
         playAttempt(data)
@@ -733,7 +832,7 @@ struct ShadowDrillView: View {
     private func space(_ first: Bool) -> Text { first ? Text("") : Text(" ") }
 
     @ViewBuilder
-    private func bullet(icon: String, label: String, text: String) -> some View {
+    private func bullet(icon: String, label: LocalizedStringKey, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.subheadline)
@@ -829,6 +928,7 @@ struct ShadowDrillView: View {
         .buttonStyle(.plain)
         .tint(phase == .syncing ? .red : .accentColor)
         .disabled(!syncEnabled)
+        .accessibilityLabel(micHint)
     }
 
     @ViewBuilder
@@ -842,13 +942,6 @@ struct ShadowDrillView: View {
                     .transition(.scale.combined(with: .opacity))
                     .id(countdownValue)
             }
-        }
-    }
-
-    private var previewDisabled: Bool {
-        switch phase {
-        case .loadingAudio, .countdown, .syncing, .analyzing: return true
-        case .idle, .result: return player.isPlaying
         }
     }
 
@@ -873,9 +966,11 @@ struct ShadowDrillView: View {
         }
     }
 
+    /// The mic button's accessibility label — the one place its meaning per
+    /// phase is spelled out (a caption under it was dropped on purpose).
     /// `chrome(…)`, not bare literals: this is a `String`-typed switch, so a
     /// plain literal never sees the root's `\.locale` and stayed English in
-    /// every language. Exactly the case `chrome` exists for.
+    /// every language.
     private var micHint: String {
         switch phase {
         case .idle:        return practiceRange == nil
@@ -899,6 +994,7 @@ struct ShadowDrillView: View {
 
     private func previewTarget() async {
         error = nil
+        playedSinceLastAttempt = true
 
         // Fast path: cached and file actually exists on disk.
         if let url = cachedAudioURL,
@@ -918,7 +1014,7 @@ struct ShadowDrillView: View {
             // Preserve any specific error prepareAudio surfaced (e.g.
             // ElevenLabs HTTP code) instead of stomping with a generic one.
             if error == nil {
-                self.error = "Couldn't load audio for this line."
+                self.error = explain("Couldn't load audio for this line.")
             }
             return
         }
@@ -948,6 +1044,81 @@ struct ShadowDrillView: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    // MARK: - Both at once
+
+    /// How far back the model line sits, and how wide the two voices are
+    /// panned. The learner's own take stays at full level and slightly to the
+    /// right; the model is quieter and slightly left, so the pair separates on
+    /// earphones without either becoming a background texture.
+    private static let duetTargetVolume: Float = 0.4
+    private static let duetPan: Float = 0.35
+
+    /// Play the model line and the learner's take AT ONCE, each trimmed to its
+    /// own first word so they start together.
+    ///
+    /// This is the rhythm card with the screen turned off: a learner who ran
+    /// late hears themselves drift behind, which no two-row diagram conveys as
+    /// directly. Speed is not matched — see `AudioPlayer.armDuet`.
+    ///
+    /// Honest limit: the takes are different lengths, so the further in you
+    /// get the wider the gap. On a short line that gap IS the lesson; on a
+    /// long one it degrades into two people talking at once, which is what the
+    /// timeline's range selection is for.
+    private func playTogether() async {
+        error = nil
+        player.stop()
+        attemptPlayer.stop()
+
+        guard let attemptURL = recordingFileURL,
+              let attemptData = try? Data(contentsOf: attemptURL) else {
+            self.error = explain("Recording isn't available.")
+            return
+        }
+        if cachedAudioURL == nil || !FileManager.default
+            .fileExists(atPath: cachedAudioURL?.path ?? "") {
+            await prepareAudio()
+        }
+        guard let targetURL = cachedAudioURL,
+              let targetData = try? Data(contentsOf: targetURL) else {
+            if error == nil { self.error = explain("Couldn't load audio for this line.") }
+            return
+        }
+
+        // Both takes open on silence — the model line on its own lead-in, the
+        // attempt on the 350 ms the recorder deliberately keeps in front of
+        // the go beat plus however long the learner took to start. Skipping to
+        // where each one actually begins is what makes "together" mean
+        // together, and the onset comes from the AUDIO (`firstVoiceOnset`):
+        // word timings are missing on every take the aligner couldn't anchor
+        // and are a character-count estimate on any target line that came from
+        // a call, and a missing onset read as 0 — which played the take from
+        // the top of the file, the reported "my voice has a big gap in front".
+        // A phrase selection is the one case timings must decide, because its
+        // start is mid-file, not the first sound in it.
+        let targetSlice = activeRange.map { Array(timings[$0]) } ?? timings
+        let targetLead = activeRange != nil
+            ? Double(targetSlice.first?.startMs ?? 0) / 1000
+            : (AudioLoudness.firstVoiceOnset(at: targetURL)
+               ?? Double(targetSlice.first?.startMs ?? 0) / 1000)
+        let attemptLead = AudioLoudness.firstVoiceOnset(at: attemptURL)
+            ?? Double(attemptWordTimings.first?.startMs ?? 0) / 1000
+
+        guard player.armDuet(targetData, skipping: targetLead,
+                             volume: Self.duetTargetVolume, pan: -Self.duetPan,
+                             configureSession: true),
+              attemptPlayer.armDuet(attemptData, skipping: attemptLead,
+                                    volume: 1.0, pan: Self.duetPan,
+                                    configureSession: false) else {
+            self.error = explain("Couldn't play the two takes together.")
+            return
+        }
+        // One clock reading, one start time, both halves. Enough lead for the
+        // second `play(atTime:)` call to be made before the moment arrives.
+        let go = player.deviceTimeNow + 0.2
+        player.startDuet(at: go)
+        attemptPlayer.startDuet(at: go)
     }
 
     private func handleSyncTap() async {
@@ -982,7 +1153,11 @@ struct ShadowDrillView: View {
     static func recognitionHints(for target: String) -> [String] {
         var hints = [target]
         var seen = Set<String>()
-        for word in target.components(separatedBy: .whitespacesAndNewlines) {
+        // Japanese words are segments; a particle on its own is no hint.
+        let words = WordSplitter.spaced
+            ? target.components(separatedBy: .whitespacesAndNewlines)
+            : JapaneseMorph.segments(in: target).filter { !JapaneseMorph.isFunctionToken($0) }
+        for word in words {
             let w = word.trimmingCharacters(in: .punctuationCharacters)
             guard w.count > 1, seen.insert(w.lowercased()).inserted else { continue }
             hints.append(w)
@@ -1016,6 +1191,12 @@ struct ShadowDrillView: View {
         // Kill the background timing-recovery recognizer FIRST — a second
         // speech recognizer running against the file collides with the live
         // mic recognizer and truncates the recording after the first line.
+        Telemetry.log("shadow_attempt_started", [
+            "recovery_running": recoverTask == nil ? "0" : "1",
+            "played_first": playedSinceLastAttempt ? "1" : "0",
+            "target_measured": timings.contains(where: \.isMeasured) ? "1" : "0",
+        ])
+        playedSinceLastAttempt = false
         recoverTask?.cancel()
         recoverTask = nil
         // Ensure we have target timings loaded (used for the visual reference)
@@ -1028,7 +1209,7 @@ struct ShadowDrillView: View {
         let micOK = await recorder.requestPermission()
         let speechOK = await SpeechTranscriber.requestPermission()
         guard micOK, speechOK else {
-            error = "Microphone or speech permission denied."
+            error = explain("Microphone or speech permission denied.")
             return
         }
 
@@ -1046,10 +1227,7 @@ struct ShadowDrillView: View {
         attemptTargetDurationMs = practiceDurationMs
 
         // Reset state
-        feedback = nil
-        diffSteps = []
-        rhythm = nil
-        userWordTimings = []
+        resetResult()
         prevTranscript = ""
 
         // Start mic recognition BEFORE the countdown — no playback. Playing
@@ -1128,6 +1306,8 @@ struct ShadowDrillView: View {
             HapticEngine.countdownTick()
             try? await Task.sleep(nanoseconds: 700_000_000)
         }
+        // Nothing may have moved the phase during the count but a teardown.
+        guard phase == .countdown else { return }
         countdownValue = 0
         // Capture starts HERE — on "0", the beat the learner is cued by, not
         // back at setup. The 350 ms below is deliberate lead-in: "0" appears
@@ -1192,7 +1372,7 @@ struct ShadowDrillView: View {
     /// recognizer running would keep the mic hot and let a late final result
     /// arrive into the next attempt.
     private func cancelSync() {
-        guard phase == .syncing else { return }
+        guard phase == .syncing || phase == .countdown else { return }
         autoStopTask?.cancel()
         autoStopTask = nil
         _ = live.stop()
@@ -1204,15 +1384,58 @@ struct ShadowDrillView: View {
         // Everything the attempt would have populated, back to pre-attempt —
         // otherwise a previous result's diff/rhythm sits under an idle mic.
         syncStartedAt = nil
-        userWordTimings = []
         prevTranscript = ""
         activeRange = nil
-        feedback = nil
-        diffSteps = []
-        rhythm = nil
+        resetResult()
         phase = .idle
         HapticEngine.selection()
         Telemetry.log("shadow_attempt_cancelled")
+        rearmTimingRecovery()
+    }
+
+    /// Everything a result populates, back to nothing — one list, so a new
+    /// take and a cancel can't disagree about what a previous result left
+    /// behind.
+    private func resetResult() {
+        feedback = nil
+        heardNothing = false
+        coachPending = false
+        shownAttemptId = nil
+        diffSteps = []
+        rhythm = nil
+        wordOps = PositionAlignment()
+        wordBeats = [:]
+        attemptWordTimings = []
+    }
+
+    /// The free target alignment is killed the moment a recording starts
+    /// (two recognizers on one mic truncate the take) and used to stay dead
+    /// for the rest of the visit — so a learner who pressed record before it
+    /// finished had EVERY attempt's rhythm judged against the character-count
+    /// estimate, on a line whose audio came from a live call and so never had
+    /// stored timings to begin with. Re-arm it once the mic is down. Only when
+    /// `startSync` cleared it: a pass that already ran this visit keeps the
+    /// one-try-per-open rule `recoverTimings` documents.
+    private func rearmTimingRecovery() {
+        // Only while the line is still on the ESTIMATE, and only once: a
+        // recovered timeline with a few interpolated words is as good as
+        // this pass gets, and a recognizer re-run after every attempt is a
+        // recognizer that may still be winding down when the next take's
+        // scoring pass starts.
+        guard recoverTask == nil, !recoveryRearmed,
+              !timings.contains(where: \.isMeasured),
+              let url = cachedAudioURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let voiceId = appState.voiceCloneId else { return }
+        recoveryRearmed = true
+        recoverTask = Task {
+            // A beat before the recognizer opens: a retry tapped straight
+            // after the result cancels this while it is still a sleep, not a
+            // recognition that has to be wound down under the live mic.
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            await recoverTimings(url: url, voiceId: voiceId)
+        }
     }
 
     private func finishSync() {
@@ -1234,36 +1457,56 @@ struct ShadowDrillView: View {
     }
 
     private func analyze(finalText: String) async {
-        // The live transcript is the recognizer's last PARTIAL hypothesis —
-        // stop() can't wait for the final pass, so it's systematically worse
-        // than what the learner actually said (soundalike words, truncated
-        // tails). We have the full attempt on disk: re-run recognition on the
-        // file, final result only, biased toward the target line. Falls back
-        // to the live text when the file pass fails (network, timeout).
-        var scoredText = finalText
-        var learnerTimings: [WordTiming] = []
-        usedRoughTranscript = true
-        if let url = recordingFileURL {
-            let rescored = await SpeechTranscriber.transcribeForScoring(
-                audioURL: url,
-                languageCode: targetLanguage,
-                contextualStrings: Self.recognitionHints(for: attemptTargetText)
-            )
-            if let rescored, !rescored.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                // No pre-roll to strip: the file starts on the go beat. Its
-                // only lead-in is the deliberate 350ms that catches a learner
-                // who speaks the moment "0" appears — that IS the attempt.
-                scoredText = rescored.text
-                prevTranscript = rescored.text
-                learnerTimings = rescored.wordTimings
-                usedRoughTranscript = false
-            }
-        }
-        // Scoring fell back to the live PARTIAL hypothesis — systematically
-        // worse than the file pass. Surface it in the result UI and count it,
-        // so "the score felt wrong" days are checkable against data.
+        // `finalText` is the live recognizer's last PARTIAL hypothesis —
+        // stop() can't wait for a final pass, so it is systematically worse
+        // than what the learner actually said. The whole attempt is on disk,
+        // and reading THAT is `ShadowTranscriber`'s job: levelled audio, the
+        // words from an audio-grounded model that is never shown the target,
+        // the times carried over from the on-device pass. No pre-roll to
+        // strip — the file starts on the go beat, and its only lead-in is the
+        // deliberate 350ms that catches a learner who speaks the moment "0"
+        // appears, which IS the attempt.
+        let reading = await ShadowTranscriber.read(
+            audioURL: recordingFileURL,
+            liveText: finalText,
+            targetLanguage: targetLanguage,
+            recognitionHints: Self.recognitionHints(for: attemptTargetText)
+        )
+        let scoredText = reading.text
+        let learnerTimings = reading.wordTimings
+        attemptWordTimings = learnerTimings
+        prevTranscript = scoredText
+        // Nothing read the file — the score is standing on a live partial.
+        // Surface it in the result UI and count it, so "the score felt wrong"
+        // days are checkable against data.
+        usedRoughTranscript = reading.source == .rough
         if usedRoughTranscript {
             Telemetry.log("shadow_rescore_failed")
+        }
+        // How often the two readers describe different sentences is the only
+        // measure of how wrong the old single-reader path was.
+        Telemetry.log("shadow_transcript", [
+            "source": reading.source.rawValue,
+            "disagreed": reading.readersDisagreed ? "1" : "0",
+            "timed": learnerTimings.isEmpty ? "0" : "1",
+            "audio": reading.audioOutcome.rawValue,
+            "device_ms": "\(reading.deviceMs)",
+            "audio_ms": "\(reading.audioMs)",
+        ])
+
+        // No speech at all — a learner who never started, a mic that never
+        // opened. Not a 0: nothing is saved, counted or coached, and the
+        // line says so. The auto-stop fires at the line's own length with
+        // nobody talking, so this is an ordinary path, not an edge.
+        if scoredText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            heardNothing = true
+            // Nothing references a silent take; don't leave it in Documents.
+            if let url = recordingFileURL { try? FileManager.default.removeItem(at: url) }
+            recordingFileURL = nil
+            phase = .result
+            rearmTimingRecovery()
+            Telemetry.log("shadow_heard_nothing", ["source": reading.source.rawValue])
+            return
         }
 
         let analysis = ShadowEngine.analyze(target: attemptTargetText, learner: scoredText,
@@ -1280,6 +1523,8 @@ struct ShadowDrillView: View {
             learnerTimings: learnerTimings,
             language: targetLanguage
         )
+        refreshWordVerdicts()
+        rearmTimingRecovery()
         // Learner duration = measured utterance span (first voice → last
         // voice, incl. mid-speech pauses) — NOT the wall clock, which includes
         // lead-in silence and the auto-stop tail and systematically inflated
@@ -1308,82 +1553,99 @@ struct ShadowDrillView: View {
         // diff highlights already tell the story, and heavy shadowers repeat
         // lines many times — charging a call per near-perfect rep added cost
         // without adding signal.
-        var payload: ShadowEngine.Payload?
-        if analysis.score < 90 {
-            do {
-                payload = try await GeminiClient.shared.sendJSON(
-                    system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage,
-                                                      nativeLanguage: appState.nativeLanguage),
-                    messages: [GeminiClient.Message(
-                        role: .user,
-                        content: ShadowEngine.userMessage(
-                            targetText: attemptTargetText,
-                            learnerText: scoredText,
-                            targetDurationMs: attemptTargetDurationMs,
-                            learnerDurationMs: learnerDurMs,
-                            diffSteps: analysis.steps,
-                            rhythm: rhythm
-                        )
-                    )],
-                    // Three native-language bullets — cheap, but 300 left no
-                    // room for thinking, and a truncation drops the feedback
-                    // entirely (payload = nil) leaving a bare score.
-                    maxTokens: 1024,
-                    purpose: "shadow"
-                )
-            } catch {
-                payload = nil
-            }
-        }
+        // Coaching is gated on the number the learner is JUDGED by, not on
+        // the word half of it — a take that hit every word a beat late is
+        // exactly the one that needs a bullet, and under the old gate it was
+        // the one that never got one.
+        let overall = ShadowEngine.overallScore(match: analysis.score, rhythm: rhythm?.score)
+        let coachable = overall < 90
 
+        // The result goes up NOW, on the deterministic half. The bullets
+        // used to sit in front of it — one more Gemini round trip (3–6 s on
+        // the ledger) between "Comparing…" and a score that had been known
+        // for all of it. They arrive in place below.
+        // The ≥90 line names what was measured: "on the beat" is a claim
+        // about rhythm, and beside a "words only" badge it was a lie.
         feedback = ShadowFeedback(
-            pronunciation: payload?.pronunciation
-                ?? (analysis.score >= 90
-                    ? "Nailed it — matched the line almost word for word."
-                    : "Coach comments couldn't load — the score and highlighted words above are still accurate."),
-            pacing: payload?.pacing ?? "",
-            fix: payload?.fix ?? "",
-            matchScore: analysis.score
+            pronunciation: coachable ? ""
+                : (rhythm == nil
+                   ? explain("Nailed it — matched the line almost word for word.")
+                   : explain("Nailed it — matched the line almost word for word, on the beat.")),
+            pacing: "",
+            fix: "",
+            matchScore: analysis.score,
+            rhythmScore: rhythm?.score
         )
+        coachPending = coachable
         phase = .result
-        HapticEngine.shadowComplete(score: analysis.score)
+        HapticEngine.shadowComplete(score: overall)
 
         // Persist this attempt so the user can revisit / hear it later —
-        // even when the coach bullets failed to generate.
-        let attempt = ShadowAttempt(
+        // before the coach call, so an attempt whose bullets never come is
+        // still on file with its score and recording.
+        var attempt = ShadowAttempt(
             turnId: turn.id,
             targetText: attemptTargetText,
             learnerTranscript: scoredText,
             recordingFilename: recordingFileURL?.lastPathComponent,
             matchScore: analysis.score,
             rhythmScore: rhythm?.score,
-            pronunciation: payload?.pronunciation ?? "",
-            pacing: payload?.pacing ?? "",
-            fix: payload?.fix ?? ""
+            pronunciation: feedback?.pronunciation ?? "",
+            pacing: "",
+            fix: "",
+            phraseRange: activeRange
         )
+        shownAttemptId = attempt.id
         appState.saveShadowAttempt(attempt)
         // A recorded take IS the practice — nothing else to finish.
         PracticeLog.shared.record(.shadow, finished: true)
-    }
 
-    /// Replace `userWordTimings` from the LATEST segment-level word timings
-    /// published by LiveTranscriber. Each `WordTimingInfo.startSeconds` is
-    /// audio-time offset within the current recognition segment (NOT wall
-    /// clock). To convert to "ms from syncStart":
-    ///   absolute = segmentAnchorAt + startSeconds
-    ///   ms = (absolute - syncStartedAt) * 1000
-    /// SFSpeechRecognizer may revise earlier words as more audio arrives, so
-    /// we replace the whole list rather than appending. Effectively the
-    /// final state at finishSync reflects what SFSpeechRecognizer believes
-    /// best matches the audio — far more accurate than wall-clock delivery.
-    private func applyWordTimings(_ new: [LiveTranscriber.WordTimingInfo]) {
-        guard phase == .syncing,
-              let syncStart = syncStartedAt,
-              let anchor = live.segmentAnchorAt else { return }
-        let anchorOffsetMs = Int(anchor.timeIntervalSince(syncStart) * 1000)
-        userWordTimings = new.map { w in
-            UserWordHit(word: w.word, ms: anchorOffsetMs + Int(w.startSeconds * 1000))
+        guard coachable else { return }
+        let coachStartedAt = Date()
+        var payload: ShadowEngine.Payload?
+        do {
+            payload = try await GeminiClient.shared.sendJSON(
+                system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage,
+                                                  nativeLanguage: appState.nativeLanguage),
+                messages: [GeminiClient.Message(
+                    role: .user,
+                    content: ShadowEngine.userMessage(
+                        targetText: attemptTargetText,
+                        learnerText: scoredText,
+                        targetDurationMs: attemptTargetDurationMs,
+                        learnerDurationMs: learnerDurMs,
+                        diffSteps: analysis.steps,
+                        rhythm: rhythm
+                    )
+                )],
+                // Three native-language bullets — cheap, but 300 left no
+                // room for thinking, and a truncation drops the feedback
+                // entirely (payload = nil) leaving a bare score.
+                maxTokens: 1024,
+                purpose: "shadow"
+            )
+        } catch {
+            payload = nil
         }
+        Telemetry.log("shadow_coach", [
+            "outcome": payload == nil ? "failed" : "ok",
+            "ms": "\(Int(Date().timeIntervalSince(coachStartedAt) * 1000))",
+        ])
+
+        if let payload {
+            attempt.pronunciation = payload.pronunciation
+            attempt.pacing = payload.pacing
+            attempt.fix = payload.fix
+            appState.updateShadowAttempt(attempt)
+        }
+        // The learner may have started the next take meanwhile; the record
+        // above is theirs either way, the screen is not.
+        guard shownAttemptId == attempt.id else { return }
+        coachPending = false
+        feedback?.pronunciation = payload?.pronunciation
+            ?? explain("Coach comments couldn't load — the score and highlighted words above are still accurate.")
+        feedback?.pacing = payload?.pacing ?? ""
+        feedback?.fix = payload?.fix ?? ""
     }
 
     // MARK: - Audio prep
@@ -1393,7 +1655,7 @@ struct ShadowDrillView: View {
         // Screenshot capture: synthesize evenly-spaced karaoke timings locally
         // and skip the voice-clone/network path so the timeline renders offline.
         if DebugCapture.captureShadow {
-            let words = turn.transcript.split(separator: " ").map(String.init)
+            let words = WordSplitter.timingWords(turn.transcript)
             let per = 380
             timings = words.enumerated().map { i, w in
                 WordTiming(word: w, startMs: i * per, endMs: (i + 1) * per - 60)
@@ -1449,7 +1711,8 @@ struct ShadowDrillView: View {
         if let ready = url, FileManager.default.fileExists(atPath: ready.path) {
             cachedAudioURL = ready
             targetDurationMs = Self.durationMs(of: ready)
-            timings = Self.fits(storedTimings, durationMs: targetDurationMs) ? storedTimings : []
+            timings = Self.fits(storedTimings, durationMs: targetDurationMs)
+                && Self.cutMatches(storedTimings, text: turn.transcript) ? storedTimings : []
             phase = .idle
             if timings.isEmpty {
                 timings = Self.estimatedTimings(for: turn.transcript,
@@ -1548,17 +1811,22 @@ struct ShadowDrillView: View {
     /// Approximate, but it keeps the highlight moving with the audio — the
     /// product rule is that karaoke always works, at zero synthesis cost.
     static func estimatedTimings(for text: String, durationMs: Int) -> [WordTiming] {
-        let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        let words = WordSplitter.timingWords(text)
         guard !words.isEmpty, durationMs > 0 else { return [] }
-        let totalChars = words.reduce(0) { $0 + max($1.count, 1) }
+        // Weighted by what is SAID — a 。 or 「 on a Japanese word takes no time.
+        func weight(_ w: String) -> Int {
+            WordSplitter.spaced ? max(w.count, 1) : max(LocalAlignment.normalized(w).count, 1)
+        }
+        let totalChars = words.reduce(0) { $0 + weight($1) }
         let msPerChar = Double(durationMs) / Double(totalChars)
         var cursor = 0.0
         return words.map { w in
             let start = cursor
-            cursor += msPerChar * Double(max(w.count, 1))
+            cursor += msPerChar * Double(weight(w))
             // Small trailing gap so adjacent highlights read as distinct words.
             return WordTiming(word: w, startMs: Int(start),
-                              endMs: max(Int(start) + 1, Int(cursor) - 20))
+                              endMs: max(Int(start) + 1, Int(cursor) - 20),
+                              isMeasured: false)
         }
     }
 
@@ -1581,8 +1849,16 @@ struct ShadowDrillView: View {
     /// Rough spoken length of a line, for when the real audio duration isn't
     /// available. Only ever used to size a SAFETY cutoff, so it errs long.
     static func durationFromText(_ text: String) -> Int {
-        let words = text.split(whereSeparator: \.isWhitespace).count
+        let words = WordSplitter.count(text)
         return max(6000, words * 400)
+    }
+
+    /// A stored timeline is cut into the words this line is cut into now.
+    /// Always true for a spaced language; for Japanese it refuses a timeline
+    /// saved before the line had words (one span for the whole sentence),
+    /// which the estimate plus the free local pass then rebuild.
+    static func cutMatches(_ timings: [WordTiming], text: String) -> Bool {
+        WordSplitter.spaced || timings.map(\.word) == WordSplitter.timingWords(text)
     }
 
     private static func durationMs(of url: URL) -> Int {

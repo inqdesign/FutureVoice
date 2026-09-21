@@ -26,18 +26,15 @@ struct ConversationView: View {
     @State private var topicBlurb = ""
     @State private var turns: [Turn] = []
     @State private var phase: Phase = .idle
+    /// The written greeting is taking too long — the call is up and the screen
+    /// says so rather than sitting in an unexplained silence. See the branch
+    /// in `openConversation` that opens the line before the opener exists.
+    @State private var openerIsLate = false
     @State private var error: String?
     @State private var summary: SessionSummary?
     @State private var showTopicPicker = false
     @State private var dueDrillCount = 0
     @State private var phoneCallActive = false
-    /// When the current call seat opened — drives the elapsed clock in the
-    /// title. Set once per call; hidden (not frozen) once the call ends.
-    @State private var callStartedAt: Date?
-    /// Talk time banked across pauses. A pause STOPS the clock and a resume
-    /// continues it (the first cut reset to zero on every pause, reported
-    /// 2026-09-03) — on resume the virtual start date is backdated by this.
-    @State private var callElapsedAtPause: TimeInterval = 0
     @State private var silenceTask: Task<Void, Never>?
     /// True only while `endSession` is wrapping up (summary generation in
     /// flight). Distinct from `phase == .thinking`, which also fires per-turn
@@ -79,11 +76,23 @@ struct ConversationView: View {
     /// The last failure was a 402 — the user is out of credits. Retry is
     /// pointless until they top up, so the recovery UI leads with the paywall.
     @State private var outOfCredits = false
+    /// The free first call's seconds ran out mid-call. The call wraps itself
+    /// up (`handleTalkPoolSpent`) and the plans are offered after the book,
+    /// whether or not the pitch has been made once already.
+    @State private var freeCallSpent = false
     /// Wall-clock talk metering (4.5 cr/min via `talk-tick`). Started when
     /// the call seat opens, stopped on end/teardown; its 402 ends the call
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
+    /// The call screen is waiting on that pitch to close before it exits.
+    @State private var closeAfterPaywall = false
+    /// Which of this screen's doors opened the paywall — `PaywallView`'s
+    /// `source`, set beside every `showingPaywall = true`.
+    @State private var paywallSource = "talk"
+    /// Set by Done so the summary sheet's dismiss can tell Done from a swipe
+    /// (`talk_summary_closed`). Both then take the same exit.
+    @State private var summaryClosedByDone = false
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -598,6 +607,25 @@ struct ConversationView: View {
     /// see `isBillableMoment`. Set where a user turn is made (both paths),
     /// cleared with the session.
     @State private var learnerSpokeThisCall = false
+    /// The live call died under the learner — socket gone, reply failed
+    /// past its retry, mic lost after a route change. Set from the realtime
+    /// state observer; presented as the one alert that offers a way BACK.
+    /// Until 2026-09-12 this case had no message at all: the screen went
+    /// quiet and the only move was to hang up.
+    @State private var callDropped: String?
+    /// Whether this call ever reached a live state — a failure before that
+    /// is a connect failure and keeps its own (existing) alert.
+    @State private var realtimeWasLive = false
+    /// When the call last put ITSELF back together after a transport drop.
+    /// The gateway's Durable Object can be reset under a live call — a deploy,
+    /// or Cloudflare moving the object (prod 2026-09-15: "object was reset",
+    /// no exception of ours) — and a reconnect carries the whole talk. One
+    /// learner tapped Reconnect and was back in 3 s; the next hung up at the
+    /// alert. So a socket drop reconnects without asking, at most once a
+    /// minute: a second drop inside that is no longer a blip, and gets the
+    /// alert.
+    @State private var lastAutoReconnectAt: Date?
+    private static let autoReconnectSpacing: TimeInterval = 60
 
     private func isBillableMoment() -> Bool {
         // Nothing counts until the learner has said something IN THIS CALL.
@@ -728,8 +756,7 @@ struct ConversationView: View {
                     } else if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
                     } else {
-                        outOfCredits = true
-                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                        handleTalkPoolSpent()
                     }
                 }
                 // Silence isn't billed — see `isBillableMoment`. Set before
@@ -774,14 +801,48 @@ struct ConversationView: View {
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
             }
-            .sheet(item: summaryBinding) { s in
+            .sheet(item: summaryBinding, onDismiss: {
+                let how = summaryClosedByDone ? "done" : "swipe"
+                summaryClosedByDone = false
+                let props = ["how": how, "free_call_spent": freeCallSpent ? "1" : "0"]
+                Telemetry.log("talk_summary_closed", props)
+                Analytics.capture("talk_summary_closed", props)
+                // A swipe is the same exit as Done. It used to leave the
+                // learner on a finished call screen — and skip the plans a
+                // spent free pool is owed.
+                if how == "swipe" { endAndClose() }
+            }) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
-                             onDone: endAndClose)
+                             onDone: {
+                                 summaryClosedByDone = true
+                                 endAndClose()
+                             })
                     .environmentObject(appState)
             }
-            .alert("Something went wrong", isPresented: errorBinding) {
+            // The call dropped mid-talk. Two honest choices, and the
+            // transcript stays on screen behind them.
+            .alert(explain("The call dropped"), isPresented: callDroppedBinding) {
+                Button(explain("Reconnect")) {
+                    Telemetry.log("talk_rt_reconnect", ["turns": String(turns.count)])
+                    Task { await reconnectRealtimeCall() }
+                }
+                Button(explain("End the call"), role: .cancel) {
+                    Task { await endSession() }
+                }
+            } message: {
+                Text(explain("Everything said so far is saved. Reconnect to carry on from where you were."))
+            }
+            // The title follows what happened. This alert is the call
+            // screen's catch-all, so everything that lands in it inherits
+            // "Something went wrong" — and a spent pool is not a fault, it is
+            // the plan working as sold. Reported 2026-09-20, in those words.
+            .alert(outOfCredits ? explain("Your talk time is used up")
+                                : explain("Something went wrong"),
+                   isPresented: errorBinding) {
                 if outOfCredits {
-                    Button("See plans") { error = nil; showingPaywall = true }
+                    Button("See plans") {
+                        error = nil; paywallSource = "talk_out_of_time"; showingPaywall = true
+                    }
                 }
                 Button("OK") { error = nil }
             } message: {
@@ -798,6 +859,7 @@ struct ConversationView: View {
                     // tier ids, so the old name silently preselected nothing and left
                     // the sheet on the plan they already hold.
                     paywallTier = "plus"
+                    paywallSource = "talk_spent_month"
                     showingPaywall = true
                 case .review:  leaveForPractice()
                 case nil:      break
@@ -822,11 +884,17 @@ struct ConversationView: View {
             } message: {
                 Text(explain("Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works."))
             }
-            .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
+            .sheet(isPresented: $showingPaywall, onDismiss: {
+                paywallTier = nil
+                // The post-summary pitch holds the exit: the call's own
+                // dismissal is what happens when the learner closes it,
+                // whether they bought or not.
+                if closeAfterPaywall { closeAfterPaywall = false; close() }
+            }) {
                 // Reached here from an out-of-credits failure → no trial pitch.
                 // Opened FROM the spent-day sheet it carries the tier that
                 // sheet named, so "Go Unlimited" doesn't land on Daily.
-                PaywallView(preselectTier: paywallTier)
+                PaywallView(source: paywallSource, preselectTier: paywallTier)
             }
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
@@ -875,44 +943,42 @@ struct ConversationView: View {
             .onChange(of: realtime.state) { _, state in
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
                 switch state {
-                case .listening, .hearing: phase = .listening
-                case .thinkingReply:       phase = .thinking
-                case .speaking:            phase = .speaking
+                case .listening, .hearing: phase = .listening; realtimeWasLive = true
+                case .thinkingReply:       phase = .thinking;  realtimeWasLive = true
+                case .speaking:            phase = .speaking;  realtimeWasLive = true
                 case .idle, .connecting, .failed: phase = .idle
-                }
-                // First learner speech starts the clock (realtime path).
-                if case .hearing = state, callStartedAt == nil {
-                    callStartedAt = Date()
                 }
                 // The gateway meters the call server-side and hangs up with a
                 // wall code when the allowance is spent — the same two 402s
                 // the classic meter's tick returns, so they land on the same
                 // sheets: a subscriber's finished day is never a paywall.
-                if case .failed = state {
+                if case .failed(let message) = state {
                     if realtime.wallCode == "fair_use_limit" {
                         fairUseHalted = true
                     } else if realtime.wallCode == "daily_cap_reached" {
                         dailyCapReached = true
                     } else if realtime.wallCode == "insufficient_credits" {
-                        outOfCredits = true
-                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                        handleTalkPoolSpent()
+                    } else if realtimeWasLive {
+                        // A LIVE call that failed — not a connect failure
+                        // (that one is reported where the connect happens).
+                        // The idle hang-up is the gateway's judgement that
+                        // nobody was talking, and it says so in its message;
+                        // everything else deserves the way back.
+                        if realtime.lastFailureCode == "idle" {
+                            error = message
+                        } else if realtime.lastFailureCode == "socket", !isTornDown,
+                                  lastAutoReconnectAt.map({ Date().timeIntervalSince($0)
+                                      > Self.autoReconnectSpacing }) ?? true {
+                            lastAutoReconnectAt = Date()
+                            Telemetry.log("talk_rt_reconnect", ["turns": String(turns.count),
+                                                                "auto": "1"])
+                            Task { await reconnectRealtimeCall() }
+                        } else {
+                            callDropped = message
+                        }
+                        realtimeWasLive = false
                     }
-                }
-            }
-            .onChange(of: phoneCallActive) { _, active in
-                // The elapsed clock arms on the learner's FIRST speech, not
-                // here — a call opened and cancelled without a word shows no
-                // timer at all (asked for 2026-09-02: "누르고 그냥 취소"가
-                // 통화로 세어지는 게 이상하다).
-                if !active {
-                    // Pause: bank what ran so far and stop the clock.
-                    if let start = callStartedAt {
-                        callElapsedAtPause += Date().timeIntervalSince(start)
-                    }
-                    callStartedAt = nil
-                } else if callElapsedAtPause > 0 {
-                    // Resume: continue from the banked time, not from zero.
-                    callStartedAt = Date().addingTimeInterval(-callElapsedAtPause)
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -950,12 +1016,14 @@ struct ConversationView: View {
                              level: appState.proficiency,
                              surface: .talk,
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
-                             // Elapsed, phone-style — every tier. Ticks while
-                             // the call runs, freezes while it's paused, and
-                             // goes away once the talk is wrapped up.
-                             callStartedAt: phoneCallActive ? callStartedAt : nil,
-                             pausedElapsed: !phoneCallActive && callElapsedAtPause > 0
-                                 && !didSaveCurrentSession ? callElapsedAtPause : nil)
+                             // Talk time, phone-style — every tier. The meter's
+                             // own count, so silence doesn't move it; shown from
+                             // the learner's first line (a call opened and left
+                             // without a word has no clock, asked 2026-09-02)
+                             // and gone once the talk is wrapped up.
+                             callClock: learnerSpokeThisCall
+                                 && (phoneCallActive || !didSaveCurrentSession)
+                                 ? meter.clock : nil)
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {
@@ -1019,7 +1087,10 @@ struct ConversationView: View {
         if isEnding {
             ZStack {
                 Color(.systemBackground).opacity(0.95).ignoresSafeArea()
-                SummaryProgressView(progress: summaryProgress, facts: talkFacts)
+                SummaryProgressView(progress: summaryProgress, facts: talkFacts,
+                                    banner: freeCallSpent
+                                        ? explain("Your free talk time is used up")
+                                        : nil)
             }
             .transition(.opacity)
         }
@@ -1103,7 +1174,10 @@ struct ConversationView: View {
                     } else if let fid = failedTurnId, turns.last?.id == fid {
                         RetryReplyRow(outOfCredits: outOfCredits,
                                       onRetry: retryReply,
-                                      onGetCredits: { showingPaywall = true })
+                                      onGetCredits: {
+                                          paywallSource = "talk_retry_row"
+                                          showingPaywall = true
+                                      })
                             .id("retry-row")
                             .transition(.opacity)
                     }
@@ -1282,6 +1356,12 @@ struct ConversationView: View {
     /// that says tapping hangs up — every in-call state must name it.
     private var micHint: String {
         if phoneCallActive {
+            // The written greeting is late and the line is open: say so, or
+            // the call reads as dead (2026-09-13 — a scenario opener that
+            // never came back left 37 seconds of unexplained silence).
+            if openerIsLate, turns.isEmpty, phase == .listening {
+                return explain("You can start — go ahead")
+            }
             switch phase {
             case .listening: return explain("Listening · pause to send · tap to stop")
             case .thinking:  return explain("Thinking… · tap to stop")
@@ -1305,6 +1385,10 @@ struct ConversationView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { error != nil }, set: { if !$0 { error = nil } })
+    }
+
+    private var callDroppedBinding: Binding<Bool> {
+        Binding(get: { callDropped != nil }, set: { if !$0 { callDropped = nil } })
     }
 
     private var summaryBinding: Binding<SessionSummary?> {
@@ -1624,6 +1708,7 @@ struct ConversationView: View {
     /// the learner's own speech.
     /// - Returns: the joined text, and how many words were dropped as echo.
     nonisolated static func stitch(_ text: String, _ piece: String) -> (String, Int) {
+        if !WordSplitter.spaced { return stitchUnspaced(text, piece) }
         let minEchoWords = 4
         let maxEchoWords = 80
         let pieceWords = piece.split(separator: " ").map(String.init)
@@ -1648,6 +1733,35 @@ struct ConversationView: View {
         let kept = pieceWords.dropFirst(dropRaw)
         guard !kept.isEmpty else { return (text, pieceWords.count) }
         return (text + " " + kept.joined(separator: " "), dropRaw)
+    }
+
+    /// `stitch` for a language written without spaces: the same echo rule
+    /// over SEGMENTS, and the pieces joined as they were written — a space
+    /// between two Japanese pieces is a space the learner never said. A
+    /// longer bar than words (segments are finer: 行き|まし|た is three), and
+    /// the cut lands at the end of the last echoed segment in the raw piece.
+    nonisolated private static func stitchUnspaced(_ text: String, _ piece: String) -> (String, Int) {
+        let minEchoSegments = 6
+        let maxEchoSegments = 120
+        let pieceTokens = JapaneseMorph.words(in: piece)
+        guard !pieceTokens.isEmpty else { return (text, 0) }
+        guard !text.isEmpty else { return (piece, 0) }
+        let prev = JapaneseMorph.segments(in: text)
+        let cur = pieceTokens.map(\.surface)
+        var drop = 0
+        let limit = min(prev.count, cur.count, maxEchoSegments)
+        if limit >= minEchoSegments {
+            for k in stride(from: limit, through: minEchoSegments, by: -1)
+            where Array(prev.suffix(k)) == Array(cur.prefix(k)) {
+                drop = k
+                break
+            }
+        }
+        guard drop > 0 else { return (text + piece, 0) }
+        guard drop < pieceTokens.count else { return (text, pieceTokens.count) }
+        let rest = piece[pieceTokens[drop - 1].range.upperBound...]
+            .drop { $0.isWhitespace || $0.isPunctuation }
+        return (text + rest, drop)
     }
 
     /// Words reduced to their comparable form, dropping tokens that normalize
@@ -1996,6 +2110,48 @@ struct ConversationView: View {
                 // start, no Gemini call, and the line's TTS is already in the
                 // phrase cache after its first play.
                 opener = stored
+            } else if RealtimeMode.isEnabled {
+                // No line in hand: a scenario without a stored pool, or a
+                // Find-people call — Gemini WRITES the greeting. Nothing about
+                // the call needs it, so the line is opened first and the
+                // greeting is said when it lands (`RealtimeTalkClient.say`).
+                // Awaiting it here put the model's 2–4 s in front of the audio
+                // stack, the socket and the gateway's own start-up instead of
+                // alongside them: 6–8 s of silence after the tap, measured
+                // 2026-09-13. A greeting that never arrives now costs the call
+                // nothing — the learner simply speaks first.
+                let askedAt = Date()
+                async let written = generateOpener()
+                await startRealtimeCall(opener: nil)
+                guard !isTornDown else { return }
+                // The greeting can be pathologically slow — measured on device
+                // 2026-09-13, a scenario opener that had not returned after 37
+                // seconds (the request reached the server; the model didn't
+                // come back). Nothing can be done about that from here, but a
+                // call where nobody speaks and nothing says why is the worst
+                // possible shape for it, so the screen asks the learner to
+                // start after `openerPatience`.
+                let late = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: UInt64(Self.openerPatience * 1_000_000_000))
+                    guard !Task.isCancelled, !isTornDown else { return }
+                    openerIsLate = true
+                }
+                let line = try? await written
+                late.cancel()
+                openerIsLate = false
+                let ms = Int(Date().timeIntervalSince(askedAt) * 1000)
+                Self.step("opener: written in \(ms)ms (\(line == nil ? "FAILED" : "ok"))")
+                Telemetry.log("talk_opener", [
+                    "ms": String(ms),
+                    "ok": line == nil ? "0" : "1",
+                    "kind": sessionScenarioId != nil ? "scenario" : (counterpart != nil ? "person" : "topic"),
+                ])
+                if let line, !isTornDown {
+                    realtime.say(line, audio: activeVoiceId.flatMap {
+                        PhraseAudioStore.shared.url(text: line, voiceId: $0)
+                    })
+                }
+                return
             } else {
                 opener = try await generateOpener()
             }
@@ -2052,12 +2208,33 @@ struct ConversationView: View {
 
     // MARK: - Realtime path (gateway)
 
+    /// Pick the dropped call back up: same wiring, same voice, the turns so
+    /// far as history, and NO opener — the learner speaks next, the fluent
+    /// self already knows what was said.
+    private func reconnectRealtimeCall() async {
+        guard !isTornDown else { return }
+        callDropped = nil
+        phoneCallActive = true
+        phase = .listening
+        await startRealtimeCall(opener: nil)
+    }
+
     /// Open the call on the realtime gateway and wire its turns into `turns`.
     ///
     /// This is the whole integration: everything the learning loop needs
     /// already hangs off `turns`, `sessionId` and `endSession`, so the only
     /// job here is to produce the same turns from a different transport —
     /// with their audio, so Practice keeps listen-back, replay and shadowing.
+    /// How long the screen waits for a written greeting before telling the
+    /// learner to start. Long enough that a normal 2–4 s generation is never
+    /// interrupted by it.
+    private static let openerPatience: TimeInterval = 7
+
+    /// DEBUG console line, same stream as the realtime client's.
+    private static func step(_ message: String) {
+        RealtimeTalkClient.step(message)
+    }
+
     private func startRealtimeCall(opener: String?) async {
         guard let voiceId = activeVoiceId else {
             error = explain("Your voice isn't ready yet.")
@@ -2123,6 +2300,15 @@ struct ConversationView: View {
             language: appState.targetLanguage,
             system: systemPrompt() + Self.realtimeStyleRules,
             opener: opener,
+            // The launcher warms every pool greeting's TTS into the phrase
+            // cache (`FreeTalkOpeners.warmAudio`), so the line is usually
+            // already here in the learner's own voice — the client plays it
+            // the moment the call is up instead of waiting on the gateway's
+            // own round trip for a line the phone already has. A miss is a
+            // nil and the gateway speaks it exactly as before.
+            openerAudio: opener.flatMap {
+                PhraseAudioStore.shared.url(text: $0, voiceId: voiceId)
+            },
             // A resumed talk carries its history so the fluent self knows what
             // was already said.
             history: turns.map { (role: $0.role == .user ? "user" : "model",
@@ -2152,7 +2338,10 @@ struct ConversationView: View {
     /// must stay that way: the voice is already playing by the time this
     /// fires, so nothing the learner hears ever waits on coaching.
     private func requestRealtimeSuggestion(for turnId: UUID, said: String) {
-        guard said.split(separator: " ").count >= 3 else { return }
+        // Words, not spaces: a Japanese line is one space-free run, and
+        // counting on " " gave every Japanese turn a length of one — no
+        // correction was ever requested on this path.
+        guard WordSplitter.count(said) >= 3 else { return }
         let target = appState.targetLanguage
         let native = appState.nativeLanguage
         Task { @MainActor in
@@ -2406,9 +2595,6 @@ struct ConversationView: View {
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
         learnerSpokeThisCall = true
-        // First learner speech starts the clock (classic path — armed at the
-        // turn commit; the realtime path arms earlier, on `.hearing`).
-        if callStartedAt == nil { callStartedAt = Date() }
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
 
@@ -3361,8 +3547,48 @@ struct ConversationView: View {
         }
     }
 
+    /// The free pool ran out mid-call — the one wall a paying account never
+    /// meets. The call puts ITSELF down and wraps up: book first, plans after.
+    ///
+    /// It used to raise the error alert and wait for End. Prod, 2026-09-17: a
+    /// first caller with 42 turns hit this wall at 23:57:51 and never pressed
+    /// End — no summary call, no book, and the plans pitch (which hangs off
+    /// the summary sheet's Done) never shown; five minutes later they were in
+    /// Watch, and they never subscribed. The screen after the wall is a dead
+    /// call — the gateway has torn the session down, the mic is closed,
+    /// nothing answers — so leaving the learner on it with a message is
+    /// asking them to find the one button that produces what the free call
+    /// was FOR. A wall with no learner turn behind it (the pre-flight refused
+    /// the greeting) keeps the alert: there is nothing to wrap up.
+    private func handleTalkPoolSpent() {
+        outOfCredits = true
+        guard turns.contains(where: { $0.role == .user }), !isEnding else {
+            // Nothing was said, so there is nothing to wrap up — and nothing
+            // went wrong either, which is what "Something went wrong" claimed
+            // until 2026-09-20. A free pool too small to carry a call is
+            // closed on the call's very first tick (20260920150000), so this
+            // is now the ordinary way a spent account meets the wall: the
+            // plans are the honest answer, and the call screen leaves with
+            // them. A subscriber's finished day never lands here — that is
+            // `dailyCapReached`, its own sheet.
+            Telemetry.log("talk_wall_before_speaking", ["turns": String(turns.count)])
+            realtime.hangUp()
+            phase = .idle
+            phoneCallActive = false
+            meter.stop()
+            CallNowPlaying.end()
+            closeAfterPaywall = true
+            paywallSource = "talk_wall_before_speaking"
+            showingPaywall = true
+            return
+        }
+        freeCallSpent = true
+        Telemetry.log("talk_free_call_spent", ["turns": String(turns.count)])
+        Task { await endSession() }
+    }
+
     private func endSession() async {
-        guard !turns.isEmpty else { return }
+        guard !turns.isEmpty, !isEnding else { return }
         phoneCallActive = false
         // The call is over — summary generation isn't talk time, and the lock
         // screen must stop showing a call that has hung up.
@@ -3538,15 +3764,13 @@ struct ConversationView: View {
 
     private func startNewSession() {
         failedTurnId = nil
+        // Closed by code, not a swipe — the sheet's onDismiss must not exit.
+        if summary != nil { summaryClosedByDone = true }
         summary = nil
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
         learnerSpokeThisCall = false
-        // A new session's clock starts empty — the banked time belongs to
-        // the call that just ended, not this one.
-        callElapsedAtPause = 0
-        callStartedAt = nil
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
@@ -3569,15 +3793,69 @@ struct ConversationView: View {
         summary = nil
         phoneCallActive = false
         cancelSilenceTimer()
-        // First-ever finished conversation → ask for feedback before leaving;
-        // the sheet's onDismiss completes the exit.
-        if FeedbackPrompt.shouldShow(.firstTalk) {
-            FeedbackPrompt.markShown(.firstTalk)
+        // The plans are offered when the free minutes are SPENT, never while
+        // any are left (2026-09-21: ten free minutes replaced the trial, and
+        // the welcome sheet promises the decision comes after them). "Spent"
+        // is the pool ending this call, or less than a call's minimum left
+        // after it — the next tap could not open a call either way.
+        if let cached = BillingGate.shared.account, cached.isEntitled || cached.unlimited {
+            // Entitlement doesn't lapse mid-call; no round trip on every exit.
+            logPostCallPitch("skipped_entitled")
+            endAndCloseAfterPitch()
+            return
+        }
+        Task {
+            // Forced: they just spent minutes, so a cached snapshot from
+            // before the call would answer about a different account.
+            let account = await BillingGate.shared.snapshot(force: true)
+            guard let account, !account.isEntitled, !account.unlimited else {
+                // Already paying, or we couldn't ask — never hold the
+                // exit on a question we have no answer to.
+                logPostCallPitch(account == nil ? "skipped_lookup_failed"
+                                                : "skipped_entitled")
+                endAndCloseAfterPitch()
+                return
+            }
+            guard freeCallSpent || account.needsSubscription else {
+                logPostCallPitch("skipped_minutes_left")
+                endAndCloseAfterPitch()
+                return
+            }
+            logPostCallPitch("shown")
+            closeAfterPaywall = true
+            paywallSource = freeCallSpent ? "after_free_call_spent" : "after_free_minutes_low"
+            showingPaywall = true
+        }
+    }
+
+    private func logPostCallPitch(_ decision: String) {
+        let props = ["decision": decision, "free_call_spent": freeCallSpent ? "1" : "0"]
+        Telemetry.log("post_call_pitch", props)
+        Analytics.capture("post_call_pitch", props)
+    }
+
+    /// Everything the end of a call does once the plans question is settled.
+    private func endAndCloseAfterPitch() {
+        // They came back and had another real call — the first moment at which
+        // "how is it going" is a question about something. The sheet's
+        // onDismiss completes the exit.
+        if FeedbackPrompt.shouldShowReturningTalk(callSeconds: callElapsed) {
+            FeedbackPrompt.markShown(.returningTalk)
             dismissAfterFeedback = true
-            feedbackContext = .firstTalk
+            feedbackContext = .returningTalk
+        } else if ReviewRequest.shouldAsk(callSeconds: callElapsed) {
+            close()
+            ReviewRequest.ask()
         } else {
             close()
         }
+    }
+
+    /// How long this call ran, in seconds — the same clock the header shows.
+    /// Still readable here: only the meter's next `start` (a new session)
+    /// clears it, and the summary sheet sits between that and this.
+    private var callElapsed: TimeInterval {
+        TimeInterval(meter.clock.seconds)
     }
 
     private static func mp3DurationMs(_ data: Data) -> Int {

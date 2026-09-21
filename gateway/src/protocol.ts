@@ -38,12 +38,29 @@ export interface StartMessage {
   opener?: string
 }
 
+/** Speak a line the app chose, after the call is already up.
+ *
+ *  `start.opener` covers the line the app HAS when it dials. A scenario or a
+ *  Find-people call doesn't have one: its greeting is written by Gemini, and
+ *  waiting for that before dialling put the model's 2–4 s in front of the
+ *  gateway's own start-up instead of alongside it (measured 2026-09-13 —
+ *  6–8 s of silence after the tap). So the call opens with no opener and the
+ *  line arrives here when it is written.
+ *
+ *  `alreadySpoken` means the app played the line itself from its phrase
+ *  cache: record it in history, say nothing. */
+export interface SayMessage {
+  type: "say"
+  text: string
+  alreadySpoken?: boolean
+}
+
 /** Polite hang-up; the gateway closes upstream sessions and then the socket. */
 export interface EndMessage {
   type: "end"
 }
 
-export type ClientMessage = StartMessage | EndMessage
+export type ClientMessage = StartMessage | SayMessage | EndMessage
 
 // ---------------------------------------------------------------------------
 // Gateway -> client events.
@@ -72,6 +89,24 @@ export type ServerMessage =
   /** The upstream session is being rotated (Gemini Live ~15 min cap);
    *  momentary — the gateway reconnects with the resumption handle itself. */
   | { type: "rotating" }
+  /** Something went wrong and the call CONTINUES. A reply that failed and
+   *  was retried, a TTS socket that dropped one line, a transcriber rotation
+   *  that took longer than it should. The client logs it; nothing else. On
+   *  2026-09-12 every one of these ended the call (`error` → teardown) and
+   *  the learner saw the fluent self simply go quiet — no message, no way
+   *  back, and nothing in telemetry either. */
+  | { type: "warning"; code: string; message: string }
+  /** The session's last word, sent right before the socket closes — why it
+   *  ended and what happened in it. This is the ONLY per-session record
+   *  this path produces (the reply and the voice go straight to their
+   *  providers, so the usage ledger sees neither), which is why it exists:
+   *  the client writes it to client_events and the console reads it. */
+  | { type: "ended"; reason: string; turns: number; speechSeconds: number
+      durationMs: number; voiceFirstMs: number[]; warnings: number
+      /** Turn-taking evidence (2026-09-15): barge-ins right after a commit,
+       *  finals merged into a held one, and the learner's measured pause on
+       *  each caught continuation. A client older than this ignores them. */
+      cutoffs: number; merges: number; mergeGapMs: number[] }
   | { type: "error"; code: string; message: string }
 
 export function send(ws: WebSocket, msg: ServerMessage): void {

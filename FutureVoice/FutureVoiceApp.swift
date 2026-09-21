@@ -88,7 +88,11 @@ struct FutureVoiceApp: App {
             // reminder. Background path never prompts for permission.
             if phase == .background {
                 Task { await DrillReminder.reschedule() }
+                // Push what this stint changed before iOS suspends us.
+                SyncEngine.shared.backgrounded()
             }
+            // Pull the other devices' practice, then push ours.
+            if phase == .active { SyncEngine.shared.foregrounded() }
             // Cards drift due over time even with no store writes, so re-snapshot
             // the widget's study queue at both edges of a foreground stint.
             if phase == .active || phase == .background {
@@ -248,16 +252,25 @@ final class AppState: ObservableObject {
         }
     }
     @Published var nativeLanguage: String = LanguageCatalog.defaultNative {
-        didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
+        didSet {
+            UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey)
+            SyncEngine.noteChanged(.defaults)
+        }
     }
     @Published var targetLanguage: String = "en" {
-        didSet { UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey) }
+        didSet {
+            UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey)
+            SyncEngine.noteChanged(.defaults)
+        }
     }
     /// Target languages the user has enrolled in, enrollment order. The
     /// active one is `targetLanguage`; switching swaps the entire language-
     /// scoped store set (docs/multi-language-plan.md).
     @Published var enrolledLanguages: [String] = ["en"] {
-        didSet { UserDefaults.standard.set(enrolledLanguages, forKey: LanguageScope.enrolledDefaultsKey) }
+        didSet {
+            UserDefaults.standard.set(enrolledLanguages, forKey: LanguageScope.enrolledDefaultsKey)
+            SyncEngine.noteChanged(.defaults)
+        }
     }
     /// Transient (never persisted): set when a weekly assessment RAISES the
     /// measured level — RootTabView presents the one-time level-up sheet from
@@ -267,6 +280,7 @@ final class AppState: ObservableObject {
     @Published var proficiency: CEFRLevel = .b1 {
         didSet {
             UserDefaults.standard.set(proficiency.rawValue, forKey: Self.proficiencyKey)
+            SyncEngine.noteChanged(.defaults)
             // Keep the persisted profile's level in sync — it drives prompt
             // calibration in conversations and summaries.
             if learnerProfile.proficiencyLevel != proficiency {
@@ -438,6 +452,9 @@ final class AppState: ObservableObject {
         // here so an install that predates it still resolves its own audio.
         PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
 
+        SyncEngine.shared.onApplied = { [weak self] kinds in
+            self?.adoptSyncedChanges(kinds)
+        }
         Task { await self.observeAuth() }
     }
 
@@ -623,9 +640,21 @@ final class AppState: ObservableObject {
     /// one piece of data that's expensive to lose on reinstall.
     private func observeAuth() async {
         for await change in SupabaseProvider.shared.auth.authStateChanges {
+            // Sync follows the ACCOUNT: an anonymous onboarding session has
+            // nothing to sync and no identity to key a zone on.
+            let syncUser = change.session.flatMap { $0.user.isAnonymous ? nil : $0.user.id.uuidString }
+            SyncEngine.shared.setUser(syncUser)
             guard let session = change.session else { continue }
             // distinct_id = Supabase user UUID (a random account id, not PII).
-            Analytics.identify(userId: session.user.id.uuidString)
+            // Only a real account: the onboarding session is anonymous and is
+            // reclaimed server-side if sign-up never happens, and an id that
+            // is going to be deleted must not become the phone's identity.
+            // Events before sign-up ride on PostHog's own anonymous id and
+            // merge into the person at identify time. Apple sign-in LINKS the
+            // anonymous user, so the id identified here is the same one.
+            if !session.user.isAnonymous {
+                Analytics.identify(userId: session.user.id.uuidString)
+            }
             await self.restoreVoiceCloneFromCloud()
             // Retry any delete that never landed — an orphaned clone holds an
             // account voice slot hostage, and the ceiling is shared by every
@@ -725,6 +754,14 @@ final class AppState: ObservableObject {
         ShadowAttemptStore.shared.save(a)
         shadowAttempts = ShadowAttemptStore.shared.load()
         Analytics.capture("shadow_attempted", ["score": a.matchScore])
+    }
+
+    /// Re-writes an attempt already on file (the coach bullets landing after
+    /// the score was saved). Not `saveShadowAttempt`: that counts an attempt,
+    /// and this is the same one.
+    func updateShadowAttempt(_ a: ShadowAttempt) {
+        ShadowAttemptStore.shared.save(a)
+        shadowAttempts = ShadowAttemptStore.shared.load()
     }
 
     func deleteShadowAttempt(id: UUID) {
@@ -886,9 +923,13 @@ final class AppState: ObservableObject {
             }
         }
         for i in c.shadowLines.indices where c.shadowLines[i].masteredAt == nil {
+            // `overallScore`, the number the take is judged by everywhere
+            // (Talk books have used it since rhythm entered the score) —
+            // this read `matchScore`, so the same take mastered a Watch
+            // line and not a Talk line.
             let best = shadowAttempts
-                .filter { $0.turnId == c.shadowLines[i].id }
-                .map(\.matchScore).max() ?? 0
+                .filter { $0.turnId == c.shadowLines[i].id && !$0.isPartial }
+                .map(\.overallScore).max() ?? 0
             if best >= ScenarioCurriculum.shadowMasteryScore {
                 c.shadowLines[i].masteredAt = Date()
                 changed = true
@@ -977,9 +1018,10 @@ final class AppState: ObservableObject {
     /// typed, and something said out loud to your own future self was not
     /// said to strangers. No persona on file means the learner never finished
     /// onboarding — writing one here would fake that.
-    func rememberAboutUser(_ notes: [PersonaNote], metAt when: Date? = nil) {
+    func rememberAboutUser(_ notes: [PersonaNote], updates: [UserPersona.NoteUpdate] = [],
+                           metAt when: Date? = nil) {
         guard var p = persona else { return }
-        p.absorb(notes: notes)
+        p.absorb(notes: notes, updates: updates)
         if let when, p.metAt == nil { p.metAt = when }
         PersonaStore.shared.save(p)
         persona = p
@@ -1248,6 +1290,10 @@ final class AppState: ObservableObject {
         }
         proficiency = level        // didSet syncs the profile
         setupComplete = true
+        // What they picked, to the server. Usually a no-op right here — the
+        // setup flow runs before the anonymous session exists — and the
+        // launch-time call below is what actually lands it.
+        LearnerSetupSync.push(target: target, native: native, level: level)
     }
 
     /// Switch the active practice language. Order matters: persist the
@@ -1344,6 +1390,40 @@ final class AppState: ObservableObject {
         // Global (unscoped) stores the restore also overwrote.
         persona = PersonaStore.shared.load()
         counterparts = CounterpartStore.shared.load()
+        StudyWidgetRefresher.refresh()
+    }
+
+    /// A pull wrote merged files underneath the running app. Same job as
+    /// `adoptRestoredData`, narrowed to what changed — and never a relaunch.
+    func adoptSyncedChanges(_ kinds: Set<SyncKind>) {
+        if kinds.contains(.defaults) {
+            let defaults = UserDefaults.standard
+            if let native = defaults.string(forKey: Self.nativeLanguageKey) {
+                let n = LanguageCatalog.normalizedNative(native)
+                if n != nativeLanguage { nativeLanguage = n }
+            }
+            let enrolled = defaults.stringArray(forKey: LanguageScope.enrolledDefaultsKey) ?? []
+            if !enrolled.isEmpty, enrolled != enrolledLanguages { enrolledLanguages = enrolled }
+            if let target = defaults.string(forKey: Self.targetLanguageKey), target != targetLanguage {
+                targetLanguage = target
+                LanguageScope.repointStores()
+                reloadLanguageScopedState()
+            }
+            if let raw = defaults.string(forKey: Self.proficiencyKey),
+               let level = CEFRLevel(rawValue: raw), level != proficiency { proficiency = level }
+            GoalStore.shared.reloadFromDefaults()
+        }
+        if kinds.contains(.profile) {
+            learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)
+            if learnerProfile.proficiencyLevel != proficiency { proficiency = learnerProfile.proficiencyLevel }
+        }
+        if kinds.contains(.persona) || kinds.contains(.personaNote) { persona = PersonaStore.shared.load() }
+        if kinds.contains(.counterpart) { counterparts = CounterpartStore.shared.load() }
+        if kinds.contains(.dialogue) { watchDialogues = WatchDialogueStore.shared.load() }
+        if kinds.contains(.scenario) { scenarios = ScenarioStore.shared.load() }
+        if kinds.contains(.shadow) { shadowAttempts = ShadowAttemptStore.shared.load() }
+        if kinds.contains(.savedLine) { savedLines = SavedLineStore.shared.load() }
+        if kinds.contains(.weekly) { weeklyReports = WeeklyReportStore.shared.load() }
         StudyWidgetRefresher.refresh()
     }
 

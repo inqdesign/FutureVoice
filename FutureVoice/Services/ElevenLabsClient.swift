@@ -140,19 +140,24 @@ final class ElevenLabsClient {
     /// Generates accent-remix previews of an existing clone. Same person,
     /// instructed accent — see `VoiceAccentCatalog` for the descriptions.
     /// `text` is what the previews speak (upstream wants 100–1000 chars).
+    /// `promptStrength` (0…1) is how far the remix may leave the reference
+    /// audio; nil lets upstream pick, which is what the first version did
+    /// and what pulled the voice away from the speaker.
     func remixVoicePreviews(voiceId: String, voiceDescription: String,
-                            text: String) async throws -> [RemixPreview] {
+                            text: String, promptStrength: Double? = nil) async throws -> [RemixPreview] {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
+        var body: [String: Any] = [
             "voice_id": voiceId,
             "voice_description": voiceDescription,
             "text": text,
-        ])
+        ]
+        if let promptStrength { body["prompt_strength"] = promptStrength }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         // Preview generation runs tens of seconds upstream and returns a few
         // MB of base64 audio — the roomier upload session, not the 60s one.
         let (data, response) = try await uploadSession.dataWithRetry(for: request)
@@ -551,12 +556,16 @@ final class ElevenLabsClient {
 
     /// Group consecutive non-whitespace characters into words and collapse
     /// per-character timings into a single [start, end] window per word.
-    private static func wordTimings(
+    static func wordTimings(
         from chars: [String],
         starts: [Double],
         ends: [Double]
     ) -> [WordTiming] {
         guard chars.count == starts.count, chars.count == ends.count else { return [] }
+        if !WordSplitter.spaced,
+           let words = groupedIntoWords(chars: chars, starts: starts, ends: ends) {
+            return words
+        }
         var out: [WordTiming] = []
         var current: String = ""
         var currentStart: Double = 0
@@ -585,6 +594,38 @@ final class ElevenLabsClient {
                 startMs: Int((currentStart * 1000).rounded()),
                 endMs: Int((currentEnd * 1000).rounded())
             ))
+        }
+        return out
+    }
+
+    /// The same characters gathered into the line's WORDS where the language
+    /// has no spaces to group them by (`WordSplitter.timingWords` — the cut
+    /// the shadow screen draws and taps). Without it a whole Japanese line
+    /// came back as one timed "word": karaoke lit it all at once, no word
+    /// could be tapped, and the rhythm had nothing to pair. nil if the
+    /// characters don't spell the words out, and the caller keeps the plain
+    /// grouping.
+    private static func groupedIntoWords(chars: [String], starts: [Double],
+                                         ends: [Double]) -> [WordTiming]? {
+        let words = WordSplitter.timingWords(chars.joined())
+        guard !words.isEmpty else { return nil }
+        var out: [WordTiming] = []
+        var i = 0
+        for word in words {
+            var spelled = ""
+            var first: Int?
+            var last = 0
+            while spelled.count < word.count, i < chars.count {
+                defer { i += 1 }
+                guard !chars[i].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                if first == nil { first = i }
+                spelled += chars[i]
+                last = i
+            }
+            guard spelled == word, let first else { return nil }
+            out.append(WordTiming(word: word,
+                                  startMs: Int((starts[first] * 1000).rounded()),
+                                  endMs: Int((ends[last] * 1000).rounded())))
         }
         return out
     }

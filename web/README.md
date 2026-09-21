@@ -10,6 +10,7 @@ Static pages, no build step. Everything (CSS/JS) is inlined.
 - `ko.html` — LIVE parity: the July marketing page as deployed (unlinked, kept so no live URL changes)
 - `index.next.html` — the NEW English marketing page, work in progress (launch swaps this to index.html)
 - `ko.next.html` — the NEW Korean marketing page (the design lead — Korean is finalized first, then ported to en). App screens live in `shots/` (see shots/README.md for the slot map the user fills)
+- `launch.html` — the TEMPORARY App Store launch page (2026-09-08): the beta page minus the waitlist form, with the App Store badge (id6792794655) and the maker's voice note as the center play button. Ships as the root when the app goes live: `cp launch.html index.html` (until the full `index.next.html` is ready)
 - `beta.html` — same as the live root, kept under its own name
 - `waitlist.html` — an older minimal waitlist page, kept and `noindex`ed
 

@@ -816,7 +816,7 @@ struct ProgressTab: View {
                 FlowLayout(spacing: 8) {
                     ForEach(Carryover.Source.displayOrder, id: \.self) { source in
                         if let count = carryover.bySource[source], count > 0 {
-                            Label("\(source.label) \(count)", systemImage: source.icon)
+                            Label { Text(verbatim: "\(source.localizedLabel) \(count)") } icon: { Image(systemName: source.icon) }
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8).padding(.vertical, 4)
@@ -1990,7 +1990,7 @@ struct ProgressTab: View {
         out.shadowTrend = PracticeStats.shadowTrend(attempts: input.shadowAttempts, now: effortNow)
         let recentScores = input.shadowAttempts
             .sorted { $0.createdAt > $1.createdAt }
-            .prefix(10).map(\.matchScore)
+            .prefix(10).map(\.overallScore)
         out.avgShadowScore = recentScores.isEmpty ? 0 : recentScores.reduce(0, +) / recentScores.count
 
         // --- Objective vocabulary CEFR estimate (from words actually used) ---

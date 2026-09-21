@@ -42,6 +42,16 @@ struct RootTabView: View {
     @ObservedObject private var callInbox = DailyCallInbox.shared
     @ObservedObject private var referralInbox = ReferralInbox.shared
     @ObservedObject private var updates = AppUpdateService.shared
+    /// The one look at the mirrored Find-people intro before it is published
+    /// — raised on the Watch tab, where the pool is met.
+    @State private var showingIntroPreview = false
+    /// The first-visit welcome and the minutes it announces. Two values so the
+    /// number doesn't blank out while the sheet animates away.
+    @State private var showingWelcome = false
+    @State private var welcomeMinutes = 0
+    /// "Start talking" on the welcome — the call opens once the sheet is gone,
+    /// so the ring's morph never plays underneath a sheet.
+    @State private var startTalkAfterWelcome = false
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -131,13 +141,35 @@ struct RootTabView: View {
         // Presented from onAppear rather than a computed binding so a swipe-away
         // is honoured for this run and simply asks again next launch.
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
-        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .sheet(isPresented: $showingPaywall) { PaywallView(source: "free_talk") }
+        .sheet(isPresented: $showingWelcome, onDismiss: {
+                   Analytics.capture("free_talk_welcome_closed",
+                                     ["started": startTalkAfterWelcome])
+                   if startTalkAfterWelcome {
+                       startTalkAfterWelcome = false
+                       selection = .home
+                       startFreeTalk()
+                   }
+               }) {
+            FreeTalkWelcomeSheet(minutes: welcomeMinutes) {
+                startTalkAfterWelcome = true
+            }
+        }
         .onAppear {
             // Warm the billing snapshot so the first paid tap answers from
             // memory instead of holding the call button on a round trip.
             BillingGate.shared.warm()
             if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
                 showingAgeCheck = true
+            } else {
+                Task {
+                    if let minutes = await FreeTalkWelcome.minutesToAnnounce() {
+                        FreeTalkWelcome.markShown()
+                        Analytics.capture("free_talk_welcome_shown", ["minutes": minutes])
+                        welcomeMinutes = minutes
+                        showingWelcome = true
+                    }
+                }
             }
             // Populate the home-screen widgets on first entry. The scenePhase
             // refresh only fires on background↔active transitions, so a cold
@@ -153,10 +185,27 @@ struct RootTabView: View {
                 await PublicPersonaService.autoSyncMyPersona(
                     appState.persona, language: appState.targetLanguage)
             }
+            // The onboarding choice, mirrored to `profiles`. Here rather than
+            // in `completeSetup` because the choice is made before any session
+            // exists — and here rather than nowhere because every row on the
+            // server still holds the trigger's defaults.
+            if appState.setupComplete {
+                LearnerSetupSync.push(target: appState.targetLanguage,
+                                      native: appState.nativeLanguage,
+                                      level: appState.proficiency)
+            }
         }
         // Feature usage: which tab the user is on.
         .onChange(of: selection) { _, tab in
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
+            // Nothing about this learner reaches the pool until they have
+            // seen the paragraph a stranger's phone would speak as "them".
+            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona) {
+                showingIntroPreview = true
+            }
+        }
+        .sheet(isPresented: $showingIntroPreview) {
+            PublicIntroPreviewSheet().environmentObject(appState)
         }
         // Free Talk widget tap while the app is already up — and in-app jumps
         // ("Start a talk" on a Progress tip), which can be staged from any tab,

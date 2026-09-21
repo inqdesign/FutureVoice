@@ -216,7 +216,7 @@ struct PracticeTab: View {
                 ConversationDetailView(session: talk.session)
                     .environmentObject(appState)
             }
-            .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .sheet(isPresented: $showingPaywall) { PaywallView(source: "practice") }
             .fullScreenCover(item: $talkLaunch, onDismiss: reload) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
                                  initialOrigin: .scenario, initialScenarioId: s.id)
@@ -616,9 +616,10 @@ struct PracticeTab: View {
             // own tap target without an invented split control.
             LazyVGrid(columns: tileColumns, spacing: 10) {
                 // Sentences is the only conditional one: it's a moving target
-                // (clear today's deck, capped at DrillView.sessionCap so a
-                // 400-card backlog asks for 20), and on a day with nothing due
-                // and nothing done there's nothing to ask for.
+                // (clear today's deck, whose hand IS this goal — see
+                // `DrillView.sessionCap` — so a 400-card backlog asks for
+                // today's number), and on a day with nothing due and nothing
+                // done there's nothing to ask for.
                 if goals.sentencesPerDay > 0, dueDrillCount > 0 || today.drillDone > 0 {
                     // The learner's goal, but never more than exists to do —
                     // asking for 20 when 3 cards are due makes the day

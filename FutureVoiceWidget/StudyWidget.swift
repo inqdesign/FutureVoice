@@ -40,7 +40,7 @@ struct StreakWidget: Widget {
                 .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName("Streak")
-        .description("Keep your daily talking streak alive.")
+        .description("Keep your daily streak alive.")
         .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }
@@ -73,9 +73,9 @@ struct StreakProvider: TimelineProvider {
         // Only count "today" if the snapshot is actually from today; otherwise a
         // stale snapshot after midnight would wrongly read as done.
         let freshToday = Calendar.current.isDate(s.updatedAt, inSameDayAs: now)
-        // The Core bar, decided app-side — the same rule `streakDays` beside
-        // it was counted by. Judging this by the learner's daily goal made the
-        // face and the number disagree about the very same day.
+        // The streak's rule, decided app-side — the same one `streakDays`
+        // beside it was counted by. Judging this by the learner's daily goal
+        // made the face and the number disagree about the very same day.
         let done = freshToday && s.metToday
 
         var entries = [entry(at: now, done: done, streak: s.streakDays, deadline: deadline)]

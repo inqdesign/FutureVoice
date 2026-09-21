@@ -65,7 +65,7 @@ struct PlanPageView: View {
                     // different promises.
                     row(icon: refillIcon,
                         title: refillTitle,
-                        subtitle: account.isTrialing
+                        subtitle: account.isTrialing && !account.cancelAtPeriodEnd
                             ? explain("Cancel any time before then in the App Store")
                             : nil)
                 }
@@ -93,6 +93,35 @@ struct PlanPageView: View {
                                 title: explain("Last charge \(charge)"),
                                 value: AccountStatus.dayLabel(on))
                         }
+                        // What Apple will charge next, and when — but only
+                        // where it is NEWS. In a trial it is the whole
+                        // question: nothing has been charged, so there is no
+                        // "Last charge" row and the date above says the day it
+                        // starts costing money without ever saying how much.
+                        // On a steady subscription the same figure is already
+                        // on screen twice over (the last charge, and the date
+                        // it refills), and a third row saying it again is the
+                        // restatement this page was cut down to avoid. What
+                        // remains is the case worth interrupting for: the
+                        // amount is about to CHANGE — a launch code running
+                        // out, a price rise — which nobody should meet on
+                        // their statement.
+                        if let next = account.renewalPriceLabel, !account.renewalLabel.isEmpty,
+                           account.isTrialing
+                            || account.renewalPriceMilliunits != account.lastChargeMilliunits
+                            || account.renewalCurrency != account.lastChargeCurrency {
+                            row(icon: "creditcard",
+                                title: account.isTrialing
+                                    ? explain("First charge \(next)")
+                                    : explain("Next charge \(next)"),
+                                value: account.renewalLabel)
+                        }
+                        // A code redeemed before the subscription started
+                        // prices the first RENEWAL, not the trial — so this
+                        // row is the only thing on the screen that says the
+                        // code arrived at all. It sits UNDER the charge it
+                        // discounts: the question being asked is how much and
+                        // when, and this is the answer to why that figure.
                         if let until = account.offerCodeUntil {
                             row(icon: "tag.fill",
                                 title: explain("Half price with your launch code"),
@@ -186,16 +215,22 @@ struct PlanPageView: View {
     }
 
     private var refillIcon: String {
-        if account.isTrialing { return "calendar.badge.exclamationmark" }
-        return account.cancelAtPeriodEnd ? "calendar.badge.minus" : "arrow.clockwise"
+        if account.cancelAtPeriodEnd { return "calendar.badge.minus" }
+        return account.isTrialing ? "calendar.badge.exclamationmark" : "arrow.clockwise"
     }
 
+    /// Auto-renew is asked FIRST: a trial whose renewal was switched off
+    /// ends on its date, and telling that learner it "becomes paid" is the
+    /// opposite promise — the cancel they just made reads as not having
+    /// worked.
     private var refillTitle: String {
+        if account.cancelAtPeriodEnd {
+            return account.isTrialing
+                ? explain("Your trial ends on \(account.renewalLabel)")
+                : explain("Your plan ends on \(account.renewalLabel)")
+        }
         if account.isTrialing {
             return explain("Your trial becomes paid on \(account.renewalLabel)")
-        }
-        if account.cancelAtPeriodEnd {
-            return explain("Your plan ends on \(account.renewalLabel)")
         }
         return explain("Refills on \(account.renewalLabel)")
     }

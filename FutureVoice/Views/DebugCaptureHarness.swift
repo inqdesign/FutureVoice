@@ -90,6 +90,42 @@ enum DebugCapture {
         .init(title: "a mix-up with someone's name", blurb: "At a cafe: they called the wrong name for my drink and I sort it out."),
     ]
 
+    /// A profile with both halves filled: the typed fields and three lines
+    /// the fluent self picked up, classified the way the summary call would.
+    private static func seedSamplePersona(_ appState: AppState) {
+        var p = UserPersona.empty
+        p.displayName = "Eunggyu"
+        p.city = "Munich"
+        p.country = "Germany"
+        p.lengthOfStay = "3 years"
+        p.occupation = "Solo founder of an AI app for language learners"
+        p.household = "Wife and 4yo daughter at Kita"
+        p.interests = ["AI / tech", "parenting", "language learning"]
+        p.situations = ["Kita / school", "Client calls", "Daily small talk"]
+        p.freeNotes = "Thinking about moving back next year."
+        p.metAt = Calendar.current.date(byAdding: .day, value: -20, to: Date())
+        let day: TimeInterval = 86_400
+        p.learnedNotes = [
+            PersonaNote(text: "매주 토요일 아침 이자르 강변에서 달린다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-9 * day), share: .all,
+                        heard: "Saturday mornings I run along the Isar, every week", why: "취미"),
+            PersonaNote(text: "유치원생 딸이 하나 있다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-5 * day), share: .gist,
+                        heard: "I dropped my daughter off at Kita this morning", gist: "어린 아이를 키우는 부모",
+                        why: "가족"),
+            PersonaNote(text: "투자자 미팅이 잘 안 풀려서 자금 압박이 있다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-2 * day), share: .nothing,
+                        heard: "the investor meeting didn't go well, money is getting tight",
+                        gist: "회사를 키우는 중", why: "돈 이야기"),
+            PersonaNote(text: "서울 다녀와서 시차 적응 중",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-1 * day), share: .nothing,
+                        kind: .now, heard: "I got back from Seoul on Sunday and I'm still waking up at 4",
+                        gist: "최근 여행을 다녀옴", why: "지금 상황"),
+        ]
+        PersonaStore.shared.save(p)
+        appState.persona = p
+    }
+
     /// Idempotent per name — the resolver may evaluate more than once.
     private static func once(_ name: String, _ work: () -> Void) {
         guard !seeded.contains(name) else { return }
@@ -125,6 +161,33 @@ enum DebugCapture {
         out.lastChargeDate = out.periodStart
         out.currentOfferType = 3
         out.offerCodeSince = out.startedAt
+        // What Apple charges next — the code is already pricing this period,
+        // so the next charge is the same discounted figure.
+        out.renewalOfferType = 3
+        out.renewalPriceMilliunits = 7_500_000
+        out.renewalCurrency = "KRW"
+        return out
+    }
+
+    /// The same Light account in its FIRST week: a launch code redeemed
+    /// before the subscription started, so nothing has been charged yet and
+    /// the code prices the first renewal rather than this period. Its own
+    /// capture because that week is where the receipt is hardest to read —
+    /// and where a discounted subscriber was shown the regular price until
+    /// 2026-09-18.
+    static var sampleTrialAccount: AccountStatus {
+        var out = sampleLightAccount
+        out.subscriptionStatus = "trialing"
+        out.startedAt = Calendar.current.date(byAdding: .day, value: -3, to: Date())
+        out.periodStart = out.startedAt
+        out.periodEnd = Calendar.current.date(byAdding: .day, value: 4, to: Date())
+        // Nothing charged yet: the trial's own transaction is the intro
+        // offer, priced at zero, and no offer-code transaction exists.
+        out.lastChargeMilliunits = nil
+        out.lastChargeCurrency = nil
+        out.lastChargeDate = nil
+        out.currentOfferType = 1
+        out.offerCodeSince = nil
         return out
     }
 
@@ -219,6 +282,12 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
+        case "sync":
+            return AnyView(NavigationStack {
+                List { SyncSection() }
+                    .navigationTitle("Devices")
+                    .navigationBarTitleDisplayMode(.inline)
+            }.environmentObject(appState))
         case "activity-unsaved":
             // The reported bug: a call closed with "Close without saving" —
             // metered, no `Session`. The day must still be on the calendar,
@@ -256,6 +325,12 @@ enum DebugCapture {
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "setup":
+            // The first-run picker steps (native language, target, level,
+            // goal) — the only screen where the app-language choice is made
+            // before anything else exists.
+            return AnyView(SetupFlowView().environmentObject(appState)
+                .environmentObject(AuthService()))
         case "welcome":
             // The first screen, primary path (Get started).
             return AnyView(WelcomeView().environmentObject(appState)
@@ -280,6 +355,17 @@ enum DebugCapture {
         case "watchtab":
             // The Watch tab with the merged People entry in its header.
             return AnyView(WatchTab().environmentObject(appState))
+        case "intro-preview":
+            // The mirrored Find-people intro, seen before anything is
+            // published: work · town · situations · the unlocked lines only.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(PublicIntroPreviewSheet().environmentObject(appState))
+        case "profile-notes":
+            // Me → Profile, "Your life" step: the remembered lines with their
+            // locks — two private, one the summary call let out.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(PersonaOnboardingView(initialPersona: appState.persona, startStep: 1)
+                .environmentObject(appState))
         case "people":
             // The ONE people page: own people on top, the shared pool below.
             return AnyView(FindPeopleSheet(onNew: {}, onTalk: { _ in }, onWatch: { _ in },
@@ -299,6 +385,13 @@ enum DebugCapture {
             // once — which is what the two-capture split kept failing to do.
             return AnyView(NavigationStack {
                 PlanPageView(account: Self.sampleLightAccount, previewUsage: .sample)
+            })
+        case "plan-trial":
+            // The same page during the trial week of a launch-code
+            // subscriber: no charge yet, the first one dated and priced, and
+            // the code named above it.
+            return AnyView(NavigationStack {
+                PlanPageView(account: Self.sampleTrialAccount, previewUsage: .sample)
             })
         case "plan-guide":
             // The transparency page for a Light subscriber — the one place
@@ -362,9 +455,9 @@ enum DebugCapture {
             // already said (ticked), the rest still open. Real use needs a
             // notebook AND a live call, so the state is staged here.
             let goals = [
+                TalkGoalItem(key: "hectic", text: "hectic", isWord: true, claimedKnown: true),
                 TalkGoalItem(key: "commute", text: "commute", isWord: true),
                 TalkGoalItem(key: "it slipped my mind", text: "it slipped my mind", isWord: false),
-                TalkGoalItem(key: "hectic", text: "hectic", isWord: true),
                 TalkGoalItem(key: "run me through it", text: "run me through it", isWord: false),
                 TalkGoalItem(key: "eventually", text: "eventually", isWord: true),
             ]
@@ -660,14 +753,17 @@ enum DebugCapture {
             once("deepen") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(DeepenCaptureHost(expanded: name == "deepen-full")
                 .environmentObject(appState))
+        case "free-minutes-welcome":
+            // The first-visit free-minutes welcome over the Talk home.
+            return AnyView(WelcomeCaptureHost().environmentObject(appState))
         case "paywall", "paywall-plans":
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
             return AnyView(PaywallView().environmentObject(appState))
         case "feedback":
-            // The first-talk feedback sheet, at the medium detent the call
-            // ends into. Reachable no other way in a capture run: it fires
-            // once, after a real conversation has been summarized.
+            // The feedback sheet, at the medium detent the call ends into.
+            // Reachable no other way in a capture run: it fires once, after a
+            // minute-long call on a RETURN visit (`shouldShowReturningTalk`).
             return AnyView(FeedbackCaptureHost().environmentObject(appState))
         case "update", "update-required":
             // The update notice, both temperaments. Unreachable in a capture
@@ -680,6 +776,20 @@ enum DebugCapture {
             return AnyView(DaySpentCaptureHost(
                 kind: name == "day-spent-scenes" ? .scenes : .talk,
                 canUpgrade: name != "day-spent-unlimited")
+                .environmentObject(appState))
+        case "day-spent-trial", "day-spent-trial-plus":
+            // The same sheet as a TRIAL account meets it: the pool is the
+            // Light pool pro-rated 7/30 (35 min) whatever tier is trialed, and
+            // the date is the trial's end (`periodEnd`). A Plus trial gets no
+            // upgrade half — `canUpgradePlan` is `isLightPlan`.
+            let trialEnd = Calendar.current.date(byAdding: .day, value: 4, to: Date()) ?? Date()
+            var account = Self.sampleTrialAccount
+            account.periodEnd = trialEnd
+            return AnyView(DaySpentCaptureHost(
+                kind: .talk,
+                canUpgrade: name == "day-spent-trial",
+                allowance: 35,
+                renewsOn: account.renewalLabel)
                 .environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
@@ -730,6 +840,18 @@ enum DebugCapture {
                 appState.weeklyReports = [report]
             }
             return AnyView(ProgressTab().environmentObject(appState))
+        case "shadow-ja":
+            // A Japanese line in karaoke: words, not one run — each lights
+            // and taps on its own, punctuation riding on the word before.
+            once("shadow-ja") { captureShadow = true }
+            return AnyView(NavigationStack {
+                ShadowDrillView(
+                    turn: Turn(id: UUID(uuidString: "00000000-0000-0000-0000-0000000000B3")!,
+                               role: .fluentSelf, audioURL: nil,
+                               transcript: "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。",
+                               durationMs: 4200, timestamp: Date(), suggestion: nil),
+                    targetLanguage: "ja")
+            })
         case "shadow":
             once("shadow") { captureShadow = true }
             return AnyView(NavigationStack {
@@ -797,6 +919,26 @@ enum DebugCapture {
                 session: talkDetailSession,
                 chapter: chapter)
                 .environmentObject(appState))
+        case "wordcard-ja":
+            // The word card on a kanji headword: its reading has to sit
+            // under it (あわてる), or the card teaches a word nobody can say.
+            return AnyView(NavigationStack {
+                WordCard(word: "慌てる", currentWord: .constant("慌てる"))
+            }.environmentObject(appState))
+        case "transcript-ja", "talkdetail-ja":
+            // A Japanese talk — the one target with no spaces. The transcript
+            // has to draw its 、。 back around highlighted words, the
+            // correction has to light up the changed segments only, and the
+            // word chapter has to hold headwords (疲れる, not 疲れ). Launch
+            // with `-futurevoice.targetLanguage ja` so the stores and the
+            // splitter are on the Japanese pool.
+            if name == "transcript-ja" {
+                return AnyView(NavigationStack {
+                    TalkTranscriptView(session: japaneseTalkSession)
+                }.environmentObject(appState))
+            }
+            return AnyView(TalkBookCaptureHost(session: japaneseTalkSession, chapter: .words)
+                .environmentObject(appState))
         case "talkdetail", "talkdetail-mid", "talkdetail-low":
             // The ONE session detail page in post-talk mode — exactly what
             // the wrap-up sheet presents when a talk ends. Lists don't honor
@@ -854,6 +996,50 @@ enum DebugCapture {
     /// One fully-populated finished talk — every section of the session
     /// detail page has material (scorecard + grammar slips, new words,
     /// expressions, say-it-better, suggestions → shadow lines, drill next).
+    static var japaneseTalkSession: Session {
+        let started = Date().addingTimeInterval(-900)
+        let turns = [
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "久しぶり！最近、家事に追われてるって言ってたけど、少しは落ち着いた？", durationMs: 3200,
+                 timestamp: started, suggestion: nil),
+            Turn(id: UUID(), role: .user, audioURL: nil,
+                 transcript: "うん、でも洗濯が溜まって、とても面倒くさいでした。", durationMs: 62_000,
+                 timestamp: started.addingTimeInterval(6),
+                 suggestion: TurnSuggestion(alternative: "うん、でも洗濯が溜まって、とても面倒くさかった。",
+                                            reason: "い형용사의 과거형")),
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。", durationMs: 4200,
+                 timestamp: started.addingTimeInterval(70), suggestion: nil),
+            Turn(id: UUID(), role: .user, audioURL: nil,
+                 transcript: "そうだね。週末に掃除をするつもりです。", durationMs: 58_000,
+                 timestamp: started.addingTimeInterval(80),
+                 suggestion: TurnSuggestion(alternative: "そうだね。週末に掃除するつもり。",
+                                            reason: "반말로 통일"))
+        ]
+        var summary = SessionSummary(
+            phrasesUsed: [PhraseFeedback(userSaid: "面倒くさいでした",
+                                         fluentAlternative: "面倒くさかった",
+                                         reason: "い형용사의 과거형")],
+            newPatternsDetected: [],
+            suggestedDrills: ["週末にまとめて片付けるつもり。", "洗濯が溜まって面倒くさかった。"],
+            overallNote: "자연스럽게 이어졌어요. 형용사 과거형만 다듬으면 돼요.",
+            scorecard: sampleScorecard)
+        summary.newWordsUsed = ["洗濯", "掃除", "溜まる"]
+        summary.expressionsUsed = ["週末に掃除をする"]
+        summary.expressionsOffered = ["家事に追われる", "とりあえず一つずつ", "少しは落ち着いた"]
+        summary.grammarIssues = [
+            GrammarIssue(quote: "とても面倒くさいでした",
+                         correction: "とても面倒くさかった",
+                         note: "い형용사는 かった로 과거를 만들어요")
+        ]
+        return Session(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D2")!,
+            userId: UUID(), targetLanguage: "ja", mode: .conversation,
+            topic: "家事と通勤", startedAt: started,
+            endedAt: started.addingTimeInterval(600),
+            turns: turns, summary: summary)
+    }
+
     static var talkDetailSession: Session {
         let started = Date().addingTimeInterval(-900)
         let turns = [
@@ -922,14 +1108,14 @@ enum DebugCapture {
             ("That's a fair point.", 30 * day, 5),
         ]
         for (tgt, delay, box) in future {
-            DrillStore.shared.save(DrillCard(
+            DrillStore.shared.seed(DrillCard(
                 sourcePhrase: "", targetPhrase: tgt, reason: "",
                 createdAt: Date().addingTimeInterval(-day),
                 lastReviewedAt: Date(),
                 nextReviewAt: Date().addingTimeInterval(delay), box: box))
         }
         for i in 0..<22 {
-            DrillStore.shared.save(DrillCard(
+            DrillStore.shared.seed(DrillCard(
                 sourcePhrase: "I have went there \(i + 1) times",
                 targetPhrase: "I have been there \(i + 1) times",
                 reason: "past participle",
@@ -995,14 +1181,14 @@ enum DebugCapture {
             ("more easy", "easier", "comparative form"),
         ]
         for (src, tgt, why) in due {
-            DrillStore.shared.save(DrillCard(
+            DrillStore.shared.seed(DrillCard(
                 sourcePhrase: src, targetPhrase: tgt, reason: why,
                 createdAt: Date(), lastReviewedAt: nil,
                 nextReviewAt: Date().addingTimeInterval(-3600), box: 0))
         }
         // One legacy-style card with a WHOLE rambling turn as its source, to
         // verify the render-time fragment trim keeps the card on screen.
-        DrillStore.shared.save(DrillCard(
+        DrillStore.shared.seed(DrillCard(
             sourcePhrase: """
             Hey I'm just wondering if there is any kind of Yeah, where people come and set \
             the same goal and Together towards to the door like English learning I see a lot of \
@@ -1071,6 +1257,10 @@ enum DebugCapture {
                  quote: "Next Friday. I'm really looking forward to it."),
             Seed(source: .studyingWord, item: "commute",
                  quote: "I commuted for two hours every day back then."),
+            Seed(source: .knownExpression, item: "on the same page",
+                 quote: "Just so we're on the same page, it's Friday, right?"),
+            Seed(source: .knownWord, item: "hectic",
+                 quote: "This week has been pretty hectic at work."),
         ]
 
         var turns: [Turn] = []
@@ -1294,14 +1484,16 @@ private struct BookCaptureHost: View {
 private struct DaySpentCaptureHost: View {
     let kind: DailyAllowanceSheet.Kind
     let canUpgrade: Bool
+    var allowance: Int? = nil
+    var renewsOn: String = "Sep 14"
     @State private var showing = false
 
     var body: some View {
         ConversationHome()
             .sheet(isPresented: $showing) {
                 DailyAllowanceSheet(kind: kind, canUpgrade: canUpgrade,
-                                    allowance: kind == .talk ? 150 : 60,
-                                    renewsOn: "Sep 14",
+                                    allowance: allowance ?? (kind == .talk ? 150 : 60),
+                                    renewsOn: renewsOn,
                                     onReview: {}, onUpgrade: {})
             }
             .onAppear {
@@ -1346,13 +1538,27 @@ private struct UpdateCaptureHost: View {
     }
 }
 
+private struct WelcomeCaptureHost: View {
+    @State private var showing = false
+
+    var body: some View {
+        ConversationHome()
+            .sheet(isPresented: $showing) {
+                FreeTalkWelcomeSheet(minutes: 10) {}
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
+            }
+    }
+}
+
 private struct FeedbackCaptureHost: View {
     @State private var showing = false
 
     var body: some View {
         ConversationHome()
             .sheet(isPresented: $showing) {
-                FeedbackSheet(context: .firstTalk)
+                FeedbackSheet(context: .returningTalk)
             }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }

@@ -85,12 +85,19 @@ final class StoreKitService: ObservableObject {
     /// user who already burned their free trial (or their free credits) must
     /// not be pitched "Try for free" again — the paywall skips straight to
     /// plans when this is false.
-    @Published private(set) var trialEligible = true
+    ///
+    /// False until StoreKit has shown an ACTUAL free-trial offer. The trial
+    /// gave way to ten free minutes on 2026-09-21, and `isEligibleForIntroOffer`
+    /// answers about the ACCOUNT ("hasn't used an intro offer"), not whether
+    /// one exists — so with the offer removed in App Store Connect, the old
+    /// `true` default and a bare eligibility check pitched "7 days free" for a
+    /// trial Apple would not give.
+    @Published private(set) var trialEligible = false
 
     /// Longest free trial across loaded products — drives the timeline copy.
-    /// Falls back to 7 while products aren't configured yet.
+    /// Zero when no product carries one.
     var trialDays: Int {
-        options.compactMap(\.trialDays).max() ?? 7
+        options.compactMap(\.trialDays).max() ?? 0
     }
 
     // MARK: - App-lifetime transaction listener
@@ -171,7 +178,10 @@ final class StoreKitService: ObservableObject {
         do {
             let res: ClaimResponse = try await SupabaseProvider.shared.functions.invoke(
                 "apple-claim",
-                options: FunctionInvokeOptions(body: ClaimBody(jws: result.jwsRepresentation))
+                options: FunctionInvokeOptions(
+                    headers: try await SupabaseProvider.authorizedHeaders(),
+                    body: ClaimBody(jws: result.jwsRepresentation)
+                )
             )
             claimed.insert(tag)
             // Keep the set small; an Apple ID holds a handful of these.
@@ -253,20 +263,19 @@ final class StoreKitService: ObservableObject {
                        storefrontCountry: storefront)
         }
 
-        // Trial eligibility, straight from StoreKit: eligible if ANY loaded
-        // product's subscription still offers this account an intro offer.
-        // With no products loaded there's nothing purchasable anyway — leave
-        // the default (true) rather than guessing.
-        if !products.isEmpty {
-            var eligible = false
-            for p in products {
-                if let sub = p.subscription, await sub.isEligibleForIntroOffer {
-                    eligible = true
-                    break
-                }
+        // Trial eligibility, straight from StoreKit: eligible only if a loaded
+        // product HAS a free-trial intro offer and this account may still
+        // redeem it. No products, or no offer configured, means no trial.
+        var eligible = false
+        for p in products {
+            guard let sub = p.subscription,
+                  sub.introductoryOffer?.paymentMode == .freeTrial else { continue }
+            if await sub.isEligibleForIntroOffer {
+                eligible = true
+                break
             }
-            trialEligible = eligible
         }
+        trialEligible = eligible
     }
 
     func purchase(_ option: PlanOption) async {

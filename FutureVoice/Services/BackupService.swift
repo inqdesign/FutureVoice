@@ -81,7 +81,9 @@ enum BackupService {
     /// Top-level Documents folders that hold regenerable caches — big, and
     /// pointless to carry across installs (audio re-synthesizes on demand,
     /// keyed by the same content hashes).
-    private static let excludedFolders: Set<String> = ["PhraseAudio"]
+    /// `sync/` is this install's relationship with iCloud (`SyncIndex`) —
+    /// change tags and fingerprints that mean nothing on another install.
+    private static let excludedFolders: Set<String> = ["PhraseAudio", "sync"]
 
     /// Defaults that belong to the ACCOUNT or to this particular install, not
     /// to the practice. The footer in Me promises "your voice and minutes
@@ -170,6 +172,15 @@ enum BackupService {
     /// `nonisolated` on purpose: the caller is a view, so an inherited main
     /// actor would run the whole pack on the main thread — which is what made
     /// this look hung rather than slow. The reporting closure hops back.
+    ///
+    /// STREAMED, one file at a time, and it has to be (2026-09-17). It used to
+    /// read every file into one `Envelope` and hand that to `JSONEncoder` —
+    /// the library, then its base64, then the encoded file, all in memory at
+    /// once. A real device's Documents was 1.14 GB (a month of call audio), so
+    /// the export reached iOS's per-process limit (~3.4 GB) and was killed
+    /// mid-"Writing the backup file" with no crash log of our own, only a
+    /// JetsamEvent. The bytes on disk are the same JSON shape as before, so a
+    /// file written here still imports on a build that decodes it whole.
     nonisolated static func export(
         onProgress: @escaping @MainActor (Step) -> Void
     ) async throws -> URL {
@@ -181,28 +192,70 @@ enum BackupService {
         // be reported as "340 of 1,204", and listing is cheap next to reading.
         let found = backupableFiles(in: docs)
 
-        var files: [Envelope.File] = []
-        files.reserveCapacity(found.count)
-        for (index, entry) in found.enumerated() {
-            try Task.checkCancellation()
-            files.append(.init(path: entry.path, data: try Data(contentsOf: entry.url)))
-            if index % progressStride == 0 {
-                await onProgress(.packing(done: index + 1, total: found.count))
-            }
-        }
-        await onProgress(.packing(done: found.count, total: found.count))
-
-        await onProgress(.encoding)
         let df = DateFormatter()
         df.dateFormat = "yyyyMMdd-HHmm"
-        let out = fm.temporaryDirectory
-            // Prefix is cosmetic — the importer accepts `.item` and reads the
-            // envelope, so it never parses this name. Extension stays
-            // `.fvbackup` so older exports still import.
-            .appendingPathComponent("nawana-\(df.string(from: Date())).fvbackup")
-        let envelope = Envelope(files: files, defaults: defaultsSnapshot())
-        try JSONEncoder().encode(envelope).write(to: out, options: .atomic)
+        let tmp = fm.temporaryDirectory
+        // A previous export is the size of the whole library and nothing
+        // reads it once shared — keeping them would stack a gigabyte a tap.
+        for old in (try? fm.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)) ?? []
+        where old.pathExtension == "fvbackup" {
+            try? fm.removeItem(at: old)
+        }
+        // Prefix is cosmetic — the importer accepts `.item` and reads the
+        // envelope, so it never parses this name. Extension stays
+        // `.fvbackup` so older exports still import.
+        let out = tmp.appendingPathComponent("nawana-\(df.string(from: Date())).fvbackup")
+        guard fm.createFile(atPath: out.path, contents: nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        do {
+            let handle = try FileHandle(forWritingTo: out)
+            defer { try? handle.close() }
+            try handle.write(contentsOf: envelopeHead(defaults: defaultsSnapshot()))
+            for (index, entry) in found.enumerated() {
+                try Task.checkCancellation()
+                try autoreleasepool {
+                    try handle.write(contentsOf: envelopeEntry(
+                        path: entry.path,
+                        data: Data(contentsOf: entry.url, options: .mappedIfSafe),
+                        first: index == 0))
+                }
+                if index % progressStride == 0 {
+                    await onProgress(.packing(done: index + 1, total: found.count))
+                }
+            }
+            await onProgress(.packing(done: found.count, total: found.count))
+            await onProgress(.encoding)
+            try handle.write(contentsOf: Data("]}".utf8))
+        } catch {
+            try? fm.removeItem(at: out)
+            throw error
+        }
         return out
+    }
+
+    /// Everything before the first file: `{"version":2,"createdAt":…,
+    /// "defaults":{…},"files":[`. Encoded with `JSONEncoder` piece by piece so
+    /// each value is spelled exactly as the whole-envelope encoder spelled it.
+    static func envelopeHead(defaults: [String: Data], createdAt: Date = Date()) throws -> Data {
+        let encoder = JSONEncoder()
+        var head = Data(#"{"version":2,"createdAt":"#.utf8)
+        head.append(try encoder.encode(createdAt))
+        head.append(contentsOf: #","defaults":"#.utf8)
+        head.append(try encoder.encode(defaults))
+        head.append(contentsOf: #","files":["#.utf8)
+        return head
+    }
+
+    /// One `{"path":…,"data":"<base64>"}` element of the files array.
+    static func envelopeEntry(path: String, data: Data, first: Bool) throws -> Data {
+        var chunk = Data((first ? "" : ",").utf8)
+        chunk.append(contentsOf: #"{"path":"#.utf8)
+        chunk.append(try JSONEncoder().encode(path))
+        chunk.append(contentsOf: #","data":""#.utf8)
+        chunk.append(data.base64EncodedData())
+        chunk.append(contentsOf: #""}"#.utf8)
+        return chunk
     }
 
     /// Every regular file under Documents worth carrying, as (url, path
@@ -261,30 +314,40 @@ enum BackupService {
         await onProgress(.decoding)
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        let envelope = try JSONDecoder().decode(Envelope.self, from: Data(contentsOf: url))
+        // Mapped, never read: a mapped file's pages are the file's, so they
+        // don't count against the process the way a 1.5 GB `Data` would —
+        // which is the export's crash again, on the other install.
+        let mapped = try Data(contentsOf: url, options: .alwaysMapped)
+        let total = EnvelopeReader.countEntries(in: mapped)
         let fm = FileManager.default
         let docs = documents
         var report = RestoreReport()
-        for (index, file) in envelope.files.enumerated() {
+        // The reader is synchronous (it walks raw bytes), so progress is
+        // posted rather than awaited; posts from one task keep their order.
+        let post: (Step) -> Void = { step in Task { @MainActor in onProgress(step) } }
+        post(.restoring(done: 0, total: total))
+        var seen = 0
+        let defaults = try EnvelopeReader.read(mapped) { rawPath, data in
             try Task.checkCancellation()
-            if index % progressStride == 0 {
-                await onProgress(.restoring(done: index + 1, total: envelope.files.count))
+            seen += 1
+            if seen % progressStride == 0 {
+                post(.restoring(done: seen, total: max(total, seen)))
             }
-            let path = normalizedPath(file.path)
-            if path != file.path { report.repaired += 1 }
+            let path = normalizedPath(rawPath)
+            if path != rawPath { report.repaired += 1 }
             // Never let a crafted path escape Documents.
             let dest = docs.appendingPathComponent(path).standardizedFileURL
             guard dest.path.hasPrefix(docs.path + "/") else {
                 report.skipped += 1
-                continue
+                return
             }
             try fm.createDirectory(at: dest.deletingLastPathComponent(),
                                    withIntermediateDirectories: true)
-            try file.data.write(to: dest, options: .atomic)
+            try data.write(to: dest, options: .atomic)
             report.files += 1
         }
-        await onProgress(.restoring(done: envelope.files.count, total: envelope.files.count))
-        report.defaults = applyDefaults(envelope.defaults ?? [:])
+        await onProgress(.restoring(done: seen, total: seen))
+        report.defaults = applyDefaults(defaults)
         if report.files > 0 { discardMisfiledTrees(in: docs) }
         return report
     }
@@ -324,5 +387,220 @@ enum BackupService {
             applied += 1
         }
         return applied
+    }
+
+    enum BackupFileError: LocalizedError {
+        case damaged
+
+        var errorDescription: String? {
+            explain("This backup file is damaged or incomplete. Export it again from the other install.")
+        }
+    }
+
+    /// Reads an envelope ONE FILE AT A TIME, straight off the bytes.
+    ///
+    /// `JSONDecoder` can only hand back the whole `Envelope`, i.e. the whole
+    /// library in memory plus its parse tree — see `export` for why that dies
+    /// on a real device. This walks the same JSON and gives each file to the
+    /// caller as soon as it is decoded, so only one file is ever held. It
+    /// reads every envelope version: key order is free (the whole-envelope
+    /// encoder never fixed it), unknown keys are skipped, and escapes are
+    /// honoured (`JSONEncoder` writes base64's `/` as `\/`).
+    enum EnvelopeReader {
+        /// How many file entries the envelope holds, for the progress bar.
+        /// Base64 has no quote in its alphabet and a path's quotes are
+        /// escaped, so `"path"` appears once per entry.
+        static func countEntries(in data: Data) -> Int {
+            let needle = Array(#""path""#.utf8)
+            return data.withUnsafeBytes { raw -> Int in
+                guard let base = raw.baseAddress, raw.count >= needle.count else { return 0 }
+                var count = 0
+                var offset = 0
+                while offset < raw.count,
+                      let hit = memmem(base + offset, raw.count - offset, needle, needle.count) {
+                    count += 1
+                    offset = base.distance(to: UnsafeRawPointer(hit)) + needle.count
+                }
+                return count
+            }
+        }
+
+        /// Calls `onFile` for every entry in order and returns the defaults.
+        static func read(_ data: Data,
+                         onFile: (_ path: String, _ data: Data) throws -> Void) throws -> [String: Data] {
+            try data.withUnsafeBytes { raw in
+                let cursor = Cursor(bytes: raw)
+                var defaults: [String: Data] = [:]
+                try cursor.expect(UInt8(ascii: "{"))
+                try cursor.members { key in
+                    switch key {
+                    case "files":
+                        try cursor.elements {
+                            var path: String?
+                            var bytes: Data?
+                            try cursor.expect(UInt8(ascii: "{"))
+                            try cursor.members { field in
+                                switch field {
+                                case "path": path = String(decoding: try cursor.string(), as: UTF8.self)
+                                case "data": bytes = try cursor.base64()
+                                default: try cursor.skipValue()
+                                }
+                            }
+                            guard let path, let bytes else { throw BackupFileError.damaged }
+                            try autoreleasepool { try onFile(path, bytes) }
+                        }
+                    case "defaults":
+                        try cursor.expect(UInt8(ascii: "{"))
+                        try cursor.members { name in defaults[name] = try cursor.base64() }
+                    default:
+                        try cursor.skipValue()
+                    }
+                }
+                return defaults
+            }
+        }
+
+        /// A class, not a struct: the nested `members`/`elements` bodies
+        /// advance the same cursor they were called on.
+        private final class Cursor {
+            let bytes: UnsafeRawBufferPointer
+            var index = 0
+
+            init(bytes: UnsafeRawBufferPointer) { self.bytes = bytes }
+
+            func peek() throws -> UInt8 {
+                while index < bytes.count {
+                    switch bytes[index] {
+                    case 0x20, 0x09, 0x0A, 0x0D: index += 1
+                    default: return bytes[index]
+                    }
+                }
+                throw BackupFileError.damaged
+            }
+
+            func expect(_ byte: UInt8) throws {
+                guard try peek() == byte else { throw BackupFileError.damaged }
+                index += 1
+            }
+
+            /// `"key": value, …}` — the opening brace already consumed.
+            func members(_ body: (String) throws -> Void) throws {
+                if try peek() == UInt8(ascii: "}") { index += 1; return }
+                while true {
+                    let key = String(decoding: try string(), as: UTF8.self)
+                    try expect(UInt8(ascii: ":"))
+                    try body(key)
+                    switch try peek() {
+                    case UInt8(ascii: ","): index += 1
+                    case UInt8(ascii: "}"): index += 1; return
+                    default: throw BackupFileError.damaged
+                    }
+                }
+            }
+
+            /// `[value, …]` — including the opening bracket.
+            func elements(_ body: () throws -> Void) throws {
+                try expect(UInt8(ascii: "["))
+                if try peek() == UInt8(ascii: "]") { index += 1; return }
+                while true {
+                    try body()
+                    switch try peek() {
+                    case UInt8(ascii: ","): index += 1
+                    case UInt8(ascii: "]"): index += 1; return
+                    default: throw BackupFileError.damaged
+                    }
+                }
+            }
+
+            func base64() throws -> Data {
+                guard let data = Data(base64Encoded: try string()) else { throw BackupFileError.damaged }
+                return data
+            }
+
+            /// A string's UTF-8 bytes, unescaped. The common case — no
+            /// backslash before the closing quote — is two `memchr`s and one
+            /// copy, which is what keeps a gigabyte of base64 quick.
+            func string() throws -> Data {
+                try expect(UInt8(ascii: "\""))
+                guard let base = bytes.baseAddress else { throw BackupFileError.damaged }
+                let start = index
+                let remaining = bytes.count - start
+                guard let quote = memchr(base + start, 0x22, remaining) else { throw BackupFileError.damaged }
+                let end = base.distance(to: UnsafeRawPointer(quote))
+                if memchr(base + start, 0x5C, end - start) == nil {
+                    index = end + 1
+                    return Data(bytes: base + start, count: end - start)
+                }
+                var out = Data()
+                out.reserveCapacity(end - start)
+                while true {
+                    guard index < bytes.count else { throw BackupFileError.damaged }
+                    let byte = bytes[index]
+                    index += 1
+                    if byte == 0x22 { return out }
+                    guard byte == 0x5C else { out.append(byte); continue }
+                    guard index < bytes.count else { throw BackupFileError.damaged }
+                    let escape = bytes[index]
+                    index += 1
+                    switch escape {
+                    case UInt8(ascii: "b"): out.append(0x08)
+                    case UInt8(ascii: "f"): out.append(0x0C)
+                    case UInt8(ascii: "n"): out.append(0x0A)
+                    case UInt8(ascii: "r"): out.append(0x0D)
+                    case UInt8(ascii: "t"): out.append(0x09)
+                    case UInt8(ascii: "u"):
+                        var scalar = try hex4()
+                        if (0xD800..<0xDC00).contains(scalar) {
+                            guard index + 1 < bytes.count,
+                                  bytes[index] == 0x5C, bytes[index + 1] == UInt8(ascii: "u")
+                            else { throw BackupFileError.damaged }
+                            index += 2
+                            let low = try hex4()
+                            guard (0xDC00..<0xE000).contains(low) else { throw BackupFileError.damaged }
+                            scalar = 0x10000 + ((scalar - 0xD800) << 10) + (low - 0xDC00)
+                        }
+                        guard let unicode = Unicode.Scalar(scalar) else { throw BackupFileError.damaged }
+                        out.append(contentsOf: String(Character(unicode)).utf8)
+                    default:
+                        // `"`, `\`, `/` stand for themselves.
+                        out.append(escape)
+                    }
+                }
+            }
+
+            private func hex4() throws -> UInt32 {
+                guard index + 4 <= bytes.count,
+                      let value = UInt32(String(decoding: UnsafeRawBufferPointer(rebasing: bytes[index..<index + 4]),
+                                                as: UTF8.self), radix: 16)
+                else { throw BackupFileError.damaged }
+                index += 4
+                return value
+            }
+
+            func skipValue() throws {
+                switch try peek() {
+                case UInt8(ascii: "\""):
+                    _ = try string()
+                case UInt8(ascii: "{"):
+                    index += 1
+                    try members { _ in try skipValue() }
+                case UInt8(ascii: "["):
+                    try elements { try skipValue() }
+                default:
+                    // number, true, false, null
+                    let start = index
+                    while index < bytes.count {
+                        switch bytes[index] {
+                        case UInt8(ascii: ","), UInt8(ascii: "}"), UInt8(ascii: "]"),
+                             0x20, 0x09, 0x0A, 0x0D:
+                            if index == start { throw BackupFileError.damaged }
+                            return
+                        default: index += 1
+                        }
+                    }
+                    throw BackupFileError.damaged
+                }
+            }
+        }
     }
 }

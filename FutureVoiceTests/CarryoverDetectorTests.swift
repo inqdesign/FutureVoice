@@ -49,12 +49,84 @@ final class CarryoverDetectorTests: XCTestCase {
     private func detect(_ turns: [Turn], _ cards: [DrillCard],
                         bookmarked: [String] = [],
                         words: [String] = [],
-                        book: [CarryoverDetector.CurriculumItem] = []) -> [Carryover] {
+                        book: [CarryoverDetector.CurriculumItem] = [],
+                        knownExpressions: [String] = [],
+                        knownWords: [String] = []) -> [Carryover] {
         CarryoverDetector.detect(in: turns, cards: cards,
                                  curriculumItems: book,
                                  studyingExpressions: bookmarked,
                                  studyingWords: words,
+                                 knownExpressions: knownExpressions,
+                                 knownWords: knownWords,
                                  sessionId: sessionId, sessionStartedAt: sessionStart)
+    }
+
+    // MARK: - A correction card is credited only when the mistake is gone
+
+    private func correction(_ source: String, _ target: String) -> DrillCard {
+        DrillCard(sourcePhrase: source, targetPhrase: target, reason: "",
+                  createdAt: sessionStart.addingTimeInterval(-86_400),
+                  nextReviewAt: sessionStart, box: 1, sourceSessionId: UUID())
+    }
+
+    /// The real case: the card exists to drop the article, and the learner
+    /// said the article again. Every target token is there, in order — and
+    /// it is still the mistake.
+    func testRepeatingTheMistakeIsNotUsingTheCorrection() {
+        let card = correction("give me a feedback", "give me feedback")
+        let hits = detect([userTurn("Thankful that the user is trying to give me a feedback that helps.")], [card])
+        XCTAssertTrue(hits.isEmpty)
+    }
+
+    func testTheCorrectedLineIsCredited() {
+        let card = correction("give me a feedback", "give me feedback")
+        let hits = detect([userTurn("Could you give me feedback on this later?")], [card])
+        XCTAssertEqual(hits.map(\.source), [.drillCard])
+    }
+
+    /// Added words must be present, dropped words absent — checked on the
+    /// matched span only, so an "a" elsewhere in a long turn can't reject.
+    func testTheFixIsJudgedOnTheMatchedSpanOnly() {
+        let card = correction("I go to store yesterday", "I went to the store yesterday")
+        XCTAssertEqual(detect([userTurn("So a friend called and I went to the store yesterday, a long walk.")],
+                              [card]).count, 1)
+        XCTAssertTrue(detect([userTurn("So I go to the store yesterday, a long walk.")], [card]).isEmpty)
+    }
+
+    /// A suggested drill has no source line; nothing to check, so it credits
+    /// exactly as before.
+    func testACardWithoutASourceLineCreditsOnMatchAlone() {
+        let card = correction("", "Could you pass the salt?")
+        XCTAssertEqual(detect([userTurn("Hey, could you pass the salt please?")], [card]).count, 1)
+    }
+
+    // MARK: - Known is a claim; the talk confirms it
+
+    func testExpressionMarkedKnownIsConfirmedWhenSaid() {
+        let hits = detect([userTurn("Just so we're on the same page, it's Friday.")], [],
+                          knownExpressions: ["on the same page"])
+        XCTAssertEqual(hits.map(\.source), [.knownExpression])
+        XCTAssertEqual(hits.first?.item, "on the same page")
+    }
+
+    func testWordMarkedKnownIsConfirmedWhenSaid() {
+        let hits = detect([userTurn("This week has been pretty hectic at work.")], [],
+                          knownWords: ["hectic"])
+        XCTAssertEqual(hits.map(\.source), [.knownWord])
+    }
+
+    func testKnownItemsNotSaidAreNotCredited() {
+        let hits = detect([userTurn("It was a quiet week, honestly.")], [],
+                          knownExpressions: ["on the same page"], knownWords: ["hectic"])
+        XCTAssertTrue(hits.isEmpty)
+    }
+
+    /// The same word can't sit in both lists, but if it somehow does, one hit.
+    func testAWordInBothNotebookAndKnownIsCreditedOnce() {
+        let hits = detect([userTurn("This week has been pretty hectic.")], [],
+                          words: ["hectic"], knownWords: ["hectic"])
+        XCTAssertEqual(hits.count, 1)
+        XCTAssertEqual(hits.first?.source, .studyingWord)
     }
 
     private func bookItem(_ text: String, isWord: Bool) -> CarryoverDetector.CurriculumItem {

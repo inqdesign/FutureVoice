@@ -40,6 +40,8 @@ final class PersonaStore {
         p.updatedAt = Date()
         guard let data = try? encoder.encode(p) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.persona)
+        SyncEngine.noteChanged(.personaNote)
     }
 
     func exists() -> Bool {

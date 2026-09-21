@@ -138,5 +138,6 @@ final class StudyScheduleStore: LanguageScopedStore {
         enc.dateEncodingStrategy = .iso8601
         guard let data = try? enc.encode(entries) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.schedule)
     }
 }

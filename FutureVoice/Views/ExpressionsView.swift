@@ -43,8 +43,8 @@ struct ExpressionsView: View {
     private var entries: [ExpressionCatalog.Item] {
         let all = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
         switch filter {
-        case .toStudy: return all.filter { !store.isKnownExpression($0.text) }
-        case .known:   return all.filter { store.isKnownExpression($0.text) }
+        case .toStudy: return all.filter { !store.hasUsedExpression($0.text) }
+        case .known:   return all.filter { store.hasUsedExpression($0.text) }
         }
     }
 
@@ -140,15 +140,18 @@ struct ExpressionsView: View {
 
     private func row(_ entry: ExpressionCatalog.Item) -> some View {
         let studying = store.isStudyingExpression(entry.text)
-        let known = store.isKnownExpression(entry.text)
+        let known = store.hasUsedExpression(entry.text)
+        let confirmed = store.isConfirmedExpression(entry.text)
         return HStack(spacing: 12) {
             // Status badge, same grammar as the word cloud: bookmark = studying,
-            // check = known.
+            // check = known, filled check = said in a talk (confirmed).
             if studying || known {
-                Image(systemName: studying ? "bookmark.fill" : "checkmark")
+                Image(systemName: studying ? "bookmark.fill" : (confirmed ? "checkmark.circle.fill" : "checkmark"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(studying ? Color.accentColor : Color.green)
                     .frame(width: 16)
+                    .accessibilityLabel(studying ? explain("Studying")
+                                        : (confirmed ? explain("Used in a talk") : explain("Marked known")))
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(Self.display(entry.text))

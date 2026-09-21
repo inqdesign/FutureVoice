@@ -40,7 +40,11 @@ enum ShadowEngine {
         let targetTokens = tokenize(expandForDiff(target, language: language), style: style)
         let learnerTokens = tokenize(expandForDiff(learner, language: language), style: style)
 
-        let (matches, steps) = align(targetTokens, learnerTokens)
+        // Japanese compares by sound: the transcriber picks the script
+        // (ナワナ / なわな), so a kana token is keyed in hiragana — the
+        // steps still carry what each side wrote.
+        let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
+        let (matches, steps) = align(targetTokens, learnerTokens, key: key)
         let denom = max(targetTokens.count, learnerTokens.count)
         let raw = denom > 0 ? Double(matches) / Double(denom) : 0
         // Reanchor: 90+ excellent, 75 good, <60 noticeable. A pure
@@ -110,6 +114,10 @@ enum ShadowEngine {
         let targetDurationMs: Int
         /// Learner word span, pace-normalized (ms).
         let learnerDurationMs: Int
+        /// Both onsets were observed by a recognizer. False when either side
+        /// is an estimate or an interpolated gap — drawn on the card, never
+        /// graded or coloured, and never used to pin the normalization.
+        let isMeasured: Bool
     }
 
     struct RhythmAnalysis: Hashable {
@@ -118,6 +126,41 @@ enum ShadowEngine {
         /// Full extent of the target timeline covered by paired words (ms),
         /// measured from the first paired onset to the last paired word end.
         let targetSpanMs: Int
+    }
+
+    // MARK: - The headline number
+
+    /// How much of the grade each half carries. Words lead — a take with the
+    /// wrong words is wrong however beautifully it was timed — but not by so
+    /// much that the beat is decoration.
+    static let matchWeight = 0.65
+    static let rhythmWeight = 0.35
+
+    /// The ONE number a shadow attempt is judged by, on the result card, in
+    /// the attempt history, in the mastery threshold and in the retry picks.
+    ///
+    /// `analyze`'s match score alone answers "did you say the right words",
+    /// and that is reading aloud, not shadowing: a mid-sentence pause is
+    /// completely invisible to a token diff (the token stream is identical),
+    /// hesitation sounds are dropped by the transcriber before they can
+    /// count, and the `sqrt` curve then lifts 4-of-5 words to 89. So a take
+    /// that hit every word a beat late scored the same as one that landed on
+    /// it — reported 2026-09-13, and the rhythm number was sitting right
+    /// there on the card, measured and unused.
+    ///
+    /// **Rhythm counts only when it was MEASURED.** nil is not zero: it means
+    /// too few words anchored to a timestamp for a timeline to be trusted
+    /// (`ShadowTranscriber.realigned`), and grading a learner on a
+    /// measurement the app failed to take is the one thing worse than not
+    /// grading it. The card says "words only" in that case rather than
+    /// silently handing back a different kind of number — and since the
+    /// audio-grounded transcript landed the same day, that branch is rare.
+    /// It is also why every attempt saved before then keeps its old score:
+    /// no `rhythmScore`, no blend.
+    static func overallScore(match: Int, rhythm: Int?) -> Int {
+        guard let rhythm else { return match }
+        let blended = Double(match) * matchWeight + Double(rhythm) * rhythmWeight
+        return max(0, min(100, Int(blended.rounded())))
     }
 
     /// Full-credit half-width: onsets within ±this of the beat score 1.0.
@@ -152,12 +195,26 @@ enum ShadowEngine {
     ///
     /// Guards mirror `LocalAlignment`'s philosophy: if the token stream and
     /// the word spans don't account for each other exactly, return nil (never
-    /// show wrong data); likewise under 3 pairs.
+    /// show wrong data); likewise under `minMeasuredPairs` MEASURED pairs.
     ///
-    /// Normalization: both timelines are re-zeroed on their first paired
-    /// onset, then the learner timeline is scaled by targetSpan/learnerSpan.
-    /// A uniformly slower attempt therefore scores 100 — overall speed is the
-    /// duration card's job; rhythm grades only relative word placement.
+    /// **Only a pair observed on BOTH sides counts** (2026-09-16). Every
+    /// target timeline built for a live-call line starts as a character-count
+    /// estimate, and both the free target alignment and the learner's
+    /// `ShadowTranscriber.realigned` share out up to half their words across
+    /// gaps a recognizer never placed — none of which the card could tell from
+    /// a measurement, so it coloured a learner red for missing a beat that
+    /// was itself made up. `WordTiming.isMeasured` now rides in from every
+    /// timing source; an unmeasured pair is still returned (the bar is drawn,
+    /// dimmed) but carries no credit, and a target that is estimate throughout
+    /// yields nil, which `overallScore` reads as "rhythm was not measured".
+    ///
+    /// Normalization: both timelines are re-zeroed on their first MEASURED
+    /// pair's onset, then the learner timeline is scaled by
+    /// targetSpan/learnerSpan over the measured extremes. A uniformly slower
+    /// attempt therefore scores 100 — overall speed is the duration card's
+    /// job; rhythm grades only relative word placement. Those two pinned
+    /// words score 1.0 by construction, which is why the minimum is four
+    /// rather than three: three left exactly one word to judge.
     static func analyzeRhythm(
         steps: [DiffStep],
         targetTimings: [WordTiming],
@@ -198,14 +255,16 @@ enum ShadowEngine {
         }
         // Slots must consume BOTH token streams exactly — anything else means
         // the diff and the timings are describing different text.
-        guard t == targetWordOf.count, l == learnerWordOf.count,
-              pairs.count >= 3 else { return nil }
+        guard t == targetWordOf.count, l == learnerWordOf.count else { return nil }
 
-        let t0 = pairs[0].target.startMs
-        let l0 = pairs[0].learner.startMs
-        guard let lastPair = pairs.last else { return nil }
-        let targetSpan = lastPair.target.startMs - t0
-        let learnerSpan = lastPair.learner.startMs - l0
+        let measured = pairs.filter { $0.target.isMeasured && $0.learner.isMeasured }
+        guard measured.count >= minMeasuredPairs,
+              let firstMeasured = measured.first, let lastMeasured = measured.last else { return nil }
+
+        let t0 = firstMeasured.target.startMs
+        let l0 = firstMeasured.learner.startMs
+        let targetSpan = lastMeasured.target.startMs - t0
+        let learnerSpan = lastMeasured.learner.startMs - l0
         guard targetSpan > 0, learnerSpan > 0 else { return nil }
         let scale = Double(targetSpan) / Double(learnerSpan)
 
@@ -216,29 +275,35 @@ enum ShadowEngine {
                 targetOnsetMs: pair.target.startMs - t0,
                 learnerOnsetMs: Int((Double(pair.learner.startMs - l0) * scale).rounded()),
                 targetDurationMs: max(0, pair.target.endMs - pair.target.startMs),
-                learnerDurationMs: max(0, Int((Double(pair.learner.endMs - pair.learner.startMs) * scale).rounded()))
+                learnerDurationMs: max(0, Int((Double(pair.learner.endMs - pair.learner.startMs) * scale).rounded())),
+                isMeasured: pair.target.isMeasured && pair.learner.isMeasured
             )
         }
 
-        // Continuous per-word credit: 1.0 inside ±graceMs, fading linearly to
-        // 0 at grace+ramp. Mean × 100 → score. First/last words pin the
-        // normalization (deviation 0), which slightly flatters short lines —
-        // acceptable next to the ≥3-pair guard.
-        let credits = words.map { w -> Double in
+        // Continuous per-word credit over MEASURED words only: 1.0 inside
+        // ±graceMs, fading linearly to 0 at grace+ramp. Mean × 100 → score.
+        let credits = words.filter(\.isMeasured).map { w -> Double in
             let over = max(0, Double(abs(w.deviationMs)) - rhythmGraceMs)
             return max(0, 1 - over / rhythmRampMs)
         }
         let mean = credits.reduce(0, +) / Double(credits.count)
         let score = max(0, min(100, Int((mean * 100).rounded())))
-        let spanEnd = lastPair.target.endMs - t0
+        // The drawn extent covers every pair, measured or not, so an
+        // unmeasured tail still fits on the card.
+        let spanEnd = pairs.map { $0.target.endMs - t0 }.max() ?? targetSpan
         return RhythmAnalysis(score: score, words: words, targetSpanMs: max(spanEnd, targetSpan))
     }
+
+    /// Fewest measured pairs a rhythm score may stand on. The first and last
+    /// pin the normalization and score 1.0 whatever happened, so this is
+    /// "two words actually judged", not four.
+    static let minMeasuredPairs = 4
 
     /// Compact rhythm evidence for the coach prompt — only meaningfully
     /// off-beat words, e.g. `[weather +180] [is -240]` (+ = late, − = early).
     static func renderRhythmForPrompt(_ rhythm: RhythmAnalysis?) -> String {
         guard let rhythm else { return "n/a" }
-        let off = rhythm.words.filter { rhythmGrade(deviationMs: $0.deviationMs) < 2 }
+        let off = rhythm.words.filter { $0.isMeasured && rhythmGrade(deviationMs: $0.deviationMs) < 2 }
         guard !off.isEmpty else { return "all words on beat" }
         return off.map { w in
             String(format: "[%@ %+dms]", w.word, w.deviationMs)
@@ -278,7 +343,7 @@ enum ShadowEngine {
         You are a strict but fair pronunciation + delivery coach for \(LanguageCatalog.englishName(targetLanguage)). \
         The learner shadowed a fluent line. You will be given:
           • target_line       — what they tried to say
-          • learner_transcript — what on-device STT heard them say
+          • learner_transcript — what a transcriber heard them say
           • duration_ratio    — learner_duration / target_duration
           • diff              — token-level alignment using [= match] [~ sub] [- del] [+ ins]
           • rhythm            — per-word onset deviation after pace \
@@ -355,6 +420,14 @@ enum ShadowEngine {
     /// tokens, so expanded forms are consistent with the existing display.
     static func expandForDiff(_ text: String, language: String) -> String {
         var out = text.lowercased()
+        // Typographic apostrophes → ASCII. A model-written target says
+        // "I’m" (U+2019) and every recognizer writes "I'm"; the suffix table
+        // below only knows the ASCII form, so the target tokenized to
+        // `i`,`m` against the learner's `i am` and a word they said
+        // perfectly was scored a substitution.
+        for curly in ["\u{2019}", "\u{2018}", "\u{02BC}"] {
+            out = out.replacingOccurrences(of: curly, with: "'")
+        }
         // Hyphens → spaces so "twenty-one"/"check-in" (written) match
         // "twenty one"/"check in" (how STT writes them). Spell-out below
         // strips its own hyphens at insertion for the same reason.
@@ -362,7 +435,8 @@ enum ShadowEngine {
 
         // Digits → spell-out in the practice language. Word-ish digit runs
         // only; anything NumberFormatter can't parse is left alone.
-        if let re = try? NSRegularExpression(pattern: #"\d+"#) {
+        if out.unicodeScalars.contains(where: { CharacterSet.decimalDigits.contains($0) }),
+           let re = digitRun {
             let formatter = NumberFormatter()
             formatter.numberStyle = .spellOut
             formatter.locale = Locale(identifier: language)
@@ -375,6 +449,12 @@ enum ShadowEngine {
                 out.replaceSubrange(r, with: " \(flat) ")
             }
         }
+
+        // A romaji word in a Japanese line (nawana) is six letters on one
+        // side and three kana on the other — the ja-JP recognizer writes it
+        // ナワナ. Cut into kana on both sides so the morae line up; the
+        // hiragana/katakana difference is left to `analyze`'s key.
+        if language.hasPrefix("ja") { return JapaneseMorph.katakana(fromLatinIn: out) }
 
         guard language.hasPrefix("en") else { return out }
         // Irregulars first, then generic suffixes. "'s"/"'d" are ambiguous
@@ -408,6 +488,11 @@ enum ShadowEngine {
         return out
     }
 
+    /// Built once: `expandForDiff` runs per word per frame while the karaoke
+    /// line animates over a result (`tokenSpans`), and compiling a regex
+    /// there was measurable.
+    private static let digitRun = try? NSRegularExpression(pattern: #"\d+"#)
+
     /// Lowercase + strip punctuation; collapses contractions like "don't" to
     /// a single token. Comparison is case- and punctuation-insensitive.
     /// `.syllable` further splits each word into single characters, so CJK
@@ -428,8 +513,10 @@ enum ShadowEngine {
     /// match count and a step list traceable to the original (non-normalized)
     /// tokens — we keep both inputs as-tokenized so the rendered diff matches
     /// what the user actually sees.
-    private static func align(_ a: [String], _ b: [String]) -> (Int, [DiffStep]) {
+    private static func align(_ a: [String], _ b: [String],
+                              key: (String) -> String = { $0 }) -> (Int, [DiffStep]) {
         let n = a.count, m = b.count
+        let ka = a.map(key), kb = b.map(key)
         if n == 0 && m == 0 { return (0, []) }
 
         var dp = Array(repeating: Array(repeating: 0, count: m + 1), count: n + 1)
@@ -437,7 +524,7 @@ enum ShadowEngine {
         for j in 0...m { dp[0][j] = j }
         for i in 1...max(n, 1) where i <= n {
             for j in 1...max(m, 1) where j <= m {
-                if a[i-1] == b[j-1] {
+                if ka[i-1] == kb[j-1] {
                     dp[i][j] = dp[i-1][j-1]
                 } else {
                     dp[i][j] = 1 + min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])
@@ -449,7 +536,7 @@ enum ShadowEngine {
         var matches = 0
         var i = n, j = m
         while i > 0 || j > 0 {
-            if i > 0 && j > 0 && a[i-1] == b[j-1] {
+            if i > 0 && j > 0 && ka[i-1] == kb[j-1] {
                 steps.append(DiffStep(op: .match, target: a[i-1], learner: b[j-1]))
                 matches += 1
                 i -= 1; j -= 1

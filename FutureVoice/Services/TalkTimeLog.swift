@@ -63,6 +63,32 @@ enum TalkTimeLog {
         load()[key(day: day, language: language)] ?? 0
     }
 
+    /// Every metered second still in the log, all days and languages. The log
+    /// keeps `keepDays`, so this is "recent" talk — what `ReviewRequest` wants.
+    static func totalSeconds() -> Int {
+        load().values.reduce(0, +)
+    }
+
+    /// Every day still in the log with any metered talk, in any language, as
+    /// local start-of-day dates. Only `keepDays` deep — the streak also reads
+    /// sessions for anything older.
+    static func activeDays(calendar: Calendar = .current) -> Set<Date> {
+        let f = DateFormatter()
+        f.calendar = calendar
+        f.timeZone = calendar.timeZone
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return Set(load().compactMap { key, seconds -> Date? in
+            guard seconds > 0, let date = f.date(from: String(key.prefix(10))) else { return nil }
+            return calendar.startOfDay(for: date)
+        })
+    }
+
+    /// Distinct local days with any metered talk, within the log's window.
+    static func daysWithTalk() -> Int {
+        Set(load().filter { $0.value > 0 }.keys.map { String($0.prefix(10)) }).count
+    }
+
     // MARK: - Server backfill
 
     /// Rebuild the log from the server's `usage_ledger`, which is where the
@@ -178,6 +204,7 @@ enum TalkTimeLog {
 
     private static func save(_ map: [String: Int]) {
         UserDefaults.standard.set(map, forKey: key)
+        SyncEngine.noteChanged(.talkDay)
     }
 
     private static func prune(_ map: [String: Int], now: Date) -> [String: Int] {

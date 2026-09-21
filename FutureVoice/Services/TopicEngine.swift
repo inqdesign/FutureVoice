@@ -581,6 +581,18 @@ private struct FallbackText {
             catchUpBlurb: "Fang damit an, was dir in letzter Zeit im Kopf herumgeht.",
             onYourMind: "Etwas, das dir auf der Seele liegt und das du ansprechen wolltest",
             onYourMindBlurb: "Nimm etwas Echtes, wozu du wirklich ihre Meinung hören willst."),
+        "ja": FallbackText(
+            yourCity: "住んでいる街",
+            weekCatchUp: "近況を話す。友達に今週どうだったか聞かれる",
+            weekCatchUpBlurb: "決まり文句ではなく、実際にやったことから話してみましょう。",
+            explainWorkFormat: "%@で知り合ったばかりの人に、自分の仕事を説明する",
+            explainWorkBlurb: "相手は興味津々。専門用語は避けて、人間味のある話にしましょう。",
+            smallProblem: "丁寧に切り出したい、ちょっとした問題",
+            smallProblemBlurb: "職場や近所で気になっていることをひとつ。",
+            catchUpWithFormat: "%@と軽く近況を話す",
+            catchUpBlurb: "最近気になっていることから始めてみましょう。",
+            onYourMind: "ずっと言おうと思っていた、気になっていること",
+            onYourMindBlurb: "相手の意見を本当に聞きたい、実際の出来事を選びましょう。"),
         "ko": FallbackText(
             yourCity: "당신이 사는 도시",
             weekCatchUp: "안부 나누기 — 친구가 이번 주 어땠냐고 묻는다",

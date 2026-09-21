@@ -26,6 +26,9 @@ struct RootView: View {
     /// Set by `OnboardingPaywallView` on every exit — including the silent
     /// one it takes for an account that has nothing to buy.
     @AppStorage("futurevoice.paywall.onboarded") private var paywallOnboarded = false
+    /// A signed-in account with practice already in iCloud, on an install
+    /// that hasn't been set up: offer to continue from it (`SyncContinuePromptView`).
+    @State private var showSyncOffer = false
 
     init() { Self.applyRoundedNavBar() }
 
@@ -46,6 +49,23 @@ struct RootView: View {
             // It used to be the language being LEARNED; see
             // `UILanguage.chromeLanguage` for why that's gone.
             .environment(\.locale, Locale(identifier: UILanguage.chromeLanguage))
+            .task(id: auth.session?.user.id.uuidString ?? "") {
+                await checkSyncOffer()
+            }
+    }
+
+    /// The second device's question, asked once per account per install,
+    /// only where setup hasn't happened yet — after that the toggle in Me is
+    /// the place. Never shown for an anonymous session: nothing to key on.
+    private func checkSyncOffer() async {
+        guard !appState.setupComplete, auth.isSignedIn,
+              let uid = auth.session?.user.id.uuidString,
+              !SyncStore.wasOffered(userId: uid),
+              !SyncEngine.shared.isEnabled
+        else { showSyncOffer = false; return }
+        if await SyncEngine.shared.cloudHasData() == true {
+            showSyncOffer = true
+        }
     }
 
     @ViewBuilder
@@ -106,6 +126,8 @@ struct RootView: View {
             // deferred to the voice-clone step (the first server-bound act).
             // The sign-in path here is for returning users restoring.
             WelcomeView()
+        } else if showSyncOffer && !appState.setupComplete {
+            SyncContinuePromptView { showSyncOffer = false }
         } else if !appState.setupComplete {
             SetupFlowView()
         } else if appState.persona == nil {

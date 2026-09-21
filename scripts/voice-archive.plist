@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Archives every new voice-clone recording within 10 minutes of its creation
+  (scripts/voice-archive.sh). Install once:
+
+    cp scripts/voice-archive.plist ~/Library/LaunchAgents/com.nawana.voice-archive.plist
+    launchctl load ~/Library/LaunchAgents/com.nawana.voice-archive.plist
+
+  Remove:  launchctl unload ~/Library/LaunchAgents/com.nawana.voice-archive.plist
+  Output:  ~/Desktop/beta audio/voices/archive.log (+ launchd.log for stderr)
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nawana.voice-archive</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/eunggyuelee/FutureVoice/scripts/voice-archive.sh</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>600</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string>
+    <key>HOME</key>
+    <string>/Users/eunggyuelee</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/eunggyuelee/Desktop/beta audio/voices/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/eunggyuelee/Desktop/beta audio/voices/launchd.log</string>
+</dict>
+</plist>

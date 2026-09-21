@@ -34,6 +34,11 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   ADMIN_TOKEN: string;
   ADMIN_PASSWORD?: string;
+  /** PostHog personal API key (scope: query read) — city + app-open state for
+   *  the 라이브 tab. Without it the tab still works, with no map. */
+  POSTHOG_API_KEY?: string;
+  /** Numeric project id; defaults to the key's current project. */
+  POSTHOG_PROJECT_ID?: string;
 }
 
 const COOKIE = "nawana_admin";
@@ -86,7 +91,209 @@ async function fetchData(env: Env) {
     body: "{}",
   });
   if (!r.ok) throw new Error(`admin_raw ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  return assemble(await r.json());
+  const raw = await r.json();
+  // Never let this card take the whole console down with it.
+  raw.recent_ledger = await recentLedger(env).catch((e) => {
+    console.log(`recentLedger: ${(e as Error).message}`);
+    return [];
+  });
+  const data = assemble(raw);
+  // Same rule as recentLedger: a missing column must not blank the console.
+  const offers = await offerCodes(env).catch((e) => {
+    console.log(`offerCodes: ${(e as Error).message}`);
+    return {} as Record<string, OfferInfo>;
+  });
+  // Every profile's language pair — admin_raw's `setup` only has people who
+  // finished setup after setup_at existed, which left the rest as "?".
+  const langs = await profileLangs(env).catch((e) => {
+    console.log(`profileLangs: ${(e as Error).message}`);
+    return {} as Record<string, { native: string | null; target: string | null }>;
+  });
+  for (const u of data.users as { id: string; offer?: OfferInfo; native?: string | null; target?: string | null }[]) {
+    if (offers[u.id]) u.offer = offers[u.id];
+    if (langs[u.id]) { u.native = langs[u.id].native; u.target = langs[u.id].target; }
+  }
+  return data;
+}
+
+/** Every usage_ledger row of the last 24 h, thin, oldest first — the 라이브
+ *  tab folds them into per-person episodes ("18:32–18:41 영어로 통화"). */
+async function dayLedger(env: Env): Promise<unknown[]> {
+  const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+  const page = 1000;
+  const rows: unknown[] = [];
+  for (let from = 0; from < 20_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/usage_ledger`
+      + `?select=u:user_id,at:created_at,action,purpose:metadata->>purpose,`
+      + `language:metadata->>language,seconds:metadata->seconds`
+      + `&created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null`
+      + `&or=(source_fn.is.null,source_fn.neq.migration)&order=created_at.asc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) throw new Error(`usage_ledger ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    const batch = await r.json() as unknown[];
+    rows.push(...batch);
+    if (batch.length < page) break;
+  }
+  return rows;
+}
+
+async function profileLangs(env: Env): Promise<Record<string, { native: string | null; target: string | null }>> {
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/profiles?select=id,native_language,target_language`, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!r.ok) throw new Error(`profiles ${r.status}`);
+  const out: Record<string, { native: string | null; target: string | null }> = {};
+  for (const x of await r.json() as { id: string; native_language: string | null; target_language: string | null }[]) {
+    out[x.id] = { native: x.native_language, target: x.target_language };
+  }
+  return out;
+}
+
+/** Who is on an App Store offer code (type 3), and at what price.
+ *  Two sources, because Apple applies a code AFTER the free trial: during the
+ *  trial week only renewal info knows about it (`renewal_offer_*`, filed from
+ *  signedRenewalInfo since 20260918100000); once a period has been charged
+ *  under it, the transaction carries `offer_type = 3` too. */
+type OfferInfo = {
+  name: string | null;
+  price: number | null; currency: string | null;   // next charge, major units
+  pending: boolean;                                  // code not charged yet
+  firstChargedAt: string | null; charges: number;
+};
+async function offerCodes(env: Env): Promise<Record<string, OfferInfo>> {
+  const get = async (q: string) => {
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${q}`, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!r.ok) throw new Error(`${q.split("?")[0]} ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return await r.json() as Record<string, unknown>[];
+  };
+  const [subs, txs] = await Promise.all([
+    get("user_subscriptions?select=user_id,renewal_offer_type,renewal_offer_id,"
+      + "renewal_price_milliunits,renewal_currency&renewal_offer_type=eq.3"),
+    get("subscription_transactions?select=user_id,purchase_date,price_milliunits,currency"
+      + "&offer_type=eq.3&order=purchase_date.asc"),
+  ]);
+  const out: Record<string, OfferInfo> = {};
+  const money = (m: unknown) => (typeof m === "number" ? m / 1000 : null);
+  for (const t of txs) {
+    const id = String(t.user_id);
+    const o = out[id] ??= { name: null, price: money(t.price_milliunits),
+      currency: (t.currency as string) ?? null, pending: false,
+      firstChargedAt: (t.purchase_date as string) ?? null, charges: 0 };
+    o.charges++;
+  }
+  for (const s of subs) {
+    const id = String(s.user_id);
+    const o = out[id] ??= { name: null, price: null, currency: null, pending: true,
+      firstChargedAt: null, charges: 0 };
+    o.name = (s.renewal_offer_id as string) ?? o.name;
+    o.price = money(s.renewal_price_milliunits) ?? o.price;
+    o.currency = (s.renewal_currency as string) ?? o.currency;
+    o.pending = o.charges === 0;
+  }
+  return out;
+}
+
+/** Every usage_ledger row of the last 8 days, thin. `admin_raw.hours` is a
+ *  whole-window UTC hour-of-day sum, which can say when people usually come
+ *  but not what TODAY looks like against that — and "today" has to be cut in
+ *  the zone the page is set to, so the rows go to the page raw and it buckets
+ *  them. ~1k rows a day at launch; paged because PostgREST caps a response. */
+async function recentLedger(env: Env): Promise<unknown[]> {
+  const since = new Date(Date.now() - 8 * 86_400_000).toISOString();
+  const page = 1000;
+  const rows: unknown[] = [];
+  for (let from = 0; from < 50_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/usage_ledger`
+      + `?select=user_id,created_at,action,delta,seconds:metadata->seconds`
+      + `&created_at=gte.${encodeURIComponent(since)}&order=created_at.asc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) throw new Error(`usage_ledger ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    const batch = await r.json() as unknown[];
+    rows.push(...batch);
+    if (batch.length < page) break;
+  }
+  return rows;
+}
+
+// ---- PostHog: where people are, and whether the app is open --------------
+// The iOS SDK stamps every event with a GeoIP city (PostHog's default) and
+// sends "Application Opened" / "Application Backgrounded". One HogQL query
+// reads the latest of each per account. distinct_id is the Supabase UUID
+// UPPERCASED (Swift uuidString), so it is lowered to join.
+//
+// Held for 60 s per isolate: the tab polls every 15 s, a city does not move
+// between two polls, and PostHog rate-limits its query API per project. The database half of live.json is never cached.
+type PhRow = { city: string | null; cc: string | null; lat: number | null; lon: number | null;
+               lifecycle: string | null; lifecycleAt: string | null;
+               lastEvent: string | null; lastAt: string | null };
+let phCache: { at: number; rows: Record<string, PhRow>; error?: string } | null = null;
+
+async function posthogPresence(env: Env): Promise<{ rows: Record<string, PhRow>; error?: string }> {
+  if (!env.POSTHOG_API_KEY) return { rows: {}, error: "no_key" };
+  if (phCache && Date.now() - phCache.at < 60_000) return phCache;
+  const project = env.POSTHOG_PROJECT_ID || "@current";
+  const query = `
+    select distinct_id,
+      argMax(properties.$geoip_city_name, timestamp),
+      argMax(properties.$geoip_country_code, timestamp),
+      argMax(properties.$geoip_latitude, timestamp),
+      argMax(properties.$geoip_longitude, timestamp),
+      argMaxIf(event, timestamp, event in ('Application Opened', 'Application Backgrounded')),
+      maxIf(timestamp, event in ('Application Opened', 'Application Backgrounded')),
+      argMax(event, timestamp),
+      max(timestamp)
+    from events
+    where timestamp > now() - interval 30 day
+      and properties.app = 'nawana'
+    group by distinct_id
+    limit 10000`;
+  try {
+    const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
+    });
+    if (!r.ok) throw new Error(`posthog ${r.status}`);
+    const body = await r.json() as { results?: unknown[][] };
+    const rows: Record<string, PhRow> = {};
+    const iso = (v: unknown) => (v ? new Date(String(v).replace(" ", "T") + (String(v).match(/Z|[+-]\d\d:?\d\d$/) ? "" : "Z")).toISOString() : null);
+    for (const x of body.results ?? []) {
+      const id = String(x[0] ?? "").toLowerCase();
+      if (!/^[0-9a-f-]{36}$/.test(id)) continue;
+      const num = (v: unknown) => (v === null || v === "" || v === undefined ? null : Number(v));
+      rows[id] = {
+        city: (x[1] as string) || null, cc: (x[2] as string) || null,
+        lat: num(x[3]), lon: num(x[4]),
+        lifecycle: (x[5] as string) || null, lifecycleAt: iso(x[6]),
+        lastEvent: (x[7] as string) || null, lastAt: iso(x[8]),
+      };
+    }
+    phCache = { at: Date.now(), rows };
+  } catch (e) {
+    // Keep serving the last good answer; say that it is stale.
+    phCache = { at: Date.now(), rows: phCache?.rows ?? {}, error: (e as Error).message };
+  }
+  return phCache;
 }
 
 const PRIVATE_HEADERS = {
@@ -113,9 +320,8 @@ function loginPage(base: string, message = ""): string {
 <meta name="robots" content="noindex,nofollow"><title>nawana 어드민</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
 <style>
-:root{color-scheme:light dark;--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#898781;
+:root{color-scheme:light;--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#898781;
   --ring:rgba(11,11,11,.12);--s1:#2a78d6;--crit:#d03b3b}
-@media (prefers-color-scheme:dark){:root{--page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink-2:#c3c2b7;--muted:#898781;--ring:rgba(255,255,255,.12);--s1:#3987e5;--crit:#e66767}}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--page);color:var(--ink);
   font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px}
@@ -217,7 +423,7 @@ export default {
     const signedIn = !!session && constantTimeEqual(session, expected);
     if (!signedIn) {
       // data.json is for scripts, and a script gets a 404 rather than a form.
-      if (path === "/data.json") return text("Not found", 404);
+      if (path === "/data.json" || path === "/live.json") return text("Not found", 404);
       return html(loginPage(base), 401);
     }
 
@@ -229,6 +435,39 @@ export default {
         "키는 Supabase 대시보드 → Project Settings → API keys → service_role.\n",
         503,
       );
+    }
+
+    // The 라이브 tab polls this every 15 s — its own small RPC, never the whole
+    // admin_raw() read the page itself is built from.
+    if (path === "/live.json") {
+      const [r, ph] = await Promise.all([
+        fetch(`${env.SUPABASE_URL}/rest/v1/rpc/admin_live`, {
+          method: "POST",
+          headers: {
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        }),
+        posthogPresence(env),
+      ]);
+      if (!r.ok) {
+        return new Response(JSON.stringify({ error: `admin_live ${r.status}` }), {
+          status: 502,
+          headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
+        });
+      }
+      const live = await r.json() as Record<string, unknown>;
+      // The timeline needs every row of the day, not admin_live's last 12 per
+      // person — a call alone writes a talk tick every 15 s.
+      const events = await dayLedger(env).catch((e) => {
+        console.log(`dayLedger: ${(e as Error).message}`);
+        return [];
+      });
+      return new Response(JSON.stringify({ ...live, events, ph: ph.rows, phError: ph.error ?? null }), {
+        headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
+      });
     }
 
     let data: unknown;
@@ -246,7 +485,7 @@ export default {
 
     const page = (shell as unknown as string)
       .replace("__ADMIN_DATA__", () => JSON.stringify(data))
-      .replace("__ADMIN_BASE__", base);
+      .replaceAll("__ADMIN_BASE__", base);
     return html(page);
   },
 };

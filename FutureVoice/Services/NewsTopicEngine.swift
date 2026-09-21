@@ -58,6 +58,7 @@ enum NewsTopicEngine {
         let response: ResponsePayload = try await SupabaseProvider.shared.functions.invoke(
             "news-topics",
             options: FunctionInvokeOptions(
+                headers: try await SupabaseProvider.authorizedHeaders(),
                 body: RequestPayload(categories: interests, language: targetLanguage,
                                      refresh: refresh)
             )
