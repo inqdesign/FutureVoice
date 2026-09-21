@@ -216,7 +216,7 @@ struct PracticeTab: View {
                 ConversationDetailView(session: talk.session)
                     .environmentObject(appState)
             }
-            .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .sheet(isPresented: $showingPaywall) { PaywallView(source: "practice") }
             .fullScreenCover(item: $talkLaunch, onDismiss: reload) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
                                  initialOrigin: .scenario, initialScenarioId: s.id)

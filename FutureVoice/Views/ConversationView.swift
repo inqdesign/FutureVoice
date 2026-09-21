@@ -85,15 +85,14 @@ struct ConversationView: View {
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
-    /// The plans are offered ONCE, right after the first call's summary — not
-    /// before the call (see `20260918100000_first_call_is_free`). Launch week:
-    /// every one of the 14 people who stopped had cloned their voice and
-    /// opened Talk, and left inside two minutes without buying, having never
-    /// heard the fluent self answer them. The flag is set when the pitch is
-    /// DECIDED, so a declined offer never comes back on the next call.
-    @AppStorage("futurevoice.paywall.afterFirstCall") private var firstCallPitchShown = false
     /// The call screen is waiting on that pitch to close before it exits.
     @State private var closeAfterPaywall = false
+    /// Which of this screen's doors opened the paywall — `PaywallView`'s
+    /// `source`, set beside every `showingPaywall = true`.
+    @State private var paywallSource = "talk"
+    /// Set by Done so the summary sheet's dismiss can tell Done from a swipe
+    /// (`talk_summary_closed`). Both then take the same exit.
+    @State private var summaryClosedByDone = false
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -802,9 +801,22 @@ struct ConversationView: View {
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
             }
-            .sheet(item: summaryBinding) { s in
+            .sheet(item: summaryBinding, onDismiss: {
+                let how = summaryClosedByDone ? "done" : "swipe"
+                summaryClosedByDone = false
+                let props = ["how": how, "free_call_spent": freeCallSpent ? "1" : "0"]
+                Telemetry.log("talk_summary_closed", props)
+                Analytics.capture("talk_summary_closed", props)
+                // A swipe is the same exit as Done. It used to leave the
+                // learner on a finished call screen — and skip the plans a
+                // spent free pool is owed.
+                if how == "swipe" { endAndClose() }
+            }) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
-                             onDone: endAndClose)
+                             onDone: {
+                                 summaryClosedByDone = true
+                                 endAndClose()
+                             })
                     .environmentObject(appState)
             }
             // The call dropped mid-talk. Two honest choices, and the
@@ -828,7 +840,9 @@ struct ConversationView: View {
                                 : explain("Something went wrong"),
                    isPresented: errorBinding) {
                 if outOfCredits {
-                    Button("See plans") { error = nil; showingPaywall = true }
+                    Button("See plans") {
+                        error = nil; paywallSource = "talk_out_of_time"; showingPaywall = true
+                    }
                 }
                 Button("OK") { error = nil }
             } message: {
@@ -845,6 +859,7 @@ struct ConversationView: View {
                     // tier ids, so the old name silently preselected nothing and left
                     // the sheet on the plan they already hold.
                     paywallTier = "plus"
+                    paywallSource = "talk_spent_month"
                     showingPaywall = true
                 case .review:  leaveForPractice()
                 case nil:      break
@@ -879,7 +894,7 @@ struct ConversationView: View {
                 // Reached here from an out-of-credits failure → no trial pitch.
                 // Opened FROM the spent-day sheet it carries the tier that
                 // sheet named, so "Go Unlimited" doesn't land on Daily.
-                PaywallView(preselectTier: paywallTier)
+                PaywallView(source: paywallSource, preselectTier: paywallTier)
             }
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
@@ -1159,7 +1174,10 @@ struct ConversationView: View {
                     } else if let fid = failedTurnId, turns.last?.id == fid {
                         RetryReplyRow(outOfCredits: outOfCredits,
                                       onRetry: retryReply,
-                                      onGetCredits: { showingPaywall = true })
+                                      onGetCredits: {
+                                          paywallSource = "talk_retry_row"
+                                          showingPaywall = true
+                                      })
                             .id("retry-row")
                             .transition(.opacity)
                     }
@@ -3560,6 +3578,7 @@ struct ConversationView: View {
             meter.stop()
             CallNowPlaying.end()
             closeAfterPaywall = true
+            paywallSource = "talk_wall_before_speaking"
             showingPaywall = true
             return
         }
@@ -3745,6 +3764,8 @@ struct ConversationView: View {
 
     private func startNewSession() {
         failedTurnId = nil
+        // Closed by code, not a swipe — the sheet's onDismiss must not exit.
+        if summary != nil { summaryClosedByDone = true }
         summary = nil
         sessionId = UUID()
         sessionStartedAt = Date()
@@ -3772,28 +3793,45 @@ struct ConversationView: View {
         summary = nil
         phoneCallActive = false
         cancelSilenceTimer()
-        // They have now had the conversation the plans are for. This is the
-        // one place the app asks, and it asks at most once per install.
-        // A call the free pool ended asks again even if the pitch was made
-        // once: this time it is the answer to "what now", not an offer.
-        if !firstCallPitchShown || freeCallSpent {
-            firstCallPitchShown = true
-            Task {
-                // Forced: they just spent minutes, so a cached snapshot from
-                // before the call would answer about a different account.
-                let account = await BillingGate.shared.snapshot(force: true)
-                guard let account, !account.isEntitled, !account.unlimited else {
-                    // Already paying, or we couldn't ask — never hold the
-                    // exit on a question we have no answer to.
-                    endAndCloseAfterPitch()
-                    return
-                }
-                closeAfterPaywall = true
-                showingPaywall = true
-            }
+        // The plans are offered when the free minutes are SPENT, never while
+        // any are left (2026-09-21: ten free minutes replaced the trial, and
+        // the welcome sheet promises the decision comes after them). "Spent"
+        // is the pool ending this call, or less than a call's minimum left
+        // after it — the next tap could not open a call either way.
+        if let cached = BillingGate.shared.account, cached.isEntitled || cached.unlimited {
+            // Entitlement doesn't lapse mid-call; no round trip on every exit.
+            logPostCallPitch("skipped_entitled")
+            endAndCloseAfterPitch()
             return
         }
-        endAndCloseAfterPitch()
+        Task {
+            // Forced: they just spent minutes, so a cached snapshot from
+            // before the call would answer about a different account.
+            let account = await BillingGate.shared.snapshot(force: true)
+            guard let account, !account.isEntitled, !account.unlimited else {
+                // Already paying, or we couldn't ask — never hold the
+                // exit on a question we have no answer to.
+                logPostCallPitch(account == nil ? "skipped_lookup_failed"
+                                                : "skipped_entitled")
+                endAndCloseAfterPitch()
+                return
+            }
+            guard freeCallSpent || account.needsSubscription else {
+                logPostCallPitch("skipped_minutes_left")
+                endAndCloseAfterPitch()
+                return
+            }
+            logPostCallPitch("shown")
+            closeAfterPaywall = true
+            paywallSource = freeCallSpent ? "after_free_call_spent" : "after_free_minutes_low"
+            showingPaywall = true
+        }
+    }
+
+    private func logPostCallPitch(_ decision: String) {
+        let props = ["decision": decision, "free_call_spent": freeCallSpent ? "1" : "0"]
+        Telemetry.log("post_call_pitch", props)
+        Analytics.capture("post_call_pitch", props)
     }
 
     /// Everything the end of a call does once the plans question is settled.

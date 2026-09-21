@@ -25,7 +25,16 @@ struct PaywallView: View {
     /// Light — the plan they already have — selected.
     private let preselectTier: String?
 
-    init(onClose: (() -> Void)? = nil, preselectTier: String? = nil) {
+    /// Where this sheet was opened from ("onboarding", "after_first_call", …),
+    /// stamped on every `paywall_*` event. Until 2026-09-21 the paywall logged
+    /// nothing at all, so "saw the plans and said no" and "never saw them"
+    /// read identically — which is how onboarding's paywall skipped itself
+    /// for every new account for days without a single row saying so.
+    private let source: String
+
+    init(source: String = "other", onClose: (() -> Void)? = nil,
+         preselectTier: String? = nil) {
+        self.source = source
         self.onClose = onClose
         self.preselectTier = preselectTier
     }
@@ -48,12 +57,37 @@ struct PaywallView: View {
     /// store page inside itself, and a blank sheet is all the learner sees
     /// meanwhile). The button says it is opening so the tap isn't judged dead.
     @State private var openingCodeSheet = false
+    /// When the first real step was drawn — nil while `.resolving`, so a
+    /// sheet closed before it showed anything reports `seen: 0`.
+    @State private var shownAt: Date?
+    @State private var furthestStep: Step = .resolving
+    @State private var didPurchase = false
 
     /// `.resolving` is the state before StoreKit and the account snapshot
     /// have answered. Without it the sheet opened on `.pitch` and jumped to
     /// `.plans` a beat later — a "Try for free" pitch flashed at people who
     /// already pay us.
-    enum Step { case resolving, pitch, timeline, plans }
+    enum Step {
+        case resolving, pitch, timeline, plans
+
+        /// Telemetry label, and the order the funnel walks in.
+        var name: String {
+            switch self {
+            case .resolving: return "resolving"
+            case .pitch:     return "pitch"
+            case .timeline:  return "timeline"
+            case .plans:     return "plans"
+            }
+        }
+        var rank: Int {
+            switch self {
+            case .resolving: return 0
+            case .pitch:     return 1
+            case .timeline:  return 2
+            case .plans:     return 3
+            }
+        }
+    }
 
     enum PlanPeriod: String, CaseIterable, Identifiable {
         case weekly, monthly, annual
@@ -181,6 +215,28 @@ struct PaywallView: View {
                 step = .plans
             }
             #endif
+            shownAt = Date()
+            track("paywall_shown", [
+                "trial_eligible": showsTrial ? "1" : "0",
+                "subscriber": isSubscriber ? "1" : "0",
+                "products": String(store.options.filter { $0.product != nil }.count),
+            ])
+        }
+        .onChange(of: step) { old, new in
+            // The first step is `paywall_shown`; this is every move after it.
+            guard old != .resolving else { furthestStep = new; return }
+            if new.rank > furthestStep.rank { furthestStep = new }
+            track("paywall_step", ["from": old.name])
+        }
+        .onDisappear {
+            // Every exit lands here — the close button, a swipe, the
+            // purchase alert's Done, onboarding moving on.
+            let seen = shownAt.map { Int(Date().timeIntervalSince($0)) } ?? 0
+            track("paywall_closed", [
+                "outcome": didPurchase ? "purchased" : "dismissed",
+                "furthest": furthestStep.name,
+                "seen_s": String(seen),
+            ])
         }
         .onChange(of: store.purchaseState) { _, state in
             if state == .purchased, showsTrial {
@@ -259,6 +315,7 @@ struct PaywallView: View {
             if step == .plans {
                 HStack(spacing: 18) {
                     Button(explain("Restore purchases")) {
+                        track("paywall_restore_tapped")
                         Task { await store.restore() }
                     }
                     // Beta testers and the waitlist were mailed one-time
@@ -267,6 +324,7 @@ struct PaywallView: View {
                     // person who opened the app first.
                     Button {
                         guard !openingCodeSheet else { return }
+                        track("paywall_code_tapped")
                         openingCodeSheet = true
                         Task {
                             await StoreKitService.presentOfferCodeSheet()
@@ -813,7 +871,29 @@ struct PaywallView: View {
 
     private func purchaseSelected() async {
         guard let opt = selectedOption else { return }
+        let plan = ["plan": opt.id, "trial": showsTrial ? "1" : "0"]
+        track("paywall_purchase_tapped", plan)
         await store.purchase(opt)
+        // `.idle` after a purchase is Apple's sheet cancelled (or an
+        // unknown result StoreKit may add later) — the one outcome with no
+        // state of its own.
+        let outcome: String
+        switch store.purchaseState {
+        case .purchased: outcome = "purchased"; didPurchase = true
+        case .failed:    outcome = "failed"
+        case .idle, .purchasing: outcome = "cancelled"
+        }
+        track("paywall_purchase_result", plan.merging(["outcome": outcome]) { $1 })
+    }
+
+    /// One event, both sinks: PostHog for the funnel, `client_events` so a
+    /// billing question can be answered next to `user_subscriptions` in SQL.
+    private func track(_ event: String, _ extra: [String: String] = [:]) {
+        var props = extra
+        props["source"] = source
+        props["step"] = step.name
+        Telemetry.log(event, props)
+        Analytics.capture(event, props)
     }
 
     /// Honor the timeline promise: a local reminder two days before the
@@ -857,7 +937,7 @@ struct OnboardingPaywallView: View {
     var body: some View {
         Group {
             if shows == true {
-                PaywallView(onClose: { onboarded = true })
+                PaywallView(source: "onboarding", onClose: { onboarded = true })
             } else {
                 // The same blank hold RootView's auth gate uses: never a
                 // flash of a pitch at someone who isn't going to be shown one.
@@ -871,7 +951,24 @@ struct OnboardingPaywallView: View {
             // Couldn't ask, or nothing to sell — step aside for good. A
             // failed lookup must not park the learner on a paywall forever;
             // the first paid tap asks the server again anyway.
-            if !blocked { onboarded = true }
+            if !blocked {
+                onboarded = true
+                // The skip is silent on screen, so it has to be loud here: a
+                // free-call grant makes EVERY new account take this branch.
+                let account = await BillingGate.shared.snapshot()
+                let reason: String
+                if let account {
+                    reason = account.isEntitled ? "entitled"
+                        : account.unlimited ? "unlimited"
+                        : account.secondsBalance > 0 ? "balance" : "unknown"
+                } else {
+                    reason = "lookup_failed"
+                }
+                let props = ["reason": reason,
+                             "balance_s": String(account?.secondsBalance ?? -1)]
+                Telemetry.log("onboarding_paywall_skipped", props)
+                Analytics.capture("onboarding_paywall_skipped", props)
+            }
         }
     }
 }

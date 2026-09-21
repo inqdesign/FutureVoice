@@ -163,7 +163,7 @@ struct ConversationHome: View {
             // from cached audio instead of blocking on live calls.
             .task { await prewarmFreeTalkOpenerAudio() }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
-                PaywallView()
+                PaywallView(source: "talk_home")
             }
             .sheet(isPresented: $showingProfile) {
                 MeTab().environmentObject(appState).environmentObject(auth)

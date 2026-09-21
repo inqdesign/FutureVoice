@@ -559,7 +559,7 @@ struct FindPersonCard: View {
             .padding(.vertical, 10)
             .background(.bar)
         }
-        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .sheet(isPresented: $showingPaywall) { PaywallView(source: "find_people") }
     }
 
     /// First Talk/Preview is the moment you "meet" them — persist the person

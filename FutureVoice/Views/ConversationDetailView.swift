@@ -153,7 +153,7 @@ struct ConversationDetailView: View {
             Text(regenerateError ?? "")
         }
         .sheet(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(source: "talk_book")
         }
         .confirmationDialog("Delete this talk?", isPresented: $showingDeleteConfirm,
                             titleVisibility: .visible) {
@@ -1164,7 +1164,7 @@ struct TalkTranscriptView: View {
             ConversationView(resumeSession: session)
                 .environmentObject(appState)
         }
-        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .sheet(isPresented: $showingPaywall) { PaywallView(source: "talk_book") }
         .sheet(item: $wordSheet) { item in
             WordSheet(initialWord: item.word, words: item.words)
                 .environmentObject(appState)

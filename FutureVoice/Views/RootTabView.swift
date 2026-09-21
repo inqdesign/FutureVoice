@@ -45,6 +45,13 @@ struct RootTabView: View {
     /// The one look at the mirrored Find-people intro before it is published
     /// — raised on the Watch tab, where the pool is met.
     @State private var showingIntroPreview = false
+    /// The first-visit welcome and the minutes it announces. Two values so the
+    /// number doesn't blank out while the sheet animates away.
+    @State private var showingWelcome = false
+    @State private var welcomeMinutes = 0
+    /// "Start talking" on the welcome — the call opens once the sheet is gone,
+    /// so the ring's morph never plays underneath a sheet.
+    @State private var startTalkAfterWelcome = false
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -134,13 +141,35 @@ struct RootTabView: View {
         // Presented from onAppear rather than a computed binding so a swipe-away
         // is honoured for this run and simply asks again next launch.
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
-        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .sheet(isPresented: $showingPaywall) { PaywallView(source: "free_talk") }
+        .sheet(isPresented: $showingWelcome, onDismiss: {
+                   Analytics.capture("free_talk_welcome_closed",
+                                     ["started": startTalkAfterWelcome])
+                   if startTalkAfterWelcome {
+                       startTalkAfterWelcome = false
+                       selection = .home
+                       startFreeTalk()
+                   }
+               }) {
+            FreeTalkWelcomeSheet(minutes: welcomeMinutes) {
+                startTalkAfterWelcome = true
+            }
+        }
         .onAppear {
             // Warm the billing snapshot so the first paid tap answers from
             // memory instead of holding the call button on a round trip.
             BillingGate.shared.warm()
             if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
                 showingAgeCheck = true
+            } else {
+                Task {
+                    if let minutes = await FreeTalkWelcome.minutesToAnnounce() {
+                        FreeTalkWelcome.markShown()
+                        Analytics.capture("free_talk_welcome_shown", ["minutes": minutes])
+                        welcomeMinutes = minutes
+                        showingWelcome = true
+                    }
+                }
             }
             // Populate the home-screen widgets on first entry. The scenePhase
             // refresh only fires on background↔active transitions, so a cold

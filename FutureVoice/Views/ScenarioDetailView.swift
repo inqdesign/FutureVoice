@@ -74,7 +74,7 @@ struct ScenarioDetailView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
         .bookExport(exporter)
-        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .sheet(isPresented: $showingPaywall) { PaywallView(source: "scenario_book") }
         .fullScreenCover(isPresented: $talkPresented, onDismiss: refreshMastery) {
             if let s = scenario {
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)

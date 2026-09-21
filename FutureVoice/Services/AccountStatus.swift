@@ -207,8 +207,10 @@ struct AccountStatus {
         secondsRemaining / 60
     }
 
-    /// The free tier's full tank — the signup grant (3960 s = 66 min).
-    static let freeGrantSeconds = 3960
+    /// The free tier's full tank — the signup grant (600 s = 10 min, set by
+    /// `handle_new_user_credits`; was the beta's 3960 s, which drew a new
+    /// account's ring 85% spent on day one).
+    static let freeGrantSeconds = 600
     /// The admin account's tank: the server auto-resets it to 6600 s
     /// (110 min) when it would overdraw, so that's what "full" means there.
     static let adminResetSeconds = 6600

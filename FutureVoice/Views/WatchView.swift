@@ -102,7 +102,7 @@ struct WatchSetupSheet: View {
                 }
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+                PaywallView(source: "watch")
             }
             .navigationTitle("Watch")
             .navigationBarTitleDisplayMode(.inline)
@@ -445,7 +445,7 @@ struct WatchView: View {
             capSheet
         }
         .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
-            PaywallView(preselectTier: paywallTier)
+            PaywallView(source: "watch_spent_month", preselectTier: paywallTier)
         }
         .sheet(item: $bridge) { b in
             ShadowDrillView(turn: b.turn, targetLanguage: appState.targetLanguage)

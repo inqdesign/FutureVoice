@@ -276,7 +276,7 @@ struct MeTab: View {
                 Task { account = await AccountStatus.fetch() }
             }) {
                 // Trial pitch only while the free credits last.
-                PaywallView()
+                PaywallView(source: "me")
             }
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)

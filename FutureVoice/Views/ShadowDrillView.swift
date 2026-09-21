@@ -162,7 +162,7 @@ struct ShadowDrillView: View {
                 Text(error ?? "")
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+                PaywallView(source: "shadow")
             }
             .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
                 MicChoiceSheet { _ in }

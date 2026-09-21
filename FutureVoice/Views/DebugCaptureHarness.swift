@@ -753,6 +753,9 @@ enum DebugCapture {
             once("deepen") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(DeepenCaptureHost(expanded: name == "deepen-full")
                 .environmentObject(appState))
+        case "free-minutes-welcome":
+            // The first-visit free-minutes welcome over the Talk home.
+            return AnyView(WelcomeCaptureHost().environmentObject(appState))
         case "paywall", "paywall-plans":
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
@@ -1528,6 +1531,20 @@ private struct UpdateCaptureHost: View {
                                   notes: required ? nil : Self.releaseNotes,
                                   required: required),
                     onDismiss: {})
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
+            }
+    }
+}
+
+private struct WelcomeCaptureHost: View {
+    @State private var showing = false
+
+    var body: some View {
+        ConversationHome()
+            .sheet(isPresented: $showing) {
+                FreeTalkWelcomeSheet(minutes: 10) {}
             }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
