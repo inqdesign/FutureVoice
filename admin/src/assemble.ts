@@ -12,7 +12,13 @@
 // merely marked. Only the synthetic device-test account is filtered, and that
 // one is genuinely not a person.
 const OWNER_ID = "72bcaa7e-3dd2-4364-b197-078ba59c1ce4";
-const TEST_IDS = new Set(["ecd78251-49c4-4e18-a156-6fbe90fd6e3b"]);
+const TEST_IDS = new Set([
+  "ecd78251-49c4-4e18-a156-6fbe90fd6e3b",
+  // The owner's own Google test accounts (2026-09-21) — signed up like a
+  // stranger to walk the onboarding and the free first call.
+  "c5a85f25-a631-47c5-b32b-fb5bc89c551e",
+  "5692cfc2-13ec-4f7e-a3bc-31daee02e28f",
+]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
@@ -65,8 +71,11 @@ export function assemble(raw: any) {
   const idx = (r: any) => uidx.get(r.id);
   const keep = (r: any) => uidx.has(r.id) && dayIdx.has(r.d);
 
+  // [user, day, rows, turns, talk secs, learner-speech secs | null]. The last
+  // is null wherever no tick measured it (before 2026-09-21, or the classic
+  // path) — never 0, which would claim they said nothing.
   const cells = raw.cells.filter(keep).map((r: any) =>
-    [idx(r), dayIdx.get(r.d), r.rows, r.turns, r.secs]);
+    [idx(r), dayIdx.get(r.d), r.rows, r.turns, r.secs, r.spoke ?? null]);
   const sceneCells = raw.scenes.filter(keep).map((r: any) =>
     [idx(r), dayIdx.get(r.d), r.n]);
   const sessions = raw.sessions.filter(keep).map((r: any) =>
@@ -76,10 +85,16 @@ export function assemble(raw: any) {
     .map((r: any) => [dayIdx.get(r.d), r.n]);
 
   // ---------------------------------------------------------------- users
-  const agg = new Map<number, { days: Set<number>; turns: number; secs: number }>();
+  const agg = new Map<number, { days: Set<number>; turns: number; secs: number;
+                                spoke: number | null; spokeOf: number }>();
   for (const c of cells) {
-    const a = agg.get(c[0]) ?? { days: new Set<number>(), turns: 0, secs: 0 };
+    const a = agg.get(c[0]) ?? { days: new Set<number>(), turns: 0, secs: 0,
+                                 spoke: null, spokeOf: 0 };
     a.days.add(c[1]); a.turns += c[3]; a.secs += c[4];
+    // `spokeOf` is the talk time on the SAME days speech was measured, so a
+    // share is never learner seconds from one week over billed seconds from
+    // three.
+    if (c[5] !== null) { a.spoke = (a.spoke ?? 0) + c[5]; a.spokeOf += c[4]; }
     agg.set(c[0], a);
   }
   const sceneTot = new Map<number, number>();
@@ -91,7 +106,8 @@ export function assemble(raw: any) {
     raw.langs.map((l: any) => [l.id, l.langs]));
 
   const users = raw.users.map((u: any, i: number) => {
-    const a = agg.get(i) ?? { days: new Set<number>(), turns: 0, secs: 0 };
+    const a = agg.get(i) ?? { days: new Set<number>(), turns: 0, secs: 0,
+                              spoke: null, spokeOf: 0 };
     const ds = [...a.days].sort((x, y) => x - y);
     const rv = raw.reviews
       .filter((r: any) => r.id === u.id)
@@ -116,6 +132,7 @@ export function assemble(raw: any) {
       firstActive: ds.length ? days[ds[0]] : null,
       lastActive: ds.length ? days[ds[ds.length - 1]] : null,
       turns: a.turns, talkSecs: a.secs,
+      spokeSecs: a.spoke, spokeOfSecs: a.spokeOf,
       talkSessions: sessCt.get(i) ?? 0, scenes: sceneTot.get(i) ?? 0,
       reviewCount: rv.length, langs: langByUser.get(u.id) ?? [],
       name: u.display_name, realEmail: u.real_email,
@@ -169,6 +186,15 @@ export function assemble(raw: any) {
   const setup = withIdx(raw.setup);
   // Talk seconds by UTC hour-of-day, per user. The page rotates them.
   const hours = withIdx(raw.hours);
+  // One row per (user, UTC day, UTC hour): [user idx, "YYYY-MM-DD", hour,
+  // talk seconds, server calls]. The page folds it into weekdays, weeks and
+  // months — in the READER's zone, which is why the hour is still here and
+  // why nothing is pre-bucketed by day. Absent on a Worker talking to a
+  // database that has not had the day_hours migration yet, and the page
+  // falls back to the launch-window cells.
+  const dayHours = (raw.day_hours ?? [])
+    .filter((r: any) => uidx.has(r.id))
+    .map((r: any) => [uidx.get(r.id), r.d, r.h, r.secs, r.events, r.spoke ?? null]);
   // The last 8 days, one row per ledger row: [user idx, epoch ms, talk
   // seconds or -1 for a non-talk row]. Same seconds rule as
   // `talk_row_seconds`: metadata.seconds when present, else a negative delta.
@@ -311,6 +337,7 @@ export function assemble(raw: any) {
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
     rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours, recentActivity,
+    dayHours,
     prices: MONTHLY_PRICE,
   };
 }

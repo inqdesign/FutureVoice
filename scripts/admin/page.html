@@ -165,6 +165,9 @@ h3{font-size:14px; font-weight:600; margin:0 0 6px}
   background:var(--s1); min-width:2px}
 .bars .val{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums;
   white-space:nowrap; min-width:92px}
+/* 요일·주·달 막대는 값이 길다(합계 · 평균 · 사람 수). 좁은 화면에서
+   가로로 밀지 말고 두 줄로 내려가게 둔다. */
+#dow .val, #span .val{white-space:normal; min-width:104px; text-align:right; line-height:1.35}
 
 /* --- tables ------------------------------------------------------------- */
 table{width:100%; border-collapse:collapse; font-size:13.5px}
@@ -265,6 +268,7 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
   margin:-2.5px 0 0 -2.5px; border-radius:50%; background:var(--seq4)}
 .hm .num{text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2); padding-left:8px}
 .hm .num b{color:var(--ink); font-weight:600}
+.hm .num .spk{display:block; font-size:10.5px; color:var(--s3); white-space:nowrap}
 .hm .pl{padding-left:14px; white-space:nowrap; font-size:11.5px; color:var(--ink-2);
   display:flex; align-items:center; gap:6px}
 .hm .ids{padding-left:14px; min-width:0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -273,6 +277,22 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
   cursor:text}
 .hm .ids span:hover{color:var(--ink-2)}
 .hm .ids i{font-style:normal; font-family:inherit; opacity:.7; margin-right:4px; user-select:none}
+/* 구독 중 / 체험 중 / 그 외 — 세 덩어리는 읽는 질문이 다르다. 구독이 맨 위고,
+   그 줄은 배경으로도 띄운다: 스무 줄 속의 점 하나는 못 찾는다. */
+.hm .g{display:flex; align-items:baseline; gap:7px; padding:0 6px; margin:18px 0 5px;
+  font-size:12px; font-weight:700; color:var(--ink-2)}
+.hm .g em{font-style:normal; font-weight:400; color:var(--muted)}
+/* `paying`, not `sub` — 페이지에 이미 전역 `.sub`(설명 문단)가 있어서
+   같은 이름을 쓰면 줄마다 max-width와 아래 여백이 붙는다. */
+.hm .r.paying{background:rgba(12,163,12,.10); box-shadow:inset 2.5px 0 0 var(--good)}
+.hm .r.paying:hover{background:rgba(12,163,12,.17)}
+/* 체험 중에 자동갱신을 껐는데, 끈 날 이후에도 다시 온 사람. 줄 색은 이름 앞
+   점(체험 취소 = --warn)과 같은 금색. 금색 밑줄이 있는 칸이 끈 날이라, 그
+   오른쪽에 불이 켜져 있으면 "끄고도 왔다"가 그대로 보인다. */
+.hm .r.lapsing{background:rgba(201,138,6,.11); box-shadow:inset 2.5px 0 0 var(--warn)}
+.hm .r.lapsing:hover{background:rgba(201,138,6,.18)}
+.hm .c.cx{box-shadow:inset 0 -3px 0 var(--warn)}
+.hm .pl .plsub{display:block; font-size:10.5px; color:var(--muted); line-height:1.3}
 
 /* the per-hour heatmap (renderHoursByUser) still draws with these */
 .hm-row{display:flex; align-items:center; gap:8px}
@@ -463,7 +483,10 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
   줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
   말은 안 했지만 앱은 쓴 날은 <b>가장 옅은 칸에 점</b>이 찍혀요 — Watch 장면이나 복습만 한 날이에요.
-  테두리 칸은 <b>가입한 날</b>이에요. 이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
+  테두리 칸은 <b>가입한 날</b>이에요. 줄은 <b>구독 중 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 네 묶음이고,
+  <b>구독 중인 줄은 초록</b>(해지 예정도 기간이 끝날 때까진 구독 중), <b>체험 중에 자동갱신을 끄고도 끈 날 이후에
+  다시 온 사람은 금색</b>이에요. 금색 밑줄 칸이 자동갱신을 끈 날이라, 그 오른쪽에 불이 켜져 있으면 끄고도 온 거예요.
+  이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
   맨 오른쪽은 <b>유저 ID</b>와 <b>ElevenLabs 보이스 ID</b>예요 — 클릭 한 번에 전체가 선택돼요.</p>
   <div class="card scroll" id="heatmap"></div>
 </section>
@@ -483,6 +506,26 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   진해져요 — 많이 쓴 사람과 적게 쓴 사람의 패턴을 같은 눈으로 보려고요. 칸에 올리면 그 시간에 쓴 양과
   <b>며칠</b> 그 시간에 왔는지가 나와요. 오른쪽은 전체 양과 주로 쓰는 시간대예요.</p>
   <div class="card scroll" id="hoursByUser"></div>
+</section>
+
+<section data-tab="funnel" hidden>
+  <h2>무슨 요일에 쓰나</h2>
+  <p class="sub">같은 기록을 요일로 모았어요. 막대는 <b>그 요일 전부를 합한 양</b>이고, 괄호 안은
+  <b>그 요일 하루 평균</b>이에요 — 창 안에 토요일이 여섯 번, 일요일이 다섯 번 들어 있으면 합계만으로는
+  토요일이 이겨요. 오른쪽 숫자는 그 요일에 뭔가를 한 사람 수(중복 제외)고요.
+  위의 <b>앱 사용 / 통화 시간</b> 토글을 같이 따라가요.</p>
+  <div class="card bars" id="dow"></div>
+</section>
+
+<section data-tab="funnel" hidden>
+  <h2>주마다, 달마다 얼마나 말하나</h2>
+  <p class="sub">요금이 매겨지는 <b>통화 시간</b>만이에요 — Watch 장면이나 복습은 안 들어가요.
+  통화 시간은 <b>미래의 나가 말하는 시간 + 답을 만드는 시간 + 본인이 말하는 시간</b>이고,
+  <b>말함</b>은 그중 본인 목소리가 들린 시간만이에요. 9/21부터 기록돼서 그 전 기간은 비어 있어요.
+  주는 <b>월요일에 시작</b>하고, 아직 안 끝난 주·달은 <b>진행 중</b>으로 표시돼요.
+  괄호 안은 그 기간에 말한 사람 한 명당 평균이에요.</p>
+  <div class="seg" id="spanPick" role="group" aria-label="주 또는 달"></div>
+  <div class="card bars" id="span"></div>
 </section>
 
 <section data-tab="funnel" hidden>
@@ -523,6 +566,16 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   둘은 다를 수 있어요 — 고르고 아직 말하지 않은 사람이 있으니까요.</p>
   <div class="card bars" id="langs"></div>
   <p class="sub" style="margin-top:10px" id="langsNote"></p>
+</section>
+
+<section data-tab="people" hidden>
+  <h2>출시 이후 가입한 사람, 기간별로</h2>
+  <p class="sub">9/12 출시 이후 가입한 사람만이에요. <b>통화</b>는 요금이 매겨지는 대화 시간(미래의 나가 말하고 답을
+  만드는 시간 포함), <b>말함</b>은 그중 본인 목소리가 들린 시간과 그 비율이에요(9/21부터 기록). <b>턴</b>은 미래의 나가
+  대답한 횟수, <b>장면</b>은 Watch 장면을 튼 횟수예요. 기간과 날짜는 서버의 UTC 날짜 기준이에요.
+  <span class="muted">앱을 켜 둔 학습 시간은 폰에만 기록돼서 여기엔 없어요.</span></p>
+  <div class="seg" id="totalsPeriod" role="group" aria-label="기간"></div>
+  <div class="card scroll"><table id="totalsTable"></table></div>
 </section>
 
 <section data-tab="people" hidden>
@@ -622,6 +675,15 @@ const num = n => Number(n||0).toLocaleString('ko-KR');
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const usd = (n,d=2) => '$' + Number(n||0).toFixed(d);
 const fmtD = s => { const [,m,d]=String(s).split('-'); return `${+m}/${+d}`; };
+/** "말함 4분 · 33%" — the learner's own voice inside the billed talk time.
+ *  Billed time is the fluent self speaking + a reply being written + the
+ *  learner speaking; this is the last of those alone, as the gateway heard it.
+ *  '' when no tick measured it (before 9/21, or the classic path), so the
+ *  caller prints nothing rather than a 0 that would say they were silent.
+ *  `of` is the talk time on the days speech WAS measured — the share never
+ *  divides one window by another. */
+const spokeText = (spoke, of, short=false) => spoke == null ? ''
+  : `말함 ${fmtMin(spoke)}${!short && of ? ` · ${Math.round(spoke/of*100)}%` : ''}`;
 const fmtDate = s => { const [,m,d]=String(s).split('-'); return `${+m}월 ${+d}일`; };
 const fmtMin = secs => secs>=3600 ? `${Math.floor(secs/3600)}시간 ${Math.round(secs%3600/60)}분`
   : secs>=60 ? `${Math.round(secs/60)}분` : `${secs||0}초`;
@@ -769,6 +831,35 @@ const badge = u => u.owner ? '<span class="ownchip">본인</span>'
   : u.dev ? '<span class="devchip">TEST</span>' : '';
 const stateOf = u => u.subState || ({active:'paid', trialing:'trial'}[u.subStatus] || u.subStatus || 'none');
 const isSale = u => stateOf(u)!=='none' && stateOf(u)!=='comp' && u.subSource!=='comp';
+/** 체험 중 — 자동갱신을 꺼둔 체험도 기간이 끝나기 전까지는 체험이다. 되살릴지
+ *  말지가 아직 남아 있으니 '끝난 사람'으로 묶으면 그 질문이 사라진다. */
+const isTrialing = u => { const k = stateOf(u); return k==='trial' || k==='trial_cancelled'; };
+/** 돈이 들어오고 있는 사람. 해지 예정도 기간이 끝날 때까지는 구독 중이고,
+ *  무료 제공(comp)은 매출이 아니라 뺀다 — `isSale`과 같은 기준. */
+const isSubscriber = u => { const k = stateOf(u); return (k==='paid' || k==='cancelling') && u.subSource!=='comp'; };
+/** The UTC day a trial's auto-renew was switched off — the LATEST switch-off,
+ *  since a trial can go off, on and off again — or null. */
+const cancelDayOf = u => { const ev = cancelEventOf(u.idx); return ev?.at ? String(ev.at).slice(0,10) : null; };
+/** Days a trial-cancelled learner used the app AFTER the day they switched
+ *  renewal off. That day itself doesn't count: most switch-offs happen
+ *  mid-session, and finishing the session is not coming back. */
+function daysBackAfterCancel(u){
+  if(stateOf(u) !== 'trial_cancelled') return 0;
+  const cd = cancelDayOf(u); if(!cd) return 0;
+  let n = 0;
+  for(const [uu,d,rows,t,secs] of DATA.cells)
+    if(uu === u.idx && DATA.days[d] > cd && (rows > 0 || secs > 0)) n++;
+  return n;
+}
+/** When the trial ends, in the reader's zone: "오늘 끝남", "내일 끝남", "3일 남음". */
+function trialEndLabel(u){
+  if(!u.trialEndsAt) return '';
+  const end = localDay(u.trialEndsAt);
+  if(end < TODAY) return '끝남';
+  if(end === TODAY) return '오늘 끝남';
+  const diff = Math.round((Date.parse(end) - Date.parse(TODAY)) / 86400000);
+  return diff === 1 ? '내일 끝남' : `${diff}일 남음`;
+}
 const subChip = u => {
   const k = stateOf(u), st = SUB_KO[k];
   if(!st) return '<span class="chip">플랜 없음</span>';
@@ -778,6 +869,19 @@ const subChip = u => {
   return `<span class="chip"><span class="dot" style="background:${st.color}"></span>`
        + `${PLAN_KO[u.plan]||u.plan} · ${st.ko}${tail?`<span class="tail">${tail}</span>`:''}</span>`;
 };
+/** The same state as `subChip`, small enough to sit in a heatmap row: a
+ *  coloured dot (hover for the plan and the date) plus a two-word label. */
+const subDot = u => {
+  const k = stateOf(u), st = SUB_KO[k];
+  const label = st ? `${PLAN_KO[u.plan]||u.plan||''} · ${st.ko}` : '플랜 없음';
+  const tail = (k==='trial'||k==='trial_cancelled') && u.trialEndsAt
+      ? ` · ${fmtD(u.trialEndsAt.slice(0,10))}까지`
+    : k==='cancelling' && u.periodEnd ? ` · ${fmtD(u.periodEnd.slice(0,10))}까지` : '';
+  return `<span class="dot" title="${esc(label+tail)}" style="background:${st?st.color:'var(--grid)'};`
+       + `margin-right:4px;flex:none"></span>`;
+};
+const subShort = u => { const st = SUB_KO[stateOf(u)]; return st ? st.ko : '플랜 없음'; };
+
 const forUser = (list, idx) => (list||[]).filter(r => r.u===idx);
 /** The AUTO_RENEW_DISABLED that turned this person's trial off, if any. */
 const cancelEventOf = idx => (DATA.subEvents||[])
@@ -1148,7 +1252,7 @@ function renderHeatmap(users){
   if(!el) return;
   const n = DATA.days.length;
   const byUser = {};
-  for(const [u,d,rows,t,secs] of DATA.cells) (byUser[u] ??= {})[d] = [rows,t,secs];
+  for(const [u,d,rows,t,secs,spoke] of DATA.cells) (byUser[u] ??= {})[d] = [rows,t,secs,spoke ?? null];
   // Intensity is TALK seconds — that is what the grid is for. But a day
   // spent on Watch scenes or the review deck is not an empty day, and drawing
   // it as one is how a Watch-only learner vanished from this chart. A day
@@ -1166,21 +1270,58 @@ function renderHeatmap(users){
 
   const narrow = innerWNarrow();
   const nameW = narrow ? 110 : 210;
-  const tail = narrow ? 0 : 60 + 44 + 118 + 190;       // talk · days · plan · ids
+  const tail = narrow ? 0 : 80 + 44 + 118 + 190;       // talk · days · plan · ids
   const cs = Math.max(12, Math.min(30, Math.floor((innerW(el, 300) - nameW - tail - 24) / n) - 3));
-  const cols = `${nameW}px repeat(${n}, ${cs}px)` + (narrow ? '' : ' 60px 44px 118px minmax(150px,1fr)');
+  const cols = `${nameW}px repeat(${n}, ${cs}px)` + (narrow ? '' : ' 80px 44px 118px minmax(150px,1fr)');
   const today = DATA.days.length - 1;
   const signupIdx = u => DATA.days.indexOf((u.signedUpAt||'').slice(0,10) || u.signedUp);
+
+  // 네 묶음, 돈 순서대로. 이 그림에 묻는 질문이 묶음마다 다르다 — 구독은
+  // "계속 쓰고 있나", 체험은 "끝나기 전에 돌아오나", 나머지는 "애초에
+  // 돌아오나". 한 덩어리로 섞여 있으면 셋 다 안 보인다. 구독이 맨 위에
+  // 오고, 그 줄은 배경으로도 띄운다: 스무 줄 속의 점 하나는 못 찾는다.
+  //
+  // 체험 중에 자동갱신을 끄고도 끈 날 이후에 다시 온 사람은 따로 뺀다. 다섯
+  // 명 중 둘이 끈 뒤에 30분 넘게 말했는데(2026-09-21), "체험 중" 속에 섞여
+  // 있으면 이게 떠나는 사람인지 되돌릴 수 있는 사람인지가 안 보인다. 끈 날만
+  // 쓰고 사라진 사람은 체험 중에 남는다 — 금색 점이 그걸 이미 말해준다.
+  const backDays = new Map(rows.map(u => [u.idx, daysBackAfterCancel(u)]));
+  const lapsing = u => backDays.get(u.idx) > 0;
+  const payRows = rows.filter(isSubscriber);
+  const trialRows = rows.filter(u => isTrialing(u) && !lapsing(u));
+  const lapseRows = rows.filter(lapsing);
+  // "그 외" reads as an intake queue, not a leaderboard: newest signup DAY
+  // first (by day, not second — a timestamp never ties, and the next key
+  // would never get a say), and within a day the people who actually talked
+  // ahead of those who didn't.
+  const signupDay = u => u.signedUpAt ? localDay(u.signedUpAt) : (u.signedUp || '');
+  const restRows = rows.filter(u => !isSubscriber(u) && !isTrialing(u))
+    .sort((a,b) => signupDay(b).localeCompare(signupDay(a))
+      || ((b.talkSecs > 0) - (a.talkSecs > 0))
+      || (b.talkSecs - a.talkSecs)
+      || (b.signedUpAt||'').localeCompare(a.signedUpAt||''));
+  const endingSoon = lapseRows.filter(u => ['오늘 끝남','내일 끝남'].includes(trialEndLabel(u))).length;
+  const groups = [
+    {ko:'구독 중', note:`${payRows.length}명 · 돈이 들어오고 있는 사람`, rows:payRows},
+    {ko:'체험 중', note:`${trialRows.length}명 · 체험이 끝나기 전에 돌아오는지`, rows:trialRows},
+    {ko:'체험 취소 · 계속 사용', note:`${lapseRows.length}명 · 자동갱신을 끈 날 이후에도 다시 온 사람`
+        + (endingSoon ? ` · 체험이 오늘·내일 끝나는 사람 ${endingSoon}명` : ''), rows:lapseRows},
+    {ko:'그 외', note:`${restRows.length}명 · 플랜 없음 · 만료 · 무료 제공 · 최근 가입순, 같은 날엔 통화한 사람 먼저`, rows:restRows},
+  ];
 
   let html = `<div class="hm" style="--cs:${cs}px"><div class="r hd" style="grid-template-columns:${cols}"><span></span>`
     + DATA.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
     + (narrow ? '' : `<span class="num">통화</span><span class="num">일</span><span class="pl">구독</span><span class="ids">ID</span>`)
     + `</div>`;
-  for(const u of rows){
+  for(const g of groups){
+   if(!g.rows.length) continue;
+   html += `<div class="g">${g.ko} <em>${g.note}</em></div>`;
+   for(const u of g.rows){
     const m = byUser[u.idx] || {};
     const su = signupIdx(u);
     const k = stateOf(u), st = SUB_KO[k];
-    html += `<div class="r" style="grid-template-columns:${cols}">`
+    const cxIdx = k === 'trial_cancelled' ? DATA.days.indexOf(cancelDayOf(u)) : -1;
+    html += `<div class="r${isSubscriber(u)?' paying':lapsing(u)?' lapsing':''}" style="grid-template-columns:${cols}">`
       + `<div class="who" title="${esc(u.realEmail||u.email||u.label)}">`
       +   `<div class="n"><span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`
       +     `<span style="overflow:hidden;text-overflow:ellipsis">${esc(nameOf(u))}</span>${badge(u)}</div>`
@@ -1189,26 +1330,35 @@ function renderHeatmap(users){
     for(let i=0;i<n;i++){
       const c = m[i];
       const rowsN = c ? c[0] : 0, turnsN = c ? c[1] : 0, secs = c ? c[2] : 0;
+      const spokeDay = c ? c[3] : null;
       const before = i < su;
       const usedOnly = !secs && rowsN > 0;      // here, but didn't speak
       const fill = before ? 'transparent' : secs ? ramp(secs) : usedOnly ? 'var(--seq1)' : 'var(--chip)';
       const head = `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`;
       const tip = before ? `${head} · 가입 전`
-        : secs ? `${head} · 통화 ${fmtMin(secs)} · 턴 ${turnsN}${i===su?'<br>가입한 날':''}`
+        : secs ? `${head} · 통화 ${fmtMin(secs)} · 턴 ${turnsN}`
+            + `${spokeDay!=null?`<br>${spokeText(spokeDay, secs)}`:''}${i===su?'<br>가입한 날':''}`
         : usedOnly ? `${head}<br>말은 안 했지만 앱은 썼어요 · 기록 ${rowsN}건${i===su?'<br>가입한 날':''}`
         : `${head} · 조용${i===su?'<br>가입한 날':''}`;
-      html += `<span class="c${i===su?' su':''}${usedOnly&&!before?' used':''}" style="background:${fill}"`
-        + ` data-tip="${tip.replace(/"/g,'&quot;')}"></span>`;
+      const tipAll = tip + (i === cxIdx ? '<br><b>자동갱신 끈 날</b>' : '');
+      html += `<span class="c${i===su?' su':''}${usedOnly&&!before?' used':''}${i===cxIdx?' cx':''}" style="background:${fill}"`
+        + ` data-tip="${tipAll.replace(/"/g,'&quot;')}"></span>`;
     }
     if(!narrow){
-      html += `<span class="num">${u.talkSecs ? `<b>${fmtMin(u.talkSecs)}</b>` : '—'}</span>`
+      html += `<span class="num">${u.talkSecs ? `<b>${fmtMin(u.talkSecs)}</b>` : '—'}`
+        + `${u.talkSecs && u.spokeSecs!=null?`<span class="spk" title="${spokeText(u.spokeSecs, u.spokeOfSecs)}">${spokeText(u.spokeSecs, 0, true)}</span>`:''}</span>`
         + `<span class="num">${u.activeDays}일</span>`
-        + `<span class="pl">${st ? `<span class="sd" style="background:${st.color}"></span>${st.ko}` : '<span class="muted">플랜 없음</span>'}</span>`
+        + `<span class="pl">${st ? `<span class="sd" style="background:${st.color}"></span>`
+            + (lapsing(u)
+                ? `<span>${st.ko}<span class="plsub">끈 뒤 ${backDays.get(u.idx)}일 옴 · ${trialEndLabel(u)}</span></span>`
+                : st.ko)
+            : '<span class="muted">플랜 없음</span>'}</span>`
         + `<span class="ids"><span title="유저 ID — 클릭하면 전체 선택">${u.id}</span>`
         + (u.voiceId ? `<span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택"><i>voice</i>${u.voiceId}</span>` : '')
         + `</span>`;
     }
     html += `</div>`;
+   }
   }
   html += `</div><div class="legend">`
        +  `조용 <span class="cell" style="background:var(--chip)"></span>`
@@ -1220,6 +1370,9 @@ function renderHeatmap(users){
        +  `<span class="cell" style="background:var(--seq4)"></span>`
        +  `<span class="cell" style="background:var(--seq5)"></span> 10분 이상 · `
        +  `<span class="cell" style="background:var(--chip);outline:1.5px solid var(--ink-2);outline-offset:1px"></span> 가입한 날 · `
+       +  `<span class="cell" style="background:rgba(12,163,12,.17);box-shadow:inset 2.5px 0 0 var(--good)"></span> 구독 중 · `
+       +  `<span class="cell" style="background:rgba(201,138,6,.2);box-shadow:inset 2.5px 0 0 var(--warn)"></span> 체험 취소 뒤에도 옴 · `
+       +  `<span class="cell" style="background:var(--chip);box-shadow:inset 0 -3px 0 var(--warn)"></span> 자동갱신 끈 날 · `
        +  `이름 앞 점은 구독 상태</div>`;
   el.innerHTML = html;
 }
@@ -1278,7 +1431,7 @@ function renderHoursMetric(){
   el.innerHTML = HOUR_METRICS.map(([k,lab])=>
     `<button type="button" data-k="${k}" aria-pressed="${k===hourMetric}">${lab}</button>`).join('');
   el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
-    hourMetric = b.dataset.k; renderHoursMetric(); renderHoursToday(visibleUsers()); renderHours(visibleUsers()); renderHoursByUser(visibleUsers());
+    hourMetric = b.dataset.k; renderHoursMetric(); renderHoursToday(visibleUsers()); renderHours(visibleUsers()); renderHoursByUser(visibleUsers()); renderDow(visibleUsers());
   }));
 }
 
@@ -1467,7 +1620,8 @@ function renderHoursByUser(users){
   if(!rows.length){ el.innerHTML='<div class="empty">아직 기록이 없어요.</div>'; return; }
 
   const nameW = innerWNarrow() ? 88 : 186, gap = 2;
-  const avail = innerW(el, 200) - nameW - 8 - (innerWNarrow() ? 0 : 150);
+  const sideW = innerWNarrow() ? 0 : 120;
+  const avail = innerW(el, 200) - nameW - sideW - 24;
   const cs = Math.max(9, Math.min(26, avail/24 - gap));
   const width = 24*(cs+gap);
   const nowParts = new Intl.DateTimeFormat('en-GB', {timeZone: tzZone(), hour:'2-digit', hourCycle:'h23'})
@@ -1486,7 +1640,7 @@ function renderHoursByUser(users){
   for(const u of rows){
     const d = byUser.get(u.idx), max = Math.max(...d.v);
     let svg = `<div class="hm-row"><div class="hm-name" title="${esc(u.realEmail||u.email||u.label)}">`
-      + `<div class="n">${esc(nameOf(u))}${badge(u)}</div>`
+      + `<div class="n">${subDot(u)}${esc(nameOf(u))}${badge(u)}</div>`
       + `<div class="v">${u.voiceName ? esc(u.voiceName) : '<span class="muted">클론 없음</span>'}</div>`
       + `</div><svg width="${width}" height="${cs+4}">`;
     for(let h=0;h<24;h++){
@@ -1501,7 +1655,10 @@ function renderHoursByUser(users){
     svg += `</svg>`;
     if(!innerWNarrow()){
       const uh = usualHour(u.idx);
-      svg += `<div class="hm-side">${fmtVal(d.total)}${uh ? ` · 주로 ${uh}` : ''}</div>`;
+      svg += `<div class="hm-side" style="width:${sideW}px;flex:none">${fmtVal(d.total)}`
+        + `${uh ? `<span style="display:block">주로 ${uh}</span>` : ''}`
+        + `<span style="display:block;color:${(SUB_KO[stateOf(u)]||{}).color||'var(--muted)'}">`
+        + `${subShort(u)}</span></div>`;
     }
     html += svg + `</div>`;
   }
@@ -1534,6 +1691,151 @@ function usualHour(idx){
   }
   const hh = h => `${String(h).padStart(2,'0')}시`;
   return `${hh(best.from)}–${hh((best.to+1)%24)}`;
+}
+
+/* ===================================================== 요일 · 주 · 달 */
+/** One series, folded three ways (weekday · week · month), so the three
+ *  cannot disagree with each other. A row is [user, epoch ms, talk seconds,
+ *  server calls]; the FOLDING happens here rather than in the database
+ *  because the reader picks the zone, and a UTC day pre-bucketed on the
+ *  server puts a midnight call on the wrong day — and therefore on the wrong
+ *  weekday. `exact` is false when the day_hours migration has not landed yet:
+ *  the launch window's day cells are then stamped at noon, where a ±12 h zone
+ *  shift cannot move the date. */
+function activitySeries(){
+  const dh = DATA.dayHours || [];
+  if(dh.length){
+    return {exact:true, rows: dh.map(([u,d,h,secs,ev,spoke])=>{
+      const [y,m,dd] = d.split('-').map(Number);
+      return [u, Date.UTC(y, m-1, dd, h), secs, ev, spoke ?? null];
+    })};
+  }
+  return {exact:false, rows: (DATA.cells||[]).map(([u,d,rows,t,secs,spoke])=>{
+    const [y,m,dd] = (DATA.days[d]||'').split('-').map(Number);
+    return [u, Date.UTC(y, m-1, dd, 12), secs, rows, spoke ?? null];
+  }).filter(r => !isNaN(r[1]))};
+}
+/** The series' own window, in the reader's zone, for the legend to state. */
+const seriesSpan = rows => rows.length
+  ? [localDay(Math.min(...rows.map(r=>r[1]))), localDay(Math.max(...rows.map(r=>r[1])))] : null;
+const DOW_KO = ['월','화','수','목','금','토','일'];
+/** Monday = 0, in the reader's zone. Built from the local date STRING so the
+ *  browser's own zone can't get a vote. */
+const dowOf = dayKey => { const [y,m,d] = dayKey.split('-').map(Number);
+  return (new Date(y, m-1, d).getDay() + 6) % 7; };
+const mondayOf = dayKey => { const [y,m,d] = dayKey.split('-').map(Number);
+  const dt = new Date(y, m-1, d); dt.setDate(dt.getDate() - dowOf(dayKey));
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+};
+const addDays = (dayKey, n) => { const [y,m,d] = dayKey.split('-').map(Number);
+  const dt = new Date(y, m-1, d); dt.setDate(dt.getDate()+n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+};
+/** The `.bars` component, one row per bucket. */
+const barRows = (items, max) => items.map(it =>
+  `<div class="row"><div class="lbl">${it.lbl}</div>`
+  + `<div class="track" data-tip="${String(it.tip).replace(/"/g,'&quot;')}">`
+  + `<div class="fill" style="width:${(max ? Math.max(it.v?1.5:0, it.v/max*100) : 0).toFixed(1)}%`
+  + `${it.dim?';opacity:.55':''}"></div></div>`
+  + `<div class="val">${it.val}</div></div>`).join('');
+
+function renderDow(users){
+  const el = document.getElementById('dow'); if(!el) return;
+  const {rows, exact} = activitySeries();
+  const vis = new Set(users.map(u=>u.idx));
+  const [, metricLabel, , fmtVal] = hourMetricDef();
+  const take = (secs, ev) => hourMetric==='secs' ? secs : ev;
+  const tot = Array(7).fill(0), people = Array.from({length:7},()=>new Set()),
+        dates = Array.from({length:7},()=>new Set());
+  const span = seriesSpan(rows.filter(r=>vis.has(r[0])));
+  for(const [u, ms, secs, ev] of rows){
+    if(!vis.has(u)) continue;
+    const day = localDay(ms), i = dowOf(day);
+    dates[i].add(day);
+    tot[i] += take(secs, ev);
+    if(ev > 0) people[i].add(u);
+  }
+  const total = tot.reduce((a,b)=>a+b,0);
+  if(!total){ el.innerHTML='<div class="empty">아직 기록이 없어요.</div>'; return; }
+  // 평균은 '그 요일이 창 안에 몇 번 있었나'로 나눈다 — 기록이 남은 날만
+  // 세면 조용한 일요일이 오히려 높게 나온다.
+  const every = {};
+  if(span) for(let d = span[0]; d <= span[1]; d = addDays(d,1)) every[dowOf(d)] = (every[dowOf(d)]||0)+1;
+  const max = Math.max(...tot);
+  const best = tot.indexOf(max);
+  const items = DOW_KO.map((ko,i)=>{
+    const n = every[i] || dates[i].size || 1;
+    const avg = tot[i]/n;
+    return {lbl:`${ko}요일`, v:tot[i],
+      val:`${fmtVal(tot[i])} <span class="muted">(${fmtVal(Math.round(avg))})</span>`
+         + ` · ${people[i].size}명`,
+      tip:`<b>${ko}요일</b> ${n}번<br>${metricLabel} 합계 ${fmtVal(tot[i])}`
+         + `<br>하루 평균 ${fmtVal(Math.round(avg))}<br>${people[i].size}명`};
+  });
+  el.innerHTML = barRows(items, max)
+    + `<div class="legend">${span?`${fmtDate(span[0])}–${fmtDate(span[1])} · `:''}`
+    + `${tzLabel()} 시간 기준 · 가장 많은 요일은 <b style="color:var(--ink)">${DOW_KO[best]}요일</b>`
+    + `${exact?'':' · <span style="color:var(--warn)">서버가 아직 요일용 기록을 안 내려줘서 출시 이후만 보여요</span>'}</div>`;
+}
+
+const SPANS = [['week','주별'], ['month','월별']];
+let spanKey = 'week';
+function renderSpanPick(){
+  const el = document.getElementById('spanPick'); if(!el) return;
+  el.innerHTML = SPANS.map(([k,lab])=>
+    `<button type="button" data-k="${k}" aria-pressed="${k===spanKey}">${lab}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    spanKey = b.dataset.k; renderSpanPick(); renderSpan(visibleUsers());
+  }));
+}
+function renderSpan(users){
+  const el = document.getElementById('span'); if(!el) return;
+  const {rows, exact} = activitySeries();
+  const vis = new Set(users.map(u=>u.idx));
+  const byWeek = spanKey === 'week';
+  const keyOf = day => byWeek ? mondayOf(day) : day.slice(0,7);
+  const buckets = new Map();
+  for(const [u, ms, secs, , spoke] of rows){
+    if(!vis.has(u) || !secs) continue;
+    const k = keyOf(localDay(ms));
+    const b = buckets.get(k) || {secs:0, people:new Set(), days:new Set(), spoke:null, spokeOf:0};
+    b.secs += secs; b.people.add(u); b.days.add(localDay(ms));
+    if(spoke != null){ b.spoke = (b.spoke ?? 0) + spoke; b.spokeOf += secs; }
+    buckets.set(k, b);
+  }
+  if(!buckets.size){ el.innerHTML='<div class="empty">아직 통화가 없어요.</div>'; return; }
+  const now = keyOf(TODAY);
+  const keys = [...buckets.keys()].sort();
+  // 빈 기간도 그린다: 말이 없던 주가 빠져 있으면 줄어든 줄을 알아볼 수 없다.
+  const all = [];
+  if(byWeek){
+    for(let k = keys[0]; k <= now && all.length < 80; k = addDays(k,7)) all.push(k);
+  } else {
+    let [y,m] = keys[0].split('-').map(Number);
+    const [ny,nm] = now.split('-').map(Number);
+    while((y < ny || (y === ny && m <= nm)) && all.length < 80){
+      all.push(`${y}-${String(m).padStart(2,'0')}`);
+      if(++m > 12){ m = 1; y++; }
+    }
+  }
+  const max = Math.max(...all.map(k => (buckets.get(k)||{secs:0}).secs));
+  const label = k => byWeek ? `${fmtD(k)}–${fmtD(addDays(k,6))}` : `${+k.slice(5)}월`;
+  const items = all.map(k=>{
+    const b = buckets.get(k) || {secs:0, people:new Set(), days:new Set(), spoke:null, spokeOf:0};
+    const running = k === now;
+    const per = b.people.size ? Math.round(b.secs/b.people.size) : 0;
+    return {lbl: label(k) + (running?' <span class="muted">진행 중</span>':''), v:b.secs, dim:running,
+      val: b.secs ? `${fmtMin(b.secs)} <span class="muted">(${fmtMin(per)})</span> · ${b.people.size}명`
+                    + `${b.spoke!=null?` <span class="muted">· ${spokeText(b.spoke, b.spokeOf)}</span>`:''}`
+                  : '<span class="muted">—</span>',
+      tip:`<b>${label(k)}</b>${running?' · 아직 진행 중':''}<br>통화 ${fmtMin(b.secs)}`
+        + `${b.spoke!=null?`<br>${spokeText(b.spoke, b.spokeOf)}${b.spokeOf<b.secs?' <span style="opacity:.7">(측정된 통화 기준)</span>':''}`:''}`
+        + `<br>${b.people.size}명 · 1인당 ${fmtMin(per)}<br>말한 날 ${b.days.size}일`};
+  });
+  const totalSecs = all.reduce((a,k)=>a+((buckets.get(k)||{secs:0}).secs),0);
+  el.innerHTML = barRows(items, max)
+    + `<div class="legend">합계 ${fmtMin(totalSecs)} · ${tzLabel()} 시간 기준`
+    + `${exact?'':' · <span style="color:var(--warn)">서버가 아직 기간용 기록을 안 내려줘서 출시 이후만 보여요</span>'}</div>`;
 }
 
 function renderDaily(users){
@@ -1861,7 +2163,7 @@ function renderPeople(users){
             ? `<div class="usub">${esc(u.voiceName)}</div>`:''}`
           :'<span class="muted">—</span>'}</td>
       <td class="num">${u.talkSessions||'—'}<div class="usub">턴 ${num(u.turns)}</div></td>
-      <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}</td>
+      <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}${u.talkSecs && u.spokeSecs!=null?`<div class="usub">${spokeText(u.spokeSecs, u.spokeOfSecs)}</div>`:''}</td>
       <td class="num">${u.scenes||'—'}</td>
       <td>${subChip(u)}${(()=>{ const pu=(DATA.planUsage||[]).find(r=>r.u===u.idx);
         return pu ? `<div class="usub">${pu.ends?'종료':'갱신'} ${fmtD((pu.period_end||'').slice(0,10))}</div>` : ''; })()}</td>
@@ -1976,7 +2278,7 @@ function renderTrials(){
       <td style="white-space:nowrap">${fmtTs(u.subStartedAt)}</td>
       <td style="white-space:nowrap">${countdownCell(k, ends, u.offer)}</td>
       <td class="num">${price?usd(price):'—'}</td>
-      <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}</td>
+      <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}${u.talkSecs && u.spokeSecs!=null?`<div class="usub">${spokeText(u.spokeSecs, u.spokeOfSecs)}</div>`:''}</td>
     </tr>`;
   }
   const live = rows.filter(u=>['trial','paid','cancelling'].includes(stateOf(u)));
@@ -2134,6 +2436,82 @@ function renderCostMonths(){
     costPeriod = b.dataset.p; renderCostMonths(); renderCostTable();
   }));
 }
+/** Per-person totals for the people who joined at or after launch, over a
+ *  chosen stretch of server (UTC) days. Built from the per-day `cells`
+ *  (talk seconds, turns) and `sceneCells`, so every column can be cut by
+ *  period — which is also why it shows turns and scenes rather than a raw
+ *  ledger count: the talk-tick share of that count only exists per hour. */
+const TOTALS_PERIODS = [
+  ['all', '출시 이후', () => 0],
+  ['7d',  '최근 7일', n => Math.max(0, n-7)],
+  ['yesterday', '어제', n => Math.max(0, n-2)],
+  ['today', '오늘', n => n-1],
+];
+let totalsPeriod = 'all';
+function renderTotalsPeriod(){
+  const el = document.getElementById('totalsPeriod'); if(!el) return;
+  el.innerHTML = TOTALS_PERIODS.map(([k,lab])=>
+    `<button type="button" data-k="${k}" aria-pressed="${k===totalsPeriod}">${lab}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    totalsPeriod = b.dataset.k; renderTotalsPeriod(); renderTotals();
+  }));
+}
+function renderTotals(){
+  const el = document.getElementById('totalsTable'); if(!el) return;
+  const users = launchUsers();
+  const n = DATA.days.length;
+  const from = (TOTALS_PERIODS.find(p=>p[0]===totalsPeriod) || TOTALS_PERIODS[0])[2](n);
+  const to = totalsPeriod === 'yesterday' ? n-2 : n-1;
+  const inRange = d => d >= from && d <= to;
+  const vis = new Set(users.map(u=>u.idx));
+  const agg = new Map(users.map(u=>[u.idx, {secs:0, turns:0, scenes:0, talkDays:new Set(), days:new Set(),
+                                             spoke:null, spokeOf:0}]));
+  for(const [u,d,rows,turns,secs,spoke] of DATA.cells){
+    if(!vis.has(u) || !inRange(d)) continue;
+    const a = agg.get(u);
+    a.secs += secs; a.turns += turns;
+    if(spoke != null){ a.spoke = (a.spoke ?? 0) + spoke; a.spokeOf += secs; }
+    if(rows > 0) a.days.add(d);
+    if(secs > 0) a.talkDays.add(d);
+  }
+  for(const [u,d,cnt] of (DATA.sceneCells||[])){
+    if(!vis.has(u) || !inRange(d)) continue;
+    const a = agg.get(u); a.scenes += cnt; a.days.add(d);
+  }
+  const rows = users.map(u=>({u, a:agg.get(u.idx)}))
+    .sort((x,y) => (y.a.secs-x.a.secs) || (y.a.days.size-x.a.days.size)
+      || (y.u.signedUpAt||'').localeCompare(x.u.signedUpAt||''));
+  let html = `<thead><tr><th>유저</th><th class="num">통화</th><th class="num" title="통화 중 본인 목소리가 들린 시간">말함</th><th class="num">턴</th>`
+    + `<th class="num">장면</th><th class="num">통화한 날</th><th class="num">앱 쓴 날</th>`
+    + `<th class="num">가입일</th></tr></thead><tbody>`;
+  if(!rows.length){ el.innerHTML = html + `<tr><td colspan="8" class="empty">출시 이후 가입한 사람이 없어요.</td></tr></tbody>`; return; }
+  const dash = '<span class="muted">—</span>';
+  const tot = {secs:0, turns:0, scenes:0, talkers:0, active:0, spoke:null, spokeOf:0};
+  for(const {u,a} of rows){
+    tot.secs += a.secs; tot.turns += a.turns; tot.scenes += a.scenes;
+    if(a.spoke != null){ tot.spoke = (tot.spoke ?? 0) + a.spoke; tot.spokeOf += a.spokeOf; }
+    if(a.secs > 0) tot.talkers += 1;
+    if(a.days.size) tot.active += 1;
+    const quiet = !a.days.size;
+    html += `<tr${quiet?' style="opacity:.55"':''}>
+      <td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}</td>
+      <td class="num">${a.secs ? `<b>${fmtMin(a.secs)}</b>` : dash}</td>
+      <td class="num">${a.spoke != null ? `${fmtMin(a.spoke)}${a.spokeOf?` <span class="muted">${Math.round(a.spoke/a.spokeOf*100)}%</span>`:''}` : dash}</td>
+      <td class="num">${a.turns || dash}</td>
+      <td class="num">${a.scenes || dash}</td>
+      <td class="num">${a.talkDays.size || dash}</td>
+      <td class="num">${a.days.size || dash}</td>
+      <td class="num">${fmtD((u.signedUpAt||'').slice(0,10) || u.signedUp)}</td></tr>`;
+  }
+  html += `<tr style="border-top:2px solid var(--baseline)"><td><b>합계</b> <span class="muted">`
+    + `${rows.length}명 중 쓴 사람 ${tot.active}명 · 통화한 사람 ${tot.talkers}명</span></td>
+    <td class="num"><b>${tot.secs ? fmtMin(tot.secs) : '—'}</b></td>
+    <td class="num"><b>${tot.spoke != null ? fmtMin(tot.spoke) : '—'}</b>${tot.spoke != null && tot.spokeOf ? ` <span class="muted">${Math.round(tot.spoke/tot.spokeOf*100)}%</span>` : ''}</td>
+    <td class="num"><b>${tot.turns || '—'}</b></td>
+    <td class="num"><b>${tot.scenes || '—'}</b></td><td></td><td></td><td></td></tr>`;
+  el.innerHTML = html + '</tbody>';
+}
+
 function renderCostTable(){
   const C = DATA.cost;
   // Cost, like revenue, is an account fact — every account, toggle or not.
@@ -2206,8 +2584,9 @@ function render(){
   const cohort = launchUsers();
   renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
   renderHoursMetric(); renderHoursToday(users); renderHours(users); renderHoursByUser(users);
+  renderDow(users); renderSpanPick(); renderSpan(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
-  renderPeopleTiles(users); renderLangs(users); renderPeople(users);
+  renderPeopleTiles(users); renderLangs(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
