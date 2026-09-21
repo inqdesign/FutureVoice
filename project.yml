@@ -54,6 +54,15 @@ targets:
           - Default
         com.apple.security.application-groups:
           - group.com.roro.futurevoice
+        # Opt-in sync of the learner's practice between their own devices
+        # (`SyncEngine`). ONE container per config — see ICLOUD_CONTAINER
+        # below — so a dev build can never sync into the shipped build's
+        # cloud data, the same wall the separate bundle id puts around the
+        # local stores.
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.icloud-container-identifiers:
+          - $(ICLOUD_CONTAINER)
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -73,9 +82,11 @@ targets:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.dev
           APP_DISPLAY_NAME: nawana dev
+          ICLOUD_CONTAINER: iCloud.com.roro.futurevoice.dev
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
           APP_DISPLAY_NAME: nawana
+          ICLOUD_CONTAINER: iCloud.com.roro.futurevoice
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig

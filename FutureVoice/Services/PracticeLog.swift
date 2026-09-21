@@ -141,6 +141,7 @@ final class PracticeLog {
     private func save(_ days: [String: Day]) {
         guard let data = try? JSONEncoder().encode(days) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.practiceDay)
     }
 
     private static let keyFormatter: DateFormatter = {

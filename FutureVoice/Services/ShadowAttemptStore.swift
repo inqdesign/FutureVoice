@@ -64,5 +64,8 @@ final class ShadowAttemptStore: LanguageScopedStore {
     private func write(_ list: [ShadowAttempt]) {
         guard let data = try? encoder.encode(list) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.shadow)
+        // The take's WAV landed in Recordings/ just before this.
+        SyncEngine.noteChanged(.blobRecording)
     }
 }

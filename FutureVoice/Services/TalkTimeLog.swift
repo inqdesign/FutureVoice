@@ -204,6 +204,7 @@ enum TalkTimeLog {
 
     private static func save(_ map: [String: Int]) {
         UserDefaults.standard.set(map, forKey: key)
+        SyncEngine.noteChanged(.talkDay)
     }
 
     private static func prune(_ map: [String: Int], now: Date) -> [String: Int] {

@@ -64,5 +64,6 @@ final class ScenarioStore: LanguageScopedStore {
     private func write(_ list: [Scenario]) {
         guard let data = try? encoder.encode(list) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.scenario)
     }
 }

@@ -54,6 +54,7 @@ struct MeTab: View {
     @State private var voiceRegenerateError: String?
     @State private var pickingAccent = false
     @State private var comparingVoice = false
+    @ObservedObject private var syncEngine = SyncEngine.shared
     @State private var importingBackup = false
     @State private var backupResult: String?
     /// Non-nil while an export or import is running — it's both the progress
@@ -177,6 +178,13 @@ struct MeTab: View {
                         row(icon: "paintpalette",
                             title: explain("Appearance"),
                             subtitle: appState.appearance.label)
+                    }
+                    NavigationLink {
+                        syncPage
+                    } label: {
+                        row(icon: "icloud",
+                            title: explain("Continue on your other devices"),
+                            subtitle: syncEngine.isEnabled ? explain("On · iCloud") : explain("Off"))
                     }
                     NavigationLink {
                         dataPage
@@ -1060,6 +1068,12 @@ struct MeTab: View {
     private var dataPage: some View {
         List { backupSection }
             .navigationTitle("Practice data")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var syncPage: some View {
+        List { SyncSection() }
+            .navigationTitle("Devices")
             .navigationBarTitleDisplayMode(.inline)
     }
 

@@ -13,16 +13,16 @@ final class GoalStore: ObservableObject {
     static let shared = GoalStore()
 
     @Published var sentencesPerDay: Int {
-        didSet { defaults.set(sentencesPerDay, forKey: Keys.sentences) }
+        didSet { defaults.set(sentencesPerDay, forKey: Keys.sentences); SyncEngine.noteChanged(.defaults) }
     }
     @Published var wordsPerDay: Int {
-        didSet { defaults.set(wordsPerDay, forKey: Keys.words) }
+        didSet { defaults.set(wordsPerDay, forKey: Keys.words); SyncEngine.noteChanged(.defaults) }
     }
     @Published var expressionsPerDay: Int {
-        didSet { defaults.set(expressionsPerDay, forKey: Keys.expressions) }
+        didSet { defaults.set(expressionsPerDay, forKey: Keys.expressions); SyncEngine.noteChanged(.defaults) }
     }
     @Published var shadowsPerDay: Int {
-        didSet { defaults.set(shadowsPerDay, forKey: Keys.shadows) }
+        didSet { defaults.set(shadowsPerDay, forKey: Keys.shadows); SyncEngine.noteChanged(.defaults) }
     }
 
     private enum Keys {
@@ -43,6 +43,18 @@ final class GoalStore: ObservableObject {
         wordsPerDay       = defaults.object(forKey: Keys.words) as? Int ?? 10
         expressionsPerDay = defaults.object(forKey: Keys.expressions) as? Int ?? 3
         shadowsPerDay     = defaults.object(forKey: Keys.shadows) as? Int ?? 2
+    }
+
+    /// The sync wrote new goals into defaults underneath the published copies.
+    func reloadFromDefaults() {
+        let s = defaults.object(forKey: Keys.sentences) as? Int ?? 20
+        let w = defaults.object(forKey: Keys.words) as? Int ?? 10
+        let e = defaults.object(forKey: Keys.expressions) as? Int ?? 3
+        let sh = defaults.object(forKey: Keys.shadows) as? Int ?? 2
+        if sentencesPerDay != s { sentencesPerDay = s }
+        if wordsPerDay != w { wordsPerDay = w }
+        if expressionsPerDay != e { expressionsPerDay = e }
+        if shadowsPerDay != sh { shadowsPerDay = sh }
     }
 
     var anyEnabled: Bool {

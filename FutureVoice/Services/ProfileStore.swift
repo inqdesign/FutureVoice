@@ -64,6 +64,7 @@ final class ProfileStore {
         all.append(profile)
         guard let data = try? encoder.encode(all) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.profile)
     }
 
     private func loadAll() -> [LearnerProfile] {

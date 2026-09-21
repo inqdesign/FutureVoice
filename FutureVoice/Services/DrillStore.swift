@@ -71,7 +71,7 @@ final class DrillStore: LanguageScopedStore {
     /// One card per sentence, keeping the copy the learner has actually
     /// worked on. Order is preserved so every caller's own sort still
     /// decides what it sees.
-    private static func deduplicated(_ cards: [DrillCard]) -> [DrillCard] {
+    static func deduplicated(_ cards: [DrillCard]) -> [DrillCard] {
         var keepers: [String: DrillCard] = [:]
         var order: [String] = []
         for card in cards {
@@ -90,7 +90,7 @@ final class DrillStore: LanguageScopedStore {
     /// in favour of a fresh copy of the same line. Between two untouched
     /// copies the older one survives, so `createdAt` keeps pointing at the
     /// talk that first taught the sentence.
-    private static func keeper(_ a: DrillCard, _ b: DrillCard) -> DrillCard {
+    static func keeper(_ a: DrillCard, _ b: DrillCard) -> DrillCard {
         if a.box != b.box { return a.box > b.box ? a : b }
         if (a.lastReviewedAt != nil) != (b.lastReviewedAt != nil) {
             return a.lastReviewedAt != nil ? a : b
@@ -404,6 +404,7 @@ final class DrillStore: LanguageScopedStore {
         // Every mutation funnels through here — keep the home-screen widget's
         // snapshot of the due queue in sync.
         StudyWidgetRefresher.schedule()
+        SyncEngine.noteChanged(.drill)
     }
 
     /// Lowercased, punctuation stripped, whitespace collapsed — so a summary

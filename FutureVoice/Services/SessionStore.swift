@@ -191,5 +191,13 @@ final class SessionStore: LanguageScopedStore {
     private func write(_ sessions: [Session]) {
         guard let data = try? encoder.encode(sessions) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.session)
+    }
+
+    /// The sync laid a merged `sessions.json` down underneath the cache.
+    func invalidateCache() {
+        lock.lock(); defer { lock.unlock() }
+        cache = nil
+        otherLanguageCache = [:]
     }
 }

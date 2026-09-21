@@ -61,5 +61,6 @@ final class WatchDialogueStore: LanguageScopedStore {
     private func write(_ list: [WatchDialogue]) {
         guard let data = try? encoder.encode(list) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.dialogue)
     }
 }

@@ -88,7 +88,11 @@ struct FutureVoiceApp: App {
             // reminder. Background path never prompts for permission.
             if phase == .background {
                 Task { await DrillReminder.reschedule() }
+                // Push what this stint changed before iOS suspends us.
+                SyncEngine.shared.backgrounded()
             }
+            // Pull the other devices' practice, then push ours.
+            if phase == .active { SyncEngine.shared.foregrounded() }
             // Cards drift due over time even with no store writes, so re-snapshot
             // the widget's study queue at both edges of a foreground stint.
             if phase == .active || phase == .background {
@@ -248,16 +252,25 @@ final class AppState: ObservableObject {
         }
     }
     @Published var nativeLanguage: String = LanguageCatalog.defaultNative {
-        didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
+        didSet {
+            UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey)
+            SyncEngine.noteChanged(.defaults)
+        }
     }
     @Published var targetLanguage: String = "en" {
-        didSet { UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey) }
+        didSet {
+            UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey)
+            SyncEngine.noteChanged(.defaults)
+        }
     }
     /// Target languages the user has enrolled in, enrollment order. The
     /// active one is `targetLanguage`; switching swaps the entire language-
     /// scoped store set (docs/multi-language-plan.md).
     @Published var enrolledLanguages: [String] = ["en"] {
-        didSet { UserDefaults.standard.set(enrolledLanguages, forKey: LanguageScope.enrolledDefaultsKey) }
+        didSet {
+            UserDefaults.standard.set(enrolledLanguages, forKey: LanguageScope.enrolledDefaultsKey)
+            SyncEngine.noteChanged(.defaults)
+        }
     }
     /// Transient (never persisted): set when a weekly assessment RAISES the
     /// measured level — RootTabView presents the one-time level-up sheet from
@@ -267,6 +280,7 @@ final class AppState: ObservableObject {
     @Published var proficiency: CEFRLevel = .b1 {
         didSet {
             UserDefaults.standard.set(proficiency.rawValue, forKey: Self.proficiencyKey)
+            SyncEngine.noteChanged(.defaults)
             // Keep the persisted profile's level in sync — it drives prompt
             // calibration in conversations and summaries.
             if learnerProfile.proficiencyLevel != proficiency {
@@ -438,6 +452,9 @@ final class AppState: ObservableObject {
         // here so an install that predates it still resolves its own audio.
         PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
 
+        SyncEngine.shared.onApplied = { [weak self] kinds in
+            self?.adoptSyncedChanges(kinds)
+        }
         Task { await self.observeAuth() }
     }
 
@@ -623,6 +640,10 @@ final class AppState: ObservableObject {
     /// one piece of data that's expensive to lose on reinstall.
     private func observeAuth() async {
         for await change in SupabaseProvider.shared.auth.authStateChanges {
+            // Sync follows the ACCOUNT: an anonymous onboarding session has
+            // nothing to sync and no identity to key a zone on.
+            let syncUser = change.session.flatMap { $0.user.isAnonymous ? nil : $0.user.id.uuidString }
+            SyncEngine.shared.setUser(syncUser)
             guard let session = change.session else { continue }
             // distinct_id = Supabase user UUID (a random account id, not PII).
             // Only a real account: the onboarding session is anonymous and is
@@ -1369,6 +1390,40 @@ final class AppState: ObservableObject {
         // Global (unscoped) stores the restore also overwrote.
         persona = PersonaStore.shared.load()
         counterparts = CounterpartStore.shared.load()
+        StudyWidgetRefresher.refresh()
+    }
+
+    /// A pull wrote merged files underneath the running app. Same job as
+    /// `adoptRestoredData`, narrowed to what changed — and never a relaunch.
+    func adoptSyncedChanges(_ kinds: Set<SyncKind>) {
+        if kinds.contains(.defaults) {
+            let defaults = UserDefaults.standard
+            if let native = defaults.string(forKey: Self.nativeLanguageKey) {
+                let n = LanguageCatalog.normalizedNative(native)
+                if n != nativeLanguage { nativeLanguage = n }
+            }
+            let enrolled = defaults.stringArray(forKey: LanguageScope.enrolledDefaultsKey) ?? []
+            if !enrolled.isEmpty, enrolled != enrolledLanguages { enrolledLanguages = enrolled }
+            if let target = defaults.string(forKey: Self.targetLanguageKey), target != targetLanguage {
+                targetLanguage = target
+                LanguageScope.repointStores()
+                reloadLanguageScopedState()
+            }
+            if let raw = defaults.string(forKey: Self.proficiencyKey),
+               let level = CEFRLevel(rawValue: raw), level != proficiency { proficiency = level }
+            GoalStore.shared.reloadFromDefaults()
+        }
+        if kinds.contains(.profile) {
+            learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)
+            if learnerProfile.proficiencyLevel != proficiency { proficiency = learnerProfile.proficiencyLevel }
+        }
+        if kinds.contains(.persona) || kinds.contains(.personaNote) { persona = PersonaStore.shared.load() }
+        if kinds.contains(.counterpart) { counterparts = CounterpartStore.shared.load() }
+        if kinds.contains(.dialogue) { watchDialogues = WatchDialogueStore.shared.load() }
+        if kinds.contains(.scenario) { scenarios = ScenarioStore.shared.load() }
+        if kinds.contains(.shadow) { shadowAttempts = ShadowAttemptStore.shared.load() }
+        if kinds.contains(.savedLine) { savedLines = SavedLineStore.shared.load() }
+        if kinds.contains(.weekly) { weeklyReports = WeeklyReportStore.shared.load() }
         StudyWidgetRefresher.refresh()
     }
 
