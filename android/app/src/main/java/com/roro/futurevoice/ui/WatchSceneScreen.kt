@@ -110,6 +110,17 @@ fun WatchSceneScreen(
         val scenario = store.load(targetLanguage).firstOrNull { it.id == scenarioId }
             ?.also { scene = it }
             ?: run { onBack(); return@LaunchedEffect }
+        // Capture only: the scene as it stands once it has played out, from
+        // the saved take — no model call, no TTS.
+        if (com.roro.futurevoice.capture.flags.WatchCaptureFlags.previewSceneFinished) {
+            title = scenario.curriculum?.dialogueTitle
+            shown = scenario.curriculum?.dialogue.orEmpty().map {
+                Turn(id = it.id, role = if (it.speaker == "user") TurnRole.USER else TurnRole.FLUENT_SELF,
+                    transcript = it.text)
+            }
+            generating = false; playingIndex = -1
+            return@LaunchedEffect
+        }
         val cast = StockPerson.by(scenario.voicePresetId)
         // What the two actually share, worked out in code — a scene about a
         // person has to open on the overlap, not on a fact plucked from one

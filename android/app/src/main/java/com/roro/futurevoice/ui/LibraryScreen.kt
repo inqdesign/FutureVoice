@@ -368,9 +368,11 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                         }
                         glosses[row.key] = ""   // claim the slot; also the no-entry answer
                         val entry = try {
-                            lore.entry(row.text, nativeLanguage, language,
-                                if (kind == LibraryKind.WORDS) WordLore.Kind.WORD
-                                else WordLore.Kind.EXPRESSION)
+                            com.roro.futurevoice.capture.flags.PracticeCaptureFlags.lookup {
+                                lore.entry(row.text, nativeLanguage, language,
+                                    if (kind == LibraryKind.WORDS) WordLore.Kind.WORD
+                                    else WordLore.Kind.EXPRESSION)
+                            }
                         } catch (cancelled: kotlinx.coroutines.CancellationException) {
                             throw cancelled   // the row scrolled away; write nothing
                         } catch (failure: Exception) {

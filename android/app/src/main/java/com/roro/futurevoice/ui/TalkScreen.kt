@@ -110,6 +110,8 @@ fun TalkScreen(
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
+    // Capture build only: a prepared call, drawn without starting one.
+    val preview = remember { com.roro.futurevoice.capture.flags.TalkCaptureFlags.callPreview }
     // The live call's notification is the only control a locked phone has,
     // and Android 13+ shows none of it without this permission. Ask once,
     // here, where the reason is on screen — the daily call toggle also asks,
@@ -117,7 +119,7 @@ fun TalkScreen(
     val notifPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
-        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+        if (preview == null && android.os.Build.VERSION.SDK_INT >= 33 &&
             context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
             android.content.pm.PackageManager.PERMISSION_GRANTED) {
             notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -128,7 +130,8 @@ fun TalkScreen(
             initializer { TalkViewModel(context) }
         }
     )
-    val state by vm.state.collectAsStateWithLifecycle()
+    val liveState by vm.state.collectAsStateWithLifecycle()
+    val state = preview?.state ?: liveState
     // System back = hang up and leave, same as End — never kill the activity
     // with a call still holding the mic.
     // Leaving after the wrap-up: the first time, the feedback ask comes
@@ -172,7 +175,7 @@ fun TalkScreen(
     // One-time "which mic?", asked here because the call is the first mic
     // surface most learners reach. The call waits for the answer; both
     // buttons are answers.
-    var askingMic by remember { mutableStateOf(MicPreference.shouldAsk(appContext)) }
+    var askingMic by remember { mutableStateOf(preview == null && MicPreference.shouldAsk(appContext)) }
     if (askingMic) {
         MicChoiceSheet(onChoose = { choice ->
             MicPreference.set(appContext, choice)
@@ -180,7 +183,7 @@ fun TalkScreen(
         })
     }
     LaunchedEffect(voiceId, askingMic) {
-        if (askingMic) return@LaunchedEffect
+        if (askingMic || preview != null) return@LaunchedEffect
         vm.start(
             TalkConfig(
                 voiceId = voiceId,
@@ -203,10 +206,11 @@ fun TalkScreen(
     // Today's notebook, dealt once when the call opens. It never re-deals
     // mid-call: a row that changed under the learner would be asking for a
     // different word than the one they were about to say.
-    var goals by remember { mutableStateOf<List<TalkGoalItem>>(emptyList()) }
-    var goalsUsed by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var openGoal by remember { mutableStateOf<TalkGoalItem?>(null) }
+    var goals by remember { mutableStateOf(preview?.goals ?: emptyList()) }
+    var goalsUsed by remember { mutableStateOf(preview?.goalsUsed ?: emptySet()) }
+    var openGoal by remember { mutableStateOf(preview?.openGoal) }
     LaunchedEffect(targetLanguage) {
+        if (preview != null) return@LaunchedEffect
         goals = TalkGoalPicker.pick(context, targetLanguage)
     }
     // ADDITIVE: every version of a user turn's text is checked, from the

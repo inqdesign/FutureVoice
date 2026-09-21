@@ -66,7 +66,11 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 fun CreditGuideScreen(onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     var account by remember { mutableStateOf<AccountStatus?>(null) }
-    LaunchedEffect(Unit) { account = AccountStatus.load(AuthRepository()) }
+    LaunchedEffect(Unit) {
+        // Screenshot harness only: a sample account instead of the network.
+        account = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
+            ?: AccountStatus.load(AuthRepository())
+    }
     val locale = LocalConfiguration.current.locales[0]
 
     Scaffold(

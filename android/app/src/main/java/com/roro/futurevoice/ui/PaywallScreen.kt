@@ -126,13 +126,20 @@ fun PaywallScreen(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val billing = remember { BillingService.shared(context) }
     val offers by billing.offers.collectAsStateWithLifecycle()
-    val plans by billing.plans.collectAsStateWithLifecycle()
-    val settled by billing.settled.collectAsStateWithLifecycle()
+    // Screenshot harness only: open on the plans over a sample catalog,
+    // without asking Play or the server.
+    val previewPlans = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewPlans
+    val livePlans by billing.plans.collectAsStateWithLifecycle()
+    val liveSettled by billing.settled.collectAsStateWithLifecycle()
+    val plans = previewPlans ?: livePlans
+    val settled = liveSettled || previewPlans != null
     var period by remember { mutableStateOf("monthly") }
     var tier by remember { mutableStateOf("plus") }
-    var step by remember { mutableStateOf(PaywallStep.RESOLVING) }
+    var step by remember {
+        mutableStateOf(if (previewPlans != null) PaywallStep.PLANS else PaywallStep.RESOLVING)
+    }
 
-    LaunchedEffect(Unit) { billing.refresh() }
+    LaunchedEffect(Unit) { if (previewPlans == null) billing.refresh() }
 
     // Trial length and eligibility come from Play's own pricing phases: a
     // trial is a phase priced at zero, and Play only attaches one to an

@@ -160,6 +160,15 @@ internal fun ScenarioComposer(
             partner = StockPerson.catalog.first()
                 .asCounterpart(CounterpartStore.shared(context).load())
         }
+        // Capture only (iOS `composerPreview`): Cafe already picked, with
+        // sample ideas as its chips, so the narrowing step renders offline.
+        com.roro.futurevoice.capture.flags.WatchCaptureFlags.composerPreviewIdeas?.let { ideas ->
+            if (path.isEmpty()) {
+                val cafe = PathIdeasContent.categories.first { it.title == "Cafe" }
+                path = listOf(Crumb(cafe.title, cafe.icon))
+                options = ideas
+            }
+        }
     }
 
     // Dictation language. The app language is what a situation gets described

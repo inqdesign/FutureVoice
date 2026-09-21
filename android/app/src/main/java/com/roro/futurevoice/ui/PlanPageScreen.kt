@@ -87,6 +87,12 @@ fun PlanPageScreen(
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var receipt by remember { mutableStateOf<SubscriptionReceipt?>(null) }
     LaunchedEffect(Unit) {
+        // Screenshot harness only: a sample account instead of the network.
+        com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount?.let {
+            account = it
+            receipt = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewReceipt
+            return@LaunchedEffect
+        }
         val auth = AuthRepository()
         val loaded = AccountStatus.load(auth)
         account = loaded

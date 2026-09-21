@@ -172,8 +172,10 @@ fun WordCardSheet(
         loading = true
         failed = false
         entry = null
-        val fetched = lore.entry(term, nativeLanguage, language,
-            if (isWord) WordLore.Kind.WORD else WordLore.Kind.EXPRESSION)
+        val fetched = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.lookup {
+            lore.entry(term, nativeLanguage, language,
+                if (isWord) WordLore.Kind.WORD else WordLore.Kind.EXPRESSION)
+        }
         entry = fetched
         failed = fetched == null
         loading = false

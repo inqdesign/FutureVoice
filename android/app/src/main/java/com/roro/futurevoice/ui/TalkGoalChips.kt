@@ -262,12 +262,15 @@ fun TalkGoalSheet(
     onDismiss: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    // Capture build only: a stubbed entry instead of the lookup.
+    val stub = com.roro.futurevoice.capture.flags.TalkCaptureFlags.stubGoalEntry
     var entry by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.net.WordLore.Entry?>(null)
+        androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.net.WordLore.Entry?>(stub)
     }
-    var loading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    var loading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(stub == null) }
 
     androidx.compose.runtime.LaunchedEffect(item.key) {
+        if (stub != null) return@LaunchedEffect
         loading = true
         entry = com.roro.futurevoice.net.WordLore(com.roro.futurevoice.data.AuthRepository())
             .entry(item.text, nativeLanguage, targetLanguage,

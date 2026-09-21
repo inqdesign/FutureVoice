@@ -125,6 +125,10 @@ fun FindPeopleScreen(
 
     val client = remember { PublicPersonaClient(AuthRepository()) }
     suspend fun loadPool() {
+        // Capture only: a sample pool, never the network (signed out, offline).
+        com.roro.futurevoice.capture.flags.WatchCaptureFlags.samplePool?.let {
+            pool = it; loading = false; loadFailed = false; return
+        }
         loading = true
         loadFailed = false
         runCatching { client.fetchPool(language) }

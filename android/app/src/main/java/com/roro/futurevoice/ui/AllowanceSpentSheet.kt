@@ -76,7 +76,11 @@ fun AllowanceSpentSheet(
     // an arbitrary stop, and the size was on the card before the purchase.
     // Loaded here rather than passed in, so every caller gets the same sheet.
     var account by remember { mutableStateOf<AccountStatus?>(null) }
-    LaunchedEffect(Unit) { account = AccountStatus.load(AuthRepository()) }
+    LaunchedEffect(Unit) {
+        // Screenshot harness only: a sample account instead of the network.
+        account = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
+            ?: AccountStatus.load(AuthRepository())
+    }
 
     // Same line every billing surface uses, so one date format reaches them all.
     val locale = LocalConfiguration.current.locales[0]

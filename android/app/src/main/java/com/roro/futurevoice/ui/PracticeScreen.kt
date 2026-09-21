@@ -109,11 +109,13 @@ fun PracticeBody(
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenDueReview: () -> Unit = {},
+    /** Which shelf the page opens on (iOS `PracticeTab(initialShelf:)`). */
+    initialShelf: Shelf = Shelf.STUDYING,
 ) {
     var editingGoals by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var shelf by remember { mutableStateOf(Shelf.STUDYING) }
+    var shelf by remember { mutableStateOf(initialShelf) }
     var due by remember { mutableStateOf(0) }
     var wordsDue by remember { mutableStateOf(0) }
     var expressionsDue by remember { mutableStateOf(0) }
@@ -1282,6 +1284,6 @@ private fun canDoAt(level: String): String = stringResource(
 
 /** The finished shelf's date: a day, abbreviated, in the learner's own
  *  language. A finished book is a record, so it says WHEN, not how long ago. */
-private fun shelfDate(at: Long): String =
+internal fun shelfDate(at: Long): String =
     java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
         .format(java.util.Date(at))

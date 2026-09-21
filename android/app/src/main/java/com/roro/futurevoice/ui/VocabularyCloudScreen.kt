@@ -135,7 +135,8 @@ fun VocabularyCloudScreen(
     var marks by remember(language) { mutableStateOf(Marks()) }
     var cloud by remember(language) { mutableStateOf(CloudLayout.Cloud()) }
     /** The tapped word's card; null while the cloud has the screen to itself. */
-    var openWord by remember { mutableStateOf<String?>(null) }
+    var openWord by remember { mutableStateOf(
+        com.roro.futurevoice.capture.flags.PracticeCaptureFlags.cloudOpenWord) }
 
     LaunchedEffect(language, revision) { marks = loadMarks(context, language) }
 

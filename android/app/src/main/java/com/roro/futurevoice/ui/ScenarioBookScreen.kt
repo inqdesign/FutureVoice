@@ -74,9 +74,11 @@ fun ScenarioBookScreen(
     var scenario by remember { mutableStateOf<Scenario?>(null) }
     var wordMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
     var exprMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var chapter by remember { mutableStateOf(Chapter.SCENE) }
+    var chapter by remember { mutableStateOf(
+        Chapter.entries.firstOrNull { it.name == com.roro.futurevoice.capture.flags.PracticeCaptureFlags.bookChapter } ?: Chapter.SCENE) }
     LaunchedEffect(scenarioId, revision) {
-        val sc = ScenarioStore.shared(context).load(language).firstOrNull { it.id == scenarioId }
+        val sc = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.bookScenario?.takeIf { it.id == scenarioId }
+            ?: ScenarioStore.shared(context).load(language).firstOrNull { it.id == scenarioId }
         scenario = sc
         val vocab = VocabStore.shared(context)
         val cur = sc?.curriculum

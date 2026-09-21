@@ -123,9 +123,12 @@ fun TalkDetailScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var session by remember { mutableStateOf<Session?>(null) }
-    var chapter by remember { mutableStateOf(TalkChapter.INTRO) }
+    var chapter by remember { mutableStateOf(
+        TalkChapter.entries.firstOrNull { it.name == com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailChapter }
+            ?: TalkChapter.INTRO) }
     LaunchedEffect(sessionId, revision) {
-        session = SessionStore.shared(context).load(language).firstOrNull { it.id == sessionId }
+        session = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailSession?.takeIf { it.id == sessionId }
+            ?: SessionStore.shared(context).load(language).firstOrNull { it.id == sessionId }
     }
     val s = session ?: return
     val sm = s.summary
@@ -509,7 +512,7 @@ private fun MasteredBanner(onArchive: () -> Unit) {
  * can't keep.
  */
 @Composable
-private fun ScoreBlock(
+internal fun ScoreBlock(
     card: SessionScorecard,
     contextLine: String,
     grammarIssueCount: Int,

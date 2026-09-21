@@ -149,12 +149,18 @@ fun StudyDeckScreen(
         revealed = false
         entry = null
         val item = top ?: return@LaunchedEffect
+        // Capture seam: a drag can only be photographed from inside itself.
+        if (com.roro.futurevoice.capture.flags.PracticeCaptureFlags.previewStudyTray) {
+            revealed = true; dragging = true; dragOffset = 40f to 150f
+        }
         loading = true
         // A mixed deck holds both kinds; each has to be looked up as what it
         // is, or an expression comes back glossed as one of its words.
-        entry = lore.entry(item.text, nativeLanguage, language,
-            if (item.kind == StudyScheduleStore.Kind.EXPRESSION) WordLore.Kind.EXPRESSION
-            else WordLore.Kind.WORD)
+        entry = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.lookup {
+            lore.entry(item.text, nativeLanguage, language,
+                if (item.kind == StudyScheduleStore.Kind.EXPRESSION) WordLore.Kind.EXPRESSION
+                else WordLore.Kind.WORD)
+        }
         loading = false
     }
 

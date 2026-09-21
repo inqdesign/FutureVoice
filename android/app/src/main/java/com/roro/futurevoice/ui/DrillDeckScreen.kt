@@ -172,10 +172,21 @@ fun DrillDeckScreen(
         refreshFolders()
     }
 
-    LaunchedEffect(language) { dealHand() }
+    LaunchedEffect(language) {
+        dealHand()
+        if (com.roro.futurevoice.capture.flags.PracticeCaptureFlags.previewDrillFolder) openFolder = DrillBin.TOMORROW
+    }
 
     val top = deck.firstOrNull()
-    LaunchedEffect(top?.id) { revealed = false }
+    LaunchedEffect(top?.id) {
+        revealed = false
+        // Capture seams: the tray is drag-only and a folder is tap-only, so a
+        // screenshot can't reach either without being put there.
+        if (top != null && com.roro.futurevoice.capture.flags.PracticeCaptureFlags.previewDrillTray) {
+            revealed = true; dragging = true; activeBin = DrillBin.TOMORROW
+            cardOffset.snapTo(with(density) { Offset(40.dp.toPx(), 150.dp.toPx()) })
+        }
+    }
 
     fun apply(card: DrillCard, bin: DrillBin) {
         scope.launch {

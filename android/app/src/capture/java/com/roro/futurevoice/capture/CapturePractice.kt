@@ -1,7 +1,45 @@
 package com.roro.futurevoice.capture
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.roro.futurevoice.R
+import com.roro.futurevoice.capture.flags.PracticeCaptureFlags
+import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.LanguageScope
+import com.roro.futurevoice.data.StudyScheduleStore
+import com.roro.futurevoice.data.VocabStore
+import com.roro.futurevoice.talk.TurnRole
+import com.roro.futurevoice.ui.DrillDeckScreen
+import com.roro.futurevoice.ui.FinishedBooksSheet
+import com.roro.futurevoice.ui.LibraryKind
+import com.roro.futurevoice.ui.LibraryScreen
+import com.roro.futurevoice.ui.PracticeBody
+import com.roro.futurevoice.ui.ScenarioBookScreen
+import com.roro.futurevoice.ui.ScoreBlock
+import com.roro.futurevoice.ui.ShadowScreen
+import com.roro.futurevoice.ui.Shelf
+import com.roro.futurevoice.ui.StudyDeckHost
+import com.roro.futurevoice.ui.TalkDetailScreen
+import com.roro.futurevoice.ui.VocabularyCloudScreen
+import com.roro.futurevoice.ui.brand.AppSurfaces
+import kotlinx.coroutines.runBlocking
 
 /**
  * Capture modes for the Practice area. This file owns exactly these iOS modes:
@@ -49,10 +87,248 @@ import androidx.compose.runtime.Composable
  * names the master-plan item), or absent (still NOT WIRED in the gallery).
  */
 object CapturePractice {
+
+    private const val MIN = 60_000L
+    private const val DAY = 86_400_000L
+
+    private fun lang(c: Context) = LanguageScope.active(c)
+    private fun native(c: Context) =
+        c.getSharedPreferences("futurevoice", 0).getString("futurevoice.nativeLanguage", null) ?: "en"
+    private fun level(c: Context) =
+        CefrLevel.from(c.getSharedPreferences("futurevoice", 0).getString("futurevoice.proficiency", "b1"))
+
+    /**
+     * One mode: flags first, then the seeds (synchronously, before the real
+     * screen's first read — iOS seeds inside `view(for:)` for the same
+     * reason), then the screen. Lookups are offline in every mode: the
+     * capture app has no session, and iOS's lookups come back nil for the
+     * same reason.
+     */
+    private fun mode(
+        seed: suspend (Context) -> Unit = {},
+        screen: @Composable (Context) -> Unit,
+    ): @Composable (Context) -> Unit = { ctx ->
+        remember {
+            PracticeCaptureFlags.offlineLookups = true
+            runBlocking { seed(ctx) }
+            true
+        }
+        screen(ctx)
+    }
+
+    // ── Seeds (the iOS route bodies) ──
+
+    private suspend fun seedSessionsAndBooks(c: Context, name: String) = CaptureSeed.once(name) {
+        CaptureSeed.seedSessions(c, scored = true); CaptureSeed.seedScenarios(c)
+    }
+
+    private suspend fun snoozePast(c: Context, agoMs: Long,
+                                   words: List<String>, expressions: List<String>) {
+        val store = StudyScheduleStore.shared(c)
+        val at = System.currentTimeMillis() - agoMs
+        words.forEach { store.snooze(StudyScheduleStore.Kind.WORD, it, lang(c), at) }
+        expressions.forEach { store.snooze(StudyScheduleStore.Kind.EXPRESSION, it, lang(c), at) }
+    }
+
+    private suspend fun seedPracticeDue(c: Context, expressions: List<String>) =
+        CaptureSeed.once("practice-due") {
+            CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c)
+            CaptureSeed.seedNews(c); CaptureSeed.seedScenarios(c)
+            snoozePast(c, 15 * MIN, listOf("reschedule", "overwhelmed"), expressions)
+        }
+
+    private suspend fun seedVocab(c: Context, fresh: Boolean = false) =
+        CaptureSeed.once("vocab") { CaptureSeed.seedVocab(c, freshSchedule = fresh) }
+
+    private suspend fun seedDrills(c: Context) =
+        CaptureSeed.once("drills") { CaptureSeed.seedVocab(c); CaptureSeed.seedDrillFolders(c) }
+
+    // ── Screens ──
+
+    /** The Practice tab's body. The tab shell (title, tab bar) is RootScreen's. */
+    @Composable
+    private fun Practice(c: Context, shelf: Shelf) {
+        Column(
+            Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+        ) {
+            PracticeBody(language = lang(c), level = level(c),
+                onOpenDeck = {}, onOpenWords = {}, onOpenExpressions = {},
+                onOpenScenarioBook = {}, onOpenTalk = {}, initialShelf = shelf)
+        }
+    }
+
+    @Composable
+    private fun DueDeck(c: Context) =
+        StudyDeckHost(kind = null, language = lang(c), nativeLanguage = native(c),
+            level = level(c), onBack = {})
+
+    @Composable
+    private fun DailyDeck(c: Context, kind: StudyScheduleStore.Kind) =
+        StudyDeckHost(kind = kind, language = lang(c), nativeLanguage = native(c),
+            level = level(c), onBack = {})
+
+    @Composable
+    private fun Drills(c: Context) =
+        DrillDeckScreen(language = lang(c), nativeLanguage = native(c), onBack = {})
+
+    @Composable
+    private fun Cloud(c: Context) = VocabularyCloudScreen(language = lang(c), onBack = {})
+
+    private fun talkDetail(chapter: String?, variant: String = "") = mode(
+        seed = { c ->
+            seedVocab(c)
+            var s = CaptureSeed.talkDetailSession
+            // iOS: the "-mid"/"-low" variants blank the UPPER sections so a
+            // screenshot reaches the lower ones.
+            if (variant.isNotEmpty()) {
+                s = s.copy(summary = s.summary?.copy(scorecard = null, overallNote = ""))
+            }
+            if (variant == "low") {
+                s = s.copy(turns = s.turns.filter { it.role == TurnRole.USER },
+                    summary = s.summary?.copy(newWordsUsed = emptyList()))
+            }
+            PracticeCaptureFlags.talkDetailSession = s
+            PracticeCaptureFlags.talkDetailChapter = chapter
+        },
+    ) { c ->
+        TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = lang(c),
+            level = level(c), onBack = {})
+    }
+
+    private fun book(chapter: String?) = mode(
+        seed = {
+            PracticeCaptureFlags.bookScenario = CaptureSeed.bookScenario
+            PracticeCaptureFlags.bookChapter = chapter
+        },
+    ) { c ->
+        ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
+            onWatch = {}, onShadow = {}, onBack = {})
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun Scorecard() {
+        // The iOS route draws the same harness page around `ScorecardView`.
+        Scaffold(topBar = { TopAppBar(title = { Text("Scorecard") }) }) { padding ->
+            Column(Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
+                .verticalScroll(rememberScrollState()).padding(vertical = 14.dp)) {
+                Text("Last talk", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp))
+                val card = CaptureSeed.sampleScorecard
+                ScoreBlock(
+                    card = card,
+                    contextLine = stringResource(
+                        R.string.scored_against_your_level_setting_this_talk_itself_read_as,
+                        "B1", card.cefrLevel.orEmpty().uppercase()),
+                    grammarIssueCount = 0,
+                    onGrammarReview = {})
+            }
+        }
+    }
+
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
+        "practice-talk" to mode({ seedSessionsAndBooks(it, "practice-talk") }) { Practice(it, Shelf.TALK) },
+        "practice-watch" to mode({ seedSessionsAndBooks(it, "practice-watch") }) { Practice(it, Shelf.WATCH) },
+        "practice-studying" to mode({ seedSessionsAndBooks(it, "practice-studying") }) {
+            Practice(it, Shelf.STUDYING)
+        },
+        "practice-due" to mode({ seedPracticeDue(it, listOf("walk you through")) }) {
+            Practice(it, Shelf.STUDYING)
+        },
+        // What the review reminder opens: on Android the due deck is its own
+        // screen rather than a sheet over the tab, so the route IS this deck.
+        "practice-review-route" to mode({ seedPracticeDue(it, emptyList()) }) { DueDeck(it) },
+        "review-due" to mode({ c ->
+            CaptureSeed.once("review-due") {
+                CaptureSeed.seedVocab(c)
+                snoozePast(c, 10 * MIN, listOf("appreciate", "reschedule"), listOf("catch up on"))
+                // Still waiting — must NOT appear in the due deck.
+                StudyScheduleStore.shared(c).snooze(StudyScheduleStore.Kind.WORD, "nuanced",
+                    lang(c), System.currentTimeMillis() + 3 * DAY)
+            }
+        }) { DueDeck(it) },
+
+        "drills" to mode({ seedDrills(it) }) { Drills(it) },
+        "drills-tray" to mode({ seedDrills(it); PracticeCaptureFlags.previewDrillTray = true }) { Drills(it) },
+        "drills-folder" to mode({ seedDrills(it); PracticeCaptureFlags.previewDrillFolder = true }) { Drills(it) },
+
+        "daily-words" to mode({ seedVocab(it, fresh = true) }) {
+            DailyDeck(it, StudyScheduleStore.Kind.WORD)
+        },
+        "daily-words-tray" to mode({
+            seedVocab(it, fresh = true)
+            PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
+            PracticeCaptureFlags.previewStudyTray = true
+        }) { DailyDeck(it, StudyScheduleStore.Kind.WORD) },
+        "daily-words-full" to mode({
+            seedVocab(it, fresh = true)
+            PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
+        }) { DailyDeck(it, StudyScheduleStore.Kind.WORD) },
+        "daily-expressions" to mode({ seedVocab(it, fresh = true) }) {
+            DailyDeck(it, StudyScheduleStore.Kind.EXPRESSION)
+        },
+
+        "vocab" to mode({ seedVocab(it) }) { Cloud(it) },
+        "vocab-card" to mode({ c ->
+            seedVocab(c)
+            PracticeCaptureFlags.cloudOpenWord = VocabStore.shared(c).studying(lang(c)).firstOrNull()
+        }) { Cloud(it) },
+        "vocab-loading" to mode({
+            seedVocab(it)
+            PracticeCaptureFlags.cloudOpenWord = "zzz-uncached-word"
+            PracticeCaptureFlags.slowLookupMs = 30_000L
+        }) { Cloud(it) },
+        "vocab-failed" to mode({
+            seedVocab(it)
+            PracticeCaptureFlags.cloudOpenWord = "zzz-uncached-word"
+        }) { Cloud(it) },
+        "expr" to mode({ c ->
+            CaptureSeed.once("expr") { CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c, scored = true) }
+        }) { LibraryScreen(kind = LibraryKind.EXPRESSIONS, language = lang(it), onBack = {}) },
+
+        "book" to book(null),
+        "book-words" to book("WORDS"),
+        "book-lines" to book("SHADOW"),
+
+        "talkdetail" to talkDetail(null),
+        "talkdetail-mid" to talkDetail(null, "mid"),
+        "talkdetail-low" to talkDetail(null, "low"),
+        "talkdetail-words" to talkDetail("WORDS"),
+        "talkdetail-expressions" to talkDetail("EXPRESSIONS"),
+        "talkdetail-lines" to talkDetail("LINES"),
+        "talkdetail-cards" to talkDetail("CARDS"),
+
+        "finished" to mode { _ ->
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+                FinishedBooksSheet(books = CaptureSeed.sampleFinishedBooks, onOpen = {}, onDismiss = {})
+            }
+        },
+        "finished-empty" to mode { _ ->
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+                FinishedBooksSheet(books = emptyList(), onOpen = {}, onDismiss = {})
+            }
+        },
+
+        // Android's karaoke is always estimated locally and nothing plays
+        // until tapped, so iOS's `captureShadow` seam has nothing to switch.
+        "shadow" to mode { _ ->
+            val turn = CaptureSeed.shadowTurn
+            ShadowScreen(line = turn.transcript, voiceId = "", targetLanguage = "en",
+                turnId = turn.id, onBack = {})
+        },
+        "score" to mode({ c -> CaptureSeed.once("score") { CaptureSeed.seedVocab(c) } }) { Scorecard() },
     )
 
     /** mode → why Android can't show it yet (name the master-plan item). */
     val notPorted: Map<String, String> = mapOf(
+        "review-item-word" to "4.8 — A review reminder can't open ONE item: Android's reminder opens " +
+            "the whole due queue (DeepLinkInbox.REVIEW carries no item) — no master-plan item yet",
+        "review-item-sentence" to "4.8 — A review reminder can't open ONE sentence card: Android's " +
+            "reminder opens the whole due queue — no master-plan item yet",
+        "wordcard-ja" to "Japanese target not ported yet — 2.15",
+        "talkdetail-ja" to "Japanese target not ported yet — 2.15",
+        "shadow-ja" to "Japanese target not ported yet — 2.15",
     )
 }

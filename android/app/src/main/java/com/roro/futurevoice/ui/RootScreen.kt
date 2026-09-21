@@ -681,7 +681,7 @@ private fun Loading() {
 }
 
 @Composable
-private fun SignInScreen(
+internal fun SignInScreen(
     state: AppState,
     googleAvailable: Boolean = false,
     onGoogleSignIn: (android.content.Context) -> Unit = {},
@@ -721,7 +721,7 @@ private fun SignInScreen(
             // Emulator escape hatch while Apple web-OAuth setup is pending.
             // Debug builds only — this whole block is compiled out of release,
             // and production accounts are Apple-only so email reaches nothing real.
-            if (BuildConfig.DEBUG) {
+            if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
                 OutlinedTextField(
                     value = devEmail,
                     onValueChange = { devEmail = it },
@@ -753,7 +753,7 @@ private data class PendingLaunch(val topic: String, val facts: List<String>, val
  * with the install.
  */
 @Composable
-private fun AccountScreen(
+internal fun AccountScreen(
     googleAvailable: Boolean,
     onGoogleSignIn: (android.content.Context) -> Unit,
     onAppleSignIn: () -> Unit,
@@ -782,8 +782,9 @@ private fun AccountScreen(
     }
 }
 
-/** The four verbs, in the order the product does them. */
-private enum class HomeTab(val label: Int) {
+/** The four verbs, in the order the product does them. Internal so the
+ *  capture build can open the shell on a tab. */
+internal enum class HomeTab(val label: Int) {
     TALK(R.string.talk), WATCH(R.string.watch),
     PRACTICE(R.string.practice), PROGRESS(R.string.progress)
 }
@@ -794,7 +795,7 @@ private enum class HomeTab(val label: Int) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeScreen(
+internal fun HomeScreen(
     state: AppState,
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
     onOpenMe: () -> Unit,
@@ -1032,7 +1033,7 @@ private fun HomeScreen(
                         Text(it, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error)
                     }
-                    if (BuildConfig.DEBUG) {
+                    if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
                         TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
                         TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
                     }
@@ -1638,8 +1639,11 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
  */
 @Composable
 private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
-    var account by remember { mutableStateOf<AccountStatus?>(null) }
+    // Capture build only: an injected account, since a capture is signed out.
+    val injected = com.roro.futurevoice.capture.flags.TalkCaptureFlags.headerAccount
+    var account by remember { mutableStateOf(injected) }
     LaunchedEffect(Unit) {
+        if (injected != null) return@LaunchedEffect
         runCatching { AccountStatus.load(AuthRepository()) }.getOrNull()?.let {
             BillingGate.remember(it)
             account = it
