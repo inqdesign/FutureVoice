@@ -97,13 +97,6 @@ struct RootTabView: View {
                                  onClose: { callInbox.pendingAnswer = nil })
                     .environmentObject(appState)
             }
-            // Declined from the ALARM, which has no room to ask when to try
-            // again — so the app opens straight onto the question. (The
-            // notification fallback asks inline and never lands here.)
-            .sheet(item: $callInbox.pendingCallbackChoice) { plan in
-                DailyCallCallbackSheet(plan: plan,
-                                       onDone: { callInbox.pendingCallbackChoice = nil })
-            }
 
             // Opaque cover that snaps in ahead of the call's fade so the home
             // (and tab bar) don't bleed through the half-transparent call

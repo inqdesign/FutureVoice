@@ -12476,6 +12476,7 @@
       }
     },
     "Call back" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12522,6 +12523,7 @@
       }
     },
     "Call back in %lld hours" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12568,6 +12570,7 @@
       }
     },
     "Call back in %lld min" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12614,6 +12617,7 @@
       }
     },
     "Call back in 1 hour" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -21682,6 +21686,52 @@
         }
       }
     },
+    "Everything else is still here. One minute of reading brings your fluent self back." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles andere ist noch da. Eine Minute Vorlesen, und dein fließendes Ich ist zurück."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo lo demás sigue aquí. Con un minuto de lectura, tu yo fluido vuelve."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout le reste est toujours là. Une minute de lecture, et ton moi fluide revient."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかはすべてそのままです。1分読むだけで、流暢な自分が戻ってきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 건 전부 그대로예요. 1분만 읽으면 유창한 나를 다시 만날 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他内容都还在。只要朗读一分钟，流利的你就回来了。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他內容都還在。只要朗讀一分鐘，流利的你就回來了。"
+          }
+        }
+      }
+    },
     "Everything in this scenario is yours now." : {
       "localizations" : {
         "de" : {
@@ -29832,6 +29882,7 @@
       }
     },
     "If you can't talk" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -33151,6 +33202,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收合"
+          }
+        }
+      }
+    },
+    "Let's make your voice again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass uns deine Stimme neu aufnehmen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volvamos a crear tu voz."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recréons ta voix."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度、声をつくりましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 다시 만들어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新录一次你的声音吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新錄一次你的聲音吧。"
           }
         }
       }
@@ -40232,6 +40329,7 @@
       }
     },
     "Not today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -40675,6 +40773,7 @@
       }
     },
     "Nothing is lost by putting this off — no streak breaks and today still counts." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -62202,6 +62301,7 @@
       }
     },
     "The message stays on your Talk tab either way — you can listen whenever." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -70986,6 +71086,7 @@
       }
     },
     "When should I call?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -74124,6 +74225,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "整個故事都是自己撐完的，只有講到過去時，時態才卡了一下。下次通話，試著先把過去的背景鋪好。"
+          }
+        }
+      }
+    },
+    "You didn't finish signing up, so we deleted the voice you made to keep it safe." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast die Registrierung nicht abgeschlossen, deshalb haben wir deine Stimme zu deinem Schutz gelöscht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No terminaste de registrarte, así que eliminamos la voz que creaste para protegerla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu n’as pas terminé ton inscription, alors nous avons supprimé la voix que tu avais créée pour la protéger."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登録が完了しなかったため、安全のためにつくった声を削除しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가입을 마치지 않아서, 안전을 위해 만들어 둔 목소리를 삭제했어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你没有完成注册，为了安全，我们删除了你之前克隆的声音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你沒有完成註冊，為了安全，我們刪除了你之前複製的聲音。"
           }
         }
       }
@@ -78927,48 +79074,48 @@
         }
       }
     },
-    "Your phone rings at every time you set here, even on silent. Can't talk? They ring back later — and if you never pick up, the message waits for you instead of counting against you." : {
+    "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein Telefon klingelt zu jeder hier gesetzten Zeit, auch lautlos. Keine Zeit? Es wird später erneut angerufen – und wenn du nie rangehst, wartet die Nachricht auf dich, statt gegen dich zu zählen."
+            "value" : "Dein Telefon klingelt zu jeder hier gesetzten Zeit, auch lautlos. Keine Zeit? Einfach ablehnen – nichts zählt gegen dich."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El teléfono suena a cada hora que fijes aquí, incluso en silencio. ¿No puedes hablar? Vuelven a llamar más tarde, y si no contestas nunca, el mensaje te espera en vez de contar en tu contra."
+            "value" : "El teléfono suena a cada hora que fijes aquí, incluso en silencio. ¿No puedes hablar? Rechaza la llamada y listo, no cuenta en tu contra."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le téléphone sonne à chaque heure que tu fixes ici, même en silencieux. Pas le moment ? Il rappelle plus tard — et si tu ne réponds jamais, le message t’attend au lieu de compter contre toi."
+            "value" : "Le téléphone sonne à chaque heure que tu fixes ici, même en silencieux. Pas le moment ? Refuse l’appel, rien ne compte contre toi."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ここで決めた時刻ごとに電話が鳴ります。マナーモードでもです。都合が悪ければあとでかけ直し、結局出られなくてもペナルティの代わりにメッセージが残って待っています。"
+            "value" : "ここで決めた時刻ごとに電話が鳴ります。マナーモードでもです。都合が悪ければ拒否するだけで大丈夫。ペナルティはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "여기 정한 시각마다 전화가 울려요. 무음이어도요. 지금 곤란하면 나중에 다시 걸고, 끝내 못 받아도 벌점 대신 메시지가 남아 기다려요."
+            "value" : "여기 정한 시각마다 전화가 울려요. 무음이어도요. 지금 곤란하면 그냥 거절하세요. 불이익은 없어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每到这里设置的时间，电话就会响，静音也一样。不方便接？之后会再打来；一直没接的话，留言会留着等你，不会扣分。"
+            "value" : "每到这里设置的时间，电话就会响，静音也一样。不方便接？直接拒接就好，不会扣分。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每到這裡設定的時間，電話就會響，靜音也一樣。不方便接？之後會再打來；一直沒接的話，留言會留著等你，不會扣分。"
+            "value" : "每到這裡設定的時間，電話就會響，靜音也一樣。不方便接？直接拒接就好，不會扣分。"
           }
         }
       }
@@ -80824,6 +80971,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "語音模型會從 App 和 ElevenLabs 兩邊刪除，無法復原。下一通電話前會請你重新錄一個。"
+          }
+        }
+      }
+    },
+    "Your voice was deleted" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme wurde gelöscht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz se eliminó"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix a été supprimée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声は削除されました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리가 삭제됐어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的声音已删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的聲音已刪除"
           }
         }
       }

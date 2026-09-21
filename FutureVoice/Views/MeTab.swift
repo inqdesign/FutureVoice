@@ -32,7 +32,6 @@ struct MeTab: View {
     /// store stays the source of truth — `onChange` writes back — because the
     /// scheduler runs from a notification action with no view in memory.
     @State private var dailyCallEnabled = DailyCallStore.shared.isEnabled
-    @State private var callbackMinutes = DailyCallScheduler.defaultCallbackMinutes
     /// Working copy of `DailyCallStore.times`; written back on every edit.
     @State private var callTimes = DailyCallStore.shared.times
     /// Nil while loading or when the learner hasn't qualified — the row still
@@ -695,32 +694,16 @@ struct MeTab: View {
                         Label("Add a call", systemImage: "plus")
                     }
                 }
-                // The ALARM screen has room for one button we control, so it
-                // can't offer a choice at ring time — this is that choice,
-                // made once. (The notification fallback, which takes an array
-                // of actions, does show all of them inline.)
-                Picker(selection: $callbackMinutes) {
-                    ForEach(DailyCallScheduler.callbackOptions, id: \.self) { m in
-                        Text(DailyCallScheduler.callbackLabel(m)).tag(m)
-                    }
-                } label: {
-                    Text("If you can't talk")
-                }
             }
         } header: {
             Text("Call")
         } footer: {
             Text(explain(dailyCallEnabled
-                ? "Your phone rings at every time you set here, even on silent. Can't talk? They ring back later — and if you never pick up, the message waits for you instead of counting against you."
+                ? "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you."
                 : "Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went."))
         }
         .onChange(of: dailyCallEnabled) { _, on in
             Task { await setDailyCall(enabled: on) }
-        }
-        .onChange(of: callbackMinutes) { _, minutes in
-            // No reschedule needed: this only decides how far the NEXT decline
-            // pushes the callback, and that's read at decline time.
-            DailyCallScheduler.defaultCallbackMinutes = minutes
         }
     }
 

@@ -143,13 +143,13 @@ Nobody opens a language app because a streak asks them to; they answer a phone t
 - **More than one call a day** — `DailyCallStore.times` is a list (max `maxTimes` = 4), edited in Me; the legacy `hour`/`minute` keys migrate into it on first read, and those properties now proxy the FIRST time (setting either collapses the list, so never wire a single-time picker to them). `DailyCallScheduler.fireDates` returns every remaining slot today, else tomorrow's first — and `schedule` arms **all of them at once**, each as its own alarm/notification carrying the same still-unheard message. Arming only the next one would be a no-op: the plan is written in the foreground, but the gap between a slept-through 08:00 and a 13:00 has the app closed with nothing running to schedule the second. Answering cancels the rest; the session that follows writes the next call fresh.
 - **Onboarding introduces it** (`DailyCallOnboardingView`, gated in `RootView` on `futurevoice.dailyCall.onboarded`). Placed AFTER the voice clone — the call is the clone's first real job, so it reads as a promise rather than a permissions request. The flag is set on BOTH exits (enabled and skipped) or the screen becomes a wall. Existing installs see it once; that's how they learn the feature exists.
 - **Button mapping is inverted on purpose.** `AlarmPresentation.Alert.stopButton` is deprecated in 26.1 (system-drawn, unlabelable), so **Answer is the SECONDARY button** — the only one we can label and give a phone glyph — and the system's button is Decline. `secondaryButtonBehavior` is `.custom`, NOT `.countdown`: countdown would oblige the app to ship a Live Activity widget for that state.
-- **Every call settles into a `DailyCallOutcome`** (answered / declined / missed) and lands in `DailyCallStore.history()`. Declining rings back later (`maxCallbacks`), then the caller gives up for the day. **Where the "call back in…" choice is asked differs by surface**: the notification shows one action per `callbackOptions` entry inline (its category takes an array); the alarm can't, so `DeclineDailyCallIntent` sets `openAppWhenRun` and the app opens on `DailyCallCallbackSheet`. That sheet dismissing without a pick falls back to `defaultCallbackMinutes` — never to cancelling the day, which would be the app deciding something the learner didn't. An untouched call is settled as `.missed` on the next launch (`settleIfRangOut`, after `rangOutGrace`) — it can't be noticed at the time because nothing is running.
+- **Every call settles into a `DailyCallOutcome`** (answered / declined / missed) and lands in `DailyCallStore.history()`. **Declining is just not taking the call** (2026-09-21, user decision): no callback, no "call back in…" choice, and the app does NOT open — `DeclineDailyCallIntent` runs with `openAppWhenRun = false` and the notification's single decline action is a background one. The old callback sheet asked a question every time the learner said no, which was the app nagging; don't bring a callback back. The learner's own later times today still ring (they chose them), so a decline settles the plan as `.declined` only once no slot is left today; until then `callbackCount` (name kept for decoding) counts declines, and a plan that then rings out settles as `.declined`, not `.missed`. An untouched call is settled as `.missed` on the next launch (`settleIfRangOut`, after `rangOutGrace`) — it can't be noticed at the time because nothing is running.
 - **That history is what the NEXT script is written from** (`VoicemailEngine.Context.lastOutcome` / `consecutiveUnanswered`). This is the feature, not a nicety: an alarm knows nothing about you; a caller who opens with "couldn't talk yesterday?" reads as a person. Never make it scold — guilt is what makes people stop picking up.
 - **The missed-call row on the Talk tab was REMOVED 2026-09-02** (user decision) — a missed call no longer leaves a visible trace on the home. The store machinery survives untouched (`DailyCallStore.unheardVoicemail`, `keepUnheard`/`clearUnheard`, `DailyCallScheduler.markVoicemailHeard`) because the record is a single row overwritten by the next miss, and restoring the row is a UI-only change. If it ever comes back, the old rules still hold: read `unheardVoicemail`, never the plan (`refresh` overwrites the plan with the NEXT call moments after settling), and `markVoicemailHeard` must never stamp `heardAt` on the plan, which by then is the next call.
 - **The voicemail is synthesized at generation time**, saved into `PhraseAudioStore` under its own (script, voiceId). `VoicemailEngine` writes a 2–3 sentence script (`flash-lite`) grounded in the last talk's topic and phrases, **always ending in a question** — an unanswered question is the whole pull. Target language: it's material. `synthesizeRingtone` takes the STREAMING TTS path purely for its **raw PCM** output — `UNNotificationSound` only plays Linear PCM / µLaw / aLaw in .wav/.caf/.aiff, never MP3 — levels it through `AudioLoudness.gain(forSpeechRMS:)`, and writes it under `Library/Sounds/` with a **never-reused filename** (iOS caches notification sounds by name). Hard 30s OS ceiling, enforced twice: `maxScriptCharacters` and `VoicemailEngine.trim`.
 - **Generation happens at SESSION END, never in the morning** (`SessionSummarizer` → `AppState.refreshDailyCall(force: true)`). iOS won't reliably run background work at a chosen hour, and a call that fails to generate is a call that never rings. By 8am the script and audio are on disk, so the ring works offline. The `scenePhase == .active` re-arm is only a safety net (reinstall, missed fire, language switch) and is a no-op when a usable plan exists.
 - **One synthesis, two uses.** The ringtone WAV is saved into `PhraseAudioStore` under the same (script, voiceId), so answering opens `ConversationView(initialOpener:)` and that cache hit IS the call's first spoken line — no second TTS, no round trip, and the voice never changes across the hand-off.
-- **"In an hour" is not a failure.** `maxSnoozes = 3` re-fires the SAME plan (no new spend). Past the cap the day goes quiet and tomorrow's is written as usual — no scold, no broken counter, and `PracticeStats`' streak is untouched by a missed call.
+- **A decline is not a failure.** No scold, no broken counter, and `PracticeStats`' streak is untouched by a declined or missed call; tomorrow's is written as usual.
 - Tapping is handled by `DailyCallNotificationDelegate` (installed from `AppDelegate` — the delegate MUST be set before launch finishes or a lock-screen answer is lost), which posts to `DailyCallInbox.shared`; `RootTabView` presents the call from there.
 - `interruptionLevel = .timeSensitive` is set but inert until the Time Sensitive capability is added to the App ID — harmless without the entitlement, no signing change needed today.
 
@@ -1068,12 +1068,29 @@ had never heard. What the server needs is a **session**, not an account.
   an account (a returning user who tapped "Get started") → linking is refused,
   they're signed into their real account, and the clone is rebuilt under it
   from the take still on disk (`adoptedExistingAccount`).
-- **Unclaimed clones are collected nightly** — `cleanup-anonymous-voices` +
-  `stale_anonymous_users` (48h grace, ElevenLabs delete first, then the user,
-  which cascades). A voice that fails to delete upstream KEEPS its user so the
+- **Unclaimed clones are collected 30 minutes after the anonymous user was
+  created** (swept every 15 min since `20260822110000`; it was 48h before) —
+  `cleanup-anonymous-voices` + `stale_anonymous_users` (ElevenLabs delete
+  first, then the user, which cascades). A voice that fails to delete upstream KEEPS its user so the
   next run can retry; deleting it would lose the only pointer to a slot we pay
   for. The cron needs `project_url` + `cleanup_secret` in the vault and
   `CLEANUP_SECRET` in the function env — until then it simply doesn't schedule.
+- **A reclaimed voice is SAID, never dialled** (2026-09-21). Someone who clones
+  and leaves before signing up comes back to a voice that no longer exists. The
+  app used to walk them into Talk anyway: `RealtimeTalkClient.accessToken`
+  minted a fresh anonymous user, the gateway refused the dead id
+  (`voice_forbidden`) twice, the sign-up that followed linked the stale id to a
+  real account, and they left without hearing a word. Now `AppState` keeps
+  `unclaimedVoiceSince` (the anonymous owner's `createdAt`, nil once an account
+  owns the session) and two checks lead to `voiceWasDeleted`: the CLOCK
+  (`checkForReclaimedVoice`, launch + foreground, no network — past
+  `reclaimGraceMinutes` the voice is gone whatever the phone knows; keep it
+  equal to the function's `GRACE_MINUTES`) and the SERVER
+  (`restoreVoiceCloneFromCloud`: the query succeeded, this user owns no active
+  row, the phone holds an id → the voice belonged to someone who is gone). It
+  drops the id, signs an anonymous session out, and the voice-clone screen opens
+  on "Your voice was deleted" until the next clone lands. The silent anonymous
+  sign-in in `accessToken` is DEBUG-only.
 
 ## Source of truth
 

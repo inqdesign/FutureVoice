@@ -131,9 +131,7 @@ enum VoicemailEngine {
         case .answered:
             grounding.append("Last time you called, they picked up and you talked.")
         case .declined:
-            grounding.append(c.lastCallbacks >= DailyCallScheduler.maxCallbacks
-                ? "Last time you called, they kept saying they couldn't talk, and you gave up for the day."
-                : "Last time you called, they said they couldn't talk right then.")
+            grounding.append("Last time you called, they said they couldn't talk right then.")
         case .missed:
             grounding.append("Last time you called, they never picked up.")
         case nil:
