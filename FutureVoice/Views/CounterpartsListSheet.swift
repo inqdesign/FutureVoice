@@ -91,6 +91,21 @@ struct CounterpartFormView: View {
                 }
             }
         }
+        // A swipe must never be the way this closes while it holds unsaved
+        // work: it discards without asking, and for a NEW person it also
+        // closes the intake behind it — everything the user said is gone.
+        // Reported: a stray vertical drag in the voice picker dismissed the
+        // whole form. Cancel stays, as the deliberate exit.
+        .interactiveDismissDisabled(hasUnsavedWork)
+    }
+
+    /// A person not on file yet is unsaved by definition (the intake's
+    /// parsed draft included); an existing one only once something changed.
+    private var hasUnsavedWork: Bool {
+        guard let initial,
+              appState.counterparts.contains(where: { $0.id == initial.id })
+        else { return true }
+        return draft != initial
     }
 }
 

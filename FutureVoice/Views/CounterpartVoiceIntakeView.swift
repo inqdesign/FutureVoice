@@ -84,6 +84,9 @@ struct CounterpartVoiceIntakeView: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            // Same rule as the form it hands off to: once there's something
+            // to lose, only Cancel closes this — never a stray swipe.
+            .interactiveDismissDisabled(!name.trimmingCharacters(in: .whitespaces).isEmpty)
             .sheet(item: $prefilled, onDismiss: { dismiss() }) { draft in
                 CounterpartFormView(initial: draft)
                     .environmentObject(appState)
@@ -282,6 +285,14 @@ struct CounterpartVoiceIntakeView: View {
                 nativeLanguage: appState.nativeLanguage)
             // What the user typed outright wins over the parse.
             draft.name = name
+            // The relationship card is REQUIRED, so the user always gave one —
+            // but the parser is told not to invent, and for someone who isn't
+            // in their life (a celebrity: "BTS 정국" + Other) it returns "".
+            // The form's Save needs a relationship, so an empty one left Save
+            // greyed out and the only exit threw the person away.
+            if draft.relationship.trimmingCharacters(in: .whitespaces).isEmpty {
+                draft.relationship = kindDetail.isEmpty ? (kind?.rawValue ?? "") : kindDetail
+            }
             prefilled = draft
         } catch {
             self.error = "Couldn't parse: \(error.localizedDescription)"
