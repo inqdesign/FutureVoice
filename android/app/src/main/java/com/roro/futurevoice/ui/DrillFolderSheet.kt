@@ -65,7 +65,11 @@ fun DrillFolderSheet(
                         .combinedClickable(onClick = { menu = true }, onLongClick = { menu = true })
                         .padding(vertical = 10.dp)) {
                         Text(card.targetPhrase, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-                        Text(returnLabel(card.nextReviewAt),
+                        // Known says it is KNOWN: a retired card has no
+                        // return, so a countdown here would announce one the
+                        // learner just said they didn't need.
+                        Text(if (bin == DrillBin.GOT_IT) stringResource(R.string.marked_as_known)
+                             else returnLabel(card.nextReviewAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

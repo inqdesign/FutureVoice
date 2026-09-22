@@ -20,8 +20,37 @@ import java.io.File
  */
 object DrillIngest {
 
-    /** Top Leitner rung — box-5 cards are "learned" (30-day interval). */
+    /** Top Leitner rung — a box-5 card is RETIRED, see [RETIRED_REVIEW_AT]. */
     const val MAX_BOX = 5
+
+    /**
+     * The top rung's "return": there isn't one. "Got it" is the learner
+     * saying they know this line, and the word and expression decks have
+     * always treated that as an END. Here it used to be a 30-day interval,
+     * which made Known a waiting room instead of a door — a known card came
+     * back, was marked known again, and came back again, so nothing ever
+     * left the store. A retired card is still LISTED under Known, and
+     * re-filing it from that folder is what brings it back — the learner's
+     * call, not the ladder's (iOS `1ab175d`).
+     */
+    const val RETIRED_REVIEW_AT = Long.MAX_VALUE
+
+    fun isRetired(card: DrillCard) = card.box >= MAX_BOX
+
+    /** A delay may never land on the top rung: putting something off is by
+     *  definition "not yet known", and the top rung means retired. */
+    fun delayBox(box: Int) = box.coerceIn(0, MAX_BOX - 1)
+
+    /** Read-time repair: a card that reached the top rung while it still
+     *  meant "back in 30 days" still carries that date. */
+    fun retired(card: DrillCard) =
+        if (isRetired(card) && card.nextReviewAt != RETIRED_REVIEW_AT)
+            card.copy(nextReviewAt = RETIRED_REVIEW_AT) else card
+
+    /** When a card at [box] comes back. Below the top rung it climbs the
+     *  interval table; the top rung retires. */
+    fun nextReviewAt(box: Int, now: Long): Long =
+        if (box >= MAX_BOX) RETIRED_REVIEW_AT else now + intervalMs(box)
 
     /** Leitner interval per box, in milliseconds. Box 0 stays due immediately. */
     fun intervalMs(box: Int): Long {
@@ -162,7 +191,14 @@ class DrillStore private constructor(context: Context) {
             StoreJson.json.decodeFromString(ListSerializer(DrillCard.serializer()), f.readText())
         }.getOrElse { emptyList() }
             .filter { !DrillIngest.looksLikeMetaRule(it.targetPhrase) }
-            .map { it.copy(targetPhrase = DrillIngest.coreSentence(it.targetPhrase, it.sourcePhrase)) }
+            .map {
+                // Cards that reached the top rung while it still meant "back
+                // in 30 days" still carry that date. Known is an END now, so
+                // retire them where they sit — read-time like the store's
+                // other repairs, and the next write persists it.
+                DrillIngest.retired(
+                    it.copy(targetPhrase = DrillIngest.coreSentence(it.targetPhrase, it.sourcePhrase)))
+            }
     }
 
     suspend fun clearUnreviewedCards(sessionId: String, language: String = LanguageScope.active(appContext)) =
@@ -198,7 +234,7 @@ class DrillStore private constructor(context: Context) {
                 Analytics.capture("drill_used_in_conversation", mapOf("box" to promoted))
                 touched = true
                 card.copy(box = promoted, lastReviewedAt = now,
-                    nextReviewAt = now + DrillIngest.intervalMs(promoted))
+                    nextReviewAt = DrillIngest.nextReviewAt(promoted, now))
             }
             if (touched) write(language, updated)
         }
@@ -219,7 +255,7 @@ class DrillStore private constructor(context: Context) {
         upsertMany(listOf(card.copy(
             timesSeen = card.timesSeen + 1, timesCorrect = card.timesCorrect + 1,
             lastReviewedAt = now, box = DrillIngest.MAX_BOX,
-            nextReviewAt = now + DrillIngest.intervalMs(DrillIngest.MAX_BOX))), language)
+            nextReviewAt = DrillIngest.RETIRED_REVIEW_AT)), language)
         PracticeLog.record(appContext, PracticeLog.Kind.DRILL, finished = true)
     }
 
@@ -237,8 +273,11 @@ class DrillStore private constructor(context: Context) {
                           language: String = LanguageScope.active(appContext),
                           now: Long = System.currentTimeMillis()) {
         com.roro.futurevoice.core.Analytics.capture("drill_reviewed")
+        // Never the top rung: a delay is by definition "not yet known", and
+        // the top rung means retired.
         upsertMany(listOf(card.copy(
-            timesSeen = card.timesSeen + 1, lastReviewedAt = now, box = box,
+            timesSeen = card.timesSeen + 1, lastReviewedAt = now,
+            box = DrillIngest.delayBox(box),
             nextReviewAt = now + delayMs)), language)
         PracticeLog.record(appContext, PracticeLog.Kind.DRILL)
     }

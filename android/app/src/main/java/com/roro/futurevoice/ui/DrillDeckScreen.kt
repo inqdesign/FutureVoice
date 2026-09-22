@@ -119,10 +119,9 @@ fun DrillDeckScreen(
     var dealt by remember { mutableStateOf(false) }
     var resolved by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableStateOf(false) }
-    /** Everything still waiting, bucketed by WHEN it comes back. */
+    /** Everything not due now: the three delay windows, plus Known for the
+     *  cards that retired there. */
     var scheduled by remember { mutableStateOf<Map<DrillBin, Int>>(emptyMap()) }
-    /** "Got it" is session-local here too — a graduated card is not "waiting". */
-    var finished by remember { mutableIntStateOf(0) }
     /** The card opened up — examples, variants, a hook to remember it by. */
     var enrichFor by remember { mutableStateOf<DrillCard?>(null) }
     /** Due cards this hand didn't take. Short enough to finish in one sitting. */
@@ -155,13 +154,17 @@ fun DrillDeckScreen(
 
     suspend fun refreshFolders() {
         val now = System.currentTimeMillis()
+        // A retired card has no return date, so it belongs in Known rather
+        // than in a window on when it comes back (iOS `1ab175d`). It is
+        // listed there, and re-filing it from the folder is what brings it
+        // back — the learner's call, not the ladder's.
         folderCards = store.load(language)
-            .filter { it.nextReviewAt > now && it.box < com.roro.futurevoice.data.DrillIngest.MAX_BOX }
-            .groupBy { DrillBin.folder(it.nextReviewAt - now) }
-        scheduled = store.load(language)
-            .filter { it.nextReviewAt > now && it.box < com.roro.futurevoice.data.DrillIngest.MAX_BOX }
-            .groupingBy { DrillBin.folder(it.nextReviewAt - now) }
-            .eachCount()
+            .filter { it.nextReviewAt > now }
+            .groupBy {
+                if (com.roro.futurevoice.data.DrillIngest.isRetired(it)) DrillBin.GOT_IT
+                else DrillBin.folder(it.nextReviewAt - now)
+            }
+        scheduled = folderCards.mapValues { it.value.size }
     }
 
     suspend fun dealHand() {
@@ -192,7 +195,7 @@ fun DrillDeckScreen(
         scope.launch {
             val manual = bin.manual
             if (manual != null) store.fileInBin(card, manual.first, manual.second, language)
-            else { store.markKnown(card, language); finished += 1 }
+            else store.markKnown(card, language)
             refreshFolders()
             StoreEvents.bump()
         }
@@ -271,7 +274,7 @@ fun DrillDeckScreen(
                 if (dealt) {
                     DeckDone(
                         folders = DrillBin.entries.map { bin ->
-                            bin to if (bin == DrillBin.GOT_IT) finished else (scheduled[bin] ?: 0)
+                            bin to (scheduled[bin] ?: 0)
                         },
                         // Nothing due at all is a different day from a deck
                         // just finished — one is "come back after a talk",
@@ -449,14 +452,10 @@ fun DrillDeckScreen(
                     dragging = dragging,
                     active = activeBin.takeIf { dragging && !cancelActive },
                     tappable = revealed,
-                    counts = { bin ->
-                        if (bin == DrillBin.GOT_IT) finished else (scheduled[bin] ?: 0)
-                    },
-                    // "Got it" has nothing to list: marking a card known
-                    // CLEARS its return date, so there is no waiting to show.
+                    counts = { bin -> scheduled[bin] ?: 0 },
                     onOpen = { bin ->
                         if (revealed && top != null) file(top, bin)
-                        else if (bin != DrillBin.GOT_IT) openFolder = bin
+                        else openFolder = bin
                     },
                     onBounds = { bin, rect -> binBounds = binBounds + (bin to rect) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

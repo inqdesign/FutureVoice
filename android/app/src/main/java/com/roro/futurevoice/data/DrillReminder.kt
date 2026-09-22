@@ -36,7 +36,12 @@ object DrillReminder {
     suspend fun reschedule(context: Context, now: Long = System.currentTimeMillis()) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(pending(context, 0))
-        val cards = runCatching { DrillStore.shared(context).load().map { it.nextReviewAt } }.getOrDefault(emptyList())
+        // Retired cards are skipped: their date is the far future, and a
+        // reminder must never promise a card the deck won't deal.
+        val cards = runCatching {
+            DrillStore.shared(context).load()
+                .filterNot { DrillIngest.isRetired(it) }.map { it.nextReviewAt }
+        }.getOrDefault(emptyList())
         val study = runCatching {
             StudyScheduleStore.shared(context).snapshot(LanguageScope.active(context)).upcoming(0L).map { it.at }
         }.getOrDefault(emptyList())
