@@ -31,6 +31,69 @@ class VocabStore private constructor(context: Context) {
             instance ?: synchronized(this) {
                 instance ?: VocabStore(context.applicationContext).also { instance = it }
             }
+
+        /**
+         * Content words in [texts] the graded pool doesn't carry, with how many
+         * of those turns each appeared in.
+         *
+         * TURNS, not occurrences: the question asked of this number is whether
+         * the fluent self kept coming back to the word, and a word said three
+         * times inside one sentence is a verbal tic, not a thread.
+         *
+         * Safe on the FLUENT SELF's turns and nowhere else: that text is
+         * model-written, so no transcriber sits between the word and the check —
+         * the same argument `expressions_offered` rests on. The learner's own
+         * speech keeps the pool gate, where a mishearing would otherwise mint a
+         * word.
+         *
+         * Four things have to hold. iOS asks a part-of-speech tagger for the
+         * first of them; Android has none, so [CoreVocabulary.isUngraded] carries
+         * the closed classes instead:
+         *
+         *  - the pool did not leave it out on purpose (what separates "have"
+         *    from "chore");
+         *  - it isn't a name — a capital letter anywhere but the start of a
+         *    sentence is a name, a language or a brand, not vocabulary;
+         *  - three letters or more, letters only;
+         *  - the graded pool doesn't already carry it.
+         *
+         * Empty for Korean and Japanese by construction: a dictionary form the
+         * wordlist can't confirm is a guess, not a word to track.
+         */
+        fun offListContentWords(texts: List<String>, language: String): Map<String, Int> {
+            if (language == "ko" || language == "ja") return emptyMap()
+            val pool = CoreVocabulary.set(language)
+            val out = HashMap<String, Int>()
+            for (text in texts) {
+                val seenHere = HashSet<String>()
+                for (m in WORD.findAll(text)) {
+                    val surface = m.value
+                    val word = surface.lowercase()
+                    if (word.length < 3 || word in pool || CoreVocabulary.isUngraded(word, language)) continue
+                    if (isCapitalizedMidSentence(text, m.range.first, surface)) continue
+                    if (seenHere.add(word)) out[word] = (out[word] ?: 0) + 1
+                }
+            }
+            return out
+        }
+
+        /** Capitalized, and not because it opens a sentence. */
+        private fun isCapitalizedMidSentence(text: String, start: Int, surface: String): Boolean {
+            if (!surface.first().isUpperCase()) return false
+            var i = start - 1
+            while (i >= 0) {
+                val c = text[i]
+                if (c.isWhitespace()) { i -= 1; continue }
+                // Straight after a sentence end (or an opening quote after one)
+                // capitals are grammar, not a name.
+                return c !in ".!?\n\"\u201C\u2018'("
+            }
+            return false   // first word of the text
+        }
+
+        /** A word as written: letters only, so contractions split at the
+         *  apostrophe and digits never reach the notebook. */
+        private val WORD = Regex("\\p{L}+")
     }
 
     @Serializable
@@ -164,6 +227,11 @@ class VocabStore private constructor(context: Context) {
      */
     suspend fun addStudying(word: String, language: String) = mutex.withLock {
         com.roro.futurevoice.core.Analytics.capture("word_saved")
+        // Bookmarking it again is how the learner takes back a removal.
+        val rf = file(language, "vocab_removed_by_hand.json")
+        val removed = readList(rf)
+        val key = word.trim().lowercase()
+        if (removed.contains(key)) writeList(rf, removed.filterNot { it == key })
         val f = file(language, "vocab_studying.json")
         val list = readList(f)
         if (list.contains(word)) return
@@ -171,11 +239,70 @@ class VocabStore private constructor(context: Context) {
         PracticeLog.record(appContext, PracticeLog.Kind.WORD)
     }
 
-    suspend fun removeStudying(word: String, language: String) = mutex.withLock {
+    /**
+     * Take a word out of the notebook. A removal BY HAND is remembered
+     * ([removedByHand]): a talk that puts an unbookmarked word straight back
+     * every time is the app overruling a decision the learner made. Nothing
+     * about it is permanent — bookmarking the word again clears the mark.
+     * Graduation passes `byHand = false`; that is the ladder, not a verdict.
+     */
+    suspend fun removeStudying(word: String, language: String, byHand: Boolean = true) = mutex.withLock {
         val f = file(language, "vocab_studying.json")
         val list = readList(f)
-        if (!list.contains(word)) return
-        writeList(f, list.filterNot { it == word })
+        if (list.contains(word)) writeList(f, list.filterNot { it == word })
+        val key = word.trim().lowercase()
+        if (byHand && key.isNotEmpty()) {
+            val rf = file(language, "vocab_removed_by_hand.json")
+            val removed = readList(rf)
+            if (!removed.contains(key)) writeList(rf, removed + key)
+        }
+    }
+
+    /** Words the learner took out of the notebook by hand. */
+    suspend fun removedByHand(language: String): List<String> = mutex.withLock {
+        readList(file(language, "vocab_removed_by_hand.json"))
+    }
+
+    /** Clear the "they threw this out" mark — the learner's own way is to
+     *  bookmark the word again, which goes through [addStudying]. */
+    suspend fun forgetRemovedByHand(word: String, language: String) = mutex.withLock {
+        val f = file(language, "vocab_removed_by_hand.json")
+        val list = readList(f)
+        val key = word.trim().lowercase()
+        if (list.contains(key)) writeList(f, list.filterNot { it == key })
+    }
+
+    /**
+     * The words a finished talk TAUGHT, into the notebook — the set the
+     * book's word chapter shows, so the page and the notebook can never
+     * disagree about what a talk taught. Returns what was actually added.
+     *
+     * Not [addStudying] in a loop, for one reason: that call logs a practice
+     * rep and fires `word_saved`, because keeping a word by hand IS effort.
+     * Nothing here was chosen by the learner, so counting it as their effort
+     * would inflate the daily goal with work nobody did.
+     *
+     * Three kinds of word are skipped, all meaning "not new to them": one
+     * they have already said or marked known, one already in the notebook,
+     * and one they took out of it by hand.
+     */
+    suspend fun keepFromTalk(words: List<String>, language: String): List<String> = mutex.withLock {
+        val f = file(language, "vocab_studying.json")
+        val list = readList(f).toMutableList()
+        val records = readRecords(file(language, "vocab_pool.json"))
+        val removed = readList(file(language, "vocab_removed_by_hand.json")).toSet()
+        val added = ArrayList<String>()
+        for (word in words) {
+            val key = word.trim().lowercase()
+            if (key.isEmpty() || records[key] != null || list.contains(key) || key in removed) continue
+            list.add(0, key)   // newest first
+            added.add(key)
+        }
+        if (added.isEmpty()) return emptyList()
+        writeList(f, list)
+        com.roro.futurevoice.core.Analytics.capture("words_kept_from_talk",
+            mapOf("count" to added.size))
+        added
     }
 
     /** "used" | "known" | null — null means the pool has never met the word. */
@@ -220,7 +347,7 @@ class VocabStore private constructor(context: Context) {
                 writeRecords(f, records + (lemma to Record("known", now, now, 0)))
             }
         }
-        removeStudying(lemma, language)
+        removeStudying(lemma, language, byHand = false)
         PracticeLog.record(appContext, PracticeLog.Kind.WORD, finished = true)
     }
 
@@ -316,17 +443,39 @@ class VocabStore private constructor(context: Context) {
      * checkmarks move.
      */
     fun pickupCandidates(fluentTexts: List<String>, atOrAbove: CefrLevel?,
-                         language: String): List<String> {
+                         language: String,
+                         excludingLemmas: Set<String> = emptySet()): List<String> {
         val minRank = atOrAbove?.let { CoreVocabulary.levelRank(it) }
-        return VocabLemmas.lemmas(fluentTexts)
+        val graded = VocabLemmas.lemmas(fluentTexts)
             .mapNotNull { w ->
+                if (w in excludingLemmas) return@mapNotNull null
                 val rank = CoreVocabulary.levelRank(CoreVocabulary.level(w, language) ?: return@mapNotNull null)
                 if (minRank != null && rank < minRank) null else w to rank
             }
             .sortedWith(compareBy({ it.second }, { it.first }))
             .map { it.first }
             .distinct()
+
+        // Words the graded pool doesn't carry. The pool is ~8k content words,
+        // so an ordinary noun like "chore" isn't in it — and being absent
+        // used to mean being invisible, even when the whole call was about
+        // the word.
+        //
+        // They are NOT capped: a cap has to decide which ones die, and with
+        // most said once there is nothing to decide it by. What orders them
+        // is evidence, in two grades — a word the fluent self came back to
+        // across several TURNS is what the call was about and leads outright;
+        // a word said once is a weaker claim than a curated level match, so
+        // those fill whatever the graded words left.
+        val offList = offListContentWords(fluentTexts, language)
+            .filterKeys { it !in excludingLemmas && it !in graded }
+        val recurring = offList.filterValues { it > 1 }.entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .map { it.key }
+        val saidOnce = offList.filterValues { it == 1 }.keys.sorted()
+        return recurring + graded + saidOnce
     }
+
 
     // ── File plumbing ──
 

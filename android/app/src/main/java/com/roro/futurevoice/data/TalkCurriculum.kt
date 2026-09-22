@@ -192,7 +192,12 @@ object TalkCurriculum {
         session, level, language,
         pickups = vocab.pickupCandidates(
             session.turns.filter { it.role == TurnRole.FLUENT_SELF }.map { it.transcript },
-            level, language),
+            level, language,
+            // What the LEARNER said in the same talk. The fluent self answers
+            // about whatever they brought up, so its turns echo their own
+            // vocabulary back — a word you already produce is not a pickup.
+            excludingLemmas = VocabLemmas.lemmas(
+                session.turns.filter { it.role == TurnRole.USER }.map { it.transcript })),
         wordLastAt = { vocab.lastAt(it, language) },
         expressionMasteredAt = { vocab.expressionMasteredAt(it, language) },
         attempts = attempts, drillCards = drillCards)

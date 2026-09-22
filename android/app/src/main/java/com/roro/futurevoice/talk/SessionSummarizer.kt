@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.TalkCurriculum
+import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.DrillIngest
 import com.roro.futurevoice.data.DailyCallStore
 import com.roro.futurevoice.data.DrillStore
@@ -221,6 +223,18 @@ object SessionSummarizer {
         val freshWords = vocab.ingest(session.id, userTexts, language)
         report { it.copy(words = freshWords.size + verifiedUsed.size, offered = computed.expressionsOffered.size,
             corrections = computed.grammarIssues.size) }
+        // The words the talk TAUGHT go into the notebook by themselves. They
+        // used to sit in the book waiting to be tapped, so a word the whole
+        // call was about entered review only if the learner went looking for
+        // it. Exactly the set the book's word chapter shows — page and
+        // notebook can never disagree about what a talk taught.
+        vocab.keepFromTalk(
+            vocab.pickupCandidates(
+                turns.filter { it.role == TurnRole.FLUENT_SELF }.map { it.transcript },
+                level, language, excludingLemmas = VocabLemmas.lemmas(userTexts))
+                .take(TalkCurriculum.MAX_WORDS),
+            language)
+
         val priorWords = session.summary?.newWordsUsed.orEmpty()
         // Expressions: seed pre-tracking sessions, then count this batch.
         vocab.notePriorExpressions(session.id, priorUsed, language)
