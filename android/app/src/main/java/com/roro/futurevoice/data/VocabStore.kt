@@ -72,6 +72,13 @@ class VocabStore private constructor(context: Context) {
         r != null && (r.state == "known" || r.count > 0)
     }
 
+    /** [hasUsedExpression]'s own test, read for its DATE — the talk book
+     *  orders its shelf by when the phrase was mastered, not when it looked. */
+    suspend fun expressionMasteredAt(phrase: String, language: String): Long? = mutex.withLock {
+        val r = readRecords(file(language, "vocab_expressions.json"))[exprKey(phrase)]
+        if (r != null && (r.state == "known" || r.count > 0)) r.lastAt else null
+    }
+
     // ── Session ingestion (`VocabStore.ingest`) ──
 
     /**

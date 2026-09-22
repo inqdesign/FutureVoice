@@ -139,18 +139,32 @@ fun TalkDetailScreen(
     var curriculum by remember(sessionId, revision) {
         mutableStateOf(com.roro.futurevoice.data.TalkCurriculum.Snapshot())
     }
-    var shadowLines by remember(sessionId, revision) {
+    // The Shadow chapter's turns, for the sheet; the ROWS come from
+    // `curriculum.shadowLines` so the page and the count are one set.
+    var shadowTurns by remember(sessionId, revision) {
         mutableStateOf<List<com.roro.futurevoice.talk.Turn>>(emptyList())
     }
+    var bestTakes by remember(sessionId, revision) { mutableStateOf<Map<String, Int>>(emptyMap()) }
     LaunchedEffect(sessionId, revision, level) {
+        val attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context).load(language)
         curriculum = com.roro.futurevoice.data.TalkCurriculum.build(
             session = s, level = level, language = language,
             vocab = com.roro.futurevoice.data.VocabStore.shared(context),
-            attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context).load(language),
+            attempts = attempts,
             drillCards = com.roro.futurevoice.data.DrillStore.shared(context).load(language))
-        shadowLines = com.roro.futurevoice.data.TalkCurriculum.shadowPicks(s, level, language)
+        shadowTurns = com.roro.futurevoice.data.TalkCurriculum.shadowPicks(s, level, language)
+        bestTakes = attempts.groupBy { it.turnId }.mapValues { (_, v) -> v.maxOf { it.matchScore } }
     }
-    val corrections = sm?.phrasesUsed.orEmpty()
+    // What the learner actually said, per correction: a turn-derived item
+    // carries its source turn in its id; a summary one is matched by text.
+    val saidByPhrase = sm?.phrasesUsed.orEmpty()
+        .associateBy({ com.roro.futurevoice.talk.CarryoverDetector.normalized(it.fluentAlternative) }, { it.userSaid })
+    fun originalOf(item: com.roro.futurevoice.talk.ScenarioCurriculum.Item): String? {
+        val turnId = com.roro.futurevoice.data.TalkCurriculum.turnIdOfCorrection(item.id)
+        val said = s.turns.firstOrNull { it.id == turnId }?.transcript
+            ?: saidByPhrase[com.roro.futurevoice.talk.CarryoverDetector.normalized(item.text)]
+        return said?.let { com.roro.futurevoice.data.DrillIngest.relevantFragment(it, item.text) }
+    }
     val grammar = sm?.grammarIssues.orEmpty()
     // The transcript is the book's "scene": one tap away behind Replay, never
     // the first thing the cover shows. Android has no separate transcript
@@ -168,18 +182,28 @@ fun TalkDetailScreen(
                 done = curriculum.words.count { it.masteredAt != null },
                 total = curriculum.words.size))
         }
-        val expressions = sm?.expressionsOffered.orEmpty() + sm?.expressionsUsed.orEmpty()
-        if (expressions.isNotEmpty()) {
+        // Every chapter carries done/total now — each one counts toward the
+        // book, so each ribbon shows how far along it is (iOS 54).
+        if (curriculum.expressions.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.EXPRESSIONS, Icons.Filled.FormatQuote,
-                stringResource(R.string.expressions), count = expressions.size))
+                stringResource(R.string.expressions),
+                done = curriculum.expressions.count { it.masteredAt != null },
+                total = curriculum.expressions.size))
         }
-        if (shadowLines.isNotEmpty()) {
+        if (curriculum.shadowLines.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.LINES, Icons.Filled.Mic,
-                stringResource(R.string.shadow), count = shadowLines.size))
+                stringResource(R.string.shadow),
+                done = curriculum.shadowLines.count { it.masteredAt != null },
+                total = curriculum.shadowLines.size))
         }
-        if (corrections.isNotEmpty() || grammar.isNotEmpty()) {
+        if (curriculum.corrections.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.CARDS, Icons.Filled.Style,
-                stringResource(R.string.drill), count = corrections.size + grammar.size))
+                stringResource(R.string.drill),
+                done = curriculum.corrections.count { it.masteredAt != null },
+                total = curriculum.corrections.size))
+        } else if (grammar.isNotEmpty()) {
+            add(BookmarkTab(TalkChapter.CARDS, Icons.Filled.Style,
+                stringResource(R.string.drill), count = grammar.size))
         }
     }
 
@@ -290,13 +314,7 @@ fun TalkDetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     // Mastery is READ, never stored here: the
                                     // vocab store is the one source of truth.
-                                    Icon(
-                                        if (item.masteredAt != null) Icons.Filled.CheckCircle
-                                        else Icons.Outlined.Circle,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp),
-                                        tint = if (item.masteredAt != null) Color(0xFF34C759)
-                                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    MasteryMark(item.masteredAt != null)
                                     Text(item.text, style = MaterialTheme.typography.bodyLarge)
                                 }
                             }
@@ -308,17 +326,18 @@ fun TalkDetailScreen(
                         PageTitle(stringResource(R.string.expressions))
                         Column(Modifier.padding(horizontal = 20.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Offered ABOVE used: a book exists to teach what
-                            // you can't say yet (iOS ordering).
-                            sm?.expressionsOffered.orEmpty().forEach {
-                                Text(it, style = MaterialTheme.typography.bodyLarge)
+                            // The curriculum's own list, split back into
+                            // the two groups; offered ABOVE used — a book
+                            // exists to teach what you can't say yet.
+                            val mine = sm?.expressionsUsed.orEmpty()
+                                .map { com.roro.futurevoice.talk.CarryoverDetector.normalized(it) }.toSet()
+                            val (used, offered) = curriculum.expressions.partition {
+                                com.roro.futurevoice.talk.CarryoverDetector.normalized(it.text) in mine
                             }
-                            if (!sm?.expressionsUsed.isNullOrEmpty()) {
-                                HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                                sm.expressionsUsed.forEach {
-                                    Text(it, style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                            offered.forEach { MasteryRow(it.text, it.masteredAt != null) }
+                            if (used.isNotEmpty()) {
+                                if (offered.isNotEmpty()) HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                                used.forEach { MasteryRow(it.text, it.masteredAt != null) }
                             }
                         }
                         PageFooter(stringResource(
@@ -328,11 +347,11 @@ fun TalkDetailScreen(
                     TalkChapter.LINES -> {
                         PageTitle(stringResource(R.string.shadow))
                         Column(Modifier.padding(horizontal = 20.dp)) {
-                            shadowLines.forEach { turn ->
-                                Text(turn.transcript, style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.fillMaxWidth()
-                                        .clickable { onShadow(turn.transcript) }
-                                        .padding(vertical = 8.dp))
+                            curriculum.shadowLines.forEach { line ->
+                                val text = shadowTurns.firstOrNull { it.id == line.id }?.transcript ?: line.text
+                                MasteryRow(text, line.masteredAt != null,
+                                    score = bestTakes[line.id],
+                                    onClick = { onShadow(text) })
                             }
                         }
                         PageFooter(stringResource(R.string.repeat_your_fluent_self_s_lines_from_this_talk))
@@ -342,16 +361,25 @@ fun TalkDetailScreen(
                         PageTitle(stringResource(R.string.drill))
                         Column(Modifier.padding(horizontal = 20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            corrections.forEach { p ->
-                                Column {
-                                    Text(p.userSaid, style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(p.fluentAlternative,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.primary)
-                                    if (p.reason.isNotBlank()) {
-                                        Text(p.reason, style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // `curriculum.corrections` holds both sources (turn
+                            // suggestions and the summary's own) in page
+                            // order, so this list and the ribbon's done/total
+                            // are the same set.
+                            curriculum.corrections.forEach { item ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    MasteryMark(item.masteredAt != null, Modifier.padding(top = 3.dp))
+                                    Column {
+                                        originalOf(item)?.let {
+                                            Text(it, style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Text(item.text,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.primary)
+                                        if (item.note.isNotBlank()) {
+                                            Text(item.note, style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
                                 }
                             }
@@ -818,4 +846,34 @@ private fun PageFooter(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 20.dp).padding(top = 10.dp, bottom = 6.dp))
+}
+
+/** A study row's state up front — the same mark on every chapter. Mastery is
+ *  READ from the stores, never stored here. */
+@Composable
+private fun MasteryMark(mastered: Boolean, modifier: Modifier = Modifier) {
+    Icon(
+        if (mastered) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+        contentDescription = null,
+        modifier = modifier.size(15.dp),
+        tint = if (mastered) Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** Mark · text · (best take) — the row grammar every study list shares. */
+@Composable
+private fun MasteryRow(text: String, mastered: Boolean, score: Int? = null, onClick: (() -> Unit)? = null) {
+    Row(
+        Modifier.fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        MasteryMark(mastered)
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (score != null) {
+            Text("$score", style = MaterialTheme.typography.labelMedium,
+                color = if (score >= com.roro.futurevoice.data.TalkCurriculum.SHADOW_MASTERY_SCORE)
+                    Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }

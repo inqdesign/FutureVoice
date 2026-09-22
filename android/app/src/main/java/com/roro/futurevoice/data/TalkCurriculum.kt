@@ -9,20 +9,9 @@ import com.roro.futurevoice.talk.TurnRole
 
 /**
  * The review material of ONE finished talk — the same anatomy as a Watch
- * book's [ScenarioCurriculum] (words to master + lines to shadow), but
- * DERIVED on demand, never persisted:
- *
- *  - words → the fluent self's pickup words (words it used that the learner
- *    hasn't), mastered through [VocabStore] exactly like a scenario word
- *  - shadow lines → the corrected versions of the learner's own sentences
- *    (`Turn.suggestion`), mastered by a shadow attempt scoring at least
- *    [SHADOW_MASTERY_SCORE], or by the correction's drill card reaching the
- *    top Leitner box (the book page studies corrections as CARDS, so the
- *    card's "Got it" has to be able to finish the book)
- *
- * Deriving instead of storing keeps ONE source of truth: mastery lives in
- * `VocabStore` / `ShadowAttemptStore`, and old sessions get a curriculum
- * retroactively with no migration.
+ * book's [ScenarioCurriculum], but DERIVED on demand, never persisted. Mastery
+ * lives in `VocabStore` / `ShadowAttemptStore` / `DrillStore`, so old sessions
+ * get a curriculum retroactively with no migration.
  */
 object TalkCurriculum {
 
@@ -34,16 +23,31 @@ object TalkCurriculum {
 
     const val SHADOW_MASTERY_SCORE = 80
 
+    /**
+     * ONE ITEM PER PIECE OF WORK THE BOOK ASKS FOR — the four lists are the
+     * book's four study chapters, in page order (iOS 54, `29c8fe5`).
+     *
+     * It used to be two (words + the turn-suggestion corrections) while the
+     * page offered four, so the Expressions chapter, the Shadow chapter and
+     * every correction the SUMMARY produced counted for nothing, and a talk
+     * finished itself the moment its words were ticked. Anything the page
+     * asks for has to be in here.
+     */
     data class Snapshot(
         val words: List<ScenarioCurriculum.Item> = emptyList(),
+        val expressions: List<ScenarioCurriculum.Item> = emptyList(),
+        /** The fluent self's lines to say back — the Shadow chapter. */
         val shadowLines: List<ScenarioCurriculum.Item> = emptyList(),
+        /** The talk's corrections — the Drill chapter, studied as cards. */
+        val corrections: List<ScenarioCurriculum.Item> = emptyList(),
     ) {
-        val totalCount: Int get() = words.size + shadowLines.size
-        val masteredCount: Int get() = (words + shadowLines).count { it.masteredAt != null }
+        private val all get() = words + expressions + shadowLines + corrections
+        val totalCount: Int get() = all.size
+        val masteredCount: Int get() = all.count { it.masteredAt != null }
         val progress: Double get() = if (totalCount == 0) 0.0 else masteredCount.toDouble() / totalCount
         val isMastered: Boolean get() = totalCount > 0 && masteredCount == totalCount
         /** Most recent mastery event — when this book was last studied. */
-        val lastStudiedAt: Long? get() = (words + shadowLines).mapNotNull { it.masteredAt }.maxOrNull()
+        val lastStudiedAt: Long? get() = all.mapNotNull { it.masteredAt }.maxOrNull()
     }
 
     /**
@@ -58,7 +62,7 @@ object TalkCurriculum {
         val current = StringBuilder()
         for (c in text) {
             current.append(c)
-            if (c !in ".!?") continue
+            if (c !in ".!?。！？") continue
             val piece = current.toString().trim()
             if (piece.isNotEmpty()) out.add(piece)
             current.setLength(0)
@@ -70,15 +74,20 @@ object TalkCurriculum {
     /**
      * Stable id for one sentence of a turn, so a shadow attempt made today is
      * still recognised tomorrow. Derived off a DIFFERENT byte than
-     * [shadowLineId] so the two can never collide.
+     * [correctionId] so the two can never collide.
      */
     fun sentenceLineId(turnId: String, index: Int): String =
         xorLastHexDigit(turnId, 0xA + (index and 0x0F))
 
-    /** Stable shadow-line id derived from the source turn — the same
-     *  transform the transcript's suggestion-shadow uses, so attempts made
-     *  from either surface land on the same line. */
-    fun shadowLineId(turnId: String): String = xorFirstHexDigit(turnId)
+    /** Stable id for a turn's CORRECTION — the same transform the
+     *  transcript's suggestion-shadow uses, so attempts made from either
+     *  surface land on the same line. (It was `shadowLineId` while the
+     *  corrections WERE the curriculum's shadow lines.) */
+    fun correctionId(turnId: String): String = xorFirstHexDigit(turnId)
+
+    /** The turn a correction id was derived from (the transform is its own
+     *  inverse). */
+    fun turnIdOfCorrection(correctionId: String): String = xorFirstHexDigit(correctionId)
 
     private fun xorFirstHexDigit(id: String): String {
         val i = id.indexOfFirst { it.isLetterOrDigit() }
@@ -179,6 +188,25 @@ object TalkCurriculum {
         vocab: VocabStore,
         attempts: List<ShadowAttempt>,
         drillCards: List<DrillCard>,
+    ): Snapshot = build(
+        session, level, language,
+        pickups = vocab.pickupCandidates(
+            session.turns.filter { it.role == TurnRole.FLUENT_SELF }.map { it.transcript },
+            level, language),
+        wordLastAt = { vocab.lastAt(it, language) },
+        expressionMasteredAt = { vocab.expressionMasteredAt(it, language) },
+        attempts = attempts, drillCards = drillCards)
+
+    /** The store-free core, so the chapter rules can be tested on the JVM. */
+    internal suspend fun build(
+        session: Session,
+        level: CefrLevel,
+        language: String,
+        pickups: List<String>,
+        wordLastAt: suspend (String) -> Long?,
+        expressionMasteredAt: suspend (String) -> Long?,
+        attempts: List<ShadowAttempt>,
+        drillCards: List<DrillCard>,
     ): Snapshot {
         // Lemma membership, not a substring match: the pickup words ARE
         // lemmas, so this is the symmetric test. It credits inflected forms
@@ -186,48 +214,80 @@ object TalkCurriculum {
         val userLemmas = VocabLemmas.lemmas(
             session.turns.filter { it.role == TurnRole.USER }.map { it.transcript })
 
-        // CANDIDATES, not pickupWords: the latter drops every word that has a
-        // vocab record — i.e. exactly the ones the learner has since mastered
-        // — so the chapter would shrink as you learned and sit at 0 forever.
-        val pickups = vocab.pickupCandidates(
-            session.turns.filter { it.role == TurnRole.FLUENT_SELF }.map { it.transcript },
-            level, language).take(MAX_WORDS)
-
-        val words = pickups.map { w ->
-            val when_ = vocab.lastAt(w, language)
+        // Words. CANDIDATES, not pickupWords: the latter drops every word that
+        // has a vocab record — exactly the ones since mastered — so the
+        // chapter would shrink as you learned and sit at 0 forever.
+        val words = pickups.take(MAX_WORDS).map { w ->
+            val when_ = wordLastAt(w)
                 ?: if (userLemmas.contains(w.trim().lowercase()))
                     (session.endedAt ?: session.startedAt) else null
             ScenarioCurriculum.Item(text = w, note = "", masteredAt = when_)
         }
 
-        // Shadow lines — every corrected sentence, in conversation order.
-        // Misheard-flagged turns are skipped: their "correction" fixes a
-        // sentence the learner never said.
+        // Expressions — what the fluent self offered and what the learner
+        // said, from the summary's RAW lists: a page that drops a phrase once
+        // it is known can never read as finished. Mastered by the expression
+        // pool (used in a talk, or "I know it").
+        val sm = session.summary
+        val credited = sm?.carryovers.orEmpty().map { CarryoverDetector.normalized(it.item) }.toSet()
+        val seenExpressions = HashSet<String>()
+        val expressions = ArrayList<ScenarioCurriculum.Item>()
+        for (phrase in sm?.expressionsUsed.orEmpty() + sm?.expressionsOffered.orEmpty()) {
+            val normalized = CarryoverDetector.normalized(phrase)
+            if (phrase.isBlank() || normalized in credited || !seenExpressions.add(normalized)) continue
+            expressions.add(ScenarioCurriculum.Item(text = phrase, note = "",
+                masteredAt = expressionMasteredAt(phrase)))
+        }
+
+        // Shadow lines — exactly the lines the Shadow chapter offers
+        // ([shadowPicks], so page and count can't ask for different things).
+        // Mastered by a take at or above the bar and nothing else: shadowing
+        // is the one chapter whose work can only be done out loud.
+        val shadowLines = shadowPicks(session, level, language).map { turn ->
+            ScenarioCurriculum.Item(id = turn.id, text = turn.transcript, note = "",
+                masteredAt = bestTakeAt(attempts, turn.id))
+        }
+
+        // Corrections — every corrected sentence, in conversation order, then
+        // the summary's own. Misheard-flagged turns are skipped: their
+        // "correction" fixes a sentence the learner never said.
         val sessionCards = drillCards.filter { it.sourceSessionId == session.id }
-        val lines = ArrayList<ScenarioCurriculum.Item>()
+        // Mastered by its drill card reaching the top box — the Drill chapter
+        // studies corrections as CARDS — or by a shadow take on the line,
+        // which the transcript still offers.
+        fun masteryAt(text: String, turnId: String?, itemId: String): Long? {
+            bestTakeAt(attempts, itemId)?.let { return it }
+            val needle = CarryoverDetector.normalized(text)
+            val card = sessionCards.firstOrNull {
+                it.box >= DrillIngest.MAX_BOX &&
+                    ((turnId != null && it.sourceTurnId == turnId) ||
+                        CarryoverDetector.normalized(it.targetPhrase) == needle)
+            } ?: return null
+            return card.lastReviewedAt ?: card.createdAt
+        }
+        val seenCorrections = HashSet<String>()
+        val corrections = ArrayList<ScenarioCurriculum.Item>()
         for (turn in session.turns) {
             if (turn.role != TurnRole.USER || turn.excludedFromScoring) continue
             val s = turn.suggestion ?: continue
-            val id = shadowLineId(turn.id)
-            var masteredAt = attempts
-                .filter { it.turnId == id && it.matchScore >= SHADOW_MASTERY_SCORE }
-                .maxOfOrNull { it.createdAt }
-            if (masteredAt == null) {
-                // The book page studies corrections as drill CARDS, so a card
-                // in the top box masters the line — otherwise the cover counts
-                // work no chapter offers.
-                val needle = CarryoverDetector.normalized(s.alternative)
-                val card = sessionCards.firstOrNull {
-                    it.box >= DrillIngest.MAX_BOX &&
-                        (it.sourceTurnId == turn.id ||
-                            CarryoverDetector.normalized(it.targetPhrase) == needle)
-                }
-                masteredAt = card?.let { it.lastReviewedAt ?: it.createdAt }
-            }
-            lines.add(ScenarioCurriculum.Item(
-                id = id, text = s.alternative, note = s.reason, masteredAt = masteredAt))
+            if (!seenCorrections.add(CarryoverDetector.normalized(s.alternative))) continue
+            val id = correctionId(turn.id)
+            corrections.add(ScenarioCurriculum.Item(id = id, text = s.alternative, note = s.reason,
+                masteredAt = masteryAt(s.alternative, turn.id, id)))
+        }
+        // The summary's corrections carry a card each and the Drill chapter
+        // has always listed them — they just never counted, which is most of
+        // how a book finished itself with the chapter untouched.
+        for (p in sm?.phrasesUsed.orEmpty()) {
+            if (!seenCorrections.add(CarryoverDetector.normalized(p.fluentAlternative))) continue
+            val item = ScenarioCurriculum.Item(text = p.fluentAlternative, note = p.reason)
+            corrections.add(item.copy(masteredAt = masteryAt(p.fluentAlternative, null, item.id)))
         }
 
-        return Snapshot(words = words, shadowLines = lines)
+        return Snapshot(words, expressions, shadowLines, corrections)
     }
+
+    private fun bestTakeAt(attempts: List<ShadowAttempt>, lineId: String): Long? =
+        attempts.filter { it.turnId == lineId && it.matchScore >= SHADOW_MASTERY_SCORE }
+            .maxOfOrNull { it.createdAt }
 }
