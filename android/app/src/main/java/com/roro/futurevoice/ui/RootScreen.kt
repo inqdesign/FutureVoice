@@ -188,15 +188,37 @@ fun RootScreen() {
         LevelUpSheet(from = from, to = to, onDismiss = app::clearLevelUp)
     }
     var showPublicIntro by remember { mutableStateOf(false) }
+    // The one look at the mirrored intro before anything reaches the pool,
+    // raised from the Watch tab (iOS `needsIntroDecision`).
+    var showIntroPreview by remember { mutableStateOf(false) }
+    /** The editor was opened from the preview's "Edit first" — backing out
+     *  of it undecided returns to the preview rather than dropping it. */
+    var introEditFromPreview by remember { mutableStateOf(false) }
+    if (showIntroPreview) {
+        PublicIntroPreviewSheet(
+            persona = state.persona,
+            targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            onPublish = app::publishIntroMirror,
+            onEditFirst = {
+                showIntroPreview = false
+                introEditFromPreview = true
+                showPublicIntro = true
+            },
+            onDecline = { app.declinePublicIntro(); showIntroPreview = false },
+            onDismiss = { showIntroPreview = false },
+        )
+    }
     var showInvite by remember { mutableStateOf(false) }
     var showShadowBrowser by remember { mutableStateOf(false) }
     var showDueReview by remember { mutableStateOf(false) }
     var showCreditGuide by remember { mutableStateOf(false) }
     var showPlanPage by remember { mutableStateOf(false) }
-    // Existing learners appear in Find people automatically. Gated on a real
-    // account: an anonymous session's data dies with the install, so
-    // publishing it would put a row in the pool nobody can ever talk to
-    // again.
+    // Keep the learner's pool row in step with the profile — but only a row
+    // they APPROVED (the Watch-tab preview's Publish). Before that nothing is
+    // inserted; a row an older build put up unasked is only rewritten to the
+    // current composition or taken down. Gated on a real account: an
+    // anonymous session's data dies with the install.
     LaunchedEffect(state.signedIn, state.isAnonymous, state.persona, state.targetLanguage) {
         if (state.signedIn && !state.isAnonymous) app.syncPublicPersona()
     }
@@ -263,6 +285,7 @@ fun RootScreen() {
         }
     }
     var editProfile by remember { mutableStateOf(false) }
+    var editProfileStep by remember { mutableStateOf(0) }
     var pendingAccount by remember { mutableStateOf(false) }
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
@@ -354,6 +377,7 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onBackToSetup = { editProfile = false },
             onFinish = { app.savePersona(it); editProfile = false },
+            startStep = editProfileStep,
         )
 
         shadowHand.isNotEmpty() -> ShadowScreen(
@@ -512,7 +536,14 @@ fun RootScreen() {
         showPublicIntro -> PublicIntroScreen(
             persona = state.persona,
             targetLanguage = state.targetLanguage,
-            onBack = { showPublicIntro = false },
+            onBack = {
+                showPublicIntro = false
+                if (introEditFromPreview && app.needsIntroDecision()) showIntroPreview = true
+                introEditFromPreview = false
+            },
+            onDecided = if (introEditFromPreview) ({
+                showPublicIntro = false; introEditFromPreview = false
+            }) else null,
         )
 
         showPrivacy -> PrivacyScreen(
@@ -548,7 +579,8 @@ fun RootScreen() {
             voiceId = state.voiceId,
             voiceAccentId = state.voiceAccentId,
             onAccentApplied = app::adoptRemixedVoice,
-            onEditProfile = { editProfile = true },
+            onEditProfile = { editProfileStep = 0; editProfile = true },
+            onEditNotes = { editProfileStep = 1; editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
             onOpenPrivacy = { showPrivacy = true },
@@ -648,7 +680,13 @@ fun RootScreen() {
             onOpenActivity = { showActivity = true },
             onOpenAssessment = { showAssessment = true },
             tab = tab,
-            onTabChange = { tab = it; com.roro.futurevoice.core.Analytics.capture("screen_viewed", mapOf("screen" to it.name.lowercase())) },
+            onTabChange = {
+                tab = it
+                com.roro.futurevoice.core.Analytics.capture("screen_viewed", mapOf("screen" to it.name.lowercase()))
+                // Nothing about this learner reaches the pool until they have
+                // seen the paragraph a stranger's phone would speak as "them".
+                if (it == HomeTab.WATCH && app.needsIntroDecision()) showIntroPreview = true
+            },
             onOpenDeck = { showDeck = true },
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },

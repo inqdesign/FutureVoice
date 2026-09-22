@@ -1,5 +1,8 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.automirrored.filled.ShortText
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Headphones
@@ -146,6 +149,8 @@ fun MeScreen(
     onRerecordVoice: () -> Unit = {},
     onPickAppLanguage: (String) -> Unit = {},
     onEditProfile: () -> Unit,
+    /** The remembered lines' own page — the profile editor on its home step. */
+    onEditNotes: () -> Unit = onEditProfile,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
     /** Opens the consent read-back and withdrawal page. */
@@ -285,11 +290,23 @@ fun MeScreen(
                 }
                 // What the future self has learned — the other half of the
                 // profile. Each note removable; the learner can always
-                // correct the memory.
+                // correct the memory. A tap opens the lines with their
+                // evidence and what strangers hear; the lock says it here.
                 persona?.learnedNotes?.takeIf { it.isNotEmpty() }?.forEach { note ->
                     GroupedRowDivider()
-                    Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp),
+                    Row(Modifier.fillMaxWidth().clickable(onClick = onEditNotes)
+                        .padding(start = 14.dp, end = 4.dp),
                         verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            when (note.share) {
+                                com.roro.futurevoice.talk.PersonaNote.Share.NOTHING -> Icons.Filled.Lock
+                                com.roro.futurevoice.talk.PersonaNote.Share.GIST ->
+                                    Icons.AutoMirrored.Filled.ShortText
+                                com.roro.futurevoice.talk.PersonaNote.Share.ALL -> Icons.Filled.LockOpen
+                            },
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(end = 10.dp).size(14.dp))
                         Text(note.text, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f).padding(vertical = 10.dp))

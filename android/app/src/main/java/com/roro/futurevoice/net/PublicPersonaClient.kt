@@ -49,46 +49,106 @@ class PublicPersonaClient(private val auth: AuthRepository) {
     // MARK: - My own row
 
     companion object {
-        /** Set once the learner edits or takes down their intro BY HAND.
-         *  After that auto-sync never touches the row again — an explicit
-         *  choice always wins over a derived one. */
+        /** Set once the learner has taken control of their public intro by
+         *  hand — published, edited or taken it down, or said "not now" to the
+         *  preview. After that auto-sync never touches the row again. */
         const val MANUAL_INTRO_KEY = "futurevoice.publicIntroManaged"
+
+        /** Set when the learner looked at the mirrored intro
+         *  ([com.roro.futurevoice.ui.PublicIntroPreviewSheet]) and said yes.
+         *  Until then NOTHING is published on their behalf: the onboarding
+         *  profile was written for their own fluent self, not for strangers.
+         *  Once set, the mirror keeps following profile edits. */
+        const val AUTO_APPROVED_KEY = "futurevoice.publicIntroAutoApproved"
 
         /** The bar an ACTIVE pool row must clear, enforced in the database
          *  (`public_personas_intro_bounds`). A one-liner can't carry a
          *  conversation, and the same bar keeps thin rows out of the pool. */
         const val MIN_INTRO = 80
+
+        fun prefs(context: android.content.Context): android.content.SharedPreferences =
+            context.getSharedPreferences("futurevoice", 0)
+
+        /**
+         * Whether the mirrored intro still needs the learner's yes or no —
+         * the trigger for the preview sheet. False once they decided either
+         * way, and false while the profile is too thin to publish (there is
+         * nothing to show them yet).
+         */
+        fun needsIntroDecision(
+            prefs: android.content.SharedPreferences,
+            persona: com.roro.futurevoice.talk.UserPersona?,
+        ): Boolean {
+            if (prefs.getBoolean(MANUAL_INTRO_KEY, false) || prefs.getBoolean(AUTO_APPROVED_KEY, false)) return false
+            val p = persona ?: return false
+            if (!p.isMinimallyComplete) return false
+            return composedIntro(p).length >= MIN_INTRO
+        }
+
+        /**
+         * The onboarding profile, folded into one spoken-style paragraph —
+         * what a stranger's phone will speak as "you". Only what a person
+         * would say on the first day at a language school: work, town, what
+         * they need the language for, and the remembered lines at the rung
+         * the learner set (`strangerLines`: the line, its gist, or nothing).
+         *
+         * `household` and `freeNotes` are deliberately NOT here — they were
+         * written for the fluent self, and on iOS until 2026-09-15 "wife and
+         * 4yo daughter at Kita" went out to every learner in the pool without
+         * the author ever seeing the paragraph it was in.
+         */
+        fun composedIntro(p: com.roro.futurevoice.talk.UserPersona): String {
+            val parts = ArrayList<String>()
+            if (p.occupation.isNotEmpty()) parts.add(p.occupation)
+            if (p.lengthOfStay.isNotEmpty() && p.city.isNotEmpty()) parts.add("${p.city} · ${p.lengthOfStay}")
+            if (p.situations.isNotEmpty()) parts.add(p.situations.joinToString(", "))
+            parts.addAll(p.strangerLines)
+            return parts.joinToString("\n")
+        }
     }
 
-
     /**
-     * Publish the learner's onboarding profile into the pool, so existing
-     * users appear without doing anything.
+     * Mirror the onboarding profile into the pool so existing learners show
+     * up in Find people without doing more than saying yes once. Runs at app
+     * start and on every profile save; skips when the learner manages the
+     * intro by hand, for a profile too thin to carry a conversation, or when
+     * signed out.
      *
-     * Skipped entirely once the learner has managed the row by hand, and for
-     * a profile too thin to carry a conversation — the pool's whole value is
-     * that a row can be talked to.
+     * Before the learner has approved the mirror it publishes NOTHING — but a
+     * row an earlier build published unasked is rewritten to the current
+     * composition ([trimUnapprovedRow]), so the family and free-note lines
+     * that build copied out stop being spoken by strangers' phones today.
      */
     suspend fun autoSyncMyPersona(
         context: android.content.Context,
         persona: com.roro.futurevoice.talk.UserPersona?,
         language: String,
     ) {
-        if (context.getSharedPreferences("futurevoice", 0).getBoolean(MANUAL_INTRO_KEY, false)) return
+        val prefs = prefs(context)
+        if (prefs.getBoolean(MANUAL_INTRO_KEY, false)) return
         val p = persona ?: return
-        if (!isMinimallyComplete(p)) return
+        if (!p.isMinimallyComplete) return
+        if (!prefs.getBoolean(AUTO_APPROVED_KEY, false)) {
+            trimUnapprovedRow(p, language)
+            return
+        }
+        publishMirror(p, language)
+    }
+
+    /**
+     * Publish the composed profile as the learner's row. The voice is a
+     * stable per-user pick so "you" doesn't change voices between launches.
+     * True when the row is up.
+     */
+    suspend fun publishMirror(p: com.roro.futurevoice.talk.UserPersona, language: String): Boolean {
         val intro = composedIntro(p)
-        // 80 because the DATABASE says 80: `public_personas_intro_bounds`
-        // rejects any active row under it. A lower client bar doesn't publish
-        // thinner rows, it just fails the write silently on every launch —
-        // and leaves the learner believing they are in the pool.
-        if (intro.length < MIN_INTRO) return
-        val uid = auth.userId ?: return
-        // Stable per-user voice pick so "you" doesn't change voices between
-        // launches — hash the user id into the preset catalog.
+        // 80 because the DATABASE says 80: a lower client bar doesn't publish
+        // thinner rows, it just fails the write on every launch.
+        if (intro.length < MIN_INTRO) return false
+        val uid = auth.userId ?: return false
         val catalog = com.roro.futurevoice.talk.StockPerson.catalog
         val voice = catalog[Math.floorMod(uid.hashCode(), catalog.size)]
-        runCatching {
+        return runCatching {
             publishMine(
                 displayName = p.displayName,
                 intro = intro,
@@ -98,34 +158,40 @@ class PublicPersonaClient(private val auth: AuthRepository) {
                 voicePresetId = voice.voiceId,
                 language = language,
             )
-        }
+        }.isSuccess
     }
 
     /**
-     * The onboarding profile, folded into one spoken-style paragraph. The
-     * learner wrote these fields in their own words (often their native
-     * language) — the conversation prompt's language guard keeps the talk in
-     * the target language regardless.
-     *
-     * It reads ONLY fields the user typed about themselves. What the fluent
-     * self learned in a call (`learnedNotes`) is deliberately absent:
-     * something said to your own future self was not said to strangers.
+     * A row an older build put up without asking: rewrite its intro to what
+     * the current composition allows, or take it down when that is too thin
+     * to stand. NEVER inserts — a learner with no row yet gets one only
+     * through the preview's yes.
      */
-    private fun composedIntro(p: com.roro.futurevoice.talk.UserPersona): String {
-        val parts = ArrayList<String>()
-        if (p.occupation.isNotBlank()) parts.add(p.occupation)
-        if (p.household.isNotBlank()) parts.add(p.household)
-        if (p.lengthOfStay.isNotBlank() && p.city.isNotBlank()) parts.add("${p.city} · ${p.lengthOfStay}")
-        if (p.situations.isNotEmpty()) parts.add(p.situations.joinToString(", "))
-        if (p.freeNotes.isNotBlank()) parts.add(p.freeNotes)
-        return parts.joinToString("\n")
+    private suspend fun trimUnapprovedRow(p: com.roro.futurevoice.talk.UserPersona, language: String) {
+        val existing = runCatching { fetchMine(language) }.getOrNull() ?: return
+        val intro = composedIntro(p)
+        if (intro == existing.intro) return
+        if (intro.length >= MIN_INTRO) {
+            runCatching { patchIntro(existing.id, intro) }
+        } else {
+            runCatching { withdrawMine(language) }
+        }
     }
 
-    private fun isMinimallyComplete(p: com.roro.futurevoice.talk.UserPersona): Boolean {
-        val core = p.displayName.isNotBlank() && p.city.isNotBlank()
-        val context = p.occupation.isNotBlank() || p.household.isNotBlank() ||
-            p.interests.isNotEmpty() || p.situations.isNotEmpty()
-        return core && context
+    /** Rewrite ONE column of an existing row — never an insert. */
+    private suspend fun patchIntro(rowId: String, intro: String) = withContext(Dispatchers.IO) {
+        val body = Edge.json.encodeToString(JsonObject.serializer(), buildJsonObject { put("intro", intro) })
+            .toRequestBody("application/json".toMediaType())
+        val req = Request.Builder()
+            .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas?id=eq.$rowId")
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("apikey", Config.supabaseAnonKey)
+            .header("Prefer", "return=minimal")
+            .patch(body)
+            .build()
+        Edge.client.newCall(req).execute().use { resp ->
+            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))
+        }
     }
 
     /** Upsert by hand: the table has no unique key on (owner, language), so a

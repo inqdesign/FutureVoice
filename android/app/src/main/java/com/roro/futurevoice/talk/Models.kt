@@ -3,8 +3,26 @@ package com.roro.futurevoice.talk
 import com.roro.futurevoice.audio.FluencyStats
 import com.roro.futurevoice.data.IsoDateMillisSerializer
 import com.roro.futurevoice.data.StoreJson
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 /**
  * Domain types for the Talk loop. Shapes come from
@@ -200,6 +218,10 @@ data class ConversationTurnPayload(
  * (`persona.json`; `situations` keeps its legacy `englishSituations` key).
  * The top half is the user writing about themselves; `learnedNotes` is the
  * fluent self remembering what it was told in calls. One file, one profile.
+ *
+ * Decoded LENIENTLY: a persona that fails to load walks an existing user
+ * back into onboarding, so both lists skip what they can't read instead of
+ * throwing ([LenientListSerializer]).
  */
 @Serializable
 data class UserPersona(
@@ -215,25 +237,254 @@ data class UserPersona(
     val freeNotes: String = "",
     @Serializable(with = IsoDateMillisSerializer::class)
     val updatedAt: Long = System.currentTimeMillis(),
+    @Serializable(with = PersonaNoteListSerializer::class)
     val learnedNotes: List<PersonaNote> = emptyList(),
     @Serializable(with = IsoDateMillisSerializer::class)
     val metAt: Long? = null,
+    /**
+     * The learner's own hand moves on the share level, newest last — fed
+     * back into the summary call so it sorts the way THIS person draws the
+     * line. Capped at [MAX_SHARE_CORRECTIONS].
+     */
+    @Serializable(with = ShareCorrectionListSerializer::class)
+    val shareCorrections: List<ShareCorrection> = emptyList(),
 ) {
     val isMinimallyComplete: Boolean
         get() = displayName.isNotBlank() && city.isNotBlank() &&
             (occupation.isNotBlank() || household.isNotBlank() ||
                 interests.isNotEmpty() || situations.isNotEmpty())
+
+    /** One time the learner moved a line's share level by hand. */
+    @Serializable
+    data class ShareCorrection(
+        val text: String,
+        val from: PersonaNote.Share,
+        val to: PersonaNote.Share,
+        @Serializable(with = IsoDateMillisSerializer::class)
+        val at: Long,
+    )
+
+    /** A remembered line the summary call says has CHANGED; [note] replaces [replacing]. */
+    data class NoteUpdate(val replacing: String, val note: PersonaNote)
+
+    /**
+     * The remembered lines still believed: everything on file minus the
+     * `now` lines whose month has passed. Every reader of the notebook goes
+     * through this, so an expired line is gone from all of them at once.
+     */
+    fun currentNotes(now: Long = System.currentTimeMillis()): List<PersonaNote> =
+        learnedNotes.filterNot { it.isExpired(now) }
+
+    /**
+     * What a STRANGER gets from the notebook — the ONLY lines any
+     * stranger-facing surface (the Find-people intro, a cast counterpart's
+     * prompt) may read: the text of an `ALL` line, the gist of a `GIST`
+     * line, nothing of a `NOTHING` one.
+     */
+    val strangerLines: List<String> get() = currentNotes().mapNotNull { it.strangerLine }
+
+    /** Everything the learner TYPED about themselves, as plain lines (iOS `knownFacts`). */
+    val knownFacts: List<String>
+        get() {
+            val out = ArrayList<String>()
+            val place = listOf(city, country).filter { it.isNotEmpty() }.joinToString(", ")
+            if (place.isNotEmpty()) out += "Lives in $place"
+            if (occupation.isNotEmpty()) out += occupation
+            if (household.isNotEmpty()) out += household
+            if (interests.isNotEmpty()) out += "Interested in ${interests.joinToString(", ")}"
+            if (freeNotes.isNotEmpty()) out += freeNotes
+            return out
+        }
+
+    /**
+     * Record the learner's hand moves between what was on file and this
+     * draft. Only a CHANGED level counts; a line saved as it was says nothing.
+     */
+    fun recordingShareCorrections(previous: List<PersonaNote>, now: Long = System.currentTimeMillis()): UserPersona {
+        val before = previous.associateBy { it.id }
+        val added = learnedNotes.mapNotNull { n ->
+            val old = before[n.id] ?: return@mapNotNull null
+            if (old.share == n.share) null else ShareCorrection(n.text, old.share, n.share, now)
+        }
+        if (added.isEmpty()) return this
+        return copy(shareCorrections = (shareCorrections + added).takeLast(MAX_SHARE_CORRECTIONS))
+    }
+
+    /**
+     * Fold what a talk taught into the notebook (iOS `absorb(notes:updates:)`).
+     * Updates first — the outdated line goes and its successor is appended as
+     * the newest — then expired `now` lines are pruned, then additions not
+     * already on file. The oldest fall off past [limit].
+     */
+    fun absorbing(
+        notes: List<PersonaNote>,
+        updates: List<NoteUpdate> = emptyList(),
+        limit: Int = 40,
+        now: Long = System.currentTimeMillis(),
+    ): UserPersona {
+        val kept = learnedNotes.toMutableList()
+        for (u in updates) {
+            val idx = kept.indexOfFirst { it.id == u.replacing }
+            if (idx < 0) continue
+            kept.removeAt(idx)
+            kept.add(u.note)
+        }
+        kept.removeAll { it.isExpired(now) }
+        val seen = kept.map { it.dedupeKey }.toMutableSet()
+        for (n in notes) {
+            val k = n.dedupeKey
+            if (k.isEmpty() || !seen.add(k)) continue
+            kept.add(n)
+        }
+        return copy(learnedNotes = if (kept.size > limit) kept.takeLast(limit) else kept)
+    }
+
+    companion object {
+        const val MAX_SHARE_CORRECTIONS = 8
+    }
 }
 
-/** One thing the fluent self learned about the user during a talk. NATIVE language. */
-@Serializable
+/**
+ * One thing the fluent self learned about the user during a talk. NATIVE
+ * language: the learner reads these in their own profile.
+ *
+ * Every line is a STANDING TRUTH ([text]) with its evidence under it
+ * ([heard], the sentence it was distilled from), and a three-way lock
+ * ([share]) on how much of it a stranger gets. Serialized by hand
+ * ([PersonaNoteSerializer]) because the decode has to be lenient in ways the
+ * generated one can't be, and `isPrivate` must be READ but never WRITTEN.
+ */
+@Serializable(with = PersonaNoteSerializer::class)
 data class PersonaNote(
     val id: String = StoreJson.newId(),
     val text: String,
     val sessionId: String? = null,
-    @Serializable(with = IsoDateMillisSerializer::class)
     val learnedAt: Long = System.currentTimeMillis(),
-)
+    /** How much of this a STRANGER gets. Defaults to NOTHING — a line nobody judged is hidden. */
+    val share: Share = Share.NOTHING,
+    /** How long this is expected to stay true — a `NOW` line fades after [NOW_HORIZON_MS]. */
+    val kind: Kind = Kind.FACT,
+    /** The sentence the line was distilled from, in the learner's own words. */
+    val heard: String? = null,
+    /** The outline a stranger may hear when [share] is `GIST`; null when there's no honest one. */
+    val gist: String? = null,
+    /** The model's one-clause reason for its [share] pick, in the app language. */
+    val why: String? = null,
+) {
+    enum class Kind(val wire: String) { FACT("fact"), NOW("now");
+        companion object { fun from(raw: String?): Kind? = entries.firstOrNull { it.wire == raw } }
+    }
+
+    /** What a stranger gets. Ordered least to most. */
+    @Serializable
+    enum class Share(val wire: String) {
+        @SerialName("nothing") NOTHING("nothing"),
+        @SerialName("gist") GIST("gist"),
+        @SerialName("all") ALL("all");
+        companion object { fun from(raw: String?): Share? = entries.firstOrNull { it.wire == raw } }
+    }
+
+    /** Nothing at all leaves the notebook. A `GIST` line is NOT private in this sense. */
+    val isPrivate: Boolean get() = share == Share.NOTHING
+
+    /**
+     * The line as a stranger-facing surface may read it, or null. `GIST` with
+     * no gist on file yields null rather than falling back to the text: the
+     * learner chose "the outline", and the outline is missing.
+     */
+    val strangerLine: String?
+        get() = when (share) {
+            Share.NOTHING -> null
+            Share.ALL -> text
+            Share.GIST -> gist?.trim()?.takeIf { it.isNotEmpty() }
+        }
+
+    fun isExpired(now: Long = System.currentTimeMillis()): Boolean =
+        kind == Kind.NOW && now - learnedAt > NOW_HORIZON_MS
+
+    /** Comparison form for "do we already know this?" (iOS `dedupeKey`). */
+    val dedupeKey: String
+        get() = text.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }.joinToString(" ")
+
+    companion object {
+        const val NOW_HORIZON_MS: Long = 30L * 86_400_000L
+    }
+}
+
+/**
+ * `PersonaNote.init(from:)` / `encode(to:)` on iOS. Lenient on everything
+ * but the text: every note written before a field existed has no key for it.
+ * `share` falls back to the old two-way lock (`isPrivate` true → nothing,
+ * false → all), and with neither key — or a value it can't read — to
+ * nothing. `isPrivate` is never written: a build from before the three rungs
+ * reading a `gist` line with `isPrivate: false` on it would put the WHOLE
+ * line in the intro.
+ */
+object PersonaNoteSerializer : KSerializer<PersonaNote> {
+    override val descriptor: SerialDescriptor = JsonObject.serializer().descriptor
+
+    private fun JsonObject.str(key: String): String? =
+        (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+    override fun deserialize(decoder: Decoder): PersonaNote {
+        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val text = obj.str("text") ?: throw SerializationException("PersonaNote without text")
+        val share = Share.from(obj.str("share"))
+            ?: (obj["isPrivate"] as? JsonPrimitive)?.booleanOrNull?.let { if (it) Share.NOTHING else Share.ALL }
+            ?: Share.NOTHING
+        val learnedAt = obj.str("learnedAt")?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+            ?: System.currentTimeMillis()
+        return PersonaNote(
+            id = obj.str("id") ?: StoreJson.newId(),
+            text = text,
+            sessionId = obj.str("sessionId"),
+            learnedAt = learnedAt,
+            share = share,
+            kind = PersonaNote.Kind.from(obj.str("kind")) ?: PersonaNote.Kind.FACT,
+            heard = obj.str("heard"),
+            gist = obj.str("gist"),
+            why = obj.str("why"),
+        )
+    }
+
+    override fun serialize(encoder: Encoder, value: PersonaNote) {
+        val obj = buildJsonObject {
+            put("id", value.id)
+            put("text", value.text)
+            value.sessionId?.let { put("sessionId", it) }
+            put("learnedAt", DateTimeFormatter.ISO_INSTANT.format(
+                Instant.ofEpochMilli(value.learnedAt).truncatedTo(ChronoUnit.SECONDS)))
+            put("kind", value.kind.wire)
+            put("share", value.share.wire)
+            value.heard?.let { put("heard", it) }
+            value.gist?.let { put("gist", it) }
+            value.why?.let { put("why", it) }
+        }
+        (encoder as JsonEncoder).encodeJsonElement(obj)
+    }
+}
+
+private typealias Share = PersonaNote.Share
+
+/**
+ * A list that skips the elements it can't read instead of failing the whole
+ * record — and reads as empty when the key holds something that isn't a
+ * list at all. What `UserPersona`'s lenient `init(from:)` buys on iOS.
+ */
+open class LenientListSerializer<T>(private val element: KSerializer<T>) : KSerializer<List<T>> {
+    private val list = ListSerializer(element)
+    override val descriptor: SerialDescriptor = list.descriptor
+    override fun deserialize(decoder: Decoder): List<T> {
+        val json = decoder as JsonDecoder
+        val arr = json.decodeJsonElement() as? JsonArray ?: return emptyList()
+        return arr.mapNotNull { runCatching { json.json.decodeFromJsonElement(element, it) }.getOrNull() }
+    }
+    override fun serialize(encoder: Encoder, value: List<T>) = list.serialize(encoder, value)
+}
+
+object PersonaNoteListSerializer : LenientListSerializer<PersonaNote>(PersonaNoteSerializer)
+object ShareCorrectionListSerializer :
+    LenientListSerializer<UserPersona.ShareCorrection>(UserPersona.ShareCorrection.serializer())
 
 @Serializable
 data class LearnerPattern(

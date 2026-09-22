@@ -63,8 +63,10 @@ fun PersonaIntakeScreen(
     nativeLanguage: String,
     onBackToSetup: () -> Unit,
     onFinish: (UserPersona) -> Unit,
+    /** Where the pages open — Me's remembered lines open on the home page. */
+    startStep: Int = 0,
 ) {
-    var step by remember { mutableIntStateOf(0) }
+    var step by remember { mutableIntStateOf(startStep.coerceIn(0, 3)) }
     androidx.activity.compose.BackHandler { if (step > 0) step -= 1 else onBackToSetup() }
     var name by remember { mutableStateOf(initial.displayName) }
     var city by remember { mutableStateOf(initial.city) }
@@ -72,6 +74,15 @@ fun PersonaIntakeScreen(
     var stay by remember { mutableStateOf(initial.lengthOfStay) }
     var interests by remember { mutableStateOf(initial.interests.toSet()) }
     var situations by remember { mutableStateOf(initial.situations.toSet()) }
+    // What the fluent self remembers, with each line's rung — edited here,
+    // saved with the rest on Finish (iOS `rememberedSection`).
+    var notes by remember { mutableStateOf(initial.learnedNotes) }
+    fun draft() = initial.copy(
+        displayName = name.trim(), city = city.trim(),
+        country = country.trim(), lengthOfStay = stay.trim(),
+        interests = interests.toList(), situations = situations.toList(),
+        learnedNotes = notes,
+    )
 
     val canAdvance = when (step) {
         0 -> name.isNotBlank()
@@ -92,11 +103,7 @@ fun PersonaIntakeScreen(
                     enabled = canAdvance,
                     onClick = {
                         if (step < 3) step += 1
-                        else onFinish(initial.copy(
-                            displayName = name.trim(), city = city.trim(),
-                            country = country.trim(), lengthOfStay = stay.trim(),
-                            interests = interests.toList(), situations = situations.toList(),
-                        ))
+                        else onFinish(draft().committingNotes(initial.learnedNotes))
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.next)) }
@@ -142,6 +149,10 @@ fun PersonaIntakeScreen(
                     OutlinedTextField(value = stay, onValueChange = { stay = it },
                         label = { Text(stringResource(R.string.how_long_have_you_been_there_optional)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth())
+                    // The remembered lines sit with the facts about the
+                    // learner's life, as on iOS; nothing is drawn before the
+                    // first talk has taught the fluent self anything.
+                    Column { RememberedLinesSection(draft(), onNotesChange = { notes = it }) }
                 }
                 2 -> {
                     Header(stringResource(R.string.what_are_you_into),

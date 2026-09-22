@@ -29,6 +29,9 @@ import com.roro.futurevoice.talk.UserPersona
 import com.roro.futurevoice.ui.ComposerHost
 import com.roro.futurevoice.ui.FindPeopleScreen
 import com.roro.futurevoice.ui.PersonaDeepenSheet
+import com.roro.futurevoice.ui.PersonaIntakeScreen
+import com.roro.futurevoice.ui.PublicIntroPreviewSheet
+import androidx.compose.foundation.layout.Box
 import com.roro.futurevoice.ui.PracticeBody
 import com.roro.futurevoice.ui.ScenarioComposer
 import com.roro.futurevoice.ui.WatchSceneScreen
@@ -118,6 +121,42 @@ object CaptureWatch {
                 CaptureSeed.seedScenarios(c)
             }
         },
+        // The mirrored Find-people intro, seen before anything is published:
+        // work · town · situations · the unlocked lines only (iOS
+        // `PublicIntroPreviewSheet` over the sample persona). Nothing here
+        // can publish — every exit is a no-op.
+        "intro-preview" to @Composable { c: Context ->
+            var persona by remember { mutableStateOf<UserPersona?>(null) }
+            Seeded({
+                CaptureSeed.once("sample-persona") { CaptureSeed.seedSamplePersona(c) }
+                persona = PersonaStore.shared(c).load()
+            }) {
+                Box(Modifier.fillMaxSize().background(AppSurfaces.ground))
+                PublicIntroPreviewSheet(
+                    persona = persona, targetLanguage = lang(c),
+                    nativeLanguage = c.getSharedPreferences("futurevoice", 0)
+                        .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
+                    onPublish = { false }, onEditFirst = {}, onDecline = {}, onDismiss = {},
+                )
+            }
+        },
+        // Me → Profile on its home step: the remembered lines with their
+        // rungs and evidence — one let out whole, one as its gist, two kept
+        // (iOS `PersonaOnboardingView(startStep: 1)`).
+        "profile-notes" to @Composable { c: Context ->
+            var persona by remember { mutableStateOf<UserPersona?>(null) }
+            Seeded({
+                CaptureSeed.once("sample-persona") { CaptureSeed.seedSamplePersona(c) }
+                persona = PersonaStore.shared(c).load()
+            }) {
+                PersonaIntakeScreen(
+                    initial = persona ?: UserPersona(), targetLanguage = lang(c),
+                    nativeLanguage = c.getSharedPreferences("futurevoice", 0)
+                        .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
+                    onBackToSetup = {}, onFinish = {}, startStep = 1,
+                )
+            }
+        },
         // iOS `watchtab-empty`: a learner with no scenarios yet.
         "watchtab-empty" to { c ->
             CaptureTalk.TabShot(c, com.roro.futurevoice.ui.HomeTab.WATCH) {
@@ -131,8 +170,6 @@ object CaptureWatch {
     val notPorted: Map<String, String> = mapOf(
         "intake-people" to "4.12 — Guided new-person intake (CounterpartVoiceIntakeView) not ported — " +
             "Android has only the plain person form; no plan item yet (nearest 2.25)",
-        "intro-preview" to "Public-intro consent sheet (publish / edit first / not now) not ported — 2.1",
-        "profile-notes" to "Remembered lines with their share lock and evidence not ported — 2.1",
     )
 
     @Composable

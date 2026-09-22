@@ -72,6 +72,9 @@ fun PublicIntroScreen(
     persona: UserPersona?,
     targetLanguage: String,
     onBack: () -> Unit,
+    /** Called after a publish or take-down — the preview sheet's "Edit
+     *  first" uses it to close once the editor has ended in a decision. */
+    onDecided: (() -> Unit)? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -105,13 +108,17 @@ fun PublicIntroScreen(
             interests = mine.interests
             if (mine.voice_preset_id.isNotBlank()) voiceId = mine.voice_preset_id
         } else {
-            // A draft seeds from the profile onboarding already has — the
-            // intro itself stays theirs to write.
+            // A draft seeds from the profile onboarding already has. The
+            // intro starts as the same paragraph the mirror would publish
+            // (work, town, situations, the remembered lines at their rung),
+            // so "Edit first" from the preview lands on the text they were
+            // just shown — it stays theirs to rewrite.
             displayName = persona?.displayName.orEmpty()
             persona?.let { p ->
                 location = listOf(p.city, p.country).filter { it.isNotBlank() }.joinToString(", ")
                 occupation = p.occupation
                 interests = p.interests.joinToString(", ")
+                intro = PublicPersonaClient.composedIntro(p)
             }
         }
         loading = false
@@ -220,6 +227,7 @@ fun PublicIntroScreen(
                                         publishedId = runCatching { client.fetchMine(targetLanguage) }
                                             .getOrNull()?.id
                                     }
+                                    onDecided?.invoke()
                                 }.onFailure {
                                     error = context.getString(
                                         R.string.couldnt_publish_check_your_connection)
@@ -272,6 +280,7 @@ fun PublicIntroScreen(
                                 // publishing — stop the auto-sync from
                                 // quietly putting the row back next launch.
                                 markManual(); publishedId = null
+                                onDecided?.invoke()
                             }
                             .onFailure {
                                 error = context.getString(R.string.couldnt_take_it_down)

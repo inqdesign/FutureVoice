@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 data class AppState(
@@ -282,6 +283,45 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     fun clearLevelUp() {
         _state.update { it.copy(levelUp = null) }
+    }
+
+    /** Whether the learner still owes the pool a yes or a no (the Watch-tab preview). */
+    fun needsIntroDecision(): Boolean {
+        val s = _state.value
+        if (!s.signedIn || s.isAnonymous) return false
+        return com.roro.futurevoice.net.PublicPersonaClient.needsIntroDecision(
+            com.roro.futurevoice.net.PublicPersonaClient.prefs(appContext), s.persona)
+    }
+
+    /**
+     * The preview's Publish: the mirror goes up, and from here on follows
+     * profile edits — that is what was approved. Runs on the view model's
+     * scope so dismissing the sheet can't cancel a write half-done.
+     */
+    suspend fun publishIntroMirror(): Boolean {
+        val s = _state.value
+        val p = s.persona ?: return false
+        val ok = viewModelScope.async {
+            com.roro.futurevoice.net.PublicPersonaClient(auth).publishMirror(p, s.targetLanguage)
+        }.await()
+        if (ok) {
+            com.roro.futurevoice.net.PublicPersonaClient.prefs(appContext).edit()
+                .putBoolean(com.roro.futurevoice.net.PublicPersonaClient.AUTO_APPROVED_KEY, true).apply()
+        }
+        return ok
+    }
+
+    /**
+     * The preview's Not now: an explicit no, so the mirror never publishes on
+     * its own — and a row an earlier build put up unasked comes down with it.
+     */
+    fun declinePublicIntro() {
+        com.roro.futurevoice.net.PublicPersonaClient.prefs(appContext).edit()
+            .putBoolean(com.roro.futurevoice.net.PublicPersonaClient.MANUAL_INTRO_KEY, true).apply()
+        val language = _state.value.targetLanguage
+        viewModelScope.launch {
+            runCatching { com.roro.futurevoice.net.PublicPersonaClient(auth).withdrawMine(language) }
+        }
     }
 
     fun syncPublicPersona() {

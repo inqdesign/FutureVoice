@@ -104,24 +104,22 @@ object CaptureSeed {
             freeNotes = "Thinking about moving back next year.",
             metAt = calendarDays(-20),
             learnedNotes = listOf(
-                // NOT PORTED: share (.all), heard ("Saturday mornings I run along the Isar, every week"),
-                // why ("취미") — Android `PersonaNote` has only id/text/sessionId/learnedAt; the
-                // three-way share lock and the "You said …" evidence aren't ported yet.
                 PersonaNote(text = "매주 토요일 아침 이자르 강변에서 달린다",
-                    sessionId = null, learnedAt = t - 9 * DAY),
-                // NOT PORTED: share (.gist), heard ("I dropped my daughter off at Kita this morning"),
-                // gist ("어린 아이를 키우는 부모"), why ("가족") — same missing PersonaNote fields.
+                    sessionId = null, learnedAt = t - 9 * DAY, share = PersonaNote.Share.ALL,
+                    heard = "Saturday mornings I run along the Isar, every week", why = "취미"),
                 PersonaNote(text = "유치원생 딸이 하나 있다",
-                    sessionId = null, learnedAt = t - 5 * DAY),
-                // NOT PORTED: share (.nothing), heard ("the investor meeting didn't go well, money is
-                // getting tight"), gist ("회사를 키우는 중"), why ("돈 이야기") — same missing fields.
+                    sessionId = null, learnedAt = t - 5 * DAY, share = PersonaNote.Share.GIST,
+                    heard = "I dropped my daughter off at Kita this morning", gist = "어린 아이를 키우는 부모",
+                    why = "가족"),
                 PersonaNote(text = "투자자 미팅이 잘 안 풀려서 자금 압박이 있다",
-                    sessionId = null, learnedAt = t - 2 * DAY),
-                // NOT PORTED: kind (.now — fades after a month), share (.nothing), heard ("I got back
-                // from Seoul on Sunday and I'm still waking up at 4"), gist ("최근 여행을 다녀옴"),
-                // why ("지금 상황") — Android has no PersonaNote.Kind either.
+                    sessionId = null, learnedAt = t - 2 * DAY, share = PersonaNote.Share.NOTHING,
+                    heard = "the investor meeting didn't go well, money is getting tight",
+                    gist = "회사를 키우는 중", why = "돈 이야기"),
                 PersonaNote(text = "서울 다녀와서 시차 적응 중",
-                    sessionId = null, learnedAt = t - 1 * DAY),
+                    sessionId = null, learnedAt = t - 1 * DAY, share = PersonaNote.Share.NOTHING,
+                    kind = PersonaNote.Kind.NOW,
+                    heard = "I got back from Seoul on Sunday and I'm still waking up at 4",
+                    gist = "최근 여행을 다녀옴", why = "지금 상황"),
             ),
         )
         PersonaStore.shared(context).save(p)

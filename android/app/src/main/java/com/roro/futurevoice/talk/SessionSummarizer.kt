@@ -27,6 +27,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -140,6 +142,11 @@ object SessionSummarizer {
         // the call, absorbed after it, exactly iOS's order.
         val profileStore = ProfileStore.shared(context)
         val profile = profileStore.load(session.targetLanguage, level.code)
+        // The notebook as the summary call sees it, in this order. A
+        // `replaces` in the payload is a 1-based index into THIS list, so it
+        // is captured once here and never re-read from the persona after the
+        // call (iOS `rememberedNotes`). Expired `now` lines are not in it.
+        val rememberedNotes = PersonaStore.shared(context).load()?.currentNotes().orEmpty()
         val body = SessionSummaryClient.RequestBody(
             target_language = session.targetLanguage,
             native_language = nativeLanguage,
@@ -147,8 +154,7 @@ object SessionSummarizer {
                 StoreJson.json.encodeToString(LearnerProfile.serializer(), profile)).jsonObject,
             // What the fluent self already knows about the person, so the
             // model doesn't re-learn their job every call.
-            known_about_user = PersonaStore.shared(context).load()?.learnedNotes?.map { it.text }
-                ?: emptyList(),
+            known_about_user = rememberedNotes.map { it.text },
             expression_budget = expressionBudget(turns.count { it.role == TurnRole.FLUENT_SELF }),
             transcript = formatTranscript(turns),
             metrics = metrics.promptJson(),
@@ -245,22 +251,37 @@ object SessionSummarizer {
         SessionStore.shared(context).save(saved)
 
         // The other memory: what the talk taught the fluent self about the
-        // PERSON. Capped at 3 a session — this is a notebook, not a
-        // transcript, and the model volunteers more than it should when a
-        // talk ran long. `about_user` is the LAST field in the schema, so a
-        // response cut at the token ceiling loses this and nothing else.
-        val learned = strings(payload, "about_user")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() && it.length <= 140 }
-            .take(3)
-            .map { PersonaNote(text = it, sessionId = session.id) }
+        // PERSON. Capped at 3 new lines a session — this is a notebook, not a
+        // transcript. Each line carries the model's verdict on how much of it
+        // a stranger may hear (`share`), the gist that rung hands out, the
+        // reason, and the sentence it was distilled from; the learner
+        // overturns the verdict in Me → Profile. A line naming a remembered
+        // line's number is an UPDATE and takes its place instead of counting
+        // against the three; a number that matches nothing is a new line.
+        // `about_user` is the LAST field in the schema, so a response cut at
+        // the token ceiling loses this and nothing else.
+        val entries = aboutUser(payload)
+            .map { it to it.text.trim() }
+            .filter { (_, t) -> t.isNotEmpty() && t.length <= 140 }
+        val updates = ArrayList<UserPersona.NoteUpdate>()
+        val learned = ArrayList<PersonaNote>()
+        for ((entry, text) in entries) {
+            val note = entry.toNote(text, session.id)
+            val n = entry.replaces
+            if (n != null && n >= 1 && n <= rememberedNotes.size && updates.size < 3) {
+                updates += UserPersona.NoteUpdate(rememberedNotes[n - 1].id, note)
+            } else if (learned.size < 3) {
+                learned += note
+            }
+        }
         // A plain free talk is where the fluent self gets to know someone;
         // stamping metAt here is what retires the first-call framing.
         val wasIntroTalk = session.counterpartId == null && existingTopic.isEmpty()
-        if (learned.isNotEmpty() || wasIntroTalk) {
+        if (learned.isNotEmpty() || updates.isNotEmpty() || wasIntroTalk) {
             com.roro.futurevoice.data.PersonaMemory.remember(
                 context, learned,
-                metAt = if (wasIntroTalk) (session.endedAt ?: System.currentTimeMillis()) else null)
+                metAt = if (wasIntroTalk) (session.endedAt ?: System.currentTimeMillis()) else null,
+                updates = updates)
         }
 
         // Cards: clear this session's untouched ones (a re-analysis must not
@@ -327,6 +348,52 @@ object SessionSummarizer {
 
     private fun objects(o: JsonObject, k: String): List<JsonObject> =
         (o[k] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+
+    /**
+     * One `about_user` entry — iOS `ClaudeSummaryPayload.AboutUser`. Two
+     * shapes are read: the current object `{text, heard, kind, share, gist,
+     * why, replaces}` and the old bare string. `share` falls back to the
+     * pre-three-rung `private` boolean (true → nothing, false → all), and with
+     * neither to NOTHING: a line nobody judged is hidden. `kind` falls back to
+     * a durable fact, `replaces` to a new line.
+     */
+    data class AboutUser(
+        val text: String,
+        val share: PersonaNote.Share = PersonaNote.Share.NOTHING,
+        val kind: PersonaNote.Kind = PersonaNote.Kind.FACT,
+        val heard: String? = null,
+        val gist: String? = null,
+        val why: String? = null,
+        val replaces: Int? = null,
+    ) {
+        fun toNote(text: String, sessionId: String): PersonaNote {
+            fun clip(raw: String?, limit: Int): String? =
+                raw?.trim()?.takeIf { it.isNotEmpty() && it.length <= limit }
+            val g = clip(gist, 140)
+            // "The gist" with no gist to hand out is an empty promise; the
+            // safe rung is the one below it.
+            val rung = if (share == PersonaNote.Share.GIST && g == null) PersonaNote.Share.NOTHING else share
+            return PersonaNote(text = text, sessionId = sessionId, share = rung, kind = kind,
+                heard = clip(heard, 240), gist = g, why = clip(why, 140))
+        }
+    }
+
+    fun aboutUser(p: JsonObject): List<AboutUser> =
+        (p["about_user"] as? JsonArray)?.mapNotNull { e ->
+            (e as? JsonPrimitive)?.takeIf { it.isString }?.let { return@mapNotNull AboutUser(it.content) }
+            val o = e as? JsonObject ?: return@mapNotNull null
+            val text = str(o, "text") ?: return@mapNotNull null
+            val share = PersonaNote.Share.from(str(o, "share"))
+                ?: (o["private"] as? JsonPrimitive)?.booleanOrNull
+                    ?.let { if (it) PersonaNote.Share.NOTHING else PersonaNote.Share.ALL }
+                ?: PersonaNote.Share.NOTHING
+            AboutUser(
+                text = text, share = share,
+                kind = PersonaNote.Kind.from(str(o, "kind")) ?: PersonaNote.Kind.FACT,
+                heard = str(o, "heard"), gist = str(o, "gist"), why = str(o, "why"),
+                replaces = (o["replaces"] as? JsonPrimitive)?.intOrNull,
+            )
+        }.orEmpty()
 
     private fun toDomain(p: JsonObject): SessionSummary {
         val now = System.currentTimeMillis()

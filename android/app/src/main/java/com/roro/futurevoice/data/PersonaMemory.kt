@@ -16,20 +16,15 @@ object PersonaMemory {
      * The model re-tells the same fact differently every session, so notes
      * dedupe on a punctuation-stripped, lowercased key (iOS `dedupeKey`).
      */
-    fun dedupeKey(text: String): String =
-        text.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }.joinToString(" ")
+    fun dedupeKey(text: String): String = PersonaNote(text = text).dedupeKey
 
-    /** Newest 40 survive — this is a notebook, not a transcript. */
-    fun absorb(persona: UserPersona, notes: List<PersonaNote>, limit: Int = 40): UserPersona {
-        val seen = persona.learnedNotes.map { dedupeKey(it.text) }.toMutableSet()
-        val kept = persona.learnedNotes.toMutableList()
-        for (n in notes) {
-            val k = dedupeKey(n.text)
-            if (k.isEmpty() || !seen.add(k)) continue
-            kept.add(n)
-        }
-        return persona.copy(learnedNotes = if (kept.size > limit) kept.takeLast(limit) else kept)
-    }
+    /** Updates, expiry and dedupe — [UserPersona.absorbing]. Newest 40 survive. */
+    fun absorb(
+        persona: UserPersona,
+        notes: List<PersonaNote>,
+        updates: List<UserPersona.NoteUpdate> = emptyList(),
+        limit: Int = 40,
+    ): UserPersona = persona.absorbing(notes, updates, limit)
 
     /**
      * Fold a talk's `about_user` lines in, and — for a plain FREE talk —
@@ -42,10 +37,15 @@ object PersonaMemory {
      * reach the pool — something said to your own future self was not said
      * to strangers.
      */
-    suspend fun remember(context: Context, notes: List<PersonaNote>, metAt: Long?) {
+    suspend fun remember(
+        context: Context,
+        notes: List<PersonaNote>,
+        metAt: Long?,
+        updates: List<UserPersona.NoteUpdate> = emptyList(),
+    ) {
         val store = PersonaStore.shared(context)
         var p = store.load() ?: return
-        p = absorb(p, notes)
+        p = absorb(p, notes, updates)
         if (metAt != null && p.metAt == null) p = p.copy(metAt = metAt)
         store.save(p)
         StoreEvents.bump()
