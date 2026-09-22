@@ -90,6 +90,12 @@ data class TalkUiState(
     val partial: String = "",
     val level: Float = 0f,
     val error: String? = null,
+    /**
+     * The transport went away mid-call. Not an error and not an end: the
+     * transcript stays on screen and the learner chooses — reconnect and
+     * carry on, or end the talk and keep what was said.
+     */
+    val dropped: String? = null,
     val wall: TalkWall? = null,
     /** Null until the first tick lands, and null throughout on a plan that doesn't count down. */
     val minutesRemaining: Int? = null,
@@ -143,6 +149,11 @@ class TalkViewModel(context: Context) : ViewModel() {
     val state: StateFlow<TalkUiState> = _state.asStateFlow()
 
     private var config: TalkConfig? = null
+    /** The learner asked for the call to stop — a socket closing after that
+     *  is the hang-up itself, never a drop to reconnect from. */
+    @Volatile private var endRequested = false
+    /** When the call last put ITSELF back together after a transport drop. */
+    @Volatile private var lastAutoReconnectAt = 0L
     private var sessionId: String = ""
     private var startedAt: Long = 0L
 
@@ -205,6 +216,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     // MARK: - Lifecycle
 
     fun start(config: TalkConfig) {
+        endRequested = false
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
         this.config = config
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
@@ -258,6 +270,7 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     fun end() {
         if (_state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE) return
+        endRequested = true
         // The gateway holds the mic and the sockets; putting the call down
         // has to reach it, or the room keeps streaming.
         if (REALTIME) {
@@ -404,6 +417,17 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
+    /**
+     * Put a dropped call back together: same voice, the talk so far as
+     * history, no opener. Everything said is already on screen and stays
+     * there — a reconnect carries the whole talk.
+     */
+    fun reconnect() {
+        if (!REALTIME || endRequested) return
+        _state.update { it.copy(dropped = null, error = null) }
+        resumeRealtime()
+    }
+
     private fun resumeRealtime() {
         val cfg = config ?: return
         _state.update { it.copy(phase = TalkPhase.CONNECTING, pausedForIdle = false) }
@@ -514,6 +538,23 @@ class TalkViewModel(context: Context) : ViewModel() {
                     flushRealtimeReply()
                     _state.update { it.copy(phase = TalkPhase.PAUSED, pausedForIdle = true,
                         partial = "", level = 0f) }
+                }
+                // A transport drop: the gateway's Durable Object can be reset
+                // under a live call (a deploy, or Cloudflare moving the
+                // object), and a reconnect carries the whole talk. So the
+                // call puts itself back together without asking, at most once
+                // a minute — a second drop inside that is no longer a blip,
+                // and gets the question instead.
+                realtime.lastErrorCode == "socket" && !endRequested &&
+                    System.currentTimeMillis() - lastAutoReconnectAt > AUTO_RECONNECT_SPACING_MS -> {
+                    lastAutoReconnectAt = System.currentTimeMillis()
+                    com.roro.futurevoice.core.Telemetry.log("talk_rt_reconnect",
+                        mapOf("turns" to _state.value.turns.size.toString(), "auto" to "1"))
+                    reconnect()
+                }
+                realtime.lastErrorCode == "socket" && !endRequested -> {
+                    flushRealtimeReply()
+                    _state.update { it.copy(dropped = message, partial = "", level = 0f) }
                 }
                 // Anything else is a failure the learner can retry from.
                 else -> {
@@ -1052,6 +1093,10 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     companion object {
+        /** A second drop inside a minute is not a blip; it gets the question
+         *  rather than another silent reconnect. */
+        private const val AUTO_RECONNECT_SPACING_MS = 60_000L
+
         /** Realtime is the only call path (iOS `RealtimeMode`, 2026-09-05). */
         const val REALTIME = true
         private const val TAG = "TalkViewModel"

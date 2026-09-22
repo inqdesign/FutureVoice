@@ -14,6 +14,7 @@ class FutureVoiceApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         com.roro.futurevoice.core.Analytics.start(this)
+        com.roro.futurevoice.core.Telemetry.start(this)
         InstallSalt.init(this)
         CoreVocabulary.init(this)
         BillingService.shared(this).refresh()

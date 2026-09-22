@@ -131,6 +131,10 @@ class RealtimeTalkClient(private val context: Context) {
     private var micJob: Job? = null
     @Volatile private var micRunning = false
     @Volatile private var tornDown = false
+    /** Counted for the failure and session rows, never shown. */
+    @Volatile private var micBytesSent = 0L
+    @Volatile private var warningsThisCall = 0
+    @Volatile private var turnsThisCall = 0
 
     private var player: PcmStreamPlayer? = null
     private var replyRate = DEFAULT_REPLY_RATE
@@ -171,6 +175,7 @@ class RealtimeTalkClient(private val context: Context) {
         wallCode = null
         lastErrorCode = null
         replyPCM.reset(); userPCM.reset()
+        micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
         state = State.CONNECTING
 
         val start = buildJsonObject {
@@ -209,7 +214,8 @@ class RealtimeTalkClient(private val context: Context) {
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 if (tornDown) return
                 Log.w(TAG, "socket failed", t)
-                fail(t.message ?: "connection failed")
+                lastErrorCode = "socket"
+                fail(t.message ?: "connection failed", "socket")
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -222,7 +228,10 @@ class RealtimeTalkClient(private val context: Context) {
                 // A socket the gateway closed on its own, without an error
                 // event first, is a dropped call — say so rather than leaving
                 // a listening screen that hears nothing.
-                if (state != State.FAILED) fail(reason.ifBlank { "call ended" })
+                if (state != State.FAILED) {
+                    lastErrorCode = "socket"
+                    fail(reason.ifBlank { "call ended" }, "socket")
+                }
             }
         })
     }
@@ -242,12 +251,35 @@ class RealtimeTalkClient(private val context: Context) {
         return bytes to replyRate
     }
 
-    private fun fail(message: String) {
+    /**
+     * The one way a call fails. Sets the state the view reacts to AND leaves
+     * the record the console reads — a failure nobody can see later is the
+     * launch-week bug in one sentence (iOS `72eee93`).
+     */
+    private fun fail(message: String, code: String = "") {
         Log.w(TAG, "fail: $message (state=$state)")
+        com.roro.futurevoice.core.Telemetry.log("talk_rt_failed", audioFacts() + mapOf(
+            "code" to code.ifEmpty { lastErrorCode.orEmpty() },
+            "message" to message.take(200),
+            "turns" to turnsThisCall.toString(),
+            "mic_bytes" to micBytesSent.toString()))
         teardown()
         state = State.FAILED
         onFailed?.invoke(message)
     }
+
+    /**
+     * What the audio stack looked like when it gave up. A call that ends deaf
+     * leaves nothing else behind, and "no byte went upstream" without a
+     * reason is another guess rather than a diagnosis.
+     */
+    private fun audioFacts(): Map<String, String> = mapOf(
+        "mic_running" to if (micRunning) "1" else "0",
+        "mic_bytes" to micBytesSent.toString(),
+        "player_up" to if (player != null) "1" else "0",
+        "reply_rate" to replyRate.toString(),
+        "state" to state.name.lowercase(),
+        "warnings" to warningsThisCall.toString())
 
     private fun teardown() {
         stopMic()
@@ -276,6 +308,7 @@ class RealtimeTalkClient(private val context: Context) {
                 val said = msg["text"]?.jsonPrimitive?.content.orEmpty()
                 val pcm = userPCM.toByteArray(); userPCM.reset()
                 if (said.isNotEmpty()) {
+                    turnsThisCall += 1
                     val trimmed = trimSilence(pcm, MIC_RATE)
                     val wav = saveWav(trimmed, MIC_RATE)
                     val ms = (trimmed.size / 2 * 1000L / MIC_RATE).toInt()
@@ -323,6 +356,17 @@ class RealtimeTalkClient(private val context: Context) {
                 state = State.HEARING
             }
             "stats", "rotating" -> Unit   // the gateway reconnects upstream itself
+            "warning" -> {
+                // The call SURVIVED something — a retried reply, a dropped
+                // TTS line, a rotated transcriber. Nothing to show the
+                // learner; everything to record, with the same audio facts a
+                // failure carries.
+                warningsThisCall += 1
+                com.roro.futurevoice.core.Telemetry.log("talk_rt_warning", audioFacts() + mapOf(
+                    "code" to msg["code"]?.jsonPrimitive?.content.orEmpty(),
+                    "message" to msg["message"]?.jsonPrimitive?.content.orEmpty().take(200)))
+            }
+            "ended" -> logSession(msg)
             "error" -> {
                 val code = msg["code"]?.jsonPrimitive?.content.orEmpty()
                 lastErrorCode = code
@@ -331,9 +375,40 @@ class RealtimeTalkClient(private val context: Context) {
                     wallCode = code
                     onWall?.invoke(code)
                 }
-                fail(message)
+                fail(message, code)
             }
         }
+    }
+
+    /**
+     * The gateway's last word about this session — reason, turns, speech
+     * seconds, how long the first voice took. The only per-session record
+     * this path produces: the reply and the voice never touch the usage
+     * ledger, so it goes straight to `client_events` for the console.
+     */
+    private fun logSession(msg: JsonObject) {
+        fun ints(key: String) = (msg[key] as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { it.jsonPrimitive.content.toIntOrNull() }?.sorted().orEmpty()
+        fun num(key: String) = msg[key]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+        val voice = ints("voiceFirstMs")
+        val gaps = ints("mergeGapMs")
+        com.roro.futurevoice.core.Telemetry.log("talk_rt_session", mapOf(
+            "reason" to msg["reason"]?.jsonPrimitive?.content.orEmpty(),
+            "turns" to num("turns").toString(),
+            "speech_s" to num("speechSeconds").toString(),
+            "duration_ms" to num("durationMs").toString(),
+            "voice_first_p50_ms" to (voice.getOrNull(voice.size / 2)?.toString() ?: ""),
+            "voice_first_max_ms" to (voice.lastOrNull()?.toString() ?: ""),
+            "voice_samples" to voice.size.toString(),
+            "warnings" to num("warnings").toString(),
+            "lines" to turnsThisCall.toString(),
+            // Turn-taking evidence: how often the fluent self talked over the
+            // learner, how often the hold window caught a continuation, and
+            // how long this learner's own mid-thought pauses ran.
+            "cutoffs" to num("cutoffs").toString(),
+            "merges" to num("merges").toString(),
+            "merge_gap_p50_ms" to (gaps.getOrNull(gaps.size / 2)?.toString() ?: ""),
+            "merge_gap_max_ms" to (gaps.lastOrNull()?.toString() ?: "")))
     }
 
     // ------------------------------------------------------------------
@@ -382,6 +457,7 @@ class RealtimeTalkClient(private val context: Context) {
                 // Continuous, paced by the read itself — roughly realtime,
                 // which is what Gemini Live's own VAD wants.
                 socket?.send(frame.toByteString())
+                micBytesSent += frame.size
             }
             } finally {
                 // Only this thread ever stops/releases the recorder — it is

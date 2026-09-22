@@ -246,6 +246,27 @@ fun TalkScreen(
                 }
             })
     }
+    // The transport went away mid-call. Two honest choices, and the
+    // transcript stays on screen behind them. A call that drops silently is
+    // a screen that listens to nothing (iOS `b147b53`).
+    state.dropped?.let {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(stringResource(R.string.the_call_dropped)) },
+            text = { Text(stringResource(
+                R.string.everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    com.roro.futurevoice.core.Telemetry.log("talk_rt_reconnect",
+                        mapOf("turns" to state.turns.size.toString()))
+                    vm.reconnect()
+                }) { Text(stringResource(R.string.reconnect)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.end() }) { Text(stringResource(R.string.end_the_call)) }
+            })
+    }
+
     val paused = state.phase == TalkPhase.PAUSED
     val onCall = state.phase == TalkPhase.LISTENING ||
         state.phase == TalkPhase.THINKING || state.phase == TalkPhase.SPEAKING
