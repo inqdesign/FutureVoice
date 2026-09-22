@@ -25,6 +25,7 @@ so leading/trailing spaces and apostrophes survive untouched.
 """
 import argparse
 import hashlib
+import os
 import json
 import re
 import sys
@@ -122,18 +123,33 @@ def load_entries():
         values.setdefault(source, key)   # the key IS the source-language text
         entries[key] = values
 
-    # Collisions: every member of a colliding group gets a hash suffix, so a
-    # name never silently changes meaning when a sibling key appears.
+    # Names are ASSIGNED ONCE and then remembered (string-names.json). The old
+    # rule — hash every member of a colliding group — renamed a surviving key
+    # the moment its sibling left the catalog (back_b52b36 became back), and
+    # renamed a plain key the moment a sibling arrived, so an iOS merge broke
+    # the Android build over strings nobody had touched. Now an existing key
+    # keeps its name forever; a NEW key gets the plain slug when nobody has
+    # ever held it, else the hashed one. Retired keys stay in the ledger so a
+    # name is never handed to a different sentence.
+    ledger_path = os.path.join(os.path.dirname(__file__), "string-names.json")
+    ledger = json.load(open(ledger_path)) if os.path.exists(ledger_path) else {}
+    taken = set(ledger.values())
     by_name = {}
     for key in entries:
         by_name.setdefault(resource_name(key), []).append(key)
     names = {}
-    for name, keys in by_name.items():
-        if len(keys) == 1:
-            names[keys[0]] = name
-        else:
-            for key in keys:
-                names[key] = f"{name}_{hashlib.sha1(key.encode()).hexdigest()[:6]}"
+    for key in entries:
+        if key in ledger:
+            names[key] = ledger[key]
+            continue
+        base = resource_name(key)
+        crowded = len(by_name[base]) > 1 or base in taken
+        name = f"{base}_{hashlib.sha1(key.encode()).hexdigest()[:6]}" if crowded else base
+        names[key] = name
+        ledger[key] = name
+        taken.add(name)
+    with open(ledger_path, "w") as f:
+        json.dump(ledger, f, ensure_ascii=False, indent=1, sort_keys=True)
     return source, entries, names, skipped
 
 
