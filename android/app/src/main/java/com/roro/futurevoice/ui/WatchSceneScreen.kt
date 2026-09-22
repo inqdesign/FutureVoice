@@ -160,7 +160,10 @@ fun WatchSceneScreen(
                     transcript = turn.text)
                 playingIndex = shown.lastIndex
                 val audio = runCatching {
-                    eleven.synthesize(
+                    // Cache first — a scene replayed from Practice must not
+                    // re-bill lines the learner already owns.
+                    com.roro.futurevoice.data.cachedSynthesis(
+                        context,
                         voiceId = if (isUser) voiceId else cast.voiceId,
                         text = turn.text,
                         // The learner's own lines on the fidelity model —

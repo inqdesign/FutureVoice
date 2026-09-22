@@ -444,6 +444,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 .onFailure { android.util.Log.w("AppViewModel", "voice restore failed", it) }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
                 .getOrNull()
+            // The lineage is what keeps already-synthesized audio reachable
+            // after a re-clone — without it a new voice id misses on every
+            // cached line and the whole library re-bills itself.
+            com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(voiceId)
             val profile = runCatching { voices.profile(uid) }.getOrNull()
             _state.update {
                 // The device's OWN answers outrank the server row: an Android

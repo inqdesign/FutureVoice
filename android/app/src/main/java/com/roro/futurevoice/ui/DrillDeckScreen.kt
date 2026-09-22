@@ -316,8 +316,8 @@ fun DrillDeckScreen(
                                     hearing = true
                                     scope.launch {
                                         runCatching {
-                                            val audio = ElevenLabsClient(AuthRepository()).synthesize(
-                                                voiceId, top.targetPhrase, purpose = "drill")
+                                            val audio = com.roro.futurevoice.data.cachedSynthesis(
+                                                context, voiceId, top.targetPhrase, purpose = "drill")
                                             player.play(audio)
                                         }
                                         hearing = false

@@ -865,6 +865,19 @@ internal fun HomeScreen(
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
 
+    // The call's first word, on disk before the tap. Synthesizing the
+    // openers here costs one round trip per NEW line, once, and takes the
+    // gateway's own ElevenLabs round trip out of the front of every call
+    // (iOS `26a246c`). A line already cached costs nothing.
+    LaunchedEffect(state.voiceId, state.targetLanguage, tab) {
+        if (tab != HomeTab.TALK) return@LaunchedEffect
+        val voice = state.voiceId ?: return@LaunchedEffect
+        runCatching {
+            com.roro.futurevoice.talk.FreeTalkOpeners(context)
+                .warmAudio(state.targetLanguage, state.persona?.displayName, voice)
+        }
+    }
+
     // Auto-present exactly once, right after the first talk ends — the moment
     // the "richer persona = more real talks" pitch has lived evidence behind
     // it. Before that it is a promise, and asked in onboarding it is a form.

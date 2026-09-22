@@ -144,6 +144,14 @@ class RealtimeTalkClient(private val context: Context) {
     private val replyPCM = ByteArrayOutputStream()
     private val userPCM = ByteArrayOutputStream()
 
+    /**
+     * While true the mic is read but NOT forwarded. The gateway gates its own
+     * echo because it knows when it is speaking; a line the app plays itself
+     * (the cached greeting) is invisible to it, so the app has to hold the
+     * frames back or the fluent self's own voice comes back as a user turn.
+     */
+    @Volatile var micGated: Boolean = false
+
     /** Set when the gateway named a wall; read by the view after failure. */
     @Volatile var wallCode: String? = null
         private set
@@ -456,6 +464,7 @@ class RealtimeTalkClient(private val context: Context) {
                 userPCM.write(frame)
                 // Continuous, paced by the read itself — roughly realtime,
                 // which is what Gemini Live's own VAD wants.
+                if (micGated) { level = 0f; continue }
                 socket?.send(frame.toByteString())
                 micBytesSent += frame.size
             }

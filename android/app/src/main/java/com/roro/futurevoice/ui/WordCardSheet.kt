@@ -188,8 +188,9 @@ fun WordCardSheet(
             runCatching {
                 // Deterministic key = the server dedupes a re-tap of the same
                 // term against the first synthesis, so replays are free.
-                val audio = ElevenLabsClient(AuthRepository()).synthesize(
-                    voiceId = id, text = term,
+                // Cache first: the same word must never be billed twice.
+                val audio = com.roro.futurevoice.data.cachedSynthesis(
+                    context, voiceId = id, text = term,
                     idempotencyKey = InstallSalt.ttsKey(term, id, timestamps = false),
                     purpose = "library")
                 mp3.play(audio)

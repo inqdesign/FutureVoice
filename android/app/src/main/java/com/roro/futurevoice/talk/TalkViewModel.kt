@@ -154,6 +154,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     @Volatile private var endRequested = false
     /** When the call last put ITSELF back together after a transport drop. */
     @Volatile private var lastAutoReconnectAt = 0L
+    /** The greeting to speak from the phone once the gateway says ready —
+     *  (text, mp3). Null when the cache missed and the gateway says it. */
+    @Volatile private var localOpener: Pair<String, ByteArray>? = null
     private var sessionId: String = ""
     private var startedAt: Long = 0L
 
@@ -407,10 +410,28 @@ class TalkViewModel(context: Context) : ViewModel() {
                         ).reply
                     }.getOrDefault("")
                 }
-                // NOT appended here: the gateway speaks the opener as a reply
-                // with its own context, and audio_start/reply_delta create the
-                // turn — appending it locally too printed it twice.
-                connectRealtime(config, opener, emptyList())
+                // The greeting is played from the phone when it is already
+                // there. The Talk tab synthesized every opener into the phrase
+                // cache when it opened, and asking the gateway to say a line
+                // the phone is holding costs a whole ElevenLabs round trip
+                // before the first word (iOS `26a246c`).
+                //
+                // The text still goes up — as HISTORY, so the gateway records
+                // what was said and stays silent. No protocol change: a miss
+                // is a null and the gateway speaks it exactly as before.
+                val cached = opener.takeIf { it.isNotBlank() }?.let {
+                    com.roro.futurevoice.data.PhraseAudioStore.shared(appContext)
+                        .data(it, activeVoiceId)
+                }
+                // NOT appended here on the gateway path: it speaks the opener
+                // as a reply with its own context, and audio_start/reply_delta
+                // create the turn — appending it locally too printed it twice.
+                if (cached != null) {
+                    localOpener = opener to cached
+                    connectRealtime(config, null, listOf("model" to opener))
+                } else {
+                    connectRealtime(config, opener, emptyList())
+                }
             } catch (e: Exception) {
                 fail(e)
             }
@@ -484,6 +505,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 RealtimeTalkClient.State.SPEAKING -> TalkPhase.SPEAKING
                 RealtimeTalkClient.State.IDLE, RealtimeTalkClient.State.FAILED -> null
             }
+            if (st == RealtimeTalkClient.State.LISTENING) speakLocalOpener()
             if (st == RealtimeTalkClient.State.HEARING) markLearnerSpoke()
             if (phase != null) {
                 lastActivityAt = System.currentTimeMillis()
@@ -596,6 +618,35 @@ class TalkViewModel(context: Context) : ViewModel() {
                 )
             }.getOrNull() ?: return@launch
             attachSuggestion(turnId, payload)
+        }
+    }
+
+    /**
+     * Say the cached greeting from the phone, the moment the call is up.
+     *
+     * The mic is HELD while it plays: the gateway gates its own echo because
+     * it knows when it is speaking, and a line the app plays itself is
+     * invisible to it — without the hold the fluent self's own voice comes
+     * back as the learner's first turn.
+     */
+    private fun speakLocalOpener() {
+        val (text, audio) = localOpener ?: return
+        localOpener = null
+        val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = text)
+        _state.update { it.copy(phase = TalkPhase.SPEAKING, turns = it.turns + turn) }
+        viewModelScope.launch {
+            realtime.micGated = true
+            try {
+                mp3.volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(appContext)
+                mp3.play(audio)
+            } catch (_: Exception) {
+                // Nothing played — the learner speaks first, which the call
+                // handles exactly as it does after any line.
+            } finally {
+                realtime.micGated = false
+                lastActivityAt = System.currentTimeMillis()
+                _state.update { it.copy(phase = TalkPhase.LISTENING) }
+            }
         }
     }
 

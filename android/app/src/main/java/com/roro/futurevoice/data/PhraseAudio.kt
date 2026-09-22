@@ -1,0 +1,31 @@
+package com.roro.futurevoice.data
+
+import android.content.Context
+import com.roro.futurevoice.net.ElevenLabsClient
+
+/**
+ * Say a line in a voice, paying for it at most once — the one door every
+ * repeatable spoken line goes through (word cards, drills, shadow targets,
+ * library rows, scene lines).
+ *
+ * The cache ([PhraseAudioStore]) is asked first; only genuinely new text
+ * reaches ElevenLabs, and what comes back is kept. A surface that calls the
+ * client directly re-bills the learner for audio they already own.
+ */
+suspend fun cachedSynthesis(
+    context: Context,
+    voiceId: String,
+    text: String,
+    modelId: String = ElevenLabsClient.CONVERSATION_MODEL_ID,
+    purpose: String? = null,
+    sceneKey: String? = null,
+    idempotencyKey: String? = null,
+): ByteArray {
+    val store = PhraseAudioStore.shared(context)
+    store.data(text, voiceId)?.let { return it }
+    val audio = ElevenLabsClient(AuthRepository()).synthesize(
+        voiceId = voiceId, text = text, modelId = modelId,
+        idempotencyKey = idempotencyKey, purpose = purpose, sceneKey = sceneKey)
+    store.save(audio, text, voiceId)
+    return audio
+}

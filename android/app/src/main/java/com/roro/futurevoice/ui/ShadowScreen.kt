@@ -202,8 +202,8 @@ fun ShadowScreen(
         busy = true
         scope.launch {
             runCatching {
-                val audio = ElevenLabsClient(AuthRepository()).synthesize(
-                    voiceId = voiceId, text = line,
+                val audio = com.roro.futurevoice.data.cachedSynthesis(
+                    context, voiceId = voiceId, text = line,
                     idempotencyKey = InstallSalt.ttsKey(line, voiceId, timestamps = false),
                     purpose = "shadow")
                 busy = false

@@ -51,6 +51,33 @@ class FreeTalkOpeners(private val context: Context) {
     fun hasPool(language: String, personaName: String?): Boolean =
         load()?.let { it.key == key(language, personaName) && it.lines.isNotEmpty() } == true
 
+    /**
+     * Synthesize every line of the pool into the phrase cache, so the call's
+     * FIRST word is already on the phone when the learner taps — the greeting
+     * used to wait on the gateway's own ElevenLabs round trip for a line that
+     * could have been on disk since the tab was opened (iOS `26a246c`).
+     *
+     * A line already cached costs nothing; the lineage is deliberately NOT
+     * consulted, because a greeting has to be in the CURRENT voice.
+     */
+    suspend fun warmAudio(language: String, personaName: String?, voiceId: String?) {
+        if (voiceId.isNullOrBlank()) return
+        val store = com.roro.futurevoice.data.PhraseAudioStore.shared(context)
+        val lines = buildList {
+            add(introOpener(language))
+            add(fallbackOpener(language))
+            load()?.takeIf { it.key == key(language, personaName) }?.let { addAll(it.lines) }
+        }
+        for (line in lines.distinct()) {
+            if (store.data(line, voiceId) != null) continue
+            val audio = runCatching {
+                com.roro.futurevoice.net.ElevenLabsClient(com.roro.futurevoice.data.AuthRepository())
+                    .synthesize(voiceId = voiceId, text = line, purpose = "turn")
+            }.getOrElse { return }   // no network, or a wall — try again later
+            store.save(audio, line, voiceId)
+        }
+    }
+
     /** The next line in rotation, advancing the cursor; null without a pool. */
     fun next(language: String, personaName: String?): String? {
         val pool = load() ?: return null
