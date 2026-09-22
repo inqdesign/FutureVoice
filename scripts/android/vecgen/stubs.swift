@@ -28,3 +28,8 @@ enum PublicPersonaService { enum Group: String { case character, person } }
 // ShadowEngine.matchWords references this; the vector'd `analyze` path never
 // calls it, so a stub only needs to exist.
 enum LocalAlignment { static func normalized(_ s: String) -> String { s } }
+
+// iCloud sync (iOS 1.0.7): the stores tell the engine they changed. The
+// vector generator runs the pure logic only, so the call is a no-op here.
+enum SyncKind { case drill }
+enum SyncEngine { static func noteChanged(_ kind: SyncKind) {} }
