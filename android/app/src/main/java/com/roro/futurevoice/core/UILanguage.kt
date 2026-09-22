@@ -44,6 +44,30 @@ object UILanguage {
         else -> Locale.forLanguageTag(tag)
     }
 
+    /**
+     * A context resolving strings in the TARGET language — what the learner
+     * is practising, not what the app is written in.
+     *
+     * For MATERIAL only: a line the FLUENT SELF says on screen. The hero
+     * greeting above the Talk ring is the one such line drawn as UI; it rode
+     * along with chrome when chrome moved to the app language, which turned
+     * the fluent self's own greeting into the app's voice — a learner
+     * practising Korean with the app in English read an English line above a
+     * ring whose call opens in Korean (iOS `6692f59`).
+     *
+     * A target with no UI column falls back to ENGLISH, never to the base
+     * context: that one resolves in the app language, which is a third
+     * language the line has no business being in.
+     */
+    fun materialContext(base: Context): Context {
+        val target = normalize(com.roro.futurevoice.data.LanguageScope.active(base)) ?: "en"
+        val l = locale(target)
+        val config = Configuration(base.resources.configuration)
+        config.setLocale(l)
+        config.setLocales(LocaleList(l))
+        return base.createConfigurationContext(config)
+    }
+
     /** The same context, resolving strings in the learner's language. */
     fun wrap(base: Context): Context {
         val tag = current(base) ?: return base

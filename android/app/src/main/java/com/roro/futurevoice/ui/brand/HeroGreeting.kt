@@ -1,14 +1,15 @@
 package com.roro.futurevoice.ui.brand
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.materialString
 import java.util.Calendar
 
 /**
  * The line above the ring — `HeroGreeting.swift`. Short on purpose: it is
  * set in a display face above the ring, and anything past a line and a half
- * pushes the ring off the fold. Rotation is the day plus the finished-call
+ * pushes the ring off the fold. It is the fluent self speaking, so every line
+ * resolves in the TARGET language ([materialString]), never the app's. Rotation is the day plus the finished-call
  * cursor, so the line can never change while it is on screen.
  */
 object HeroGreeting {
@@ -39,7 +40,9 @@ object HeroGreeting {
         val i = ((input.dayOfYear + input.rotationCursor) % options.size).let {
             if (it < 0) it + options.size else it
         }
-        return stringResource(options[i])
+        // MATERIAL, never chrome: this is the fluent self greeting them, so it
+        // is written in the language they are learning (iOS `6692f59`).
+        return materialString(options[i])
     }
 
     /** Four openings per stretch of the day. */
