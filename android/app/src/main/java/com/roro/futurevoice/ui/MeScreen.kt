@@ -54,6 +54,8 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.automirrored.filled.Send
 import com.roro.futurevoice.ui.brand.FutureselfTheme
 import com.roro.futurevoice.data.AudioPrefs
 import androidx.compose.material3.Slider
@@ -614,6 +616,38 @@ fun MeScreen(
                     onClick = onOpenPrivacy)
             }
 
+            // Writing to the person who builds this — one tap, no compose
+            // window. It sits in the main list rather than inside Privacy,
+            // where the only contact row used to live and where it reads as a
+            // data-request address. The footer names who is on the other end:
+            // a learner will not write to a support desk about a feature they
+            // wish existed, and they will write to a person.
+            val channels = com.roro.futurevoice.data.SupportChannel.available
+            if (channels.isNotEmpty()) {
+                GroupedSectionSpacer()
+                GroupedSectionHeader(stringResource(R.string.say_hello))
+                GroupedCard {
+                    channels.forEachIndexed { i, channel ->
+                        if (i > 0) GroupedRowDivider()
+                        MeRow(
+                            if (channel == com.roro.futurevoice.data.SupportChannel.INSTAGRAM)
+                                Icons.Filled.Forum else Icons.AutoMirrored.Filled.Send,
+                            stringResource(channel.titleRes), channel.subtitle,
+                            onClick = channel.url?.let { url -> {
+                                runCatching {
+                                    context.startActivity(android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(url)).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    })
+                                }
+                            } })
+                    }
+                }
+                GroupedFooter(stringResource(
+                    R.string.one_person_builds_this_app_and_reads_every_message_tell_me_w_bd3eae))
+            }
+
             // ── Account ──
             GroupedSectionSpacer()
             GroupedCard {
@@ -621,7 +655,9 @@ fun MeScreen(
                     Text(email.orEmpty(), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (com.roro.futurevoice.BuildConfig.DEBUG) {
+                // Never in a capture build — a dev button is gallery noise.
+                if (com.roro.futurevoice.BuildConfig.DEBUG &&
+                    com.roro.futurevoice.BuildConfig.BUILD_TYPE != "capture") {
                     GroupedRowDivider(inset = false)
                     PlainActionRow("Ring now (debug)",
                         MaterialTheme.colorScheme.primary) {
