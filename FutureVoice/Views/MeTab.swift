@@ -18,7 +18,7 @@ struct MeTab: View {
     /// Talk-call playback gain (0.25–1.0). Same key `AudioPlayer` reads.
     @AppStorage(AudioPlayer.talkVoiceVolumeKey) private var talkVoiceVolume = 1.0
     @AppStorage(MicPreferenceStore.key) private var micPreference = MicPreference.earphone.rawValue
-    @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.normal.rawValue
+    @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.default.rawValue
     @State private var account: AccountStatus = .empty
     /// AI's holistic CEFR read of the last few conversations (mode of the
     /// last 3 scored sessions — same read as ProgressTab). Level changes stay

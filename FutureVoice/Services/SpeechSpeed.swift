@@ -7,20 +7,18 @@ import Foundation
 /// spoken more slowly rather than a recording being played slow, so the voice
 /// keeps its pitch and still sounds like the learner.
 ///
-/// **Normal is 0.9, not "send nothing"** — picked by ear in the ElevenLabs
-/// playground against the production settings (turbo v2.5, stability 55,
-/// similarity 90, style 0, speaker boost on), as the most natural reading in
-/// English AND Korean. That is a real change to the shipped voice, and a
-/// measurable one: `scripts/tts-speed-probe.sh` puts 0.9 at +13% length over
-/// sending nothing (0.95 was +3.3%, inside the synthesizer's own take-to-take
-/// variance, and was set aside for this after a second listen).
-///
-/// **There is one slow rung, 0.8**, ~12% below Normal and heard as clearly
-/// slower. 0.85 is not offered: from 0.9 it is a 6% step, near enough to the
-/// variance above that a learner cannot reliably hear it, and a rung nobody
-/// can hear teaches them the control is fake. A third rung below 0.8 waits on
-/// an ear — nothing under it has been listened to, and ElevenLabs' own floor
-/// is 0.7.
+/// **Three rungs — 1.0 · 0.9 · 0.8 — and the DEFAULT is the middle one.**
+/// 0.9 was picked by ear in the ElevenLabs playground against the production
+/// settings (turbo v2.5, stability 55, similarity 90, style 0, speaker boost
+/// on) as the most natural reading in English AND Korean, so that is what
+/// everyone gets. 1.0 is upstream's own speed — the clone as recorded — kept
+/// on the ladder because the learner asked for it, and labelled **Normal**,
+/// never "fast": nothing on this control speeds the voice up. Each step is
+/// ~12% by `scripts/tts-speed-probe.sh` (0.9 = +13% over 1.0, 0.8 = +27%),
+/// well clear of the synthesizer's own take-to-take variance (0.95 measured
+/// +3.3% and two of five lines came back SHORTER). Don't add a 0.95 or an
+/// 0.85: a rung the learner cannot hear teaches them the control is fake.
+/// Below 0.8 nothing has been listened to; ElevenLabs' floor is 0.7.
 ///
 /// The same probe retired the one objection on file. `CoachingLanguage.breathPunctuation`
 /// records that `speed: 0.9` "slowed the words while REDUCING the pauses" —
@@ -29,15 +27,19 @@ import Foundation
 /// voice does not cost it its breath. The punctuation rule is what buys the
 /// breaths and is untouched by this.
 enum SpeechSpeed: String, CaseIterable, Sendable {
-    case normal
-    case slow
+    /// Ladder order, top to bottom. `rawValue` is what defaults store.
+    case normal   // 1.0 — the clone at the speed it was recorded
+    case slow     // 0.9 — the default
+    case slower   // 0.8
 
     static let key = "futurevoice.speechSpeed"
+    static let `default`: SpeechSpeed = .slow
 
     var multiplier: Double {
         switch self {
-        case .normal: return 0.90
-        case .slow:   return 0.80
+        case .normal: return 1.00
+        case .slow:   return 0.90
+        case .slower: return 0.80
         }
     }
 
@@ -45,21 +47,26 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
     /// is two different recordings, with different word timings, and one key
     /// for both would play yesterday's take under today's karaoke.
     ///
-    /// **Normal's tag is EMPTY, so the cache from before this setting existed
-    /// stays reachable** (user decision, 2026-09-23: audio already produced is
-    /// left alone — the same rule `PhraseAudioStore` has always had for a
-    /// re-cloned voice). Those files were made with no speed at all, so a
-    /// learner on Normal hears them at 1.0 and every NEW line at 0.9; that gap
-    /// was judged the right price against re-billing a whole library. Only the
-    /// slow rung, which is meant to sound different, gets its own key.
+    /// **The DEFAULT rung's tag is EMPTY, so the cache from before this setting
+    /// existed stays reachable** (user decision, 2026-09-23: audio already
+    /// produced is left alone — the same rule `PhraseAudioStore` has always
+    /// had for a re-cloned voice). Those files were made with no speed at all,
+    /// so a learner who never touches the setting hears them as they were and
+    /// every NEW line at 0.9; that gap was judged the right price against
+    /// re-billing a whole library. A rung the learner deliberately picks —
+    /// including Normal, although its audio would match those old files — is a
+    /// request for different audio and gets its own key; the empty tag can't
+    /// tell an old 1.0 line from a new 0.9 one, so it belongs to the default
+    /// alone.
     var cacheTag: String {
-        self == .normal ? "" : String(format: "s%.2f", multiplier)
+        self == Self.default ? "" : String(format: "s%.2f", multiplier)
     }
 
     var label: String {
         switch self {
         case .normal: return explain("Normal")
         case .slow:   return explain("Slower")
+        case .slower: return explain("Slowest")
         }
     }
 
@@ -69,6 +76,6 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
     /// the same learner. Threading a speed through all of them would mean a
     /// surface that forgot it, which is a voice that changes pace mid-app.
     static var current: SpeechSpeed {
-        UserDefaults.standard.string(forKey: key).flatMap(SpeechSpeed.init(rawValue:)) ?? .normal
+        UserDefaults.standard.string(forKey: key).flatMap(SpeechSpeed.init(rawValue:)) ?? .default
     }
 }
