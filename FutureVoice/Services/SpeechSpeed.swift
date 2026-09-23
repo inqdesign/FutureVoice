@@ -37,12 +37,57 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
     static let key = "futurevoice.speechSpeed"
     static let `default`: SpeechSpeed = .slow
 
+    /// The speed sent upstream. Only the DEFAULT rung is tunable from the
+    /// server (`remoteDefaultMultiplier`): Normal is upstream's own 1.0 and
+    /// Slow is the floor a learner deliberately reaches for, so moving either
+    /// is a ladder change that belongs in a build, with ears on it.
     var multiplier: Double {
         switch self {
         case .normal: return 1.00
-        case .slow:   return 0.90
+        case .slow:   return Self.remoteDefaultMultiplier ?? 0.90
         case .slower: return 0.80
         }
+    }
+
+    // MARK: - The default, tunable without a build
+
+    /// `app_release.default_speech_speed`, mirrored into defaults by
+    /// `AppUpdateService.check()` once per launch.
+    ///
+    /// **Why this exists at all**: 0.9 was chosen by ear on five probe lines
+    /// before anyone had lived with it, and the week of real calls after
+    /// shipping is what says whether it is right. Without this, retuning it
+    /// costs a build, App Review, and waiting for people to update — and every
+    /// install already out there stays on the old number regardless. Added the
+    /// day after the setting shipped, deliberately: a knob added later can
+    /// only reach the installs that come later.
+    ///
+    /// The mirrored value is read from disk, so a launch with no network uses
+    /// the last one the server gave rather than snapping back — a voice that
+    /// changes pace because the Wi-Fi is down is worse than one that is a day
+    /// behind. NULL on the server means "the app's own default": the column is
+    /// written only to CHANGE the number, so a row nobody has touched can
+    /// never drift away from the code.
+    static var remoteDefaultMultiplier: Double? {
+        let v = UserDefaults.standard.double(forKey: remoteKey)
+        return isSane(v) ? v : nil
+    }
+
+    /// Clamped to ElevenLabs' own window, and a value outside it is DROPPED
+    /// rather than pulled to the edge: out of range means the row is wrong,
+    /// and guessing which edge was meant is how a typo becomes a voice nobody
+    /// recognises. 0 is what `UserDefaults.double` returns for "absent", so it
+    /// can never be a value here.
+    private static func isSane(_ v: Double) -> Bool { v >= 0.7 && v <= 1.2 }
+
+    private static let remoteKey = "futurevoice.speechSpeed.remoteDefault"
+
+    static func storeRemoteDefault(_ value: Double?) {
+        guard let value, isSane(value) else {
+            UserDefaults.standard.removeObject(forKey: remoteKey)
+            return
+        }
+        UserDefaults.standard.set(value, forKey: remoteKey)
     }
 
     /// Part of every cache key and idempotency key: the same line at two speeds

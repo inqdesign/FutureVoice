@@ -186,7 +186,7 @@ struct WeeklyTestView: View {
             case .meaning: Label("Which word means this?", systemImage: "text.book.closed.fill")
             case .gap:     Label("Fill the blank", systemImage: "quote.bubble.fill")
             case .build:   Label("Say it the fluent way", systemImage: "rectangle.stack")
-            case .listen:  Label("What did you hear?", systemImage: "ear")
+            case .listen:  Label("Listen and build it", systemImage: "ear")
             case .speak:   Label("Say it out loud", systemImage: "waveform.badge.mic")
             }
         }
@@ -277,13 +277,13 @@ struct WeeklyTestView: View {
     @ViewBuilder
     private func answerArea(_ item: WeeklyTestItem) -> some View {
         switch item.kind {
-        case .meaning, .gap, .listen:
+        case .meaning, .gap:
             VStack(spacing: 10) {
                 ForEach(Array(item.options.enumerated()), id: \.offset) { index, option in
                     optionButton(option, index: index, item: item)
                 }
             }
-        case .build:
+        case .build, .listen:
             buildArea(item)
         case .speak:
             speakArea(item)
@@ -507,7 +507,7 @@ struct WeeklyTestView: View {
             if let outcome, !outcome {
                 VStack(alignment: .leading, spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Fluent version")
+                        (item.kind == .listen ? Text("What was said") : Text("Fluent version"))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                         fluentAnswer(item, check: check)
@@ -586,7 +586,7 @@ struct WeeklyTestView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(outcome ? "Right" : "Not this time")
                             .font(.subheadline.weight(.semibold))
-                        if !outcome, item.kind != .build {
+                        if !outcome, item.kind != .build, item.kind != .listen {
                             Text(item.answer)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -608,7 +608,7 @@ struct WeeklyTestView: View {
                 .controlSize(.large)
                 .tint(outcome ? .green : .accentColor)
                 .accessibilityIdentifier("weeklyTest.continue")
-            } else if item.kind == .build {
+            } else if item.kind == .build || item.kind == .listen {
                 Button {
                     checkBuild(item, test: test)
                 } label: {

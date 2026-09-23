@@ -9,7 +9,8 @@ import Foundation
 ///   meaning  ← the notebook (words the talks taught, `VocabStore.studying`)
 ///   gap      ← the fluent self's phrases (`expressionsOffered` / `expressionsUsed`)
 ///   build    ← the corrections (`DrillStore` cards with what the learner said)
-///   listen   ← the fluent self's saved lines (`TurnAudioStore`)
+///   listen   ← the fluent self's saved lines (`TurnAudioStore`), heard and
+///              rebuilt from tiles — dictation, not a pick from three
 ///   speak    ← the fluent self's lines, said out loud and scored like a
 ///              shadow take (`ShadowTranscriber` + `ShadowEngine`)
 ///
@@ -45,7 +46,6 @@ enum WeeklyTestEngine {
     /// so instead of dealing three questions and calling it a week.
     static let minItems = 5
     static let choiceCount = 4
-    static let listenChoiceCount = 3
     /// Extra tiles for a build item, taken from the learner's OWN wrong
     /// version — the words the correction removed are the tempting ones.
     static let maxDecoyTiles = 2
@@ -161,9 +161,12 @@ enum WeeklyTestEngine {
                 seen.insert(key)
                 // Build tiles are dealt afresh from the two lines, so a stored
                 // item picks up today's decoy rule instead of its old tiles.
-                let options = item.kind == .build
-                    ? buildTiles(target: item.answer, source: item.prompt, rng: &rng)
-                    : item.options.shuffled(using: &rng)
+                let options: [String]
+                switch item.kind {
+                case .build: options = buildTiles(target: item.answer, source: item.prompt, rng: &rng)
+                case .listen: options = dictationTiles(for: item.answer, rng: &rng)
+                default: options = item.options.shuffled(using: &rng)
+                }
                 out.append(WeeklyTestItem(id: UUID(), kind: item.kind, prompt: item.prompt, answer: item.answer,
                                           options: options, sessionId: item.sessionId, turnId: item.turnId,
                                           cardId: item.cardId, note: item.note, isRetake: true))
@@ -217,6 +220,15 @@ enum WeeklyTestEngine {
         for item in test.items {
             if answered.contains(item.id) { kept.append(item); continue }
             guard isValid(item, language: test.targetLanguage) else { changed = true; continue }
+            // An unanswered listen item minted as pick-one-of-three becomes
+            // dictation tiles.
+            if item.kind == .listen, item.options.contains(where: { $0.contains(" ") && WordSplitter.count($0) > 1 }) {
+                kept.append(WeeklyTestItem(id: item.id, kind: .listen, prompt: "", answer: item.answer,
+                                           options: dictationTiles(for: item.answer, rng: &rng),
+                                           sessionId: item.sessionId, turnId: item.turnId,
+                                           cardId: item.cardId, note: item.note, isRetake: item.isRetake))
+                changed = true; continue
+            }
             // An unanswered build item re-deals its tiles under today's rule.
             if item.kind == .build {
                 let fresh = buildTiles(target: item.answer, source: item.prompt, rng: &rng)
@@ -477,6 +489,15 @@ enum WeeklyTestEngine {
         return out
     }
 
+    /// A line's own words, shuffled and never in order — the listen item's
+    /// tiles. No decoys: the ear supplies the difficulty.
+    static func dictationTiles(for text: String, rng: inout WeeklyTestRandom) -> [String] {
+        let words = WordSplitter.words(text)
+        var tiles = words.shuffled(using: &rng)
+        if tiles.count > 2, tiles.map(tileKey) == words.map(tileKey) { tiles.swapAt(0, tiles.count - 1) }
+        return tiles
+    }
+
     /// The target's words plus up to `maxDecoyTiles` decoys, shuffled. A tile
     /// set that spells the answer in order is not a test.
     ///
@@ -509,21 +530,17 @@ enum WeeklyTestEngine {
         allSessions: [Session],
         rng: inout WeeklyTestRandom
     ) -> [WeeklyTestItem] {
+        // Picking a line out of three was a length test, not a listening
+        // test (user, 2026-09-24). The line is HEARD and rebuilt from its own
+        // word tiles with the text hidden — dictation, so the difficulty is
+        // the sentence's own. Whole turns only: the saved audio is the turn.
         func fits(_ text: String) -> Bool {
             let n = WordSplitter.count(text)
-            return n >= 4 && n <= 20 && isInTargetScript(text)
+            return n >= 4 && n <= (WordSplitter.spaced ? 14 : 18) && isInTargetScript(text)
         }
         let withAudio = fluentTurns.filter {
             fits($0.turn.transcript) && TurnAudioStore.shared.url(for: $0.turn.id) != nil
         }
-        // Decoys: other fluent lines of a similar length — this week's first,
-        // then any talk's.
-        var decoyPool = fluentTurns.map(\.turn.transcript).filter(fits)
-        decoyPool += allSessions.flatMap { $0.turns }
-            .filter { $0.role == .fluentSelf && fits($0.transcript) }
-            .map(\.transcript)
-        decoyPool = dedupe(decoyPool, key: { CarryoverDetector.normalized($0) })
-
         var out: [WeeklyTestItem] = []
         var seen = Set<String>()
         for entry in withAudio.shuffled(using: &rng) {
@@ -532,15 +549,9 @@ enum WeeklyTestEngine {
             let key = CarryoverDetector.normalized(text)
             guard !seen.contains(key) else { continue }
             seen.insert(key)
-            let decoys = decoyPool
-                .filter { CarryoverDetector.normalized($0) != key }
-                .shuffled(using: &rng)
-                .prefix(listenChoiceCount - 1)
-            guard decoys.count == listenChoiceCount - 1 else { continue }
-            let options = ([text] + decoys).shuffled(using: &rng)
             out.append(WeeklyTestItem(id: UUID(), kind: .listen, prompt: "", answer: text,
-                                      options: options, sessionId: entry.session.id,
-                                      turnId: entry.turn.id))
+                                      options: dictationTiles(for: text, rng: &rng),
+                                      sessionId: entry.session.id, turnId: entry.turn.id))
         }
         return out
     }
