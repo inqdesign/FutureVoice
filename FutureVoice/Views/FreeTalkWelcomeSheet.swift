@@ -66,24 +66,60 @@ struct FreeTalkWelcomeSheet: View {
     }
 }
 
-/// When the welcome is due. Once per install, only for an account that has
-/// free minutes and has never talked — so an existing learner with a few
-/// seconds left over is never congratulated on them after an update.
+/// When the welcome is due: on the first visit of an account that has never
+/// talked, and AGAIN whenever the free pool GROWS (2026-09-22). A grant is
+/// the one thing that raises a free account's balance, and the app had no way
+/// to mention it — the sheet was gated on a one-shot flag, so time added
+/// later landed silently and the learner only met it by not being stopped.
+///
+/// What is remembered is therefore the balance this install last SAW, not
+/// whether the sheet has been shown. Spending lowers it like anything else,
+/// so any later grant clears the bar; without that, time added to someone who
+/// had already used most of their pool would still say nothing.
 enum FreeTalkWelcome {
+    /// Pre-2026-09-22 one-shot flag. Still written, and still read once — as
+    /// the answer to "has this install already been congratulated", which is
+    /// all it can say about an account whose earlier balance nobody recorded.
     private static let shownKey = "futurevoice.freeTalkWelcome.shown"
+    private static let seenKey = "futurevoice.freeTalkWelcome.seenSeconds"
+
+    /// Below this, a rise isn't worth a sheet — and it is a whole minute
+    /// because the sheet counts in minutes and would otherwise announce a
+    /// number that hasn't moved.
+    private static let riseSeconds = 60
 
     /// Whole minutes to announce, or nil when the sheet shouldn't show.
     static func minutesToAnnounce() async -> Int? {
-        guard !UserDefaults.standard.bool(forKey: shownKey) else { return nil }
+        let defaults = UserDefaults.standard
         guard let account = await BillingGate.shared.snapshot(),
-              !account.isEntitled, !account.unlimited,
-              account.secondsBalance >= 60 else { return nil }
-        guard SessionStore.shared.loadAcrossLanguages().isEmpty else {
-            // Already talked: they have met the minutes by using them.
+              !account.isEntitled, !account.unlimited else { return nil }
+        let balance = account.secondsBalance
+        // Every pass records what it saw, including the ones that show
+        // nothing — the baseline has to exist before a grant can beat it.
+        defer { defaults.set(balance, forKey: seenKey) }
+        guard balance >= 60 else { return nil }
+
+        guard let seen = defaults.object(forKey: seenKey) as? Int else {
+            // First pass on this install. An account that has already been
+            // congratulated, or has already talked, has met its minutes by
+            // using them — take the baseline and say nothing.
+            guard !defaults.bool(forKey: shownKey),
+                  SessionStore.shared.loadAcrossLanguages().isEmpty else {
+                markShown()
+                return nil
+            }
             markShown()
-            return nil
+            return balance / 60
         }
-        return account.secondsBalance / 60
+        guard balance >= seen + riseSeconds else { return nil }
+        markShown()
+        return balance / 60
+    }
+
+    /// Whether this install has been congratulated before — the caller logs
+    /// a first welcome and a top-up as the same event with different reasons.
+    static func hasBeenShown() -> Bool {
+        UserDefaults.standard.bool(forKey: shownKey)
     }
 
     static func markShown() {

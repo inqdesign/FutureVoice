@@ -156,9 +156,14 @@ struct RootTabView: View {
                 showingAgeCheck = true
             } else {
                 Task {
+                    // Asked before the check, which marks the install shown:
+                    // a repeat is time ADDED to the pool, and the two read
+                    // nothing alike in the funnel.
+                    let repeatWelcome = FreeTalkWelcome.hasBeenShown()
                     if let minutes = await FreeTalkWelcome.minutesToAnnounce() {
-                        FreeTalkWelcome.markShown()
-                        Analytics.capture("free_talk_welcome_shown", ["minutes": minutes])
+                        Analytics.capture("free_talk_welcome_shown",
+                                          ["minutes": minutes,
+                                           "kind": repeatWelcome ? "topup" : "first"])
                         welcomeMinutes = minutes
                         showingWelcome = true
                     }
