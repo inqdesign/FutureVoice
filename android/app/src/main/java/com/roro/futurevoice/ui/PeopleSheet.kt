@@ -129,12 +129,22 @@ internal fun PersonEditor(
     onDismiss: () -> Unit,
 ) {
     var draft by remember(person.id) { mutableStateOf(person) }
+    // Once there is something to lose, Cancel is the ONLY way out: a small
+    // vertical drag while reaching for a field used to take the whole form
+    // with it (iOS `32f20a1`).
+    val dirty = draft != person
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { value ->
+            value != androidx.compose.material3.SheetValue.Hidden || !dirty
+        },
+    )
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!dirty) onDismiss() },
         // Fully expanded from the start: the form is taller than a half
         // sheet, so a partial one hides Save and asks the learner to discover
         // a scroll before they can finish what they opened.
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = sheetState,
     ) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 32.dp)

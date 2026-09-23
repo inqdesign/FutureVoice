@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="review_reminders">Recordatorios de repaso</string>
+    <string name="back_for_review">Hora de repasar</string>
+    <string name="ten_min">10 min</string>
+    <string name="three_days">3 días</string>
+    <string name="nothing_waiting_here">Nada esperando aquí</string>
+    <string name="nothing_marked_known_in_this_session">No marcaste nada como conocido esta vez</string>
+    <string name="within_the_hour">Dentro de una hora</string>
+    <string name="in_lld_hours">En %1$d horas</string>
+    <string name="in_lld_days">En %1$d días</string>
+    <string name="words">Palabras</string>
+    <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first">Todavía no hay nada para estudiar — habla o mira una escena primero; las palabras que surjan llegarán aquí.</string>
+    <string name="expressions_from_your_calls_will_collect_here">Las expresiones de tus llamadas — las tuyas y las de tu yo fluido — se irán juntando aquí.</string>
+    <string name="the_dashed_line_is_your_daily_goal">La línea punteada es tu meta diaria.</string>
+    <string name="notebook">Libreta</string>
+    <string name="export">Exportar</string>
+    <string name="markdown">Markdown</string>
+    <string name="mastered">Completado</string>
+    <string name="your_fluent_self_used_this_you_didnt">Tu yo fluido usó esto — tú todavía no.</string>
+    <string name="future_self">Tu yo futuro</string>
+    <string name="print_or_save_as_pdf">Imprimir o guardar como PDF</string>
+    <string name="tap_a_category_the_composer_suggests_specific_scenarios">Toca una categoría — te sugerimos situaciones concretas para ver.</string>
+    <string name="add_someone_you_actually_talk_to">Añade a alguien con quien realmente hables — un amigo, un colega, tu casero. Las escenas con esa persona se basan en cómo son ustedes dos de verdad.</string>
+    <string name="add_a_person">Añadir persona</string>
+    <string name="who_are_they_to_you">¿Quién es para ti?</string>
+    <string name="shared_context">Contexto compartido</string>
+    <string name="a_scene_with_lls">Una escena con %1$s</string>
+    <string name="lld_day_streak">Racha de %1$d días</string>
+    <string name="lld_talks">%1$d conversaciones</string>
+    <string name="show_known">Ver las que ya sé</string>
+    <string name="lls_min_mo">%1$s min/mes</string>
+    <string name="subscription_legal_google">El pago se cobra a tu cuenta de Google Play al momento de comprar. La suscripción se renueva automáticamente a menos que la canceles al menos 24 horas antes de que termine el período. Adminístrala o cancélala en Google Play › Pagos y suscripciones.</string>
+    <string name="checking">Comprobando…</string>
+    <string name="see_the_plans">Ver los planes</string>
+    <string name="google_play_isnt_offering_this_plan_here_yet">Google Play todavía no ofrece este plan aquí.</string>
+    <string name="thats_your_talk_time_for_this_period">Ya usaste tu tiempo de conversación de este período.</string>
+    <string name="thats_your_watch_scenes_for_this_period">Ya usaste tus escenas de este período.</string>
+    <string name="it_refills_when_the_period_does_meanwhile_review_is_free">Se renueva cuando empieza el nuevo período. Mientras tanto, repasar siempre es gratis.</string>
+    <string name="keep_going_today">Seguir hoy</string>
+    <string name="your_future_self_can_call_you">Tu yo futuro puede llamarte</string>
+    <string name="pick_a_time_answer_and_youre_already_talking">Elige una hora. Contesta, y ya estás hablando.</string>
+    <string name="call_me">Llámame</string>
+    <string name="youre_learning_everything_we_offer">Ya estás aprendiendo todo lo que ofrecemos.</string>
+    <string name="where_are_you_in_lls">¿Cómo vas con el %1$s?</string>
+    <string name="start_learning">Empezar a aprender</string>
+    <string name="new_expressions">Nuevas</string>
+    <string name="to_drill">Para practicar</string>
+    <string name="to_try">Para probar</string>
+    <string name="lld_of_lld_min_of_talking">%1$d de %2$d min hablando</string>
+    <string name="next_read_in_lld_days">Próxima evaluación en %1$d días</string>
+    <string name="lld_more_min_of_talking">%1$d min más de conversación</string>
+    <string name="read_my_level">Leer mi nivel</string>
+    <string name="new_assessment">Nueva evaluación</string>
+    <string name="you_said_these_for_the_first_time">Dijiste esto por primera vez</string>
+    <string name="keeps_coming_back">Vuelve una y otra vez</string>
+    <string name="worth_reaching_for">Vale la pena intentarlo</string>
+    <string name="lets_talk">Hablemos</string>
+    <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Todavía no hay nada aquí. Habla o mira una escena — lo que generen se convierte en cuadernos aquí.</string>
+    <string name="fluency">Fluidez</string>
+    <string name="expressiveness">Expresividad</string>
+    <string name="have_a_talk_and_this_gets_measured">Habla y esto se mide.</string>
+    <string name="things_you_studied_came_out_of_your_mouth">cosas que estudiaste salieron de tu boca en una conversación real</string>
+    <string name="plus_lld_this_week">+%1$d esta semana</string>
+    <string name="mastered_out_of_lld_your_talks_have_made">dominadas, de %1$d que tus conversaciones y escenas crearon</string>
+    <string name="your_cloned_voice">Tu voz clonada</string>
+    <string name="not_set_up_yet">Todavía no está lista</string>
+    <string name="publish_your_intro">Publica tu presentación — otros practican con \"tú\"</string>
+    <string name="dont_imitate_a_stranger">No imites a un desconocido — practica con tu yo fluido.</string>
+    <string name="time_to_meet_the_you_who_speaks">Es hora de conocer a quien habla perfecto — con tu propia voz. Basta con un minuto de lectura.</string>
+    <string name="use_the_phones_mic_or_a_better_one">Usa el micrófono del teléfono — o uno mejor.</string>
+    <string name="the_better_the_mic_the_better_the_voice">Cuanto mejor el micrófono, mejor sale la voz. Un micrófono con cable es lo ideal si tienes uno.</string>
+    <string name="take_your_earbuds_out_before_recording">Quítate los auriculares antes de grabar</string>
+    <string name="clothes_soak_up_the_echo">La ropa absorbe el eco, así que la grabación sale limpia. ¿No tienes clóset? Una cortina o un coche estacionado también sirven. Empieza cuando los niveles de abajo bajen.</string>
+    <string name="im_ready">Listo</string>
+    <string name="pick_your_look">Elige tu estilo</string>
+    <string name="its_built_and_its_yours">Ya está lista y es tuya. Inicia sesión y se queda — con tu progreso, en el teléfono que uses.</string>
+    <string name="great_sample">Excelente grabación</string>
+    <string name="usable_could_be_better">Sirve — podría ser mejor</string>
+    <string name="re_record_recommended">Te recomendamos grabar de nuevo</string>
+    <string name="too_short_llds_aim_for_60_90s">Muy corta (%1$ds) — apunta a 60-90s.</string>
+    <string name="a_little_short_60_90s_clones_best">Un poco corta — 60-90s clona mejor.</string>
+    <string name="clipping_detected_move_further">Se distorsionó el audio — aléjate un poco del micrófono.</string>
+    <string name="noisy_background_try_quieter">Hay ruido de fondo — busca un lugar más silencioso (un clóset va genial).</string>
+    <string name="some_background_noise_quieter_better">Hay algo de ruido de fondo — mientras más silencioso, mejor.</string>
+    <string name="quiet_take_well_boost_it">La grabación salió baja — la subiremos, pero acercarte al micrófono ayuda.</string>
+    <string name="continue_with_apple">Continuar con Apple</string>
+    <string name="other_ways_to_say_it">Otras formas de decirlo</string>
+    <string name="show_me_more">Mostrar más</string>
+    <string name="export_or_import_this_devices_practice">Exportar o importar el progreso de este dispositivo</string>
+    <string name="a_backup_moves_your_practice_between_installs">Una copia de seguridad mueve tu progreso entre instalaciones — y entre teléfonos.</string>
+    <string name="scanning">Escaneando…</string>
+    <string name="encoding">Codificando…</string>
+    <string name="decoding">Descodificando…</string>
+    <string name="packing_lld_of_lld">Empacando %1$d de %2$d</string>
+    <string name="restoring_lld_of_lld">Restaurando %1$d de %2$d</string>
+    <string name="your_voice_model_is_built_by_the_most_trusted_service">Tu modelo de voz lo crea el servicio más confiable que existe, y se usa solo para tu práctica de idiomas.</string>
+    <string name="given_lld">Otorgado el %1$s</string>
+    <string name="your_voice_model_is_biometric_data">Tu modelo de voz es un dato biométrico. Se usa solo para reproducir tus frases de práctica con tu propia voz — nunca se vende, nunca se comparte, nunca se usa para entrenar el modelo de otra persona.</string>
+    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">Tu modelo de voz se borra aquí y en ElevenLabs, y no se puede deshacer. Antes de tu próxima llamada, tendrás que grabar uno nuevo.</string>
+    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">Esto borra tu modelo de voz aquí y en ElevenLabs. El audio ya generado sigue disponible hasta que borres tu cuenta. La app no puede hacer una llamada sin una voz, así que te pedirá grabar una nueva — o puedes borrar tu cuenta por completo.</string>
+    <string name="write_to_us_to_see_or_correct_what_we_hold">Escríbenos para ver o corregir lo que guardamos sobre ti, incluida la fecha en que diste tu consentimiento.</string>
+    <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">Esto borra para siempre tu voz clonada, tu tiempo de conversación y tu cuenta. No se puede deshacer. Una suscripción activa de Google Play debe cancelarse por separado en la Play Store.</string>
+    <string name="couldnt_delete_account">No se pudo borrar la cuenta</string>
+    <string name="make_me_sound_more_like_you">Hazme sonar más como tú</string>
+    <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">Cuanto más sepa de tu vida, más real se siente cada conversación. Solo habla — puedes usar tu idioma nativo.</string>
+    <string name="what_do_you_do">¿A qué te dedicas?</string>
+    <string name="work_study_or_your_main_project">Trabajo, estudio o tu proyecto principal — cómo es un día normal para ti</string>
+    <string name="whos_in_your_daily_life">¿Quién está en tu día a día?</string>
+    <string name="who_you_live_with_kids_pets">Con quién vives, hijos, mascotas — personas de las que terminas hablando</string>
+    <string name="quirks_goals_pet_peeves">Manías, metas, cosas que te molestan — lo que sea que me ayude a sonar como tú</string>
+    <string name="speak">Hablar</string>
+    <string name="speech_recognition_isnt_available_type_instead">El reconocimiento de voz no está disponible aquí — escribe en su lugar.</string>
+    <string name="that_file_held_no_practice_data">Ese archivo no tenía datos de práctica — no se restauró nada. Vuelve a exportar desde la otra instalación y verifica que sea el archivo que acabas de crear.</string>
+    <string name="restored_lld_files_and_lld_settings">Se restauraron %1$d archivos y %2$d ajustes. Cierra la app por completo y vuelve a abrirla.</string>
+    <string name="tap_to_toggle_or_type_your_own">Toca para activar o desactivar, o escribe el tuyo y presiona intro. Las noticias de hoy que coincidan con esto aparecen en “En las noticias”.</string>
+    <string name="the_name_other_learners_will_see">El nombre que verán otros estudiantes — con tu nombre o un apodo basta.</string>
+    <string name="write_it_in_lld_its_what_you_will_talk_from">Escríbelo en %1$s — es lo que hablará “tú”, y escribirlo ya es práctica. Lo concreto vale más que lo pulido: tu trabajo, tu ciudad, algo de lo que hablarías durante una hora entera.</string>
+    <string name="a_stock_voice_that_plays_you">Una voz genérica que hace de “ti” — tu voz clonada nunca se usa, y las conversaciones de otros con tu personaje nunca se muestran, ni a ti ni a nadie más.</string>
+    <string name="couldnt_publish_check_your_connection">No se pudo publicar — revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="couldnt_take_it_down">No se pudo quitar — revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="youre_in_the_pool_other_lld_learners_can_find_you">Ya estás en el grupo — otros estudiantes de %1$s pueden encontrar y hablar con tu personaje.</string>
+    <string name="take_your_intro_out_of_the_pool">¿Quitar tu presentación del grupo? Quienes ya conocieron a tu personaje conservan sus conversaciones pasadas.</string>
+    <string name="copy">Copiar</string>
+    <string name="accent">Acento</string>
+    <string name="your_clone_speaking_with_a_different_accent">Tu propia voz, hablando con otro acento. Un clon grabado en tu idioma no tiene acento propio, así que usa uno predeterminado.</string>
+    <string name="hear_some_takes">Escuchar algunas tomas</string>
+    <string name="making_a_few_takes">Generando algunas tomas…</string>
+    <string name="pick_the_one_that_sounds_most_like_you">Elige la que suene más a ti</string>
+    <string name="use_this_take">Usar esta toma</string>
+    <string name="this_replaces_your_current_voice">Esto reemplaza tu voz actual. Siempre puedes recrear la original a partir de tu grabación guardada.</string>
+    <string name="couldnt_make_the_takes_try_again">No se pudieron generar las tomas — inténtalo de nuevo.</string>
+    <string name="couldnt_apply_that_take_try_again">No se pudo aplicar esa toma — inténtalo de nuevo.</string>
+    <string name="as_recorded">Tal como se grabó</string>
+    <string name="your_plan_ends_on_lld">Tu plan termina el %s.</string>
+    <string name="help">Ayuda</string>
+    <string name="ring_exactly_on_time">Sonar justo a tiempo</string>
+    <string name="without_this_the_call_can_arrive_a_few_minutes_late">Sin esto, la llamada puede llegar unos minutos tarde.</string>
+    <string name="keep_going">Seguir</string>
+    <string name="words_your_fluent_self_used_that_you_havent">Palabras que tu yo fluido usó y tú aún no. Dila una vez en una conversación y se marca sola.</string>
+    <string name="all">Todo</string>
+    <string name="referral_joined_named">%1$s se unió con tu código</string>
+    <string name="person_common_topics">Temas frecuentes</string>
+    <string name="person_notes">Notas</string>
+    <string name="person_couldnt_refresh_scenarios">No se pudieron actualizar los escenarios: %1$s</string>
+    <string name="person_scenes_with_person">Escenas con %1$s</string>
+    <string name="person_how_you_met">Cómo se conocieron</string>
+    <string name="person_style">Estilo</string>
+    <string name="feedback_couldnt_send">No se pudo enviar — inténtalo de nuevo. (%1$s)</string>
+    <string name="composer_ideaserr">No se pudieron obtener ideas — escribe la tuya, o toca Más para reintentar.</string>
+    <string name="composer_startcat">Empezar desde una categoría</string>
+    <string name="trial_becomes_paid_play">Tu prueba se convierte en suscripción paga en %1$d días. Puedes cancelar cuando quieras en Google Play.</string>
+    <string name="notifications_are_off">Las notificaciones están desactivadas</string>
+    <string name="reminders_cant_reach_you">Los repasos y la llamada diaria no pueden llegarte. Actívalos en los ajustes.</string>
+    <string name="axis_vocab">Vocabulario</string>
+    <string name="axis_express">Expresión</string>
+    <string name="keep">Seguir estudiando</string>
+    <string name="i_know">Ya lo sé</string>
+    <string name="common_phrases">Frases frecuentes</string>
+    <string name="another_way_to_say_it">Otra forma de decirlo</string>
+    <string name="as_a_name">Como nombre</string>
+    <string name="from_your_talks">De tus conversaciones</string>
+    <string name="previous_item">Anterior</string>
+    <string name="next_item">Siguiente</string>
+    <string name="why_label">Por qué</string>
+    <string name="lld_h_lld_m">%1$dh %2$dm</string>
+    <string name="lld_m">%1$dm</string>
+    <string name="talk_time_is_kept_for_lld_days">El tiempo de conversación se guarda %1$d días.</string>
+    <string name="back_in_10_minutes">Volver en 10 minutos</string>
+    <string name="how_would_a_fluent_speaker_say_it">¿Cómo lo diría alguien fluido?</string>
+    <string name="save_expression">Guardar expresión</string>
+    <string name="study_this">Estudiar esto</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Tu suscripción comienza. Cancélala cuando quieras antes de esa fecha en Google Play.</string>
+    <!-- A price and its billing cycle. Punctuation only —
+         nothing here is language, so it is never translated. -->
+    <string name="price_per_cycle" translatable="false">%1$s / %2$s</string>
+
+    <!-- Talk book: the scorecard's fourth axis. "Fluency" alone is already a
+         key elsewhere and means something narrower. -->
+    <string name="fluency_pace">Fluidez y ritmo</string>
+    <!-- The plural word inside "Review %1$d grammar %2$s from this talk".
+         Korean/Japanese/Chinese drop the argument, so it only surfaces in
+         English. -->
+    <string name="slip">error</string>
+    <string name="slips">errores</string>
+    <!-- Where a carryover was studied before it was said out loud. -->
+    <!-- A shadow take the recognizer heard nothing in. -->
+    <string name="silent_take">(silencio)</string>
+
+    <!-- The composer's speak-or-type field. Speaking is the primary path:
+         this is an app about talking, and a blank box asks someone to write
+         about their life in a language they may still be practising. -->
+    <string name="composer_placeholder">Describe la situación — o toca el micrófono y dilo</string>
+    <string name="cloud_words_total">%1$d / %2$d palabras</string>
+
+    <!-- Me → Usage: the subscription section. Android's store is Google
+         Play, so the catalog's App Store wording cannot be reused. -->
+    <!-- A used/total count. Punctuation only — nothing here is language. -->
+    <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
+    <string name="cancel_any_time_before_then_in_google_play">Cancela cuando quieras antes de esa fecha en Google Play</string>
+    <string name="manage_in_google_play">Administrar en Google Play</string>
+    <!-- What picking a fully translated native language buys, said
+         BEFORE the tap. -->
+    <string name="everything_you_read_in_the_app">Todo lo que lees en la app — menús, botones, correcciones, notas — estará en este idioma.</string>
+
+    <!-- The one feedback ask, on the first call of a RETURN visit. Two
+         scores and a sentence; iOS retired the first-call/first-Watch asks
+         (FeedbackSheet.swift, 2026-09-14) and these replace them. -->
+    <string name="feedback_returning_title">¿Cómo va todo?</string>
+    <string name="feedback_returning_subtitle">Volviste para otra llamada. Dos preguntas rápidas, y lo que quieras contarnos.</string>
+    <string name="feedback_the_app_overall">La app en general</string>
+    <string name="feedback_talking_to_your_future_self">Hablar con tu yo futuro</string>
+    <string name="feedback_anything_you_want_to_say">Lo que quieras decir</string>
+    <string name="feedback_not_rated">Sin calificar</string>
+    <string name="feedback_lld_out_of_5">%1$d de 5</string>
+
+    <!-- Progress: the per-skill pages and the "How it's assessed" sheet.
+         iOS passes these as plain Swift Strings rather than SwiftUI Text
+         literals, so the generated catalog never saw them. -->
+    <string name="unit_words_min_speaking">palabras/min hablando</string>
+    <string name="unit_words_min">palabras/min</string>
+    <string name="fluency_measured_line">%1$s pausas/min · %2$dm por conversación · %3$d palabras/turno</string>
+    <string name="talk_more_often_and_a_little_longer">Habla más seguido y un poco más largo. Supera tu meta diaria de conversación; los turnos más largos crean fluidez.</string>
+    <string name="grammar_measured_line">%1$s errores de gramática confirmados cada 100 palabras habladas en tus conversaciones evaluadas%2$s.</string>
+    <string name="counted_from_transcript_verified_slips_only">Se cuentan solo los errores confirmados por la transcripción — se excluyen fallos del reconocimiento de voz y sugerencias de estilo. Es exactamente el número que usa tu evaluación de nivel.</string>
+    <string name="run_your_review_cards_built_from_your_own_slips">Repasa tus tarjetas — están hechas con tus propios errores y apuntan justo a esto.</string>
+    <string name="how_vividly_and_naturally_you_get_your_meaning_across">Qué tan vívida y naturalmente transmites lo que quieres decir.</string>
+    <string name="tell_stories_react_and_add_detail">Cuenta historias, reacciona y añade detalles — describe cómo te sentiste, no solo qué pasó.</string>
+    <string name="finding_your_flow">Encontrando tu ritmo</string>
+    <string name="pace_conversational">Conversacional</string>
+    <string name="pace_fluent">Fluido</string>
+    <string name="pace_very_fluent">Muy fluido</string>
+    <string name="estimated_from_lld_distinct_words_graded_by_cefr">Estimado a partir de %1$d palabras distintas que usaste en tus conversaciones, cada una evaluada por nivel CEFR — tu vocabulario al hablar, no todo lo que reconoces.</string>
+    <string name="distinct_words_from_your_talks">Palabras distintas de tus conversaciones.</string>
+    <string name="assessed_detail_vocabulary">%1$d palabras distintas que usaste, cada una evaluada según la lista de palabras CEFR. Totalmente objetivo.</string>
+    <string name="assessed_detail_fluency">%1$d palabras por minuto de habla, sin contar pausas ni tiempo de pensar.</string>
+    <string name="assessed_detail_grammar_density">%1$s errores de gramática confirmados cada 100 palabras habladas — la misma densidad que usa la evaluación.</string>
+    <string name="assessed_detail_grammar_score">%1$d/100 en promedio en tus conversaciones recientes — cada una evaluada por los errores de gramática confirmados en lo que dijiste.</string>
+    <string name="assessed_detail_expression">%1$d palabras por turno — cuánto desarrollas una idea.</string>
+    <string name="a_week_since_the_last_assessment">Una semana desde la última evaluación</string>
+    <string name="one_more_day">1 día más</string>
+    <string name="lld_more_days">%1$d días más</string>
+    <string name="enough_new_conversation">Suficiente conversación nueva</string>
+    <string name="lld_more_min_of_new_talk">%1$d min más de conversación nueva</string>
+    <string name="reps_this_week">repasos esta semana</string>
+    <string name="days_active">días activos</string>
+    <string name="avg_shadow_score">puntaje promedio de shadowing</string>
+    <string name="open_google_play">Abrir Google Play</string>
+    <string name="get_the_new_test_build">Obtener la nueva versión de prueba</string>
+    <string name="android_is_blocking_the_call">Android está bloqueando la llamada. Activa las notificaciones de nawana en Ajustes y vuelve a activarlo en Mi perfil.</string>
+    <string name="back_in_when">"De vuelta en %s"</string>
+    <string name="talk_time_used_up_call_saved">"Se te acabó el tiempo de conversación. Esta llamada quedó guardada — puedes retomarla cuando quieras."</string>
+    <string name="couldn_t_score_that_one_your_take_is_still_here">"No se pudo calificar esa vez — tu toma sigue aquí."</string>
+</resources>

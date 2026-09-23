@@ -16,7 +16,7 @@
     <string name="notebook">單字本</string>
     <string name="export">匯出</string>
     <string name="markdown">Markdown</string>
-    <string name="mastered">已熟練</string>
+    <string name="mastered">完成</string>
     <string name="your_fluent_self_used_this_you_didnt">流暢的自己用過這個表達 — 我還沒用過。</string>
     <string name="future_self">未來的我</string>
     <string name="print_or_save_as_pdf">列印或存成 PDF</string>

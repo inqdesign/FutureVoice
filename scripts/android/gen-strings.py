@@ -39,9 +39,15 @@ FILE_NAME = "strings_catalog.xml"
 # reads a REGION. Traditional Chinese ships for Taiwan (mainland China needs
 # an ICP registration a German entity can't get), so zh-Hant lands in
 # values-zh-rTW.
-RES_QUALIFIER = {"zh-Hant": "zh-rTW"}
+# Simplified Chinese carries a SCRIPT, not a region: it is read in Singapore,
+# Malaysia and everywhere Chinese people live abroad, so pinning it to
+# values-zh-rCN would be wrong about who reads it. BCP-47 folders need API 24+
+# and minSdk here is 26.
+RES_QUALIFIER = {"zh-Hant": "zh-rTW", "zh-Hans": "b+zh+Hans"}
 
-DEFAULT_LANGUAGES = ["en", "ko", "ja", "zh-Hant"]   # the iOS catalog's translated columns; de UI is not
+# The iOS catalog's FULLY translated columns. `de` is deliberately absent —
+# it is a target language, not a native one, and its column is ~65% done.
+DEFAULT_LANGUAGES = ["en", "ko", "ja", "zh-Hant", "zh-Hans", "es", "fr"]
 
 JAVA_KEYWORDS = {
     "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class",
