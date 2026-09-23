@@ -1,3 +1,1 @@
-Once a week, a test made from that week's talks. What you miss goes back into review, and a month's misses return as a monthly test.
-Expressions now work like words, with the same card and the same actions.
-Syncing keeps going after you close the app.
+Choose how fast your fluent self talks — Settings → Voice, then Normal, Relaxed or Slow.
