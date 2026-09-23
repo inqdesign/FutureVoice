@@ -21686,48 +21686,48 @@
         }
       }
     },
-    "Everything else is still here. One minute of reading brings your fluent self back." : {
+    "Everything else is still here." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles andere ist noch da. Eine Minute Vorlesen, und dein fließendes Ich ist zurück."
+            "value" : "Alles andere ist noch da."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todo lo demás sigue aquí. Con un minuto de lectura, tu yo fluido vuelve."
+            "value" : "Todo lo demás sigue aquí."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout le reste est toujours là. Une minute de lecture, et ton moi fluide revient."
+            "value" : "Tout le reste est toujours là."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ほかはすべてそのままです。1分読むだけで、流暢な自分が戻ってきます。"
+            "value" : "ほかはすべてそのままです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다른 건 전부 그대로예요. 1분만 읽으면 유창한 나를 다시 만날 수 있어요."
+            "value" : "다른 건 전부 그대로예요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "其他内容都还在。只要朗读一分钟，流利的你就回来了。"
+            "value" : "其他内容都还在。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "其他內容都還在。只要朗讀一分鐘，流利的你就回來了。"
+            "value" : "其他內容都還在。"
           }
         }
       }
@@ -33206,48 +33206,48 @@
         }
       }
     },
-    "Let's make your voice again." : {
+    "Let's make your voice again" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lass uns deine Stimme neu aufnehmen."
+            "value" : "Lass uns deine Stimme neu aufnehmen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volvamos a crear tu voz."
+            "value" : "Volvamos a crear tu voz"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recréons ta voix."
+            "value" : "Recréons ta voix"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "もう一度、声をつくりましょう。"
+            "value" : "もう一度、声をつくりましょう"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "목소리를 다시 만들어요."
+            "value" : "목소리를 다시 만들어요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新录一次你的声音吧。"
+            "value" : "重新录一次你的声音吧"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新錄一次你的聲音吧。"
+            "value" : "重新錄一次你的聲音吧"
           }
         }
       }
@@ -41759,6 +41759,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "專為這個情境寫的一段對話。裡面的單字、用語和你的台詞會變成檢查清單。生成一次，就是你的複習本。"
+          }
+        }
+      }
+    },
+    "One minute of reading brings your fluent self back." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Minute Vorlesen, und dein fließendes Ich ist zurück."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con un minuto de lectura, tu yo fluido vuelve."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une minute de lecture, et ton moi fluide revient."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1分読むだけで、流暢な自分が戻ってきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1분만 읽으면 유창한 나를 다시 만날 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只要朗读一分钟，流利的你就回来了。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只要朗讀一分鐘，流利的你就回來了。"
           }
         }
       }
@@ -54175,10 +54221,84 @@
       }
     },
     "Show again in 3 days" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar de nuevo en 3 días"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoir dans 3 jours"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3日後にまた見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3일 뒤에 다시 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 天后再看"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 天後再看"
+          }
+        }
+      }
     },
     "Show again tomorrow" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar de nuevo mañana"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoir demain"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明日また見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내일 다시 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天再看"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天再看"
+          }
+        }
+      }
     },
     "Show the talk" : {
       "localizations" : {
@@ -74101,7 +74221,44 @@
       }
     },
     "You can start — go ahead" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes empezar tú"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux commencer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先に話しかけて大丈夫です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼저 말해도 돼요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可以先开口"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可以先開口"
+          }
+        }
+      }
     },
     "You can talk with your fluent self for %lld minutes. Once they're used up, choose a plan." : {
       "localizations" : {
@@ -80542,6 +80699,7 @@
       }
     },
     "Your trial starts — a week's worth of talk, and all the review it produces." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -80618,6 +80776,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "試用開始。每天五分鐘通話，加上它帶來的所有複習。"
+          }
+        }
+      }
+    },
+    "Your trial starts — talk time on us, and all the review it produces." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empieza la prueba: tiempo de conversación por nuestra cuenta y todo el repaso que sale de ahí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’essai commence — du temps de conversation offert, et toute la révision qui en sort."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トライアルが始まります。通話時間はこちらが持ちます。そこから生まれる復習のすべてが一緒です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체험이 시작돼요. 통화 시간은 저희가 낼게요. 거기서 나오는 모든 복습도 함께예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "试用开始。通话时间由我们请客，加上它带来的所有复习。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "試用開始。通話時間由我們請客，加上它帶來的所有複習。"
           }
         }
       }
@@ -80971,52 +81169,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "語音模型會從 App 和 ElevenLabs 兩邊刪除，無法復原。下一通電話前會請你重新錄一個。"
-          }
-        }
-      }
-    },
-    "Your voice was deleted" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Stimme wurde gelöscht"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu voz se eliminó"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta voix a été supprimée"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "声は削除されました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "목소리가 삭제됐어요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的声音已删除"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的聲音已刪除"
           }
         }
       }
