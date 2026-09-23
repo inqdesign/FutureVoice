@@ -1002,6 +1002,7 @@ struct ConversationDetailView: View {
             regenerateError = error.localizedDescription
             Telemetry.log("talk_summary_error", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "detail": error.decodeDetail ?? "",
                 "turns": String(session.turns.count),
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
                 "retry": "1",

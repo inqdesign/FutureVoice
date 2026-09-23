@@ -12,6 +12,7 @@ struct ExpressionsView: View {
     @ObservedObject private var store = VocabStore.shared
     @State private var selected: PhraseRef?
     @State private var filter: Filter = .toStudy
+    @State private var searchText = ""
     /// First-sense gloss per phrase, filled lazily as rows appear — the words
     /// page's pattern. "" = looked up, nothing to show; the row falls back to
     /// its origin line and the session won't retry.
@@ -29,9 +30,11 @@ struct ExpressionsView: View {
         case toStudy, known
         var id: String { rawValue }
         var label: String {
+            // Through `explain` — a `String` never sees the locale on its own
+            // (the words page's rule; these two read as English in Korean).
             switch self {
-            case .toStudy: return "To study"
-            case .known:   return "Known"
+            case .toStudy: return explain("To study")
+            case .known:   return explain("Known")
             }
         }
     }
@@ -42,10 +45,24 @@ struct ExpressionsView: View {
     /// this page had never heard of, while the daily deck dealt them anyway.
     private var entries: [ExpressionCatalog.Item] {
         let all = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
+        if !searchQuery.isEmpty {
+            // Search reads BOTH lenses, whatever is up — the words page's rule.
+            let q = searchQuery.lowercased()
+            return all.filter { $0.text.lowercased().contains(q) }
+                .sorted { l, r in
+                    let lp = l.text.lowercased().hasPrefix(q), rp = r.text.lowercased().hasPrefix(q)
+                    if lp != rp { return lp }
+                    return l.text < r.text
+                }
+        }
         switch filter {
         case .toStudy: return all.filter { !store.hasUsedExpression($0.text) }
         case .known:   return all.filter { store.hasUsedExpression($0.text) }
         }
+    }
+
+    private var searchQuery: String {
+        searchText.trimmingCharacters(in: .whitespaces)
     }
 
     var body: some View {
@@ -54,19 +71,25 @@ struct ExpressionsView: View {
                 ForEach(Filter.allCases) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
+            // The search drawer above brings its own air; the list below
+            // brings none — same row as the words page.
             .padding(.horizontal, 16)
-            .padding(.top, 8)
             .padding(.bottom, 12)
 
-            if entries.isEmpty {
-                ContentUnavailableView {
-                    Label(emptyTitle, systemImage: "quote.bubble")
-                } description: {
-                    Text(emptyMessage)
-                }
-                .frame(maxHeight: .infinity)
-            } else {
-                List {
+            List {
+                if entries.isEmpty {
+                    Section {
+                        if !searchQuery.isEmpty {
+                            ContentUnavailableView.search(text: searchText)
+                        } else {
+                            ContentUnavailableView {
+                                Label(emptyTitle, systemImage: "quote.bubble")
+                            } description: {
+                                Text(emptyMessage)
+                            }
+                        }
+                    }
+                } else {
                     Section {
                         ForEach(entries) { entry in
                             Button {
@@ -76,28 +99,14 @@ struct ExpressionsView: View {
                             }
                             .buttonStyle(.plain)
                             .task(id: entry.text) { await loadMeaning(entry) }
-                            // A phrase gets here by appearing verbatim in the
-                            // learner's own turns — which a mishearing does
-                            // too, in their own words ("넉다운이 된던"). Words
-                            // are safe by construction (they must be in
-                            // `CoreVocabulary`); expressions have no lexicon,
-                            // so the learner is the last judge and needs a way
-                            // to say it.
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    store.dismissExpression(entry.text)
-                                } label: {
-                                    Label("Remove", systemImage: "trash")
-                                }
-                            }
                         }
                     } header: {
                         // What this lens adds up to — same grammar as the
                         // words page.
                         Text("\(entries.count) expressions")
                     } footer: {
-                        if filter == .toStudy {
-                            Text(explain("Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known, and swipe away anything that came out of a mishearing."))
+                        if filter == .toStudy, searchQuery.isEmpty {
+                            Text(explain("Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known."))
                         }
                     }
                 }
@@ -106,6 +115,9 @@ struct ExpressionsView: View {
         .navigationTitle("Expressions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .searchable(text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: Text("Search expressions"))
         .onAppear {
             // Opened from a widget note tap → jump straight to that phrase.
             if let p = appState.focusPhrase {
@@ -154,8 +166,9 @@ struct ExpressionsView: View {
                                         : (confirmed ? explain("Used in a talk") : explain("Marked known")))
             }
             VStack(alignment: .leading, spacing: 3) {
+                // Same rounded face as the card and the words page's rows.
                 Text(Self.display(entry.text))
-                    .font(.headline)
+                    .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundStyle(.primary)
                 subtitle(entry)
             }
@@ -269,7 +282,6 @@ struct ExpressionCard: View {
     var navigationPhrases: [String]? = nil
     var context: Context? = nil
 
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @StateObject private var player = AudioPlayer()
@@ -293,8 +305,10 @@ struct ExpressionCard: View {
             VStack(alignment: .leading, spacing: 26) {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 5) {
+                        // The word card's headline face; a size down because
+                        // a phrase is several words and still has to fit.
                         Text(ExpressionsView.display(phrase))
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
                             .fixedSize(horizontal: false, vertical: true)
                         // What kind of chunk it is + its register — the
                         // expression's answer to a word's part of speech.
@@ -327,17 +341,9 @@ struct ExpressionCard: View {
 
                 section("Meaning") {
                     if let senses = entry?.senses, !senses.isEmpty {
-                        VStack(alignment: .leading, spacing: 14) {
-                            ForEach(senses) { s in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(s.meaning)
-                                        .font(.title3.weight(.semibold))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                    if let note = s.note, !note.isEmpty {
-                                        Text(note).font(.footnote).foregroundStyle(.secondary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                }
+                        VStack(alignment: .leading, spacing: 16) {
+                            ForEach(Array(senses.enumerated()), id: \.element.id) { i, s in
+                                senseRow(i + 1, s)
                             }
                         }
                     } else {
@@ -364,14 +370,7 @@ struct ExpressionCard: View {
                 if let variants = entry?.phrases, !variants.isEmpty {
                     section("Another way to say it") {
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(variants) { v in
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(v.phrase).font(.callout.weight(.medium))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                    Text(v.meaning).font(.footnote).foregroundStyle(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
+                            ForEach(variants) { phraseRow($0) }
                         }
                     }
                 }
@@ -387,33 +386,12 @@ struct ExpressionCard: View {
             .padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle("My expressions · \(store.expressionCount)")
+        // Walking a dealt list titles by position — the word card's rule —
+        // and the library's count otherwise.
+        .navigationTitle(navIndex != nil
+                         ? Text("\((navIndex ?? 0) + 1) of \(navList.count)")
+                         : Text("My expressions · \(store.expressionCount)"))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if let i = navIndex {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { currentPhrase = navList[i - 1] } label: { Image(systemName: "chevron.up") }
-                        .disabled(i == 0)
-                    Button { currentPhrase = navList[i + 1] } label: { Image(systemName: "chevron.down") }
-                        .disabled(i + 1 >= navList.count)
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    // The card is where a bad phrase is actually recognized as
-                    // bad — the dictionary entry for it reads as nonsense — so
-                    // the way out is here as well as on the list row.
-                    Button(role: .destructive) {
-                        store.dismissExpression(phrase)
-                        dismiss()
-                    } label: {
-                        Label("Remove from expressions", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
-        }
         .safeAreaInset(edge: .bottom) { actionBar }
         .task(id: phrase) { await load() }
         .onDisappear { player.stop() }
@@ -445,6 +423,52 @@ struct ExpressionCard: View {
         .disabled(speaking)
     }
 
+    /// Numbered like the word card's senses; the register line stands in
+    /// for a part of speech and is skipped when the entry has none.
+    private func senseRow(_ index: Int, _ s: WordEntry.Sense) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(index)")
+                .font(.caption.weight(.bold)).monospacedDigit()
+                .foregroundStyle(.tint)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color.accentColor.opacity(0.12)))
+            VStack(alignment: .leading, spacing: 4) {
+                if !s.pos.isEmpty {
+                    Text(s.pos)
+                        .font(.caption2.weight(.semibold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(.secondary)
+                }
+                Text(s.meaning)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let note = s.note, !note.isEmpty {
+                    Text(note).font(.footnote).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// The word card's "Common phrases" tile, so a variant reads as the same
+    /// kind of thing there and here: saveable, shadowable, on a long press.
+    private func phraseRow(_ p: WordEntry.Phrase) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(p.phrase)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(p.meaning).font(.footnote).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
+        .contentShape(Rectangle())
+        .contextMenu { saveActions(for: p.phrase) }
+    }
+
     private func exampleRow(_ e: WordEntry.Example) -> some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 2)
@@ -463,14 +487,29 @@ struct ExpressionCard: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .contentShape(Rectangle())
-        .contextMenu {
+        .contextMenu { saveActions(for: e.text) }
+    }
+
+    /// Long-press actions on an example — the word card's pair: save the
+    /// sentence to study later, or shadow it right now.
+    @ViewBuilder
+    private func saveActions(for text: String) -> some View {
+        if store.isStudyingExpression(text) {
+            Label("Saved to expressions", systemImage: "checkmark")
+        } else {
             Button {
-                shadowing = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
-                                 transcript: e.text, durationMs: 0,
-                                 timestamp: Date(), suggestion: nil)
+                store.addExpression(text)
+                HapticEngine.drillCorrect()
             } label: {
-                Label("Shadow this", systemImage: "waveform.badge.mic")
+                Label("Save to expressions", systemImage: "bookmark")
             }
+        }
+        Button {
+            shadowing = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                             transcript: text, durationMs: 0, timestamp: Date(),
+                             suggestion: nil)
+        } label: {
+            Label("Shadow this", systemImage: "waveform.badge.mic")
         }
     }
 
@@ -493,48 +532,38 @@ struct ExpressionCard: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemFill)))
     }
 
+    /// The word card's bar, to the letter: Keep · I know · ↑ · ↓
+    /// (`CardButtons.swift`). The state rides on the icon and tint, never on
+    /// the label, so the two capsules keep one width each.
     private var actionBar: some View {
-        HStack(spacing: 12) {
-            blurButton(isStudying ? "Studying" : "Study",
-                       icon: isStudying ? "bookmark.fill" : "bookmark",
-                       tint: isStudying ? .accentColor : .primary) {
+        HStack(spacing: 8) {
+            CardActionButton(title: "Keep",
+                             icon: isStudying ? "bookmark.fill" : "bookmark",
+                             tint: isStudying ? .accentColor : .primary) {
                 // Bookmark to keep studying — mirrors adding a word to the
                 // notebook; the phrase then shows on the Expressions widget.
                 store.setStudyingExpression(phrase, !isStudying)
             }
-            blurButton(isKnown ? "Known" : "I know it",
-                       icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
-                       tint: isKnown ? .green : .primary) {
+            .accessibilityLabel(isStudying ? "Studying this expression" : "Keep studying this expression")
+
+            CardActionButton(title: "I know",
+                             icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
+                             tint: isKnown ? .green : .primary) {
                 // Toggle known — stay on the phrase so it visibly flips, same
                 // as WordCard.
                 store.setKnownExpression(phrase, !isKnown)
             }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
+            .accessibilityLabel(isKnown ? "Marked as known" : "Mark as known")
 
-    /// Same style as WordCard's action bar: native Liquid Glass on iOS 26, a
-    /// bordered capsule fallback below.
-    private func blurButton(_ title: String, icon: String, tint: Color,
-                            action: @escaping () -> Void) -> some View {
-        let button = Button(action: action) {
-            Label(title, systemImage: icon)
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity)
+            if let i = navIndex {
+                CardStepButton(icon: "chevron.up", label: "Previous expression") { currentPhrase = navList[i - 1] }
+                    .disabled(i == 0)
+                CardStepButton(icon: "chevron.down", label: "Next expression") { currentPhrase = navList[i + 1] }
+                    .disabled(i + 1 >= navList.count)
+            }
         }
-        .controlSize(.large)
-        .buttonBorderShape(.capsule)
-        .tint(tint)
-        if #available(iOS 26.0, *) {
-            return AnyView(button.buttonStyle(.glass))
-        } else {
-            // .bordered alone is a translucent tint with NO blur — a material
-            // capsule underneath keeps the label readable over the sheet's
-            // scrolling content on pre-26 OSes (seen on iPad).
-            return AnyView(button.buttonStyle(.bordered)
-                .background(.regularMaterial, in: Capsule()))
-        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Logic

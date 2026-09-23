@@ -813,20 +813,21 @@ struct WordCard: View {
     /// and swap to "Studying" / "Known" once set — four strings that pushed the
     /// two capsules to the screen edges and left nowhere for the chevrons. The
     /// state is carried by the icon (outline → filled) and its tint instead,
-    /// which is what the eye reads first anyway.
+    /// which is what the eye reads first anyway. The buttons themselves are
+    /// `CardButtons.swift`, shared with the expression card.
     private var actionBar: some View {
         HStack(spacing: 8) {
             let studying = store.isStudying(word)
-            blurButton("Keep",
-                       icon: studying ? "bookmark.fill" : "bookmark",
-                       tint: studying ? .accentColor : .primary) {
+            CardActionButton(title: "Keep",
+                             icon: studying ? "bookmark.fill" : "bookmark",
+                             tint: studying ? .accentColor : .primary) {
                 studying ? store.removeStudying(word) : store.addStudying(word)
             }
             .accessibilityLabel(studying ? "Studying this word" : "Keep studying this word")
 
-            blurButton("I know",
-                       icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
-                       tint: isKnown ? .green : .primary) {
+            CardActionButton(title: "I know",
+                             icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
+                             tint: isKnown ? .green : .primary) {
                 // Toggle: tap to mark known, tap again to clear it. Stay on the
                 // word so it visibly flips — confirmation the tap worked.
                 // Deliberately NO jump to the next study word.
@@ -839,67 +840,14 @@ struct WordCard: View {
             // (Collapsed, where there's no action bar, the chevrons stay in
             // the toolbar.)
             if let i = navIndex {
-                stepButton("chevron.up", label: "Previous word") { currentWord = navList[i - 1] }
+                CardStepButton(icon: "chevron.up", label: "Previous word") { currentWord = navList[i - 1] }
                     .disabled(i == 0)
-                stepButton("chevron.down", label: "Next word") { currentWord = navList[i + 1] }
+                CardStepButton(icon: "chevron.down", label: "Next word") { currentWord = navList[i + 1] }
                     .disabled(i + 1 >= navList.count)
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-    }
-
-    /// Icon-only sibling of `blurButton` — same glass capsule, sized to its
-    /// glyph so the two labelled buttons keep the width.
-    private func stepButton(_ icon: String, label: String,
-                            action: @escaping () -> Void) -> some View {
-        let button = Button(action: action) {
-            Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
-                // Just the glyph — every point saved here is a point the two
-                // labelled buttons get to keep.
-                .frame(width: 14)
-        }
-        .controlSize(.large)
-        .buttonBorderShape(.capsule)
-        .tint(.primary)
-        .accessibilityLabel(label)
-        if #available(iOS 26.0, *) {
-            return AnyView(button.buttonStyle(.glass))
-        } else {
-            return AnyView(button.buttonStyle(.bordered)
-                .background(.regularMaterial, in: Capsule()))
-        }
-    }
-
-    /// Action button matching the header's chevron buttons: native Liquid Glass
-    /// on iOS 26, a bordered capsule fallback below. One system style — fill and
-    /// edge can't misalign.
-    private func blurButton(_ title: String, icon: String, tint: Color,
-                            action: @escaping () -> Void) -> some View {
-        let button = Button(action: action) {
-            Label(title, systemImage: icon)
-                .font(.subheadline.weight(.semibold))
-                // One line, always. Four controls share this row now, so a
-                // label that wraps ("I" / "know") both looks broken and grows
-                // the bar's height.
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
-        }
-        .controlSize(.large)
-        .buttonBorderShape(.capsule)
-        .tint(tint)
-        if #available(iOS 26.0, *) {
-            return AnyView(button.buttonStyle(.glass))
-        } else {
-            // .bordered alone is a translucent tint with NO blur, so over the
-            // scrolling sheet content the label fought whatever sat beneath it
-            // (visible on pre-26 iPads). A material capsule underneath gives
-            // the same read-through-blur the glass style provides.
-            return AnyView(button.buttonStyle(.bordered)
-                .background(.regularMaterial, in: Capsule()))
-        }
     }
 
     // MARK: - Logic
