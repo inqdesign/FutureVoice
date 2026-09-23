@@ -589,10 +589,17 @@ struct WeeklyTestView: View {
 
     /// The insertion point, drawn between placed tiles when it isn't at the end.
     private var caret: some View {
-        RoundedRectangle(cornerRadius: 1)
-            .fill(Color.accentColor)
-            .frame(width: 2, height: 30)
-            .accessibilityHidden(true)
+        // A hidden tile sets the height, so the bar sits at the tiles' own
+        // centre whatever the button style pads them to; the flow layout
+        // aligns its rows to the top, not the middle.
+        ZStack {
+            tile("I", filled: true, verdict: nil) {}
+                .opacity(0)
+                .allowsHitTesting(false)
+            BlinkingCaret()
+        }
+        .frame(width: 2)
+        .accessibilityHidden(true)
     }
 
     private func tileTint(_ verdict: Bool?) -> Color {
@@ -1059,5 +1066,20 @@ struct WeeklyTestResultView: View {
         case .listen:  Image(systemName: "ear")
         case .speak:   Image(systemName: "waveform.badge.mic")
         }
+    }
+}
+
+
+/// A text cursor: a thin bar that blinks, the way every insertion point does.
+private struct BlinkingCaret: View {
+    @State private var on = true
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.accentColor)
+            .frame(width: 2, height: 24)
+            .opacity(on ? 1 : 0.15)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) { on = false }
+            }
     }
 }
