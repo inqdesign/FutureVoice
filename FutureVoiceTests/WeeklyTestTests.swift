@@ -63,6 +63,26 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertNotEqual(keys, ["i", "really", "like", "it", "very"].map { $0 })
     }
 
+    /// A word the correction merely dropped is not a decoy; a word it
+    /// replaced is.
+    func testDecoysAreReplacedWordsOnly() {
+        let replaced = WeeklyTestEngine.replacedWords(
+            source: WordSplitter.words("I felt the intro section took too long."),
+            target: WordSplitter.words("I felt like the intro took a bit too long."))
+        XCTAssertFalse(replaced.contains("section"))        // omitted in passing
+        XCTAssertEqual(WeeklyTestEngine.replacedWords(
+            source: WordSplitter.words("I very like it"),
+            target: WordSplitter.words("I really like it")), ["very"])
+        XCTAssertEqual(WeeklyTestEngine.replacedWords(
+            source: WordSplitter.words("I end up carrying most boxes myself."),
+            target: WordSplitter.words("I ended up carrying most of the boxes myself.")), ["end"])
+        var rng = WeeklyTestRandom(seed: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!)
+        let tiles = WeeklyTestEngine.buildTiles(target: "I felt like the intro took a bit too long.",
+                                                source: "I felt the intro section took too long.", rng: &rng)
+        XCTAssertFalse(tiles.contains("section"))
+        XCTAssertEqual(tiles.count, WordSplitter.count("I felt like the intro took a bit too long."))
+    }
+
     func testSeededRandomIsDeterministic() {
         let id = UUID()
         var a = WeeklyTestRandom(seed: id), b = WeeklyTestRandom(seed: id)

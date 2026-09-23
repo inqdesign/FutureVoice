@@ -159,20 +159,14 @@ enum WeeklyTestEngine {
                 let key = itemKey(item)
                 guard !seen.contains(key) else { continue }
                 seen.insert(key)
-                var copy = item
-                copy = WeeklyTestItem(id: UUID(), kind: item.kind, prompt: item.prompt, answer: item.answer,
-                                      options: item.options.shuffled(using: &rng),
-                                      sessionId: item.sessionId, turnId: item.turnId, cardId: item.cardId,
-                                      note: item.note, isRetake: true)
-                if copy.kind == .build, copy.options.map(tileKey) == WordSplitter.words(copy.answer).map(tileKey),
-                   copy.options.count > 2 {
-                    var tiles = copy.options
-                    tiles.swapAt(0, tiles.count - 1)
-                    copy = WeeklyTestItem(id: copy.id, kind: .build, prompt: copy.prompt, answer: copy.answer,
-                                          options: tiles, sessionId: copy.sessionId, turnId: copy.turnId,
-                                          cardId: copy.cardId, note: copy.note, isRetake: true)
-                }
-                out.append(copy)
+                // Build tiles are dealt afresh from the two lines, so a stored
+                // item picks up today's decoy rule instead of its old tiles.
+                let options = item.kind == .build
+                    ? buildTiles(target: item.answer, source: item.prompt, rng: &rng)
+                    : item.options.shuffled(using: &rng)
+                out.append(WeeklyTestItem(id: UUID(), kind: item.kind, prompt: item.prompt, answer: item.answer,
+                                          options: options, sessionId: item.sessionId, turnId: item.turnId,
+                                          cardId: item.cardId, note: item.note, isRetake: true))
             }
         }
         return out
@@ -217,8 +211,26 @@ enum WeeklyTestEngine {
     /// nothing changed.
     static func pruned(_ test: WeeklyTest) -> WeeklyTest? {
         let answered = Set(test.answers.map(\.itemId))
-        let kept = test.items.filter { answered.contains($0.id) || isValid($0, language: test.targetLanguage) }
-        guard kept.count != test.items.count else { return nil }
+        var changed = false
+        var rng = WeeklyTestRandom(seed: test.id)
+        var kept: [WeeklyTestItem] = []
+        for item in test.items {
+            if answered.contains(item.id) { kept.append(item); continue }
+            guard isValid(item, language: test.targetLanguage) else { changed = true; continue }
+            // An unanswered build item re-deals its tiles under today's rule.
+            if item.kind == .build {
+                let fresh = buildTiles(target: item.answer, source: item.prompt, rng: &rng)
+                if Set(fresh.map(tileKey)) != Set(item.options.map(tileKey)) {
+                    var copy = item
+                    copy = WeeklyTestItem(id: item.id, kind: .build, prompt: item.prompt, answer: item.answer,
+                                          options: fresh, sessionId: item.sessionId, turnId: item.turnId,
+                                          cardId: item.cardId, note: item.note, isRetake: item.isRetake)
+                    kept.append(copy); changed = true; continue
+                }
+            }
+            kept.append(item)
+        }
+        guard changed else { return nil }
         var t = test
         t.items = kept
         return t
@@ -465,15 +477,21 @@ enum WeeklyTestEngine {
         return out
     }
 
-    /// The target's words plus up to `maxDecoyTiles` words that only the
-    /// learner's own version had, shuffled. A tile set that spells the answer
-    /// in order is not a test.
+    /// The target's words plus up to `maxDecoyTiles` decoys, shuffled. A tile
+    /// set that spells the answer in order is not a test.
+    ///
+    /// A decoy is a word the correction REPLACED — "very" where the fluent
+    /// line says "really" — never one it merely left out. "I felt the intro
+    /// section took too long" → "I felt like the intro took a bit too long"
+    /// drops "section" in passing; a learner who lays "the intro section
+    /// took" has said something fluent and was marked wrong for it (device,
+    /// 2026-09-23). Aligning the two lines tells the cases apart: a gap where
+    /// BOTH sides have words is a substitution and its source words tempt; a
+    /// gap with source words alone is an omission and they stay off the table.
     static func buildTiles(target: String, source: String, rng: inout WeeklyTestRandom) -> [String] {
         let targetWords = WordSplitter.words(target)
-        let targetKeys = Set(targetWords.map(tileKey))
-        let decoys = dedupe(WordSplitter.words(source).filter {
-            !targetKeys.contains(tileKey($0)) && isInTargetScript($0)
-        }, key: tileKey)
+        let decoys = dedupe(replacedWords(source: WordSplitter.words(source), target: targetWords)
+            .filter { isInTargetScript($0) }, key: tileKey)
             .shuffled(using: &rng)
             .prefix(maxDecoyTiles)
         var tiles = (targetWords + decoys).shuffled(using: &rng)
@@ -537,6 +555,35 @@ enum WeeklyTestEngine {
     /// A build item: the tiles in the order the learner laid them.
     static func isCorrect(_ item: WeeklyTestItem, tiles: [String]) -> Bool {
         tiles.map(tileKey) == WordSplitter.words(item.answer).map(tileKey)
+    }
+
+    /// Source words that sit in a substitution gap of the source↔target
+    /// alignment: the words the correction swapped for others.
+    static func replacedWords(source: [String], target: [String]) -> [String] {
+        let a = source.map(tileKey), b = target.map(tileKey)
+        guard !a.isEmpty, !b.isEmpty else { return [] }
+        var dp = Array(repeating: Array(repeating: 0, count: b.count + 1), count: a.count + 1)
+        for i in stride(from: a.count - 1, through: 0, by: -1) {
+            for j in stride(from: b.count - 1, through: 0, by: -1) {
+                dp[i][j] = a[i] == b[j] ? dp[i + 1][j + 1] + 1 : max(dp[i + 1][j], dp[i][j + 1])
+            }
+        }
+        var out: [String] = []
+        var gapSource: [String] = [], gapTargetCount = 0
+        func closeGap() {
+            if gapTargetCount > 0 { out += gapSource }
+            gapSource = []; gapTargetCount = 0
+        }
+        var i = 0, j = 0
+        while i < a.count, j < b.count {
+            if a[i] == b[j] { closeGap(); i += 1; j += 1 }
+            else if dp[i + 1][j] >= dp[i][j + 1] { gapSource.append(source[i]); i += 1 }
+            else { gapTargetCount += 1; j += 1 }
+        }
+        gapSource += source[i...]
+        gapTargetCount += b.count - j
+        closeGap()
+        return out
     }
 
     /// Which laid tiles are where the answer wants them, and which of the
