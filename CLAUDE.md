@@ -37,6 +37,26 @@ reasons are the design:
 - **Audio goes too** (user: "a few GB of iCloud is fine"). Items first, audio
   after, so a second device is useful within a minute. Blob uploads are
   Wi-Fi only unless the Me toggle says otherwise.
+- **A pass keeps going after the app closes** (2026-09-22). Leaving the
+  app mid-pass holds a `beginBackgroundTask` (~30 s) around it; after that,
+  `SyncBackground` hands the rest to iOS — a `BGAppRefreshTask` (pulls the
+  other device's talks before this one is opened) and, while items or audio
+  are still waiting, a `BGProcessingTask` that iOS runs idle/overnight, which
+  is what carries a first sync's gigabyte without the learner holding the
+  app open. Every pass is resumable (the index saves per batch), so being cut
+  off anywhere costs nothing. Every pass — `enable` included — goes through
+  `requestSync`; calling `runSync` directly ran two passes on one index.
+- **Nothing a screen waits on includes audio** (same day). `enable()` runs
+  an `.items` pass and returns — the second device's "Continue" used to sit
+  on "Downloading audio 37 of 412…" until the last file, which is the
+  "useful within a minute" promise above broken on the one screen it was
+  made for. Audio follows in an `.everything` pass nobody waits on, fetched
+  `blobFetchBatch` (10) records per round trip instead of one, NEWEST talk
+  first (`observedAt` = the record's `modifiedAt` for a wanted blob; a
+  first pull hears of everything at once, so "when this device noticed"
+  can't order anything). Every CloudKit op runs `.userInitiated` — CloudKit
+  defers `.utility` behind everything else on the device and the network,
+  and a pass here is either watched or on a background task's clock.
 - **The second device asks** (`SyncContinuePromptView`, `RootView` after the
   auth gate and before setup): a signed-in, un-set-up install whose account
   already has a zone is offered "Continue where you left off?" once per

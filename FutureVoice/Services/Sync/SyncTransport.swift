@@ -33,6 +33,20 @@ protocol SyncTransport: AnyObject {
     /// The full record including its asset, downloaded to a temporary file
     /// the caller must move or copy before returning.
     func fetch(recordName: String, in zone: String) async throws -> SyncRecord?
+
+    /// Several full records in one round trip, keyed by record name; a name
+    /// the server doesn't have is simply absent.
+    func fetch(recordNames: [String], in zone: String) async throws -> [String: SyncRecord]
+}
+
+extension SyncTransport {
+    func fetch(recordNames: [String], in zone: String) async throws -> [String: SyncRecord] {
+        var out: [String: SyncRecord] = [:]
+        for name in recordNames {
+            if let r = try await fetch(recordName: name, in: zone) { out[name] = r }
+        }
+        return out
+    }
 }
 
 enum SyncAccountState: Equatable {

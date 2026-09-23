@@ -98,6 +98,12 @@ final class CloudKitTransport: SyncTransport {
         }
     }
 
+    /// CloudKit defers `.utility` work behind everything else on the device
+    /// and the network — measured as a first sync crawling while the
+    /// learner watched its progress bar. Every pass here is either watched
+    /// or on a background task's clock, so it asks for the foreground lane.
+    static let qos: QualityOfService = .userInitiated
+
     // MARK: - Save
 
     func save(_ records: [SyncRecord], in zone: String) async throws -> [String: SyncSaveOutcome] {
@@ -140,7 +146,7 @@ final class CloudKitTransport: SyncTransport {
             let op = CKModifyRecordsOperation(recordsToSave: records, recordIDsToDelete: [])
             op.savePolicy = .ifServerRecordUnchanged
             op.isAtomic = false
-            op.qualityOfService = .utility
+            op.qualityOfService = Self.qos
             op.configuration.allowsCellularAccess = allowsCellular
             var results: [CKRecord.ID: Result<CKRecord, Error>] = [:]
             op.perRecordSaveBlock = { id, result in results[id] = result }
@@ -191,29 +197,41 @@ final class CloudKitTransport: SyncTransport {
     }
 
     func fetch(recordName: String, in zone: String) async throws -> SyncRecord? {
-        let id = CKRecord.ID(recordName: recordName, zoneID: zoneID(zone))
-        let ck: CKRecord = try await withCheckedThrowingContinuation { cont in
-            let op = CKFetchRecordsOperation(recordIDs: [id])
-            op.qualityOfService = .utility
+        let found = try await fetch(recordNames: [recordName], in: zone)
+        guard let record = found[recordName] else { throw SyncTransportError.other("no record") }
+        return record
+    }
+
+    func fetch(recordNames: [String], in zone: String) async throws -> [String: SyncRecord] {
+        guard !recordNames.isEmpty else { return [:] }
+        let zid = zoneID(zone)
+        let ids = recordNames.map { CKRecord.ID(recordName: $0, zoneID: zid) }
+        let records: [CKRecord] = try await withCheckedThrowingContinuation { cont in
+            let op = CKFetchRecordsOperation(recordIDs: ids)
+            op.qualityOfService = Self.qos
             op.configuration.allowsCellularAccess = allowsCellularForBlobs
-                || !recordName.hasPrefix("blob")
-            var fetched: Result<CKRecord, Error>?
-            op.perRecordResultBlock = { _, result in fetched = result }
+                || recordNames.contains { !$0.hasPrefix("blob") }
+            var fetched: [CKRecord] = []
+            op.perRecordResultBlock = { _, result in
+                // A missing record is a per-record failure; the caller reads
+                // its absence. Only a whole-operation failure is thrown.
+                if case .success(let record) = result { fetched.append(record) }
+            }
             op.fetchRecordsResultBlock = { result in
                 if case .failure(let error) = result,
                    !((error as? CKError)?.code == .partialFailure) {
                     cont.resume(throwing: Self.mapped(error))
                     return
                 }
-                switch fetched {
-                case .success(let record)?: cont.resume(returning: record)
-                case .failure(let error)?: cont.resume(throwing: Self.mapped(error))
-                case nil: cont.resume(throwing: SyncTransportError.other("no record"))
-                }
+                cont.resume(returning: fetched)
             }
             database.add(op)
         }
-        return Self.makeSyncRecord(ck, includingAssets: true)
+        var out: [String: SyncRecord] = [:]
+        for ck in records {
+            if let r = Self.makeSyncRecord(ck, includingAssets: true) { out[ck.recordID.recordName] = r }
+        }
+        return out
     }
 
     // MARK: - Mapping

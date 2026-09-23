@@ -50,6 +50,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // they're finished. The paywall's own service is gone the moment the
         // sheet closes, so the listener has to start here.
         StoreKitService.startTransactionListener()
+        // iCloud sync's background tasks — registration after launch is refused.
+        SyncBackground.register()
         return true
     }
 }
@@ -88,9 +90,11 @@ struct FutureVoiceApp: App {
             // reminder. Background path never prompts for permission.
             if phase == .background {
                 Task { await DrillReminder.reschedule() }
+                Task { await WeeklyTestReminder.reschedule() }
                 // Push what this stint changed before iOS suspends us.
                 SyncEngine.shared.backgrounded()
-                Task { await WeeklyTestReminder.reschedule() }
+                // …and whatever doesn't fit in that, iOS finishes later.
+                SyncBackground.schedule()
             }
             // Pull the other devices' practice, then push ours.
             if phase == .active { SyncEngine.shared.foregrounded() }

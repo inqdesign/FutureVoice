@@ -376,9 +376,12 @@ final class SyncTests: XCTestCase {
         try FileManager.default.createDirectory(at: turnDir, withIntermediateDirectories: true)
         try Data([1, 2, 3, 4]).write(to: turnDir.appendingPathComponent("T1.mp3"))
         try await a.engine.enable()
+        // Audio follows enable() in a pass nobody waits on.
+        await a.engine.waitUntilIdle()
 
         let b = device(cloud)
         try await b.engine.enable()
+        await b.engine.waitUntilIdle()
         let landed = b.root.appendingPathComponent("TurnAudio/T1.mp3")
         XCTAssertEqual(try Data(contentsOf: landed), Data([1, 2, 3, 4]))
         XCTAssertEqual(b.engine.blobState(kind: .blobTurn, key: "T1.mp3"), .local)

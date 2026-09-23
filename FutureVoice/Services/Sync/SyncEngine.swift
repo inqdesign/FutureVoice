@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Keeps this device's practice and the learner's other devices' practice
 /// the same, through their iCloud — opt-in, per app account.
@@ -61,10 +62,17 @@ final class SyncEngine: ObservableObject {
     private(set) var userId: String?
     private var index: SyncIndex?
 
+    /// How much of a pass to run. `.items` is what a screen waits on — the
+    /// second device's "Continue", the Me toggle — and it ends the moment the
+    /// talks, cards and words are in step; audio then follows in an
+    /// `.everything` pass nobody waits on.
+    enum Scope { case items, everything }
+
     private var dirty: Set<SyncKind> = []
     private var debounce: Task<Void, Never>?
     private var running: Task<Void, Never>?
     private var rerunRequested = false
+    private var rerunScope: Scope = .items
     /// Blobs the UI asked for by name — fetched before everything else.
     private var requestedBlobs: [String] = []
 
@@ -90,6 +98,9 @@ final class SyncEngine: ObservableObject {
     /// The signed-in app account, or nil (signed out / anonymous). Sync
     /// follows the account: a different user gets a different index and zone.
     func setUser(_ id: String?) {
+        // Remembered for a background launch (`SyncBackground`), where iOS
+        // runs the task before any scene — and so before auth — is up.
+        UserDefaults.standard.set(id, forKey: Self.lastUserKey)
         guard id != userId else { return }
         running?.cancel()
         running = nil
@@ -107,6 +118,15 @@ final class SyncEngine: ObservableObject {
     }
 
     var zoneName: String? { userId.map { "nawana-\($0)" } }
+
+    private static let lastUserKey = "futurevoice.sync.lastUserId"
+
+    /// A background launch has no auth observer yet: pick up the account the
+    /// app last ran under. Signing out clears it (`setUser(nil)`).
+    func restoreLastUserIfNeeded() {
+        guard userId == nil, let id = UserDefaults.standard.string(forKey: Self.lastUserKey) else { return }
+        setUser(id)
+    }
 
     /// Whether the account already has practice in the cloud — the second
     /// device's question. Nil when it can't be answered (no iCloud, offline).
@@ -154,7 +174,13 @@ final class SyncEngine: ObservableObject {
         index = SyncIndex(userId: userId)
         status = .idle
         Analytics.capture("sync_enabled")
-        await runSync(kinds: nil)
+        // Through the one-pass-at-a-time door: calling `runSync` straight
+        // let a foreground pass start beside this one on the same index.
+        // Items only — the caller's screen is waiting, and a second device
+        // is useful the moment the talks are here. Audio follows in a pass
+        // nobody waits on, newest talk first.
+        await syncAndWait(kinds: nil, scope: .items)
+        if hasBackgroundWork { requestSync(kinds: nil) }
     }
 
     /// Stops syncing. Nothing is deleted anywhere: what's on this device
@@ -226,31 +252,64 @@ final class SyncEngine: ObservableObject {
     }
 
     /// One pass at a time; a request during a pass runs once more after it.
-    func requestSync(kinds: Set<SyncKind>?) {
+    func requestSync(kinds: Set<SyncKind>?, scope: Scope = .everything) {
         guard isEnabled else { return }
         if running != nil {
             rerunRequested = true
+            if scope == .everything { rerunScope = .everything }
             if let kinds { dirty.formUnion(kinds) }
             return
         }
         running = Task { [weak self] in
             guard let self else { return }
-            await self.runSync(kinds: kinds)
+            // Leaving the app mid-pass would otherwise suspend it within
+            // seconds; this buys the ~30 s iOS grants to finish the batch in
+            // flight. On expiry the pass is cancelled — every batch saves
+            // the index, so the next pass resumes where this one stopped.
+            let assertion = BackgroundAssertion.begin { [weak self] in self?.running?.cancel() }
+            defer { assertion.end() }
+            await self.runSync(kinds: kinds, scope: scope)
             self.running = nil
             if self.rerunRequested {
                 self.rerunRequested = false
                 let more = self.dirty
+                let again = self.rerunScope
                 self.dirty = []
-                self.requestSync(kinds: more.isEmpty ? nil : more)
+                self.rerunScope = .items
+                self.requestSync(kinds: more.isEmpty ? nil : more, scope: again)
             }
         }
+    }
+
+    /// Requests a pass and returns once it — and any rerun it queued — is
+    /// over. Used by `enable` (the settings row waits on it) and by the
+    /// background tasks.
+    func syncAndWait(kinds: Set<SyncKind>?, scope: Scope = .everything) async {
+        requestSync(kinds: kinds, scope: scope)
+        await waitUntilIdle()
+    }
+
+    /// Returns once no pass is running — including any the last one queued.
+    func waitUntilIdle() async {
+        while let task = running { await task.value }
+    }
+
+    /// A background task's time is up.
+    func cancelRunning() {
+        running?.cancel()
+    }
+
+    /// Anything left that a background pass could finish.
+    var hasBackgroundWork: Bool {
+        refreshCounts()
+        return pendingItems + pendingAudio + wantedAudio > 0
     }
 
     // MARK: - The pass
 
     /// pull → push (items) → [conflicts: pull → push] → push audio → fetch
     /// wanted audio. `kinds == nil` diffs everything.
-    func runSync(kinds: Set<SyncKind>?) async {
+    func runSync(kinds: Set<SyncKind>?, scope: Scope = .everything) async {
         guard let index, let zone = zoneName else { return }
         switch await transport.accountAvailable() {
         case .available: break
@@ -267,9 +326,11 @@ final class SyncEngine: ObservableObject {
                 try await pull(index: index, zone: zone)
                 conflicts = try await push(kinds: itemKinds, index: index, zone: zone)
             }
-            let blobKinds = (kinds ?? Set(SyncKind.allCases)).filter { $0.isBlob }
-            _ = try await push(kinds: blobKinds, index: index, zone: zone)
-            try await downloadWanted(index: index, zone: zone)
+            if scope == .everything {
+                let blobKinds = (kinds ?? Set(SyncKind.allCases)).filter { $0.isBlob }
+                _ = try await push(kinds: blobKinds, index: index, zone: zone)
+                try await downloadWanted(index: index, zone: zone)
+            }
             index.save()
             lastSyncAt = Date()
             status = .idle
@@ -489,6 +550,11 @@ final class SyncEngine: ObservableObject {
                 entry.wanted = true
                 entry.needsPush = false
                 entry.pushedAt = now
+                // When the audio was made, not when this device heard of it
+                // — a first pull hears of everything at once, and the
+                // download queue is sorted on this so the newest talk's
+                // audio lands first.
+                entry.observedAt = record.modifiedAt
             }
             index.set(entry)
         }
@@ -645,8 +711,11 @@ final class SyncEngine: ObservableObject {
     // MARK: - Audio downloads
 
     /// Fetches blobs the server has and this device doesn't, requested ones
-    /// first. One at a time: each is a separate record fetch, and a phone
-    /// on a café Wi-Fi shouldn't have twenty in flight.
+    /// first, then newest talk first. `blobFetchBatch` per round trip: one
+    /// fetch per file was a full round trip per turn of audio, and a
+    /// first sync of a few hundred took the afternoon.
+    static let blobFetchBatch = 10
+
     private func downloadWanted(index: SyncIndex, zone: String) async throws {
         var wanted = index.wantedBlobs
         guard !wanted.isEmpty else { return }
@@ -657,45 +726,59 @@ final class SyncEngine: ObservableObject {
             return a.observedAt > b.observedAt
         }
         let total = wanted.count
-        for (i, entry) in wanted.enumerated() {
+        var done = 0
+        var cursor = 0
+        while cursor < wanted.count {
             try Task.checkCancellation()
-            progress = Progress(phase: .downloadingAudio, done: i, total: total)
-            guard let blob = SyncKindRegistry.handler(for: entry.kind) as? BlobKind else { continue }
-            let record: SyncRecord?
+            progress = Progress(phase: .downloadingAudio, done: done, total: total)
+            let slice = Array(wanted[cursor..<min(cursor + Self.blobFetchBatch, wanted.count)])
+            cursor += slice.count
+            let fetched: [String: SyncRecord]
             do {
-                record = try await transport.fetch(recordName: entry.recordName, in: zone)
+                fetched = try await transport.fetch(recordNames: slice.map(\.recordName), in: zone)
             } catch SyncTransportError.other {
+                done += slice.count
                 continue
             }
-            guard let record, let temp = record.assetURL else {
-                // Gone from the server; forget it.
-                var e = entry
-                e.wanted = false
-                index.set(e)
-                continue
+            for entry in slice {
+                land(fetched[entry.recordName], for: entry, index: index)
+                done += 1
             }
-            let dest = blob.fileURL(entry.key)
-            let fm = FileManager.default
-            try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? fm.removeItem(at: dest)
-            do {
-                try fm.copyItem(at: temp, to: dest)
-            } catch {
-                continue
-            }
-            var e = entry
-            e.wanted = false
-            e.needsPush = false
-            e.pushedAt = Date()
-            if let attrs = try? fm.attributesOfItem(atPath: dest.path),
-               let size = attrs[.size] as? Int, let mtime = attrs[.modificationDate] as? Date {
-                e.hash = SyncCanonical.blobFingerprint(size: size, modifiedAt: mtime)
-            }
-            index.set(e)
-            requestedBlobs.removeAll { $0 == entry.recordName }
-            if i % 10 == 9 { index.save() }
+            index.save()
             refreshCounts()
         }
+    }
+
+    /// Moves one fetched blob into place, or forgets one the server no
+    /// longer has.
+    private func land(_ record: SyncRecord?, for entry: SyncIndex.Entry, index: SyncIndex) {
+        guard let blob = SyncKindRegistry.handler(for: entry.kind) as? BlobKind else { return }
+        guard let record, let temp = record.assetURL else {
+            // Gone from the server; forget it.
+            var e = entry
+            e.wanted = false
+            index.set(e)
+            return
+        }
+        let dest = blob.fileURL(entry.key)
+        let fm = FileManager.default
+        try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? fm.removeItem(at: dest)
+        do {
+            try fm.copyItem(at: temp, to: dest)
+        } catch {
+            return
+        }
+        var e = entry
+        e.wanted = false
+        e.needsPush = false
+        e.pushedAt = Date()
+        if let attrs = try? fm.attributesOfItem(atPath: dest.path),
+           let size = attrs[.size] as? Int, let mtime = attrs[.modificationDate] as? Date {
+            e.hash = SyncCanonical.blobFingerprint(size: size, modifiedAt: mtime)
+        }
+        index.set(e)
+        requestedBlobs.removeAll { $0 == entry.recordName }
     }
 
     enum BlobState { case local, queued, absent }
@@ -729,5 +812,29 @@ final class SyncEngine: ObservableObject {
         pendingItems = pending.filter { !$0.kind.isBlob }.count
         pendingAudio = pending.filter { $0.kind.isBlob }.count
         wantedAudio = index.wantedBlobs.count
+    }
+}
+
+
+/// `UIApplication.beginBackgroundTask`, ended exactly once.
+@MainActor
+private final class BackgroundAssertion {
+    private var id: UIBackgroundTaskIdentifier = .invalid
+
+    static func begin(onExpire: @escaping @MainActor () -> Void) -> BackgroundAssertion {
+        let a = BackgroundAssertion()
+        a.id = UIApplication.shared.beginBackgroundTask(withName: "sync") { [weak a] in
+            MainActor.assumeIsolated {
+                onExpire()
+                a?.end()
+            }
+        }
+        return a
+    }
+
+    func end() {
+        guard id != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(id)
+        id = .invalid
     }
 }
