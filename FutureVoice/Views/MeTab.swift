@@ -18,6 +18,7 @@ struct MeTab: View {
     /// Talk-call playback gain (0.25–1.0). Same key `AudioPlayer` reads.
     @AppStorage(AudioPlayer.talkVoiceVolumeKey) private var talkVoiceVolume = 1.0
     @AppStorage(MicPreferenceStore.key) private var micPreference = MicPreference.earphone.rawValue
+    @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.normal.rawValue
     @State private var account: AccountStatus = .empty
     /// AI's holistic CEFR read of the last few conversations (mode of the
     /// last 3 scored sessions — same read as ProgressTab). Level changes stay
@@ -69,6 +70,16 @@ struct MeTab: View {
     @State private var confirmingAudioCacheClear = false
     @State private var previewFeedback: FeedbackSheet.Context?
     #endif
+    #if DEBUG
+    /// Subpage a `-capture` run opens on launch — `MeTab` has no route of its
+    /// own (every page is a NavigationLink), so screenshots of a subpage
+    /// need this door. Nil in the app proper.
+    enum CapturePage { case voice }
+    private let capturePage: CapturePage?
+    @State private var captureVoiceOpen = false
+    init(capturePage: CapturePage? = nil) { self.capturePage = capturePage }
+    #endif
+
     var body: some View {
         NavigationStack {
             List {
@@ -90,16 +101,21 @@ struct MeTab: View {
                 // page about how many minutes are left. Buying and metering
                 // are different questions; only one of them is asked by
                 // someone who cannot talk yet.
+                // The admin flag counts as a plan here (2026-09-24): the row
+                // gated on `isEntitled` alone, so the day the admin's own test
+                // subscription expired it flipped to "Subscribe" with no value,
+                // and "Admin" — which `planLabel` already returns — vanished.
                 Section {
                     Button {
                         showingPaywall = true
                     } label: {
+                        let hasPlan = account.isEntitled || account.unlimited
                         row(icon: "sparkles",
-                            title: account.isEntitled ? explain("Subscription")
-                                                      : explain("Subscribe"),
-                            subtitle: account.isEntitled ? nil
-                                                         : explain("Talking needs a plan"),
-                            value: account.isEntitled ? account.planLabel : nil)
+                            title: hasPlan ? explain("Subscription")
+                                           : explain("Subscribe"),
+                            subtitle: hasPlan ? nil
+                                              : explain("Talking needs a plan"),
+                            value: hasPlan ? account.planLabel : nil)
                     }
                 }
 
@@ -257,6 +273,18 @@ struct MeTab: View {
                             title: explain("Preview feedback sheet"),
                             subtitle: explain("The ask that follows a return visit's call"))
                     }
+                    // A week's test can only be taken once, so testing the
+                    // feature means throwing this week's paper away. Dev
+                    // builds only; earlier weeks and the streak stay.
+                    Button {
+                        WeeklyTestStore.shared.removeCurrentWeek(
+                            opening: WeeklyTestSettings.shared.schedule.currentOpening())
+                        WeeklyTestSettings.shared.clearThin()
+                    } label: {
+                        row(icon: "checklist",
+                            title: explain("Reset this week's test"),
+                            subtitle: explain("Deal this week's paper again — past weeks stay"))
+                    }
                 } header: {
                     Text("Developer")
                 } footer: {
@@ -265,6 +293,10 @@ struct MeTab: View {
                 #endif
             }
             .navigationTitle("Settings")
+            #if DEBUG
+            .navigationDestination(isPresented: $captureVoiceOpen) { voicePage }
+            .onAppear { if capturePage == .voice { captureVoiceOpen = true } }
+            #endif
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -767,6 +799,19 @@ struct MeTab: View {
                         title: applied.map { explain("Accent: \($0.label)") } ?? explain("Accent"),
                         subtitle: explain("Same voice, the accent you choose"))
                 }
+            }
+            // Under Accent because it is the same kind of question — the voice
+            // stays the learner's, only how it speaks changes. It is a
+            // SYNTHESIS setting, not playback: the words are spoken slowly
+            // rather than a recording played slow, so the pitch is untouched
+            // and it still sounds like them. Takes effect on the next line
+            // synthesized; a call already running keeps the speed it dialled.
+            Picker(selection: $speechSpeed) {
+                ForEach(SpeechSpeed.allCases, id: \.rawValue) { speed in
+                    Text(speed.label).tag(speed.rawValue)
+                }
+            } label: {
+                Label("Speaking speed", systemImage: "speedometer")
             }
             // Above the re-record, because it is the question people arrive
             // with. "It doesn't sound like me" used to have exactly one answer

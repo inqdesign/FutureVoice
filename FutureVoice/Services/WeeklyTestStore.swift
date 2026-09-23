@@ -48,6 +48,12 @@ final class WeeklyTestStore: LanguageScopedStore {
     #if DEBUG
     /// Capture runs start from an empty week.
     func removeAll() { write([]) }
+
+    /// Dev tool: forget the paper(s) minted since `opening`, weekly and
+    /// monthly, so the week can be taken again. Earlier weeks stay.
+    func removeCurrentWeek(opening: Date) {
+        write(load().filter { $0.createdAt < opening })
+    }
     #endif
 
     private func write(_ list: [WeeklyTest]) {
