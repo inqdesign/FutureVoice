@@ -25,13 +25,17 @@ import java.util.Locale
 object UILanguage {
     /** The columns that actually exist in the catalogs. Everything else falls
      *  back to English rather than showing half a translated app. */
-    val translated = listOf("en", "ko", "ja", "zh-Hant")
+    val translated = listOf("en", "ko", "ja", "zh-Hant", "zh-Hans", "es", "fr")
 
-    /** A stored native code as a UI language: a bare "zh" means Traditional
-     *  here (Simplified is a separate translation that doesn't ship). */
+    /**
+     * A stored native code as a UI language. Chinese is listed BY SCRIPT:
+     * Traditional and Simplified are different vocabularies, not just
+     * different glyphs, and every platform API resolves a bare "zh" to
+     * Simplified — so that is what a bare "zh" becomes here too.
+     */
     fun normalize(code: String?): String? = when (code) {
         null -> null
-        "zh", "zh-Hans", "zh-Hant" -> "zh-Hant"
+        "zh" -> "zh-Hans"
         else -> code.takeIf { it in translated }
     }
 
@@ -39,8 +43,11 @@ object UILanguage {
         normalize(context.getSharedPreferences("futurevoice", 0).getString("futurevoice.nativeLanguage", null))
 
     private fun locale(tag: String): Locale = when (tag) {
-        // A resource folder carries a REGION, never a script — values-zh-rTW.
+        // Traditional ships for Taiwan, so its folder is a REGION
+        // (values-zh-rTW); Simplified carries its SCRIPT, because it is read
+        // in Singapore, Malaysia and everywhere Chinese people live abroad.
         "zh-Hant" -> Locale.forLanguageTag("zh-TW")
+        "zh-Hans" -> Locale.forLanguageTag("zh-Hans")
         else -> Locale.forLanguageTag(tag)
     }
 

@@ -55,7 +55,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     private val _state = MutableStateFlow(AppState(
         setupComplete = prefs.getBoolean(SETUP_COMPLETE_KEY, false),
         targetLanguage = prefs.getString("futurevoice.targetLanguage", null) ?: "en",
-        nativeLanguage = prefs.getString(NATIVE_KEY, null) ?: LanguageCatalog.defaultNative(),
+        // A bare "zh" was stored before Chinese was split by script.
+        nativeLanguage = prefs.getString(NATIVE_KEY, null)
+            ?.let { LanguageCatalog.normalizedNative(it) } ?: LanguageCatalog.defaultNative(),
         // Per-language, falling back to the one-and-only level a pre-
         // multi-language install stored.
         level = CefrLevel.from(
@@ -265,7 +267,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      */
     fun setLevel(language: String, level: CefrLevel) {
         LanguageScope.setLevel(appContext, language, level.code)
-        if (language == _state.value.targetLanguage) _state.update { it.copy(level = level) }
+        if (language == _state.value.targetLanguage) {
+            _state.update { it.copy(level = level) }
+            mirrorSetup()
+        }
     }
 
     fun applyMeasuredLevel(raw: String) {
@@ -392,6 +397,22 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 targetLanguage = target, level = level,
                 enrolledLanguages = LanguageScope.enrolled(appContext))
         }
+        mirrorSetup()
+    }
+
+    /**
+     * Leave what they CHOSE on the server. Nothing has ever written
+     * `profiles`' three setup columns, so every row carries the column
+     * defaults and a console reading them would report every learner as an
+     * English learner. Called wherever a session and a completed setup can
+     * both be true — setup, a language switch, a level move, and each launch.
+     */
+    private fun mirrorSetup() {
+        val st = _state.value
+        if (!st.setupComplete) return
+        com.roro.futurevoice.data.LearnerSetupSync.push(
+            appContext, target = st.targetLanguage, native = st.nativeLanguage,
+            level = st.level.code)
     }
 
     /**
@@ -412,6 +433,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             it.copy(targetLanguage = code, level = level,
                 enrolledLanguages = LanguageScope.enrolled(appContext))
         }
+        mirrorSetup()
         StoreEvents.bump()
     }
 
@@ -448,6 +470,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             // after a re-clone — without it a new voice id misses on every
             // cached line and the whole library re-bills itself.
             com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(voiceId)
+            // A session exists now, which is the first moment the onboarding
+            // choices have anywhere to go.
+            mirrorSetup()
             val profile = runCatching { voices.profile(uid) }.getOrNull()
             _state.update {
                 // The device's OWN answers outrank the server row: an Android

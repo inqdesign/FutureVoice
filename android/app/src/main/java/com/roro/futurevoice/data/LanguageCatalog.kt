@@ -32,6 +32,9 @@ object LanguageCatalog {
         "en" to "English", "es" to "Spanish", "de" to "German", "fr" to "French",
         "it" to "Italian", "pt" to "Portuguese", "ja" to "Japanese",
         "ko" to "Korean", "zh" to "Chinese", "vi" to "Vietnamese",
+        // Spelled out so a prompt told "Chinese" can't quietly write the
+        // other script.
+        "zh-Hant" to "Traditional Chinese", "zh-Hans" to "Simplified Chinese",
         "th" to "Thai", "id" to "Indonesian", "hi" to "Hindi", "ar" to "Arabic",
         "tr" to "Turkish", "ru" to "Russian", "pl" to "Polish", "nl" to "Dutch",
     )
@@ -56,7 +59,10 @@ object LanguageCatalog {
      * is wide; UI translation exists only for en/ko today.
      */
     val nativeLanguages: List<String> = listOf(
-        "ko", "ja", "zh", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
+        // Chinese is listed BY SCRIPT: Traditional (Taiwan/HK/Macau) and
+        // Simplified are different vocabularies, not just different glyphs,
+        // and a learner has to be able to say which one they read.
+        "ko", "ja", "zh-Hant", "zh-Hans", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
         "hi", "bn", "ur", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ne", "si",
         "ar", "fa", "tr", "he", "kk", "uz", "az", "ka", "hy", "ps",
         "en", "es", "pt", "fr", "de", "it", "ru", "pl", "uk", "nl", "ro", "el", "cs",
@@ -99,20 +105,56 @@ object LanguageCatalog {
     fun defaultNative(): String =
         deviceLanguageCodes().firstOrNull { it in nativeLanguages } ?: "en"
 
+    /**
+     * Device-preferred languages as entries of [nativeLanguages] — script
+     * qualified where the list is, so a phone set to zh-TW lands on
+     * Traditional rather than on whatever a bare "zh" resolves to.
+     */
     private fun deviceLanguageCodes(): List<String> {
         val locales = android.os.LocaleList.getDefault()
-        return (0 until locales.size()).map { locales.get(it).language }
+        return (0 until locales.size()).mapNotNull { i ->
+            val l = locales.get(i)
+            val script = l.script.takeIf { it.isNotEmpty() }
+                ?: when (l.country) { "TW", "HK", "MO" -> "Hant"; "CN", "SG" -> "Hans"; else -> null }
+            val qualified = script?.let { "${l.language}-$it" }
+            when {
+                qualified != null && qualified in nativeLanguages -> qualified
+                l.language in nativeLanguages -> l.language
+                else -> null
+            }
+        }
     }
 
-    /** Language name in its own language — "Deutsch", "한국어". */
-    fun endonym(code: String): String =
-        java.util.Locale(code).getDisplayLanguage(java.util.Locale(code))
-            .replaceFirstChar { it.uppercase() }.ifEmpty { code.uppercase() }
+    /**
+     * A stored code as a native language. A bare "zh" was a valid choice
+     * before Chinese was split by script; it means Simplified everywhere
+     * else on the platform, so it maps there.
+     */
+    fun normalizedNative(code: String): String = if (code == "zh") "zh-Hans" else code
+
+    /** True when two codes name the same language whatever the script or
+     *  region — "zh-Hant" and "zh-Hans", "pt" and "pt-BR". */
+    fun sameLanguage(a: String, b: String): Boolean = a.substringBefore('-') == b.substringBefore('-')
+
+    /** Language name in its own language — "Deutsch", "한국어", "繁體中文". */
+    fun endonym(code: String): String = name(code, code)
 
     /** Language name in the LEARNER's language — "영어" for a Korean. */
-    fun ownName(code: String, native: String): String =
-        java.util.Locale(code).getDisplayLanguage(java.util.Locale(native))
-            .replaceFirstChar { it.uppercase() }.ifEmpty { englishName(code) }
+    fun ownName(code: String, native: String): String = name(code, native)
+
+    /**
+     * The name of [code] written in [locale] — the ONE helper every on-screen
+     * language name goes through, because it keeps the SCRIPT.
+     * `getDisplayLanguage` drops it, so both Chinese columns came back as
+     * plain 中文 and the two rows of the picker read identically.
+     */
+    private fun name(code: String, locale: String): String {
+        val of = java.util.Locale.forLanguageTag(code)
+        val inLocale = java.util.Locale.forLanguageTag(locale)
+        val display = if (of.script.isNotEmpty()) of.getDisplayName(inLocale)
+        else of.getDisplayLanguage(inLocale)
+        return display.replaceFirstChar { it.uppercase() }.ifEmpty { englishName(code) }
+    }
 
     private val topikByCefr = mapOf(CefrLevel.A1 to 1, CefrLevel.A2 to 2, CefrLevel.B1 to 3,
         CefrLevel.B2 to 4, CefrLevel.C1 to 5, CefrLevel.C2 to 6)
