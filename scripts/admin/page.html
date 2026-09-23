@@ -96,11 +96,19 @@
 .tlrow .tw{font-weight:600; font-size:13.5px}
 .tlrow .tw small{font-weight:400; color:var(--muted); font-size:12px}
 .tlrow .tp{font-size:12.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* Supabase user id + ElevenLabs voice id under the row — the two handles a
+   log line, a ledger query or the ElevenLabs dashboard are searched by.
+   Monospace, muted, select-all so a click grabs the whole id. */
+.tlrow .tid{grid-column:3 / -1; margin-top:-3px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:10.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tlrow .tid span{user-select:all; cursor:text}
+.tlrow .tid i{font-style:normal; margin:0 4px 0 10px; opacity:.7}
 .tlrow .nowdot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--good);
   margin-right:5px; animation:beat 1.6s ease-out infinite; vertical-align:1px}
 @media (max-width:640px){
   .tlrow{grid-template-columns:70px 22px minmax(0,1fr)}
   .tlrow .tp{grid-column:3; margin-top:-4px}
+  .tlrow .tid{grid-column:3}
   .kchip{margin:3px 4px 0 0}
 }
 .lsec{font-size:11.5px; font-weight:600; letter-spacing:.04em; color:var(--muted); margin:6px 0 0}
@@ -852,7 +860,12 @@ const failureLabel = e => (EVENT_KO[e.event]||e.event)
 /* ------------------------------------------------------- user helpers */
 const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
 const badge = u => u.owner ? '<span class="ownchip">본인</span>'
-  : u.dev ? '<span class="devchip">TEST</span>' : '';
+  : u.dev ? '<span class="devchip">TEST</span>'
+  // Cloned a voice, never reached Apple sign-in — not a signup. Swept 30 min
+  // after creation, so one on screen is either mid-onboarding right now or
+  // the sweep is stuck (2026-09-23: it was, on ElevenLabs' 400 for a voice
+  // already gone).
+  : u.anonymous ? '<span class="devchip">미가입</span>' : '';
 const stateOf = u => u.subState || ({active:'paid', trialing:'trial'}[u.subStatus] || u.subStatus || 'none');
 const isSale = u => stateOf(u)!=='none' && stateOf(u)!=='comp' && u.subSource!=='comp';
 /** 체험 중 — 자동갱신을 꺼둔 체험도 기간이 끝나기 전까지는 체험이다. 되살릴지
@@ -2066,7 +2079,8 @@ function personDetail(u){
     `<div><h4>${title}</h4>${items.length?`<ul>${items.join('')}</ul>`:`<div class="muted">${empty}</div>`}</div>`;
   const mail = u.realEmail
     ? `${esc(u.realEmail)} <span class="muted">· 앱 로그인 ${esc(u.email||'')}</span>`
-    : esc(u.email||'이메일 없음');
+    : u.anonymous ? '가입 전 — 목소리만 만들고 Apple 로그인은 안 했어요 (30분 뒤 자동 삭제)'
+    : esc(u.email||'이메일 없음 — Apple이 이메일 클레임 없이 로그인시킨 계정');
   const cost = (DATA.cost.byUser||{})[String(u.idx)];
   return `<div class="dl">
     ${col('프로필', [
@@ -2814,6 +2828,13 @@ function renderLive(){
     ? {city: ph.city, country: ph.cc, lat: ph.lat, lon: ph.lon} : null;
   const dir = new Map([...(liveData.placed||[]), ...(liveData.users||[])].map(u=>[u.id, u]));
   const person = id => dir.get(id) || {id};
+  // admin_live rows carry neither voice nor plan; the day's data does, by the
+  // same id (a session created since the page loaded has no row → null).
+  const dayUser = id => (DATA.users||[]).find(x => x.id === id) || null;
+  const voiceOf = id => (dayUser(id) || {}).voiceId || null;
+  // The same dot + two-word label the people tab uses, so 구독 중 / 체험 중 /
+  // 플랜 없음 read the same colour everywhere.
+  const subOf = id => { const f = dayUser(id); return f ? `${subDot(f)}${subShort(f)}` : ''; };
   const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
 
   const note = document.getElementById('liveNote');
@@ -2927,7 +2948,10 @@ function renderLive(){
         e.end - e.start >= 60e3 && !e.app ? `–${fmtClock(new Date(e.end).toISOString())}` : ''}</span>
       <span class="te">${emojiOf(e)}</span>
       <span class="tw">${esc(label(e))} <small>${detail(e)}</small>${chips(e)}</span>
-      <span class="tp"><b>${esc(liveName(u))}</b>${e.u===owner?'<span class="ownchip">본인</span>':''} · ${where(g)}</span>
+      <span class="tp"><b>${esc(liveName(u))}</b>${e.u===owner?'<span class="ownchip">본인</span>':''}${
+        subOf(e.u) ? ` · ${subOf(e.u)}` : ''} · ${where(g)}</span>
+      <span class="tid"><span title="Supabase 유저 ID — 클릭하면 전체 선택">${esc(e.u)}</span>${
+        voiceOf(e.u) ? `<i>voice</i><span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택">${esc(voiceOf(e.u))}</span>` : ''}</span>
     </div>`;
   }
   document.getElementById('tlList').innerHTML = html
@@ -2978,7 +3002,8 @@ function renderLive(){
     if(!mk) return;
     el.addEventListener('mouseenter', () => mk.openTooltip());
     el.addEventListener('mouseleave', () => mk.closeTooltip());
-    el.addEventListener('click', () => {
+    el.addEventListener('click', ev => {
+      if(ev.target.closest('.tid')) return;   // selecting an id is not a tap
       liveMap.flyTo(mk.getLatLng(), Math.max(liveMap.getZoom(), 3.5), {duration:.6});
       setTimeout(()=>mk.openTooltip(), 650);
     });
