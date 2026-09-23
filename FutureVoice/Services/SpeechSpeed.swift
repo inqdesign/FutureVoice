@@ -13,7 +13,9 @@ import Foundation
 /// on) as the most natural reading in English AND Korean, so that is what
 /// everyone gets. 1.0 is upstream's own speed — the clone as recorded — kept
 /// on the ladder because the learner asked for it, and labelled **Normal**,
-/// never "fast": nothing on this control speeds the voice up. Each step is
+/// never "fast": nothing on this control speeds the voice up. The middle rung
+/// is **Relaxed** (여유있게 — user's word, 2026-09-23), not "slower": it is the
+/// default, and a default called slower reads as a handicap. Each step is
 /// ~12% by `scripts/tts-speed-probe.sh` (0.9 = +13% over 1.0, 0.8 = +27%),
 /// well clear of the synthesizer's own take-to-take variance (0.95 measured
 /// +3.3% and two of five lines came back SHORTER). Don't add a 0.95 or an
@@ -65,8 +67,8 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
     var label: String {
         switch self {
         case .normal: return explain("Normal")
-        case .slow:   return explain("Slower")
-        case .slower: return explain("Slowest")
+        case .slow:   return explain("Relaxed")
+        case .slower: return explain("Slow")
         }
     }
 
