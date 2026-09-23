@@ -90,14 +90,14 @@ object VoiceCloneScript {
     )
 
     private val greetings: Map<String, String> = mapOf(
-        "en" to "Hey — it's you. Just more fluent. Pick a color that feels like us.",
-        "de" to "Hey — das bist du. Nur fließender. Such dir eine Farbe aus, die zu uns passt.",
-        "ko" to "안녕, 한국어를 유창하게 잘하는 너야. 우리한테 어울리는 색을 골라볼래?",
-        "ja" to "やあ — 君だよ。ただ、もっと流暢な。僕たちらしい色を選んでみて。",
-        "es" to "Oye — eres tú. Solo que más fluido. Elige un color que nos represente.",
-        "fr" to "Salut — c'est toi. En plus fluide. Choisis une couleur qui nous ressemble.",
-        "it" to "Ehi — sei tu. Solo più fluente. Scegli un colore che ci somigli.",
-        "pt" to "Ei — é você. Só que mais fluente. Escolha uma cor com a nossa cara.",
-        "zh" to "嘿 — 是你。只是更流利了。挑一个像我们的颜色吧。",
+        "en" to "Hey, it's you, a few years from now and a lot more fluent, so pick a color that feels like us.",
+        "de" to "Hey, ich bin du, ein paar Jahre später und viel fließender, also such dir eine Farbe aus, die zu uns passt.",
+        "ko" to "안녕, 나는 몇 년 뒤의 너야. 한국어가 훨씬 편해졌으니까, 우리한테 어울리는 색 하나 골라볼래?",
+        "ja" to "やあ、僕は数年後の君だよ。日本語がずっと楽になったから、僕たちに似合う色を選んでみて。",
+        "es" to "Oye, soy tú unos años después y mucho más fluido, así que elige un color que nos represente.",
+        "fr" to "Salut, c’est toi dans quelques années, en beaucoup plus fluide, alors choisis une couleur qui nous ressemble.",
+        "it" to "Ehi, sono te tra qualche anno, molto più fluente, quindi scegli un colore che ci somigli.",
+        "pt" to "Ei, sou você daqui a alguns anos, bem mais fluente, então escolha uma cor com a nossa cara.",
+        "zh" to "嘿，我是几年后的你，现在说得流利多了，挑一个像我们的颜色吧。",
     )
 }
