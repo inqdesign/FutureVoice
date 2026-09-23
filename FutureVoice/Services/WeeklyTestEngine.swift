@@ -444,7 +444,12 @@ enum WeeklyTestEngine {
             guard !seen.contains(key) else { continue }
             seen.insert(key)
             let tiles = buildTiles(target: card.targetPhrase, source: card.sourcePhrase, rng: &rng)
-            out.append(WeeklyTestItem(id: UUID(), kind: .build, prompt: card.sourcePhrase,
+            // The same trim the drill card does: a turn can be a rambling
+            // paragraph of fillers, and only the sentence the correction is
+            // about belongs on a test card.
+            let said = DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                   matching: card.targetPhrase, maxChars: 120)
+            out.append(WeeklyTestItem(id: UUID(), kind: .build, prompt: said,
                                       answer: card.targetPhrase, options: tiles,
                                       sessionId: card.sourceSessionId, turnId: card.sourceTurnId,
                                       cardId: card.id, note: card.reason))
@@ -524,6 +529,49 @@ enum WeeklyTestEngine {
     /// A build item: the tiles in the order the learner laid them.
     static func isCorrect(_ item: WeeklyTestItem, tiles: [String]) -> Bool {
         tiles.map(tileKey) == WordSplitter.words(item.answer).map(tileKey)
+    }
+
+    /// Which laid tiles are where the answer wants them, and which of the
+    /// answer's own words never arrived.
+    ///
+    /// Painting every tile red when one word is out of place says nothing —
+    /// the learner had eight of nine right (seen on device, 2026-09-23). The
+    /// longest common subsequence against the answer is what separates
+    /// "in the right order" from "what went wrong": a tile inside it is
+    /// placed correctly, everything else is the mistake.
+    struct TileCheck {
+        /// One per laid tile, in the order they were laid.
+        var correct: [Bool]
+        /// One per word of the answer.
+        var answerMatched: [Bool]
+    }
+
+    static func tileCheck(tiles: [String], answer: String) -> TileCheck {
+        let a = tiles.map(tileKey)
+        let b = WordSplitter.words(answer).map(tileKey)
+        guard !a.isEmpty, !b.isEmpty else {
+            return TileCheck(correct: Array(repeating: false, count: a.count),
+                             answerMatched: Array(repeating: false, count: b.count))
+        }
+        var dp = Array(repeating: Array(repeating: 0, count: b.count + 1), count: a.count + 1)
+        for i in stride(from: a.count - 1, through: 0, by: -1) {
+            for j in stride(from: b.count - 1, through: 0, by: -1) {
+                dp[i][j] = a[i] == b[j] ? dp[i + 1][j + 1] + 1 : max(dp[i + 1][j], dp[i][j + 1])
+            }
+        }
+        var correct = Array(repeating: false, count: a.count)
+        var matched = Array(repeating: false, count: b.count)
+        var i = 0, j = 0
+        while i < a.count, j < b.count {
+            if a[i] == b[j] {
+                correct[i] = true; matched[j] = true; i += 1; j += 1
+            } else if dp[i + 1][j] >= dp[i][j + 1] {
+                i += 1
+            } else {
+                j += 1
+            }
+        }
+        return TileCheck(correct: correct, answerMatched: matched)
     }
 
     /// Tiles joined back into the sentence the learner built.

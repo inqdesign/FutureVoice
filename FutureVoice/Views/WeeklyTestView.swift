@@ -459,11 +459,17 @@ struct WeeklyTestView: View {
     }
 
     private func buildArea(_ item: WeeklyTestItem) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // Graded and wrong: which tiles were actually misplaced. Painting all
+        // of them red says nothing when eight of nine were right.
+        let check: WeeklyTestEngine.TileCheck? = outcome == false
+            ? WeeklyTestEngine.tileCheck(tiles: laid.map { item.options[$0] }, answer: item.answer)
+            : nil
+        return VStack(alignment: .leading, spacing: 16) {
             // The sentence being laid.
             FlowLayout(spacing: 8, lineSpacing: 10) {
-                ForEach(laid, id: \.self) { index in
-                    tile(item.options[index], filled: true) { unlay(index) }
+                ForEach(Array(laid.enumerated()), id: \.element) { position, index in
+                    tile(item.options[index], filled: true,
+                         verdict: check.map { $0.correct[position] }) { unlay(index) }
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
@@ -487,28 +493,63 @@ struct WeeklyTestView: View {
             FlowLayout(spacing: 8, lineSpacing: 10) {
                 ForEach(Array(item.options.enumerated()), id: \.offset) { index, word in
                     if !laid.contains(index) {
-                        tile(word, filled: false) { lay(index) }
+                        tile(word, filled: false, verdict: nil) { lay(index) }
                     }
                 }
             }
             .animation(.easeOut(duration: 0.18), value: laid)
 
             if let outcome, !outcome {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Fluent version")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(item.answer)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.green)
-                        .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Fluent version")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        fluentAnswer(item, check: check)
+                            .font(.body.weight(.medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    // The card's own reason, labelled for what it is: why this
+                    // sentence was corrected in the first place, not a verdict
+                    // on the order just laid.
+                    if let note = item.note, !note.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Why it was corrected")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Text(note)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
                 .transition(.opacity)
             }
         }
     }
 
-    private func tile(_ word: String, filled: Bool, action: @escaping () -> Void) -> some View {
+    /// The answer, with the words the learner never placed carried in bold —
+    /// the one word missing from an otherwise right sentence is the lesson.
+    private func fluentAnswer(_ item: WeeklyTestItem, check: WeeklyTestEngine.TileCheck?) -> Text {
+        let words = WordSplitter.words(item.answer)
+        guard let check, check.answerMatched.count == words.count else {
+            return Text(item.answer).foregroundStyle(.green)
+        }
+        let gap = WordSplitter.spaced ? " " : ""
+        var out = Text("")
+        for (i, word) in words.enumerated() {
+            if i > 0 { out = out + Text(gap) }
+            let piece = Text(word).foregroundStyle(.green)
+            out = out + (check.answerMatched[i] ? piece : piece.bold().underline())
+        }
+        return out
+    }
+
+    /// `verdict` nil = not graded (or graded right, where the whole row is
+    /// green); true = this tile sits where the answer wants it.
+    private func tile(_ word: String, filled: Bool, verdict: Bool?,
+                      action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(word)
                 .font(.body.weight(.medium))
@@ -516,14 +557,14 @@ struct WeeklyTestView: View {
                 .padding(.vertical, 8)
         }
         .buttonStyle(.bordered)
-        .tint(filled ? tileTint : (outcome == nil ? .accentColor : .gray))
+        .tint(filled ? tileTint(verdict) : (outcome == nil ? .accentColor : .gray))
     }
 
-    private var tileTint: Color {
+    private func tileTint(_ verdict: Bool?) -> Color {
         switch outcome {
         case .none: return .accentColor
         case .some(true): return .green
-        case .some(false): return .red
+        case .some(false): return verdict == true ? .green : .red
         }
     }
 
@@ -543,12 +584,6 @@ struct WeeklyTestView: View {
                         if !outcome, item.kind != .build {
                             Text(item.answer)
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        if let note = item.note, !note.isEmpty, item.kind == .build {
-                            Text(note)
-                                .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }

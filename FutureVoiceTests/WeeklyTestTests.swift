@@ -69,6 +69,25 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertEqual([1, 2, 3, 4, 5].shuffled(using: &a), [1, 2, 3, 4, 5].shuffled(using: &b))
     }
 
+    /// A near-miss is mostly right: only the misplaced tiles are marked, and
+    /// the word that never arrived is named.
+    func testTileCheckMarksOnlyWhatWentWrong() {
+        let answer = "Considering it's only two weeks away from the launch."
+        let laid = ["Exactly.", "it's", "Considering", "only", "two", "weeks", "from", "the", "launch."]
+        let check = WeeklyTestEngine.tileCheck(tiles: laid, answer: answer)
+        XCTAssertEqual(check.correct.count, laid.count)
+        XCTAssertFalse(check.correct[0])                       // the decoy
+        XCTAssertTrue(check.correct.filter { $0 }.count >= 6)  // most of it was right
+        let words = WordSplitter.words(answer)
+        let missing = zip(words, check.answerMatched).filter { !$0.1 }.map(\.0)
+        XCTAssertTrue(missing.contains("away"))
+
+        // Laid perfectly: every tile correct, nothing missing.
+        let perfect = WeeklyTestEngine.tileCheck(tiles: words, answer: answer)
+        XCTAssertTrue(perfect.correct.allSatisfy { $0 })
+        XCTAssertTrue(perfect.answerMatched.allSatisfy { $0 })
+    }
+
     // MARK: - Other scripts
 
     /// The active language decides how words are cut; flip it for a test and
