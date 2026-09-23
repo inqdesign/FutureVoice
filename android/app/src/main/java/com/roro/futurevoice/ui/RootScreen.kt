@@ -371,6 +371,10 @@ fun RootScreen() {
             initialTarget = state.targetLanguage,
             initialLevel = state.level,
             onBackToWelcome = app::signOut,
+            // The pick lands NOW: this screen is the language picker, and a
+            // choice that only arrives at the end leaves the learner
+            // answering in a language they just said they cannot read.
+            onPickNative = app::setNativeLanguage,
             onFinish = app::completeSetup,
         )
         editProfile -> PersonaIntakeScreen(

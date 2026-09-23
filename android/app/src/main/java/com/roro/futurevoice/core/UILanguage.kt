@@ -68,6 +68,20 @@ object UILanguage {
         return base.createConfigurationContext(config)
     }
 
+    /**
+     * The same context, resolving strings in ONE named language — what the
+     * setup flow's first screen uses so the app turns into the language the
+     * moment it is tapped, instead of four steps later.
+     */
+    fun contextFor(base: Context, code: String?): Context {
+        val tag = normalize(code) ?: return base
+        val l = locale(tag)
+        val config = Configuration(base.resources.configuration)
+        config.setLocale(l)
+        config.setLocales(LocaleList(l))
+        return base.createConfigurationContext(config)
+    }
+
     /** The same context, resolving strings in the learner's language. */
     fun wrap(base: Context): Context {
         val tag = current(base) ?: return base

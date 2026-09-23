@@ -52,6 +52,41 @@ fun SetupFlowScreen(
     initialTarget: String,
     initialLevel: CefrLevel,
     onBackToWelcome: () -> Unit,
+    /**
+     * Called the moment a native language is tapped, not at the end. This
+     * screen IS the language picker, and the pick used to sit in its own
+     * state until `onFinish` — so tapping 日本語 left every word around it in
+     * the old language, and the learner answered the remaining questions in
+     * the language they had just said they cannot read (iOS `19436f8`).
+     */
+    onPickNative: (String) -> Unit = {},
+    onFinish: (native: String, target: String, level: CefrLevel, goalMinutes: Int) -> Unit,
+) {
+    // The screen speaks the language under the finger. Overriding the locale
+    // for this subtree beats recreating the activity, which would throw away
+    // the answers already given.
+    val base = androidx.compose.ui.platform.LocalContext.current
+    var native0 by remember { mutableStateOf(initialNative) }
+    val localized = remember(native0) { com.roro.futurevoice.core.UILanguage.contextFor(base, native0) }
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalContext provides localized,
+        androidx.compose.ui.platform.LocalConfiguration provides localized.resources.configuration,
+    ) {
+        SetupFlowBody(
+            initialNative = initialNative, initialTarget = initialTarget,
+            initialLevel = initialLevel, onBackToWelcome = onBackToWelcome,
+            onPickNative = { native0 = it; onPickNative(it) }, onFinish = onFinish)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SetupFlowBody(
+    initialNative: String,
+    initialTarget: String,
+    initialLevel: CefrLevel,
+    onBackToWelcome: () -> Unit,
+    onPickNative: (String) -> Unit,
     onFinish: (native: String, target: String, level: CefrLevel, goalMinutes: Int) -> Unit,
 ) {
     var step by remember { mutableIntStateOf(0) }
@@ -127,7 +162,7 @@ fun SetupFlowScreen(
                         moreHeader = stringResource(R.string.corrections_and_notes_only),
                         moreFooter = stringResource(
                             R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21),
-                    ) { native = it }
+                    ) { native = it; onPickNative(it) }
                 }
                 1 -> ChoiceList(targetChoices, selected = target,
                     title = { LanguageCatalog.endonym(it) },
