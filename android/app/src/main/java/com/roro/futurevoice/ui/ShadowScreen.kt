@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.AlertDialog
@@ -72,7 +73,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.roro.futurevoice.R
-import com.roro.futurevoice.audio.LiveTranscriber
+import com.roro.futurevoice.audio.WavRecorder
+import com.roro.futurevoice.data.StoreJson
+import com.roro.futurevoice.talk.ShadowTranscriber
 import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.core.InstallSalt
 import com.roro.futurevoice.data.AuthRepository
@@ -117,10 +120,18 @@ private enum class ShadowPhase {
     IDLE, COUNTDOWN, RECORDING, ANALYZING, RESULT,
     /** Nothing was said. One line under the target, nothing saved or scored. */
     HEARD_NOTHING,
+    /** The take was made but could not be READ — the learner can still hear
+     *  it, and nothing is scored on a reading nobody has. */
+    READ_FAILED,
 }
 
 /** iOS `ShadowDrillView.stillSpeakingSeconds` — a breath is 0.5–1.5 s. */
 private const val STILL_SPEAKING_MS = 1_500L
+
+/** Mic level (the recorder's own 0…1 curve) that counts as someone talking.
+ *  Only ever asked AFTER the line's own length has passed, so a quiet room
+ *  ends the take and a voice still going holds it open. */
+private const val VOICED_LEVEL = 0.35f
 
 /** Rough spoken length of a line, for when the real audio duration isn't
  *  known yet — it only ever sizes the take's own floor and ceiling. */
@@ -148,7 +159,15 @@ fun ShadowScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mp3 = remember { Mp3Player(context.cacheDir, source = "shadow") }
-    val live = remember { LiveTranscriber(context) }
+    /** The take's own player, so a past attempt can be heard back. */
+    val takePlayer = remember { Mp3Player(context.cacheDir, source = "shadow_take") }
+    /**
+     * The take is RECORDED and read from the audio (`ShadowTranscriber`), not
+     * transcribed live: a recognizer collapses exactly the connected speech
+     * this exercise is about, and its guess would be the learner's grade.
+     * One mic, so the recognizer does not run at the same time.
+     */
+    val recorder = remember { WavRecorder() }
 
     val words = remember(line) { line.split(Regex("\\s+")).filter { it.isNotEmpty() } }
 
@@ -158,6 +177,8 @@ fun ShadowScreen(
     var attempt by remember { mutableStateOf<ShadowScore.Analysis?>(null) }
     var said by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    /** The WAV this take was recorded to — the learner can hear it back. */
+    var takeRecording by remember { mutableStateOf<String?>(null) }
     /** Length of the model line, once its audio has been heard once. */
     var durationMs by remember { mutableIntStateOf(0) }
     // Back is held while a take is being made: leaving mid-attempt used to
@@ -203,7 +224,7 @@ fun ShadowScreen(
             .sortedByDescending { it.createdAt }
     }
     DisposableEffect(Unit) {
-        onDispose { mp3.stop(); runCatching { live.stop() } }
+        onDispose { mp3.stop(); takePlayer.stop(); runCatching { recorder.stop() } }
     }
 
     fun playLine() {
@@ -246,7 +267,7 @@ fun ShadowScreen(
         // scored and nothing is written.
         take?.cancel()
         take = null
-        runCatching { live.stop() }
+        runCatching { recorder.stop() }
         clockMs = -1
         activeRange = null
         said = ""
@@ -261,12 +282,13 @@ fun ShadowScreen(
         val range = practiceRange
         attempt = null
         said = ""
+        val takeFile = java.io.File(
+            java.io.File(context.filesDir, "shadow-takes"), StoreJson.newId() + ".wav")
         take = scope.launch {
-            // Mic FIRST: a learner who starts speaking on the beat must be
-            // inside the recognition, and the countdown's silence is harmless.
-            val started = runCatching {
-                live.start(LanguageCatalog.sttLocale(targetLanguage)) { }
-            }.isSuccess
+            // Mic FIRST: a learner who starts speaking on the beat must
+            // already be inside the recording, and the countdown's silence
+            // costs nothing.
+            val started = runCatching { recorder.start(takeFile) }.isSuccess
             if (!started) {
                 error = context.getString(R.string.microphone_or_speech_permission_denied)
                 phase = ShadowPhase.IDLE
@@ -296,14 +318,16 @@ fun ShadowScreen(
             }
             // Nothing can end the attempt before the line's OWN length — the
             // learner cannot be finished sooner, so a pause before that is
-            // always mid-attempt.
+            // always mid-attempt. After that the recorder's own level says
+            // whether anyone is still talking; there is no recognizer to ask.
             val earliest = maxOf(1_000, targetMs)
             val hardStop = startedAt + attemptCutoffMs(targetMs)
             delay(earliest.toLong())
+            var lastVoiced = System.currentTimeMillis()
             while (System.currentTimeMillis() < hardStop) {
-                val voiced = live.lastVoicedAtMs ?: break
-                if (System.currentTimeMillis() - voiced >= STILL_SPEAKING_MS) break
-                delay(200)
+                if (recorder.level >= VOICED_LEVEL) lastVoiced = System.currentTimeMillis()
+                if (System.currentTimeMillis() - lastVoiced >= STILL_SPEAKING_MS) break
+                delay(100)
             }
             karaoke.cancel()
             clockMs = -1
@@ -311,7 +335,22 @@ fun ShadowScreen(
             phase = ShadowPhase.ANALYZING
             // Tail grace: the last syllable is still arriving.
             delay(300)
-            val text = runCatching { live.stop() }.getOrDefault("")
+            runCatching { recorder.stop() }
+            val read = ShadowTranscriber.read(takeFile, targetLanguage)
+            com.roro.futurevoice.core.Telemetry.log("shadow_transcript", mapOf(
+                "source" to read.source.name.lowercase(),
+                "audio_ms" to read.ms.toString(),
+                "partial" to if (range != null) "1" else "0"))
+            // Nobody could read the take. Saying nothing is honest; scoring
+            // it on a reading the learner cannot see is not.
+            if (read.source == ShadowTranscriber.Source.FAILED && read.text.isEmpty() &&
+                takeFile.length() > 44L) {
+                attempt = null
+                takeRecording = takeFile.absolutePath
+                phase = ShadowPhase.READ_FAILED
+                return@launch
+            }
+            val text = read.text
             said = text
             // A take with NO speech in it is not a 0 — it is nothing. The
             // auto-stop fires at the line's own length with nobody talking,
@@ -320,12 +359,14 @@ fun ShadowScreen(
             // (iOS `17d0b56`).
             if (text.isBlank()) {
                 attempt = null
+                takeFile.delete()
                 phase = ShadowPhase.HEARD_NOTHING
                 com.roro.futurevoice.core.Analytics.capture("shadow_heard_nothing")
                 return@launch
             }
             val a = ShadowScore.analyze(target, text, targetLanguage)
             attempt = a
+            takeRecording = takeFile.absolutePath
             phase = ShadowPhase.RESULT
             com.roro.futurevoice.core.Analytics.capture(
                 "shadow_attempted", mapOf("score" to a.score))
@@ -341,6 +382,7 @@ fun ShadowScreen(
                     // never read as a verdict on the whole line.
                     phraseFirst = range?.first,
                     phraseLast = range?.last,
+                    recordingFilename = takeFile.absolutePath,
                 ),
                 targetLanguage)
             com.roro.futurevoice.data.PracticeLog.record(
@@ -355,7 +397,8 @@ fun ShadowScreen(
 
     fun onMicTap() {
         when (phase) {
-            ShadowPhase.IDLE, ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING -> {
+            ShadowPhase.IDLE, ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING,
+            ShadowPhase.READ_FAILED -> {
                 val ok = ContextCompat.checkSelfPermission(
                     context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                 if (ok) runTake() else micPermission.launch(Manifest.permission.RECORD_AUDIO)
@@ -407,7 +450,7 @@ fun ShadowScreen(
                     // would discard an attempt that is still being made.
                     navigationIcon = {
                         IconButton(
-                            onClick = { mp3.stop(); runCatching { live.stop() }; onBack() },
+                            onClick = { mp3.stop(); runCatching { recorder.stop() }; onBack() },
                             enabled = phase != ShadowPhase.RECORDING && phase != ShadowPhase.COUNTDOWN,
                         ) {
                             Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
@@ -525,7 +568,8 @@ fun ShadowScreen(
                                     .clickable(
                                         enabled = phase == ShadowPhase.IDLE ||
                                             phase == ShadowPhase.RESULT ||
-                                            phase == ShadowPhase.HEARD_NOTHING
+                                            phase == ShadowPhase.HEARD_NOTHING ||
+                                            phase == ShadowPhase.READ_FAILED
                                     ) { tapWord(i) }
                                     .padding(horizontal = 3.dp, vertical = 1.dp),
                             )
@@ -541,6 +585,25 @@ fun ShadowScreen(
                     Text(stringResource(R.string.didn_t_hear_anything_try_again_closer_to_the_mic),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                // The take was made but nobody could read it. It is still
+                // theirs to hear; nothing is scored on a reading that does
+                // not exist.
+                if (phase == ShadowPhase.READ_FAILED) {
+                    Text(stringResource(R.string.couldn_t_score_that_one_your_take_is_still_here),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    takeRecording?.let { path ->
+                        TextButton(onClick = {
+                            scope.launch { mp3.stop(); runCatching { takePlayer.play(java.io.File(path)) } }
+                        }) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null,
+                                modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text(stringResource(R.string.your_take))
+                        }
+                    }
                 }
 
                 // ---- the take
@@ -572,6 +635,23 @@ fun ShadowScreen(
                             missed = MaterialTheme.colorScheme.onSurfaceVariant,
                             kept = MaterialTheme.colorScheme.onSurface),
                             style = MaterialTheme.typography.bodyLarge)
+                        // The take is the learner's own voice — hearing it
+                        // back is half of what shadowing teaches, and the
+                        // ORIGINAL recording is what plays (the levelled copy
+                        // exists only for the machine that read it).
+                        takeRecording?.let { path ->
+                            TextButton(onClick = {
+                                scope.launch {
+                                    mp3.stop()
+                                    runCatching { takePlayer.play(java.io.File(path)) }
+                                }
+                            }) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = null,
+                                    modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.size(6.dp))
+                                Text(stringResource(R.string.your_take))
+                            }
+                        }
                         if (said.isNotBlank()) {
                             Text(stringResource(R.string.what_i_heard),
                                 style = MaterialTheme.typography.labelMedium,
@@ -603,7 +683,14 @@ fun ShadowScreen(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                         }
-                        past.forEach { PastAttemptRow(it) }
+                        past.forEach { attemptRow ->
+                            PastAttemptRow(attemptRow) { path ->
+                                scope.launch {
+                                    mp3.stop()
+                                    runCatching { takePlayer.play(java.io.File(path)) }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -641,7 +728,7 @@ fun ShadowScreen(
 private fun MicButton(phase: ShadowPhase, onTap: () -> Unit) {
     val recording = phase == ShadowPhase.RECORDING
     val enabled = phase == ShadowPhase.IDLE || phase == ShadowPhase.RESULT ||
-        phase == ShadowPhase.HEARD_NOTHING || recording
+        phase == ShadowPhase.HEARD_NOTHING || phase == ShadowPhase.READ_FAILED || recording
     val pulse = rememberInfiniteTransition(label = "mic")
     val scale by pulse.animateFloat(
         initialValue = 1f, targetValue = if (recording) 1.06f else 1f,
@@ -663,14 +750,14 @@ private fun MicButton(phase: ShadowPhase, onTap: () -> Unit) {
             when (phase) {
                 ShadowPhase.RECORDING -> Icons.Filled.Close
                 ShadowPhase.ANALYZING -> Icons.Filled.MoreHoriz
-                ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING -> Icons.Filled.Refresh
+                ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING, ShadowPhase.READ_FAILED -> Icons.Filled.Refresh
                 else -> Icons.Filled.Mic
             },
             contentDescription = stringResource(
                 when (phase) {
                     ShadowPhase.RECORDING -> R.string.follow_the_highlight_tap_to_cancel
                     ShadowPhase.ANALYZING -> R.string.comparing
-                    ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING -> R.string.tap_to_try_again
+                    ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING, ShadowPhase.READ_FAILED -> R.string.tap_to_try_again
                     else -> R.string.tap_to_sync_shadow
                 }),
             tint = glyph,
@@ -680,7 +767,7 @@ private fun MicButton(phase: ShadowPhase, onTap: () -> Unit) {
 }
 
 @Composable
-private fun PastAttemptRow(a: ShadowAttempt) {
+private fun PastAttemptRow(a: ShadowAttempt, onPlay: ((String) -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
@@ -701,7 +788,17 @@ private fun PastAttemptRow(a: ShadowAttempt) {
         Text(a.learnerTranscript.ifBlank { silent },
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
-            color = MaterialTheme.colorScheme.onSurface)
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f))
+        // A take kept on disk can be heard again — including a phrase take,
+        // which is listed and replayable even though it never judges the line.
+        a.recordingFilename?.takeIf { onPlay != null && java.io.File(it).exists() }?.let { path ->
+            IconButton(onClick = { onPlay?.invoke(path) }, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.your_take),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+            }
+        }
     }
 }
 

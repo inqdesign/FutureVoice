@@ -53,6 +53,12 @@ class Mp3Player(private val cacheDir: File, private val source: String? = null) 
         }
     }
 
+    /** Play a file already on disk — a recorded take, kept as it was. */
+    suspend fun play(file: File) {
+        source?.let { Analytics.capture("audio_played", mapOf("source" to it)) }
+        playFile(file)
+    }
+
     private suspend fun playFile(file: File) = suspendCancellableCoroutine { cont ->
         stop()
         val mp = MediaPlayer().apply {

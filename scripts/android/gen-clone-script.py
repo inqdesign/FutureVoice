@@ -8,11 +8,14 @@ def seg(name):
     i = sw.index(f'private static let {name}')
     return sw[i:sw.index('\n    ]', i)]
 paras = {}
-for m in re.finditer(r'"([a-z]{2})": \[(.*?)\n        \]', seg('byLanguage'), re.S):
+# A script-qualified code carries its OWN text: zh-Hant must never be
+# handed the Simplified script, which is the same language in the wrong
+# writing system to read aloud from.
+for m in re.finditer(r'"([a-zA-Z-]{2,7})": \[(.*?)\n        \]', seg('byLanguage'), re.S):
     items = re.findall(r'"((?:\\.|[^"\\])*)"', m.group(2))
     paras[m.group(1)] = [t.replace('\\"', '"').replace('\\n', '\n') for t in items]
 greet = {m.group(1): m.group(2).replace('\\"', '"')
-         for m in re.finditer(r'"([a-z]{2})": "((?:\\.|[^"\\])*)"', seg('greetings'))}
+         for m in re.finditer(r'"([a-zA-Z-]{2,7})": "((?:\\.|[^"\\])*)"', seg('greetings'))}
 assert set(paras) == set(greet) and all(len(v) == 6 for v in paras.values())
 def k(s): return '"' + s.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + '"'
 out = ['package com.roro.futurevoice.talk', '', '/**',
@@ -21,10 +24,19 @@ out = ['package com.roro.futurevoice.talk', '', '/**',
        ' * never retyped. Edit the Swift file, then re-run the script.', ' */',
        'object VoiceCloneScript {', '',
        '    fun paragraphs(language: String): List<String> =',
-       '        byLanguage[language] ?: byLanguage.getValue("en")', '',
+       '        handAuthored(language) ?: byLanguage.getValue("en")', '',
+       '    /**',
+       "     * The script for a language, or null when there isn't one. The",
+       '     * EXACT code is tried first so a script-qualified language can',
+       '     * carry its own text — zh-Hant must not be handed the Simplified',
+       '     * script, which is the same language and the wrong writing system',
+       '     * to read aloud from.',
+       '     */',
+       '    fun handAuthored(language: String): List<String>? =',
+       '        byLanguage[language] ?: byLanguage[language.take(2)]', '',
        "    /** The clone's first words, spoken the moment it exists. */",
        '    fun greeting(language: String): String =',
-       '        greetings[language] ?: greetings.getValue("en")', '',
+       '        greetings[language] ?: greetings[language.take(2)] ?: greetings.getValue("en")', '',
        '    private val byLanguage: Map<String, List<String>> = mapOf(']
 for code in paras:
     out.append(f'        "{code}" to listOf(')
