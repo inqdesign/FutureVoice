@@ -70,16 +70,6 @@ struct MeTab: View {
     @State private var confirmingAudioCacheClear = false
     @State private var previewFeedback: FeedbackSheet.Context?
     #endif
-    #if DEBUG
-    /// Subpage a `-capture` run opens on launch — `MeTab` has no route of its
-    /// own (every page is a NavigationLink), so screenshots of a subpage
-    /// need this door. Nil in the app proper.
-    enum CapturePage { case voice }
-    private let capturePage: CapturePage?
-    @State private var captureVoiceOpen = false
-    init(capturePage: CapturePage? = nil) { self.capturePage = capturePage }
-    #endif
-
     var body: some View {
         NavigationStack {
             List {
@@ -293,10 +283,6 @@ struct MeTab: View {
                 #endif
             }
             .navigationTitle("Settings")
-            #if DEBUG
-            .navigationDestination(isPresented: $captureVoiceOpen) { voicePage }
-            .onAppear { if capturePage == .voice { captureVoiceOpen = true } }
-            #endif
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

@@ -289,10 +289,6 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
-        case "me-voice":
-            // Me → Voice: the clone's name, scene partner voice, accent, and
-            // since 2026-09-23 the speaking-speed picker under Accent.
-            return AnyView(MeTab(capturePage: .voice).environmentObject(appState))
         case "sync":
             return AnyView(NavigationStack {
                 List { SyncSection() }
