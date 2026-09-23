@@ -1057,6 +1057,37 @@ ceiling) and retries once on a timeout. `edgeFunctions` caps every attempt at
 it a failure, and that learner cancelled her trial two minutes later. The idle
 timeout stays 40 s — only the ceiling moved, and only for this one call.
 
+**The `ended` record is read by whoever gets it first** (2026-09-23). The
+hang-up drain above never worked: `receiveNext` always has a read
+outstanding, so IT received `ended`, and its torn-down guard threw the
+message away — 10 records for 179 calls in the week of 09-16. A torn-down
+read now keeps exactly that one message (`endedRecord`, `logSession` is
+once-only via `sessionLogged`), and a gateway `error` — which the gateway
+follows with `ended` a millisecond later — closes through
+`closeKeepingSessionRecord` like a hang-up does, instead of a bare
+`teardown()` that cancelled it unread.
+
+**A wall is not a failure, and the console's "문제" is an ALLOWLIST** (same
+day). Every wall (`insufficient_credits` is the free call's designed
+wrap-up) goes through `fail()`, so it lands in `talk_rt_failed` beside a
+dead socket; `20260923150000` hands the console the row's `code` and lists
+failures as call endings (`rt_sessions.src = 'failed'`), and the page keeps
+`RT_WALL` apart from `isDroppedCall`. The problem count itself is
+`FAILURE_EVENTS`: `client_events` carries every kind of record the app
+writes (shadow timings, paywall views, the wrap-up closing) and a denylist
+drew all of it as red dots — 33 of 34 people had "문제", 13 had a failure.
+A new telemetry event is not a problem until it is named there.
+
+**A summary that can't be decoded says what it wrote** (same day). Eight
+retries and two failures that week were all `dataCorrupted@` at the root —
+not truncations (max 2083 of 8192 tokens), and nothing said what the model
+produced. `sendJSONStreamAccumulating` now throws `GeminiError.malformedJSON`
+with Foundation's line/column, a 160-char excerpt around it, and
+`dropped_chunks` (SSE lines that failed to decode — a hole in the text is
+the transport's fault, a typo the model's); `decodeDetail` carries all of it
+into `talk_summary_retry` / `talk_summary_error`. Read the next one off the
+console before guessing at a repair pass.
+
 ## A call outlives the screen (2026-08-18)
 
 A phone call doesn't end because you looked at something else. Until now this

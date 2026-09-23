@@ -332,6 +332,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var localOpener: (text: String, buffer: AVAudioPCMBuffer, rate: Double)?
 
     private var isTornDown = false
+    /// The gateway's `ended` record has been written for this call. It can
+    /// arrive on two paths (the live read loop and the post-hang-up drain)
+    /// and must count once.
+    private var sessionLogged = false
 
     // MARK: - Lifecycle
 
@@ -355,6 +359,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         default: return
         }
         isTornDown = false
+        sessionLogged = false
         wallCode = nil
         heldWall = nil
         heldWallTask?.cancel()
@@ -387,16 +392,6 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.step("connect: mic granted")
             let token = try await Self.accessToken()
             Self.step("connect: got token")
-            do { try startAudio() } catch {
-                // Launch-time races (another component touching the session
-                // mid-build) can stop the engine under the first attempt —
-                // one settle-and-retry saves the call instead of failing it.
-                Self.step("connect: startAudio threw (\(error)) — retrying once")
-                stopAudio()
-                try? await Task.sleep(nanoseconds: 600_000_000)
-                try startAudio()
-            }
-            Self.step("connect: audio up")
             // The greeting the launcher already synthesized (see
             // `FreeTalkOpeners.warmAudio`) is on disk in the learner's own
             // voice. Play it from there and the gateway is never asked for
@@ -413,10 +408,46 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 startOpener = nil
                 Self.step("opener: playing the cached take locally")
             }
+            // The socket goes up BEFORE the audio stack, and is read only
+            // AFTER it. Building the stack (session activation, voice
+            // processing, the channel-settling cycle) takes ~2 s on an iPhone
+            // speaker, and the gateway's own `start` → `ready` another ~2.5 s;
+            // run one after the other they were 4.5 s of silence after the
+            // tap (device log 2026-09-21: audio 55.62 → 57.66, ready 60.10).
+            // Side by side, the call waits only for the slower one. Nothing
+            // can arrive too early: a WebSocket task holds incoming messages
+            // until `receive` is called, so `ready` and the first reply chunk
+            // wait for an engine that can play them, and the gateway buffers
+            // mic audio until its transcriber is up anyway.
             try openSocket(token: token, voiceId: voiceId,
                            language: language, system: system,
                            opener: startOpener, history: startHistory)
             Self.step("connect: socket opened")
+            // The slow half off the main thread — see `prepareAudio`. A
+            // failure here falls through to the inline build below, which
+            // either succeeds or takes the usual retry.
+            let prepared = try? await Task.detached(priority: .userInitiated) {
+                try Self.prepareAudio()
+            }.value
+            guard !isTornDown else {
+                if prepared != nil {
+                    try? AVAudioSession.sharedInstance()
+                        .setActive(false, options: .notifyOthersOnDeactivation)
+                }
+                return
+            }
+            do { try startAudio(prepared: prepared) } catch {
+                // Launch-time races (another component touching the session
+                // mid-build) can stop the engine under the first attempt —
+                // one settle-and-retry saves the call instead of failing it.
+                Self.step("connect: startAudio threw (\(error)) — retrying once")
+                stopAudio()
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                guard !isTornDown else { return }
+                try startAudio()
+            }
+            Self.step("connect: audio up")
+            receiveNext()
             // CONCURRENTLY with the gateway's own start-up, never before it.
             // The gateway spends 2.7–3.6 s on `start` → `ready` (verify, voice
             // ownership, allowance pre-flight, the transcriber's handshake)
@@ -574,7 +605,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         if let existing = try? await SupabaseProvider.shared.auth.session {
             return existing.accessToken
         }
+        // DEBUG only. In a shipped build a missing session means the user
+        // behind this install is gone (an unclaimed anonymous clone the
+        // server reclaimed), and minting a fresh anonymous user here dialled
+        // the dead voice under a stranger's id — `voice_forbidden`, no word
+        // spoken, and the sign-up that followed linked the stale voice to a
+        // real account (2026-09-21). `AppState.voiceWasDeleted` is the answer.
+        #if DEBUG
         return try await SupabaseProvider.shared.auth.signInAnonymously().accessToken
+        #else
+        throw URLError(.userAuthenticationRequired)
+        #endif
     }
 
     /// The one way a call fails. Sets the state the view reacts to AND
@@ -651,6 +692,18 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // shipped (checked 2026-09-15), and the console had drop counts with
         // nothing to divide them by. The audio stops NOW; the socket alone is
         // kept a moment longer to hear that last word.
+        closeKeepingSessionRecord()
+    }
+
+    /// Tear the call down but let the socket live long enough to hear the
+    /// gateway's `ended`. Two things had to be true for the record to land,
+    /// and until 2026-09-23 neither was (10 records for 179 calls that
+    /// week): `receiveNext` always has a read outstanding, so IT gets the
+    /// message before the drain does — and its torn-down guard threw it
+    /// away; and a gateway `error` (a wall, a dead transcriber) is followed
+    /// by `ended` on the same socket a millisecond later, which a plain
+    /// `teardown()` cancelled unread.
+    private func closeKeepingSessionRecord() {
         let draining = socket
         socket = nil
         teardown()
@@ -666,15 +719,21 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// hang-up is dropped: the call is over.
     private static let sessionRecordWait: UInt64 = 1_500_000_000
 
+    /// The parsed `ended` message, or nil for anything else the socket said.
+    private static func endedRecord(in text: String) -> [String: Any]? {
+        guard let data = text.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              json["type"] as? String == "ended" else { return nil }
+        return json
+    }
+
     private func drainForSessionRecord(_ socket: URLSessionWebSocketTask) async {
         let read = Task { () -> [String: Any]? in
             while !Task.isCancelled {
                 guard let message = try? await socket.receive() else { return nil }
                 guard case .string(let text) = message,
-                      let data = text.data(using: .utf8),
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-                else { continue }
-                if json["type"] as? String == "ended" { return json }
+                      let json = Self.endedRecord(in: text) else { continue }
+                return json
             }
             return nil
         }
@@ -720,10 +779,37 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
 
     // MARK: - Audio graph
 
-    private func startAudio() throws {
+    /// A fresh engine whose session and voice processing are already settled
+    /// — the slow half of `startAudio`, built off the main thread.
+    struct PreparedAudio: @unchecked Sendable {
+        let engine: AVAudioEngine
+    }
+
+    /// `prepared` is the call's first build, made by `prepareAudio` on a
+    /// background thread; a rebuild mid-call passes nothing and does it all
+    /// inline, as it always has.
+    private func startAudio(prepared: PreparedAudio? = nil) throws {
         // Fresh graph every time — see the `engine` declaration.
-        engine = AVAudioEngine()
+        engine = try (prepared ?? Self.prepareAudio()).engine
         player = AVAudioPlayerNode()
+        let session = AVAudioSession.sharedInstance()
+        let input = engine.inputNode
+        let probeFormat = input.outputFormat(forBus: 0)
+        guard probeFormat.sampleRate > 0, probeFormat.channelCount > 0 else {
+            throw RealtimeError.audioUnavailable
+        }
+        try buildGraph(session: session)
+    }
+
+    /// Session category, activation, the channel-count and earphone cycles,
+    /// and voice processing: ~1.8 s on an iPhone speaker (device log
+    /// 2026-09-21), every step of it blocking. On the main thread that was
+    /// a frozen screen right as the call faded in after the ring's morph —
+    /// no pill, no indicator, then the voice. Touches nothing of the
+    /// client's, so the first build runs it detached; `AVAudioSession` is
+    /// thread-safe and an engine that isn't running yet belongs to no one.
+    nonisolated static func prepareAudio() throws -> PreparedAudio {
+        let engine = AVAudioEngine()
         let session = AVAudioSession.sharedInstance()
         // Same category/options as a Talk call: whatever the learner is
         // wearing is the mic (`recordOptions` includes HFP), and output is
@@ -892,10 +978,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let probeFormat = input.outputFormat(forBus: 0)
         Self.step("audio: session sr=\(session.sampleRate) inCh=\(session.inputNumberOfChannels) "
             + "inputAvail=\(session.isInputAvailable) probe=\(probeFormat.sampleRate)/\(probeFormat.channelCount)")
-        guard probeFormat.sampleRate > 0, probeFormat.channelCount > 0 else {
-            throw RealtimeError.audioUnavailable
-        }
+        return PreparedAudio(engine: engine)
+    }
 
+    /// The fast half: player, tap, start — on the main thread, where the
+    /// client's state lives.
+    private func buildGraph(session: AVAudioSession) throws {
         // The wire format the gateway (and Gemini) expects.
         guard let uplink = AVAudioFormat(commonFormat: .pcmFormatInt16,
                                          sampleRate: 16000, channels: 1,
@@ -1528,9 +1616,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                             history: [(role: String, text: String)]) throws {
         let task = session.webSocketTask(with: Self.gatewayURL)
         socket = task
-        mic.set(converter: converter, format: uplinkFormat, socket: task)
+        // No mic wiring and no `receiveNext` here: `connect` opens the socket
+        // before the audio stack exists, `startAudio` hands the tap the
+        // socket once it is live, and reading starts after that.
         task.resume()
-        receiveNext()
         var payload: [String: Any] = [
             "type": "start",
             "token": token,
@@ -1555,7 +1644,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private func receiveNext() {
         socket?.receive { [weak self] result in
             Task { @MainActor [weak self] in
-                guard let self, !self.isTornDown else { return }
+                guard let self else { return }
+                if self.isTornDown {
+                    // The call is over, but this read was outstanding when it
+                    // ended and is the one that gets the gateway's last word.
+                    if case .success(.string(let text)) = result,
+                       let json = Self.endedRecord(in: text) {
+                        self.logSession(json)
+                    }
+                    return
+                }
                 switch result {
                 case .failure(let error):
                     // The gateway closes the socket right after a wall; the
@@ -1581,6 +1679,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// from `hangUp`'s drain, which is the ONLY way it arrives for a call the
     /// learner ends — see there.
     private func logSession(_ json: [String: Any]) {
+        guard !sessionLogged else { return }
+        sessionLogged = true
         // The gateway's last word. The only per-session record this path
         // produces — the reply and the voice never touch the usage
         // ledger — so it goes straight to client_events for the console.
@@ -1787,7 +1887,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 }
             }
             fail(code.isEmpty ? "gateway" : code, message)
-            teardown()
+            // The gateway's `ended` follows this `error` on the same socket;
+            // a bare `teardown()` cancelled it unread.
+            closeKeepingSessionRecord()
         default:
             break
         }
@@ -1852,7 +1954,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         heldWallTask = nil
         guard !isTornDown else { return }
         fail(held.code, held.message)
-        teardown()
+        closeKeepingSessionRecord()
     }
 
     private func handOverReply() {

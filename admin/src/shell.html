@@ -815,15 +815,39 @@ const REVIEW_CTX = {first_talk:'첫 통화 후', first_watch:'첫 Watch 장면 �
   subscription_survey:'구독 가격 설문'};
 const RT_REASON_KO = {
   hangup:'직접 종료', idle:'말이 없어 종료', client_gone:'앱과 끊김', socket_closed:'소켓 끊김',
-  transcriber:'받아쓰기 실패', internal:'서버 오류', session_ceiling:'1시간 상한',
+  socket:'소켓 끊김', transcriber:'받아쓰기 실패', internal:'서버 오류', session_ceiling:'1시간 상한',
   unauthorized:'인증 실패', bad_json:'프로토콜 오류', voice_forbidden:'보이스 권한',
+  mic_silent:'마이크 무음', audio_start:'마이크 열기 실패', route:'이어폰 전환 실패', gateway:'게이트웨이 오류',
   insufficient_credits:'무료 통화 소진', daily_cap_reached:'이번 달 소진', fair_use_limit:'공정사용 확인',
 };
-const RT_OK = new Set(['hangup']);
-// A warning is something the call SURVIVED, and a cancelled drill is the
-// learner tapping cancel. Neither is a red dot beside a name.
-const NOT_A_FAILURE = new Set(['shadow_attempt_cancelled','talk_rt_warning',
-                               'talk_rt_reconnect','talk_summary_retry']);
+// How a call ended, in three kinds. `RT_OK` is an end somebody chose (idle
+// is the call putting itself down after 30 s of nobody). `RT_WALL` is the
+// allowance running out — the free call's designed wrap-up since 2026-09-18,
+// and a spent month on Light — which the app records through the same
+// `talk_rt_failed` door as a dead socket. Neither is a failure; everything
+// else is.
+const RT_OK   = new Set(['hangup','idle']);
+const RT_WALL = new Set(['insufficient_credits','daily_cap_reached','fair_use_limit']);
+const isDroppedCall = r => !RT_OK.has(r.reason) && !RT_WALL.has(r.reason);
+// A problem is something that BROKE. `client_events` carries every kind of
+// record the app writes — shadowing timings, paywall views, the wrap-up
+// closing — and the week of 2026-09-16 the console drew all of it as red
+// dots: 33 of 34 people had "문제", 13 had a failure. So this is an
+// allowlist, never a denylist; a new telemetry event is not a problem until
+// it is named here. `talk_rt_failed` counts by its code (see RT_WALL).
+const FAILURE_EVENTS = new Set(['talk_turn_error','talk_summary_error',
+  'talk_tts_split_open_failed','talk_tts_split_rest_failed','shadow_rescore_failed',
+  'talk_rt_failed']);
+const isFailure = e => {
+  if(!FAILURE_EVENTS.has(e.event)) return false;
+  // `code` arrives with 20260923150000; a Worker on the older function sees
+  // none and counts every rt failure, as before.
+  if(e.event==='talk_rt_failed' && e.code) return isDroppedCall({reason:e.code});
+  return true;
+};
+/** "통화 끊김 · 소켓 끊김" — the event, then which failure it was. */
+const failureLabel = e => (EVENT_KO[e.event]||e.event)
+  + (e.code ? ` · ${RT_REASON_KO[e.code]||e.code}` : '');
 
 /* ------------------------------------------------------- user helpers */
 const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
@@ -900,7 +924,7 @@ const cancelledBeforeUse = u => {
 };
 const realSession = s => s.secs>=10;
 const failuresOf = idx => forUser(DATA.recentEvents, idx)
-  .filter(e => !NOT_A_FAILURE.has(e.event)).reduce((a,e)=>a+e.n, 0);
+  .filter(isFailure).reduce((a,e)=>a+e.n, 0);
 
 /** Signed up on or after launch day. The funnel and the cohort are claims
  *  ABOUT that intake, so they must not quietly include the beta accounts the
@@ -1001,16 +1025,16 @@ function renderAttention(users){
   }
   // 3. Something actually broke for them.
   for(const u of users){
-    const fails = forUser(DATA.recentEvents, u.idx).filter(e=>!NOT_A_FAILURE.has(e.event));
+    const fails = forUser(DATA.recentEvents, u.idx).filter(isFailure);
     for(const e of fails){
       items.push({at: e.last, pri:0, color:'var(--crit)',
-        t:`<b>${esc(nameOf(u))}</b> ${EVENT_KO[e.event]||e.event} ${e.n}회`,
+        t:`<b>${esc(nameOf(u))}</b> ${failureLabel(e)} ${e.n}회`,
         w: e.detail ? esc(e.detail) : `빌드 ${e.build||'?'}`});
     }
   }
   // 4. Calls that ended for a reason nobody chose.
   for(const u of users){
-    const dropped = forUser(DATA.rtSessions, u.idx).filter(r=>!RT_OK.has(r.reason));
+    const dropped = forUser(DATA.rtSessions, u.idx).filter(isDroppedCall);
     if(!dropped.length) continue;
     const last = dropped[0];
     items.push({at:last.at, pri:0, color:'var(--crit)',
@@ -1047,8 +1071,8 @@ function buildFeed(users){
     for(const r of (u.reviews||[])) add(r.at || (r.d+'T12:00:00Z'), 'trouble','var(--s2)',
         `${who} 리뷰 “${esc(r.body)}”`, REVIEW_CTX[r.context]||r.context);
     for(const e of forUser(DATA.recentEvents, u.idx)){
-      if(NOT_A_FAILURE.has(e.event)) continue;
-      add(e.last, 'trouble','var(--crit)', `${who} ${EVENT_KO[e.event]||e.event} ${e.n}회`,
+      if(!isFailure(e)) continue;
+      add(e.last, 'trouble','var(--crit)', `${who} ${failureLabel(e)} ${e.n}회`,
           e.detail ? esc(e.detail) : '');
     }
     for(const s of forUser(DATA.recentSessions, u.idx)){
@@ -1058,6 +1082,10 @@ function buildFeed(users){
     }
     for(const r of forUser(DATA.rtSessions, u.idx)){
       if(RT_OK.has(r.reason)) continue;
+      if(RT_WALL.has(r.reason)){
+        add(r.at, 'talk','var(--s2)', `${who} 통화 끝남`, `${RT_REASON_KO[r.reason]} · 턴 ${r.turns}`);
+        continue;
+      }
       add(r.at, 'trouble','var(--crit)', `${who} 통화 끊김`, RT_REASON_KO[r.reason]||r.reason);
     }
   }
@@ -2032,7 +2060,7 @@ function personDetail(u){
   for(const f of forUser(DATA.freeRecent, u.idx)) free[f.purpose]=(free[f.purpose]||0)+f.n;
   const freeRows = Object.entries(free).sort((a,b)=>b[1]-a[1]);
   const subs = forUser(DATA.subEvents, u.idx);
-  const errs = forUser(DATA.recentEvents, u.idx);
+  const errs = forUser(DATA.recentEvents, u.idx).filter(isFailure);
   const rt = forUser(DATA.rtSessions, u.idx).slice(0,12);
   const col = (title, items, empty) =>
     `<div><h4>${title}</h4>${items.length?`<ul>${items.join('')}</ul>`:`<div class="muted">${empty}</div>`}</div>`;
@@ -2081,17 +2109,19 @@ function personDetail(u){
       + ` · ${s.summarized?'<span class="ok">요약 ✓</span>':'<span class="muted">요약 없음</span>'}</li>`),
       '통화 기록 없음')}
     ${col('통화 종료', rt.map(r => {
-      const good = RT_OK.has(r.reason);
-      return `<li>${fmtTs(r.at)} · <b class="${good?'ok':'bad'}">${RT_REASON_KO[r.reason]||r.reason}</b>`
-        + ` · 턴 ${r.turns} · ${fmtMin(r.secs)}`
+      const cls = RT_OK.has(r.reason) ? 'ok' : RT_WALL.has(r.reason) ? 'muted' : 'bad';
+      return `<li>${fmtTs(r.at)} · <b class="${cls}">${RT_REASON_KO[r.reason]||r.reason}</b>`
+        + ` · 턴 ${r.turns}${r.src==='failed'?'':` · ${fmtMin(r.secs)}`}`
         + (r.p50?` · 응답 ${(r.p50/1000).toFixed(1)}초`:'')
-        + (r.warnings?` <span class="muted">복구 ${r.warnings}회</span>`:'') + `</li>`;
+        + (r.warnings?` <span class="muted">복구 ${r.warnings}회</span>`:'')
+        + (r.src==='failed' && r.detail && !RT_WALL.has(r.reason)
+            ? ` <span class="muted">${esc(r.detail)}</span>`:'') + `</li>`;
     }), '기록 없음 (2026-09-13 이후 빌드부터)')}
     ${col('그 밖의 활동', freeRows.map(([p,n])=>`<li>${PURPOSE_KO[p]||p} <b>${n}</b>회</li>`), '없음')}
     ${col('구독 이벤트', subs.map(e =>
       `<li>${fmtTs(e.at)} · ${subEventLabel(e)} · ${PLAN_KO[e.plan]||e.plan}</li>`), '없음')}
     ${col('문제 (7일)', errs.map(e =>
-      `<li>${EVENT_KO[e.event]||e.event} <b>${e.n}</b>회 · ${ago(e.last)}`
+      `<li>${failureLabel(e)} <b>${e.n}</b>회 · ${ago(e.last)}`
       + `${e.detail?` <span class="muted">${esc(e.detail)}</span>`:''}</li>`), '없음')}
     ${(u.reviews||[]).length ? `<div><h4>리뷰</h4>${(u.reviews||[]).map(r =>
       `<div class="quote">${esc(r.body)}<span class="ctx">${REVIEW_CTX[r.context]||r.context}`
@@ -2140,7 +2170,7 @@ function renderPeople(users){
     + `<th class="num">시간</th><th class="num">장면</th><th>구독</th><th>마지막</th><th>신호</th></tr></thead><tbody>`;
   for(const u of rows){
     const errs = failuresOf(u.idx);
-    const dropped = forUser(DATA.rtSessions, u.idx).filter(r=>!RT_OK.has(r.reason)).length;
+    const dropped = forUser(DATA.rtSessions, u.idx).filter(isDroppedCall).length;
     const sig = [];
     if(u.reviewCount) sig.push(`<span class="chip">리뷰 ${u.reviewCount}</span>`);
     if(errs) sig.push(`<span class="chip"><span class="dot" style="background:var(--crit)"></span>문제 ${errs}</span>`);

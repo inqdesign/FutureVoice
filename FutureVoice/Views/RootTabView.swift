@@ -407,6 +407,7 @@ struct RootTabView: View {
         // round trip, and a second tap inside that window would otherwise
         // mount two calls.
         guard freeTalkCallId == nil, !freeTalkClosing, !pillDocked else { return }
+        RealtimeTalkClient.step("ui: ring tapped — morph starts")
         // Stage 0 — the proxy mounts ON the ring's pose (the home ring hides
         // itself the same tick), and the backdrop starts covering the home.
         appState.talkRingProxyActive = true
@@ -426,6 +427,7 @@ struct RootTabView: View {
             // cost can't stutter an animation that has already finished.
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard pillDocked, !freeTalkClosing else { return }   // closed mid-open
+            RealtimeTalkClient.step("ui: call view mounting")
             withAnimation(.easeOut(duration: 0.2)) { freeTalkCallId = UUID() }
             // Stage 3 — proxy hands off to the call's own identical mic pill.
             try? await Task.sleep(nanoseconds: 250_000_000)

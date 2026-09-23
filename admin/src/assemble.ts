@@ -18,6 +18,10 @@ const TEST_IDS = new Set([
   // stranger to walk the onboarding and the free first call.
   "c5a85f25-a631-47c5-b32b-fb5bc89c551e",
   "5692cfc2-13ec-4f7e-a3bc-31daee02e28f",
+  // The owner's second device (2026-09-23) — the private-relay Apple account
+  // re-created on 2026-09-16 that carries the admin flag. Its 09-15
+  // predecessor (c7565d27-…) was already flagged; this id replaced it.
+  "b28ca7b1-dbd8-46de-bfd2-5857e05665bc",
 ]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
@@ -123,6 +127,9 @@ export function assemble(raw: any) {
       email: u.email,
       dev: TEST_IDS.has(u.id),
       owner: u.id === OWNER_ID,
+      // Not a signup: an onboarding session that never reached Apple sign-in
+      // (field absent until 20260923110000 is applied → false).
+      anonymous: !!u.anonymous,
       signedUp: u.signed_up,
       origin: preWindow ? raw.windowStart : u.signed_up,
       preWindow,
