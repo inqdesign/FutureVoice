@@ -241,11 +241,12 @@ enum WeeklyTestEngine {
         rng: inout WeeklyTestRandom
     ) -> [WeeklyTestItem] {
         let offered = Set(sessions.flatMap { $0.summary?.expressionsOffered ?? [] }.map { $0.lowercased() })
-        struct Line { let text: String; let session: Session; let turn: Turn; let weight: Int }
+        struct Line { let text: String; let session: Session; let lineId: UUID; let weight: Int }
         var lines: [Line] = []
         var seen = excluding
         for entry in fluentTurns {
-            for sentence in TalkCurriculum.sentences(in: entry.turn.transcript) {
+            let parts = TalkCurriculum.sentences(in: entry.turn.transcript)
+            for (index, sentence) in parts.enumerated() {
                 let n = WordSplitter.count(sentence)
                 guard n >= 4, n <= 16, isInTargetScript(sentence) else { continue }
                 let key = CarryoverDetector.normalized(sentence)
@@ -253,13 +254,20 @@ enum WeeklyTestEngine {
                 seen.insert(key)
                 let lower = sentence.lowercased()
                 let weight = offered.filter { lower.contains($0) }.count
-                lines.append(Line(text: sentence, session: entry.session, turn: entry.turn, weight: weight))
+                // The line's identity is the talk book's: a one-sentence turn
+                // keeps its turn id (its recorded audio matches the text), a
+                // sentence cut from a longer turn gets the book's sentence id.
+                // The turn's audio must never play for a sentence — it carries
+                // the neighbours too (heard on device, 2026-09-23).
+                let lineId = parts.count == 1 ? entry.turn.id
+                    : TalkCurriculum.sentenceLineId(for: entry.turn.id, index: index)
+                lines.append(Line(text: sentence, session: entry.session, lineId: lineId, weight: weight))
             }
         }
         let shuffled = lines.shuffled(using: &rng).sorted { $0.weight > $1.weight }
         return shuffled.prefix(maxSpeak).map {
             WeeklyTestItem(id: UUID(), kind: .speak, prompt: "", answer: $0.text, options: [],
-                           sessionId: $0.session.id, turnId: $0.turn.id)
+                           sessionId: $0.session.id, turnId: $0.lineId)
         }
     }
 

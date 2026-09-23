@@ -28,6 +28,8 @@ struct WeeklyTestView: View {
     @State private var speakScore: Int?
     @State private var recordingURL: URL?
     @State private var autoStopTask: Task<Void, Never>?
+    /// "Hear it" is fetching the line in the learner's voice.
+    @State private var loadingLineAudio = false
     /// Longest a take may run before it stops itself.
     static let maxRecordSeconds: Double = 12
     /// A second go at this test's misses, played here and never saved: it is
@@ -237,16 +239,19 @@ struct WeeklyTestView: View {
                 Text(item.answer)
                     .font(.title3.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
-                if let turnId = item.turnId, TurnAudioStore.shared.url(for: turnId) != nil, outcome == nil {
+                if outcome == nil, appState.voiceCloneId != nil {
                     Button {
-                        play(item)
+                        Task { await hearLine(item) }
                     } label: {
-                        Label("Hear it", systemImage: player.isPlaying ? "speaker.wave.3.fill" : "speaker.wave.2")
-                            .font(.footnote.weight(.semibold))
+                        HStack(spacing: 6) {
+                            if loadingLineAudio { ProgressView().controlSize(.mini) }
+                            Label("Hear it", systemImage: player.isPlaying ? "speaker.wave.3.fill" : "speaker.wave.2")
+                        }
+                        .font(.footnote.weight(.semibold))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(speakPhase == .recording || speakPhase == .reading)
+                    .disabled(speakPhase == .recording || speakPhase == .reading || loadingLineAudio)
                 }
             }
         }
@@ -823,10 +828,55 @@ struct WeeklyTestView: View {
         resume(paper)
     }
 
+    /// The transcript of the turn with this id, if a talk still has it.
+    private static func turnText(_ turnId: UUID) -> String? {
+        for session in SessionStore.shared.load() {
+            if let turn = session.turns.first(where: { $0.id == turnId }) { return turn.transcript }
+        }
+        return nil
+    }
+
+    /// A listen item plays the turn's own recording: the text IS the turn.
     private func play(_ item: WeeklyTestItem) {
         guard let turnId = item.turnId, let data = TurnAudioStore.shared.data(for: turnId) else { return }
         if player.isPlaying { player.stop(); return }
         try? player.play(data, source: "weekly_test", forceSessionReset: true)
+    }
+
+    /// A speak item's line, exactly and only that line, in the learner's own
+    /// voice — resolved the way the shadow screen does: the line's own saved
+    /// audio, else the phrase cache, else one synthesis that both caches
+    /// keep. A sentence cut from a longer turn never plays the turn's file:
+    /// its audio has the neighbouring sentences in it.
+    private func hearLine(_ item: WeeklyTestItem) async {
+        if player.isPlaying { player.stop(); return }
+        guard let voiceId = appState.voiceCloneId else { return }
+        // The saved file is only the line when the turn IS the line. Items
+        // minted before sentence ids existed carry the whole turn's id, and
+        // its file has the neighbouring sentences in it — so the text is
+        // checked, never trusted by id alone.
+        if let turnId = item.turnId, let data = TurnAudioStore.shared.data(for: turnId),
+           Self.turnText(turnId).map({ CarryoverDetector.normalized($0) }) == CarryoverDetector.normalized(item.answer) {
+            try? player.play(data, source: "weekly_test", forceSessionReset: true)
+            return
+        }
+        if let data = PhraseAudioStore.shared.data(text: item.answer, voiceId: voiceId) {
+            try? player.play(data, source: "weekly_test", forceSessionReset: true)
+            return
+        }
+        loadingLineAudio = true
+        defer { loadingLineAudio = false }
+        do {
+            let (data, timings) = try await ElevenLabsClient.shared
+                .synthesizeWithTimestamps(voiceId: voiceId, text: item.answer, purpose: "shadow")
+            PhraseAudioStore.shared.save(data, text: item.answer, voiceId: voiceId, timings: timings)
+            if let turnId = item.turnId {
+                TurnAudioStore.shared.save(data, turnId: turnId, timings: timings)
+            }
+            try? player.play(data, source: "weekly_test", forceSessionReset: true)
+        } catch {
+            // Offline or out of allowance: the line is still on screen to read.
+        }
     }
 }
 
