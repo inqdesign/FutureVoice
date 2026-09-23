@@ -562,6 +562,69 @@ object CaptureSeed {
                 turns = turns, summary = summary)
         }
 
+    /**
+     * iOS `DebugCapture.japaneseTalkSession` — the one target that writes no
+     * spaces. The transcript has to draw its 、。 back around highlighted
+     * words, the correction has to light the changed segments only, and the
+     * word chapter has to hold headwords (疲れる, not 疲れ).
+     */
+    val japaneseTalkSession: Session
+        get() {
+            val started = now() - 900_000L
+            val turns = listOf(
+                Turn(id = stableId("turn", "ja-0"), role = TurnRole.FLUENT_SELF,
+                    transcript = "久しぶり！最近、家事に追われてるって言ってたけど、少しは落ち着いた？",
+                    durationMs = 3200, timestamp = started),
+                Turn(id = stableId("turn", "ja-1"), role = TurnRole.USER,
+                    transcript = "うん、でも洗濯が溜まって、とても面倒くさいでした。", durationMs = 62_000,
+                    timestamp = started + 6_000L,
+                    suggestion = com.roro.futurevoice.talk.TurnSuggestion(
+                        "うん、でも洗濯が溜まって、とても面倒くさかった。", "い형용사의 과거형")),
+                Turn(id = stableId("turn", "ja-2"), role = TurnRole.FLUENT_SELF,
+                    transcript = "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。",
+                    durationMs = 4200, timestamp = started + 70_000L),
+                Turn(id = stableId("turn", "ja-3"), role = TurnRole.USER,
+                    transcript = "そうだね。週末に掃除をするつもりです。", durationMs = 58_000,
+                    timestamp = started + 80_000L,
+                    suggestion = com.roro.futurevoice.talk.TurnSuggestion(
+                        "そうだね。週末に掃除するつもり。", "반말로 통일")),
+            )
+            val summary = SessionSummary(
+                phrasesUsed = listOf(com.roro.futurevoice.talk.PhraseFeedback(
+                    userSaid = "面倒くさいでした", fluentAlternative = "面倒くさかった",
+                    reason = "い형용사의 과거형")),
+                suggestedDrills = listOf("週末にまとめて片付けるつもり。", "洗濯が溜まって面倒くさかった。"),
+                overallNote = "자연스럽게 이어졌어요. 형용사 과거형만 다듬으면 돼요.",
+                scorecard = sampleScorecard,
+                newWordsUsed = listOf("洗濯", "掃除", "溜まる"),
+                expressionsUsed = listOf("週末に掃除をする"),
+                expressionsOffered = listOf("家事に追われる", "とりあえず一つずつ", "少しは落ち着いた"),
+                grammarIssues = listOf(com.roro.futurevoice.talk.GrammarIssue(
+                    quote = "とても面倒くさいでした", correction = "とても面倒くさかった",
+                    note = "い형용사는 かった로 과거를 만들어요")),
+            )
+            return Session(
+                id = "00000000-0000-0000-0000-0000000000D2", userId = stableId("user", "ja"),
+                targetLanguage = "ja", mode = SessionMode.CONVERSATION,
+                topic = "家事と通勤", startedAt = started, endedAt = started + 600_000L,
+                turns = turns, summary = summary)
+        }
+
+    /** A few Japanese words in the notebook, so the cloud has something to
+     *  open a card on. */
+    fun seedJapaneseWords(context: Context) = kotlinx.coroutines.runBlocking {
+        val vocab = VocabStore.shared(context)
+        for (w in listOf("慌てる", "洗濯", "掃除", "溜まる", "通勤", "片付ける", "家事", "面倒くさい")) {
+            vocab.addStudying(w, "ja")
+        }
+    }
+
+    /** The Japanese karaoke line — words, not one run. */
+    val japaneseShadowTurn: Turn
+        get() = Turn(id = "00000000-0000-0000-0000-0000000000B3", role = TurnRole.FLUENT_SELF,
+            transcript = "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。",
+            durationMs = 4200, timestamp = now())
+
     /** iOS `DebugCapture.shadowTurn` — the karaoke line. */
     val shadowTurn: Turn
         get() = Turn(id = "00000000-0000-0000-0000-0000000000B2", role = TurnRole.FLUENT_SELF,

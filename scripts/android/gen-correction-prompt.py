@@ -38,6 +38,9 @@ mapping = {
     r"\(targetName)": "$targetName",
     r"\(nativeName)": "$nativeName",
     r"\(level.rawValue)": "$levelCode",
+    # Appended at a LINE END so every other language's prompt stays
+    # byte-identical: the guard is empty unless the target is Japanese.
+    r"\(scriptGuard(targetLanguage))": "$scriptGuard",
 }
 for k, v in mapping.items():
     text = text.replace(k, v)
@@ -46,7 +49,7 @@ if r"\(" in text:
              + re.search(r"\\\([^)]*\)", text).group(0))
 
 # Kotlin raw strings can't escape `$`; only our own placeholders may remain.
-stray = re.sub(r"\$(targetName|nativeName|levelCode)\b", "", text)
+stray = re.sub(r"\$(targetName|nativeName|levelCode|scriptGuard)\b", "", text)
 if "$" in stray:
     sys.exit("prompt carries a literal '$' — escape it before generating")
 
@@ -65,10 +68,25 @@ import com.roro.futurevoice.data.LanguageCatalog
  * judge a spoken line by the same rules, ASR guards included.
  */
 object CorrectionOnlyPrompt {{
+
+    /**
+     * Japanese only: the recognizer, not the learner, decides kanji or kana.
+     * Empty for every other target, and appended at a line end, so their
+     * prompts stay byte-identical.
+     */
+    private fun scriptGuard(targetLanguage: String): String =
+        if (targetLanguage.substringBefore('-') != "ja") "" else
+            "\\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji" +
+                "\\n  or kana and which kanji (\u5206\u304b\u308b / \u308f\u304b\u308b, \u4e0b\u3055\u3044 / \u304f\u3060\u3055\u3044," +
+                "\\n  \u7dba\u9e97 / \u304d\u308c\u3044). A suggestion whose only change is how a word is" +
+                "\\n  WRITTEN corrects nothing they said. If that is the only change you" +
+                "\\n  would make, the line was fine: return null."
+
     fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel): String {{
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()
+        val scriptGuard = scriptGuard(targetLanguage)
         return """{text}""".trimIndent()
     }}
 }}

@@ -25,7 +25,18 @@ object SpokenWords {
      * Deliberately narrow: a mixed suggestion that fixes something real AND
      * happens to contract still survives.
      */
-    fun saysTheSameThing(a: String, b: String): Boolean = of(a) == of(b)
+    fun saysTheSameThing(a: String, b: String, language: String = "en"): Boolean {
+        if (language.startsWith("ja")) {
+            // The SCRIPT is the transcriber's choice, like punctuation. This
+            // folds what it can — katakana against hiragana, a romaji name
+            // against its kana — but not kanji against kana (分かった /
+            // わかった), which needs a reading Android has no way to produce.
+            // The prompt's own ASR SCRIPT GUARD carries that half.
+            val ja = com.roro.futurevoice.data.JapaneseMorph::soundSpelling
+            return ja(a.filter { it.isLetterOrDigit() }) == ja(b.filter { it.isLetterOrDigit() })
+        }
+        return of(a) == of(b)
+    }
 
     /**
      * Which display tokens of [alternative] actually changed against

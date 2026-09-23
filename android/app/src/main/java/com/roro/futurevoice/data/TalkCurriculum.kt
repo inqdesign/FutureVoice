@@ -146,7 +146,7 @@ object TalkCurriculum {
         for (turn in fluent) {
             val parts = sentences(turn.transcript)
             parts.forEachIndexed { offset, sentence ->
-                val words = sentence.split(Regex("\\s+")).count { it.isNotBlank() }
+                val words = WordSplitter.count(sentence, language)
                 if (words !in 4..28) return@forEachIndexed
                 // The fluent self repeats itself across a call; a chapter that
                 // asks for the same line twice wastes a slot.

@@ -198,6 +198,51 @@ out["shadow_analyze"] = shadowCases.map { c -> [String: Any] in
             "ops": a.steps.map { $0.op.rawValue }]
 }
 
+// ── 7. Japanese segmentation and headwords ───────────────────────────────
+// The port has no system tokenizer with readings, so these vectors are how
+// the Kotlin side proves it cuts the same sentences into the same words.
+func loadTSV(_ path: String, columns: Int) -> [String: String] {
+    guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [:] }
+    var out: [String: String] = [:]
+    for line in text.split(whereSeparator: \.isNewline) {
+        let parts = line.split(separator: "\t")
+        if parts.count == columns { out[String(parts[0])] = String(parts[columns - 1]) }
+    }
+    return out
+}
+let jaLexicon = Set(loadTSV("FutureVoice/Resources/cefr_words_ja.tsv", columns: 3).keys)
+let jaForms = loadTSV("FutureVoice/Resources/ja_forms.tsv", columns: 2)
+let jaSentences = [
+    "今日は暑いね。水を飲んだ？",
+    "駅まで歩いて行きました。",
+    "面倒くさいけど、お疲れ様でした。",
+    "3時に会いましょう。",
+    "わかった、また明日ね",
+    "「ちょっと待って」と言われた。",
+    "nawana で毎日練習しています。",
+    "ご飯を食べてから、少し休もう。",
+]
+LanguageScope.active = "ja"
+out["japanese"] = jaSentences.map { text -> [String: Any] in
+    [
+        "text": text,
+        "words": WordSplitter.words(text),
+        "count": WordSplitter.count(text),
+        "timing_words": WordSplitter.timingWords(text),
+        "headwords": JapaneseMorph.headwords(in: text, lexicon: jaLexicon, forms: jaForms)
+            .map { $0.headword },
+        "sound": JapaneseMorph.soundSpelling(text),
+    ]
+}
+out["japanese_candidates"] = ["行き", "食べ", "飲ん", "疲れ", "語", "箸", "わかる", "朝御飯"]
+    .map { raw -> [String: Any] in
+        ["surface": raw,
+         "candidates": JapaneseMorph.candidates(for: raw),
+         "dictionary_form": JapaneseMorph.dictionaryForm(of: raw, in: jaLexicon,
+                                                         forms: jaForms) ?? ""]
+    }
+LanguageScope.active = "en"
+
 let json = try JSONSerialization.data(withJSONObject: out, options: [.prettyPrinted, .sortedKeys])
 let dest = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "vectors.json"
 try json.write(to: URL(fileURLWithPath: dest))

@@ -169,7 +169,11 @@ fun ShadowScreen(
      */
     val recorder = remember { WavRecorder() }
 
-    val words = remember(line) { line.split(Regex("\\s+")).filter { it.isNotEmpty() } }
+    // The line's own words — Japanese writes no spaces, so splitting on them
+    // made the whole sentence one word: nothing to tap, nothing to light.
+    val words = remember(line, targetLanguage) {
+        com.roro.futurevoice.data.WordSplitter.timingWords(line, targetLanguage)
+    }
 
     var phase by remember { mutableStateOf(ShadowPhase.IDLE) }
     var countdown by remember { mutableIntStateOf(0) }
@@ -203,7 +207,8 @@ fun ShadowScreen(
     // been heard, from the text's length before that — the rule is that the
     // highlight always works, and never at the cost of a second synthesis.
     val timings: List<WordTiming> = remember(line, durationMs) {
-        WordTimings.estimate(line, if (durationMs > 0) durationMs else durationFromText(words.size))
+        WordTimings.estimate(line, if (durationMs > 0) durationMs else durationFromText(words.size),
+            targetLanguage)
     }
 
     // The selection as a scoring range: nil when it is stale or spans the
@@ -246,7 +251,7 @@ fun ShadowScreen(
                     while (isActive) {
                         val d = mp3.durationMs
                         if (heard.isEmpty() && d > 0) {
-                            heard = WordTimings.estimate(line, d)
+                            heard = WordTimings.estimate(line, d, targetLanguage)
                             durationMs = d
                         }
                         clockMs = if (heard.isEmpty()) -1 else mp3.positionMs
@@ -540,8 +545,13 @@ fun ShadowScreen(
                     // something shifted. A wrong word in orange is worse.
                     val aligned = ops != null && spans.isNotEmpty() &&
                         spans.sumOf { it.count() } == ops.size
+                    // Flush for a language that writes no spaces: a gap
+                    // between two words reads as a space Japanese does not
+                    // have. A spaced language keeps its hairline gap.
+                    val gap = if (com.roro.futurevoice.data.WordSplitter.spaced(targetLanguage))
+                        2.dp else 0.dp
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(gap),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         words.forEachIndexed { i, word ->
@@ -571,7 +581,8 @@ fun ShadowScreen(
                                             phase == ShadowPhase.HEARD_NOTHING ||
                                             phase == ShadowPhase.READ_FAILED
                                     ) { tapWord(i) }
-                                    .padding(horizontal = 3.dp, vertical = 1.dp),
+                                    .padding(horizontal = if (gap > 0.dp) 3.dp else 0.dp,
+                                        vertical = 1.dp),
                             )
                         }
                     }

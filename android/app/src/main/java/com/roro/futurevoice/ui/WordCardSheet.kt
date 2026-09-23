@@ -258,6 +258,13 @@ fun WordCardSheet(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(term, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold)
+                    // A kanji headword has to print its reading, or the card
+                    // teaches a word nobody can say out loud. Several where
+                    // the word has several (からい・つらい).
+                    CoreVocabulary.reading(term, language)?.let { reading ->
+                        Text(reading, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     val band = if (isWord) CoreVocabulary.level(term, language)?.code?.uppercase()
                     else null
                     val caption = listOfNotNull(

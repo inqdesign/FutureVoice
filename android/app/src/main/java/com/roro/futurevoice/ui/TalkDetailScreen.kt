@@ -170,7 +170,9 @@ fun TalkDetailScreen(
     // The transcript is the book's "scene": one tap away behind Replay, never
     // the first thing the cover shows. Android has no separate transcript
     // destination, so the page opens it in place.
-    var showingTranscript by remember(sessionId) { mutableStateOf(false) }
+    var showingTranscript by remember(sessionId) {
+        mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailTranscript)
+    }
     var showingGrammarReview by remember(sessionId) { mutableStateOf(false) }
 
     val tabs = buildList {

@@ -13,10 +13,25 @@ import com.roro.futurevoice.data.LanguageCatalog
  * judge a spoken line by the same rules, ASR guards included.
  */
 object CorrectionOnlyPrompt {
+
+    /**
+     * Japanese only: the recognizer, not the learner, decides kanji or kana.
+     * Empty for every other target, and appended at a line end, so their
+     * prompts stay byte-identical.
+     */
+    private fun scriptGuard(targetLanguage: String): String =
+        if (targetLanguage.substringBefore('-') != "ja") "" else
+            "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji" +
+                "\n  or kana and which kanji (分かる / わかる, 下さい / ください," +
+                "\n  綺麗 / きれい). A suggestion whose only change is how a word is" +
+                "\n  WRITTEN corrects nothing they said. If that is the only change you" +
+                "\n  would make, the line was fine: return null."
+
     fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel): String {
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()
+        val scriptGuard = scriptGuard(targetLanguage)
         return """You are a $targetName coach reading ONE line a $levelCode learner just
 SPOKE on a live phone call. You are not in the conversation and you do
 not answer them — you only decide whether that line needs a correction.
@@ -39,7 +54,7 @@ Return STRICT JSON only — no prose, no code fences:
   building" arrives as "I am building" every time. A suggestion whose
   only change is contracting what you received is correcting the
   transcriber, not the learner. If that is the only change you would
-  make, the line was fine: return null.
+  make, the line was fine: return null.$scriptGuard
 - Judge it as SPEECH, never as writing. Contractions, casual register
   and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
   speakers talk, not slips.

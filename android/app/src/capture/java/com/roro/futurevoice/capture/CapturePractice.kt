@@ -173,7 +173,8 @@ object CapturePractice {
         DrillDeckScreen(language = lang(c), nativeLanguage = native(c), onBack = {})
 
     @Composable
-    private fun Cloud(c: Context) = VocabularyCloudScreen(language = lang(c), onBack = {})
+    private fun Cloud(c: Context, language: String? = null) =
+        VocabularyCloudScreen(language = language ?: lang(c), onBack = {})
 
     private fun talkDetail(chapter: String?, variant: String = "") = mode(
         seed = { c ->
@@ -319,6 +320,39 @@ object CapturePractice {
                 turnId = turn.id, onBack = {})
         },
         "score" to mode({ c -> CaptureSeed.once("score") { CaptureSeed.seedVocab(c) } }) { Scorecard() },
+
+        // Japanese: the one target that writes no spaces. The line has to be
+        // cut into WORDS — each lighting and tapping on its own, punctuation
+        // riding on the word before — not left as one run.
+        "shadow-ja" to mode { _ ->
+            val turn = CaptureSeed.japaneseShadowTurn
+            ShadowScreen(line = turn.transcript, voiceId = "", targetLanguage = "ja",
+                turnId = turn.id, onBack = {})
+        },
+        "talkdetail-ja" to mode(
+            seed = {
+                PracticeCaptureFlags.talkDetailSession = CaptureSeed.japaneseTalkSession
+                PracticeCaptureFlags.talkDetailChapter = "WORDS"
+            },
+        ) { c ->
+            TalkDetailScreen(sessionId = CaptureSeed.japaneseTalkSession.id, language = "ja",
+                level = level(c), onBack = {})
+        },
+        "transcript-ja" to mode(
+            seed = {
+                PracticeCaptureFlags.talkDetailSession = CaptureSeed.japaneseTalkSession
+                PracticeCaptureFlags.talkDetailTranscript = true
+            },
+        ) { c ->
+            TalkDetailScreen(sessionId = CaptureSeed.japaneseTalkSession.id, language = "ja",
+                level = level(c), onBack = {})
+        },
+        // A kanji headword has to print its reading (あわてる), or the card
+        // teaches a word nobody can say.
+        "wordcard-ja" to mode({ c ->
+            CaptureSeed.seedJapaneseWords(c)
+            PracticeCaptureFlags.cloudOpenWord = "慌てる"
+        }) { Cloud(it, "ja") },
     )
 
     /** mode → why Android can't show it yet (name the master-plan item). */
@@ -327,8 +361,5 @@ object CapturePractice {
             "the whole due queue (DeepLinkInbox.REVIEW carries no item) — no master-plan item yet",
         "review-item-sentence" to "4.8 — A review reminder can't open ONE sentence card: Android's " +
             "reminder opens the whole due queue — no master-plan item yet",
-        "wordcard-ja" to "Japanese target not ported yet — 2.15",
-        "talkdetail-ja" to "Japanese target not ported yet — 2.15",
-        "shadow-ja" to "Japanese target not ported yet — 2.15",
     )
 }

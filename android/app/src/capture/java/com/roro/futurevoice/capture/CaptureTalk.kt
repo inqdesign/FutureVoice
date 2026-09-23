@@ -133,7 +133,6 @@ object CaptureTalk {
             "iOS design-review experiment (TalkHomeExperiment), never shipped — n/a (not an Android gap)",
         "talk-alt-demo" to
             "iOS design-review experiment (TalkHomeExperiment), never shipped — n/a (not an Android gap)",
-        "transcript-ja" to "Japanese target not ported yet — 2.15",
     )
 
     // MARK: - Seeding

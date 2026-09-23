@@ -19,9 +19,14 @@ object CoreVocabulary {
 
     private val wordlistResource = mapOf(
         "en" to "cefr_words", "de" to "cefr_words_de", "ko" to "cefr_words_ko",
+        "ja" to "cefr_words_ja",
     )
 
-    private class Pool(val levelByWord: Map<String, CefrLevel>) {
+    private class Pool(
+        val levelByWord: Map<String, CefrLevel>,
+        /** Headword → reading(s), the Japanese list's third column. */
+        val readings: Map<String, String> = emptyMap(),
+    ) {
         val set: Set<String> get() = levelByWord.keys
     }
 
@@ -35,20 +40,74 @@ object CoreVocabulary {
             val resource = wordlistResource[language] ?: return@getOrPut Pool(emptyMap())
             val ctx = appContext ?: return@getOrPut Pool(emptyMap())
             val map = HashMap<String, CefrLevel>()
+            val readings = HashMap<String, String>()
             runCatching {
                 ctx.assets.open("wordlists/$resource.tsv").bufferedReader().forEachLine { line ->
+                    // The attribution sits on the first line and carries no
+                    // tab, so it is skipped by shape rather than by count.
                     val parts = line.split('\t')
-                    if (parts.size == 2) {
-                        val level = CefrLevel.entries.firstOrNull { it.code.equals(parts[1], true) }
-                        if (level != null) map.putIfAbsent(parts[0].lowercase(), level)
+                    if (parts.size !in 2..3) return@forEachLine
+                    val level = CefrLevel.entries.firstOrNull { it.code.equals(parts[1], true) }
+                        ?: return@forEachLine
+                    map.putIfAbsent(parts[0].lowercase(), level)
+                    // A third column is the READING(S) — 辛い is からい・つらい,
+                    // and the word card prints them under a kanji headword.
+                    if (parts.size == 3 && parts[2].isNotBlank()) {
+                        readings.putIfAbsent(parts[0], parts[2])
                     }
                 }
             }
-            Pool(map)
+            Pool(map, readings)
         }
     }
 
     fun set(language: String): Set<String> = pool(language).set
+
+    /**
+     * How a headword is read, for display beside it — null when the word
+     * already spells its sound (no kanji), or when the list doesn't carry it.
+     * Android has no kanji→kana on its own, so unlike iOS there is no guess
+     * behind this: an off-list word simply shows no reading.
+     */
+    fun reading(headword: String, language: String): String? =
+        pool(language).readings[headword]
+
+    /**
+     * Other spellings of a headword — わかる → 分かる, 判る → 分かる, 朝御飯 →
+     * 朝ご飯. Only Japanese has one; every other language returns empty, which
+     * is what the morphology expects.
+     */
+    fun forms(language: String): Map<String, String> = synchronized(formsCache) {
+        formsCache.getOrPut(language) {
+            if (language.substringBefore('-') != "ja") return@getOrPut emptyMap()
+            val ctx = appContext ?: return@getOrPut emptyMap()
+            val out = HashMap<String, String>()
+            runCatching {
+                ctx.assets.open("wordlists/ja_forms.tsv").bufferedReader().forEachLine { line ->
+                    val parts = line.split('\t')
+                    if (parts.size == 2) out.putIfAbsent(parts[0], parts[1])
+                }
+            }
+            out
+        }
+    }
+
+    private val formsCache = HashMap<String, Map<String, String>>()
+
+    /**
+     * Grades a SPOKEN surface token. English and German callers pre-split so
+     * this is a direct lookup; Japanese surfaces carry conjugation, so they
+     * route through the headword heuristic first.
+     *
+     * Read a CHUNK, not a segment, wherever a level is wanted — 疲れ alone
+     * cannot say it is 疲れる.
+     */
+    fun levelOfSurface(token: String, language: String): CefrLevel? {
+        if (language.substringBefore('-') != "ja") return level(token, language)
+        val head = JapaneseMorph.headwords(token, set(language), forms(language))
+            .firstOrNull()?.first ?: return null
+        return level(head, language)
+    }
 
     /**
      * Words whose absence from the pool is a DECISION, not a gap — what

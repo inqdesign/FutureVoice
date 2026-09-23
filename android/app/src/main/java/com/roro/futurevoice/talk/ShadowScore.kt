@@ -34,7 +34,14 @@ object ShadowScore {
         val style = LanguageCatalog.tokenStyle(language)
         val targetTokens = tokenize(expandForDiff(target, language), style)
         val learnerTokens = tokenize(expandForDiff(learner, language), style)
-        val (matches, steps) = align(targetTokens, learnerTokens)
+        // Japanese compares by SOUND: the transcriber picks the script
+        // (ナワナ / なわな / nawana are the same three morae), so a token is
+        // keyed in hiragana — the steps still carry what each side wrote.
+        // Without this the app's own name scored as a miss on every take.
+        val key: (String) -> String =
+            if (language.startsWith("ja")) com.roro.futurevoice.data.JapaneseMorph::soundSpelling
+            else { t -> t }
+        val (matches, steps) = align(targetTokens, learnerTokens, key)
         val denom = maxOf(targetTokens.size, learnerTokens.size)
         val raw = if (denom > 0) matches.toDouble() / denom else 0.0
         // sqrt curve: single-word slips don't crater a good attempt.
@@ -104,14 +111,17 @@ object ShadowScore {
         }
     }
 
-    private fun align(a: List<String>, b: List<String>): Pair<Int, List<DiffStep>> {
+    private fun align(a: List<String>, b: List<String>,
+                      key: (String) -> String = { it }): Pair<Int, List<DiffStep>> {
         val n = a.size; val m = b.size
         if (n == 0 && m == 0) return 0 to emptyList()
+        val ka = a.map(key); val kb = b.map(key)
+        fun same(i: Int, j: Int) = ka[i - 1] == kb[j - 1]
         val dp = Array(n + 1) { IntArray(m + 1) }
         for (i in 0..n) dp[i][0] = i
         for (j in 0..m) dp[0][j] = j
         for (i in 1..n) for (j in 1..m) {
-            dp[i][j] = if (a[i - 1] == b[j - 1]) dp[i - 1][j - 1]
+            dp[i][j] = if (same(i, j)) dp[i - 1][j - 1]
             else 1 + minOf(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1])
         }
         val steps = mutableListOf<DiffStep>()
@@ -119,7 +129,7 @@ object ShadowScore {
         var i = n; var j = m
         while (i > 0 || j > 0) {
             when {
-                i > 0 && j > 0 && a[i - 1] == b[j - 1] -> {
+                i > 0 && j > 0 && same(i, j) -> {
                     steps.add(DiffStep(DiffOp.MATCH, a[i - 1], b[j - 1])); matches += 1; i -= 1; j -= 1
                 }
                 i > 0 && j > 0 && dp[i][j] == dp[i - 1][j - 1] + 1 -> {
@@ -170,8 +180,10 @@ data class WordTiming(val word: String, val startMs: Int, val endMs: Int)
  * alignment/estimation, never a duplicate paid synthesis.
  */
 object WordTimings {
-    fun estimate(text: String, durationMs: Int): List<WordTiming> {
-        val words = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+    fun estimate(text: String, durationMs: Int, language: String = "en"): List<WordTiming> {
+        // The timeline is cut into the language's OWN words: punctuation
+        // rides along so the words joined back give the line itself.
+        val words = com.roro.futurevoice.data.WordSplitter.timingWords(text, language)
         if (words.isEmpty() || durationMs <= 0) return emptyList()
         val totalChars = words.sumOf { maxOf(it.length, 1) }
         val msPerChar = durationMs.toDouble() / totalChars

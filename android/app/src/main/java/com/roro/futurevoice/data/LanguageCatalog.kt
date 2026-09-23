@@ -46,12 +46,18 @@ object LanguageCatalog {
 
     fun tokenStyle(code: String): TokenStyle = language(code).tokenStyle
 
+    /** False for the languages that write no spaces between words — the one
+     *  question [WordSplitter] asks. Chinese is here too, though it is not a
+     *  selectable target: it must never be cut with the JAPANESE segmenter,
+     *  so give `zh` its own before it gets a wordlist. */
+    fun writesSpaces(code: String): Boolean = code.substringBefore('-') !in setOf("ja", "zh")
+
     fun englishName(code: String): String =
         englishNames[code] ?: code.uppercase()
 
     /** Targets offered in setup — everything with a graded word list. */
     val selectableTargets: List<Language>
-        get() = targets.filter { it.code in setOf("en", "de", "ko") }
+        get() = targets.filter { it.code in setOf("en", "de", "ko", "ja") }
 
     /**
      * Languages a learner may name as NATIVE (`LanguageCatalog.swift`,

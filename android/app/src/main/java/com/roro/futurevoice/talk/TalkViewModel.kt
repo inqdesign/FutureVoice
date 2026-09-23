@@ -606,7 +606,9 @@ class TalkViewModel(context: Context) : ViewModel() {
      * on coaching. Lines under three words are not worth a request.
      */
     private fun requestRealtimeSuggestion(turnId: String, said: String, cfg: TalkConfig) {
-        if (said.split(Regex("\\s+")).count { it.isNotBlank() } < 3) return
+        // Never count words on " ": Japanese writes none, so every turn
+        // measured one word and no Japanese line was ever corrected.
+        if (com.roro.futurevoice.data.WordSplitter.count(said, cfg.targetLanguage) < 3) return
         viewModelScope.launch {
             val payload = runCatching {
                 GeminiClient(auth).sendJson(
@@ -1018,7 +1020,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         // they made a mistake they did not make, in their own voice. The
         // prompt asks the model not to; this is what makes it true.
         val suggestion = payload.turnSuggestion()
-            ?.takeUnless { said.isNotBlank() && SpokenWords.saysTheSameThing(it.alternative, said) }
+            ?.takeUnless {
+                said.isNotBlank() &&
+                    SpokenWords.saysTheSameThing(it.alternative, said,
+                        config?.targetLanguage ?: "en")
+            }
         val upgraded = payload.transcript?.takeIf { it.isNotBlank() }
         if (suggestion == null && upgraded == null) return
         _state.update { state ->

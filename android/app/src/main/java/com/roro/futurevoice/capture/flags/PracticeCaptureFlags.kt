@@ -44,6 +44,11 @@ object PracticeCaptureFlags {
     /** The talk book opens on this chapter (`TalkChapter` name). */
     @JvmField var talkDetailChapter: String? = null
 
+    /** The talk book opens with the transcript already unfolded — Android
+     *  has no separate transcript destination, so this is how the shot of it
+     *  is reached (iOS captures `TalkTranscriptView` on its own). */
+    @JvmField var talkDetailTranscript = false
+
     /** The scenario book reads this scenario instead of the store. */
     @JvmField var bookScenario: Scenario? = null
 

@@ -78,7 +78,7 @@ object ShadowPicks {
                 if (turn.role != TurnRole.FLUENT_SELF) continue
                 val text = turn.transcript.trim()
                 val key = text.lowercase()
-                val words = text.split(Regex("\\s+")).count { it.isNotBlank() }
+                val words = WordSplitter.count(text, language)
                 if (text.isEmpty() || words < MIN_WORDS) continue
                 if (latestByTurn.containsKey(turn.id) || !seen.add(key)) continue
                 val c = Candidate(
