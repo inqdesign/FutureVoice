@@ -95,11 +95,22 @@ enum VoicemailEngine {
         return clipped
     }
 
-    /// ~25 s of speech at a natural pace. Nobody listens to a longer
-    /// voicemail, and the learner is meant to answer a question, not sit
-    /// through a monologue. Enforced twice: here in characters, and again on
-    /// the PCM in `synthesizeVoicemail`.
-    static let maxScriptCharacters = 260
+    /// ~25 s of speech at a natural pace, at speed 1.0. Nobody listens to a
+    /// longer voicemail, and the learner is meant to answer a question, not
+    /// sit through a monologue. Enforced twice: here in characters, and again
+    /// on the PCM in `synthesizeVoicemail`.
+    static let baseScriptCharacters = 260
+
+    /// The budget the script is written to and trimmed to. The learner's
+    /// speech speed (Me → Voice, `SpeechSpeed`) stretches the audio — Normal
+    /// 0.9 is +13%, Slower 0.8 is +27% — while the OS's 30 s ceiling and the
+    /// hard cut below do not move, so 260 characters at Slower would be cut
+    /// mid-sentence and lose the question at the END, which is the whole
+    /// pull. Fewer characters, same seconds. Read at generation time; the
+    /// prompt and the trim see the same number within one call.
+    static var maxScriptCharacters: Int {
+        Int(Double(baseScriptCharacters) * SpeechSpeed.current.multiplier)
+    }
 
     /// Hard cut for the spoken audio, in case a model overruns the character
     /// budget anyway.

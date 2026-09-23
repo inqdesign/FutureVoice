@@ -36,6 +36,11 @@ export interface StartMessage {
    *  app because the app would need a second audio engine to do it, and
    *  two engines fighting over one session is how the call goes silent. */
   opener?: string
+  /** How fast the fluent self speaks — ElevenLabs `voice_settings.speed`,
+   *  0.7–1.2, chosen by the learner in Me → Voice. Absent means normal, and
+   *  an app build that predates the setting never sends it. Clamped here
+   *  rather than trusted: this rides in from a client. */
+  speed?: number
 }
 
 /** Speak a line the app chose, after the call is already up.

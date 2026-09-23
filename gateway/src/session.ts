@@ -29,6 +29,15 @@ const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
 const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
 const CONVERSATION_MODEL = "eleven_turbo_v2_5"
 
+/** The app's speech-speed setting, made safe. Anything outside ElevenLabs'
+ *  0.7–1.2 window is refused by upstream for the WHOLE line, which would be a
+ *  silent call — so a nonsense value becomes "no preference", never an error. */
+function clampSpeed(v: unknown): number | undefined {
+  if (typeof v !== "number" || !Number.isFinite(v)) return undefined
+  if (v < 0.7 || v > 1.2) return undefined
+  return v
+}
+
 export class CallSession implements DurableObject {
   private client: WebSocket | null = null
   private transcriber: GeminiTranscriber | null = null
@@ -617,6 +626,7 @@ export class CallSession implements DurableObject {
         voiceId: msg.voiceId,
         modelId: CONVERSATION_MODEL,
         outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
+        speed: clampSpeed(msg.speed),
       },
       {
         onAudio: (contextId, pcm) => {

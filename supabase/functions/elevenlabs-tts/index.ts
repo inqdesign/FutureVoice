@@ -117,6 +117,10 @@ Deno.serve(async (req) => {
     // out of the talk allowance; without it — an un-updated app — the scene
     // is metered in seconds against the talk allowance exactly as before.
     scene_key?: string
+    // How fast the fluent self speaks — the learner's choice in Me → Voice,
+    // forwarded to ElevenLabs as `voice_settings.speed`. Absent means normal,
+    // which is what every build before 2026-09-23 sends.
+    speed?: number
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -315,6 +319,12 @@ Deno.serve(async (req) => {
         // TestFlight and users reported the clone not sounding like them.
         style: 0,
         use_speaker_boost: true,
+        // Clamped, not trusted: outside 0.7–1.2 ElevenLabs refuses the whole
+        // request, so a bad value would be a silent line rather than a
+        // slightly wrong one. Out of range means "no preference".
+        ...(typeof body.speed === "number" && body.speed >= 0.7 && body.speed <= 1.2
+          ? { speed: body.speed }
+          : {}),
       },
     }),
   }

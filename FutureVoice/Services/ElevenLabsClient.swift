@@ -262,7 +262,12 @@ final class ElevenLabsClient {
                                          timestamps: Bool) -> String {
         // Timestamps flag included: plain and karaoke syntheses are separate
         // billable actions and must not dedupe against each other.
-        let digest = SHA256.hash(data: Data("\(voiceId)|\(timestamps)|\(text)".utf8))
+        // The chosen speech speed joins the key: the same line at two speeds is
+        // two DIFFERENT syntheses and must not dedupe against each other.
+        // Normal's tag is empty (see `SpeechSpeed.cacheTag`), so every existing
+        // key is unchanged.
+        let speedTag = SpeechSpeed.current.cacheTag
+        let digest = SHA256.hash(data: Data("\(voiceId)|\(timestamps)|\(speedTag)\(text)".utf8))
         let hex = digest.prefix(12).map { String(format: "%02x", $0) }.joined()
         return "tts:\(installSalt):\(hex)"
     }
@@ -314,6 +319,11 @@ final class ElevenLabsClient {
         ]
         // Feature tag for the usage ledger (spend attribution) — the edge
         // function records it in metadata, never forwards it upstream.
+        // How fast the fluent self talks (Me → Voice). Always sent, because
+        // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
+        // edge deploy that predates the field ignores it and the line
+        // synthesizes exactly as it used to.
+        body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         // One Watch scene = one key across all its lines, so the plan's daily
         // scene COUNT is charged once and the scene's seconds stop coming out
@@ -380,6 +390,11 @@ final class ElevenLabsClient {
             "stream": true,
             "stream_formats": Self.streamFormats,
         ]
+        // How fast the fluent self talks (Me → Voice). Always sent, because
+        // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
+        // edge deploy that predates the field ignores it and the line
+        // synthesizes exactly as it used to.
+        body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         if let sceneKey { body["scene_key"] = sceneKey }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -500,6 +515,11 @@ final class ElevenLabsClient {
             "model_id": modelId,
             "with_timestamps": true,
         ]
+        // How fast the fluent self talks (Me → Voice). Always sent, because
+        // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
+        // edge deploy that predates the field ignores it and the line
+        // synthesizes exactly as it used to.
+        body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

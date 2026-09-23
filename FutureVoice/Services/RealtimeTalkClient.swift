@@ -1627,6 +1627,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             "language": language,
             "system": system,
         ]
+        // The learner's chosen speech speed (Me → Voice) — always sent, since
+        // even Normal is 0.9 (see `SpeechSpeed`). A gateway deploy that
+        // predates the field ignores it and the call sounds as it used to.
+        payload["speed"] = SpeechSpeed.current.multiplier
         if let opener, !opener.isEmpty { payload["opener"] = opener }
         if !history.isEmpty {
             payload["history"] = history.map { ["role": $0.role, "text": $0.text] }

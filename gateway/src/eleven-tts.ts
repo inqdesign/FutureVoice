@@ -26,6 +26,8 @@ export interface ElevenTTSConfig {
   modelId: string
   /** e.g. "pcm_22050"; must be allowed on the ElevenLabs plan. */
   outputFormat: string
+  /** Optional speaking speed (0.7–1.2). Omitted = upstream default. */
+  speed?: number
 }
 
 export class ElevenTTS {
@@ -167,6 +169,10 @@ export class ElevenTTS {
               similarity_boost: 0.9,
               style: 0,
               use_speaker_boost: true,
+              // The learner's chosen speed, and only when they chose one:
+              // sending 1.0 explicitly is not the same request as sending
+              // nothing, and the default call must stay what it was.
+              ...(this.config.speed !== undefined ? { speed: this.config.speed } : {}),
             },
           }
         : {}),
