@@ -225,6 +225,20 @@ final class DrillStore: LanguageScopedStore {
     }
 
     /// Demote and reschedule for soon.
+    /// One rung up — the step a sentence takes when the weekly test's build
+    /// item is laid out right. Not the learner's verdict, so unlike "Got it"
+    /// it never retires the card: it earns the next interval and nothing
+    /// more (an answer is a claim; see CLAUDE.md "USED outranks KNOWN").
+    func markCorrect(_ card: DrillCard, at now: Date = Date()) {
+        var c = card
+        c.timesSeen += 1
+        c.timesCorrect += 1
+        c.lastReviewedAt = now
+        c.box = min(c.box + 1, Self.maxBox - 1)
+        c.nextReviewAt = Self.nextReview(after: c.box, from: now)
+        save(c)
+        Analytics.capture("drill_reviewed", ["correct": true, "box": c.box])
+    }
     func markIncorrect(_ card: DrillCard, at now: Date = Date()) {
         var c = card
         c.timesSeen += 1

@@ -462,6 +462,8 @@ final class DailyCallInbox: ObservableObject {
     /// Set when a per-item callback is tapped — the app opens that exact
     /// word / phrase / line.
     @Published var pendingReviewItem: ItemReminder.Target?
+    /// Set when the weekly test's reminder is tapped — the app opens the test.
+    @Published var pendingWeeklyTest = false
 }
 
 /// Routes notification taps. Installed as the app's `UNUserNotificationCenter`
@@ -505,6 +507,16 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
                 defer { completionHandler() }
                 guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
                 DailyCallInbox.shared.pendingReview = true
+            }
+            return
+        }
+
+        // The weekly test opened: land on it, not on the tab it sits in.
+        if category == WeeklyTestReminder.categoryId {
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                DailyCallInbox.shared.pendingWeeklyTest = true
             }
             return
         }

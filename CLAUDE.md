@@ -742,6 +742,88 @@ Three consequences to preserve when touching this: the failure path in `requestR
 
 Any future work that improves the learner's line has the same obligation: improve what the MODEL gets, never what the SCREEN shows, until `voiceDidStart`.
 
+## The weekly test (2026-09-23)
+
+One sit-down a week, built from THAT learner's own week: the words the talks
+taught, the phrases the fluent self used, the sentences that were corrected,
+the lines worth hearing again. Nothing comes from a generic bank — an item
+with no source in the learner's material is not an item. Files:
+`WeeklyTestEngine` (build + grade + write-back), `WeeklyTestStore` (+
+`WeeklyTestSettings`, `WeeklyTestSchedule`, `WeeklyTestReminder`),
+`WeeklyTestView` (+ `WeeklyTestResultView`), `SoundEffects`; entry row on the
+Practice Today card, settings section in `StudyGoalsSheet`, route
+`.weeklyTest` / `futurevoice://weeklytest`, sync kind `.weeklyTest`.
+
+- **Five kinds, one shelf each, every grade computed in code**: `meaning`
+  (a notebook word's gloss → pick the word; decoys are the learner's other
+  notebook words, then graded words of the same part of speech), `gap` (a
+  fluent-self line with its `expressions_offered` phrase blanked → pick the
+  phrase; decoys are the week's other phrases before the library), `build`
+  (a correction card: "You said …" → lay the fluent version from shuffled
+  tiles, plus up to two decoy tiles taken from the learner's OWN wording),
+  `listen` (a fluent-self line with audio on disk → pick what was said),
+  `speak` (a fluent-self line said out loud: one mic button, the take read
+  through `ShadowTranscriber` — the one door every shadow score walks
+  through — scored by `ShadowEngine.analyze`, passing at
+  `PracticeStats.retryThreshold`, and SAVED as a `ShadowAttempt` of that
+  turn, so the talk book's Shadow chapter sees it). The only model calls
+  are the free, cached dictionary lookup that writes a gloss and the
+  audio-grounded read of a take; no LLM ever decides whether an answer was
+  right.
+- **Misses come back.** Last week's wrong answers are dealt again first this
+  week (`maxRetake` 3, badge "Again"), and the **monthly test** collects every
+  distinct wrong answer of the month's weekly tests (`buildMonthly`, cap
+  20, same `minItems`). It opens with the first weekly opening of each
+  calendar month (`monthOpening`) over the tests finished since the previous
+  month's first opening; its row appears on the Today card only when there
+  is something to collect (`monthlyState`). `WeeklyTest.kind` (nil =
+  weekly) tells the two apart in one store; the weeks-in-a-row streak and
+  the weekly state ignore monthly papers.
+- **The week is the learner's, not the calendar's.** `WeeklyTestSchedule` is
+  one weekday + time (default Saturday 10:00, in the goals sheet); every
+  moment belongs to the most recent opening, so a test taken on Tuesday is
+  still "this week's", and a finished test shows its score on the row until
+  the next opening. Material window = since the last test was built, else
+  seven days. Under `minItems` (5) the row says "a talk or two first" and
+  the opening is remembered as thin so the tab doesn't rebuild on every
+  appearance. Settings are device-local like the daily call (two synced
+  devices must not both ring); the tests themselves sync (`ArrayKind`, LWW).
+- **Write-back is a CLAIM, never a verdict** (see "USED outranks KNOWN"):
+  meaning right → the word waits 3 days, wrong → back in the notebook, due
+  now; gap the same for the phrase (wrong bookmarks it); build right → one
+  Leitner rung up (`DrillStore.markCorrect`, which never retires), wrong →
+  one down; listen writes nothing. Applied once (`appliedAt`) when the test
+  finishes; answers are saved as they land so a closed sheet resumes.
+- **Sound + haptic per answer, and nothing else invented.** `SoundEffects`
+  plays four synthesized WAVs (`scripts/make-ui-sounds.py`, -12 dBFS) with
+  `AVAudioPlayer` on the app's playback route — NOT a system sound: under
+  the app-wide `.playAndRecord` session those went to the earpiece or
+  nowhere, inaudible on device — toggle in the goals sheet, beside the
+  existing `HapticEngine` cues. The run of right answers is a flame on the question's caption line
+  (a bar above the host was tried and pulled: it framed the face); the
+  result is a system `Gauge`, one positive line, last week's score in a
+  footnote, the per-kind rows, then every answer. No confetti, no custom
+  chrome; the whole screen is system buttons.
+- **The host** (`WeeklyTestCharacter`): two pixel eyes on a rounded-square
+  tile — each eye one 12.8 pt cell, stretched tall (0.82 × 1.12), moved and
+  blinked with smooth motion, no mouth, no brows, no mosaic behind them.
+  Settled by eye on 2026-09-23 after the live Futureself mosaic (colour,
+  then grey), a sub-pixel rasterised eye, a mouth, arches and a circle
+  backdrop were each tried and set aside the same day: colour and deep
+  black fought the eyes, a round face on a round disc read as someone
+  else's robot, a squint read as sleepy. Moods: waiting glances and blinks;
+  `happy` (right) lifts the eyes with a flutter of three blinks and a
+  bounce; `sad` (wrong) drops them, long and low, inner corners up; `angry`
+  (second wrong in a row) narrows them into inward slits — a pout at
+  itself, brief, never a scold; `thinking` sweeps while the paper is
+  written. Preview poses with `-moodhold happy|sad|angry`, `-eyelid 0…1`,
+  `-eyeshape 0|1|2`.
+- Captures: `-capture weekly-test-{word,gap,build,listen,speak}` (+ `-right` /
+  `-wrong` to pre-answer), `weekly-test-result`, `practice-weekly`,
+  `monthly-test`, `practice-monthly`. The
+  seeders clear the store first — a test minted by one launch would
+  otherwise be the next launch's window start.
+
 ## Japanese as a TARGET language (2026-09-18)
 
 Japanese was wired for STT, shadow scoring and the clone script from the

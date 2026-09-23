@@ -90,6 +90,7 @@ struct FutureVoiceApp: App {
                 Task { await DrillReminder.reschedule() }
                 // Push what this stint changed before iOS suspends us.
                 SyncEngine.shared.backgrounded()
+                Task { await WeeklyTestReminder.reschedule() }
             }
             // Pull the other devices' practice, then push ours.
             if phase == .active { SyncEngine.shared.foregrounded() }
@@ -163,6 +164,8 @@ final class AppState: ObservableObject {
         case review                         // review reminder → the due deck
         /// A per-item callback → open exactly that card.
         case reviewItem(kind: String, value: String)
+        /// The weekly test's reminder or deep link → open this week's test.
+        case weeklyTest
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 

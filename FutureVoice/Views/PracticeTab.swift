@@ -37,6 +37,11 @@ struct PracticeTab: View {
     /// that makes it visible without one.
     @State private var showingDueReview = false
     @State private var dueReviewCount = 0
+    /// This week's test, as the Today card reports it.
+    @State private var showingWeeklyTest = false
+    @State private var weeklyTestState: WeeklyTestSchedule.State = .ready
+    @State private var showingMonthlyTest = false
+    @State private var monthlyTestState: WeeklyTestSchedule.MonthlyState = .none
     /// Expressions not yet marked known — same "to study" meaning as the
     /// other tiles.
     @State private var expressionsToStudy = 0
@@ -227,7 +232,7 @@ struct PracticeTab: View {
             }
             .sheet(isPresented: $showingGoalsEditor) {
                 StudyGoalsSheet()
-                    .presentationDetents([.medium])
+                    .presentationDetents([.medium, .large])
             }
             // Deck sessions write snoozes ("back in 10 minutes") — honor them
             // with the shared review reminder the moment the sheet closes.
@@ -279,6 +284,22 @@ struct PracticeTab: View {
                 DueReviewView()
                     .environmentObject(appState)
             }
+            // A finished test writes snoozes and Leitner moves — same
+            // reminder refresh as the decks on the way out.
+            .sheet(isPresented: $showingWeeklyTest, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
+            }) {
+                WeeklyTestView()
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingMonthlyTest, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
+            }) {
+                WeeklyTestView(kind: .monthly)
+                    .environmentObject(appState)
+            }
             .sheet(item: $shadowSession, onDismiss: reload) { session in
                 NavigationStack {
                     PracticeSessionView(shadowPicks: session.picks, includeCards: false)
@@ -326,6 +347,12 @@ struct PracticeTab: View {
             showingExpressions = false
             shelf = .studying
             showingDueReview = true
+        case .weeklyTest:
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            showingWeeklyTest = true
         case .vocabulary:
             appState.pendingPracticeRoute = nil
             showingVocabulary = true
@@ -608,6 +635,13 @@ struct PracticeTab: View {
             if dueReviewCount > 0 {
                 dueReviewRow
             }
+            // The week's one sit-down: always here, so the week has a place
+            // to be looked back on even when nothing is due.
+            weeklyTestRow
+            // Once a month, everything the month's tests got wrong.
+            if monthlyTestState != .none {
+                monthlyTestRow
+            }
 
             // The four categories as a 2×2 grid. Stacked full-width rows made
             // the card tall and gave each bar more room than a bar deserves;
@@ -713,6 +747,110 @@ struct PracticeTab: View {
     /// "You asked to see these again" — words and expressions whose snooze
     /// has run out. No progress bar: this isn't a goal with a target, it's a
     /// pile that empties as you clear it.
+    /// The week's test, in the same row shape as "Back from earlier": what
+    /// it is, where it stands, one tap in. It is always on the card — a
+    /// finished test shows its score until the next opening, so the week
+    /// has a place to be looked at.
+    private var weeklyTestRow: some View {
+        Button { showingWeeklyTest = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "checklist")
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Weekly test")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(weeklyTestSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                if case let .done(test, _) = weeklyTestState {
+                    Text("\(test.score)/\(test.total)")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.tint)
+                } else if case let .inProgress(test) = weeklyTestState {
+                    Text("\(test.answers.count)/\(test.total)")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("practice.weeklyTest")
+    }
+
+    private var monthlyTestRow: some View {
+        Button { showingMonthlyTest = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "calendar.badge.checkmark")
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Monthly test")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(monthlyTestSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                if case let .done(test) = monthlyTestState {
+                    Text("\(test.score)/\(test.total)")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.tint)
+                } else if case let .inProgress(test) = monthlyTestState {
+                    Text("\(test.answers.count)/\(test.total)")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("practice.monthlyTest")
+    }
+
+    private var monthlyTestSubtitle: String {
+        switch monthlyTestState {
+        case .none, .ready: return explain("Everything you missed this month")
+        case .inProgress: return explain("Pick up where you left off")
+        case .done: return explain("Done for this month")
+        }
+    }
+
+    private var weeklyTestSubtitle: String {
+        switch weeklyTestState {
+        case .ready:
+            return explain("Made from this week's talks")
+        case .inProgress:
+            return explain("Pick up where you left off")
+        case let .done(_, next):
+            return explain("Next one \(Self.weekdayName(next, .wide))")
+        case let .thin(next):
+            return explain("A talk or two first · next \(Self.weekdayName(next, .abbreviated))")
+        }
+    }
+
+    /// A weekday in the APP language — `formatted()` alone follows the phone's.
+    static func weekdayName(_ date: Date, _ width: Date.FormatStyle.Symbol.Weekday) -> String {
+        date.formatted(Date.FormatStyle(locale: Locale(identifier: UILanguage.chromeLanguage)).weekday(width))
+    }
+
     private var dueReviewRow: some View {
         Button { showingDueReview = true } label: {
             HStack(spacing: 12) {
@@ -1162,6 +1300,10 @@ struct PracticeTab: View {
     }
 
     private func reload() {
+        let tests = WeeklyTestStore.shared.load()
+        weeklyTestState = WeeklyTestSettings.shared.schedule.state(
+            tests: tests, settings: WeeklyTestSettings.shared)
+        monthlyTestState = WeeklyTestSettings.shared.schedule.monthlyState(tests: tests)
         vocab.backfillFromSessions()
         let cards = DrillStore.shared.load()
         dueDrillCount = cards.filter { $0.nextReviewAt <= Date() }.count
@@ -1259,6 +1401,7 @@ struct StudyGoalsSheet: View {
                 } footer: {
                     Text(explain("When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting."))
                 }
+                WeeklyTestSettingsSection(notifications: $notifications)
             }
             .task { notifications = await ReviewNotifications.status() }
             .navigationTitle("Daily goals")
@@ -1452,5 +1595,70 @@ struct FinishedBooksSheet: View {   // internal: DebugCaptureHarness renders it
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
+    }
+}
+
+
+/// The weekly test's day, time, reminder and sounds — one Form section, in
+/// the goals sheet because that is where the Practice tab's own settings
+/// live. The day is the learner's: the default is Saturday, when a week can
+/// be looked back on, and nothing here is synced (two devices must not ring).
+struct WeeklyTestSettingsSection: View {
+    @ObservedObject private var settings = WeeklyTestSettings.shared
+    @Binding var notifications: ReviewNotifications.Status?
+
+    private var weekdays: [(Int, String)] {
+        var cal = Calendar.current
+        cal.locale = Locale(identifier: UILanguage.chromeLanguage)   // the app language, not the phone's
+        let symbols = cal.weekdaySymbols   // Sunday first
+        return (1...7).map { ($0, symbols[$0 - 1]) }
+    }
+
+    var body: some View {
+        Section {
+            Picker(selection: $settings.weekday) {
+                ForEach(weekdays, id: \.0) { day in
+                    Text(day.1).tag(day.0)
+                }
+            } label: {
+                Label("Test day", systemImage: "checklist")
+            }
+            DatePicker(selection: Binding(
+                get: { settings.timeOfDay },
+                set: { settings.timeOfDay = $0 }
+            ), displayedComponents: .hourAndMinute) {
+                Label("Opens at", systemImage: "clock")
+            }
+            Toggle(isOn: Binding(
+                get: { settings.reminderOn },
+                set: { on in Task { await setReminder(on) } }
+            )) {
+                Label("Remind me", systemImage: "bell")
+            }
+            Toggle(isOn: $settings.soundsOn) {
+                Label("Sounds", systemImage: "speaker.wave.2")
+            }
+        } header: {
+            Text("Weekly test")
+        } footer: {
+            Text(explain("One test a week from your talks, words and corrections. It opens on this day and waits until the next one."))
+        }
+        .onChange(of: settings.weekday) { _, _ in Task { await WeeklyTestReminder.reschedule() } }
+        .onChange(of: settings.hour) { _, _ in Task { await WeeklyTestReminder.reschedule() } }
+        .onChange(of: settings.minute) { _, _ in Task { await WeeklyTestReminder.reschedule() } }
+    }
+
+    /// Turning the reminder on asks for notification permission if it has
+    /// never been asked; a denial leaves the toggle off rather than lying.
+    private func setReminder(_ on: Bool) async {
+        guard on else {
+            settings.reminderOn = false
+            await WeeklyTestReminder.reschedule()
+            return
+        }
+        let status = await ReviewNotifications.request()
+        notifications = status
+        settings.reminderOn = status.canRing
+        await WeeklyTestReminder.reschedule()
     }
 }

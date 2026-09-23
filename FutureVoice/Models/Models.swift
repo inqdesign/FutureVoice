@@ -1540,3 +1540,89 @@ struct DrillCardEnrichment: Codable, Hashable {
     var memoryHook: String      // 1-line trigger to help recall when to reach for it
     var generatedAt: Date
 }
+
+// MARK: - Weekly test
+
+/// One week's test, built from THAT learner's own week — the words the talks
+/// taught, the phrases the fluent self used, the sentences that were
+/// corrected, the lines worth hearing again. Nothing here comes from a
+/// generic bank; an item with no source in the learner's material is not an
+/// item. Frozen once built (`items`), so a test read later still asks what
+/// it asked; the answers accumulate as the learner plays.
+struct WeeklyTest: Codable, Identifiable, Equatable {
+    /// A weekly paper from the week's material, or the monthly paper made of
+    /// every item the month's weekly tests got wrong.
+    enum Kind: String, Codable { case weekly, monthly }
+
+    let id: UUID
+    let targetLanguage: String
+    /// nil decodes as `.weekly` (tests written before the monthly existed).
+    var kind: Kind? = nil
+    var isMonthly: Bool { kind == .monthly }
+    /// The window the material was drawn from.
+    let periodStart: Date
+    let periodEnd: Date
+    let createdAt: Date
+    var startedAt: Date?
+    var finishedAt: Date?
+    var items: [WeeklyTestItem]
+    var answers: [WeeklyTestAnswer] = []
+    /// Longest run of correct answers in a row while playing.
+    var bestStreak: Int = 0
+    /// When the result was written into the review loop (`WeeklyTestEngine.apply`);
+    /// nil until then, so a finished test is applied exactly once.
+    var appliedAt: Date? = nil
+
+    var isFinished: Bool { finishedAt != nil }
+    var score: Int { answers.filter(\.correct).count }
+    var total: Int { items.count }
+    /// The next item to play, nil once every one is answered.
+    var nextItem: WeeklyTestItem? {
+        let done = Set(answers.map(\.itemId))
+        return items.first { !done.contains($0.id) }
+    }
+}
+
+struct WeeklyTestItem: Codable, Identifiable, Hashable {
+    enum Kind: String, Codable, CaseIterable {
+        /// A word the talks taught: its meaning is shown, pick the word.
+        case meaning
+        /// A line the fluent self said with its phrase blanked out: pick the phrase.
+        case gap
+        /// A sentence the learner said and was corrected: rebuild the fluent
+        /// version from shuffled word tiles.
+        case build
+        /// A fluent-self line played from its saved audio: pick what was said.
+        case listen
+        /// A fluent-self line to say out loud, scored like a shadow take.
+        case speak
+    }
+    let id: UUID
+    let kind: Kind
+    /// meaning: the sense in the learner's language · gap: the line with the
+    /// blank · build: what the learner originally said · listen: empty.
+    let prompt: String
+    /// The correct answer, as the material spells it.
+    let answer: String
+    /// meaning/gap/listen: the choices, answer included, in display order ·
+    /// build: the word tiles, in display order.
+    let options: [String]
+    /// Where the item came from, so the result can write back to the review
+    /// loop and the screen can name the talk.
+    var sessionId: UUID? = nil
+    var turnId: UUID? = nil
+    var cardId: UUID? = nil
+    /// build: the correction's one-line reason (coaching, native language).
+    var note: String? = nil
+    /// True when the item came back from an earlier test's wrong answers.
+    var isRetake: Bool? = nil
+}
+
+struct WeeklyTestAnswer: Codable, Hashable {
+    let itemId: UUID
+    let given: String
+    let correct: Bool
+    let at: Date
+    /// speak: the shadow match score the verdict was made from.
+    var score: Int? = nil
+}

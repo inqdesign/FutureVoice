@@ -26,6 +26,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     case scenario
     case dialogue
     case weekly
+    case weeklyTest
     // Global (Documents root / UserDefaults).
     case practiceDay
     case talkDay
@@ -49,7 +50,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
         case .session, .drill, .vocabRecord, .vocabExpression, .vocabStudying,
              .vocabStudyingExpression, .vocabRemovedByHand, .vocabAutoKept,
              .vocabDismissed, .vocabIngested, .vocabExpressionIngested,
-             .schedule, .shadow, .savedLine, .scenario, .dialogue, .weekly:
+             .schedule, .shadow, .savedLine, .scenario, .dialogue, .weekly, .weeklyTest:
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults,

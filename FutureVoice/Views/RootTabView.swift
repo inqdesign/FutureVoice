@@ -218,6 +218,7 @@ struct RootTabView: View {
         .onAppear { consumeReviewTap() }
         .onChange(of: callInbox.pendingReview) { _, _ in consumeReviewTap() }
         .onChange(of: callInbox.pendingReviewItem) { _, _ in consumeReviewTap() }
+        .onChange(of: callInbox.pendingWeeklyTest) { _, _ in consumeReviewTap() }
         // In-app jumps to Practice (Home's Practice row) stage a route instead
         // of opening a URL — see ConversationHome.practiceProgressRow. Bring
         // the tab along; PracticeTab consumes the route once it's up.
@@ -251,6 +252,9 @@ struct RootTabView: View {
                 // things you set aside are back").
                 selection = .practice
                 appState.pendingPracticeRoute = .review
+            case "weeklytest":
+                selection = .practice
+                appState.pendingPracticeRoute = .weeklyTest
             case "book":
                 // Continue widget: open a specific book's detail page.
                 let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -371,6 +375,12 @@ struct RootTabView: View {
     }
 
     private func consumeReviewTap() {
+        if callInbox.pendingWeeklyTest {
+            callInbox.pendingWeeklyTest = false
+            selection = .practice
+            appState.pendingPracticeRoute = .weeklyTest
+            return
+        }
         if let item = callInbox.pendingReviewItem {
             callInbox.pendingReviewItem = nil
             selection = .practice

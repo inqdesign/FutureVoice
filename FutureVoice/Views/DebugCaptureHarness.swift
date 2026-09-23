@@ -63,6 +63,13 @@ enum DebugCapture {
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
 
+    /// Which item kind a freshly built weekly test opens on, so each kind's
+    /// screen can be photographed. nil = the engine's own order.
+    static var weeklyTestKind: WeeklyTestItem.Kind?
+    /// Pre-answer the first item: true = the right answer, false = a wrong
+    /// one, so the graded state can be photographed.
+    static var weeklyTestAnswer: Bool?
+
     /// Same trick for the study deck, with the cancel target lit: a drag can
     /// only be photographed from inside itself, and XCUITest has no way to
     /// hold one open while the camera runs.
@@ -641,6 +648,43 @@ enum DebugCapture {
         case "practice-watch":
             once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
+        case "monthly-test":
+            // The month's paper: two finished weekly tests with misses, dated
+            // into the month behind the current month's first opening.
+            once("monthly-test") { seedWeeklyTestWeek(); seedMonthOfMisses() }
+            return AnyView(WeeklyTestView(kind: .monthly).environmentObject(appState))
+        case "practice-monthly":
+            once("practice-monthly") {
+                seedVocab(); seedSessions(); seedScenarios(into: appState); seedMonthOfMisses()
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+        case "weekly-test", "weekly-test-word", "weekly-test-gap", "weekly-test-build", "weekly-test-listen",
+             "weekly-test-speak",
+             "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right":
+            // The test sheet, opened on a chosen item kind. Material is the
+            // seeded week; the dictionary is stubbed so a meaning item can be
+            // built offline.
+            once("weekly-test") { seedWeeklyTestWeek() }
+            stubWordEntry = fatWordEntry
+            weeklyTestKind = switch name {
+                case "weekly-test-word", "weekly-test-word-right": .meaning
+                case "weekly-test-gap", "weekly-test-gap-wrong": .gap
+                case "weekly-test-build", "weekly-test-build-wrong", "weekly-test-build-right": .build
+                case "weekly-test-listen": .listen
+                case "weekly-test-speak": .speak
+                default: nil
+            }
+            weeklyTestAnswer = name.hasSuffix("-right") ? true : (name.hasSuffix("-wrong") ? false : nil)
+            return AnyView(WeeklyTestView().environmentObject(appState))
+        case "weekly-test-result":
+            once("weekly-test-result") { seedFinishedWeeklyTest() }
+            return AnyView(WeeklyTestView().environmentObject(appState))
+        case "practice-weekly":
+            // The Today card carrying the weekly test row, finished state.
+            once("practice-weekly") {
+                seedVocab(); seedSessions(); seedScenarios(into: appState); seedFinishedWeeklyTest()
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "practice-due":
             // The Today card with items back from an earlier snooze — the
             // non-notification entry point into the review deck.
@@ -860,6 +904,25 @@ enum DebugCapture {
         case "expr":
             once("expr") { seedVocab(); seedSessions(scored: true) }
             return AnyView(NavigationStack { ExpressionsView() })
+        case "expr-card":
+            // One phrase's card, open over the list — the widget's deep-link
+            // path, staged in a .task like `vocab-loading`.
+            once("expr") { seedVocab(); seedSessions(scored: true) }
+            // Offline, so the card is handed a phrase-shaped entry: one sense
+            // with the register line, two examples, two near-variants.
+            stubWordEntry = WordEntry(
+                pos: "구동사 · 일상 대화",
+                senses: [.init(pos: "", meaning: "제안이나 결정에 반대 의견을 내다; 밀어내듯 저항하다.",
+                               note: "회의나 협상에서 정중하게 반대할 때 자주 써요.")],
+                examples: [.init(text: "I had to push back on the deadline — two weeks wasn't realistic.",
+                                 meaning: "마감에 반대 의견을 내야 했어요. 2주는 현실적이지 않았거든요."),
+                           .init(text: "Don't be afraid to push back on feedback you disagree with.",
+                                 meaning: "동의하지 않는 피드백에는 주저 말고 반대 의견을 내세요.")],
+                phrases: [.init(phrase: "raise concerns about", meaning: "~에 대해 우려를 제기하다"),
+                          .init(phrase: "challenge", meaning: "이의를 제기하다")],
+                properNoun: nil)
+            return AnyView(NavigationStack { ExpressionsView() }
+                .task { appState.focusPhrase = "push back on" })
         case "score":
             once("score") { seedVocab() }
             return AnyView(NavigationStack {
@@ -1292,6 +1355,151 @@ enum DebugCapture {
             turns: turns, summary: summary, origin: .free)
         SessionStore.shared.save(session)
         return session
+    }
+
+
+    // MARK: - Weekly test
+
+    /// A week with something on every shelf: notebook words, a talk whose
+    /// summary offered phrases the fluent self actually said, corrections
+    /// with the learner's own wording, and fluent lines with audio on disk
+    /// (the bundled ringtone stands in for a saved line).
+    static func seedWeeklyTestWeek() {
+        WeeklyTestStore.shared.removeAll()
+        seedVocab()
+        let uid = UUID()
+        let ended = Date().addingTimeInterval(-2 * 3600)
+        let started = ended.addingTimeInterval(-900)
+        let lines: [(TurnRole, String)] = [
+            (.fluentSelf, "So how did the move go? Did you end up hiring movers?"),
+            (.user, "It was okay. I end up carrying most boxes myself."),
+            (.fluentSelf, "That sounds exhausting. Honestly, next time I'd push back on doing it alone."),
+            (.user, "Yeah, my back is still sore from it."),
+            (.fluentSelf, "Give yourself a day off. You can always catch up on the unpacking later."),
+            (.user, "I have to unpack the kitchen first, it's a chore."),
+            (.fluentSelf, "Kitchens are the worst part. Let me walk you through how I did mine."),
+        ]
+        var turns: [Turn] = []
+        for (i, line) in lines.enumerated() {
+            var t = Turn(id: UUID(), role: line.0, audioURL: nil, transcript: line.1,
+                         durationMs: line.0 == .user ? 9_000 : 3_500,
+                         timestamp: started.addingTimeInterval(Double(i) * 20), suggestion: nil)
+            if line.0 == .user, i == 1 {
+                t.suggestion = TurnSuggestion(alternative: "I ended up carrying most of the boxes myself.",
+                                              reason: "Past tense, and \"most of the\" before a noun.")
+            }
+            if line.0 == .fluentSelf,
+               let wav = Bundle.main.url(forResource: "ringtone", withExtension: "wav"),
+               let data = try? Data(contentsOf: wav) {
+                // The store reads mp3/m4a only; AVAudioPlayer sniffs the bytes.
+                TurnAudioStore.shared.save(data, turnId: t.id, fileExtension: "mp3")
+            }
+            turns.append(t)
+        }
+        var summary = SessionSummary(phrasesUsed: [
+            PhraseFeedback(userSaid: "my back is still sore from it",
+                           fluentAlternative: "my back is still sore from all that lifting",
+                           reason: "Name what caused it."),
+        ], newPatternsDetected: [], suggestedDrills: [],
+           overallNote: "Relaxed and clear.", scorecard: sampleScorecard)
+        summary.expressionsOffered = ["end up", "push back on", "catch up on", "walk you through"]
+        summary.expressionsUsed = ["a chore"]
+        let session = Session(id: UUID(), userId: uid, targetLanguage: "en", mode: .conversation,
+                              topic: nil, startedAt: started, endedAt: ended,
+                              turns: turns, summary: summary, origin: .free)
+        SessionStore.shared.save(session)
+        for turn in turns where turn.suggestion != nil {
+            DrillStore.shared.seed(DrillCard(
+                sourcePhrase: turn.transcript, targetPhrase: turn.suggestion!.alternative,
+                reason: turn.suggestion!.reason, createdAt: ended, lastReviewedAt: nil,
+                nextReviewAt: ended.addingTimeInterval(86_400), box: 0,
+                sourceSessionId: session.id, sourceTurnId: turn.id))
+        }
+        DrillStore.shared.seed(DrillCard(
+            sourcePhrase: "I have to unpack the kitchen first, it's a chore.",
+            targetPhrase: "I have to unpack the kitchen first. It's such a chore.",
+            reason: "Two sentences read better out loud.", createdAt: ended, lastReviewedAt: nil,
+            nextReviewAt: ended.addingTimeInterval(86_400), box: 0,
+            sourceSessionId: session.id, sourceTurnId: turns[5].id))
+        VocabStore.shared.addStudying("chore")
+        VocabStore.shared.addStudying("exhausting")
+    }
+
+    /// Two finished weekly tests, each with misses, inside the month that
+    /// the monthly paper collects from.
+    static func seedMonthOfMisses() {
+        WeeklyTestStore.shared.removeAll()
+        let schedule = WeeklyTestSettings.shared.schedule
+        let opening = schedule.monthOpening()
+        for weeksBack in [1, 2] {
+            let at = opening.addingTimeInterval(Double(-weeksBack) * 7 * 86_400 + 3_600)
+            let items: [WeeklyTestItem] = [
+                .init(id: UUID(), kind: .meaning, prompt: "Making you feel very tired.",
+                      answer: "exhausting", options: ["thrilling", "exhausting", "soothing", "spare"]),
+                .init(id: UUID(), kind: .gap, prompt: "Honestly, next time I'd ______ doing it alone.",
+                      answer: "push back on", options: ["end up", "push back on", "catch up on", "walk you through"]),
+                .init(id: UUID(), kind: .build, prompt: "I end up carrying most boxes myself.",
+                      answer: "I ended up carrying most of the boxes myself.",
+                      options: ["most", "I", "myself.", "ended", "the", "up", "boxes", "carrying", "of", "end"]),
+                .init(id: UUID(), kind: .meaning, prompt: weeksBack == 1 ? "A task you have to do regularly and find tedious." : "In a careless or lazy way.",
+                      answer: weeksBack == 1 ? "chore" : "slackly",
+                      options: weeksBack == 1 ? ["chore", "errand", "hobby", "shift"] : ["slackly", "briskly", "neatly", "gladly"]),
+                .init(id: UUID(), kind: .speak, prompt: "", answer: "Give yourself a day off.", options: []),
+            ]
+            var test = WeeklyTest(id: UUID(), targetLanguage: "en",
+                                  periodStart: at.addingTimeInterval(-7 * 86_400), periodEnd: at,
+                                  createdAt: at, items: items)
+            test.startedAt = at
+            for (i, item) in items.enumerated() {
+                let ok = i == 1 && weeksBack == 2
+                test.answers.append(WeeklyTestAnswer(itemId: item.id, given: ok ? item.answer : "",
+                                                     correct: ok, at: at.addingTimeInterval(Double(i) * 30)))
+            }
+            test.finishedAt = at.addingTimeInterval(600)
+            test.appliedAt = test.finishedAt
+            WeeklyTestStore.shared.save(test)
+        }
+    }
+
+    /// A finished test on file for this week, so the result page and the
+    /// Today card's done row render.
+    static func seedFinishedWeeklyTest() {
+        WeeklyTestStore.shared.removeAll()
+        let now = Date()
+        var items: [WeeklyTestItem] = [
+            .init(id: UUID(), kind: .meaning, prompt: "A task you have to do regularly and find tedious.",
+                  answer: "chore", options: ["chore", "errand", "hobby", "shift"]),
+            .init(id: UUID(), kind: .meaning, prompt: "Making you feel very tired.",
+                  answer: "exhausting", options: ["thrilling", "exhausting", "soothing", "spare"]),
+            .init(id: UUID(), kind: .gap, prompt: "Honestly, next time I'd ______ doing it alone.",
+                  answer: "push back on", options: ["end up", "push back on", "catch up on", "walk you through"]),
+            .init(id: UUID(), kind: .gap, prompt: "You can always ______ the unpacking later.",
+                  answer: "catch up on", options: ["catch up on", "push back on", "end up", "walk you through"]),
+            .init(id: UUID(), kind: .build, prompt: "I end up carrying most boxes myself.",
+                  answer: "I ended up carrying most of the boxes myself.",
+                  options: ["most", "I", "myself.", "ended", "the", "up", "boxes", "carrying", "of", "end"]),
+            .init(id: UUID(), kind: .listen, prompt: "", answer: "Give yourself a day off.",
+                  options: ["Give yourself a day off.", "Kitchens are the worst part.", "That sounds exhausting."]),
+            .init(id: UUID(), kind: .build, prompt: "my back is still sore from it",
+                  answer: "my back is still sore from all that lifting",
+                  options: ["sore", "from", "my", "all", "back", "that", "is", "lifting", "still", "it"]),
+        ]
+        let wrong: Set<Int> = [1, 4]
+        var test = WeeklyTest(id: UUID(), targetLanguage: "en",
+                              periodStart: now.addingTimeInterval(-7 * 86_400), periodEnd: now,
+                              createdAt: now.addingTimeInterval(-600), items: items)
+        test.startedAt = now.addingTimeInterval(-600)
+        for (i, item) in items.enumerated() {
+            let ok = !wrong.contains(i)
+            let given = ok ? item.answer : (item.kind == .build ? "I end up carrying most of the boxes myself." : item.options.first { $0 != item.answer } ?? "")
+            test.answers.append(WeeklyTestAnswer(itemId: item.id, given: given, correct: ok,
+                                                 at: now.addingTimeInterval(Double(i) * 30 - 600)))
+        }
+        test.bestStreak = 3
+        test.finishedAt = now.addingTimeInterval(-60)
+        test.appliedAt = test.finishedAt
+        items.removeAll()
+        WeeklyTestStore.shared.save(test)
     }
 
     static func seedSessions(scored: Bool = false) {
