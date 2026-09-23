@@ -49,6 +49,11 @@ struct WeeklyTestView: View {
     @State private var chosen: String?
     /// build: indices into `item.options`, in the order laid.
     @State private var laid: [Int] = []
+    /// Where the next tile goes: an insertion index into `laid`, 0…count.
+    /// Tapping a placed tile puts the cursor right after it, so a word can be
+    /// slipped into the middle without unlaying everything behind it (user,
+    /// 2026-09-24); tapping that same tile again removes it.
+    @State private var cursor = 0
     /// nil until graded.
     @State private var outcome: Bool?
     @State private var streak = 0
@@ -472,12 +477,19 @@ struct WeeklyTestView: View {
         return VStack(alignment: .leading, spacing: 16) {
             // The sentence being laid.
             FlowLayout(spacing: 8, lineSpacing: 10) {
+                if outcome == nil, cursor == 0, !laid.isEmpty { caret }
                 ForEach(Array(laid.enumerated()), id: \.element) { position, index in
                     tile(item.options[index], filled: true,
-                         verdict: check.map { $0.correct[position] }) { unlay(index) }
+                         verdict: check.map { $0.correct[position] },
+                         selected: outcome == nil && cursor == position + 1 && cursor < laid.count) {
+                        tapPlaced(at: position)
+                    }
+                    if outcome == nil, cursor == position + 1, cursor < laid.count { caret }
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
+            .contentShape(Rectangle())
+            .onTapGesture { if outcome == nil { cursor = laid.count } }
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 14)
@@ -503,6 +515,13 @@ struct WeeklyTestView: View {
                 }
             }
             .animation(.easeOut(duration: 0.18), value: laid)
+
+            if outcome == nil, !laid.isEmpty {
+                Text(explain("Tap a placed word to add after it. Tap it again to take it out."))
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let outcome, !outcome {
                 VStack(alignment: .leading, spacing: 10) {
@@ -553,7 +572,7 @@ struct WeeklyTestView: View {
 
     /// `verdict` nil = not graded (or graded right, where the whole row is
     /// green); true = this tile sits where the answer wants it.
-    private func tile(_ word: String, filled: Bool, verdict: Bool?,
+    private func tile(_ word: String, filled: Bool, verdict: Bool?, selected: Bool = false,
                       action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(word)
@@ -563,6 +582,17 @@ struct WeeklyTestView: View {
         }
         .buttonStyle(.bordered)
         .tint(filled ? tileTint(verdict) : (outcome == nil ? .accentColor : .gray))
+        // The tile the cursor follows wears a ring; a style can't be
+        // switched in a ternary, and a ring reads as "selected" either way.
+        .overlay(Capsule().strokeBorder(Color.accentColor, lineWidth: selected ? 2 : 0))
+    }
+
+    /// The insertion point, drawn between placed tiles when it isn't at the end.
+    private var caret: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.accentColor)
+            .frame(width: 2, height: 30)
+            .accessibilityHidden(true)
     }
 
     private func tileTint(_ verdict: Bool?) -> Color {
@@ -723,6 +753,7 @@ struct WeeklyTestView: View {
         current = test.nextItem
         chosen = nil
         laid = []
+        cursor = 0
         outcome = nil
         phase = .playing(test)
         if current == nil { finish(test) }
@@ -738,14 +769,28 @@ struct WeeklyTestView: View {
 
     private func lay(_ index: Int) {
         guard outcome == nil else { return }
-        laid.append(index)
+        let at = min(max(cursor, 0), laid.count)
+        laid.insert(index, at: at)
+        cursor = at + 1
         SoundEffects.play(.tap)
         HapticEngine.selection()
     }
 
-    private func unlay(_ index: Int) {
-        guard outcome == nil else { return }
-        laid.removeAll { $0 == index }
+    /// First tap on a placed tile moves the cursor after it; a second tap on
+    /// the tile the cursor already follows takes it out.
+    private func tapPlaced(at position: Int) {
+        guard outcome == nil, laid.indices.contains(position) else { return }
+        if cursor == position + 1 && cursor < laid.count {
+            laid.remove(at: position)
+            cursor = position
+        } else if cursor == position + 1 {
+            // Cursor at the end sits after the last tile; tapping the last
+            // tile there is a removal too.
+            laid.remove(at: position)
+            cursor = laid.count
+        } else {
+            cursor = position + 1
+        }
         SoundEffects.play(.tap)
         HapticEngine.selection()
     }
@@ -780,6 +825,7 @@ struct WeeklyTestView: View {
         player.stop()
         chosen = nil
         laid = []
+        cursor = 0
         outcome = nil
         speakPhase = .idle
         speakTranscript = nil

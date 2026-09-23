@@ -62118,6 +62118,46 @@
         }
       }
     },
+    "Tap a placed word to add after it. Tap it again to take it out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca una palabra colocada para añadir después de ella. Tócala otra vez para quitarla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche un mot posé pour ajouter après lui. Touche-le encore pour l’enlever."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置いた単語をタップするとその後ろに入ります。もう一度タップで外します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "놓은 단어를 누르면 그 뒤에 넣어요. 한 번 더 누르면 빼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点一下已放的词，就会加在它后面。再点一下就拿掉。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下已放的字，就會加在它後面。再點一下就拿掉。"
+          }
+        }
+      }
+    },
     "Tap a word in the cloud to start your notebook" : {
       "localizations" : {
         "de" : {
