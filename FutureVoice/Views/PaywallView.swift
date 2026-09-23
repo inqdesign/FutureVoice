@@ -441,6 +441,14 @@ struct PaywallView: View {
 
     // MARK: - Step 2 · Trial timeline
 
+    /// The day the "it converts soon" notice fires, counting the purchase as
+    /// day 1 — nil when it collides with a row the timeline already draws.
+    private var reminderDay: Int? {
+        let days = store.trialDays
+        let day = days - TrialReminder.leadDays(forTrialDays: days)
+        return (2..<days).contains(day) ? day : nil
+    }
+
     private var timelineContent: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 8) {
@@ -455,12 +463,19 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 0) {
                 timelineRow(icon: "lock.open.fill",
                             title: explain("Today"),
-                            caption: explain("Your trial starts — a week's worth of talk, and all the review it produces."),
+                            caption: explain("Your trial starts — talk time on us, and all the review it produces."),
                             showsLine: true)
-                timelineRow(icon: "bell.fill",
-                            title: explain("Day \(max(1, store.trialDays - 2))"),
-                            caption: explain("A reminder that your trial is about to convert — we ask to send notifications when the trial starts."),
-                            showsLine: true)
+                // The reminder's own day, from the one place that decides it.
+                // Dropped when it has nowhere of its own to sit: on a short
+                // trial the notice can land on the day the trial starts or
+                // the day it ends, and a row repeating "Today" or the last
+                // row reads as a mistake rather than a schedule.
+                if let day = reminderDay {
+                    timelineRow(icon: "bell.fill",
+                                title: explain("Day \(day)"),
+                                caption: explain("A reminder that your trial is about to convert — we ask to send notifications when the trial starts."),
+                                showsLine: true)
+                }
                 timelineRow(icon: "crown.fill",
                             title: explain("Day \(store.trialDays)"),
                             caption: explain("Your subscription starts. Cancel any time before then in the App Store."),
