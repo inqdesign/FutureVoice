@@ -32,9 +32,29 @@ enum StudyWidgetRefresher {
 
     /// Fire-and-forget hook for nonisolated call sites (store writes may not
     /// be on the main actor).
+    ///
+    /// COALESCED, and never in the same run-loop turn as the write. A single
+    /// "I know" on a word card writes three files, and each write asked for
+    /// a refresh that rebuilt every talk book on the main thread — 30 books
+    /// ≈ 515 ms in the simulator (2026-09-23), more on a phone — before the
+    /// button could repaint, which the learner reported as the tap
+    /// stuttering. One refresh per burst of writes, after the burst; the
+    /// scene-phase edges still call `refresh()` directly, so a background
+    /// exit never loses the snapshot.
     nonisolated static func schedule() {
-        Task { @MainActor in refresh() }
+        Task { @MainActor in
+            pending?.cancel()
+            pending = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(coalesceSeconds * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+                pending = nil
+                refresh()
+            }
+        }
     }
+
+    @MainActor private static var pending: Task<Void, Never>?
+    private static let coalesceSeconds = 0.4
 
     /// Language code stamped into the study snapshots — only when the user is
     /// enrolled in more than one language, so a single-language install never

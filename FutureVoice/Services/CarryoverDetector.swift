@@ -357,13 +357,28 @@ enum CarryoverDetector {
     /// normalization `DrillStore` matches quotes with, so a card and a
     /// transcript compare on equal terms despite STT casing/punctuation drift.
     static func normalized(_ text: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(.whitespaces)
-        return String(text.unicodeScalars.filter { allowed.contains($0) })
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        // One pass, no intermediate arrays. This runs twice per sentence of
+        // every talk-book build (`TalkCurriculum.shadowPicks`), and the
+        // filter → lowercased → components → joined chain was most of a
+        // warm build's time (2026-09-23). Same output as that chain: letters
+        // and digits kept, runs of spaces/tabs collapsed to one, newlines
+        // and everything else dropped outright, then lowercased.
+        var out = String.UnicodeScalarView()
+        var pendingSpace = false
+        for scalar in text.unicodeScalars {
+            if Self.normalizedKept.contains(scalar) {
+                if pendingSpace, !out.isEmpty { out.append(" ") }
+                pendingSpace = false
+                out.append(scalar)
+            } else if Self.normalizedSpace.contains(scalar) {
+                pendingSpace = true
+            }
+        }
+        return String(out).lowercased()
     }
+
+    private static let normalizedKept = CharacterSet.alphanumerics
+    private static let normalizedSpace = CharacterSet.whitespaces
 
     /// Words, normalized. An unspaced language is segmented FIRST and each
     /// segment normalized after — `normalized` keeps letters and spaces, and

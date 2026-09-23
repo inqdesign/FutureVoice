@@ -130,6 +130,10 @@ struct VocabularyView: View {
     private func cloud(in size: CGSize) -> some View {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let margin: CGFloat = 70
+        // One set per render, not `store.isStudying` per node: that is a
+        // linear scan of the notebook for each of the pool's thousands of
+        // words, on every store write while the sheet is up.
+        let studyingSet = Set(store.studying)
 
         return ZStack {
             Color(.systemBackground)
@@ -148,7 +152,7 @@ struct VocabularyView: View {
                     // that leaves the top/bottom of tall screens empty.
                     let nd = hypot((sx - center.x) / center.x, (sy - center.y) / center.y)
                     let opacity = max(0, min(1, 1.25 - nd))
-                    let studying = store.isStudying(node.word)
+                    let studying = studyingSet.contains(node.word)
                     Text(node.word)
                         .font(.system(size: node.size, weight: used ? .regular : .semibold, design: .rounded))
                         .foregroundStyle(used ? Color.secondary : Color.primary)

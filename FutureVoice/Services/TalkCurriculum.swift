@@ -160,19 +160,26 @@ enum TalkCurriculum {
     /// model-written speech, not prose with abbreviations and decimals, and a
     /// bad split produces a fragment the 4-word floor above throws away.
     nonisolated static func sentences(in text: String) -> [String] {
+        // Slices, not a character-by-character rebuild: this runs over every
+        // turn of every talk on each book build (measured 2026-09-23).
         var out: [String] = []
-        var current = ""
-        for character in text {
-            current.append(character)
-            guard ".!?。！？".contains(character) else { continue }
-            let piece = current.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !piece.isEmpty { out.append(piece) }
-            current = ""
+        var start = text.startIndex
+        var i = start
+        while i < text.endIndex {
+            let next = text.index(after: i)
+            if sentenceTerminators.contains(text[i]) {
+                let piece = text[start..<next].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !piece.isEmpty { out.append(piece) }
+                start = next
+            }
+            i = next
         }
-        let tail = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tail = text[start...].trimmingCharacters(in: .whitespacesAndNewlines)
         if !tail.isEmpty { out.append(tail) }
         return out
     }
+
+    nonisolated private static let sentenceTerminators: Set<Character> = [".", "!", "?", "。", "！", "？"]
 
     /// Stable id for one sentence of a turn, so a shadow attempt made today is
     /// still recognised tomorrow. Derived from the source turn like

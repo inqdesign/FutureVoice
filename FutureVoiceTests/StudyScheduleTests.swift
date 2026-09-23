@@ -752,6 +752,9 @@ final class ConfirmedByUseTests: XCTestCase {
         let store = VocabStore.shared
         let word = "hectic"
         store.unmark(word); store.removeStudying(word); store.forgetRemovedByHand(word)
+        // Only a claim made on a NOTEBOOK word counts (2026-09-21), so it has
+        // to be studied before "I know it" means anything.
+        store.addStudying(word)
         store.markKnown(word)
         defer { store.unmark(word); store.forgetRemovedByHand(word) }
         XCTAssertFalse(store.isConfirmedWord(word), "marked by hand is a claim, not evidence")
@@ -781,6 +784,8 @@ final class ConfirmedByUseTests: XCTestCase {
     func testSayingAKnownExpressionConfirmsIt() {
         let store = VocabStore.shared
         let phrase = "slipped my mind \(UUID().uuidString.prefix(6).lowercased())"
+        // Same notebook rule as the word above: bookmarked first, then known.
+        store.setStudyingExpression(phrase, true)
         store.setKnownExpression(phrase, true)
         defer { store.dismissExpression(phrase) }
         XCTAssertTrue(store.unconfirmedKnownExpressions.contains(phrase))
