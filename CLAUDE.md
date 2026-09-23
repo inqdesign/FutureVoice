@@ -1238,7 +1238,7 @@ had never heard. What the server needs is a **session**, not an account.
   (`restoreVoiceCloneFromCloud`: the query succeeded, this user owns no active
   row, the phone holds an id → the voice belonged to someone who is gone). It
   drops the id, signs an anonymous session out, and the voice-clone screen opens
-  on "Your voice was deleted" until the next clone lands. The silent anonymous
+  on "Let's make your voice again" (positive first, the deletion is the second line) until the next clone lands. The silent anonymous
   sign-in in `accessToken` is DEBUG-only.
 
 ## Source of truth

@@ -331,7 +331,9 @@ struct VoiceCloneOnboardingView: View {
 
     private var stageTitle: String {
         switch status {
-        case .intro:     return chrome("Your fluent self")
+        case .intro:     return appState.voiceWasReclaimed
+                                ? chrome("Let's make your voice again")
+                                : chrome("Your fluent self")
         case .consent:   return chrome("Your voice, in safe hands")
         case .spot:      return chrome("Find a quiet spot")
         case .mic:       return chrome("Mic check")
@@ -467,7 +469,32 @@ struct VoiceCloneOnboardingView: View {
     // Step 1 — the narrative. Why it's YOUR voice and not a stranger's (the
     // pitch the consent screen used to carry, moved to where the decision is
     // actually being made), then what the next minute buys.
+    @ViewBuilder
     private var introContent: some View {
+        if appState.voiceWasReclaimed {
+            reclaimedIntroContent
+        } else {
+            firstIntroContent
+        }
+    }
+
+    /// The intro for someone whose voice the server reclaimed: they cloned,
+    /// left before signing up, and came back after `AppState.reclaimGraceMinutes`.
+    /// Opens on what they GET (their voice back, in a minute), then says what
+    /// happened and why — never leads with the loss (user rule 2026-09-21:
+    /// always start positive). The first-time pitch would read as the app not
+    /// knowing they have already been here.
+    private var reclaimedIntroContent: some View {
+        VStack(spacing: 12) {
+            stepHeader(explain("One minute of reading brings your fluent self back."),
+                       explain("You didn't finish signing up, so we deleted the voice you made to keep it safe."))
+            supportLine(explain("Everything else is still here."))
+                .padding(.horizontal, 32)
+        }
+        .transition(.opacity)
+    }
+
+    private var firstIntroContent: some View {
         VStack(spacing: 12) {
             stepHeader(explain("Another you.\nAlready fluent."),
                        explain("Don't imitate a stranger — practice with the fluent you."))

@@ -110,6 +110,8 @@ struct FutureVoiceApp: App {
             // silent forever — a reinstall (pending requests gone), a plan
             // whose time passed unanswered, or a language switch.
             if phase == .active {
+                // Before the daily call re-arms on a voice that may be gone.
+                appState.checkForReclaimedVoice()
                 appState.refreshDailyCall()
                 // The Core has no push infrastructure, so an arrival is
                 // noticed here and announced locally. Late by design — the
@@ -219,7 +221,33 @@ final class AppState: ObservableObject {
             // Remember the id so a LATER re-record doesn't orphan everything
             // already synthesized in this voice — see PhraseAudioStore.
             PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
+            // Which kind of user now owns this voice. An anonymous owner is on
+            // the server's reclaim clock from the moment it was created.
+            if voiceCloneId != nil, let owner = SupabaseProvider.shared.auth.currentSession?.user {
+                unclaimedVoiceSince = owner.isAnonymous ? owner.createdAt : nil
+            }
         }
+    }
+    /// When the anonymous user holding the current voice was created — nil once
+    /// a real account owns it. `cleanup-anonymous-voices` deletes an unclaimed
+    /// anonymous user AND its clone `reclaimGraceMinutes` after creation, so a
+    /// learner who cloned, left before signing up and came back later is
+    /// holding an id to a voice that no longer exists (2026-09-21: cloned
+    /// 23:23, reclaimed 00:00, back at 10:54 — the app then called with the
+    /// dead id, got `voice_forbidden` twice, and they left without hearing a
+    /// word). The clock needs no network: past the grace the voice is gone
+    /// whatever this phone knows.
+    private(set) var unclaimedVoiceSince: Date? {
+        didSet { UserDefaults.standard.set(unclaimedVoiceSince, forKey: Self.unclaimedVoiceSinceKey) }
+    }
+    /// The server's grace (`GRACE_MINUTES` in `cleanup-anonymous-voices`).
+    /// Past it the voice is condemned even if the sweep hasn't run yet.
+    static let reclaimGraceMinutes: Double = 30
+    /// True between "your voice was deleted" and the next successful clone —
+    /// the voice-clone screen opens on the notice instead of its usual intro.
+    /// Persisted so a relaunch mid-way still says why they're recording again.
+    @Published private(set) var voiceWasReclaimed = false {
+        didSet { UserDefaults.standard.set(voiceWasReclaimed, forKey: Self.voiceWasReclaimedKey) }
     }
     /// The accent last APPLIED to the clone (`VoiceAccent.id`), nil when the
     /// clone speaks with whatever the TTS model guesses. A remixed voice id
@@ -402,6 +430,8 @@ final class AppState: ObservableObject {
     }
 
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
+    private static let unclaimedVoiceSinceKey = "futurevoice.unclaimedVoiceSince"
+    private static let voiceWasReclaimedKey = "futurevoice.voiceWasReclaimed"
     private static let voiceNameKey = "futurevoice.voiceName"
     private static let voiceAccentIdKey = "futurevoice.voiceAccentId"
     private static let cloneScriptLanguageKey = "futurevoice.cloneScriptLanguage"
@@ -434,6 +464,8 @@ final class AppState: ObservableObject {
         voiceAccentId = UserDefaults.standard.string(forKey: Self.voiceAccentIdKey)
         cloneScriptLanguage = UserDefaults.standard.string(forKey: Self.cloneScriptLanguageKey)
         pendingDeleteVoiceId = UserDefaults.standard.string(forKey: Self.pendingDeleteVoiceIdKey)
+        unclaimedVoiceSince = UserDefaults.standard.object(forKey: Self.unclaimedVoiceSinceKey) as? Date
+        voiceWasReclaimed = UserDefaults.standard.bool(forKey: Self.voiceWasReclaimedKey)
         setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
         onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
         persona = PersonaStore.shared.load()
@@ -462,7 +494,40 @@ final class AppState: ObservableObject {
         SyncEngine.shared.onApplied = { [weak self] kinds in
             self?.adoptSyncedChanges(kinds)
         }
+        // Before anything can call with it: a voice left unclaimed past the
+        // grace is gone upstream, and the app must say so rather than dial it.
+        checkForReclaimedVoice()
         Task { await self.observeAuth() }
+    }
+
+    /// The offline half of "is my voice still there?": an anonymous owner
+    /// older than the server's grace means the sweep has deleted it, or will
+    /// within minutes whatever this phone does. Runs at launch and on every
+    /// foreground (a backgrounded app can outlive the grace without a relaunch).
+    func checkForReclaimedVoice() {
+        guard voiceCloneId != nil, let since = unclaimedVoiceSince,
+              Date().timeIntervalSince(since) > Self.reclaimGraceMinutes * 60 else { return }
+        voiceWasDeleted(reason: "unclaimed_grace")
+    }
+
+    /// The voice this phone holds no longer exists upstream. Drop it and send
+    /// the learner back to record, with the voice-clone screen saying why —
+    /// never leave them in an app whose every call is refused.
+    ///
+    /// No `pendingDeleteVoiceId`: there is nothing left to delete. An
+    /// anonymous session is signed out too — its user is (or is about to be)
+    /// deleted along with the voice, and a new clone must not land on it.
+    func voiceWasDeleted(reason: String) {
+        guard voiceCloneId != nil else { return }
+        Analytics.capture("voice_reclaimed_notice", ["reason": reason])
+        Telemetry.log("voice_reclaimed_notice", ["reason": reason])
+        voiceCloneId = nil
+        voiceAccentId = nil
+        unclaimedVoiceSince = nil
+        voiceWasReclaimed = true
+        if SupabaseProvider.shared.auth.currentSession?.user.isAnonymous == true {
+            Task { try? await SupabaseProvider.shared.auth.signOut() }
+        }
     }
 
     // MARK: - Daily call
@@ -661,6 +726,11 @@ final class AppState: ObservableObject {
             // anonymous user, so the id identified here is the same one.
             if !session.user.isAnonymous {
                 Analytics.identify(userId: session.user.id.uuidString)
+                // An account owns the session now — a linked anonymous user
+                // keeps its id and is off the reclaim clock. (One that was
+                // adopted into an existing account is re-cloned by onboarding,
+                // and the cloud check below catches a clone that never was.)
+                unclaimedVoiceSince = nil
             }
             await self.restoreVoiceCloneFromCloud()
             // Retry any delete that never landed — an orphaned clone holds an
@@ -701,6 +771,21 @@ final class AppState: ObservableObject {
                 .limit(1)
                 .execute()
                 .value
+            let anonymous = SupabaseProvider.shared.auth.currentSession?.user.isAnonymous == true
+            // The query succeeded and this user owns no voice, yet the phone
+            // holds one: it belonged to a user that is gone (an unclaimed
+            // anonymous clone the sweep reclaimed, then a fresh session). The
+            // clone function inserts the row before the id ever reaches the
+            // client, so an empty answer is never "not mirrored yet".
+            if rows.isEmpty {
+                if voiceCloneId != nil, !holdVoiceOnboarding, voiceCloneId != pendingDeleteVoiceId {
+                    voiceWasDeleted(reason: "no_server_voice")
+                }
+                return
+            }
+            // Onboarding owns the voice while the session is anonymous; a
+            // restore here could only resurrect one being reclaimed.
+            guard !anonymous else { return }
             guard let active = rows.first?.elevenlabs_voice_id,
                   active != voiceCloneId else { return }
             // A voice staged for deletion is on its way OUT — adopting it
@@ -1165,6 +1250,7 @@ final class AppState: ObservableObject {
         }
         if let old = voiceCloneId, old != newId { pendingDeleteVoiceId = old }
         voiceCloneId = newId
+        voiceWasReclaimed = false
         // A clone straight off the recording is un-remixed again, whatever
         // accent the outgoing one carried.
         voiceAccentId = nil
