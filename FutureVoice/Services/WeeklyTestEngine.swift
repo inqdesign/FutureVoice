@@ -104,7 +104,8 @@ enum WeeklyTestEngine {
         // review, and a miss is the most certain material there is.
         if let last = lastTest, last.isFinished, !last.isMonthly {
             let fresh = Set(items.map { itemKey($0) })
-            items += retakes(from: [last], limit: maxRetake, excluding: fresh, rng: &rng)
+            items += retakes(from: [last], limit: maxRetake, excluding: fresh,
+                             language: appState.targetLanguage, rng: &rng)
         }
 
         #if DEBUG
@@ -132,7 +133,8 @@ enum WeeklyTestEngine {
                              now: Date = Date()) -> WeeklyTest? {
         let id = UUID()
         var rng = WeeklyTestRandom(seed: id)
-        var items = retakes(from: tests, limit: maxMonthly, excluding: [], rng: &rng)
+        var items = retakes(from: tests, limit: maxMonthly, excluding: [],
+                            language: targetLanguage, rng: &rng)
         guard items.count >= minItems else { return nil }
         items.shuffle(using: &rng)
         if let first = items.first, first.kind == .listen || first.kind == .speak,
@@ -147,12 +149,12 @@ enum WeeklyTestEngine {
     /// Wrong answers of `tests`, newest test first, one per distinct answer,
     /// as fresh items with their choices reshuffled.
     private static func retakes(from tests: [WeeklyTest], limit: Int, excluding: Set<String>,
-                                rng: inout WeeklyTestRandom) -> [WeeklyTestItem] {
+                                language: String, rng: inout WeeklyTestRandom) -> [WeeklyTestItem] {
         var out: [WeeklyTestItem] = []
         var seen = excluding
         for test in tests.sorted(by: { $0.createdAt > $1.createdAt }) {
             let wrong = Set(test.answers.filter { !$0.correct }.map(\.itemId))
-            for item in test.items where wrong.contains(item.id) && isValid(item) {
+            for item in test.items where wrong.contains(item.id) && isValid(item, language: language) {
                 guard out.count < limit else { return out }
                 let key = itemKey(item)
                 guard !seen.contains(key) else { continue }
@@ -180,7 +182,8 @@ enum WeeklyTestEngine {
     /// place, never saved. nil when nothing was missed.
     static func retryPaper(from test: WeeklyTest) -> WeeklyTest? {
         var rng = WeeklyTestRandom(seed: UUID())
-        let items = retakes(from: [test], limit: maxMonthly, excluding: [], rng: &rng)
+        let items = retakes(from: [test], limit: maxMonthly, excluding: [],
+                            language: test.targetLanguage, rng: &rng)
         guard !items.isEmpty else { return nil }
         var paper = WeeklyTest(id: UUID(), targetLanguage: test.targetLanguage, kind: test.kind,
                                periodStart: test.periodStart, periodEnd: test.periodEnd,
@@ -192,16 +195,18 @@ enum WeeklyTestEngine {
     /// An item that still passes today's rules. Tests are frozen when built,
     /// so an item minted before a rule existed (the Korean-sourced card of
     /// 2026-09-23) has to be caught wherever a stored item is reused.
-    static func isValid(_ item: WeeklyTestItem) -> Bool {
-        guard isInTargetScript(item.answer) else { return false }
+    /// `language` is the TEST's own, never the active pointer: a stored item
+    /// is judged by the language it was written for.
+    static func isValid(_ item: WeeklyTestItem, language: String) -> Bool {
+        func ok(_ text: String) -> Bool { isInTargetScript(text, language: language) }
+        guard ok(item.answer) else { return false }
         switch item.kind {
         case .build:
-            return isInTargetScript(item.prompt) && item.options.allSatisfy { isInTargetScript($0) }
+            return ok(item.prompt) && item.options.allSatisfy(ok)
         case .gap:
-            return isInTargetScript(item.prompt.replacingOccurrences(of: blankMark, with: ""))
-                && item.options.allSatisfy { isInTargetScript($0) }
+            return ok(item.prompt.replacingOccurrences(of: blankMark, with: "")) && item.options.allSatisfy(ok)
         case .meaning, .listen:
-            return item.options.allSatisfy { isInTargetScript($0) }
+            return item.options.allSatisfy(ok)
         case .speak:
             return true
         }
@@ -212,7 +217,7 @@ enum WeeklyTestEngine {
     /// nothing changed.
     static func pruned(_ test: WeeklyTest) -> WeeklyTest? {
         let answered = Set(test.answers.map(\.itemId))
-        let kept = test.items.filter { answered.contains($0.id) || isValid($0) }
+        let kept = test.items.filter { answered.contains($0.id) || isValid($0, language: test.targetLanguage) }
         guard kept.count != test.items.count else { return nil }
         var t = test
         t.items = kept

@@ -7,8 +7,9 @@ import XCTest
 @MainActor
 final class WeeklyTestTests: XCTestCase {
 
-    private func item(_ kind: WeeklyTestItem.Kind, answer: String, options: [String] = []) -> WeeklyTestItem {
-        WeeklyTestItem(id: UUID(), kind: kind, prompt: "", answer: answer, options: options)
+    private func item(_ kind: WeeklyTestItem.Kind, answer: String, options: [String] = [],
+                      prompt: String = "") -> WeeklyTestItem {
+        WeeklyTestItem(id: UUID(), kind: kind, prompt: prompt, answer: answer, options: options)
     }
 
     // MARK: - Grading
@@ -172,10 +173,16 @@ final class WeeklyTestTests: XCTestCase {
             return t
         }
         let a = item(.meaning, answer: "chore", options: ["chore", "errand", "hobby", "shift"])
-        let b = item(.gap, answer: "end up", options: ["end up", "push back on", "catch up on", "walk you through"])
-        let c = item(.build, answer: "I really like it", options: ["I", "like", "really", "it", "very"])
+        let b = item(.gap, answer: "end up",
+                     options: ["end up", "push back on", "catch up on", "walk you through"],
+                     prompt: "Did you \(WeeklyTestEngine.blankMark) hiring movers?")
+        let c = item(.build, answer: "I really like it", options: ["I", "like", "really", "it", "very"],
+                     prompt: "I very like it")
         let d = item(.speak, answer: "Give yourself a day off.")
         let e = item(.listen, answer: "Kitchens are the worst part.", options: ["Kitchens are the worst part.", "x", "y"])
+        // The paper is judged in ITS language, whatever the active one is.
+        UserDefaults.standard.set("de", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey) }
         let week1 = finished([a, b, c], wrong: [0, 1, 2], daysAgo: 14)
         let week2 = finished([item(.meaning, answer: "Chore", options: a.options), d, e], wrong: [0, 1, 2], daysAgo: 7)
         let monthly = WeeklyTestEngine.buildMonthly(from: [week1, week2], targetLanguage: "en")
