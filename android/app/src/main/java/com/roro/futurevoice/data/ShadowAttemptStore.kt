@@ -29,6 +29,19 @@ data class ShadowAttempt(
     val recordingFilename: String? = null,
     /** 0–100. */
     val matchScore: Int = 0,
+    /**
+     * The words this take covered, when it was a PHRASE rather than the whole
+     * line — null means the whole line. Old records decode as whole-line,
+     * which is what they were.
+     *
+     * Tapping two words and saying "the bank" used to save an attempt under
+     * the line's own id with nothing to mark it partial, so a two-word take
+     * checked the sentence off. A phrase take is still listed, replayable and
+     * counted as a rep; it is excluded from everything that judges the LINE
+     * (iOS `17d0b56`).
+     */
+    val phraseFirst: Int? = null,
+    val phraseLast: Int? = null,
     /** 0–100 word-onset timing; null = not measurable. */
     val rhythmScore: Int? = null,
     val pronunciation: String = "",
@@ -36,7 +49,10 @@ data class ShadowAttempt(
     val fix: String = "",
     @Serializable(with = IsoDateMillisSerializer::class)
     val createdAt: Long = System.currentTimeMillis(),
-)
+) {
+    /** A take of PART of the line — never a verdict on the line itself. */
+    val isPartial: Boolean get() = phraseFirst != null && phraseLast != null
+}
 
 class ShadowAttemptStore private constructor(private val context: Context) {
 

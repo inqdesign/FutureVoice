@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import com.roro.futurevoice.data.LanguageCatalog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -103,6 +107,9 @@ private enum class CloneAct { INTRO, CONSENT, MIC, SPOT, SCRIPT, REVIEW, UPLOADI
 @Composable
 fun CloneFlowScreen(
     targetLanguage: String,
+    /** What the learner reads in by default — see the picker on the script
+     *  step. */
+    nativeLanguage: String = targetLanguage,
     onCloned: (voiceId: String) -> Unit,
     /** True once the session has a real account behind it. */
     signedIn: Boolean = false,
@@ -121,6 +128,23 @@ fun CloneFlowScreen(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) startRecordingRequested = true }
     var consented by remember { mutableStateOf(false) }
+    /**
+     * The NATIVE script is always the pre-selection; the picker above the
+     * text is how anyone changes it.
+     *
+     * It used to be the target language, full stop. iOS defaulted by
+     * self-rated level (native below B2) and dropped even that: a rating made
+     * sixty seconds earlier was deciding the ONE take the whole product is
+     * built on, and a halting read is a halting clone — damage a too-safe
+     * default can never do (iOS `b41ed9f`).
+     */
+    var readInNative by remember { mutableStateOf(true) }
+    val nativeScript = remember(nativeLanguage) {
+        VoiceCloneScript.handAuthored(nativeLanguage)
+            // Same language on both sides means there is nothing to choose.
+            ?.takeIf { nativeLanguage.take(2) != targetLanguage.take(2) }
+    }
+    val scriptLanguage = if (readInNative && nativeScript != null) nativeLanguage else targetLanguage
     val recorder = remember { WavRecorder() }
     // The clone is built from ONE recording, so it takes the best microphone
     // in the room — the phone's. This is the one mic surface that never asks.
@@ -429,7 +453,32 @@ fun CloneFlowScreen(
                 }
 
                 CloneAct.SCRIPT -> {
-                    VoiceCloneScript.paragraphs(targetLanguage).forEach {
+                    // The language choice is made by LOOKING at the text —
+                    // "can I read this aloud for a minute without stumbling?"
+                    // is answered by the paragraphs below, not by a question
+                    // on a screen of its own.
+                    if (nativeScript != null) {
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            SegmentedButton(
+                                selected = !readInNative,
+                                onClick = { readInNative = false },
+                                shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            ) { Text(LanguageCatalog.endonym(targetLanguage)) }
+                            SegmentedButton(
+                                selected = readInNative,
+                                onClick = { readInNative = true },
+                                shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            ) { Text(LanguageCatalog.endonym(nativeLanguage)) }
+                        }
+                    }
+                    Text(
+                        stringResource(if (nativeScript == null)
+                            R.string.read_it_naturally_mistakes_are_fine_just_keep_going
+                        else R.string.read_whichever_one_feels_natural_we_re_capturing_your_voice_3c04bd),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    (nativeScript.takeIf { readInNative }
+                        ?: VoiceCloneScript.paragraphs(targetLanguage)).forEach {
                         Text(it, style = MaterialTheme.typography.bodyLarge)
                     }
                 }

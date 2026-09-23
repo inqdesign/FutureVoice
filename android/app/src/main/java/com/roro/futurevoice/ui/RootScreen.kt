@@ -322,6 +322,7 @@ fun RootScreen() {
         // the dev account already has a voice, so the real gate never shows.
         clonePreview -> CloneFlowScreen(
             targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
             onCloned = { clonePreview = false },
         )
 
@@ -329,6 +330,7 @@ fun RootScreen() {
         // replaces the old one only once it is kept.
         recloning -> CloneFlowScreen(
             targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
             onCloned = { id -> app.onVoiceCloned(id); recloning = false },
             signedIn = state.signedIn && !state.isAnonymous,
             onSaveVoice = { pendingAccount = true },
@@ -614,6 +616,7 @@ fun RootScreen() {
         // launcher pattern; the screen itself only records after it.
         !state.restoringVoice && state.voiceId == null -> CloneFlowScreen(
             targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
             onCloned = app::onVoiceCloned,
             // The sign-up is the flow's LAST act, not a gate in front of it:
             // by then the learner has heard the voice they are being asked to

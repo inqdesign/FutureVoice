@@ -293,6 +293,7 @@ object TalkCurriculum {
     }
 
     private fun bestTakeAt(attempts: List<ShadowAttempt>, lineId: String): Long? =
-        attempts.filter { it.turnId == lineId && it.matchScore >= SHADOW_MASTERY_SCORE }
+        attempts.filter { it.turnId == lineId && !it.isPartial &&
+            it.matchScore >= SHADOW_MASTERY_SCORE }
             .maxOfOrNull { it.createdAt }
 }

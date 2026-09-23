@@ -110,7 +110,9 @@ object ShadowPicks {
         // from the text the attempt captured.
         val turnById = sessions.flatMap { it.turns }.associateBy { it.id }
         val retries = latestByTurn.values
-            .filter { it.matchScore < RETRY_THRESHOLD }
+            // A phrase take is practice, never a verdict on the line — it
+            // must not decide whether the line comes back.
+            .filter { !it.isPartial && it.matchScore < RETRY_THRESHOLD }
             .sortedByDescending { it.createdAt }
             .map { a ->
                 val turn = turnById[a.turnId] ?: Turn(

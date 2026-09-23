@@ -113,7 +113,11 @@ import kotlinx.coroutines.launch
  * which `SpeechRecognizer` never hands over while it holds the mic), and
  * playback of a past take.
  */
-private enum class ShadowPhase { IDLE, COUNTDOWN, RECORDING, ANALYZING, RESULT }
+private enum class ShadowPhase {
+    IDLE, COUNTDOWN, RECORDING, ANALYZING, RESULT,
+    /** Nothing was said. One line under the target, nothing saved or scored. */
+    HEARD_NOTHING,
+}
 
 /** iOS `ShadowDrillView.stillSpeakingSeconds` — a breath is 0.5–1.5 s. */
 private const val STILL_SPEAKING_MS = 1_500L
@@ -141,7 +145,6 @@ fun ShadowScreen(
     /** Move to the next line of the hand. Null = this is the last one. */
     onNext: (() -> Unit)? = null,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mp3 = remember { Mp3Player(context.cacheDir, source = "shadow") }
@@ -157,6 +160,12 @@ fun ShadowScreen(
     var error by remember { mutableStateOf<String?>(null) }
     /** Length of the model line, once its audio has been heard once. */
     var durationMs by remember { mutableIntStateOf(0) }
+    // Back is held while a take is being made: leaving mid-attempt used to
+    // discard it silently, with the screen gone before the learner knew.
+    androidx.activity.compose.BackHandler(
+        enabled = phase != ShadowPhase.RECORDING && phase != ShadowPhase.COUNTDOWN,
+        onBack = onBack)
+
     /** Where the karaoke clock is, ms into the line (-1 = nothing running). */
     var clockMs by remember { mutableIntStateOf(-1) }
     /** Loop selection, shared by the tap handler and the attempt. */
@@ -304,6 +313,17 @@ fun ShadowScreen(
             delay(300)
             val text = runCatching { live.stop() }.getOrDefault("")
             said = text
+            // A take with NO speech in it is not a 0 — it is nothing. The
+            // auto-stop fires at the line's own length with nobody talking,
+            // so this is an ordinary path, and a zero saved here would drag
+            // down an average and hide a line the learner never attempted
+            // (iOS `17d0b56`).
+            if (text.isBlank()) {
+                attempt = null
+                phase = ShadowPhase.HEARD_NOTHING
+                com.roro.futurevoice.core.Analytics.capture("shadow_heard_nothing")
+                return@launch
+            }
             val a = ShadowScore.analyze(target, text, targetLanguage)
             attempt = a
             phase = ShadowPhase.RESULT
@@ -317,6 +337,10 @@ fun ShadowScreen(
                     targetText = target,
                     learnerTranscript = text,
                     matchScore = a.score,
+                    // What this take actually covered — a phrase take must
+                    // never read as a verdict on the whole line.
+                    phraseFirst = range?.first,
+                    phraseLast = range?.last,
                 ),
                 targetLanguage)
             com.roro.futurevoice.data.PracticeLog.record(
@@ -331,7 +355,7 @@ fun ShadowScreen(
 
     fun onMicTap() {
         when (phase) {
-            ShadowPhase.IDLE, ShadowPhase.RESULT -> {
+            ShadowPhase.IDLE, ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING -> {
                 val ok = ContextCompat.checkSelfPermission(
                     context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                 if (ok) runTake() else micPermission.launch(Manifest.permission.RECORD_AUDIO)
@@ -376,11 +400,23 @@ fun ShadowScreen(
                             }
                         }
                     },
+                    // The way OUT is on the left and says Close. It used to be
+                    // a "Done" on the right, which reads as "I have finished
+                    // this sentence" — a verdict the learner did not give
+                    // (iOS `4de3739`). It is disabled mid-take, where leaving
+                    // would discard an attempt that is still being made.
                     navigationIcon = {
+                        IconButton(
+                            onClick = { mp3.stop(); runCatching { live.stop() }; onBack() },
+                            enabled = phase != ShadowPhase.RECORDING && phase != ShadowPhase.COUNTDOWN,
+                        ) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
+                        }
+                    },
+                    actions = {
                         // Archive this line for repeat practice — saved lines
                         // live under Practice → Saved lines. A line with no
-                        // turn behind it has no id to file under, so that one
-                        // keeps the plain way out instead.
+                        // turn behind it has no id to file under.
                         if (turnId != null) {
                             IconButton(onClick = {
                                 scope.launch {
@@ -395,17 +431,7 @@ fun ShadowScreen(
                                         else R.string.save_line),
                                     tint = MaterialTheme.colorScheme.primary)
                             }
-                        } else {
-                            IconButton(onClick = { mp3.stop(); runCatching { live.stop() }; onBack() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                            }
                         }
-                    },
-                    actions = {
-                        TextButton(
-                            onClick = { mp3.stop(); runCatching { live.stop() }; onBack() },
-                            enabled = phase != ShadowPhase.RECORDING && phase != ShadowPhase.COUNTDOWN,
-                        ) { Text(stringResource(R.string.done)) }
                     },
                 )
             },
@@ -450,7 +476,12 @@ fun ShadowScreen(
                         Text(stringResource(R.string.target_line),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.lld_words, words.size),
+                        // The word count said nothing; this says what the
+                        // screen can do, which is how anyone finds out that
+                        // a phrase can be picked at all (iOS `17d0b56`).
+                        Text(stringResource(if (practiceRange != null)
+                            R.string.practicing_the_selected_phrase
+                        else R.string.tap_words_to_pick_a_phrase),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                     }
@@ -492,7 +523,9 @@ fun ShadowScreen(
                                         if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
                                         else Color.Transparent)
                                     .clickable(
-                                        enabled = phase == ShadowPhase.IDLE || phase == ShadowPhase.RESULT
+                                        enabled = phase == ShadowPhase.IDLE ||
+                                            phase == ShadowPhase.RESULT ||
+                                            phase == ShadowPhase.HEARD_NOTHING
                                     ) { tapWord(i) }
                                     .padding(horizontal = 3.dp, vertical = 1.dp),
                             )
@@ -501,6 +534,14 @@ fun ShadowScreen(
                 }
 
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+
+                // Nothing was said: one line, and nothing else — no score, no
+                // saved attempt, no rep.
+                if (phase == ShadowPhase.HEARD_NOTHING) {
+                    Text(stringResource(R.string.didn_t_hear_anything_try_again_closer_to_the_mic),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
                 // ---- the take
                 val a = attempt
@@ -599,7 +640,8 @@ fun ShadowScreen(
 @Composable
 private fun MicButton(phase: ShadowPhase, onTap: () -> Unit) {
     val recording = phase == ShadowPhase.RECORDING
-    val enabled = phase == ShadowPhase.IDLE || phase == ShadowPhase.RESULT || recording
+    val enabled = phase == ShadowPhase.IDLE || phase == ShadowPhase.RESULT ||
+        phase == ShadowPhase.HEARD_NOTHING || recording
     val pulse = rememberInfiniteTransition(label = "mic")
     val scale by pulse.animateFloat(
         initialValue = 1f, targetValue = if (recording) 1.06f else 1f,
@@ -621,14 +663,14 @@ private fun MicButton(phase: ShadowPhase, onTap: () -> Unit) {
             when (phase) {
                 ShadowPhase.RECORDING -> Icons.Filled.Close
                 ShadowPhase.ANALYZING -> Icons.Filled.MoreHoriz
-                ShadowPhase.RESULT -> Icons.Filled.Refresh
+                ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING -> Icons.Filled.Refresh
                 else -> Icons.Filled.Mic
             },
             contentDescription = stringResource(
                 when (phase) {
                     ShadowPhase.RECORDING -> R.string.follow_the_highlight_tap_to_cancel
                     ShadowPhase.ANALYZING -> R.string.comparing
-                    ShadowPhase.RESULT -> R.string.tap_to_try_again
+                    ShadowPhase.RESULT, ShadowPhase.HEARD_NOTHING -> R.string.tap_to_try_again
                     else -> R.string.tap_to_sync_shadow
                 }),
             tint = glyph,
@@ -685,6 +727,17 @@ private fun wordColor(
     // A phrase attempt: the rest of the line was never attempted, and while
     // the clock runs it stays out of the way too.
     if (activeRange != null && index !in activeRange) return quiet
+    // The karaoke OUTRANKS the diff colours while the target is playing.
+    // Ordered the other way round, hearing the line again after a result left
+    // it frozen on the last take's colours and the highlight never moved
+    // (iOS `17d0b56`).
+    if (clockMs >= 0 && timing != null) {
+        return when {
+            clockMs >= timing.endMs -> MaterialTheme.colorScheme.onSurface  // passed
+            clockMs >= timing.startMs -> MaterialTheme.colorScheme.primary  // current
+            else -> quiet                                                   // upcoming
+        }
+    }
     if (ops != null) {
         if (!aligned) return MaterialTheme.colorScheme.onSurface
         val span = spans.getOrNull(index - (activeRange?.first ?: 0)) ?: return quiet
@@ -700,12 +753,7 @@ private fun wordColor(
             else -> MaterialTheme.colorScheme.onSurface
         }
     }
-    if (clockMs < 0 || timing == null) return quiet
-    return when {
-        clockMs >= timing.endMs -> MaterialTheme.colorScheme.onSurface  // passed
-        clockMs >= timing.startMs -> MaterialTheme.colorScheme.primary  // current
-        else -> quiet                                                   // upcoming
-    }
+    return quiet
 }
 
 /** The TARGET line scored against the take — not a transcript of it. */

@@ -153,7 +153,8 @@ fun TalkDetailScreen(
             attempts = attempts,
             drillCards = com.roro.futurevoice.data.DrillStore.shared(context).load(language))
         shadowTurns = com.roro.futurevoice.data.TalkCurriculum.shadowPicks(s, level, language)
-        bestTakes = attempts.groupBy { it.turnId }.mapValues { (_, v) -> v.maxOf { it.matchScore } }
+        bestTakes = attempts.filterNot { it.isPartial }
+            .groupBy { it.turnId }.mapValues { (_, v) -> v.maxOf { it.matchScore } }
     }
     // What the learner actually said, per correction: a turn-derived item
     // carries its source turn in its id; a summary one is matched by text.

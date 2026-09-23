@@ -72,7 +72,13 @@ object ShadowScore {
     )
 
     fun expandForDiff(text: String, language: String): String {
-        var out = text.lowercase().replace("-", " ")
+        // A model-written target says "I’m" and the recognizer writes "I'm";
+        // that is a choice no mouth makes, so folding the typographic forms
+        // keeps a perfectly-said word from scoring as a substitution
+        // (iOS `17d0b56`).
+        var out = text.lowercase()
+            .replace('\u2019', '\'').replace('\u2018', '\'').replace('\u02BC', '\'')
+            .replace("-", " ")
         out = Regex("\\d+").replace(out) { m ->
             val n = m.value.toIntOrNull() ?: return@replace m.value
             val spelled = spellOut(n, language) ?: return@replace m.value
