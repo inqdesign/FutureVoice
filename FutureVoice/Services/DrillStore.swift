@@ -331,6 +331,14 @@ final class DrillStore: LanguageScopedStore {
             let target = Self.coreSentence(of: target, pairedWith: source)
             let key = Self.normalizedForMatch(target)
             guard !key.isEmpty, !seenTargets.contains(key) else { return }
+            // A learner who slipped into their own language for a turn gets
+            // no card for it: the model still "corrects" a Korean line into
+            // English, and that card asks nonsense everywhere it is dealt
+            // (device, 2026-09-23). Both sides must be in the target script.
+            let language = LanguageScope.active
+            guard TextScript.isInTargetScript(target, language: language),
+                  source.trimmingCharacters(in: .whitespaces).isEmpty
+                    || TextScript.isInTargetScript(source, language: language) else { return }
             // Safety net: even with the tightened summary prompt, Gemini
             // occasionally produces meta-rule "phrases" like "using articles
             // correctly". Those tank the drill UX — TTS on a rule is gibberish.
@@ -543,6 +551,11 @@ final class DrillStore: LanguageScopedStore {
         // Sentence-fragments that point at grammar concepts rather than
         // anything you'd actually say in a conversation.
         let bannedSubstrings = [
+            // Korean / Japanese / German names for the same categories — the
+            // list below is English, and a meta-rule written in the coaching
+            // language slipped past it.
+            "문법", "조사를", "시제", "관사", "올바르게", "정확하게",
+            "文法", "助詞", "時制", "正しく", "grammatik",
             "correctly",            // "using X correctly"
             "properly",
             "appropriately",

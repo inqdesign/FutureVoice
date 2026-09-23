@@ -217,6 +217,34 @@ enum SessionSummarizer {
         let userTexts = turns
             .filter { $0.role == .user && !$0.excludedFromScoring }
             .map { $0.transcript }
+
+        // phrases_used become correction cards, so they get the two checks
+        // the live suggestion already has and the grammar quotes below have:
+        // the quote has to be something the learner actually said (contained
+        // in a turn, or sharing three words in four with one — the model
+        // quotes loosely), and the fix has to change something a mouth can
+        // hear ("I am" → "I'm", a digit, Korean spacing are the transcriber's).
+        let normalizedTurns = userTexts.map(CarryoverDetector.normalized)
+        func isTheirs(_ quote: String) -> Bool {
+            let needle = CarryoverDetector.normalized(quote)
+            guard !needle.isEmpty else { return false }
+            if normalizedTurns.contains(where: { $0.contains(needle) }) { return true }
+            let words = Set(needle.split(separator: " ").map(String.init))
+            guard words.count >= 3 else { return false }
+            return normalizedTurns.contains { turn in
+                let have = Set(turn.split(separator: " ").map(String.init))
+                return Double(words.intersection(have).count) / Double(words.count) >= 0.75
+            }
+        }
+        let keptPhrases = computed.phrasesUsed.filter {
+            isTheirs($0.userSaid) && !ConversationEngine.saysTheSameThing($0.userSaid, $0.fluentAlternative)
+        }
+        if keptPhrases.count != computed.phrasesUsed.count {
+            NSLog("PHRASECAPTURE dropped %d of %d (not theirs, or no audible change)",
+                  computed.phrasesUsed.count - keptPhrases.count, computed.phrasesUsed.count)
+        }
+        computed.phrasesUsed = keptPhrases
+        report { $0.phrases = computed.phrasesUsed.count }
         // What they had been studying, and what they had marked known, as it
         // stood BEFORE this talk is credited: producing a word takes it out of
         // the notebook, and the wrap-up still has to say it was a notebook

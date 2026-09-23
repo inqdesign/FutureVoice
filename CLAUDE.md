@@ -673,6 +673,23 @@ Every feature should feed this loop. Per-turn suggestions come back in the SAME 
 
 The narrowness is the point in both directions: a mixed suggestion that fixes something real AND happens to contract still survives the filter, and now highlights only the real fix.
 
+**Same rule, every language, both correction paths** (2026-09-23, after a
+review asked whether the grammar/naturalness verdicts hold per language).
+`saysTheSameThing` now compares `comparable()` — `ShadowEngine.expandForDiff`
+(curly apostrophes, hyphens, DIGITS spelled out in the target language, English
+contractions) then `spokenWords`, and for Korean with the SPACES removed,
+because 띄어쓰기 is the recognizer's ("한번" / "한 번"). Both prompts carry a
+Korean ASR SPACING GUARD next to the Japanese SCRIPT GUARD. The summary's
+`phrases_used` had neither check: `SessionSummarizer` now drops a phrase whose
+quote isn't the learner's (not contained in a turn, and under three words in
+four shared with one) or whose fix changes nothing a mouth can hear — the same
+two gates the live suggestion and the grammar quotes already had. And
+`DrillStore.ingest` refuses a card whose target or source isn't in the target
+script (`TextScript.isInTargetScript`, shared with the weekly test): a learner
+who slipped into Korean for a turn got a "Show me the clock once" card and a
+test item built on it. `looksLikeMetaRule` knows the Korean/Japanese/German
+words for grammar categories too; its list was English.
+
 **And a SCORE may never be built on it either** (2026-09-13, `ShadowTranscriber`). Shadowing was the last surface still resting on Apple's recognizer alone, and there a transcript is not context for a model — it IS the grade: the diff, the score, the coach bullets and the rhythm card are all computed from it. Reported that day: *"Soak it all in, right?"* came back as **"So right"**, every attempt. Connected speech (`[soʊkɪɾɔlɪn]`) is exactly what an on-device pass collapses, and the learner was told they had skipped three words they said perfectly well. Three layers, in order, all of them in the one new door every shadow score walks through:
 
 - **The audio is levelled before anyone reads it** (`AudioLoudness.peakNormalizedWAV`, boost-only) and the SAME file goes to both readers, so they are judging the same thing. The learner's own playback still uses the ORIGINAL — the take is theirs, the levelling is for the machines.

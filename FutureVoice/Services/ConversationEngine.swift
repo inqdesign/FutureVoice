@@ -973,7 +973,7 @@ enum ConversationEngine {
           "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
-          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))
+          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))
         - "suggestion": include whenever the user's most recent line has a
           grammar slip or wording a fluent speaker wouldn't choose — give the
           natural version. Set it to null only when the line was already
@@ -1050,7 +1050,7 @@ enum ConversationEngine {
           building" arrives as "I am building" every time. A suggestion whose
           only change is contracting what you received is correcting the
           transcriber, not the learner. If that is the only change you would
-          make, the line was fine: return null.\(scriptGuard(targetLanguage))
+          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
@@ -1088,8 +1088,29 @@ enum ConversationEngine {
             let left = JapaneseMorph.reading(of: a)
             return !left.isEmpty && left == JapaneseMorph.reading(of: b)
         }
-        let left = spokenWords(a)
-        return !left.isEmpty && left == spokenWords(b)
+        let left = comparable(a)
+        return !left.isEmpty && left == comparable(b)
+    }
+
+    /// What a mouth could have said, with everything the transcriber chose
+    /// removed: case, punctuation, English contractions, hyphens, digits
+    /// (spelled out in the target language, so "3 times" and "three times"
+    /// are one line) — and for Korean the spaces, because 띄어쓰기 is the
+    /// recognizer's decision, not the speaker's ("한번" / "한 번").
+    static func comparable(_ text: String) -> String {
+        let language = LanguageScope.active
+        let words = spokenWords(ShadowEngine.expandForDiff(text, language: language))
+        return words.joined(separator: LanguageCatalog.base(language) == "ko" ? "" : " ")
+    }
+
+    /// Korean-only line for both correction prompts: word spacing is the
+    /// transcriber's. Empty for every other target.
+    static func spacingGuard(_ targetLanguage: String) -> String {
+        guard LanguageCatalog.base(targetLanguage) == "ko" else { return "" }
+        return "\n- ASR SPACING GUARD: the recognizer, not the learner, decides word"
+            + "\n  spacing (띄어쓰기: 한번 / 한 번, 할수 / 할 수, 못해요 / 못 해요). A"
+            + "\n  suggestion whose only change is spacing corrects nothing they said."
+            + "\n  If that is the only change you would make, the line was fine: return null."
     }
 
     /// Japanese-only line for both correction prompts: the script is the
