@@ -214,8 +214,31 @@ final class StoreKitService: ObservableObject {
         await claimCurrentEntitlements()
     }
 
+    /// The catalog fetch in flight, if any. Every `load()` call awaits the
+    /// SAME one: the paywall's `.task` is what calls this, and a sheet
+    /// presented while another is still dismissing is torn down and
+    /// presented again — two `.task`s, one `@StateObject`. The first copy's
+    /// task is CANCELLED mid-fetch; the second used to hit `!loading` and
+    /// return at once to an empty `options`, so the screen logged
+    /// `products: 0`, skipped the trial pitch, and drew cards with no prices
+    /// until (if ever) the first fetch landed. Prod 2026-09-24: four of the
+    /// five accounts that met the free pool's end saw that screen.
+    ///
+    /// An unstructured `Task { }` does not inherit its creator's
+    /// cancellation, so the fetch outlives the torn-down view, and awaiting
+    /// `.value` from a cancelled caller still waits for it.
+    private var inflightLoad: Task<Void, Never>?
+
     func load() async {
-        guard options.isEmpty, !loading else { return }
+        guard options.isEmpty else { return }
+        if let inflightLoad { await inflightLoad.value; return }
+        let task = Task { await fetchCatalog() }
+        inflightLoad = task
+        await task.value
+        inflightLoad = nil
+    }
+
+    private func fetchCatalog() async {
         loading = true
         defer { loading = false }
 
@@ -234,11 +257,13 @@ final class StoreKitService: ObservableObject {
             return
         }
 
-        let products: [Product]
-        do {
-            products = try await Product.products(for: plans.map(\.apple_product_id))
-        } catch {
-            products = []
+        // One retry covers StoreKit answering empty on a cold first call.
+        let ids = plans.map(\.apple_product_id)
+        var products: [Product] = []
+        for attempt in 0..<2 {
+            products = (try? await Product.products(for: ids)) ?? []
+            if !products.isEmpty || attempt == 1 { break }
+            try? await Task.sleep(nanoseconds: 500_000_000)
         }
         // A silent empty answer is the one failure this screen can't explain
         // to itself — every price line simply goes blank. Name the ids Apple

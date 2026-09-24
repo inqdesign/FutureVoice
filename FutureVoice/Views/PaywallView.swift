@@ -885,9 +885,26 @@ struct PaywallView: View {
     // MARK: - Actions
 
     private func purchaseSelected() async {
-        guard let opt = selectedOption else { return }
+        // Nothing to sell, and the button said "Subscribe" anyway. StoreKit
+        // answering with no products leaves `selectedOption` nil while the
+        // cards still draw (they come from the server catalog) — so the tap
+        // returns here and, until 2026-09-24, logged NOTHING: the one moment
+        // of highest intent in the app was the one moment invisible to us.
+        // Four of the first thirteen accounts to see a paywall saw it with
+        // `products: 0`, so this is not hypothetical.
+        guard let opt = selectedOption else {
+            track("paywall_purchase_unavailable",
+                  ["tier": selectedTier, "period": period.rawValue,
+                   "options": String(store.options.count)])
+            OwnerPing.paywall(phase: "result", outcome: "unavailable",
+                              plan: "\(selectedTier)_\(period.rawValue)",
+                              trial: showsTrial, source: source, step: step.name)
+            return
+        }
         let plan = ["plan": opt.id, "trial": showsTrial ? "1" : "0"]
         track("paywall_purchase_tapped", plan)
+        OwnerPing.paywall(phase: "tapped", option: opt, trial: showsTrial,
+                          source: source, step: step.name)
         await store.purchase(opt)
         // `.idle` after a purchase is Apple's sheet cancelled (or an
         // unknown result StoreKit may add later) — the one outcome with no
@@ -899,6 +916,8 @@ struct PaywallView: View {
         case .idle, .purchasing: outcome = "cancelled"
         }
         track("paywall_purchase_result", plan.merging(["outcome": outcome]) { $1 })
+        OwnerPing.paywall(phase: "result", outcome: outcome, option: opt,
+                          trial: showsTrial, source: source, step: step.name)
     }
 
     /// One event, both sinks: PostHog for the funnel, `client_events` so a

@@ -90,9 +90,17 @@ struct ConversationView: View {
     /// Which of this screen's doors opened the paywall — `PaywallView`'s
     /// `source`, set beside every `showingPaywall = true`.
     @State private var paywallSource = "talk"
-    /// Set by Done so the summary sheet's dismiss can tell Done from a swipe
-    /// (`talk_summary_closed`). Both then take the same exit.
-    @State private var summaryClosedByDone = false
+    /// How the summary sheet is going away, read by its `onDismiss`: Done
+    /// and a swipe take the same exit (and are told apart in
+    /// `talk_summary_closed`); `.code` is `startNewSession` clearing it,
+    /// which must not exit. That function has no caller today — the case
+    /// keeps the protection it always had, now that Done exits too.
+    enum SummaryClose: String { case done, swipe, code }
+    @State private var summaryClose: SummaryClose = .swipe
+    /// The summary sheet's `onDismiss` has run once. It is terminal for this
+    /// screen (every exit goes through `close()`), so nothing resets it
+    /// except the unreferenced `startNewSession`.
+    @State private var postCallExitStarted = false
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -802,20 +810,41 @@ struct ConversationView: View {
                     .environmentObject(appState)
             }
             .sheet(item: summaryBinding, onDismiss: {
-                let how = summaryClosedByDone ? "done" : "swipe"
-                summaryClosedByDone = false
-                let props = ["how": how, "free_call_spent": freeCallSpent ? "1" : "0"]
+                let how = summaryClose
+                summaryClose = .swipe
+                // Closed by code (`startNewSession`) — nothing to log,
+                // nothing to exit.
+                guard how != .code else { return }
+                // This closure has fired twice for one call (prod, d48b0216,
+                // 2026-09-24): the second run logged a second close and
+                // pitched the plans on top of the first.
+                guard !postCallExitStarted else { return }
+                postCallExitStarted = true
+                let props = ["how": how.rawValue, "free_call_spent": freeCallSpent ? "1" : "0"]
                 Telemetry.log("talk_summary_closed", props)
                 Analytics.capture("talk_summary_closed", props)
-                // A swipe is the same exit as Done. It used to leave the
-                // learner on a finished call screen — and skip the plans a
-                // spent free pool is owed.
-                if how == "swipe" { endAndClose() }
+                // BOTH exits go on from here, and only from here — after the
+                // sheet is GONE. Done used to call `endAndClose()` directly,
+                // which nil'd the summary and raced the plans pitch against
+                // the sheet's own dismiss animation: whenever the billing
+                // snapshot answered inside ~0.4 s, `showingPaywall` flipped
+                // while the summary sheet was still sliding out, SwiftUI
+                // presented the paywall, tore it down and presented it again,
+                // and the torn-down copy's `.task` was cancelled mid
+                // `Product.products(for:)` — which threw, was swallowed, and
+                // left the paywall with no prices and a "Subscribe" button
+                // that answered "not available on the App Store yet". Prod
+                // 2026-09-24: four of the five accounts that met the free
+                // pool's end saw exactly that screen; the one that didn't had
+                // a 1.4 s snapshot. A swipe was already routed through this
+                // closure, and it broke the same way once (d48b0216) because
+                // the summary landed a second time — hence the guard above.
+                endAndClose()
             }) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
                              onDone: {
-                                 summaryClosedByDone = true
-                                 endAndClose()
+                                 summaryClose = .done
+                                 summary = nil
                              })
                     .environmentObject(appState)
             }
@@ -3765,8 +3794,9 @@ struct ConversationView: View {
     private func startNewSession() {
         failedTurnId = nil
         // Closed by code, not a swipe — the sheet's onDismiss must not exit.
-        if summary != nil { summaryClosedByDone = true }
+        if summary != nil { summaryClose = .code }
         summary = nil
+        postCallExitStarted = false
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
@@ -3787,8 +3817,12 @@ struct ConversationView: View {
         }
     }
 
-    /// Done from the summary sheet → leave the talk seat entirely, back to the
-    /// Talk home. Summary is already saved to History.
+    /// The summary sheet is GONE (its `onDismiss`, Done or swipe) → leave the
+    /// talk seat entirely, back to the Talk home, offering the plans first
+    /// when the free pool is spent. Summary is already saved to History.
+    /// Only ever called from that `onDismiss`: the plans are a second sheet
+    /// on the same presenter, and presenting it while the first is still
+    /// animating out is what emptied the paywall (see the sheet).
     private func endAndClose() {
         summary = nil
         phoneCallActive = false
