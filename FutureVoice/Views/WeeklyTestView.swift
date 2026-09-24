@@ -713,7 +713,8 @@ struct WeeklyTestView: View {
         phase = .loading
         let tests = WeeklyTestStore.shared.load()
         let opening = settings.schedule.currentOpening()
-        guard var test = await WeeklyTestEngine.build(lastTest: tests.first, appState: appState) else {
+        guard var test = await WeeklyTestEngine.build(lastTest: WeeklyTestStore.latestWeekly(tests),
+                                                      appState: appState) else {
             settings.markThin(opening: opening)
             phase = .thin
             return

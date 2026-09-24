@@ -38,6 +38,13 @@ final class WeeklyTestStore: LanguageScopedStore {
 
     func latest() -> WeeklyTest? { load().first }
 
+    /// The newest weekly paper — the one a new week is built after. The
+    /// store also holds monthly papers, and `first` is whichever was built
+    /// last.
+    static func latestWeekly(_ tests: [WeeklyTest]) -> WeeklyTest? {
+        tests.sorted { $0.createdAt > $1.createdAt }.first { !$0.isMonthly }
+    }
+
     func save(_ test: WeeklyTest) {
         var all = load()
         all.removeAll { $0.id == test.id }

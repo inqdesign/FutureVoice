@@ -55,9 +55,14 @@ enum WeeklyTestEngine {
 
     // MARK: - Window
 
-    /// The material window: since the last test was built, else one week.
+    /// The material window: since the last WEEKLY test was built, else one
+    /// week. A monthly paper is never the anchor — it is built from the
+    /// weeklies, minutes before or after one, and anchoring on it would
+    /// start the week's window at that moment (a Saturday that opened the
+    /// monthly first then found the weekly "thin").
     static func window(lastTest: WeeklyTest?, now: Date) -> (start: Date, end: Date) {
-        let start = lastTest?.periodEnd ?? now.addingTimeInterval(-defaultWindow)
+        let anchor = lastTest.flatMap { $0.isMonthly ? nil : $0 }
+        let start = anchor?.periodEnd ?? now.addingTimeInterval(-defaultWindow)
         return (min(start, now), now)
     }
 
@@ -65,6 +70,8 @@ enum WeeklyTestEngine {
 
     /// Builds this week's test, or nil when the window holds fewer than
     /// `minItems` gradable things. Reads the active language's stores.
+    /// `lastTest` is the latest WEEKLY paper (`WeeklyTestStore.latestWeekly`);
+    /// a monthly one is ignored for the window and for retakes.
     static func build(
         lastTest: WeeklyTest?,
         appState: AppState,
