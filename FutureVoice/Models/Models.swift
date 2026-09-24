@@ -449,9 +449,23 @@ struct SessionScorecard: Codable, Hashable {
     var pronunciation: AxisScore?     // nil until shadow drills exist
     var topLine: String               // 1-sentence holistic note
     var cefrLevel: String?            // AI's holistic CEFR read of the whole talk (a1…c2)
+    /// The CEFR band of the grammatical STRUCTURES the learner actually
+    /// produced in this talk (a1…c2) — range, as distinct from accuracy.
+    /// `grammar.score` and the verified slips measure how accurately they
+    /// spoke; this says how much grammar they reached for. A learner who
+    /// stays in short present-tense clauses makes no slips and used to read
+    /// C2 on Progress (2026-09-24) — a level is the meeting of both, so the
+    /// ≈Grammar band is the LOWER of the two. Optional: talks summarized
+    /// before the field decode without it.
+    var grammarRange: String? = nil
 }
 
 extension SessionScorecard {
+    /// `grammarRange` as a level, nil when absent or unrecognized.
+    var grammarRangeLevel: CEFRLevel? {
+        grammarRange.flatMap { CEFRLevel(rawValue: $0.lowercased()) }
+    }
+
     /// Mean of the axis scores (+ pronunciation when present) — the single
     /// headline number for a talk, shared by the detail header and the Talk
     /// book card.

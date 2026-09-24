@@ -660,7 +660,7 @@ enum ConversationEngine {
           "overall_note": "1-2 sentence encouraging note",
           "scorecard": {
             "vocabulary":     { "score": 0, "note": "..." },
-            "grammar":        { "score": 0, "note": "..." },
+            "grammar":        { "score": 0, "note": "...", "range": "a1|a2|b1|b2|c1|c2" },
             "expressiveness": { "score": 0, "note": "..." },
             "fluency":        { "score": 0, "note": "..." },
             "top_line":       "one-sentence holistic read of the session",
@@ -905,6 +905,23 @@ enum ConversationEngine {
             an empty grammar_errors list is ~90-100 even if suggestion_rate is
             high (those were style nudges, not errors). Calibrate to the
             user's CEFR level, not native-speaker absolutes.
+          * grammar.range: the CEFR band of the grammatical STRUCTURES the
+            user actually PRODUCED in this transcript — how much grammar they
+            reached for, independent of the score, which says how accurately.
+            Judge only what they said, not what they understood or what you
+            think they could do. Structures that were attempted and mangled
+            still count toward range. Rough ladder, for any language:
+            a1 = fixed phrases, single short clauses, one basic tense;
+            a2 = past and future, simple connectors (and / but / because /
+            so), basic questions and negation; b1 = subordinate clauses
+            (when / if / that / relative clauses), modals and conditionals,
+            comparisons, ideas linked across sentences; b2 = complex
+            sentences sustained, passive, reported speech, hypotheticals,
+            precise aspect and tense contrast; c1 = flexible, varied complex
+            structures with idiomatic ordering and emphasis; c2 = full
+            native-like structural range. Short, correct sentences are NOT
+            high range — a talk of accurate one-clause replies is a1 or a2
+            here even with a score of 100. Lowercase.
           * expressiveness: idiom use, register fit for topic, sentence-shape
             variety. Pure judgment call.
           * fluency: anchor on articulation_rate_wpm — words per minute of
@@ -1304,8 +1321,10 @@ struct ClaudeSummaryPayload: Decodable {
     struct Axis: Decodable {
         let score: Int
         let note: String?
+        /// Only the grammar axis carries this (structural range, a1…c2).
+        let range: String?
 
-        private enum CodingKeys: String, CodingKey { case score, note }
+        private enum CodingKeys: String, CodingKey { case score, note, range }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -1323,6 +1342,7 @@ struct ClaudeSummaryPayload: Decodable {
                                                        debugDescription: "score is not a number")
             }
             note = try? c.decodeIfPresent(String.self, forKey: .note)
+            range = try? c.decodeIfPresent(String.self, forKey: .range)
         }
     }
     struct Scorecard: Decodable {
@@ -1477,7 +1497,12 @@ struct ClaudeSummaryPayload: Decodable {
                 fluency: fluencyAxis,
                 pronunciation: nil,
                 topLine: sc.top_line ?? "",
-                cefrLevel: sc.cefr_level?.lowercased()
+                cefrLevel: sc.cefr_level?.lowercased(),
+                // Kept only when it names a real band, so a stray value can
+                // never cap the Progress page on nothing.
+                grammarRange: sc.grammar.range
+                    .flatMap { CEFRLevel(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) }?
+                    .rawValue
             )
         }
         return SessionSummary(

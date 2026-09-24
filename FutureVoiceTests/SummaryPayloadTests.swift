@@ -47,6 +47,25 @@ final class SummaryPayloadTests: XCTestCase {
         XCTAssertEqual(p.toDomain().scorecard?.fluency.score, 0)
     }
 
+    /// `grammar.range` is the structural band the talk reached for. Missing
+    /// (every summary before 2026-09-24) or nonsense → nil, so the Progress
+    /// page falls back rather than capping the band on a stray string.
+    func testGrammarRangeDecodesAndIsValidated() throws {
+        func card(_ grammar: String) throws -> SessionScorecard? {
+            try decode("""
+            {"overall_note":"x","scorecard":{
+              "vocabulary":{"score":80,"note":"a"},
+              "grammar":\(grammar),
+              "expressiveness":{"score":60,"note":"c"},
+              "fluency":{"score":70,"note":"d"},
+              "top_line":"nice"}}
+            """).toDomain().scorecard
+        }
+        XCTAssertEqual(try card(#"{"score":95,"note":"b","range":"A2 "}"#)?.grammarRangeLevel, .a2)
+        XCTAssertNil(try card(#"{"score":95,"note":"b"}"#)?.grammarRange)
+        XCTAssertNil(try card(#"{"score":95,"note":"b","range":"native"}"#)?.grammarRange)
+    }
+
     /// A missing axis is not inventable — the scorecard drops, the rest of
     /// the review material still lands.
     func testIncompleteScorecardDropsOnlyItself() throws {

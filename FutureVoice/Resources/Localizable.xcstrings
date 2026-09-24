@@ -141,6 +141,166 @@
         }
       }
     },
+    "%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f fallos de gramática confirmados por cada 100 palabras habladas: la misma densidad que pesa la evaluación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f fautes de grammaire confirmées pour 100 mots parlés : la densité même que pèse l’évaluation."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "話した100語あたりの確認済み文法ミスは%.1f件。レベル評価が見ているのと同じ数値です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말한 100단어당 확인된 문법 실수 %.1f개 — 레벨 평가가 보는 바로 그 수치예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每说 100 个字有 %.1f 个确认到的语法错误，和等级评估看的是同一个数字。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每說 100 個字有 %.1f 個確認到的文法錯誤，和等級評估看的是同一個數字。"
+          }
+        }
+      }
+    },
+    "Accurate, within ≈%@ structures — the sentences you build set this band; the slips would read higher." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preciso, dentro de estructuras ≈%@: las frases que construyes fijan este nivel; solo por los fallos leería más alto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Précis, dans des structures ≈%@ : les phrases que tu construis fixent ce niveau ; les fautes seules liraient plus haut."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正確です。ただ文の構造が≈%@の範囲にとどまっているので、このバンドになりました。ミスだけならもっと高く出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정확해요. 다만 문장이 ≈%@ 구조 안에 머물러서 이 밴드가 정해졌어요 — 실수만 보면 더 높아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "很准确。不过句子结构停在 ≈%@ 的范围，所以是这个等级；只看错误的话会更高。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "很準確。不過句子結構停在 ≈%@ 的範圍，所以是這個等級；只看錯誤的話會更高。"
+          }
+        }
+      }
+    },
+    "Capped at ≈%@ by the words you use — your next talk will be read for the structures you build." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limitado a ≈%@ por las palabras que usas: en tu próxima charla se leerán también las estructuras que construyes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plafonné à ≈%@ par les mots que tu utilises : ta prochaine conversation sera aussi lue pour les structures que tu construis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使っている単語に合わせて≈%@までとしました。次のトークからは、組み立てる文の構造も読みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "쓰는 단어 수준에 맞춰 ≈%@까지로 잡았어요 — 다음 통화부터는 만드는 문장 구조도 함께 읽어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依你使用的单词先定在 ≈%@；下一次对话起，也会一并读取你组成的句子结构。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依你使用的單字先定在 ≈%@；下一次對話起，也會一併讀取你組成的句子結構。"
+          }
+        }
+      }
+    },
+    "Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se lee de las estructuras que construyes de verdad y de los fallos de gramática confirmados por cada 100 palabras: el menor de los dos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculé sur les structures que tu construis vraiment et sur les fautes de grammaire confirmées pour 100 mots parlés : le plus bas des deux."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実際に組み立てている文の構造と、話した100語あたりの確認済み文法ミスから読みます。低いほうを取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실제로 만드는 문장 구조와 말한 100단어당 확인된 문법 실수로 읽어요 — 둘 중 낮은 쪽이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以你实际组成的句子结构，和每说 100 个字中确认到的语法错误来读，取两者较低的一个。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以你實際組成的句子結構，和每說 100 個字中確認到的文法錯誤來讀，取兩者較低的一個。"
+          }
+        }
+      }
+    },
     "Relaxed" : {
       "localizations" : {
         "es" : {
@@ -181,6 +341,46 @@
         }
       }
     },
+    "Scoring %lld/100 across recent talks — each talk graded from the verified grammar slips in what you said." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/100 en tus últimas charlas: cada una se puntúa por los fallos de gramática confirmados en lo que dijiste."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/100 sur tes dernières conversations : chacune est notée sur les fautes de grammaire confirmées dans ce que tu as dit."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近のトークの平均は%lld/100点。トークごとに、実際に話した文の確認済みミスから採点します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 통화 평균 %lld/100점 — 통화마다 실제로 말한 문장의 확인된 실수로 매겨요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近对话平均 %lld/100 分，每次对话都依你实际说出的句子中确认到的错误评分。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近對話平均 %lld/100 分，每次對話都依你實際說出的句子中確認到的錯誤評分。"
+          }
+        }
+      }
+    },
     "Slow" : {
       "localizations" : {
         "es" : {
@@ -217,6 +417,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "慢"
+          }
+        }
+      }
+    },
+    "Verified grammar slips per 100 spoken words — fewer reads higher." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fallos de gramática confirmados por cada 100 palabras habladas: cuantos menos, más alto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fautes de grammaire confirmées pour 100 mots parlés : moins il y en a, plus c’est haut."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "話した100語あたりの確認済み文法ミス。少ないほど高くなります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말한 100단어당 확인된 문법 실수 — 적을수록 높아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每说 100 个字中确认到的语法错误，越少等级越高。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每說 100 個字中確認到的文法錯誤，越少等級越高。"
+          }
+        }
+      }
+    },
+    "Your sentences stay simple — link two ideas in one: a reason, a condition, what happened before." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus frases siguen siendo simples: une dos ideas en una, una razón, una condición, lo que pasó antes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes phrases restent simples : relie deux idées en une, une raison, une condition, ce qui s’est passé avant."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文がまだシンプルです。ひとつの文に二つの考えをつなげてみてください。理由、条件、その前にあったこと、など。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문장이 아직 단순해요 — 한 문장에 두 생각을 이어 보세요. 이유, 조건, 그 전에 있었던 일처럼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "句子还很简单。试着把两个想法放进一句话：原因、条件、之前发生的事。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "句子還很簡單。試著把兩個想法放進一句話：原因、條件、之前發生的事。"
           }
         }
       }
@@ -48678,46 +48958,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重看對話"
-          }
-        }
-      }
-    },
-    "Read from verified grammar slips per 100 spoken words — fewer reads higher." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se lee de los fallos de gramática confirmados por cada 100 palabras habladas — cuantos menos, más alto."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Calculé sur les fautes de grammaire confirmées pour 100 mots dits — moins il y en a, plus c’est haut."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "話した100語あたりの確認済み文法ミスから読みます。少ないほど高くなります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "말한 100단어당 확인된 문법 실수로 읽어요 — 적을수록 높아요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以每说100个字中确认到的语法错误来计算，越少分数越高。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以每說100個字中確認到的文法錯誤來計算，越少分數越高。"
           }
         }
       }

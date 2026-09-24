@@ -794,6 +794,39 @@ Three consequences to preserve when touching this: the failure path in `requestR
 
 Any future work that improves the learner's line has the same obligation: improve what the MODEL gets, never what the SCREEN shows, until `voiceDidStart`.
 
+## The grammar band is RANGE × ACCURACY (2026-09-24)
+
+Reported by the founder: an A1–A2 learner who said only easy things read
+**≈C2 grammar** on Progress. `ProgressTab.grammarBands` maps verified slips
+per 100 words to a band, and a talk of short present-tense clauses carries no
+slips because nothing was attempted — accuracy without range, and the
+fallback (the scorecard's 0–100 score, "empty slip list ≈ 90–100") lands in
+the same place. A CEFR grammar level is the meeting of the structures you
+COMMAND and how cleanly, so there are two reads now and the LOWER wins
+(`ProgressTab.grammarBand`, pure, `GrammarBandTests`):
+
+- **Accuracy** — the slip density as before, score as the fallback.
+- **Range** — `SessionScorecard.grammarRange` (a1…c2), written by the
+  summary call as `scorecard.grammar.range`: the band of the structures the
+  learner actually PRODUCED in that talk, with a language-agnostic ladder in
+  the rubric and the rule said out loud that accurate one-clause replies are
+  a1/a2 range whatever the score. It is a judgment code cannot compute
+  across four target languages, made by the call that already reads the
+  transcript for the scorecard — no new request, no new spend, and the same
+  kind of read as `cefr_level`. Progress takes the MEDIAN over the density
+  window (one attempted conditional is not a range you command); the weekly
+  assessment gets `per_talk_grammar_range` and is told range first, slips
+  second. Range never RAISES the band.
+- **Talks summarized before the field have no range**: the graded
+  vocabulary (words actually used) + 1 band stands in as the ceiling
+  (`GrammarCeiling.vocabulary`), and the row says so. Nobody's grammar
+  outruns their productive vocabulary by more than a band.
+
+When a ceiling applied, the Grammar row and page explain the ceiling, the
+next-band density target goes away (fewer slips would move nothing) and the
+focus tip asks for longer sentences instead of fewer slips. The trend chart
+stays the accuracy curve — its zones are accuracy bands.
+
 ## The weekly test (2026-09-23)
 
 One sit-down a week, built from THAT learner's own week: the words the talks
