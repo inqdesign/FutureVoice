@@ -166,6 +166,9 @@ data class Carryover(
         @SerialName("studyingExpression") STUDYING_EXPRESSION,
         @SerialName("suggestion") SUGGESTION,
         @SerialName("studyingWord") STUDYING_WORD,
+        /** They said they knew it; this call is what CONFIRMED it. */
+        @SerialName("knownWord") KNOWN_WORD,
+        @SerialName("knownExpression") KNOWN_EXPRESSION,
     }
 }
 
@@ -516,6 +519,10 @@ data class DrillCard(
     val timesCorrect: Int = 0,
     val sourceSessionId: String? = null,
     val sourceTurnId: String? = null,
+    /** When the learner PRODUCED this sentence in a real conversation — the
+     *  strongest state there is, and the one a claim can never outrank. */
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val usedInTalkAt: Long? = null,
     /**
      * iOS's `DrillCardEnrichment`, carried OPAQUELY: Android doesn't render
      * it yet, but a rewrite of the file must not drop what iOS wrote.

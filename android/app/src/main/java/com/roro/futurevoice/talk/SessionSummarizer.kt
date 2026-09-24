@@ -218,6 +218,14 @@ object SessionSummarizer {
         val vocab = VocabStore.shared(context)
         val drills = DrillStore.shared(context)
 
+        // The three states, read BEFORE ingest graduates anything: the
+        // wrap-up still has to be able to say it was a notebook word they
+        // used, or a claim this call confirmed.
+        val studyingWordsBefore = vocab.studying(language)
+        val studyingExpressionsBefore = vocab.studyingExpressions(language)
+        val claimedWords = vocab.unconfirmedKnownWords(language)
+        val claimedExpressions = vocab.unconfirmedKnownExpressions(language)
+
         // Words into the long-term pool; merge with the previous summary's
         // list so a resumed talk can't erase "words you used first".
         val freshWords = vocab.ingest(session.id, userTexts, language)
@@ -245,8 +253,10 @@ object SessionSummarizer {
         val carryovers = CarryoverDetector.detect(
             turns = turns,
             cards = drills.load(language),
-            studyingExpressions = vocab.studyingExpressions(language),
-            studyingWords = vocab.studying(language),
+            studyingExpressions = studyingExpressionsBefore,
+            studyingWords = studyingWordsBefore,
+            knownWords = claimedWords,
+            knownExpressions = claimedExpressions,
             sessionId = session.id, sessionStartedAt = session.startedAt,
             language = language,
         )

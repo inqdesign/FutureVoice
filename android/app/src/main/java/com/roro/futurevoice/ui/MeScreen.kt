@@ -280,9 +280,18 @@ fun MeScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary)
+                        // An INVITATION, not an account label. The city and
+                        // the email told the learner nothing they could act
+                        // on; what this row can do is make the fluent self
+                        // know them better, so it asks for the missing parts
+                        // until there are none (iOS `0ea96e7`).
+                        val complete = persona != null &&
+                            persona.displayName.isNotBlank() && persona.city.isNotBlank() &&
+                            persona.occupation.isNotBlank() &&
+                            persona.interests.isNotEmpty() && persona.situations.isNotEmpty()
                         Text(
-                            listOfNotNull(persona?.city?.takeIf { it.isNotBlank() }, email)
-                                .joinToString(" · "),
+                            stringResource(if (complete) R.string.what_your_fluent_self_knows_about_you
+                            else R.string.tap_to_complete_your_profile),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1)

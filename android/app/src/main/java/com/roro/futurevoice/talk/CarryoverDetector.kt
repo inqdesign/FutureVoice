@@ -29,6 +29,14 @@ object CarryoverDetector {
         curriculumItems: List<CurriculumItem> = emptyList(),
         studyingExpressions: List<String> = emptyList(),
         studyingWords: List<String> = emptyList(),
+        /**
+         * Claimed but unconfirmed — "I know it" on a notebook item, never yet
+         * produced in a talk. A claim is what a call is there to CHECK, so
+         * saying it here is worth as much as spending a studying item (iOS
+         * `4fc0068`).
+         */
+        knownWords: List<String> = emptyList(),
+        knownExpressions: List<String> = emptyList(),
         sessionId: String,
         sessionStartedAt: Long,
         language: String = "en",
@@ -78,6 +86,18 @@ object CarryoverDetector {
             claim(key, hit, Carryover.Source.STUDYING_EXPRESSION, phrase, null)
         }
 
+        // ── Phrases they SAID they knew, now said out loud: the claim
+        // confirmed. Same shape as a bookmarked phrase, different source, so
+        // the wrap-up can tell "you used what you saved" from "you proved
+        // what you claimed".
+        for (phrase in knownExpressions) {
+            val key = normalized(phrase)
+            if (!available(key)) continue
+            val hit = firstMatch(phrase, userTurns) ?: continue
+            if (!free(hit)) continue
+            claim(key, hit, Carryover.Source.KNOWN_EXPRESSION, phrase, null)
+        }
+
         // ── Suggestions from earlier in THIS call, applied later in it.
         for ((index, turn) in userTurns.withIndex()) {
             val suggestion = turn.suggestion ?: continue
@@ -105,10 +125,31 @@ object CarryoverDetector {
             val rank = CoreVocabulary.level(key, language)?.let { CoreVocabulary.levelRank(it) } ?: 0
             wordHits.add(WordHit(key, hit, rank))
         }
+        val emittedWords = HashSet<String>()
         for (entry in wordHits.sortedByDescending { it.rank }.take(MAX_WORD_CARRYOVERS)) {
+            emittedWords.add(entry.word)
             out.add(Carryover(id = StoreJson.newId(), sessionId = sessionId,
                 source = Carryover.Source.STUDYING_WORD, item = entry.word,
                 quote = entry.hit.quote, turnId = entry.hit.turnId, sourceId = null, detectedAt = now))
+            creditedTurns.add(entry.hit.turnId)
+        }
+
+        // ── Words they SAID they knew, now said out loud. Last, and never
+        // for a word the notebook already credited: one item, one credit.
+        val knownHits = mutableListOf<WordHit>()
+        for (word in knownWords) {
+            val key = normalized(word)
+            if (key.isEmpty() || key in claimedWords || key in emittedWords) continue
+            val hit = firstLemmaMatch(key, userTurns) ?: continue
+            if (hit.turnId in creditedTurns) continue
+            val rank = CoreVocabulary.level(key, language)?.let { CoreVocabulary.levelRank(it) } ?: 0
+            knownHits.add(WordHit(key, hit, rank))
+        }
+        for (entry in knownHits.sortedByDescending { it.rank }.take(MAX_WORD_CARRYOVERS)) {
+            out.add(Carryover(id = StoreJson.newId(), sessionId = sessionId,
+                source = Carryover.Source.KNOWN_WORD, item = entry.word,
+                quote = entry.hit.quote, turnId = entry.hit.turnId, detectedAt = now))
+            creditedTurns.add(entry.hit.turnId)
         }
         return out
     }

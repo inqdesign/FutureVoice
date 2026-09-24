@@ -229,12 +229,17 @@ class DrillStore private constructor(context: Context) {
             var touched = false
             val updated = loadLocked(language).map { card ->
                 if (card.id !in wanted) return@map card
-                val promoted = minOf(maxOf(card.box + 2, 3), DrillIngest.MAX_BOX)
-                if (promoted <= card.box) return@map card
-                Analytics.capture("drill_used_in_conversation", mapOf("box" to promoted))
+                // A spoken line is not "probably known", it is known: the
+                // card goes straight to the top rung and retires. The old
+                // rule (+2 boxes, minimum 3) gave partial credit for
+                // evidence, which is the wrong way round — don't re-add it.
+                if (card.usedInTalkAt != null && card.box >= DrillIngest.MAX_BOX) return@map card
+                Analytics.capture("drill_used_in_conversation",
+                    mapOf("box" to DrillIngest.MAX_BOX))
                 touched = true
-                card.copy(box = promoted, lastReviewedAt = now,
-                    nextReviewAt = DrillIngest.nextReviewAt(promoted, now))
+                card.copy(box = DrillIngest.MAX_BOX, lastReviewedAt = now,
+                    usedInTalkAt = card.usedInTalkAt ?: now,
+                    nextReviewAt = DrillIngest.RETIRED_REVIEW_AT)
             }
             if (touched) write(language, updated)
         }

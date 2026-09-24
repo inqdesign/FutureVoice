@@ -102,6 +102,15 @@ class VocabStore private constructor(context: Context) {
         @Serializable(with = IsoDateMillisSerializer::class) val firstAt: Long,
         @Serializable(with = IsoDateMillisSerializer::class) val lastAt: Long,
         val count: Int,
+        /**
+         * A `known` verdict given while the item was IN the notebook — the
+         * learner studied it and then said "I know it". Only those are a
+         * claim worth checking in a call: a word ticked while browsing a
+         * level list, or a top-up waved off the first time it was dealt, was
+         * never studied. Null on every record written before this existed,
+         * which reads as "not from the notebook" — the conservative answer.
+         */
+        val fromStudying: Boolean? = null,
     )
 
     private val appContext = context.applicationContext
@@ -161,12 +170,20 @@ class VocabStore private constructor(context: Context) {
         val records = readRecords(poolFile).toMutableMap()
         val newWords = mutableListOf<String>()
         val coreSet = CoreVocabulary.set(language)
+        // Producing a word live outranks every other state: a claimed word
+        // becomes CONFIRMED (known → used), and a studying one leaves the
+        // notebook and its schedule. Evidence beats an opinion about it.
+        val studyingFile = file(language, "vocab_studying.json")
+        val studying = readList(studyingFile).toMutableList()
+        var leftNotebook = false
         for (lemma in VocabLemmas.lemmas(userTexts.drop(already))) {
             if (lemma !in coreSet) continue
             val r = records[lemma]
-            if (r != null) records[lemma] = r.copy(count = r.count + 1, lastAt = now)
+            if (r != null) records[lemma] = r.copy(state = "used", count = r.count + 1, lastAt = now)
             else { records[lemma] = Record("used", now, now, 1); newWords.add(lemma) }
+            if (studying.remove(lemma)) leftNotebook = true
         }
+        if (leftNotebook) writeList(studyingFile, studying)
         writeRecords(poolFile, records)
         writeJson(metaFile, StoreJson.json.encodeToString(
             MapSerializer(String.serializer(), Int.serializer()), counts))
@@ -344,7 +361,11 @@ class VocabStore private constructor(context: Context) {
             val f = file(language, "vocab_pool.json")
             val records = readRecords(f)
             if (records[lemma] == null) {
-                writeRecords(f, records + (lemma to Record("known", now, now, 0)))
+                // Was it a word they were STUDYING? That is what makes the
+                // claim worth checking in a call.
+                val studying = readList(file(language, "vocab_studying.json")).contains(lemma)
+                writeRecords(f, records + (lemma to
+                    Record("known", now, now, 0, fromStudying = if (studying) true else null)))
             }
         }
         removeStudying(lemma, language, byHand = false)
@@ -403,13 +424,36 @@ class VocabStore private constructor(context: Context) {
         val f = file(language, "vocab_expressions.json")
         val records = readRecords(f)
         val r = records[k]
+        val studying = known &&
+            readList(file(language, "vocab_studying_expressions.json")).contains(k)
+        val fromStudying = if (studying) true else null
         val updated = when {
-            r != null -> r.copy(state = if (known) "known" else "used", lastAt = now)
-            known -> Record("known", now, now, 0)
+            r != null -> r.copy(state = if (known) "known" else "used", lastAt = now,
+                fromStudying = r.fromStudying ?: fromStudying)
+            known -> Record("known", now, now, 0, fromStudying = fromStudying)
             else -> return
         }
         writeRecords(f, records + (k to updated))
         if (known) PracticeLog.record(appContext, PracticeLog.Kind.EXPRESSION, finished = true)
+    }
+
+    /**
+     * Words the learner SAID they know and no call has confirmed yet — the
+     * claim a call is there to check. Only verdicts given on something they
+     * were studying count: a word ticked in a level list was never studied.
+     */
+    suspend fun unconfirmedKnownWords(language: String): List<String> = mutex.withLock {
+        readRecords(file(language, "vocab_pool.json"))
+            .filter { it.value.state == "known" && it.value.fromStudying == true }
+            .keys.toList()
+    }
+
+    /** The same for expressions: claimed, never yet produced in a talk. */
+    suspend fun unconfirmedKnownExpressions(language: String): List<String> = mutex.withLock {
+        readRecords(file(language, "vocab_expressions.json"))
+            .filter { it.value.state == "known" && it.value.count == 0 &&
+                it.value.fromStudying == true }
+            .keys.toList()
     }
 
     /** Every phrase the pool has met, most recently touched first. */

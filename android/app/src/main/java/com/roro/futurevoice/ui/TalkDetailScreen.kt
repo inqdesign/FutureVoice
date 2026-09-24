@@ -677,6 +677,10 @@ private fun Carryover.Source.labelRes(): Int = when (this) {
     Carryover.Source.STUDYING_EXPRESSION -> R.string.expression_notebook
     Carryover.Source.STUDYING_WORD -> R.string.word_notebook
     Carryover.Source.SUGGESTION -> R.string.in_call_suggestions
+    // A claim this call CONFIRMED — worth naming apart from the notebook,
+    // because what it proves is different.
+    Carryover.Source.KNOWN_WORD -> R.string.words_you_marked_known
+    Carryover.Source.KNOWN_EXPRESSION -> R.string.expressions_you_marked_known
 }
 
 private fun Carryover.Source.icon(): ImageVector = when (this) {
@@ -685,6 +689,8 @@ private fun Carryover.Source.icon(): ImageVector = when (this) {
     Carryover.Source.STUDYING_EXPRESSION -> Icons.Filled.Bookmark
     Carryover.Source.STUDYING_WORD -> Icons.Filled.Book
     Carryover.Source.SUGGESTION -> Icons.Filled.Lightbulb
+    Carryover.Source.KNOWN_WORD, Carryover.Source.KNOWN_EXPRESSION ->
+        Icons.Filled.CheckCircle
 }
 
 /**

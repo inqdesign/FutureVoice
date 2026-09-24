@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +64,9 @@ data class TalkGoalItem(
     /** Single words go by lemma ("I commuted for years" ticks *commute*);
      *  everything else goes through the phrase rules. */
     val isWord: Boolean,
+    /** They already said they know this one; the call is what checks it.
+     *  Drawn as an empty CHECKED circle, and dealt first. */
+    val claimedKnown: Boolean = false,
 )
 
 object TalkGoalPicker {
@@ -115,11 +119,27 @@ object TalkGoalPicker {
             }
             .filter { it.isWord || CarryoverDetector.isCreditable(it.text) }
 
+        // A claim is what the call is there to CHECK, so it goes in front of
+        // the notebook: they said they know these and nothing has confirmed
+        // it (iOS `4fc0068`).
+        val claimed = (vocab.unconfirmedKnownExpressions(language)
+            .filter { CarryoverDetector.isCreditable(it) }
+            .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false, claimedKnown = true) } +
+            vocab.unconfirmedKnownWords(language)
+                .map { TalkGoalItem(CarryoverDetector.normalized(it), it,
+                    isWord = !it.contains(" "), claimedKnown = true) }
+                .filter { it.isWord || CarryoverDetector.isCreditable(it.text) })
+
         // Interleave so the row opens with something short: a phrase first
         // would fill the visible width on its own and the words would only
         // exist for whoever scrolls.
         val out = ArrayList<TalkGoalItem>(limit)
         val seen = HashSet<String>()
+        for (item in claimed) {
+            if (out.size >= limit) break
+            if (item.key.isEmpty() || !seen.add(item.key)) continue
+            out.add(item)
+        }
         val w = words.iterator()
         val p = phrases.iterator()
         var takeWord = true
@@ -221,7 +241,13 @@ private fun Chip(item: TalkGoalItem, done: Boolean, onTap: (TalkGoalItem) -> Uni
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Icon(
-            if (done) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+            when {
+                done -> Icons.Filled.CheckCircle
+                // A claim wears an EMPTY checked circle: they said they know
+                // it, and nothing has confirmed it yet.
+                item.claimedKnown -> Icons.Outlined.CheckCircle
+                else -> Icons.Outlined.Circle
+            },
             contentDescription = null,
             modifier = Modifier.size(13.dp),
             tint = if (done) green else MaterialTheme.colorScheme.onSurfaceVariant,
