@@ -544,8 +544,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 "fair_use_limit" -> TalkWall.FAIR_USE
                 else -> TalkWall.OUT_OF_MINUTES
             }
-            _state.update { it.copy(phase = TalkPhase.ENDED, wall = kind, partial = "") }
-            persist()
+            handleWall(kind)
         }
         realtime.onFailed = { message ->
             when {
@@ -585,6 +584,30 @@ class TalkViewModel(context: Context) : ViewModel() {
                 }
             }
         }
+    }
+
+    /**
+     * The pool ran out mid-call. If the learner SPOKE, the call wraps itself
+     * up — draft saved, summary run, book made — instead of raising an alert
+     * and waiting for an End nobody presses.
+     *
+     * Reported 2026-09-17 on iOS: a 42-turn first call hit the wall, the app
+     * asked for End, the learner never pressed it, and the whole talk was
+     * gone when they closed the app — no summary, no book, and no plans
+     * offered, because the pitch hangs off the summary's Done. A wall with no
+     * learner turn behind it keeps the old alert: there is nothing to wrap up.
+     */
+    private fun handleWall(kind: TalkWall) {
+        val spoke = _state.value.turns.any { it.role == TurnRole.USER }
+        _state.update { it.copy(wall = kind, partial = "") }
+        com.roro.futurevoice.core.Analytics.capture("talk_free_call_spent",
+            mapOf("turns" to _state.value.turns.size, "spoke" to spoke))
+        if (!spoke) {
+            _state.update { it.copy(phase = TalkPhase.ENDED) }
+            persist()
+            return
+        }
+        end()
     }
 
     /** The reply still in flight when the call was put down — without this

@@ -16,6 +16,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -70,6 +72,9 @@ import kotlin.math.min
 class RealtimeTalkClient(private val context: Context) {
 
     companion object {
+        /** How long a wall waits for the speaker to finish what it holds. */
+        private const val HELD_WALL_MS = 15_000L
+
         private const val TAG = "RealtimeTalk"
         /** What the gateway expects on the way up: 16 kHz mono s16le. */
         const val MIC_RATE = 16_000
@@ -381,6 +386,21 @@ class RealtimeTalkClient(private val context: Context) {
                 val message = msg["message"]?.jsonPrimitive?.content ?: "gateway error"
                 if (code == "insufficient_credits" || code == "daily_cap_reached" || code == "fair_use_limit") {
                     wallCode = code
+                    // "Sent" is not "heard": the gateway holds the wall until
+                    // the line it was speaking ends, and the app holds it
+                    // again until the speaker has actually played what it
+                    // was given — `fail` is the teardown, and it stops the
+                    // player mid-word (iOS `600d406`).
+                    if (state == State.SPEAKING) {
+                        scope.launch {
+                            withTimeoutOrNull(HELD_WALL_MS) {
+                                withContext(audioThread) { runCatching { player?.drain() } }
+                            }
+                            onWall?.invoke(code)
+                            fail(message, code)
+                        }
+                        return
+                    }
                     onWall?.invoke(code)
                 }
                 fail(message, code)

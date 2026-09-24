@@ -454,10 +454,13 @@ fun TalkScreen(
                 // so. What differs is the ANSWER, raised on top of it once.
                 LaunchedEffect(wall) {
                     when (wall) {
-                        TalkWall.OUT_OF_MINUTES -> {
-                            BillingGate.invalidate()
-                            BillingGate.showPaywall.value = true
-                        }
+                        // The free pool ran out: the call is wrapping
+                        // ITSELF up, and the plans come after the summary
+                        // (`pitchThenLeave`). A paywall thrown up here lands
+                        // on top of the wrap-up board and takes the book with
+                        // it — which is how a 42-turn first call ended with
+                        // nothing saved (iOS `600d406`).
+                        TalkWall.OUT_OF_MINUTES -> BillingGate.invalidate()
                         TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
                         TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
                         // Nothing to sell and nothing spent: a person is
@@ -503,7 +506,10 @@ fun TalkScreen(
             // line once the summary is on disk.
             if (state.phase == TalkPhase.ENDED) {
                 state.endedSessionId?.let { sessionId ->
-                    EndOfTalkWrapUp(sessionId = sessionId, userTurns = state.turns.count { it.role == TurnRole.USER })
+                    EndOfTalkWrapUp(
+                        sessionId = sessionId,
+                        userTurns = state.turns.count { it.role == TurnRole.USER },
+                        spentPool = state.wall == TalkWall.OUT_OF_MINUTES)
                 }
             }
 
@@ -640,7 +646,7 @@ private fun phaseLabel(phase: TalkPhase): String = stringResource(
 
 /** Board + result for the talk that just ended, keyed to its session row. */
 @Composable
-private fun EndOfTalkWrapUp(sessionId: String, userTurns: Int) {
+private fun EndOfTalkWrapUp(sessionId: String, userTurns: Int, spentPool: Boolean = false) {
     val context = LocalContext.current
     val progressMap by SessionSummarizer.progressBySession.collectAsStateWithLifecycle()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -653,6 +659,14 @@ private fun EndOfTalkWrapUp(sessionId: String, userTurns: Int) {
         }
     }
     Column(Modifier.padding(16.dp)) {
+        // Why the call ended, above the board — it wrapped itself up, and a
+        // learner who did not press End is owed the reason.
+        if (spentPool) {
+            Text(stringResource(R.string.your_free_talk_time_is_used_up),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp))
+        }
         SummaryBoard(progress, facts = stringResource(R.string.lld_turns, userTurns))
         topLine?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium,
