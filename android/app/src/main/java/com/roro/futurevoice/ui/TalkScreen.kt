@@ -152,9 +152,47 @@ fun TalkScreen(
             } else onExit()
         }
     }
+
+    /**
+     * The plans are offered when the free minutes are SPENT, never while any
+     * are left — the welcome sheet promised the decision comes after them
+     * (iOS `ef9af00`). "Spent" is the pool ending this call, or too little
+     * left to open another one.
+     *
+     * The snapshot is FORCED: they just spent minutes, so a cached one from
+     * before the call would answer about a different account. A lookup that
+     * fails never holds the exit — the learner leaves.
+     */
+    fun pitchThenLeave() {
+        val spentThisCall = state.wall == TalkWall.OUT_OF_MINUTES
+        feedbackScope.launch {
+            fun log(decision: String) {
+                val props = mapOf("decision" to decision,
+                    "free_call_spent" to if (spentThisCall) "1" else "0")
+                com.roro.futurevoice.core.Telemetry.log("post_call_pitch", props)
+                com.roro.futurevoice.core.Analytics.capture("post_call_pitch", props)
+            }
+            val account = runCatching {
+                com.roro.futurevoice.data.AccountStatus.load(AuthRepository())
+                    .also { com.roro.futurevoice.data.BillingGate.remember(it) }
+            }.getOrNull()
+            when {
+                account == null -> log("skipped_lookup_failed")
+                account.isEntitled || account.unlimited -> log("skipped_entitled")
+                spentThisCall || account.needsSubscription -> {
+                    log("shown")
+                    com.roro.futurevoice.data.BillingGate.showPaywall.value = true
+                }
+                else -> log("skipped_minutes_left")
+            }
+            leave()
+        }
+    }
     feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null; onExit() }) }
     androidx.activity.compose.BackHandler {
-        if (state.phase == TalkPhase.ENDED) leave()
+        // A swipe out is the same exit as Done: it used to leave the learner
+        // on a finished call screen and skip the plans a spent pool is owed.
+        if (state.phase == TalkPhase.ENDED) pitchThenLeave()
         else { vm.end(); if (vm.state.value.endedSessionId == null) onExit() }
     }
     /** A spent allowance: a sheet, never an error and never a bare paywall. */
@@ -321,7 +359,7 @@ fun TalkScreen(
                     // minute the app spends, and leaving here skipped it
                     // entirely. Done is what leaves.
                     if (state.phase == TalkPhase.ENDED) {
-                        Button(onClick = { leave() }) { Text(stringResource(R.string.done)) }
+                        Button(onClick = { pitchThenLeave() }) { Text(stringResource(R.string.done)) }
                     } else {
                         Button(onClick = {
                             vm.end()

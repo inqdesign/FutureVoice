@@ -119,12 +119,16 @@ object CaptureTalk {
         "carryover" to { ctx -> Carryover(ctx) },
         "glow" to { _ -> GlowGallery() },
         "themes" to { _ -> Themes() },
+        // The grant said out loud, once: onboarding's paywall steps aside for
+        // an account with a balance, so this is the only place the minutes
+        // are ever mentioned.
+        "free-minutes-welcome" to { _ ->
+            com.roro.futurevoice.ui.FreeTalkWelcomeSheet(minutes = 10, onStart = {}, onDismiss = {})
+        },
     )
 
     /** mode → why Android can't show it yet (name the master-plan item). */
     val notPorted: Map<String, String> = mapOf(
-        "free-minutes-welcome" to
-            "No free-minutes welcome sheet (iOS FreeTalkWelcomeSheet) on Android — 2.16",
         "level-sheet" to
             "No LevelInfoSheet on Android (the call title shows the level but opens nothing) — 4.3",
         "talk-alt" to

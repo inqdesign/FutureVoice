@@ -314,6 +314,37 @@ fun RootScreen() {
         }
     }
     var welcomePreview by remember { mutableStateOf(false) }
+    // "Here is time to talk with your fluent self." The grant is otherwise
+    // invisible — onboarding's paywall steps aside for any account with a
+    // balance, so without this nobody is told the minutes exist (iOS
+    // `ef9af00`). Once per install, and never to someone who has talked.
+    var welcomeMinutes by remember { mutableStateOf<Int?>(null) }
+    var startAfterWelcome by remember { mutableStateOf(false) }
+    LaunchedEffect(state.voiceId, state.setupComplete) {
+        if (state.voiceId == null || !state.setupComplete) return@LaunchedEffect
+        FreeTalkWelcome.minutesToAnnounce(context)?.let { minutes ->
+            FreeTalkWelcome.markShown(context)
+            com.roro.futurevoice.core.Analytics.capture(
+                "free_talk_welcome_shown", mapOf("minutes" to minutes))
+            welcomeMinutes = minutes
+        }
+    }
+    welcomeMinutes?.let { minutes ->
+        FreeTalkWelcomeSheet(
+            minutes = minutes,
+            onStart = { startAfterWelcome = true; welcomeMinutes = null },
+            onDismiss = { welcomeMinutes = null },
+        )
+    }
+    // "Start talking" on the sheet opens the call the sheet was about.
+    LaunchedEffect(startAfterWelcome) {
+        if (startAfterWelcome) {
+            startAfterWelcome = false
+            com.roro.futurevoice.core.Analytics.capture(
+                "free_talk_welcome_closed", mapOf("started" to true))
+            callTopic = ""; callFacts = emptyList(); callScenarioId = null; inCall = true
+        }
+    }
 
     when {
         welcomePreview -> WelcomeScreen(onGetStarted = { welcomePreview = false })
@@ -1747,8 +1778,13 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
     }
 }
 
-/** The free tier's full tank — the signup grant (3960 s = 66 min). */
-private const val FREE_GRANT_SECONDS = 3960
+/**
+ * The free tier's full tank — the signup grant, ten minutes since
+ * 2026-09-21 (`20260921120000_ten_free_minutes`). It used to be 66, which
+ * drew a ring that barely moved for an account that now decides within one
+ * conversation.
+ */
+private const val FREE_GRANT_SECONDS = 600
 
 /**
  * A header control that looks like one.
