@@ -332,6 +332,28 @@ svg text{font-family:inherit}
 
 /* --- tier cards --------------------------------------------------------- */
 .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px}
+
+/* --- 돈: 실제 원가·손익 모델 (2026-09-24) ------------------------------- */
+.gone{display:none!important}
+.eurnote{font-size:12px; color:var(--muted); font-weight:400; margin-left:8px}
+.tile.good .v{color:var(--good-text)}
+.rec{display:inline-block; font-size:11px; font-weight:600; padding:1px 7px; border-radius:999px; background:var(--chip); color:var(--ink-2)}
+.rec.no{background:#fbe3e3; color:var(--crit)}
+.rec.part{background:#fdf0d5; color:var(--warn)}
+.rec.yes{background:#e3f4e3; color:var(--good-text)}
+.pnlctl{display:grid; grid-template-columns:repeat(3,1fr); gap:12px 20px; margin-top:14px}
+.pnlctl label{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2); margin-bottom:3px}
+.pnlctl output{font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink)}
+.pnlctl input[type=range]{width:100%; accent-color:var(--s1); margin:0}
+.pnlctl .chk{display:flex; align-items:center; gap:8px; align-self:end; font-size:12.5px; color:var(--ink-2); padding-bottom:2px}
+.pnlctl .chk input{accent-color:var(--s1); width:15px; height:15px; margin:0}
+@media (max-width:760px){.pnlctl{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.pnlctl{grid-template-columns:1fr}}
+.pnl-line{fill:none; stroke-width:2; stroke-linejoin:round}
+.pnl-target{stroke:var(--ink-2); stroke-width:1.5; stroke-dasharray:6 4}
+.pnl-zero{stroke:var(--baseline); stroke-width:1}
+.pnl-grid{stroke:var(--grid); stroke-width:1; stroke-dasharray:2 4}
+.pnl-lbl{font-size:11px; fill:var(--ink-2)}
 .tiercard{background:var(--surface); border:1px solid var(--ring); border-radius:10px;
   padding:15px 17px; display:flex; flex-direction:column; gap:10px}
 .tiercard.risk{border-color:var(--crit)}
@@ -606,6 +628,68 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub" style="margin:10px 0 0">체험은 결제가 아니에요. 위 금액은 지금 걸려 있는 월 매출이고,
   실제로 청구되는 건 체험이 끝나는 날부터예요. 본인 계정은 매출에서 빼요.
   <b id="cancelShape"></b></p>
+</section>
+
+<section data-tab="money" hidden id="econHeadSec">
+  <h2>손익 한눈에 <span class="eurnote" id="econAsOf"></span></h2>
+  <p class="sub">여기서부터는 <b>ElevenLabs 계정이 직접 말하는 숫자</b>예요. 원장(usage_ledger)은 게이트웨이 통화 TTS를
+  기록하지 않아서 실제 크레딧의 절반쯤만 봅니다. 금액은 전부 €이고, 순매출은 Apple 수수료·VAT·런칭 코드를 뺀 값이에요.</p>
+  <div class="tiles" id="econTiles"></div>
+  <div id="econMissing" class="empty" hidden></div>
+</section>
+
+<section data-tab="money" hidden id="econCatsSec">
+  <h2>크레딧은 어디로 갔나</h2>
+  <p class="sub">출시일부터 ElevenLabs가 센 크레딧을 활동별로 나눈 것. 통화 TTS는 ElevenLabs의 turbo 합계에서
+  원장이 다른 용도로 기록한 turbo를 뺀 값이라, 원장의 turn 행보다 큰 만큼이 게이트웨이의 미기록분이에요.</p>
+  <div class="card">
+    <div class="alloc" id="econStack" style="height:24px"></div>
+    <div class="legend" id="econLegend" style="margin-top:8px"></div>
+    <div class="scroll" style="margin-top:12px"><table id="econCats"></table></div>
+    <div class="notes" id="econNote" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<section data-tab="money" hidden id="econDaySec">
+  <h2>일별: ElevenLabs가 센 것 vs 원장이 본 것</h2>
+  <p class="sub">연한 막대가 실제, 진한 막대가 원장. 둘의 차이가 그날 게이트웨이 통화와 악센트 미리듣기예요.
+  ElevenLabs의 하루는 UTC 기준.</p>
+  <div class="card" id="econDaily"></div>
+</section>
+
+<section data-tab="money" hidden id="econUnitSec">
+  <h2>단위 경제 — 구독자 한 명이 남기는 돈</h2>
+  <p class="sub" id="econUnitSub"></p>
+  <div class="card scroll"><table id="econPlans"></table></div>
+  <p class="sub" style="margin-top:10px" id="econUnitNote"></p>
+</section>
+
+<section data-tab="money" hidden id="pnlSec">
+  <h2>€3,000까지 — 계산기</h2>
+  <p class="sub">슬라이더를 움직이면 월 손익, 유지에 필요한 가입자 수, ElevenLabs 크레딧과 요금제가 같이 바뀌어요.
+  기본값은 위 실측 + 보수적 가정(해지 8%/월, 가입→유료 5%). 설정은 이 브라우저에 남아요.</p>
+  <div class="card">
+    <div class="seg" id="pnlPresets" role="group" aria-label="시나리오"></div>
+    <div class="pnlctl" id="pnlControls"></div>
+    <div class="tiles" id="pnlOut" style="margin-top:14px"></div>
+    <div id="pnlCurve" style="margin-top:12px"></div>
+    <p class="sub" id="pnlNote" style="margin:8px 0 0"></p>
+  </div>
+</section>
+
+<section data-tab="money" hidden id="growSec">
+  <h2>성장 경로 — 하루 가입자 수별 36개월</h2>
+  <p class="sub">계산기의 해지율·전환율·사용 가정을 그대로 두고 하루 가입자 수만 바꿔 돌린 것.
+  구독자 수는 매달 <b>남은 사람 + 가입 × 전환</b>. 지금의 하루 가입자 수가 첫 줄이에요.</p>
+  <div class="card">
+    <div id="pnlGrowth"></div>
+    <div class="scroll" style="margin-top:12px"><table id="pnlGrowRows"></table></div>
+  </div>
+</section>
+
+<section data-tab="money" hidden id="leverSec">
+  <h2>레버 — 숫자가 말하는 순서</h2>
+  <div class="card"><div class="notes"><ol id="pnlLevers" style="padding-left:20px;margin:0"></ol></div></div>
 </section>
 
 <section data-tab="money" hidden>
@@ -2619,6 +2703,356 @@ function renderFairUse(){
 }
 
 /* ============================================================ wiring */
+
+/* ============================================================ 돈: 실제 원가·손익 모델
+ * DATA.econ is built in assemble.ts from ElevenLabs' own usage API (truth.ts)
+ * with the ledger beside it. null when the Worker has no ELEVENLABS_API_KEY.
+ * Everything here is EUR; the older sections above stay in USD list prices.
+ */
+const ECON = () => DATA.econ;
+const eur = (n,d=0) => (n<0?'−':'') + '€' + Math.abs(Number(n||0)).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const kcr = n => n>=1e6 ? (n/1e6).toFixed(2)+'M' : n>=1e3 ? Math.round(n/1e3)+'k' : String(Math.round(n||0));
+const ECON_SECS = ['econCatsSec','econDaySec','econUnitSec','pnlSec','growSec','leverSec'];
+const ECON_COLOR = {talk:'var(--s1)', scene:'var(--s2)', vm:'var(--s3)', accent:'var(--warn)', review:'#e87ba4',
+                   onb:'#4a3aa7', misc_rec:'#9aa3b2', v3:'#7b8494', other:'#c3c2b7'};
+const ECON_REC = {yes:['yes','기록됨'], partial:['part','일부'], no:['no','없음']};
+
+/** EUR per month this subscriber leaves after Apple, VAT and any launch code. */
+function netEurOfUser(u){
+  const e = ECON(); if(!e) return 0;
+  const sp = DATA.storePrices[u.plan]; if(!sp) return 0;
+  const c = 1 - DATA.revenue.commission, usdToEur = 1/e.fx.USD;
+  const o = u.offer;
+  if(o && o.price && o.currency){
+    const p = o.price, cur = o.currency;
+    const net = cur==='KRW' ? p/1.1*c/e.fx.KRW : cur==='EUR' ? p/1.19*c : p*c*usdToEur;
+    return net / sp.months;
+  }
+  const pl = e.plans.find(x=>x.id===u.plan);
+  return pl ? pl.net.avg : 0;
+}
+function currentNetEur(){
+  let net=0, count=0;
+  for(const u of DATA.users){
+    if(u.dev || u.owner) continue;
+    const st = stateOf(u);
+    if(st==='paid' || st==='cancelling'){ net += netEurOfUser(u); count++; }
+  }
+  return {net, count};
+}
+function econSignupsPerDay(){ const e=ECON(); return e && e.window.days ? e.window.signups/e.window.days : 0; }
+
+function renderEcon(){
+  const e = ECON();
+  const tiles = document.getElementById('econTiles'), miss = document.getElementById('econMissing');
+  ECON_SECS.forEach(id => document.getElementById(id).classList.toggle('gone', !e));
+  if(!e){
+    tiles.innerHTML = '';
+    miss.hidden = false;
+    miss.innerHTML = 'ElevenLabs 키가 없어서 원장 숫자만 보여요 — 원장은 게이트웨이 통화를 못 봅니다. '
+      + '<code>bash admin/deploy.sh secret ELEVENLABS_API_KEY</code> (게이트웨이의 키 그대로).';
+    document.getElementById('econAsOf').textContent = '';
+    return;
+  }
+  miss.hidden = true;
+  document.getElementById('econAsOf').textContent =
+    `ElevenLabs ${fmtClock(e.fetchedAt)} 조회 · €1 = $${e.fx.USD} = ₩${num(Math.round(e.fx.KRW))}${e.fx.source==='fallback'?' (환율 고정값)':''}`;
+  const cur = currentNetEur();
+  const usdToEur = 1/e.fx.USD;
+  const gm30 = e.window.days ? e.window.gmEur/e.window.days*30 : 0;
+  const planEur = e.tierPrice*usdToEur;
+  const profitNow = cur.net - (planEur + e.fixed.eur + gm30);
+  const tierName = e.tier.charAt(0).toUpperCase()+e.tier.slice(1);
+  const over = e.cycle.per30 > e.cycle.limit;
+  const t = [
+    {k:'ElevenLabs 이번 주기', v:`${kcr(e.cycle.used)} / ${kcr(e.cycle.limit)}`,
+      d:`${tierName} · 하루 ${kcr(e.cycle.perDay)} · 월 환산 ${kcr(e.cycle.per30)}${e.cycle.resetAt?' · '+fmtDate(e.cycle.resetAt.slice(0,10))+' 리셋':''}`, alert:over},
+    {k:`출시 후 ${e.window.days}일 변동 원가`, v:eur(e.window.elEur+e.window.gmEur,1),
+      d:`EL ${eur(e.window.elEur,1)} + Gemini ${eur(e.window.gmEur,1)} · 하루 ${eur(e.window.perDayEur,2)}`},
+    {k:'월 순매출 (지금)', v:eur(cur.net,1), d:`결제 ${cur.count}명 · 수수료·VAT·코드 반영`},
+    {k:'지금의 월 손익', v:eur(profitNow), d:`EL ${tierName} $${e.tierPrice} + 고정 ${eur(e.fixed.eur)} + Gemini ${eur(gm30)}`,
+      alert: profitNow<0, good: profitNow>=0},
+    {k:'원장이 본 비율', v: e.window.recordedShare==null ? '—' : `${Math.round(e.window.recordedShare*100)}%`,
+      d:`원장 ${kcr(e.window.recorded)} / 실제 ${kcr(e.window.credits)} 크레딧`, alert: e.window.recordedShare!=null && e.window.recordedShare<0.9},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+}
+
+function renderEconCats(){
+  const e = ECON(); if(!e) return;
+  const total = e.cats.reduce((a,c)=>a+c.credits,0) || 1;
+  document.getElementById('econStack').innerHTML = e.cats.map(c =>
+    `<div style="width:${(c.credits/total*100).toFixed(2)}%;background:${ECON_COLOR[c.key]||'#999'}" data-tip="${esc(c.label)} · ${num(c.credits)} cr"></div>`).join('');
+  document.getElementById('econLegend').innerHTML = e.cats.map(c =>
+    `<span><span class="swatch" style="background:${ECON_COLOR[c.key]||'#999'}"></span> ${esc(c.label)}</span>`).join('');
+  const rows = e.cats.map(c => {
+    const [cls,lbl] = ECON_REC[c.recorded] || ['','?'];
+    return `<tr><td><span class="swatch" style="background:${ECON_COLOR[c.key]||'#999'};margin-right:6px"></span>${esc(c.label)}</td>`
+      + `<td class="num">${num(c.credits)}</td><td class="num">${Math.round(c.share*100)}%</td>`
+      + `<td class="num">${eur(c.credits*e.eurPerCredit,2)}</td>`
+      + `<td><span class="rec ${cls}">${lbl}</span> <span style="color:var(--muted);font-size:12px">${esc(c.note)}</span></td></tr>`;
+  });
+  document.getElementById('econCats').innerHTML =
+    `<thead><tr><th>활동</th><th class="num">크레딧</th><th class="num">비중</th><th class="num">원가</th><th>원장</th></tr></thead>`
+    + `<tbody>${rows.join('')}<tr><td><b>합계</b></td><td class="num"><b>${num(e.window.credits)}</b></td><td class="num">100%</td>`
+    + `<td class="num"><b>${eur(e.window.elEur,2)}</b></td><td style="color:var(--muted);font-size:12px">원장 ${num(e.window.recorded)} = ${Math.round((e.window.recordedShare||0)*100)}%</td></tr></tbody>`;
+  const rateNote = Math.abs(e.rateDb - e.rate) > 1e-7
+    ? `<li>DB의 크레딧 단가는 <b>$${e.rateDb}</b>(Creator 시절 씨앗값)인데 실제 티어는 <b>${e.tier}</b>($${e.tierPrice} / ${kcr(e.tierCredits)} = $${e.rate.toFixed(6)}). 이 탭의 모든 $·€ 원가는 실제 티어 단가로 다시 계산했어요. DB를 맞추려면 <code>select set_elevenlabs_usd_per_credit(${e.rate.toFixed(6)});</code></li>`
+    : '';
+  document.getElementById('econNote').innerHTML = `<ul>
+    <li><b>원장은 실제 크레딧의 ${Math.round((e.window.recordedShare||0)*100)}%만 봅니다.</b> 리얼타임 게이트웨이(통화의 본 경로)는 ElevenLabs에 직접 붙고 글자 수를 어디에도 남기지 않아요(<code>gateway/src/billing.ts</code>는 초만 보냄). 악센트 미리듣기는 행만 있고 크레딧이 없어요. 고치려면 게이트웨이가 통화 끝에 TTS 글자 수를 원장에 한 줄 남기면 돼요.</li>
+    ${rateNote}
+    <li>ElevenLabs 요금제는 <b>용량 레버지 단가 레버가 아니에요</b>: Pro $99/600k, Scale $299/1.8M, Business $990/6M 모두 1k당 약 $0.165, 초과분도 $0.17. 유일한 할인은 연간 결제 −17%.</li>
+  </ul>`;
+}
+
+function renderEconDaily(){
+  const e = ECON(); if(!e) return;
+  const el = document.getElementById('econDaily');
+  const rows = e.byDay;
+  if(!rows.length){ el.innerHTML = '<div class="empty">기록이 없어요.</div>'; return; }
+  const W = innerW(el, 240), H = 130, LEFT = 44, RIGHT = 8, top = 10, bh = H-top-18;
+  const n = rows.length, bw = (W-LEFT-RIGHT)/n;
+  const max = Math.max(1, ...rows.map(r=>r.actual));
+  let s = `<div class="panel-label"><span class="swatch" style="background:var(--seq2)"></span>실제
+      <span class="swatch" style="background:var(--s1);margin-left:10px"></span>원장
+      <span style="font-weight:400;color:var(--muted);margin-left:auto">합계 ${num(e.window.credits)} cr · 원장 ${num(e.window.recorded)}</span></div>`
+    + `<svg width="${W}" height="${H}" role="img" aria-label="일별 크레딧, 실제와 원장">`
+    + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`
+    + `<text x="${LEFT-6}" y="${top+8}" text-anchor="end" class="axis">${kcr(max)}</text>`;
+  rows.forEach((r,i)=>{
+    const x = LEFT+i*bw, w = Math.max(2, bw-2);
+    const ha = Math.max(1, r.actual/max*bh), hr = r.recorded/max*bh;
+    const tip = `<b>${fmtDate(r.d)}</b><br>실제 ${num(r.actual)} cr · ${eur(r.actual*e.eurPerCredit,2)}<br>원장 ${num(r.recorded)} cr (${r.actual?Math.round(r.recorded/r.actual*100):0}%)`;
+    s += `<rect x="${x.toFixed(1)}" y="${(top+bh-ha).toFixed(1)}" width="${w.toFixed(1)}" height="${ha.toFixed(1)}" rx="1.5" fill="var(--seq2)" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+    if(hr>0) s += `<rect x="${x.toFixed(1)}" y="${(top+bh-hr).toFixed(1)}" width="${w.toFixed(1)}" height="${hr.toFixed(1)}" rx="1.5" fill="var(--s1)" pointer-events="none"/>`;
+    if(n<=20 || i%Math.ceil(n/12)===0) s += `<text x="${(x+w/2).toFixed(1)}" y="${H-4}" text-anchor="middle" class="axis">${fmtD(r.d)}</text>`;
+  });
+  el.innerHTML = s + '</svg>';
+}
+
+// ---- unit economics ------------------------------------------------------
+const PLAN_KO_SHORT = {light_monthly:'Light 월', light_annual:'Light 연간(월 환산)', plus_monthly:'Plus 월', plus_annual:'Plus 연간(월 환산)'};
+function subCostEur(min, scenes){
+  const u = ECON().unit;
+  return min*u.talkEurPerMin + scenes*u.sceneEur + u.vmEurPerSubMonth;
+}
+function renderEconPlans(){
+  const e = ECON(); if(!e) return;
+  const u = e.unit;
+  document.getElementById('econUnitSub').innerHTML =
+    `순매출은 미국·한국·독일 스토어의 평균(Apple 85%, VAT 제외). 원가는 출시 후 실측 단가: <b>통화 1분 ${eur(u.talkEurPerMin,3)}</b>`
+    + ` (TTS ${u.talkCreditsPerMin} cr + Gemini ${eur(u.gmEurPerMin,4)}), <b>장면 1개 ${eur(u.sceneEur,3)}</b> (${num(u.sceneCredits)} cr),`
+    + ` 보이스메일 ${eur(u.vmEurPerSubMonth,2)}/구독자·월 (회당 ${u.vmPerSynth} cr, 하루 한 통 가정).`;
+  const pl = id => e.plans.find(p=>p.id===id).net;
+  const rows = [
+    ['plus_monthly', pl('plus_monthly'), '150분 · 8장면', subCostEur(150,8), `300분 + 30장면이면 원가 ${eur(subCostEur(300,30),1)} — 여전히 흑자`],
+    ['plus_annual',  pl('plus_annual'),  '150분 · 8장면', subCostEur(150,8), `통화 ${Math.round((pl('plus_annual').avg - u.vmEurPerSubMonth - 8*u.sceneEur)/u.talkEurPerMin)}분 넘기면 적자`],
+    ['light_monthly',pl('light_monthly'),'60분 · 4장면',  subCostEur(60,4),  `150분 + 60장면(다 쓰면) 원가 ${eur(subCostEur(150,60),1)} → <span style="color:${subCostEur(150,60)>pl('light_monthly').avg?'var(--crit)':'var(--good-text)'}">${subCostEur(150,60)>pl('light_monthly').avg?'적자':'흑자'} ${eur(Math.abs(pl('light_monthly').avg-subCostEur(150,60)),1)}</span>`],
+    ['light_annual', pl('light_annual'), '60분 · 4장면',  subCostEur(60,4),  `다 쓰면 ${eur(pl('light_annual').avg-subCostEur(150,60),1)}`],
+  ].map(([id,n,use,c,full]) => {
+    const m = n.avg - c;
+    return `<tr><td><b>${PLAN_KO_SHORT[id]}</b></td>`
+      + `<td class="num">${eur(n.avg,1)}<div style="font-size:11px;color:var(--muted)">KR ${eur(n.KR,1)} · US ${eur(n.US,1)} · DE ${eur(n.DE,1)}</div></td>`
+      + `<td style="color:var(--ink-2)">${use}</td><td class="num">${eur(c,2)}</td>`
+      + `<td class="num" style="color:${m<0?'var(--crit)':'var(--good-text)'};font-weight:600">${eur(m,1)}</td>`
+      + `<td style="color:var(--ink-2);font-size:12.5px">${full}</td></tr>`;
+  });
+  const code = pl('plus_monthly').avg/2, codeM = code - subCostEur(150,8);
+  rows.push(`<tr><td>Plus 50% 코드 (12개월)</td><td class="num">${eur(code,1)}</td><td style="color:var(--ink-2)">150분 · 8장면</td>`
+    + `<td class="num">${eur(subCostEur(150,8),2)}</td><td class="num" style="color:${codeM<0?'var(--crit)':'var(--good-text)'};font-weight:600">${eur(codeM,1)}</td>`
+    + `<td style="color:var(--ink-2);font-size:12.5px">정가의 절반, 원가는 그대로</td></tr>`);
+  rows.push(`<tr><td>무료 가입자</td><td class="num">—</td><td style="color:var(--ink-2)">무료 ${u.freeMinutes}분 + 온보딩</td>`
+    + `<td class="num">${eur(u.signupEur,2)}</td><td class="num" style="color:var(--crit);font-weight:600">${eur(-u.signupEur,2)}</td>`
+    + `<td style="color:var(--ink-2);font-size:12.5px">인사·악센트 미리듣기 ${num(u.onboardingCredits)} cr + 통화 ${u.freeMinutes}분 — 가입 1명당 확정 지출</td></tr>`);
+  document.getElementById('econPlans').innerHTML =
+    `<thead><tr><th>플랜</th><th class="num">순매출 /월</th><th>가정 사용</th><th class="num">원가 /월</th><th class="num">기여이익</th><th>다 쓰면</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  const lightFull = subCostEur(150,60) - pl('light_monthly').avg;
+  document.getElementById('econUnitNote').innerHTML = lightFull > 0
+    ? `<b>Light를 다 쓰면 ${eur(lightFull,1)} 적자</b>이고 이유는 장면(${eur(60*u.sceneEur,1)}) 하나예요. 가격 원칙(“못 쓰게 해서 벌지 않는다”)대로면 답은 장면 단가(길이 82→55초, 클론 절반 turbo — launch-billing.md의 레버)나 Light 가격이지 상한이 아니에요.`
+    : `Light는 다 써도 흑자예요.`;
+}
+
+// ---- the calculator --------------------------------------------------------
+const PNL_KEY = 'nawana.admin.pnl';
+const PNL_FIELDS = [
+  ['n','구독자 수',0,1000,5,'명'], ['plusShare','Plus 비중',0,100,5,'%'], ['codeShare','50% 코드 구독자 비중',0,100,5,'%'],
+  ['plusMin','Plus 월 통화',0,600,10,'분'], ['plusScenes','Plus 월 장면',0,120,1,'장면'],
+  ['lightMin','Light 월 통화',0,150,5,'분'], ['lightScenes','Light 월 장면',0,60,1,'장면'],
+  ['churn','월 해지율',2,20,1,'%'], ['conv','가입→유료 전환율',1,20,1,'%'],
+];
+const PNL_DEFAULT = {n:400, plusShare:60, codeShare:0, plusMin:150, plusScenes:8, lightMin:60, lightScenes:4, churn:8, conv:5, elAnnual:false};
+let pnl = {...PNL_DEFAULT};
+try{ const s = JSON.parse(localStorage.getItem(PNL_KEY)||'null'); if(s) pnl = {...PNL_DEFAULT, ...s}; }catch(e){}
+
+/** Cheapest ElevenLabs tier for this many credits a month — never below the
+ *  tier the account is on today, so the "지금" preset and the tile above agree.
+ *  Overage is billed per credit at about the same rate as the tiers. */
+function elTierFor(credits){
+  const e = ECON(); let best = Infinity, pick = null;
+  for(const t of e.tiers){
+    if(t.credits < e.tierCredits) continue;
+    const c = t.price + Math.max(0, credits - t.credits)*0.00017;
+    if(c<best){ best=c; pick=t; }
+  }
+  return {usd: best, tier: pick, over: pick ? credits > pick.credits : false};
+}
+function elPlanEur(credits, annual){
+  const e = ECON();
+  return elTierFor(credits).usd*(annual?0.8333:1)/e.fx.USD;
+}
+function elTierName(credits){
+  const r = elTierFor(credits); if(!r.tier) return '—';
+  return `${r.tier.name.charAt(0).toUpperCase()+r.tier.name.slice(1)}${r.over?' + 초과분':''} ≈ $${Math.round(r.usd)}`;
+}
+function pnlModel(N, p){
+  const e = ECON(), u = e.unit;
+  const plus = p.plusShare/100, code = p.codeShare/100, churn = p.churn/100, conv = p.conv/100;
+  const signups = conv>0 ? N*churn/conv : 0;
+  const plusNet = e.plans.find(x=>x.id==='plus_monthly').net.avg, lightNet = e.plans.find(x=>x.id==='light_monthly').net.avg;
+  const rev = N*(plus*plusNet + (1-plus)*lightNet)*(1-0.5*code);
+  const mins = N*(plus*p.plusMin + (1-plus)*p.lightMin) + signups*u.freeMinutes;
+  const gem = mins*u.gmEurPerMin;
+  const credits = N*(plus*(p.plusMin*u.talkCreditsPerMin + p.plusScenes*u.sceneCredits)
+                   + (1-plus)*(p.lightMin*u.talkCreditsPerMin + p.lightScenes*u.sceneCredits)
+                   + u.vmCreditsPerSubMonth) + signups*u.signupCredits;
+  const el = elPlanEur(credits, p.elAnnual);
+  const cost = el + gem + e.fixed.eur;
+  return {profit: rev-cost, rev, cost, credits, signups, el, gem};
+}
+function pnlSolve(p, target){ for(let N=0; N<=3000; N++){ if(pnlModel(N,p).profit >= target) return N; } return null; }
+
+function renderPnlControls(){
+  const c = document.getElementById('pnlControls');
+  if(c.dataset.built) return;
+  c.dataset.built = '1';
+  c.innerHTML = PNL_FIELDS.map(([k,lbl,min,max,step]) =>
+    `<div><label for="pnl_${k}">${lbl} <output id="pnlo_${k}"></output></label>`
+    + `<input type="range" id="pnl_${k}" min="${min}" max="${max}" step="${step}"></div>`).join('')
+    + `<label class="chk"><input type="checkbox" id="pnl_elAnnual"> ElevenLabs 연간 결제 (−17%)</label>`;
+  PNL_FIELDS.forEach(([k]) => document.getElementById('pnl_'+k).addEventListener('input', ev => { pnl[k] = +ev.target.value; renderPnl(); }));
+  document.getElementById('pnl_elAnnual').addEventListener('change', ev => { pnl.elAnnual = ev.target.checked; renderPnl(); });
+  const presets = [
+    ['now','지금', () => { const paid = DATA.users.filter(u=>!u.dev&&!u.owner&&(stateOf(u)==='paid'||stateOf(u)==='cancelling'));
+        const n = paid.length || 1;
+        return {n: paid.length, plusShare: Math.round(paid.filter(u=>String(u.plan).startsWith('plus')).length/n*20)*5,
+                codeShare: Math.round(paid.filter(u=>u.offer).length/n*20)*5}; }],
+    ['funnel','현재 퍼널의 한계', () => { const spd = econSignupsPerDay(); return {n: Math.round(spd*30*(pnl.conv/100)/(pnl.churn/100)), codeShare:0}; }],
+    ['target','€3,000 도달점', () => { const q = {...pnl, codeShare:0}; return {n: pnlSolve(q,3000) ?? 1000, codeShare:0}; }],
+    ['allplus','전원 Plus 정가', () => { const q = {...pnl, plusShare:100, codeShare:0}; return {n: pnlSolve(q,3000) ?? 1000, plusShare:100, codeShare:0}; }],
+  ];
+  document.getElementById('pnlPresets').innerHTML = presets.map(([k,l]) => `<button type="button" data-preset="${k}">${l}</button>`).join('');
+  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+    const f = presets.find(x=>x[0]===b.dataset.preset)[2]; Object.assign(pnl, f()); renderPnl();
+  }));
+}
+function renderPnl(){
+  const e = ECON(); if(!e) return;
+  renderPnlControls();
+  PNL_FIELDS.forEach(([k,,,,,unit]) => { document.getElementById('pnl_'+k).value = pnl[k]; document.getElementById('pnlo_'+k).textContent = pnl[k]+unit; });
+  document.getElementById('pnl_elAnnual').checked = !!pnl.elAnnual;
+  const m = pnlModel(pnl.n, pnl);
+  const spdNow = econSignupsPerDay();
+  const tiles = [
+    {k:'월 순이익', v:eur(m.profit), d: m.profit>=3000 ? '목표 도달' : m.profit<0 ? '적자' : `€3,000까지 ${eur(3000-m.profit)}`, alert:m.profit<0, good:m.profit>=3000},
+    {k:'월 순매출 / 원가', v:eur(m.rev), d:`원가 ${eur(m.cost)} = EL ${eur(m.el)} + Gemini ${eur(m.gem)} + 고정 ${eur(e.fixed.eur)}`},
+    {k:'유지에 필요한 가입자', v:`${Math.round(m.signups)}/월`, d:`하루 ${(m.signups/30).toFixed(1)}명 (지금 ${spdNow.toFixed(1)}명) · 무료 사용자 원가 ${eur(m.signups*e.unit.signupEur)}`},
+    {k:'ElevenLabs 크레딧 / 월', v:kcr(m.credits), d:`${elTierName(m.credits)}${pnl.elAnnual?' (연간)':''}`},
+  ];
+  document.getElementById('pnlOut').innerHTML = tiles.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  drawPnlCharts();
+  try{ localStorage.setItem(PNL_KEY, JSON.stringify(pnl)); }catch(e){}
+}
+function drawPnlCharts(){
+  const e = ECON(); if(!e || !document.getElementById('pnlControls').dataset.built) return;
+  // -- profit vs subscribers
+  const cEl = document.getElementById('pnlCurve');
+  const W = innerW(cEl, 260), H = 240, L = 50, R = 12, T = 14, B = 30;
+  const maxN = Math.max(600, Math.ceil(pnl.n*1.25/100)*100);
+  const step = Math.max(1, Math.round(maxN/160));
+  const pts = []; for(let N=0; N<=maxN; N+=step) pts.push([N, pnlModel(N,pnl).profit]);
+  if(pts[pts.length-1][0] !== maxN) pts.push([maxN, pnlModel(maxN,pnl).profit]);
+  const lo = Math.min(0, ...pts.map(q=>q[1])) - 200, hi = Math.max(3400, ...pts.map(q=>q[1])) + 200;
+  const x = N => L + N/maxN*(W-L-R), y = v => T + (1-(v-lo)/(hi-lo))*(H-T-B);
+  let s = `<svg width="${W}" height="${H}" role="img" aria-label="구독자 수에 따른 월 순이익">`;
+  const gstep = hi-lo > 8000 ? 2000 : 1000;
+  for(let v=Math.ceil(lo/gstep)*gstep; v<=hi; v+=gstep)
+    s += `<line class="${v===0?'pnl-zero':'pnl-grid'}" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="axis">${v/1000}k</text>`;
+  for(let N=0; N<=maxN; N+=maxN/6) s += `<text x="${x(N)}" y="${H-B+16}" text-anchor="middle" class="axis">${Math.round(N)}</text>`;
+  s += `<text x="${W-R}" y="${H-3}" text-anchor="end" class="axis">구독자 수 →</text>`;
+  s += `<line class="pnl-target" x1="${L}" x2="${W-R}" y1="${y(3000)}" y2="${y(3000)}"/><text x="${W-R-4}" y="${y(3000)-5}" text-anchor="end" class="pnl-lbl">€3,000</text>`;
+  s += `<path class="pnl-line" style="stroke:var(--s1)" d="${pts.map((q,i)=>(i?'L':'M')+x(q[0]).toFixed(1)+' '+y(q[1]).toFixed(1)).join('')}"/>`;
+  const be = pnlSolve(pnl,0), tg = pnlSolve(pnl,3000);
+  if(be!==null && be<=maxN) s += `<circle r="5" cx="${x(be)}" cy="${y(0)}" fill="var(--warn)" stroke="var(--surface)" stroke-width="2"/><text x="${x(be)+8}" y="${y(0)-8}" class="pnl-lbl">손익분기 ${be}명</text>`;
+  if(tg!==null && tg<=maxN) s += `<circle r="5" cx="${x(tg)}" cy="${y(3000)}" fill="var(--good)" stroke="var(--surface)" stroke-width="2"/><text x="${x(tg)+8}" y="${y(3000)+16}" class="pnl-lbl">€3,000 = ${tg}명</text>`;
+  const curP = pnlModel(pnl.n,pnl).profit;
+  s += `<circle r="6" cx="${x(pnl.n)}" cy="${y(curP)}" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" data-tip="${pnl.n}명 → ${eur(curP)}/월"/>`;
+  // hover targets: one thin column per sample
+  const colW = (W-L-R)/pts.length;
+  pts.forEach(q => { const mm = pnlModel(q[0],pnl);
+    s += `<rect x="${(x(q[0])-colW/2).toFixed(1)}" y="${T}" width="${Math.max(2,colW).toFixed(1)}" height="${H-T-B}" fill="transparent" data-tip="${q[0]}명 → ${eur(mm.profit)}/월 · 가입 ${Math.round(mm.signups)}/월 · ${kcr(mm.credits)} cr"/>`; });
+  cEl.innerHTML = s + '</svg>';
+  document.getElementById('pnlNote').textContent =
+    (be!==null ? `손익분기 ${be}명, ` : '') + (tg!==null ? `€3,000은 ${tg}명${pnl.elAnnual?' (EL 연간 결제 반영)':''}. ` : '€3,000에 닿지 않는 가정이에요. ')
+    + '곡선의 굴곡은 ElevenLabs 요금제 계단(600k · 1.8M · 6M)이에요.';
+
+  // -- 36-month growth by signups/day
+  const gEl = document.getElementById('pnlGrowth');
+  const spdNow = econSignupsPerDay();
+  const scen = [[spdNow, `지금 ${spdNow.toFixed(1)}명/일`, 'var(--s1)'], [12,'12명/일','var(--s2)'], [22,'22명/일','var(--s3)'], [30,'30명/일','var(--warn)']];
+  const N0 = currentNetEur().count;
+  const sim = spd => { let N=N0; const out=[]; for(let m=1;m<=36;m++){ N = N*(1-pnl.churn/100) + spd*30*(pnl.conv/100); out.push([m, N, pnlModel(N,pnl).profit]); } return out; };
+  const series = scen.map(([spd,name,color]) => ({spd,name,color,pts:sim(spd)}));
+  const W2 = innerW(gEl, 260), H2 = 240;
+  const all = series.flatMap(sr=>sr.pts.map(q=>q[2]));
+  const lo2 = Math.min(0,...all)-200, hi2 = Math.max(3400,...all)+300;
+  const x2 = m => L + m/36*(W2-L-R), y2 = v => T + (1-(v-lo2)/(hi2-lo2))*(H2-T-B);
+  let g = `<div class="legend">${series.map(sr=>`<span><span class="swatch" style="background:${sr.color}"></span>${sr.name}</span>`).join('')}</div>`
+    + `<svg width="${W2}" height="${H2}" role="img" aria-label="36개월 순이익 전망">`;
+  const gs2 = hi2-lo2 > 8000 ? 2000 : 1000;
+  for(let v=Math.ceil(lo2/gs2)*gs2; v<=hi2; v+=gs2)
+    g += `<line class="${v===0?'pnl-zero':'pnl-grid'}" x1="${L}" x2="${W2-R}" y1="${y2(v)}" y2="${y2(v)}"/><text x="${L-6}" y="${y2(v)+4}" text-anchor="end" class="axis">${v/1000}k</text>`;
+  [6,12,18,24,30,36].forEach(m => { g += `<text x="${x2(m)}" y="${H2-B+16}" text-anchor="middle" class="axis">${m}개월</text>`; });
+  g += `<line class="pnl-target" x1="${L}" x2="${W2-R}" y1="${y2(3000)}" y2="${y2(3000)}"/><text x="${L+4}" y="${y2(3000)-5}" class="pnl-lbl">€3,000</text>`;
+  series.forEach(sr => { g += `<path class="pnl-line" style="stroke:${sr.color}" d="${sr.pts.map((q,i)=>(i?'L':'M')+x2(q[0]).toFixed(1)+' '+y2(q[2]).toFixed(1)).join('')}"/>`; });
+  for(let m=1;m<=36;m++){
+    const tip = `<b>${m}개월</b><br>` + series.map(sr=>`${sr.name}: ${eur(sr.pts[m-1][2])} (${Math.round(sr.pts[m-1][1])}명)`).join('<br>');
+    g += `<rect x="${(x2(m)-(W2-L-R)/72).toFixed(1)}" y="${T}" width="${((W2-L-R)/36).toFixed(1)}" height="${H2-T-B}" fill="transparent" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+  }
+  gEl.innerHTML = g + '</svg>';
+  document.getElementById('pnlGrowRows').innerHTML =
+    `<thead><tr><th>하루 가입자</th><th class="num">정착 구독자</th><th class="num">12개월 후</th><th class="num">24개월 후</th><th class="num">€3,000 도달</th></tr></thead><tbody>`
+    + series.map(sr => { const hit = sr.pts.find(q=>q[2]>=3000); const steady = sr.spd*30*(pnl.conv/100)/(pnl.churn/100);
+        return `<tr><td><span class="swatch" style="background:${sr.color};margin-right:6px"></span>${sr.name}</td><td class="num">${Math.round(steady)}명</td>`
+          + `<td class="num" style="color:${sr.pts[11][2]<0?'var(--crit)':'inherit'}">${eur(sr.pts[11][2])}</td><td class="num" style="color:${sr.pts[23][2]<0?'var(--crit)':'inherit'}">${eur(sr.pts[23][2])}</td>`
+          + `<td class="num">${hit ? hit[0]+'개월째' : '<span style="color:var(--crit)">도달 못 함</span>'}</td></tr>`; }).join('') + '</tbody>';
+  renderLevers();
+}
+function renderLevers(){
+  const e = ECON(); if(!e) return;
+  const spd = econSignupsPerDay();
+  const base = {...pnl, codeShare:0};
+  const tg = pnlSolve(base,3000), tgAnnual = pnlSolve({...base, elAnnual:true},3000);
+  const need = tg!==null ? pnlModel(tg,base).signups : null;
+  const steadyNow = spd*30*(pnl.conv/100)/(pnl.churn/100);
+  const steadyProfit = pnlModel(steadyNow, pnl).profit;
+  const cur = currentNetEur();
+  const codeUsers = DATA.users.filter(u=>!u.dev&&!u.owner&&(stateOf(u)==='paid'||stateOf(u)==='cancelling')&&u.offer).length;
+  const vm = e.cats.find(c=>c.key==='vm');
+  const items = [
+    `<b>가입자 수가 전부예요.</b> 지금 퍼널(하루 ${spd.toFixed(1)}명, 전환 ${pnl.conv}%, 해지 ${pnl.churn}%)은 ${Math.round(steadyNow)}명에서 정착하고 월 ${eur(steadyProfit)}에서 멈춰요.`
+      + (tg!==null ? ` €3,000은 구독자 ${tg}명이고, 유지하려면 <b>월 ${Math.round(need)}명, 하루 ${(need/30).toFixed(0)}명</b>이 가입해야 해요 — 지금의 ${spd>0?(need/30/spd).toFixed(1):'∞'}배.` : ''),
+    `<b>전환율은 두 배가 가능한 구간.</b> 첫 통화 무료(09-18)와 무료 10분(09-22) 이후 코호트를 따로 재 보세요. 전환 ${pnl.conv}% → ${pnl.conv*2}%면 필요한 가입자가 절반이 돼요.`,
+    `<b>50% 코드는 12개월간 매출을 반으로 잘라요.</b> 지금 결제 ${cur.count}명 중 ${codeUsers}명이 코드. 웨이트리스트 이후엔 더 뿌리지 않는 게 맞아요.`,
+    `<b>Light 장면 단가.</b> Light를 다 쓰면 적자인 이유는 장면(${eur(e.unit.sceneEur,3)} × 60)뿐. 장면 길이 82→55초 −33%, 클론 절반 turbo −33% — launch-billing.md에 있는 레버.`,
+    vm ? `<b>보이스메일이 크레딧의 ${Math.round(vm.share*100)}%.</b> 일일 통화를 켠 사람마다 세션 끝마다 합성돼요(${e.window.days}일 ${vm.note}). 무료 사용자 몫이 문제면 “어제 받은 사람만 다음 것을 만든다”가 제품 규칙을 안 깨는 절약이에요.` : '',
+    `<b>ElevenLabs 요금제는 용량 레버.</b> 티어를 올려도 단가가 안 내려가요(전부 ≈$0.165/1k). 유일한 할인은 연간 −17%(도달 구독자 ${tg??'—'}→${tgAnnual??'—'}명). 지금 페이스 월 ${kcr(e.cycle.per30)}은 ${e.tier} 한도 ${kcr(e.cycle.limit)}의 ${Math.round(e.cycle.per30/e.cycle.limit*100)}% — 첫 마케팅 푸시에서 넘치니 <b>초과 과금(usage-based billing)을 미리 켜 두세요.</b>`,
+    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’·‘유저별 원가’가 이 섹션과 같은 숫자를 말해요. 그 전까지 원가의 진실은 ElevenLabs API예요.`,
+  ].filter(Boolean);
+  document.getElementById('pnlLevers').innerHTML = items.map(t=>`<li style="margin-bottom:10px">${t}</li>`).join('');
+}
+
 function render(){
   TODAY = localDay(new Date());
   YESTERDAY = localDay(new Date(Date.now()-86400000));
@@ -2634,12 +3068,14 @@ function render(){
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
+  renderEcon(); renderEconCats(); renderEconDaily(); renderEconPlans(); renderPnl();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a
  *  redraw can never disagree with it. */
 function redrawCharts(){
   const users = visibleUsers();
   renderDaily(users); renderHeatmap(users); renderHoursToday(users); renderHours(users); renderHoursByUser(users); renderBurn();
+  renderEconDaily(); drawPnlCharts();
 }
 /* ============================================================ 라이브
  * Polls __ADMIN_BASE__/live.json (admin_live()) every 15 s while the tab is

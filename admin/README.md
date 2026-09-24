@@ -45,8 +45,20 @@ practice carried more than half of every total. Four tabs, one question each:
   minutes of signing up, not after a call, so stacking it under the activity
   bars would state a sequence that never happens.
 - **사람** — one row per account, everything else behind the row.
-- **돈** — MRR, what the running trials are worth, unit cost, tier margin,
-  burn, per-account cost.
+- **돈** — MRR, what the running trials are worth, then (since 2026-09-24)
+  the P&L as ElevenLabs sees it: the account's own credit usage read from
+  the ElevenLabs API (`src/truth.ts`, secret `ELEVENLABS_API_KEY`), split
+  by activity with the ledger beside it, unit economics per plan in EUR,
+  and a calculator for the subscriber / signup counts a monthly profit
+  target needs. Below that, the older ledger-based sections (burn,
+  per-account cost, fair use), now priced at the tier's real per-credit
+  rate rather than the database's seed.
+
+  Why the API and not the ledger: the realtime gateway streams to
+  ElevenLabs directly and records seconds for the meter but never a
+  character count, and accent previews record no credits at all — the
+  ledger saw 47% of the launch cycle's credits. Without the key the tab
+  says so and shows the ledger figures only.
 
 Two defaults worth knowing:
 

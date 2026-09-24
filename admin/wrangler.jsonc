@@ -13,4 +13,5 @@
   // Secrets (set with `wrangler secret put <NAME>`):
   //   ADMIN_TOKEN                — the ?k= key; without it every path 404s
   //   SUPABASE_SERVICE_ROLE_KEY  — admin_raw() is granted to service_role only
+  //   ELEVENLABS_API_KEY         — the 돈 tab's 실제 원가 (truth.ts); optional
 }

@@ -28,6 +28,7 @@
 
 import shell from "./shell.html";
 import { assemble } from "./assemble";
+import { elevenTruth } from "./truth";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -39,6 +40,11 @@ export interface Env {
   POSTHOG_API_KEY?: string;
   /** Numeric project id; defaults to the key's current project. */
   POSTHOG_PROJECT_ID?: string;
+  /** ElevenLabs API key (the gateway's) — the 돈 tab's 실제 원가 reads the
+   *  account's own usage, because the ledger sees under half of it (see
+   *  truth.ts). Without it that section says how to set it; every other
+   *  cost figure falls back to the ledger at the database's rate. */
+  ELEVENLABS_API_KEY?: string;
 }
 
 const COOKIE = "nawana_admin";
@@ -91,13 +97,20 @@ async function fetchData(env: Env) {
     body: "{}",
   });
   if (!r.ok) throw new Error(`admin_raw ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  const raw = await r.json();
+  const raw = await r.json() as any;
   // Never let this card take the whole console down with it.
   raw.recent_ledger = await recentLedger(env).catch((e) => {
     console.log(`recentLedger: ${(e as Error).message}`);
     return [];
   });
-  const data = assemble(raw);
+  // ElevenLabs' own account of the window. Optional in every direction: no
+  // key, a refused call or a rate-limited one leaves the tab on ledger
+  // figures, marked as such.
+  const truth = await elevenTruth(env, raw.windowStart).catch((e) => {
+    console.log(`elevenTruth: ${(e as Error).message}`);
+    return null;
+  });
+  const data = assemble(raw, truth);
   // Same rule as recentLedger: a missing column must not blank the console.
   const offers = await offerCodes(env).catch((e) => {
     console.log(`offerCodes: ${(e as Error).message}`);
