@@ -1004,16 +1004,12 @@ enum WordLore {
     private static var cache: [String: WordEntry] = [:]
 
     /// On-device fallback part of speech (used only if generation fails).
+    /// Only where `NLTagger` has a model for the target (`WordClass`
+    /// checks): the tagger answers "OtherWord" for every Japanese and Korean
+    /// headword, and that was drawn under each of them while the entry
+    /// loaded.
     static func partOfSpeech(_ word: String) -> String? {
-        // The tagger is English-only here; on anything else it answers
-        // "OtherWord", which is a tag name, not a part of speech — and it was
-        // drawn under every Japanese headword while the entry loaded.
-        guard LanguageCatalog.writesSpaces(LanguageScope.active) else { return nil }
-        let tagger = NLTagger(tagSchemes: [.lexicalClass])
-        tagger.string = word
-        tagger.setLanguage(.english, range: word.startIndex..<word.endIndex)
-        let tag = tagger.tag(at: word.startIndex, unit: .word, scheme: .lexicalClass).0?.rawValue
-        return tag == NLTag.otherWord.rawValue ? nil : tag
+        WordClass.lexicalTag(word, language: LanguageScope.active)
     }
 
     private struct EntryRow: Decodable { let data: WordEntry }

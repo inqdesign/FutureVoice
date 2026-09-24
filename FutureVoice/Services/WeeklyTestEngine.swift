@@ -315,29 +315,24 @@ enum WeeklyTestEngine {
         vocab.studying.forEach(add)
         vocab.usedWords(withinDays: 7).forEach(add)
 
-        // Decoys: the learner's own pool first (all words they are studying,
-        // so none is trivially out of place), then the graded list at their
-        // level — same part of speech where the tagger can tell, so a verb's
-        // gloss isn't answered by ruling out three nouns.
-        let level = appState.proficiency
-        // Languages without a graded list (es, fr, it, pt, zh) fall back to
-        // the learner's own known/used words — still their vocabulary, still
-        // in the target script.
-        var graded = CoreVocabulary.entries
-            .filter { $0.level == level && !seen.contains($0.word.lowercased()) }
-            .map(\.word)
-            .shuffled(using: &rng)
+        // Decoys: the graded list at the learner's level leads, the two
+        // neighbouring bands follow — a same-class word one band off beats an
+        // any-class word at level, and the class is what `meaningDecoys`
+        // sorts by. Languages without a graded list (es, fr, it, pt, zh) fall
+        // back to the learner's own known/used words — still their
+        // vocabulary, still in the target script.
+        let language = appState.targetLanguage
+        var graded: [String] = []
+        for band in decoyBands(around: appState.proficiency) {
+            graded += CoreVocabulary.entries
+                .filter { $0.level == band && !seen.contains($0.word.lowercased()) }
+                .map(\.word)
+                .shuffled(using: &rng)
+        }
         if graded.count < choiceCount {
             graded += vocab.records.keys
                 .filter { !seen.contains($0.lowercased()) && isInTargetScript($0) }
                 .shuffled(using: &rng)
-        }
-        func decoys(for word: String) -> [String] {
-            let pos = WordLore.partOfSpeech(word)
-            let own = candidates.filter { $0.lowercased() != word.lowercased() }
-            let samePOS = graded.filter { pos == nil || WordLore.partOfSpeech($0) == pos }
-            return Array((own.shuffled(using: &rng) + samePOS.prefix(30).shuffled(using: &rng) + graded)
-                .prefix(choiceCount - 1))
         }
 
         var out: [WeeklyTestItem] = []
@@ -351,13 +346,51 @@ enum WeeklyTestEngine {
                   // gives the answer away.
                   !sense.lowercased().contains(word.lowercased())
             else { continue }
-            let decoys = decoys(for: word)
+            let decoys = meaningDecoys(for: word, own: candidates, graded: graded,
+                                       language: language, rng: &rng)
             guard decoys.count == choiceCount - 1 else { continue }
             let options = ([word] + decoys).shuffled(using: &rng)
             out.append(WeeklyTestItem(id: UUID(), kind: .meaning, prompt: sense,
                                       answer: word, options: options))
         }
         return out
+    }
+
+    /// The learner's level and its two neighbours, nearest first.
+    static func decoyBands(around level: CEFRLevel) -> [CEFRLevel] {
+        let all = CEFRLevel.allCases
+        guard let i = all.firstIndex(of: level) else { return [level] }
+        var bands = [level]
+        if i > 0 { bands.append(all[i - 1]) }
+        if i + 1 < all.count { bands.append(all[i + 1]) }
+        return bands
+    }
+
+    /// The wrong choices for a meaning item, `choiceCount - 1` of them.
+    ///
+    /// Same word class as the answer FIRST (`WordClass`): a verb's gloss must
+    /// not be answerable by ruling out three nouns, and a Korean predicate's
+    /// 다 would give it away against nouns before the gloss is read. Inside a
+    /// class the learner's own pool (`own`, the words they are studying — none
+    /// of which is trivially out of place) comes before the graded list, which
+    /// arrives ordered by band (`decoyBands`) and already shuffled. Only when
+    /// the class runs dry do other-class words fill the row, own first. An
+    /// answer whose class is unknown takes everything as same-class, which is
+    /// the old rule; a word with several classes (run: noun, verb) matches
+    /// either.
+    static func meaningDecoys(for word: String, own: [String], graded: [String],
+                              language: String, rng: inout WeeklyTestRandom) -> [String] {
+        func same(_ w: String) -> Bool { WordClass.sameClass(word, w, language: language) }
+        let others = own.filter { $0.lowercased() != word.lowercased() }
+        let ownSame = others.filter(same)
+        let ownRest = others.filter { !same($0) }
+        // The graded list is long; classify only until the row could be
+        // filled several times over.
+        let gradedSame = Array(graded.lazy.filter(same).prefix(30))
+        let ordered = ownSame.shuffled(using: &rng) + gradedSame.shuffled(using: &rng)
+            + ownRest.shuffled(using: &rng) + graded
+        return Array(dedupe(ordered.filter { $0.lowercased() != word.lowercased() },
+                            key: { $0.lowercased() }).prefix(choiceCount - 1))
     }
 
     // MARK: gap

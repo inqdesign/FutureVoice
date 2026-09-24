@@ -808,7 +808,18 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
 
 - **Five kinds, one shelf each, every grade computed in code**: `meaning`
   (a notebook word's gloss → pick the word; decoys are the learner's other
-  notebook words, then graded words of the same part of speech), `gap` (a
+  notebook words, then graded words of the same word class — `WordClass`,
+  2026-09-24, read from `word_classes_<code>.tsv` built by
+  `scripts/build-word-classes.py` from the sources the wordlists came from:
+  the CEFR-J/Octanove profiles for en, JMdict for ja, orthography + a hand
+  list for de (capital = noun, -en = verb, else adjective — one class with
+  the adverbs) and ko (다 = predicate). Audited over all four lists first:
+  a lone-word `NLTagger` agreed with the English profiles 72% of the time,
+  had NO model for ko/ja, and swapped German adjectives and adverbs, so the
+  tagger and the headword-shape rules are only the fallback for a word off
+  the list. A headword can carry several classes (run: noun,verb), so the
+  engine asks `sameClass`, never equality; same class outranks the
+  learner's own pool, and the graded list spans the level ±1 band), `gap` (a
   fluent-self line with its `expressions_offered` phrase blanked → pick the
   phrase; decoys are the week's other phrases before the library), `build`
   (a correction card: "You said …" → lay the fluent version from shuffled
