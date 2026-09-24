@@ -46,15 +46,45 @@ data class SubscriptionReceipt(
     /** First transaction priced by an offer code. The launch codes run
      *  [offerCodeMonths] from here. */
     val offerCodeSince: LocalDate? = null,
+    /**
+     * What will be charged NEXT, from the store's renewal information — a
+     * different fact from what was charged last, and the only one that can
+     * answer a trial ("nothing has been charged yet") or a price about to
+     * change. Null until the store tells us: Google Play's notifications are
+     * not wired yet (master plan 7.3), so a Play subscriber sees no such row
+     * rather than a guess.
+     */
+    val renewalMilliunits: Long? = null,
+    val renewalCurrency: String? = null,
 ) {
     /** The day the launch code's discount ends, when one is running. */
     val offerCodeUntil: LocalDate?
         get() = if (currentOfferType == 3) offerCodeSince?.plusMonths(offerCodeMonths) else null
 
+    /** What the next charge will be, as money. */
+    fun renewalLabel(locale: Locale): String? =
+        money(renewalMilliunits, renewalCurrency, locale)
+
+    /**
+     * True when the next charge is NEWS: a trial (nothing has been charged,
+     * so there is no last-charge row at all) or an amount about to change —
+     * a launch code running out, a price rise — which nobody should meet on
+     * their statement. On a steady subscription the figure is already on
+     * screen as the last charge.
+     */
+    fun nextChargeIsNews(isTrialing: Boolean): Boolean {
+        if (renewalMilliunits == null || renewalMilliunits <= 0) return false
+        return isTrialing || renewalMilliunits != lastChargeMilliunits ||
+            renewalCurrency != lastChargeCurrency
+    }
+
     /** The last charge as money, in the language the app is drawing in. */
-    fun lastChargeLabel(locale: Locale): String? {
-        val milli = lastChargeMilliunits?.takeIf { it > 0 } ?: return null
-        val code = lastChargeCurrency ?: return null
+    fun lastChargeLabel(locale: Locale): String? =
+        money(lastChargeMilliunits, lastChargeCurrency, locale)
+
+    private fun money(milliunits: Long?, currencyCode: String?, locale: Locale): String? {
+        val milli = milliunits?.takeIf { it > 0 } ?: return null
+        val code = currencyCode ?: return null
         return runCatching {
             java.text.NumberFormat.getCurrencyInstance(locale).apply {
                 currency = Currency.getInstance(code)
@@ -78,6 +108,12 @@ data class SubscriptionReceipt(
         private data class SubRow(
             val source: String? = null,
             val started_at: String? = null,
+        )
+
+        @Serializable
+        private data class RenewalRow(
+            val renewal_price_milliunits: Long? = null,
+            val renewal_currency: String? = null,
         )
 
         @Serializable
@@ -112,6 +148,17 @@ data class SubscriptionReceipt(
                             lastChargeDate = day(it.purchase_date),
                             currentOfferType = it.offer_type,
                         )
+                    }
+
+                // A query of its OWN: a select naming a column the database
+                // has not got fails the WHOLE query, and folding these in
+                // beside the others would blank the section for anyone on a
+                // build that shipped ahead of the migration.
+                get<RenewalRow>(auth, "user_subscriptions",
+                    "renewal_price_milliunits,renewal_currency",
+                    "user_id=eq.$userId&limit=1")?.firstOrNull()?.let {
+                        out = out.copy(renewalMilliunits = it.renewal_price_milliunits,
+                            renewalCurrency = it.renewal_currency)
                     }
 
                 if (out.currentOfferType == 3) {

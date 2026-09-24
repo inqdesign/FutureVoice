@@ -209,6 +209,22 @@ fun PlanPageScreen(
                                 on.dayLabel(locale))
                         }
                     }
+                    // What the store will charge NEXT, and when — but only
+                    // where it is news. In a trial it is the whole question:
+                    // nothing has been charged, so there is no last-charge row
+                    // and the date above says the day it starts costing money.
+                    // Otherwise only when the amount is about to CHANGE.
+                    val next = r.renewalLabel(locale)
+                    if (next != null && r.nextChargeIsNews(a.isTrialing) &&
+                        a.renewalLabel(locale).isNotBlank()) {
+                        rows += {
+                            ValueRow(Icons.Filled.CreditCard,
+                                stringResource(
+                                    if (a.isTrialing) R.string.first_charge
+                                    else R.string.next_charge, next),
+                                a.renewalLabel(locale))
+                        }
+                    }
                     r.offerCodeUntil?.let { until ->
                         rows += {
                             LineRow(Icons.Filled.LocalOffer,
