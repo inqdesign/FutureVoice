@@ -690,6 +690,42 @@ who slipped into Korean for a turn got a "Show me the clock once" card and a
 test item built on it. `looksLikeMetaRule` knows the Korean/Japanese/German
 words for grammar categories too; its list was English.
 
+**The SPEECH LEVEL is the learner's, and a coach never touches it**
+(2026-09-25, from the founder's own call: "체험을 하고 계시는 거야" was
+corrected to "거예요" under *더 자연스럽게*). Neither correction prompt nor
+the summary carried a single Korean rule beyond spacing; the "casual register
+is not a slip" line had English examples only, and the coach call gets ONE
+line with no context — not that the call is with the future self, not that it
+is in 반말. Measured with the live `correctionOnlyPrompt` on Gemini 3.6 Flash
+(55 spoken Korean lines × 2 runs, `scripts/correction-probe.py <lang>` over
+`scripts/correction-cases-<lang>.json` — it reconstructs that language's
+prompt from the Swift source, `NO_REGISTER=1` runs it without the guard): every false correction was one of two kinds —
+a SUBJECT honorific beside a 반말 ending pushed to 존댓말 ("주무셔" →
+"주무셔요"; 주체 높임 and 상대 높임 are independent and the model reads them
+as mixed politeness) and spoken right-dislocation "fixed" to written order
+("먹었어 아까 라면"); real errors were all caught, but their alternatives
+sometimes drifted to 존댓말 too ("저 … 공부했어요"). `registerGuard`
+(Korean + Japanese; the Japanese half is the same rule, unmeasured) now rides
+on all three prompts next to the spacing guard: the level spoken in is
+correct whoever the counterpart is, never change an ending, and the
+alternative stays in that level even when it fixes something else. After it:
+0/86 false corrections, 0/24 missed, alternatives in 반말. **Japanese has the
+same bug and the same block** (measured the same day, 48 lines × 2): without
+the guard, 尊敬語 about a third person beside a plain ending was called
+"inconsistent" ("社長がいらっしゃるまで待ってて" → "…ください") and two
+alternatives drifted to です; with the guard plus a JAPANESE HONORIFICS line,
+0/72 and 0/24, and 0/16 on the honorific lines over four runs. **German needs
+nothing** (47 lines × 2, du and Sie lines, spoken "hab / geh / glaub",
+dropped subjects, particles): 0/70 false, 0/24 missed, no du → Sie in any
+alternative — so it carries no guard and its prompt is unchanged. Code
+guarantee for
+the second kind: `changesOnlyWordOrder` (Korean only — an English reorder can
+be a real fix) drops a suggestion or summary phrase whose words are the same
+multiset; it is NOT used for speculative-reply adoption, where a reorder is a
+different line. Nothing server-side records a correction's text or a
+per-language correction rate (the ledger has model + purpose), so the probe
+is the only measurement there is — re-run it before touching either prompt.
+
 **And a SCORE may never be built on it either** (2026-09-13, `ShadowTranscriber`). Shadowing was the last surface still resting on Apple's recognizer alone, and there a transcript is not context for a model — it IS the grade: the diff, the score, the coach bullets and the rhythm card are all computed from it. Reported that day: *"Soak it all in, right?"* came back as **"So right"**, every attempt. Connected speech (`[soʊkɪɾɔlɪn]`) is exactly what an on-device pass collapses, and the learner was told they had skipped three words they said perfectly well. Three layers, in order, all of them in the one new door every shadow score walks through:
 
 - **The audio is levelled before anyone reads it** (`AudioLoudness.peakNormalizedWAV`, boost-only) and the SAME file goes to both readers, so they are judging the same thing. The learner's own playback still uses the ORIGINAL — the take is theirs, the levelling is for the machines.

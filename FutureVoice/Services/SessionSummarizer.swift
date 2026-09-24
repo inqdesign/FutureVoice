@@ -237,7 +237,9 @@ enum SessionSummarizer {
             }
         }
         let keptPhrases = computed.phrasesUsed.filter {
-            isTheirs($0.userSaid) && !ConversationEngine.saysTheSameThing($0.userSaid, $0.fluentAlternative)
+            isTheirs($0.userSaid)
+                && !ConversationEngine.saysTheSameThing($0.userSaid, $0.fluentAlternative)
+                && !ConversationEngine.changesOnlyWordOrder($0.userSaid, $0.fluentAlternative)
         }
         if keptPhrases.count != computed.phrasesUsed.count {
             NSLog("PHRASECAPTURE dropped %d of %d (not theirs, or no audible change)",

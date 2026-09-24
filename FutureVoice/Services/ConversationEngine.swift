@@ -691,7 +691,7 @@ enum ConversationEngine {
           natural speech, never something to report or "fix" anywhere. Every
           fluent_alternative / correction / suggested_drill must sound like a
           line said out loud in casual conversation — the user's own register,
-          contractions welcome — never a written-essay rewrite.
+          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
           this whole conversation, weighing vocabulary range, grammatical
           control, fluency, and how well they express ideas together. Anchor to
@@ -990,7 +990,7 @@ enum ConversationEngine {
           "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
-          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))
+          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))
         - "suggestion": include whenever the user's most recent line has a
           grammar slip or wording a fluent speaker wouldn't choose — give the
           natural version. Set it to null only when the line was already
@@ -1067,7 +1067,7 @@ enum ConversationEngine {
           building" arrives as "I am building" every time. A suggestion whose
           only change is contracting what you received is correcting the
           transcriber, not the learner. If that is the only change you would
-          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))
+          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
@@ -1134,6 +1134,68 @@ enum ConversationEngine {
     /// transcriber's. Empty for every other target, so their prompts are
     /// byte-identical to before.
     static func scriptGuard(_ targetLanguage: String) -> String {
+    /// Korean and Japanese line for EVERY correction prompt — both live
+    /// paths and the summary: the SPEECH LEVEL is the learner's, never a slip.
+    ///
+    /// Measured 2026-09-25 on the live `correctionOnlyPrompt` (55 spoken
+    /// Korean lines × 2 runs): every false correction was one of two kinds —
+    /// a subject honorific beside a 반말 ending pushed to 존댓말 ("체험을 하고
+    /// 계시는 거야" → "거예요", "주무셔" → "주무셔요"), and spoken
+    /// right-dislocation "fixed" to written order ("먹었어 아까 라면"). Both
+    /// vanished with this block and every real error was still caught.
+    /// Japanese, measured the same day (48 lines × 2): without the block the
+    /// same misreading once ("社長がいらっしゃるまで待ってて" → "…ください",
+    /// "inconsistent") and two alternatives drifting to です; with it, none.
+    /// German (47 lines × 2) showed no register error at all and gets no
+    /// block. Empty for every other target, so their prompts are
+    /// byte-identical to before.
+    static func registerGuard(_ targetLanguage: String) -> String {
+        let base = LanguageCatalog.base(targetLanguage)
+        guard base == "ko" || base == "ja" else { return "" }
+        var text = "\n- SPEECH LEVEL is the learner's choice, never a slip. Talking to their"
+            + "\n  own future self they use the informal level (반말 / plain form); in a"
+            + "\n  scene or with a stranger they may use the polite one. Either way the"
+            + "\n  level they spoke in is correct. NEVER change it — not a single"
+            + "\n  ending — and \"alternative\" stays in the level the line was said in,"
+            + "\n  even when it fixes something else."
+        if base == "ko" {
+            text += "\n- KOREAN HONORIFICS: a subject honorific about a third person (계시다,"
+                + "\n  주무시다, 드시다, 말씀하시다, -시-) combines freely with a 반말 ending"
+                + "\n  to the listener — \"할아버지 지금 주무셔\", \"체험을 하고 계시는 거야\""
+                + "\n  are correct Korean, not mixed politeness. Never add 요 / 예요 to them."
+                + "\n- KOREAN WORD ORDER in speech is free: an afterthought after the verb"
+                + "\n  (\"먹었어, 아까 라면\") is how people talk. A suggestion that only"
+                + "\n  reorders the same words corrects nothing; return null."
+        }
+        if base == "ja" {
+            text += "\n- JAPANESE HONORIFICS: 尊敬語 / 謙譲語 about a third person (いらっしゃる,"
+                + "\n  おっしゃる, なさる, 召し上がる) combine freely with a plain ending to the"
+                + "\n  listener — \"社長がいらっしゃるまで待ってて\", \"先生がそうおっしゃってた\""
+                + "\n  are correct Japanese, not inconsistent. Never add です / ます / ください"
+                + "\n  to them."
+        }
+        return text
+    }
+
+    /// True when a Korean "fix" only puts the SAME words in another order.
+    ///
+    /// Spoken Korean orders freely — "먹었어, 아까 라면" is an afterthought,
+    /// not a slip — and the model rewrote it to textbook order in 2 of 2
+    /// runs (2026-09-25). The prompt now asks it not to; this is the
+    /// guarantee. Korean only: in English a reorder can be a real
+    /// correction ("I yesterday went"). Words are the recognizer's spacing,
+    /// so a line that was ALSO re-spaced is not caught here — that is the
+    /// conservative side, and `saysTheSameThing` still catches a pure
+    /// re-spacing. Never used for speculative-reply adoption, where a
+    /// reorder IS a different line.
+    static func changesOnlyWordOrder(_ a: String, _ b: String) -> Bool {
+        guard LanguageCatalog.base(LanguageScope.active) == "ko" else { return false }
+        let left = spokenWords(ShadowEngine.expandForDiff(a, language: "ko"))
+        let right = spokenWords(ShadowEngine.expandForDiff(b, language: "ko"))
+        guard left.count >= 2, left != right else { return false }
+        return left.sorted() == right.sorted()
+    }
+
         guard LanguageCatalog.language(targetLanguage)?.code == "ja" else { return "" }
         return "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji"
             + "\n  or kana and which kanji (分かる / わかる, 下さい / ください,"
@@ -1281,7 +1343,8 @@ struct ConversationTurnPayload: Decodable {
         guard !alternative.isEmpty else { return nil }
         // A prompt is a request; this is the guarantee. See
         // `ConversationEngine.saysTheSameThing`.
-        guard !ConversationEngine.saysTheSameThing(original, alternative) else { return nil }
+        guard !ConversationEngine.saysTheSameThing(original, alternative),
+              !ConversationEngine.changesOnlyWordOrder(original, alternative) else { return nil }
         return TurnSuggestion(alternative: alternative, reason: s.reason)
     }
 }
