@@ -809,7 +809,11 @@ enum ConversationEngine {
             means about their life, and never a step from HOW they speak:
             nothing from their level, their mistakes, or their accent. An
             episode with no standing truth in it (what they ate, that they
-            were tired) is no line at all.
+            were tired) is no line at all. A sentence that reports ONE thing
+            that happened — "shipped the Japanese version", "got a new user
+            from Hong Kong", "was on the way to the kids' school" — is an
+            episode however much it mattered: file what it teaches ("builds
+            a language app", "has a school-age child"), or nothing.
           - `heard`: the sentence the line came from, in THEIR words as they
             said it (trimmed, ≤ 20 words, the language they spoke it in).
             The learner sees it under the line as the evidence.
@@ -1130,10 +1134,6 @@ enum ConversationEngine {
             + "\n  If that is the only change you would make, the line was fine: return null."
     }
 
-    /// Japanese-only line for both correction prompts: the script is the
-    /// transcriber's. Empty for every other target, so their prompts are
-    /// byte-identical to before.
-    static func scriptGuard(_ targetLanguage: String) -> String {
     /// Korean and Japanese line for EVERY correction prompt — both live
     /// paths and the summary: the SPEECH LEVEL is the learner's, never a slip.
     ///
@@ -1196,6 +1196,10 @@ enum ConversationEngine {
         return left.sorted() == right.sorted()
     }
 
+    /// Japanese-only line for both correction prompts: the script is the
+    /// transcriber's. Empty for every other target, so their prompts are
+    /// byte-identical to before.
+    static func scriptGuard(_ targetLanguage: String) -> String {
         guard LanguageCatalog.language(targetLanguage)?.code == "ja" else { return "" }
         return "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji"
             + "\n  or kana and which kanji (分かる / わかる, 下さい / ください,"

@@ -712,10 +712,9 @@ struct PersonaNote: Codable, Identifiable, Hashable {
     /// How long a `now` line is believed after it was learned.
     static let nowHorizon: TimeInterval = 30 * 86_400
 
-    /// `isPrivate` is read for notes written before `share` existed and is
-    /// never written: a build from before 2026-09-16 reading a `.gist` line
-    /// with `isPrivate: false` on it would put the WHOLE line in the intro.
-    /// With no key it reads the line as private, which is the safe reading.
+    /// `isPrivate` is never written: a build from before 2026-09-16 reading
+    /// a `.gist` line with `isPrivate: false` on it would put the WHOLE line
+    /// in the intro. It is no longer read either — see `init(from:)`.
     private enum CodingKeys: String, CodingKey {
         case id, text, sessionId, learnedAt, isPrivate, kind, share, heard, gist, why
     }
@@ -764,13 +763,15 @@ struct PersonaNote: Codable, Identifiable, Hashable {
         sessionId = try? c.decodeIfPresent(UUID.self, forKey: .sessionId)
         learnedAt = (try? c.decodeIfPresent(Date.self, forKey: .learnedAt)) ?? Date()
         kind = (try? c.decodeIfPresent(Kind.self, forKey: .kind)) ?? .fact
-        if let s = try? c.decodeIfPresent(Share.self, forKey: .share) {
-            share = s
-        } else if let legacy = try? c.decodeIfPresent(Bool.self, forKey: .isPrivate) {
-            share = legacy ? .nothing : .all
-        } else {
-            share = .nothing
-        }
+        // A note with no `share` is from before the rungs — either the
+        // two-way lock of 2026-09-15 or nothing at all — and lands on
+        // `nothing` EITHER WAY (2026-09-25). "Unlocked" used to map onto
+        // `all`, and those lines were the ones the one-day-old prompt had
+        // written as episodes ("Gained a new app user from Hong Kong"), with
+        // no gist and no reason on them; they went out in full in every
+        // intro. The learner opens a line in Me → Profile, where they can
+        // read it first.
+        share = (try? c.decodeIfPresent(Share.self, forKey: .share)) ?? .nothing
         heard = try? c.decodeIfPresent(String.self, forKey: .heard)
         gist = try? c.decodeIfPresent(String.self, forKey: .gist)
         why = try? c.decodeIfPresent(String.self, forKey: .why)
@@ -868,6 +869,15 @@ extension UserPersona {
     /// prompt) may read: the text of an `.all` line, the gist of a `.gist`
     /// line, nothing of a `.nothing` one. Never the notes themselves.
     var strangerLines: [String] { currentNotes().compactMap(\.strangerLine) }
+
+    /// The stranger set narrowed to STANDING truths — what the public intro
+    /// is written from (2026-09-25). A `now` line is news, not who you are:
+    /// "on the way to the kids' Korean school" was going out as the second
+    /// sentence of an introduction. The live counterpart block keeps
+    /// `strangerLines`, where an unlocked piece of news is fair small talk.
+    var strangerFacts: [String] {
+        currentNotes().filter { $0.kind == .fact }.compactMap(\.strangerLine)
+    }
 
     /// A line the summary call says has CHANGED: the trip that was planned
     /// has happened, the job that was hunted was found. `replacing` is the

@@ -67235,6 +67235,46 @@
         }
       }
     },
+    "This is how other learners find you. Tap to change it or take it down." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Así te ven otros estudiantes. Toca para cambiarlo o retirarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voilà comment les autres apprenants te voient. Touche pour le modifier ou le retirer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他の学習者にはこう見えています。タップして変更したり、取り下げたりできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 학습자에게는 이렇게 보여요. 눌러서 고치거나 내릴 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他学习者看到的就是这样。点一下可以修改或下架。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他學習者看到的就是這樣。點一下可以修改或下架。"
+          }
+        }
+      }
+    },
     "This month" : {
       "extractionState" : "manual",
       "localizations" : {
