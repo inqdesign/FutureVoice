@@ -143,13 +143,27 @@ fun TalkScreen(
     // met the app has nothing to compare it to, and the first call is the
     // worst moment to interrupt. The gate wants the length of the call that
     // just ended — a minute of talking is the bar for having an opinion.
+    val activity = LocalContext.current as? android.app.Activity
     fun leave() {
         val seconds = vm.elapsedSeconds()
         feedbackScope.launch {
             if (FeedbackPrompt.shouldShowReturningTalk(appContext, seconds)) {
                 FeedbackPrompt.markShown(appContext, FeedbackContext.RETURNING_TALK)
                 feedback = FeedbackContext.RETURNING_TALK
-            } else onExit()
+                return@launch
+            }
+            // Play's own rating sheet, of someone who has actually lived with
+            // the app. Never in the same call as the feedback ask — and never
+            // gated on what they answered there, which would be review
+            // gating. Asked after the call screen has gone: over a screen
+            // mid-dismissal the system can drop it.
+            val ask = activity != null &&
+                com.roro.futurevoice.data.ReviewRequest.shouldAsk(appContext, seconds)
+            onExit()
+            if (ask) {
+                kotlinx.coroutines.delay(1_200)
+                com.roro.futurevoice.data.ReviewRequest.ask(activity!!)
+            }
         }
     }
 

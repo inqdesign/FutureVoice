@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.androidx.credentials.play)
     implementation(libs.googleid)
     implementation(libs.billing)
+    implementation(libs.play.review)
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
 

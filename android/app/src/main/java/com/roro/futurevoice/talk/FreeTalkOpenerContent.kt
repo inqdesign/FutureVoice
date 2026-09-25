@@ -11,7 +11,7 @@ object FreeTalkOpenerContent {
         "en" to "Hi. I'm the future you — the one who speaks English fluently. I can't wait for all the talks ahead of us. Don't give up, and let's get you here, together. So — what are you up to these days?",
         "de" to "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Ich freue mich auf all die Gespräche, die vor uns liegen. Gib nicht auf, und lass uns zusammen dafür sorgen, dass du hierher kommst. Also — was machst du gerade so?",
         "ko" to "안녕. 나는 유창하게 말하는 미래의 너야. 앞으로 너와 함께할 많은 이야기들이 기대된다. 포기하지 말고, 지금의 네가 내가 될 수 있게 같이 해보자. 그래서 말인데, 요즘 어떻게 지내?",
-        "ja" to "こんにちは。流暢に話す、未来のきみだよ。これから交わす話が楽しみでならない。あきらめないで、今のきみがここまで来られるように、一緒にやっていこう。それで、最近はどんな感じ？",
+        "ja" to "やあ、未来のきみだよ。日本語、もうすらすら話せるようになったんだ。これからいっぱい話せるの、すごく楽しみ。今のきみがここまで来られるように、あきらめないで一緒にがんばろう。で、最近どうしてる？",
         "es" to "Hola. Soy tu yo del futuro, el que habla español con fluidez. Tengo muchas ganas de todas las charlas que nos esperan. No te rindas, y vamos a llevarte hasta aquí, juntos. Bueno — ¿qué tal te va últimamente?",
         "fr" to "Salut. Je suis le toi du futur, celui qui parle français couramment. J'ai hâte de toutes les conversations qui nous attendent. N'abandonne pas, et on va t'amener jusqu'ici, ensemble. Alors — tu fais quoi de tes journées en ce moment ?",
         "it" to "Ciao. Sono il te del futuro, quello che parla italiano fluentemente. Non vedo l'ora di tutte le chiacchierate che ci aspettano. Non mollare, e arriviamoci insieme. Allora — cosa fai di bello in questi giorni?",
@@ -39,6 +39,7 @@ each) that could start such a call on any day, at any time of day.
 
 Rules:
 - Warm, natural spoken $languageName a CEFR $levelCode learner easily follows.
+- PUNCTUATE LIKE SPEECH. Every line you write is read aloud by a synthesizer whose intonation follows your punctuation: a period makes the voice fall and finish, a comma keeps it suspended for what follows, and a sentence with nothing inside it is read in one breath. So a FINISHED sentence always ends with a period, question mark or exclamation mark, never a comma. In Korean, a sentence-final ending (~어, ~아, ~야, ~지, ~네, ~다, ~자, ~래) is followed by . ? or !, never by a comma. Wrong: "목소리 들으니까 반갑다, 어떻게 지내?" Right: "목소리 들으니까 반갑다. 어떻게 지내?" A comma belongs only INSIDE a sentence, where the voice should hang and breathe: after a connective ending that leaves the sentence open (Korean ~는데, ~서, ~니까, ~고, ~던지, ~면; Japanese ~て, ~けど, ~から; their equivalents elsewhere), after a name you're calling, or after a short reaction ("아, 진짜?"). Never a comma every few words. AND DON'T STACK SHORT SENTENCES. Three short ones in a row make the voice fall three times and read as staccato. When two of them are really ONE thought — a reason and what it led to, a worry and the question it raises — join them into a single sentence with a connective ending and a comma: not "아까 전화 안 받았지? 별일 없는 거지. 오늘 하루는 어땠어?" but "아까 전화 안 받아서 걱정했는데, 별일 없는 거지? 오늘 하루는 어땠어?". This is never a licence to exceed the turn's sentence ceiling: if you are over it, drop an idea instead.
 - Each opener distinct in flavor; every one must invite a reply.
 - Address $name by name in AT MOST two of them.
 - In a language that separates formal from informal address (Korean

@@ -31,7 +31,24 @@ if not m: sys.exit("no pool prompt literal")
 lines = m.group(1).split("\n")
 indent = min((len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
 prompt = "\n".join(l[indent:] if l.strip() else "" for l in lines)
-for k, v in {r"\(languageName)": "$languageName",
+# The voicemail/opener prompt splices the shared breath rule in. It is a
+# separate Swift constant with `\`-continued lines (they join with no
+# newline), so it is lifted verbatim rather than retyped — this is the rule
+# that keeps a synthesized line from being read without breathing.
+breath_src = (ROOT / "FutureVoice/Services/CoachingLanguage.swift").read_text()
+bm = re.search(r'static let breathPunctuation = """\n(.*?)\n\s*"""', breath_src, re.S)
+if not bm: sys.exit("no breathPunctuation literal")
+breath_lines = [l.strip() for l in bm.group(1).split("\n")]
+breath = ""
+for line in breath_lines:
+    if line.endswith("\\"):
+        breath += line[:-1].rstrip() + " "
+    else:
+        breath += line + "\n"
+breath = breath.strip()
+
+for k, v in {r"\(CoachingLanguage.breathPunctuation)": breath,
+             r"\(languageName)": "$languageName",
              r"\(proficiency.rawValue.uppercased())": "$levelCode",
              r"\(name)": "$name"}.items():
     prompt = prompt.replace(k, v)

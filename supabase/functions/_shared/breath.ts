@@ -1,0 +1,9 @@
+// The rule for text that will be SPOKEN, lifted verbatim from
+// `FutureVoice/Services/CoachingLanguage.swift` (breathPunctuation) — the
+// synthesizer pauses at punctuation and nowhere else, so a line without any
+// is read without breathing. Kept here because these two functions build
+// Android's scene and voicemail prompts, which iOS builds client-side.
+//
+// Re-lift with scripts/android/gen-breath-punctuation.py's own extraction if
+// the Swift constant moves.
+export const BREATH_PUNCTUATION = `PUNCTUATE LIKE SPEECH. Every line you write is read aloud by a synthesizer whose intonation follows your punctuation: a period makes the voice fall and finish, a comma keeps it suspended for what follows, and a sentence with nothing inside it is read in one breath. So a FINISHED sentence always ends with a period, question mark or exclamation mark, never a comma. In Korean, a sentence-final ending (~어, ~아, ~야, ~지, ~네, ~다, ~자, ~래) is followed by . ? or !, never by a comma. Wrong: "목소리 들으니까 반갑다, 어떻게 지내?" Right: "목소리 들으니까 반갑다. 어떻게 지내?" A comma belongs only INSIDE a sentence, where the voice should hang and breathe: after a connective ending that leaves the sentence open (Korean ~는데, ~서, ~니까, ~고, ~던지, ~면; Japanese ~て, ~けど, ~から; their equivalents elsewhere), after a name you're calling, or after a short reaction ("아, 진짜?"). Never a comma every few words. AND DON'T STACK SHORT SENTENCES. Three short ones in a row make the voice fall three times and read as staccato. When two of them are really ONE thought — a reason and what it led to, a worry and the question it raises — join them into a single sentence with a connective ending and a comma: not "아까 전화 안 받았지? 별일 없는 거지. 오늘 하루는 어땠어?" but "아까 전화 안 받아서 걱정했는데, 별일 없는 거지? 오늘 하루는 어땠어?". This is never a licence to exceed the turn's sentence ceiling: if you are over it, drop an idea instead.`

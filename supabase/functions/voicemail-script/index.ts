@@ -11,6 +11,7 @@
 // Returns Gemini's own body; the JSON inside is { "script": "..." }.
 // flash-lite, purpose "daily-call-script".
 
+import { BREATH_PUNCTUATION } from "../_shared/breath.ts"
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
@@ -111,6 +112,7 @@ curious, never wounded and never scolding. Guilt is the one thing that
 makes people stop picking up.
 
 WRITE ONE VOICEMAIL in ${targetName}:
+- ${BREATH_PUNCTUATION}
 - 2–3 sentences, UNDER ${MAX_SCRIPT_CHARACTERS} characters total. It is
   spoken aloud in under 25 seconds — that ceiling is hard.
 - Sentence 1 picks up something CONCRETE from the grounding above —

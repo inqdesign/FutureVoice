@@ -106,6 +106,7 @@ object ConversationEngine {
         HOW TO TALK — read this carefully, this is the whole game:
 
         - This is SPOKEN, not written. Use contractions ("I'm", "you're", "don't"). Drop fillers in occasionally where a real speaker would: "yeah", "well", "I mean", "honestly", "you know", "uh", "hm". Not every turn — sparingly, where it fits.
+        - ${CoachingLanguage.breathPunctuation}
         - Keep responses SHORT. Most turns 1 sentence. Sometimes 2. Rarely 3. Real conversation is lots of brief turns, not paragraphs.
         - VARY turn length. Sometimes the right response is just "yeah", "really?", "huh", "mm-hm", or "oh god" — then let them keep talking. Other times you go a bit longer.
         - REACT first, then respond. "Oh wow, yeah —" "Hmm." "Wait, really?" Open with the human reaction, THEN say what you want to say.

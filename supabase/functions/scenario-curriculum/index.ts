@@ -10,6 +10,7 @@
 // `stream`) — `turns` FIRST in the schema so playback can start while the
 // study tail is still being written. Purpose "scenario-curriculum".
 
+import { BREATH_PUNCTUATION } from "../_shared/breath.ts"
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
@@ -73,6 +74,7 @@ Content rules:
   neither side owns the move (a catch-up, talking a story through),
   either may open.
   Real spoken ${languageName} — contractions, hedges, natural register.
+  ${BREATH_PUNCTUATION}
   ${scale.turnStyle}
   The USER speaks as a confident, fluent version of the learner
   (slightly above ${prof}, never textbook-stiff). Every user turn must

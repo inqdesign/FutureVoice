@@ -53,6 +53,16 @@ object TalkTimeLog {
         }
     }
 
+    /** Every second on file, all languages — the log keeps 45 days, so this
+     *  is "recently", not "ever". */
+    fun totalSeconds(context: Context): Int = load(context).values.sum()
+
+    /** How many distinct days carry talk — coming back is the verdict that
+     *  twenty minutes in one sitting cannot give. */
+    fun daysWithTalk(context: Context): Int =
+        load(context).entries.filter { it.value > 0 }
+            .map { it.key.substringBefore(SEPARATOR) }.distinct().size
+
     /** The day's metered seconds in ONE language — what the streak is judged
      *  on. The ring's number pools every language; a day counts for one. */
     fun secondsOn(context: Context, at: Long, language: String): Int {
