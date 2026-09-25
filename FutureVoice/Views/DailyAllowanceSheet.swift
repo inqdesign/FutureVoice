@@ -35,6 +35,19 @@ struct DailyAllowanceSheet: View {
     /// App Store. Same date, opposite promise.
     var endsInstead: Bool = false
 
+    /// This account is TRIALING. The pool that ran out is the trial's own
+    /// (35 min for the whole trial, whatever plan is being tried), so nothing
+    /// here may say "this month", offer Plus (a Plus trial is metered at the
+    /// same 35 min — the button would cost money and change nothing), or call
+    /// `renewsOn` a refill: it is the day the subscription starts. Added
+    /// 2026-09-25 after a trialer met the month's copy on day one, tapped
+    /// through to the paywall three times, and left.
+    var isTrial: Bool = false
+    /// What the plan gives per month once the trial converts, when the client
+    /// knows it (`AccountStatus.planMonthlySeconds` / 60). Nil = say only that
+    /// the plan starts.
+    var planMinutesAfterTrial: Int? = nil
+
     let onReview: () -> Void
     let onUpgrade: () -> Void
 
@@ -83,7 +96,7 @@ struct DailyAllowanceSheet: View {
                 // Order is the recommendation. On Light the upgrade leads
                 // because it is the answer to "I want to keep talking"; review
                 // stays one tap away and free either way.
-                if canUpgrade {
+                if canUpgrade && !isTrial {
                     Button {
                         onUpgrade()
                         dismiss()
@@ -128,6 +141,12 @@ struct DailyAllowanceSheet: View {
     }
 
     private var title: String {
+        if isTrial {
+            switch kind {
+            case .talk:   return explain("That's your trial's talk time")
+            case .scenes: return explain("That's your trial's scenes")
+            }
+        }
         switch kind {
         case .talk:   return explain("That's this month's talk time")
         case .scenes: return explain("That's this month's scenes")
@@ -139,6 +158,16 @@ struct DailyAllowanceSheet: View {
     /// arbitrary stop. Both tiers print it now: Plus is no longer sold as
     /// unlimited, so hiding its number would be the old concealment again.
     private var spentLine: String {
+        if isTrial {
+            switch kind {
+            case .talk:
+                guard let allowance else { return explain("The trial's talk time is used up.") }
+                return explain("All \(allowance) minutes of trial talk are used up.")
+            case .scenes:
+                guard let allowance else { return explain("The trial's scenes are used up.") }
+                return explain("All \(allowance) trial scenes are used up.")
+            }
+        }
         switch kind {
         case .talk:
             guard let allowance else { return explain("This month's talk time is used up.") }
@@ -155,7 +184,18 @@ struct DailyAllowanceSheet: View {
 
     /// What to do about it — the whole reason this isn't an alert.
     private var nextLine: String {
-        canUpgrade
+        if isTrial {
+            // The one thing a stopped trialer needs to hear: this is the
+            // trial's pool, not the plan's, and the plan is a different size.
+            if endsInstead || renewsOn.isEmpty {
+                return explain("Review stays free, and always did.")
+            }
+            if let planMinutesAfterTrial {
+                return explain("Your plan starts on \(renewsOn) with \(planMinutesAfterTrial) minutes of talk a month. Review stays free until then.")
+            }
+            return explain("Your plan starts on \(renewsOn). Review stays free until then.")
+        }
+        return canUpgrade
             ? explain("Review what this month left you, or move to Plus to keep going now.")
             : explain("Review stays free, and always did.")
     }
@@ -164,6 +204,11 @@ struct DailyAllowanceSheet: View {
     /// comes back. "Tomorrow" explained itself; a date has to be said.
     private var renewalLine: String? {
         guard !renewsOn.isEmpty else { return nil }
+        if isTrial {
+            // The start date is already in `nextLine`; only a cancelled trial
+            // has a separate thing to say about that day.
+            return endsInstead ? explain("Your trial ends on \(renewsOn).") : nil
+        }
         if endsInstead { return explain("Your plan ends on \(renewsOn).") }
         return explain("Your pool refills on \(renewsOn).")
     }
@@ -174,6 +219,15 @@ struct DailyAllowanceSheet: View {
         .sheet(isPresented: .constant(true)) {
             DailyAllowanceSheet(kind: .talk, canUpgrade: true, allowance: 150,
                                 renewsOn: "Sep 14", onReview: {}, onUpgrade: {})
+        }
+}
+
+#Preview("Trial") {
+    Text("host")
+        .sheet(isPresented: .constant(true)) {
+            DailyAllowanceSheet(kind: .talk, canUpgrade: true, allowance: 35,
+                                renewsOn: "Sep 28", isTrial: true, planMinutesAfterTrial: 150,
+                                onReview: {}, onUpgrade: {})
         }
 }
 

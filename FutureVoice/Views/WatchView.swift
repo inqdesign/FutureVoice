@@ -320,6 +320,8 @@ struct WatchView: View {
     /// often and most never hit it. False on Plus: nothing left to sell
     /// there, and the answer really is next month.
     @State private var canUpgradePlan = false
+    @State private var accountIsTrialing = false
+    @State private var planMinutesAfterTrial: Int?
 
     /// The pool size for whichever cap landed — scenes or minutes — read
     /// from the account snapshot, never hardcoded.
@@ -379,6 +381,8 @@ struct WatchView: View {
             allowance: capAllowance,
             renewsOn: renewalLabel,
             endsInstead: planEndsAtPeriodEnd,
+            isTrial: accountIsTrialing,
+            planMinutesAfterTrial: planMinutesAfterTrial,
             onReview: { capChoice = .review },
             onUpgrade: { capChoice = .upgrade })
     }
@@ -830,6 +834,8 @@ struct WatchView: View {
                 let account = await AccountStatus.fetch()
                 capKind = capped.isDailyCapReached ? .talk : .scenes
                 canUpgradePlan = account.isLightPlan
+                accountIsTrialing = account.isTrialing
+                planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }
                 capAllowance = capKind == .talk
                     ? account.monthlyCapSeconds.map { $0 / 60 }
                     : account.monthlyScenesCap

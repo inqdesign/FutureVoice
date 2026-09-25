@@ -37,7 +37,8 @@ struct PlanPageView: View {
         List {
             Section {
                 row(icon: "bolt.fill",
-                    title: explain("Talk time"),
+                    title: account.isTrialing ? explain("Trial talk time") : explain("Talk time"),
+                    subtitle: trialPoolSubtitle,
                     value: talkValue)
                 // Invite minutes are time ON TOP of the pool, so they are
                 // their own row and never part of the figure above — added in,
@@ -223,6 +224,14 @@ struct PlanPageView: View {
     /// ends on its date, and telling that learner it "becomes paid" is the
     /// opposite promise — the cancel they just made reads as not having
     /// worked.
+    /// Under the trial's fraction: what the plan itself gives once the trial
+    /// converts, so 35 minutes is never read as the plan's size.
+    private var trialPoolSubtitle: String? {
+        guard account.isTrialing, !account.cancelAtPeriodEnd,
+              let seconds = account.planMonthlySeconds else { return nil }
+        return explain("\(seconds / 60) min a month once your plan starts")
+    }
+
     private var refillTitle: String {
         if account.cancelAtPeriodEnd {
             return account.isTrialing

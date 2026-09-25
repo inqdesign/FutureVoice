@@ -833,7 +833,9 @@ enum DebugCapture {
                 kind: .talk,
                 canUpgrade: name == "day-spent-trial",
                 allowance: 35,
-                renewsOn: account.renewalLabel)
+                renewsOn: account.renewalLabel,
+                isTrial: true,
+                planMinutesAfterTrial: name == "day-spent-trial" ? 150 : nil)
                 .environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
@@ -1779,6 +1781,8 @@ private struct UpdateCaptureHost: View {
 
     말이 늘지 않는 이유는 하나 — 충분히 말하지 않아서예요. 60초 녹음으로 유창해진 미래의 내 목소리를 만들고, 매일 통화하세요. 통화가 끝나면 내가 쓴 단어·표현·문법으로 나만의 교재가 만들어져요.
 
+    var isTrial: Bool = false
+    var planMinutesAfterTrial: Int? = nil
     - 내 관심사에서 시작하는 매일 통화
     - 매 턴 돌아오는 유창한 버전
     - 통화가 끝나면 자동으로 만들어지는 나만의 교재
@@ -1787,6 +1791,8 @@ private struct UpdateCaptureHost: View {
     """
 
     var body: some View {
+                                    isTrial: isTrial,
+                                    planMinutesAfterTrial: planMinutesAfterTrial,
         ConversationHome()
             .sheet(isPresented: $showing) {
                 UpdateAvailableSheet(

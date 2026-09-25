@@ -246,7 +246,11 @@ struct PaywallView: View {
         .alert(Text(explain("You're in")), isPresented: purchasedBinding) {
             Button(explain("Done")) { close() }
         } message: {
-            Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
+            if showsTrial, let trialMinutes = store.trialTalkMinutes {
+                Text(explain("Your trial is on: \(trialMinutes) minutes of talk over the next \(store.trialDays) days. Your plan's own monthly talk time starts when the trial converts."))
+            } else {
+                Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
+            }
         }
         .alert(Text(explain("Purchase failed")), isPresented: failedBinding) {
             Button(explain("OK")) { store.purchaseState = .idle }
@@ -345,7 +349,9 @@ struct PaywallView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             } else if step != .resolving {
-                Text(explain("\(store.trialDays) days free. Cancel anytime."))
+                Text(store.trialTalkMinutes.map {
+                    explain("\(store.trialDays) days free with \($0) min of talk. Cancel anytime.")
+                } ?? explain("\(store.trialDays) days free. Cancel anytime."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -461,9 +467,15 @@ struct PaywallView: View {
             .padding(.top, 12)
 
             VStack(alignment: .leading, spacing: 0) {
+                // The trial's SIZE goes here, before anyone taps: it is
+                // 35 minutes for the whole trial, not the plan's pool, and a
+                // learner who first meets that number when it runs out reads
+                // the stop as a paywall (2026-09-25).
                 timelineRow(icon: "lock.open.fill",
                             title: explain("Today"),
-                            caption: explain("Your trial starts — talk time on us, and all the review it produces."),
+                            caption: store.trialTalkMinutes.map {
+                                explain("Your trial starts: \($0) minutes of talk to use across the \(store.trialDays) days, and all the review it produces.")
+                            } ?? explain("Your trial starts — talk time on us, and all the review it produces."),
                             showsLine: true)
                 // The reminder's own day, from the one place that decides it.
                 // Dropped when it has nowhere of its own to sit: on a short
@@ -478,7 +490,7 @@ struct PaywallView: View {
                 }
                 timelineRow(icon: "crown.fill",
                             title: explain("Day \(store.trialDays)"),
-                            caption: explain("Your subscription starts. Cancel any time before then in the App Store."),
+                            caption: explain("Your subscription starts, and its own monthly talk time with it. Cancel any time before then in the App Store."),
                             showsLine: false)
             }
         }
@@ -844,6 +856,12 @@ struct PaywallView: View {
                         specRow(explain("Talking"), minutesLabel(pool.minutes),
                                 note: perDayLabel(opt))
                         specRow(explain("Watch scenes"), explain("\(pool.scenes)/mo"))
+                    }
+                    // A trial is not a free sample of the row above: it is
+                    // its own, smaller pool. On the card, next to the figure
+                    // it will be mistaken for otherwise.
+                    if showsTrial, opt?.trialDays != nil, let trialMinutes = store.trialTalkMinutes {
+                        specRow(explain("During the trial"), explain("\(trialMinutes) min of talk"))
                     }
                     specRow(explain("Your own review book"), explain("Unlimited"))
                     specRow(explain("Shadowing · words · replays · drills"),

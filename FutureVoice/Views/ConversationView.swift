@@ -116,6 +116,11 @@ struct ConversationView: View {
     /// Never hardcoded: the number is a plan setting on the server and a
     /// stale constant here would misstate what they bought.
     @State private var poolMinutes: Int?
+    /// Trialing: the sheet must speak of the trial's pool, not the month's,
+    /// and never offer Plus. With the plan's monthly minutes so it can say
+    /// what starts when the trial converts.
+    @State private var accountIsTrialing = false
+    @State private var planMinutesAfterTrial: Int?
     /// When the pool refills, for the sheet's "back on the 14th" line.
     @State private var renewalLabel = ""
     /// The plan stops on that date instead of refilling (cancelled).
@@ -901,6 +906,8 @@ struct ConversationView: View {
                     allowance: poolMinutes,
                     renewsOn: renewalLabel,
                     endsInstead: planEndsAtPeriodEnd,
+                    isTrial: accountIsTrialing,
+                    planMinutesAfterTrial: planMinutesAfterTrial,
                     onReview: { capChoice = .review },
                     onUpgrade: { capChoice = .upgrade })
             }
@@ -954,6 +961,8 @@ struct ConversationView: View {
                 poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
                 renewalLabel = account.renewalLabel
                 planEndsAtPeriodEnd = account.cancelAtPeriodEnd
+                accountIsTrialing = account.isTrialing
+                planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }
             }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.

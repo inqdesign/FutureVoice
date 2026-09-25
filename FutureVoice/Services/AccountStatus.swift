@@ -77,6 +77,13 @@ struct AccountStatus {
     /// that didn't start on our paywall — an offer code, the App Store's own
     /// page, a reinstall — still gets it.
     var trialEndsAt: Date?
+    /// The plan's OWN talk pool per month (`subscription_plans.monthly_seconds`),
+    /// which during a trial is NOT `monthlyCapSeconds` — the trial is metered
+    /// at 35 min whatever plan it trials. Read so the trial screens can say
+    /// what starts when the trial converts ("150 minutes a month from Sep 28")
+    /// instead of leaving the learner to discover it. Nil on Plus (no
+    /// ceiling) and when the catalog row could not be read.
+    var planMonthlySeconds: Int?
     /// Invite minutes, in seconds. Spent BEFORE the monthly pool since
     /// `20260821100000`, so for a subscriber this is time on top of the plan
     /// rather than the "kept for after you cancel" balance it used to be.
@@ -379,8 +386,12 @@ struct AccountStatus {
         // pool — so the two tiers' rows say the same kind of thing and a
         // learner switching between them isn't handed a reversed number.
         if isEntitled, monthlyCapSeconds != nil {
-            let plan = explain(
-                "\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min talked this month")
+            // A trial's pool is the trial's, not a month's: 35 min for the
+            // whole trial, and the plan's own pool only starts when it
+            // converts. "This month" here told a trialer the month was over.
+            let plan = isTrialing
+                ? explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min trial talk used")
+                : explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min talked this month")
             // Invite minutes are spent first, so they are not part of the
             // month's fraction and must not be folded into it — they are
             // named separately or the two numbers stop adding up.
@@ -461,6 +472,24 @@ struct AccountStatus {
             out.source = row.source
             out.startedAt = row.started_at.flatMap(Self.timestamp(from:))
             out.trialEndsAt = row.trial_ends_at.flatMap(Self.timestamp(from:))
+        }
+
+        // The plan's own pool, in a query of its OWN: a failure here costs one
+        // sentence on the trial screens, never the entitlement above.
+        struct PlanRow: Decodable {
+            let monthly_seconds: Int?
+            let talk_unlimited: Bool?
+        }
+        if let planId = out.planId,
+           let rows: [PlanRow] = try? await SupabaseProvider.shared
+            .from("subscription_plans")
+            .select("monthly_seconds,talk_unlimited")
+            .eq("id", value: planId)
+            .limit(1)
+            .execute()
+            .value,
+           let plan = rows.first, plan.talk_unlimited != true {
+            out.planMonthlySeconds = plan.monthly_seconds
         }
 
         // The receipt, as the store wrote it: the latest charge, and whether

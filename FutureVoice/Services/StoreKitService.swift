@@ -96,6 +96,18 @@ final class StoreKitService: ObservableObject {
 
     /// Longest free trial across loaded products — drives the timeline copy.
     /// Zero when no product carries one.
+    /// Talk minutes a TRIAL gets in total, whatever plan it trials — the
+    /// server's rule (`consume_metered_seconds`: Light's `monthly_seconds`
+    /// × 7 / 30 = 35 min), computed from the same catalog row so the paywall
+    /// can say the number BEFORE the purchase. Nil until the catalog has a
+    /// Light row. Keep the formula in step with the migration; a trialer who
+    /// learns the size only when it is spent leaves (2026-09-25).
+    var trialTalkMinutes: Int? {
+        let light = options.filter { $0.plan.tier == "light" }.compactMap(\.plan.monthly_seconds)
+        guard let seconds = light.min() else { return nil }
+        return seconds * 7 / 30 / 60
+    }
+
     var trialDays: Int {
         options.compactMap(\.trialDays).max() ?? 0
     }
