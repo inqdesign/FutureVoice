@@ -289,6 +289,11 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
+        case "sync-other-device":
+            // The second device when the first never turned sync on: the
+            // screen that stands where onboarding otherwise would.
+            return AnyView(SyncOtherDeviceHintView(onFound: {}, onSkip: {})
+                .environmentObject(appState))
         case "sync":
             return AnyView(NavigationStack {
                 List { SyncSection() }

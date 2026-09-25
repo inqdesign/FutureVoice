@@ -29,6 +29,10 @@ struct RootView: View {
     /// A signed-in account with practice already in iCloud, on an install
     /// that hasn't been set up: offer to continue from it (`SyncContinuePromptView`).
     @State private var showSyncOffer = false
+    /// The same install, where the OTHER device never turned sync on — so
+    /// there is nothing to offer and onboarding would read as an empty
+    /// account (`SyncOtherDeviceHintView`).
+    @State private var showOtherDeviceHint = false
 
     init() { Self.applyRoundedNavBar() }
 
@@ -50,22 +54,47 @@ struct RootView: View {
             // `UILanguage.chromeLanguage` for why that's gone.
             .environment(\.locale, Locale(identifier: UILanguage.chromeLanguage))
             .task(id: auth.session?.user.id.uuidString ?? "") {
-                await checkSyncOffer()
+                await checkSecondDevice()
+            }
+            // The clone is adopted from the server by `restoreVoiceCloneFromCloud`,
+            // which races the task above — and it is the whole tell that this
+            // account has practice elsewhere. Re-ask when it lands, but never
+            // while one of the two screens is up: the re-check would pull the
+            // offer out from under a pull that is already running.
+            .onChange(of: appState.voiceCloneId) { _, _ in
+                guard !showSyncOffer, !showOtherDeviceHint else { return }
+                Task { await checkSecondDevice() }
             }
     }
 
     /// The second device's question, asked once per account per install,
     /// only where setup hasn't happened yet — after that the toggle in Me is
     /// the place. Never shown for an anonymous session: nothing to key on.
-    private func checkSyncOffer() async {
+    ///
+    /// Two answers, not one. A zone means the practice is already in iCloud
+    /// and can be pulled now (`SyncContinuePromptView`). NO zone plus an
+    /// active voice clone means the practice exists but is sitting on a
+    /// device that never turned sync on — which is where the opt-in lives,
+    /// and is the one thing this install can't do anything about
+    /// (`SyncOtherDeviceHintView`). Onboarding is what's left.
+    private func checkSecondDevice() async {
         guard !appState.setupComplete, auth.isSignedIn,
               let uid = auth.session?.user.id.uuidString,
-              !SyncStore.wasOffered(userId: uid),
               !SyncEngine.shared.isEnabled
-        else { showSyncOffer = false; return }
-        if await SyncEngine.shared.cloudHasData() == true {
-            showSyncOffer = true
+        else { showSyncOffer = false; showOtherDeviceHint = false; return }
+        let cloud = await SyncEngine.shared.cloudHasData()
+        if cloud == true {
+            showOtherDeviceHint = false
+            showSyncOffer = !SyncStore.wasOffered(userId: uid)
+            return
         }
+        // The account's ACTIVE clone, adopted from the server on sign-in: a
+        // fresh install holding one is an account that recorded a voice on
+        // another device. A clone made HERE can't reach this branch — setup
+        // is complete long before the voice step.
+        showSyncOffer = false
+        showOtherDeviceHint = appState.voiceCloneId != nil
+            && !SyncStore.wasOtherDeviceHinted(userId: uid)
     }
 
     @ViewBuilder
@@ -128,6 +157,18 @@ struct RootView: View {
             WelcomeView()
         } else if showSyncOffer && !appState.setupComplete {
             SyncContinuePromptView { showSyncOffer = false }
+        } else if showOtherDeviceHint && !appState.setupComplete {
+            SyncOtherDeviceHintView(
+                onFound: {
+                    showOtherDeviceHint = false
+                    showSyncOffer = true
+                },
+                onSkip: {
+                    if let uid = auth.session?.user.id.uuidString {
+                        SyncStore.setOtherDeviceHinted(userId: uid)
+                    }
+                    showOtherDeviceHint = false
+                })
         } else if !appState.setupComplete {
             SetupFlowView()
         } else if appState.persona == nil {

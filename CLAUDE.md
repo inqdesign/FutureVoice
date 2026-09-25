@@ -62,6 +62,24 @@ reasons are the design:
   already has a zone is offered "Continue where you left off?" once per
   account per install. Yes = enable + first pull, then `setupComplete`
   from the pulled persona; no = the toggle waits in Me.
+- **And it says so when there is no zone to ask about** (2026-09-25,
+  `SyncOtherDeviceHintView`). The opt-in lives on device ONE, but the moment
+  anyone wants it happens on device TWO — so a learner who never turned it on
+  signs in on a tablet and gets onboarding, which reads as "my account is
+  empty" to someone with a month of talks on their phone. Measured: zero
+  `sync_enabled` events since the feature shipped, the founder's own phone
+  included. The tell is the account's ACTIVE voice clone, already adopted by
+  `restoreVoiceCloneFromCloud` — a fresh install holding one recorded a voice
+  somewhere else, and a clone made HERE can't reach the branch (setup finishes
+  long before the voice step). So `checkSecondDevice` has two answers: a zone
+  → the offer above; no zone + a clone → this screen, which says which toggle
+  to turn on over there and re-checks on a button. Not a wall — "Start fresh
+  on this device" walks into setup — and shown once per account per install
+  under its OWN flag (`wasOtherDeviceHinted`), never `wasOffered`: dismissing
+  the hint must not suppress the real offer the day a zone appears. The clone
+  lands asynchronously, so `RootView` re-asks on `voiceCloneId` — but never
+  while either screen is up, or the re-check pulls the offer out from under a
+  running pull.
 - **`BackupService` stays for dev↔release moves only.** It overwrites whole
   files; alternating two devices through it loses whatever overlapped.
 

@@ -24,6 +24,18 @@ enum SyncStore {
         defaults.set(true, forKey: "futurevoice.sync.offered.\(userId)")
     }
 
+    /// Whether this install has told the account that its practice is on
+    /// ANOTHER device and sync is off there (`SyncOtherDeviceHintView`).
+    /// Its own key, not `offered`: the hint is shown before a zone exists,
+    /// and dismissing it must not suppress the real offer the day one does.
+    static func wasOtherDeviceHinted(userId: String) -> Bool {
+        defaults.bool(forKey: "futurevoice.sync.otherDeviceHinted.\(userId)")
+    }
+
+    static func setOtherDeviceHinted(userId: String) {
+        defaults.set(true, forKey: "futurevoice.sync.otherDeviceHinted.\(userId)")
+    }
+
     /// Audio is the gigabyte; items are kilobytes. Off by default so a month
     /// of talks never goes out over cellular unasked.
     static var cellularForAudio: Bool {

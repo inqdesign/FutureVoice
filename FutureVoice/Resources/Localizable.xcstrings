@@ -84944,6 +84944,86 @@
         }
       }
     },
+    "Bring your practice over" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes traer tu práctica aquí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux récupérer ta pratique ici"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これまでの練習をここに持ってこられます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "쓰던 기기의 연습을 가져올 수 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以把你之前的练习带过来"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以把你之前的練習帶過來"
+          }
+        }
+      }
+    },
+    "Check again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a comprobar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifier à nouveau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再确认一次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再確認一次"
+          }
+        }
+      }
+    },
     "During the trial" : {
       "localizations" : {
         "es" : {
@@ -84980,6 +85060,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "試用期間"
+          }
+        }
+      }
+    },
+    "Nothing here yet — check that it's on over there, then try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todavía no hay nada. Comprueba que está activado allí y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien pour l’instant. Vérifie que c’est bien activé là-bas, puis réessaie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ届いていません。そちらのデバイスでオンになっているか確認して、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 안 보여요. 그 기기에서 켜졌는지 확인하고 다시 눌러 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没看到。请确认那台设备上已经开启，再试一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒看到。請確認那台裝置上已經開啟，再試一次。"
+          }
+        }
+      }
+    },
+    "Start fresh on this device" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empezar de cero en este dispositivo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencer à zéro sur cet appareil"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスで新しく始める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기에서 새로 시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在这台设备重新开始"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在這台裝置重新開始"
           }
         }
       }
@@ -85300,6 +85460,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "訂閱開始，之後改用方案自己的每月通話時間。在那之前，隨時可以在 App Store 取消。"
+          }
+        }
+      }
+    },
+    "Your talks, books and cards are still on it — open Me there, turn on “Continue on your other devices”, then come back here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus llamadas, cuadernos y tarjetas siguen allí. Abre Mi perfil en ese dispositivo, activa « Continuar en tus otros dispositivos » y vuelve aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes appels, tes carnets et tes cartes y sont encore. Ouvre Mon profil sur cet appareil, active « Continuer sur tes autres appareils », puis reviens ici."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話や復習ブック、カードはまだそのデバイスにあります。そちらでマイページを開いて「ほかのデバイスで続ける」をオンにしてから、戻ってきてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화와 책, 카드는 아직 그 기기에 있어요. 거기서 나 → ‘다른 기기에서 이어서 하기’를 켜고 돌아와 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话、复习本和卡片都还在那台设备上。在那里打开“我的”，开启“在其他设备上继续”，再回来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話、複習本和卡片都還在那台裝置上。在那裡打開「我的」，開啟「在其他裝置上繼續」，再回來。"
           }
         }
       }
