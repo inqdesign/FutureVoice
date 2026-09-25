@@ -884,6 +884,31 @@ enum DebugCapture {
                 appState.weeklyReports = [report]
             }
             return AnyView(ProgressTab().environmentObject(appState))
+        case "progress-beginner", "progress-beginner-grammar", "progress-grammar":
+            // The 2026-09-24 report: short accurate sentences, no slips —
+            // used to read ≈C2. The talks carry a range of a2, so the
+            // Grammar row must show ≈A2 with the range line under it.
+            // `progress-grammar` seeds the ordinary talks (no range on
+            // file) — the vocabulary stand-in ceiling.
+            if name == "progress-grammar" {
+                once("progress-grammar") { seedVocab(); seedSessions(scored: true) }
+                return AnyView(ProgressTab(initialDim: .grammar).environmentObject(appState))
+            }
+            once("progress-beginner") {
+                seedVocab(); seedSessions(scored: true, beginner: true)
+                let report = WeeklyReport(
+                    id: UUID(),
+                    periodStart: Date().addingTimeInterval(-7 * 86_400),
+                    periodEnd: Date(),
+                    sessionCount: 3, targetLanguage: "en",
+                    newExpressions: [], repeatedMistakes: [], suggestedExpressions: [],
+                    summary: "Short, clear sentences — start linking two ideas in one.",
+                    cefrLevel: "a2", generatedAt: Date())
+                WeeklyReportStore.shared.save(report)
+                appState.weeklyReports = [report]
+            }
+            return AnyView(ProgressTab(initialDim: name == "progress-beginner-grammar" ? .grammar : nil)
+                            .environmentObject(appState))
         case "shadow-ja":
             // A Japanese line in karaoke: words, not one run — each lights
             // and taps on its own, punctuation riding on the word before.
@@ -1054,6 +1079,20 @@ enum DebugCapture {
             pronunciation: AxisScore(score: 80, note: "Clear, with good linking."),
             topLine: "Confident, natural talk — tighten a few articles.",
             cefrLevel: "b1")
+    }
+
+    /// Accurate but simple: a near-perfect score with no slips, and a range
+    /// of a2 — the pair the Progress grammar band has to read as ≈A2.
+    static var beginnerScorecard: SessionScorecard {
+        SessionScorecard(
+            vocabulary: AxisScore(score: 60, note: "Everyday words, used correctly."),
+            grammar: AxisScore(score: 96, note: "No slips in what you said."),
+            expressiveness: AxisScore(score: 40, note: "Short answers — add a detail."),
+            fluency: AxisScore(score: 55, note: "Even pace, short turns."),
+            pronunciation: nil,
+            topLine: "Clear and simple — try linking two ideas.",
+            cefrLevel: "a2",
+            grammarRange: "a2")
     }
 
     /// One fully-populated finished talk — every section of the session
@@ -1502,12 +1541,27 @@ enum DebugCapture {
         WeeklyTestStore.shared.save(test)
     }
 
-    static func seedSessions(scored: Bool = false) {
+    static func seedSessions(scored: Bool = false, beginner: Bool = false) {
         let uid = UUID()
         for day in 0..<3 {
             let ended = Date().addingTimeInterval(Double(-day) * 86_400 + 3_600)
             let started = ended.addingTimeInterval(-600)
-            let turns = [
+            // beginner: one-clause present-tense replies with no slips — the
+            // shape that read ≈C2 before grammar range existed.
+            let turns = beginner ? [
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "How are you today?", durationMs: 1800,
+                     timestamp: started, suggestion: nil),
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "I am fine. I am tired.", durationMs: 4_000,
+                     timestamp: started.addingTimeInterval(4), suggestion: nil),
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "What did you do?", durationMs: 1500,
+                     timestamp: started.addingTimeInterval(10), suggestion: nil),
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "I go to work. I eat lunch. I like pasta.", durationMs: 6_000,
+                     timestamp: started.addingTimeInterval(14), suggestion: nil)
+            ] : [
                 Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
                      transcript: "So — how did the interview go?", durationMs: 3200,
                      timestamp: started, suggestion: nil),
@@ -1526,8 +1580,9 @@ enum DebugCapture {
             // empty state.
             var summary = scored ? SessionSummary(
                 phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
-                overallNote: "Confident, natural talk — tighten a few articles.",
-                scorecard: sampleScorecard) : nil
+                overallNote: beginner ? "Clear and simple — try linking two ideas."
+                                      : "Confident, natural talk — tighten a few articles.",
+                scorecard: beginner ? beginnerScorecard : sampleScorecard) : nil
             // Phrases the fluent self offered — the library and the daily deck
             // read these off the session, so a capture run needs them to show
             // the heard-in-a-call rows at all.

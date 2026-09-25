@@ -14,6 +14,8 @@ struct ProgressTab: View {
 
     // Optional because it doubles as the pager's scrollPosition binding.
     @State private var selected: Dim? = .overall
+    /// DEBUG captures only: open on a skill page instead of Overall.
+    var initialDim: Dim? = nil
     /// False until the first pass over the archive has landed. Every number
     /// below starts at zero, and zero is a CLAIM here ("nothing measured yet,
     /// 0/10 min") — so the pages must not be drawn from it before it's been
@@ -148,6 +150,10 @@ struct ProgressTab: View {
     }
 
     var body: some View {
+        content.onAppear { if let initialDim { selected = initialDim } }
+    }
+
+    private var content: some View {
         NavigationStack {
             Group {
                 // The paged scaffold shows from day one — before the first
@@ -1512,12 +1518,18 @@ struct ProgressTab: View {
                              slipsPer100Words, grammarTargetHint)
                     : "Verified grammar slips per 100 spoken words — fewer reads higher."),
             measures: "Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high.",
-            improve: "Run your review cards — they're built from your own slips and target exactly these.",
-            action: reviewSlipsAction,
+            improve: grammarCeiling == nil
+                ? "Run your review cards — they're built from your own slips and target exactly these."
+                : "Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.",
+            action: grammarCeiling == nil ? reviewSlipsAction : startTalkAction,
             trend: grammarTrend,
-            trendCaption: "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one.",
+            // Under a ceiling the accuracy zones would label the curve with a
+            // band the headline doesn't follow ("C2" behind a ≈A2 page).
+            trendCaption: grammarCeiling == nil
+                ? "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one."
+                : "Verified slips per 100 words, one point per talk — your accuracy. The band above comes from the structures you build, so this curve alone can't move it.",
             trendTarget: grammarNextBandThreshold,
-            trendBands: Self.grammarBands
+            trendBands: grammarCeiling == nil ? Self.grammarBands : []
         )
     }
 
