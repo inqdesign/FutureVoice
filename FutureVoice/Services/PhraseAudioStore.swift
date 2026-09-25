@@ -132,6 +132,22 @@ final class PhraseAudioStore {
         }
     }
 
+    /// Drop ONE cached line — its audio and the word timings that describe it,
+    /// which must never outlive the take they were measured on.
+    ///
+    /// The store's rule is that produced audio is kept (see the header), and
+    /// this does not weaken it: the caller is `FreeTalkOpeners`, re-making the
+    /// handful of lines that OPEN a call after the speaking speed moved. Those
+    /// are the one place a stale take is audible against the live voice right
+    /// after it. Anything that wants to clear more than a named line belongs in
+    /// `clearCachedAudio`, behind the learner's own button.
+    func removeAudio(text: String, voiceId: String) {
+        let k = key(text: text, voiceId: voiceId)
+        for name in ["\(k).mp3", "\(k).timings.json"] {
+            try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
+        }
+    }
+
     // MARK: - Word timings
 
     func timings(text: String, voiceId: String, allowLineage: Bool = true) -> [WordTiming]? {

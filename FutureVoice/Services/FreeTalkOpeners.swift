@@ -193,17 +193,73 @@ final class FreeTalkOpeners {
         }
     }
 
-    /// Synthesize ONE line into the phrase cache (no-op when already there).
-    /// `allowLineage: false` mirrors the live call's lookup — warming a line
-    /// the call would still consider a miss is pointless.
+    /// Synthesize ONE line into the phrase cache (no-op when already there,
+    /// at the speed in force now). `allowLineage: false` mirrors the live
+    /// call's lookup — warming a line the call would still consider a miss is
+    /// pointless.
     private func warmLine(_ line: String, voiceId: String) async throws {
-        guard PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
-                                           allowLineage: false) == nil else { return }
+        let stale = needsBake(line)
+        if stale { PhraseAudioStore.shared.removeAudio(text: line, voiceId: voiceId) }
+        guard stale || PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
+                                                    allowLineage: false) == nil else { return }
         let audio = try await ElevenLabsClient.shared.synthesize(
             voiceId: voiceId, text: line,
             modelId: ElevenLabsClient.conversationModelId,
             purpose: "turn")
         PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
+        markBaked(line)
+    }
+
+    // MARK: - The opener follows the speaking speed
+
+    /// **Openers are the one cached line that has to be re-made when the
+    /// speaking speed moves** (2026-09-25). `PhraseAudioStore` keeps what is
+    /// already produced — the default rung's cache tag is empty, so a line
+    /// synthesized before `SpeechSpeed` existed is still found and still
+    /// played. That is right for a library of hundreds of lines and wrong for
+    /// the handful that OPEN a call: a learner who already had warm opener
+    /// audio would hear the greeting at the old speed and every answer after
+    /// it at the new one, on every call, for as long as the pool text held.
+    /// The first thing a call says is the worst place to put that seam, and
+    /// re-making a few short lines is the cheapest fix there is.
+    ///
+    /// Recorded per LINE rather than per language: the pool is per language
+    /// AND per persona name, the intro and fallback lines are warmed from a
+    /// different path, and a language-wide flag set by whichever of those ran
+    /// first would leave the rest stale. Any future speed change re-bakes
+    /// them the same way — this is not a one-off migration.
+    private static let bakedSpeedKey = "futurevoice.freeTalkOpeners.bakedSpeed"
+    private static let bakedLinesKey = "futurevoice.freeTalkOpeners.bakedLines"
+    /// Pool text is regenerated over time, so the list would otherwise grow
+    /// without end. Only the CURRENT pool can be asked for, and it is a
+    /// handful of lines; dropping the oldest costs at worst one re-synthesis
+    /// of a line nobody is going to hear again.
+    private static let maxBakedLines = 60
+
+    private func needsBake(_ line: String) -> Bool {
+        let defaults = UserDefaults.standard
+        let current = SpeechSpeed.current.multiplier
+        if defaults.object(forKey: Self.bakedSpeedKey) as? Double != current {
+            // The speed moved (or this build is the first to ask): every line
+            // on file was made at some other speed.
+            defaults.set(current, forKey: Self.bakedSpeedKey)
+            defaults.removeObject(forKey: Self.bakedLinesKey)
+            return true
+        }
+        return !(defaults.stringArray(forKey: Self.bakedLinesKey) ?? []).contains(line)
+    }
+
+    /// Marked only after the audio is on disk, so a failed synthesis is tried
+    /// again next time instead of being remembered as done.
+    private func markBaked(_ line: String) {
+        let defaults = UserDefaults.standard
+        var lines = defaults.stringArray(forKey: Self.bakedLinesKey) ?? []
+        guard !lines.contains(line) else { return }
+        lines.append(line)
+        if lines.count > Self.maxBakedLines {
+            lines.removeFirst(lines.count - Self.maxBakedLines)
+        }
+        defaults.set(lines, forKey: Self.bakedLinesKey)
     }
 
     /// One-stop warm-up: make the NEXT free talk open on cached assets
