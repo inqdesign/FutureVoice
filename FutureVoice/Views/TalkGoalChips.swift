@@ -30,6 +30,12 @@ struct TalkGoalItem: Identifiable, Equatable {
     /// a claim, and the call is where the claim gets checked — which is why
     /// these lead the row and wear a different empty circle.
     var claimedKnown: Bool = false
+    /// For an item that came out of a scenario book: the sentence its scene
+    /// uses it in, and the one-line usage hint written beside it. The chip
+    /// sheet shows THAT example — a word offered because of this scene is
+    /// best explained by this scene, not by a dictionary's generic line.
+    var example: String? = nil
+    var note: String? = nil
 
     var id: String { key }
 }
@@ -97,12 +103,94 @@ enum TalkGoalPicker {
             }
             .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
 
-        let phrases = Array((knownPhrases + studyingPhrases).prefix(maxExpressions))
-        let words = knownWords + studyingWords
+        return merge(words: knownWords + studyingWords,
+                     phrases: knownPhrases + studyingPhrases, limit: limit)
+    }
 
-        // Interleave so the row opens with something short: a phrase first
-        // would fill the visible width on its own and the words would only
-        // exist for whoever scrolls.
+    /// The row for a talk ON A SCENARIO BOOK: the book's own material first.
+    ///
+    /// A learner re-running one scene until they can do it with confidence
+    /// wants the words THAT scene taught, not whatever the notebook happens
+    /// to deal today — and the book already knows which of its items are
+    /// still unmastered (`refreshScenarioMastery` ticks them off from every
+    /// talk on the scene, so the loop closes without any new write). Three
+    /// sources, in order, then the global row fills whatever is left:
+    ///
+    /// 1. the book's unmastered words and expressions;
+    /// 2. what the fluent self OFFERED in the previous talks on this scene
+    ///    (`expressionsOffered`, pickup words) that the learner has never
+    ///    said — related by construction, since they came out of this exact
+    ///    conversation;
+    /// 3. `pick()` — the notebook and the unconfirmed claims, as on any call.
+    ///
+    /// Book items ignore `StudyScheduleStore` on purpose: the daily deck's
+    /// "not twice in one day" rule protects the learner from being asked the
+    /// same thing in two voices, but here the learner chose the scene, and
+    /// the scene is the reason to ask. The book's lists rotate by how many
+    /// talks the scene has had, so the fourth run doesn't lead with the same
+    /// five words as the first — unmastered items stay in the pool, they
+    /// just take turns at the front.
+    static func pick(forScenario scenario: Scenario,
+                     previousTalks: [Session],
+                     proficiency: CEFRLevel,
+                     limit: Int = maxItems,
+                     now: Date = Date(),
+                     calendar: Calendar = .current) -> [TalkGoalItem] {
+        let store = VocabStore.shared
+        let runs = previousTalks.count
+
+        func bookItem(_ item: ScenarioCurriculum.Item) -> TalkGoalItem {
+            TalkGoalItem(key: CarryoverDetector.normalized(item.text), text: item.text,
+                         isWord: WordSplitter.isSingleWord(item.text),
+                         example: item.example,
+                         note: item.note.isEmpty ? nil : item.note)
+        }
+
+        let curriculum = scenario.curriculum
+        let bookWords = rotated(by: runs, (curriculum?.words ?? [])
+            .filter { $0.masteredAt == nil }.map(bookItem))
+            .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
+        let bookPhrases = rotated(by: runs, (curriculum?.expressions ?? [])
+            .filter { $0.masteredAt == nil }.map(bookItem))
+            .filter { CarryoverDetector.isCreditable($0.text) }
+
+        // The previous talks, newest first: their offered phrases and pickup
+        // words the learner still hasn't produced. The learner's own lemmas
+        // are excluded from the pickups the same way the talk book excludes
+        // them — a word they said is not one the scene has to teach.
+        let talks = previousTalks.sorted { $0.startedAt > $1.startedAt }
+        let offered = talks
+            .flatMap { $0.summary?.expressionsOffered ?? [] }
+            .filter { !store.hasUsedExpression($0) && CarryoverDetector.isCreditable($0) }
+            .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: false) }
+        let fluentTexts = talks.flatMap { $0.turns.filter { $0.role == .fluentSelf }.map(\.transcript) }
+        let userLemmas = VocabStore.lemmas(in: talks.flatMap { $0.turns.filter { $0.role == .user }.map(\.transcript) })
+        let pickups = fluentTexts.isEmpty ? [] : store
+            .pickupCandidates(fromFluentTexts: fluentTexts, atOrAbove: proficiency,
+                              excludingLemmas: userLemmas)
+            .filter { store.state(of: $0) == nil }
+            .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: true) }
+
+        // The scene's own material fills the row first; the notebook only
+        // tops up what the scene left empty, so a global phrase can never
+        // take a slot from a word this book is still teaching.
+        var out = merge(words: bookWords + pickups, phrases: bookPhrases + offered, limit: limit)
+        if out.count < limit {
+            var seen = Set(out.map(\.key))
+            for item in pick(limit: limit, now: now, calendar: calendar) where out.count < limit {
+                guard seen.insert(item.key).inserted else { continue }
+                out.append(item)
+            }
+        }
+        return out
+    }
+
+    /// Interleave so the row opens with something short: a phrase first
+    /// would fill the visible width on its own and the words would only
+    /// exist for whoever scrolls. Phrases are capped at `maxExpressions`.
+    private static func merge(words: [TalkGoalItem], phrases: [TalkGoalItem],
+                              limit: Int) -> [TalkGoalItem] {
+        let phrases = Array(phrases.prefix(maxExpressions))
         var out: [TalkGoalItem] = []
         var w = words.makeIterator()
         var p = phrases.makeIterator()
@@ -116,6 +204,14 @@ enum TalkGoalPicker {
             out.append(item)
         }
         return out
+    }
+
+    /// A book list, shifted by how many times the scene has been talked
+    /// through — every run leads with a different slice of what's left.
+    private static func rotated(by runs: Int, _ items: [TalkGoalItem]) -> [TalkGoalItem] {
+        guard items.count > 1 else { return items }
+        let offset = runs % items.count
+        return Array(items[offset...] + items[..<offset])
     }
 
     /// Never-scheduled items (a newest-first list), oldest first and rotated
@@ -315,9 +411,17 @@ struct TalkGoalSheet: View {
         }
     }
 
+    /// The scene's own sentence when the chip came out of a scenario book
+    /// (with its usage hint under it), the dictionary's line otherwise.
+    private var exampleLine: (text: String, meaning: String?)? {
+        if let ex = item.example, !ex.isEmpty { return (ex, item.note) }
+        if let ex = entry?.examples.first, !ex.text.isEmpty { return (ex.text, ex.meaning) }
+        return nil
+    }
+
     @ViewBuilder
     private var example: some View {
-        if let ex = entry?.examples.first, !ex.text.isEmpty {
+        if let ex = exampleLine {
             VStack(alignment: .leading, spacing: 6) {
                 Text(ex.text)
                     .font(.body)

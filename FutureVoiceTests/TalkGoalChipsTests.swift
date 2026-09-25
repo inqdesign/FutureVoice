@@ -87,4 +87,64 @@ final class TalkGoalChipsTests: XCTestCase {
         XCTAssertFalse(CarryoverDetector.isCreditable("it is a"))       // no content words
         XCTAssertTrue(CarryoverDetector.isCreditable("it slipped my mind"))
     }
+
+    // MARK: - A talk on a scenario book
+
+    private func scenario(words: [(String, Date?)], expressions: [(String, Date?)] = []) -> Scenario {
+        var s = Scenario(environment: "Pharmacy", role: "Pharmacist", notes: "")
+        var c = ScenarioCurriculum()
+        c.words = words.map { w, m in
+            var item = ScenarioCurriculum.Item(text: w, note: "when you ask for it", example: "Do you have \(w)?")
+            item.masteredAt = m
+            return item
+        }
+        c.expressions = expressions.map { e, m in
+            var item = ScenarioCurriculum.Item(text: e, note: "", example: nil)
+            item.masteredAt = m
+            return item
+        }
+        s.curriculum = c
+        return s
+    }
+
+    private func talk(offered: [String]) -> Session {
+        var summary = SessionSummary(phrasesUsed: [], newPatternsDetected: [],
+                                     suggestedDrills: [], overallNote: "", scorecard: nil)
+        summary.expressionsOffered = offered
+        return Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                       topic: nil, startedAt: Date(), endedAt: Date(), turns: [], summary: summary)
+    }
+
+    /// The book's still-unmastered words lead the row, its example rides on
+    /// the chip, and a word already ticked off in the book is not asked for.
+    func testScenarioTalkLeadsWithTheBooksUnmasteredWords() {
+        let s = scenario(words: [("ointment", nil), ("prescription", Date()), ("dosage", nil)])
+        let row = TalkGoalPicker.pick(forScenario: s, previousTalks: [], proficiency: .b1)
+        let keys = row.map(\.key)
+        XCTAssertEqual(Array(keys.prefix(2)), ["ointment", "dosage"])
+        XCTAssertFalse(keys.contains("prescription"))
+        XCTAssertEqual(row.first?.example, "Do you have ointment?")
+        XCTAssertEqual(row.first?.note, "when you ask for it")
+    }
+
+    /// What the fluent self offered in an earlier run of the scene is related
+    /// by construction, and comes before anything the global notebook deals.
+    func testScenarioTalkOffersWhatPreviousRunsTaught() {
+        let s = scenario(words: [("ointment", nil)])
+        let row = TalkGoalPicker.pick(forScenario: s,
+                                      previousTalks: [talk(offered: ["it should clear up in a week"])],
+                                      proficiency: .b1)
+        XCTAssertTrue(row.contains { $0.key == CarryoverDetector.normalized("it should clear up in a week") && !$0.isWord })
+    }
+
+    /// Each run leads with a different slice of what's left, so practising a
+    /// scene four times doesn't put the same five words up front four times.
+    func testScenarioRowRotatesWithTheNumberOfRuns() {
+        let s = scenario(words: [("ointment", nil), ("dosage", nil), ("refill", nil)])
+        let first = TalkGoalPicker.pick(forScenario: s, previousTalks: [], proficiency: .b1)
+        let second = TalkGoalPicker.pick(forScenario: s, previousTalks: [talk(offered: [])], proficiency: .b1)
+        XCTAssertEqual(first.first?.key, "ointment")
+        XCTAssertEqual(second.first?.key, "dosage")
+        XCTAssertEqual(Set(first.map(\.key)).intersection(["ointment", "dosage", "refill"]).count, 3)
+    }
 }

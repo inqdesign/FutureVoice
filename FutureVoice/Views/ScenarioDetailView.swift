@@ -77,7 +77,12 @@ struct ScenarioDetailView: View {
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "scenario_book") }
         .fullScreenCover(isPresented: $talkPresented, onDismiss: refreshMastery) {
             if let s = scenario {
-                ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
+                // The id is what links the talk to this book: the stored
+                // opener pool, the chip row's book material, telemetry's
+                // `kind`. Without it (as until 2026-09-25) the talk was a
+                // plain topic call tied to the book by its title only.
+                ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
+                                 initialOrigin: .scenario, initialScenarioId: s.id)
                     .environmentObject(appState)
             }
         }

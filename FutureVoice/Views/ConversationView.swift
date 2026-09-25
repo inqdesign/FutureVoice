@@ -954,7 +954,7 @@ struct ConversationView: View {
                 Text(explain("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."))
             }
             .task { refreshDashboard() }
-            .task { goalItems = TalkGoalPicker.pick() }
+            .task { goalItems = pickGoalItems() }
             .task {
                 let account = await AccountStatus.fetch()
                 canUpgradePlan = account.isLightPlan
@@ -3101,6 +3101,25 @@ struct ConversationView: View {
     /// never removed: the same detector runs over the finished transcript at
     /// session end, so the wrap-up is where the count is settled, and a check
     /// that vanished mid-call would read as the app taking something back.
+    /// A talk on a scenario book leads with THAT book's unmastered material
+    /// and what its previous runs offered; any other call gets the notebook.
+    /// Previous runs are matched by id, and by title for talks saved before
+    /// the book page passed one (2026-09-25 — its Talk button launched with
+    /// no scenario id, so every talk it started was linked by title alone).
+    private func pickGoalItems() -> [TalkGoalItem] {
+        guard let sid = sessionScenarioId,
+              let scenario = appState.scenarios.first(where: { $0.id == sid }) else {
+            return TalkGoalPicker.pick()
+        }
+        let title = scenario.displayTitle
+        let previous = SessionStore.shared.load().filter {
+            $0.id != sessionId && $0.endedAt != nil
+                && ($0.originScenarioId == sid || $0.topic == title)
+        }
+        return TalkGoalPicker.pick(forScenario: scenario, previousTalks: previous,
+                                   proficiency: appState.proficiency)
+    }
+
     private func creditGoalChips(turnId: UUID) {
         guard !goalItems.isEmpty,
               let turn = turns.first(where: { $0.id == turnId }) else { return }
