@@ -34,6 +34,13 @@ struct FindPeopleSheet: View {
     /// the only place the seal is real status rather than a receipt.
     @State private var coreBadges: [String: CoreClubService.Badge] = [:]
 
+    /// The learner's OWN published row, when they have one. `fetchPool`
+    /// filters it out of the pool on purpose — you don't meet yourself — but
+    /// this page is the only place the pool is ever looked at, so a learner
+    /// who published had nowhere to see what they published. Nil for anyone
+    /// who hasn't, and the section is simply absent then.
+    @State private var mine: PublicPersonaService.PublicPersona?
+
     /// Which pool the sheet is showing. Two kinds live in one table and they
     /// are not interchangeable to a learner: a real person who published an
     /// intro, and someone we invented. One list would quietly ask the user to
@@ -84,6 +91,7 @@ struct FindPeopleSheet: View {
         NavigationStack {
             List {
                 if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    mineSection
                     ownSection
                 }
                 Section {
@@ -138,6 +146,30 @@ struct FindPeopleSheet: View {
     }
 
     // MARK: - Sections
+
+    /// You, as the pool has you — the same row shape everyone else gets, so
+    /// what is on screen here can't drift from what a stranger is shown.
+    /// Tapping it lands in the editor, where the paragraph itself lives
+    /// alongside Update and Take down.
+    @ViewBuilder private var mineSection: some View {
+        if let mine {
+            Section {
+                NavigationLink {
+                    // Publishing or taking down from there changes this row,
+                    // so re-read it on the way back rather than leaving a
+                    // stale face on the page that just edited it.
+                    PublicIntroView(onDecided: { Task { await loadMine() } })
+                        .environmentObject(appState)
+                } label: {
+                    poolRow(mine)
+                }
+            } header: {
+                Text("You")
+            } footer: {
+                Text(explain("This is how other learners find you. Tap to change it or take it down."))
+            }
+        }
+    }
 
     /// The half that used to be its own "Your people" sheet — merged here so
     /// the header button answers every "who can I talk to" question at once.
@@ -271,39 +303,46 @@ struct FindPeopleSheet: View {
 
     private func personRow(_ p: PublicPersonaService.PublicPersona) -> some View {
         NavigationLink(value: PublicPersonaService.asCounterpart(p, existing: appState.counterparts)) {
-            HStack(spacing: 12) {
-                PersonBubble(name: p.display_name, size: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(p.display_name).font(.body.weight(.medium))
-                        if isInCore(ownerId: p.owner_user_id) {
-                            CoreSeal()
-                        }
-                        if bookmarks.contains(p.id) {
-                            Image(systemName: "bookmark.fill")
-                                .font(.caption2).foregroundStyle(.tint)
-                        }
+            poolRow(p)
+        }
+    }
+
+    /// One pool row's face. Shared by the strangers and by the learner's own
+    /// row above them: "how you appear" has to be the appearance itself, not
+    /// a second rendering of it.
+    private func poolRow(_ p: PublicPersonaService.PublicPersona) -> some View {
+        HStack(spacing: 12) {
+            PersonBubble(name: p.display_name, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(p.display_name).font(.body.weight(.medium))
+                    if isInCore(ownerId: p.owner_user_id) {
+                        CoreSeal()
                     }
-                    Text(facetLine(occupation: p.occupation, location: p.location))
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    // A real learner's intro is whatever they typed into
-                    // onboarding, for onboarding's purposes — it is not a
-                    // profile, and putting it on a browsable card exposed
-                    // things like who lives in their house. Their row shows
-                    // the three facets a stranger has any business seeing;
-                    // the rest still reaches the model, so the conversation
-                    // loses nothing. Characters we wrote ARE their intro.
-                    if p.group == .character {
-                        Text(p.intro)
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                    } else if !p.interests.isEmpty {
-                        Text(p.interests)
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if bookmarks.contains(p.id) {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2).foregroundStyle(.tint)
                     }
                 }
+                Text(facetLine(occupation: p.occupation, location: p.location))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                // A real learner's intro is whatever they typed into
+                // onboarding, for onboarding's purposes — it is not a
+                // profile, and putting it on a browsable card exposed
+                // things like who lives in their house. Their row shows
+                // the three facets a stranger has any business seeing;
+                // the rest still reaches the model, so the conversation
+                // loses nothing. Characters we wrote ARE their intro.
+                if p.group == .character {
+                    Text(p.intro)
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                } else if !p.interests.isEmpty {
+                    Text(p.interests)
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
-            .padding(.vertical, 2)
         }
+        .padding(.vertical, 2)
     }
 
     private func metRow(_ c: Counterpart) -> some View {
@@ -347,9 +386,20 @@ struct FindPeopleSheet: View {
         return pool.first { $0.id == remoteId }?.owner_user_id
     }
 
+    /// Read the learner's own published row. Silent on failure: this page's
+    /// job is the pool, and a network hiccup must not turn "you haven't
+    /// published" and "we couldn't ask" into the same visible claim — the
+    /// section is only ever drawn from a row that came back.
+    private func loadMine() async {
+        mine = try? await PublicPersonaService.fetchMine(language: appState.targetLanguage)
+    }
+
     private func loadPool() async {
         isLoading = true
         loadFailed = false
+        // Alongside the pool, never in front of it: the strangers are what
+        // this page is for, and one row of its own must not hold them up.
+        async let mineRow = PublicPersonaService.fetchMine(language: appState.targetLanguage)
         do {
             pool = try await PublicPersonaService.fetchPool(language: appState.targetLanguage)
             // The pool is the only thing that can tell a stranger saved
@@ -363,10 +413,13 @@ struct FindPeopleSheet: View {
             loadFailed = pool.isEmpty
         }
         isLoading = false
+        mine = try? await mineRow
         // Badges last and unguarded: the sheet is fully usable without them,
         // so a Core outage must never keep anyone from meeting people.
         coreBadges = await CoreClubService.fetchBadges(
-            ownerIds: pool.compactMap(\.owner_user_id),
+            // The learner's own id rides along in the same round trip, so
+            // their row wears the seal a stranger would see on it.
+            ownerIds: pool.compactMap(\.owner_user_id) + [mine?.owner_user_id].compactMap { $0 },
             // The pool being browsed, which is the language whose club these
             // seals belong to.
             language: appState.targetLanguage)
