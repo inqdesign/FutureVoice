@@ -2356,7 +2356,20 @@ struct ConversationView: View {
             // realtime.state observer) — don't stack an error alert on it.
             if realtime.wallCode == nil { error = message }
             phase = .idle
+            return
         }
+        // The nobody-is-here watchdog. It was armed only in the classic
+        // path's `startRecording`, so from the day realtime became the only
+        // call path (2026-09-05) a quiet screen never put itself down: the
+        // mic stayed hot until the gateway's own 3-minute hang-up ENDED the
+        // call, with no "tap to pick it back up". The loop already reads
+        // `isBillableMoment`'s realtime branch and `pauseCall`'s, so arming
+        // it here is the whole fix. Stamped here too, not only by the callers:
+        // a reconnect mid-call must not inherit a clock that is already 25 s
+        // into the 30, or the picked-up call pauses before anyone can speak.
+        lastActivityAt = Date()
+        isPausedForIdle = false
+        startIdleWatch()
     }
 
     /// The gateway speaks prose, not the `{reply, suggestion}` JSON the HTTP
