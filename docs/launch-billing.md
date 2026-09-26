@@ -539,3 +539,30 @@ subscriptions (two Apple IDs — a plan change inside one group keeps its
 original transaction id), which is why `apple-claim` and `apple-webhook`
 both keep the row on the one that ends LATER (`20260917150000` restored the
 row that a re-claim of a cancelled-but-running trial had overwritten).
+
+**The offer is CLOSED as of 2026-09-26, and the three who redeemed keep it.**
+112 codes were dealt to 56 people; three redeemed (Light `setia1115@`, Plus
+`kylewskim@` and `forsgappstore@`), so 109 live codes were sitting in mailboxes
+priced at half of a plan that has since been re-sized (§ the 2026-09-26
+revision) — a discount aimed at a beta group that is over, redeemable by
+anyone those mails reach. What was turned off is the **one-time-code BATCH**,
+not the offer: `PATCH /v1/subscriptionOfferCodeOneTimeUseCodes/<id>` with
+`{"active": false}` on the two PRODUCTION batches (Light `585415`, Plus
+`585392` — Apple also pulls their `expirationDate` in to today), which is
+exactly the set of code strings that went out. Redemption needs a code and
+there are no custom codes, so nothing can be redeemed while both batches are
+off, and the two offers (`Beta50 Light/Plus Monthly v2`) stay ACTIVE on
+purpose — a redeemed `PAY_AS_YOU_GO` discount lives in the subscription's own
+renewal info and keeps pointing at the offer. Verified against Apple AFTER the
+deactivation with `scripts/apple-subscription.sh`: all three still read
+`next charge … [offer code Beta50 … v2]` at 4.99 / 9.99 USD / 14,500 KRW, for
+the rest of their 12 months. Reversal is the same PATCH with `true`. The
+SANDBOX batches (`585487`, `585317`) were left alone — they buy nothing real
+and are how the redeem flow is tested. The v1 offers and their batches were
+already inactive. Two leftovers to know about: the four codes reserved for
+relay-only testers (`offer_code_grants.sent_at IS NULL`, "handed over in the
+beta chat") are dead too, so don't hand them over; and three `waitlist` rows
+are still `notified_at IS NULL` — `waitlist-launch-mail.py` now refuses to
+send for exactly that reason, and anyone mailed from here on is offered
+today's plans, not a code. Nothing was changed in the database: the grant rows
+are a record of what was dealt, and Apple is what enforces redemption.
