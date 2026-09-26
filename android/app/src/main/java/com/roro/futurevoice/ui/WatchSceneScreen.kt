@@ -152,6 +152,7 @@ fun WatchSceneScreen(
             // ── Play the scene: one scene_key for every line = ONE count.
             val eleven = ElevenLabsClient(auth)
             val sceneKey = "scene:${scenario.id}:$runKey"
+            var sceneCounted = false
             for (turn in fresh.dialogue.orEmpty()) {
                 val isUser = turn.speaker == "user"
                 shown = shown + Turn(
@@ -193,7 +194,18 @@ fun WatchSceneScreen(
                         else -> null   // one failed line must not kill the scene
                     }
                 }
-                audio?.let { mp3.play(it) }
+                audio?.let {
+                    // A scene the learner sat through is effort, so it keeps
+                    // a streak alive — logged ONCE, when its first line is
+                    // actually heard. Out of the daily goal: the goal counts
+                    // work they did, and a scene plays itself.
+                    if (!sceneCounted) {
+                        sceneCounted = true
+                        com.roro.futurevoice.data.PracticeLog.record(
+                            context, com.roro.futurevoice.data.PracticeLog.Kind.SCENE)
+                    }
+                    mp3.play(it)
+                }
             }
             playingIndex = -1
             // No ask here any more. The one feedback moment is after a

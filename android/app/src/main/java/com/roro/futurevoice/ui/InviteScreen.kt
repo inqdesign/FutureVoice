@@ -299,7 +299,7 @@ private fun reasonText(e: Throwable): Int = when (
  */
 @Composable
 private fun talkTimeLabel(a: AccountStatus): String = when {
-    a.unlimited || a.isPlusPlan ->
+    a.unlimited || a.isUncappedTalk ->
         stringResource(R.string.lld_min_talked_this_month, a.secondsUsedPeriod / 60)
     // Light keeps the fraction: 150 minutes is a number that account
     // actually meets, and how they spend it is their business.

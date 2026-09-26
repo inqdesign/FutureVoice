@@ -70,23 +70,31 @@ object TalkTimeLog {
         return load(context)[k] ?: 0
     }
 
-    /** Did this day clear the Core's daily bar in the language being
-     *  practised? The one predicate the streak is built from — anything that
-     *  needs to say "today counts" asks THIS, never the learner's own daily
-     *  goal. The goal fills a ring; the bar decides a day. */
+    /**
+     * Did this day clear the CORE's daily bar, in the language being
+     * practised? The club's rule and nothing else — the Home streak asks a
+     * different question ([streakDays]), and merging the two is what made a
+     * day of reviews read as a failure. Kept for the club's own surfaces.
+     */
     fun metCoreBar(context: Context, at: Long = System.currentTimeMillis()): Boolean =
         secondsOn(context, at, LanguageScope.active(context)) >= CoreBar.seconds(context)
 
     /**
-     * Consecutive days over the Core's daily bar, in the language being
-     * practised, anchored to TODAY when today already counts and to yesterday
-     * otherwise — a streak is alive until its day is over, and without that
-     * every learner reads 0 each morning.
+     * Consecutive ACTIVE days, anchored to TODAY when today already counts
+     * and to yesterday otherwise — a streak is alive until its day is over,
+     * and without that every learner reads 0 each morning.
      *
-     * It used to be "any day with any metered second, in any language", which
-     * let a two-second call keep a streak alive and pooled languages together.
-     * There is one rule now and it is the Core's, so the number on Home and
-     * the number the club promotes from can never disagree.
+     * A day counts when the learner DID something: metered talk in ANY
+     * language, a talk they spoke in, or any practice rep — cards, words,
+     * expressions, shadow takes, a Watch scene. Opening the app is not
+     * enough.
+     *
+     * This is NOT the Core's streak, and the two were one rule from 2026-08
+     * until 2026-09-19. On Home that read as a punishment: a day of reviews,
+     * shadowing and a scene, or a day spent in the other language, reset it
+     * to 0. The Core keeps its hard bar and its own server-computed number on
+     * its own page — don't re-merge them, and don't harden this one back
+     * toward the bar.
      */
     fun streakDays(context: Context, now: Long = System.currentTimeMillis()): Int {
         val cal = Calendar.getInstance()
@@ -103,13 +111,20 @@ object TalkTimeLog {
             cal.add(Calendar.DAY_OF_YEAR, -1)
             return cal.timeInMillis
         }
+        fun active(at: Long): Boolean {
+            val prefix = dayKey(at)
+            val talked = load(context).entries.any { (k, v) ->
+                v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
+            }
+            return talked || PracticeLog.day(context, at)?.didSomething == true
+        }
         var cursor = startOfDay(now)
-        if (!metCoreBar(context, cursor)) {
+        if (!active(cursor)) {
             cursor = dayBefore(cursor)
-            if (!metCoreBar(context, cursor)) return 0
+            if (!active(cursor)) return 0
         }
         var count = 0
-        while (metCoreBar(context, cursor)) { count += 1; cursor = dayBefore(cursor) }
+        while (active(cursor)) { count += 1; cursor = dayBefore(cursor) }
         return count
     }
 

@@ -288,15 +288,17 @@ fun PlanPageScreen(
 }
 
 /**
- * Uncapped talk is decided by the TIER, never by the cap the server reports.
- * A deployed `talk_allowance` without the unlimited branch hands every plan
- * its `monthly_seconds`, and a Plus account was then told it had 1,795 of
- * 1,800 minutes left — a pool that tier does not have and a number nothing
- * enforces. Read the plan id, and the client is never one server deploy away
- * from being wrong about what it sold.
+ * Uncapped talk is the SUBSCRIPTION's stamp as `talk_allowance` reports it
+ * (nil cap on an entitled account), never the tier: since 2026-09-26 a Plus
+ * bought today is a 300-minute pool (`20260926110000_bounded_plans_and_topups`)
+ * and only the rows sold before keep no ceiling. (Until then this read the
+ * plan id, because a deployed `talk_allowance` once lacked the unlimited
+ * branch; the server has had it since `20260904130000`.) Everything that
+ * hung off `isPlusPlan` — no ring, "N min talked", no invite row — hangs
+ * off this now, because those were rules about an UNCOUNTED pool.
  */
 val AccountStatus.isUncappedTalk: Boolean
-    get() = isPlusPlan || (isEntitled && monthlyCapSeconds == null)
+    get() = isEntitled && monthlyCapSeconds == null
 
 /**
  * The one number this tier is owed.

@@ -44,11 +44,22 @@ object PracticeLog {
         val shadowDone: Int = 0,
         val wordDone: Int = 0,
         val expressionDone: Int = 0,
+        /**
+         * A Watch scene the learner sat through — logged once, when its first
+         * line is heard. Out of [total] and out of the daily goal (the goal
+         * counts work the learner DID, and a scene plays itself), but it is
+         * effort, so it keeps a streak alive. Zero is not encoded, so a day
+         * written before this existed keeps its fingerprint.
+         */
+        val sceneReps: Int = 0,
     ) {
         val total: Int get() = drillReps + shadowReps + wordReps + expressionReps
+
+        /** Anything at all happened today — what the streak asks. */
+        val didSomething: Boolean get() = total > 0 || sceneReps > 0
     }
 
-    enum class Kind { DRILL, SHADOW, WORD, EXPRESSION }
+    enum class Kind { DRILL, SHADOW, WORD, EXPRESSION, SCENE }
 
     private val serializer = MapSerializer(String.serializer(), Day.serializer())
 
@@ -79,6 +90,7 @@ object PracticeLog {
                 shadowDone = d.shadowDone + if (finished) 1 else 0)
             Kind.WORD -> d.copy(wordReps = d.wordReps + 1,
                 wordDone = d.wordDone + if (finished) 1 else 0)
+            Kind.SCENE -> d.copy(sceneReps = d.sceneReps + 1)
             Kind.EXPRESSION -> d.copy(expressionReps = d.expressionReps + 1,
                 expressionDone = d.expressionDone + if (finished) 1 else 0)
         }

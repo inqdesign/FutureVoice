@@ -1740,7 +1740,7 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
     }
     IconButton(onClick = onClick) {
         val a = account
-        if (a != null && !a.isPlusPlan && (a.monthlyCapSeconds != null || !a.isEntitled)) {
+        if (a != null && !a.isUncappedTalk && (a.monthlyCapSeconds != null || !a.isEntitled)) {
             // The full tank is this account's own pool, never a constant: the
             // period's cap for a subscriber, the signup grant otherwise.
             val cap = a.monthlyCapSeconds?.takeIf { a.isEntitled }
@@ -1780,11 +1780,12 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
 
 /**
  * The free tier's full tank — the signup grant, ten minutes since
- * 2026-09-21 (`20260921120000_ten_free_minutes`). It used to be 66, which
- * drew a ring that barely moved for an account that now decides within one
- * conversation.
+ * 2026-09-21 (`20260921120000_ten_free_minutes`), 20 since 2026-09-26
+ * (`20260926100000_twenty_free_minutes`). It used to be 66, which drew a ring
+ * that barely moved for an account that now decides within a few calls.
+ * Keep it equal to `handle_new_user_credits`.
  */
-private const val FREE_GRANT_SECONDS = 600
+private const val FREE_GRANT_SECONDS = 1200
 
 /**
  * A header control that looks like one.

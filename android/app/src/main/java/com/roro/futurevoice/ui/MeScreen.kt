@@ -1135,7 +1135,7 @@ private fun storedLevel(context: android.content.Context, code: String): CefrLev
 @Composable
 private fun talkTimeLabel(a: AccountStatus?): String = when {
     a == null -> stringResource(R.string.checking)
-    a.isPlusPlan -> stringResource(R.string.talked_this_month, talkSpan(a.secondsUsedPeriod))
+    a.isUncappedTalk -> stringResource(R.string.talked_this_month, talkSpan(a.secondsUsedPeriod))
     a.isEntitled && a.monthlyCapSeconds != null ->
         stringResource(R.string.of_lld_min_talked_this_month,
             talkSpan(a.secondsUsedPeriod), a.monthlyCapSeconds / 60)
