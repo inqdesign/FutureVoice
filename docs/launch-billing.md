@@ -40,7 +40,11 @@ usage API, the trial rows). Migrations `20260926100000_twenty_free_minutes`
 and `20260926110000_bounded_plans_and_topups`; app build 60+.
 
 **Unit costs** (ElevenLabs Pro $0.000165/cr; Apple Small Business 15%):
-talk 1 min ≈ **$0.03** all in (145–170 cr TTS + Gemini), scene ≈ **$0.12**.
+talk 1 min ≈ **$0.03** all in (145–170 cr TTS + Gemini), scene ≈ **$0.12**
+— **and the scene is ~$0.07 from 2026-09-26**, when every clone-voice surface
+moved off the 2x fidelity model onto turbo after an A/B by ear
+(`scripts/tts-model-probe.sh`); scenes also lost one turn of eleven. Every
+scene figure below is the pre-change one, so each is a ceiling now.
 Net revenue: US list × 0.85; KR/EU list ÷ VAT × 0.85 (₩15,000 → ₩11,600 ≈
 $8.3; €9.99 → €7.14 ≈ $7.8).
 

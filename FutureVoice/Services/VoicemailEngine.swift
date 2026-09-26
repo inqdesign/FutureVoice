@@ -219,17 +219,23 @@ enum VoicemailEngine {
     /// no gain. Returns nil on any failure; the caller then rings on the
     /// default sound rather than not ringing at all.
     ///
-    /// Model: `fidelityModelId`. This is the surface where "that's my voice"
-    /// either lands or doesn't, and it fires at most once per day per learner
-    /// on ~260 characters — the 2x character cost is a rounding error against
-    /// a single conversation turn.
+    /// Model: turbo, like every other repeating surface (2026-09-26). It ran
+    /// `fidelityModelId` on the argument that a voicemail is where "that's my
+    /// voice" lands, and that it fires at most once a day — but the founder
+    /// compared the two models on their own clone that day and turbo held up
+    /// (`scripts/tts-model-probe.sh`), so there is nothing left to buy. The
+    /// "once a day" was also not true: the script is re-synthesized at every
+    /// SESSION end (`refreshDailyCall(force: true)`), so three talks in a day
+    /// meant three voicemails and one ring. Measured over the launch window
+    /// this path was 8.6% of all ElevenLabs credits excluding the founder's
+    /// own account, and half of that was the 2x.
     @MainActor
     static func synthesizeVoicemail(script: String, voiceId: String) async -> Data? {
         do {
             let audio = try await ElevenLabsClient.shared.synthesizeStreaming(
                 voiceId: voiceId,
                 text: script,
-                modelId: ElevenLabsClient.fidelityModelId,
+                modelId: ElevenLabsClient.cloneModelId,
                 purpose: "daily-call",
                 onPCMChunk: { _, _ in }   // nothing to play — we only want the bytes
             )

@@ -915,7 +915,7 @@ struct WatchView: View {
         // orphaned and nothing is re-billed.
         let audio = try await ElevenLabsClient.shared.synthesize(
             voiceId: voiceId, text: text,
-            modelId: ElevenLabsClient.sceneModelId,
+            modelId: ElevenLabsClient.cloneModelId,
             purpose: "scene",
             previousText: request.previousText,
             nextText: request.nextText,
@@ -944,7 +944,7 @@ struct WatchView: View {
         let result = try await ElevenLabsClient.shared.synthesizeStreaming(
             voiceId: request.voiceId,
             text: request.text,
-            modelId: ElevenLabsClient.sceneModelId,
+            modelId: ElevenLabsClient.cloneModelId,
             purpose: "scene",
             sceneKey: sceneRunKey
         ) { chunk, sampleRate in

@@ -1369,7 +1369,7 @@ struct VoiceCloneOnboardingView: View {
                     // "Becoming…" act, which is already a wait.
                     greetingData = try? await ElevenLabsClient.shared.synthesize(
                         voiceId: voiceId, text: greetingLine,
-                        modelId: ElevenLabsClient.fidelityModelId, purpose: "greeting")
+                        modelId: ElevenLabsClient.cloneModelId, purpose: "greeting")
                 }
                 HapticEngine.success()
                 isReRecordingClone = false
@@ -1414,7 +1414,7 @@ struct VoiceCloneOnboardingView: View {
         Task {
             greetingData = try? await ElevenLabsClient.shared.synthesize(
                 voiceId: voiceId, text: greetingLine,
-                modelId: ElevenLabsClient.fidelityModelId, purpose: "greeting")
+                modelId: ElevenLabsClient.cloneModelId, purpose: "greeting")
             playGreeting()
         }
     }

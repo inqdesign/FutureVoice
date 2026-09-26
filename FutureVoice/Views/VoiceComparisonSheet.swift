@@ -210,7 +210,7 @@ struct VoiceComparisonSheet: View {
             // cost is paid once.
             let data = try await ElevenLabsClient.shared.synthesize(
                 voiceId: voiceId, text: scriptOpening,
-                modelId: ElevenLabsClient.fidelityModelId, purpose: "voice_comparison")
+                modelId: ElevenLabsClient.cloneModelId, purpose: "voice_comparison")
             _ = PhraseAudioStore.shared.save(data, text: scriptOpening, voiceId: voiceId)
             cloneAudio = data
         } catch {

@@ -226,7 +226,11 @@ final class ElevenLabsClient {
     static let conversationModelId = "eleven_turbo_v2_5"
     #endif
 
-    /// Watch scene lines — BOTH voices, turbo (2026-09-26, founder's call).
+    /// EVERYTHING the learner hears in their own cloned voice, outside the
+    /// live call's own path: Watch scene lines (both voices), the daily
+    /// call's voicemail, the onboarding greeting and the voice-comparison
+    /// sheet. Turbo, all of it (2026-09-26, founder's call, confirmed by
+    /// ear) — the same model the live call has always used.
     ///
     /// The clone's lines used to take `fidelityModelId` here. The argument
     /// against it is one sentence: Talk runs the same cloned voice on turbo,
@@ -236,15 +240,31 @@ final class ElevenLabsClient {
     /// cost lever: the clone's half of the scene lines was 70% of a scene's
     /// ElevenLabs bill (26,514 credits against the counterpart's 11,354 over
     /// the launch window), so a scene goes from $0.112 to ~$0.073.
-    static let sceneModelId = "eleven_turbo_v2_5"
-
-    /// Model for material the user LISTENS to as their own voice, where
-    /// speaker similarity is the product.
     ///
-    /// What is left on it (2026-09-26): the onboarding greeting and the
-    /// voice-comparison sheet — both fire ONCE per user, at the moment they
-    /// decide whether the clone is them — and the daily call's voicemail.
-    /// Watch scenes moved to turbo; see `sceneModelId`.
+    /// And it was settled the way this app settles voice questions — by ear,
+    /// not by arithmetic. `scripts/tts-model-probe.sh` synthesized the same
+    /// scene lines both ways in the founder's own clone, with the production
+    /// voice settings and speed, weighted toward the cross-lingual case that
+    /// is the only place multilingual_v2 should earn its 2x (a clone recorded
+    /// in Korean speaking English and German). Verdict the same day: turbo
+    /// holds up, and in places sounds BETTER. Re-run the probe before moving
+    /// anything back.
+    ///
+    /// The ONCE-PER-USER surfaces went with it — the onboarding greeting and
+    /// the voice-comparison sheet — and their reason is not the money, which
+    /// was never more than a few cents. They are where the learner decides
+    /// "is that me?", so they must be a SAMPLE of what the app will actually
+    /// sound like. A greeting synthesized on a better model than every line
+    /// that follows is a demo, and the gap it hides is exactly the
+    /// disappointment it would be setting up.
+    static let cloneModelId = "eleven_turbo_v2_5"
+
+    /// The fidelity tier. **Nothing in a release build speaks on it any more**
+    /// (2026-09-26): its last three users — Watch scenes, the voicemail, the
+    /// onboarding greeting — all moved to `cloneModelId` after the founder
+    /// A/B'd the two on their own clone and turbo held up. It stays defined
+    /// as the DEBUG A/B target below (`conversationModelId`) and as the thing
+    /// to reach for if a future surface ever earns 2x per character.
     ///
     /// flash/turbo v2.5 are the latency tier — they trade speaker similarity
     /// for time-to-first-audio. multilingual_v2 is the fidelity tier, and it
