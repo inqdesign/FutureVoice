@@ -120,6 +120,12 @@ struct ScenarioComposerSheet: View {
     @State private var showingCamera = false
     @State private var addingLink = false
     @State private var linkText = ""
+    /// Relationship-grounded ideas for the attached person, for the reel.
+    /// Held here as well as on the counterpart because a Find-people
+    /// stranger is not in `CounterpartStore` until a scenario is actually
+    /// built with them — caching onto them would promote them early.
+    @State private var personIdeas: [SuggestedTopic] = []
+    @State private var loadingPersonIdeas = false
 
     struct Category: Identifiable, Hashable {
         var id: String { title.lowercased() }
@@ -211,6 +217,7 @@ struct ScenarioComposerSheet: View {
             // A vertical TextField in a Form has no built-in way to dismiss the
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
+            .task(id: person?.id) { await ensurePersonIdeas() }
             .onAppear {
                 // TLS handshake + auth-token refresh off the critical path, so
                 // the first real ideas call isn't also paying for a cold radio.
@@ -352,8 +359,9 @@ struct ScenarioComposerSheet: View {
             // do I even put here", and a demonstration of how much detail is
             // worth writing. They go away the moment there IS something to
             // write, so they never compete with the learner's own line.
-            if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !situationFocused {
-                SituationReel(lines: Self.exampleSituations) { line in
+            if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !situationFocused && !reelLines.isEmpty {
+                SituationReel(lines: reelLines) { line in
                     programmaticSituation = true
                     situation = line
                     customMode = true
@@ -418,7 +426,52 @@ struct ScenarioComposerSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
         .animation(.easeInOut(duration: 0.2), value: situationFocused)
+        .animation(.easeInOut(duration: 0.25), value: reelLines.count)
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    /// What rolls past the box. With a person attached it is THEIR ideas —
+    /// grounded in the relationship, generated once per person per language
+    /// and kept on the counterpart (`TopicEngine.suggestForCounterpart`,
+    /// the same pool the person's own card fills).
+    ///
+    /// The generic examples are deliberately NOT the fallback there. A
+    /// landlord and a doctor mean nothing on a box opened from a friend's
+    /// card, and that mismatch is what made the reel read as filler
+    /// (reported 2026-09-26). Until theirs arrive the middle simply stays
+    /// empty, which says less but says nothing wrong.
+    private var reelLines: [String] {
+        guard let p = person else { return Self.exampleSituations }
+        let stored = (appState.counterparts.first { $0.id == p.id } ?? p)
+            .savedScenarios(in: appState.targetLanguage)
+        return (stored.isEmpty ? personIdeas : stored).map {
+            let blurb = $0.blurb.trimmingCharacters(in: .whitespacesAndNewlines)
+            return blurb.isEmpty ? $0.title : blurb
+        }
+    }
+
+    /// One call per person per language, ever. Silent on failure: the box
+    /// works without a reel, and an error banner over an empty middle would
+    /// be louder than the thing it failed to show.
+    private func ensurePersonIdeas() async {
+        guard usesBox, let p = person, !loadingPersonIdeas else { return }
+        let live = appState.counterparts.first { $0.id == p.id } ?? p
+        guard live.savedScenarios(in: appState.targetLanguage).isEmpty,
+              personIdeas.isEmpty else { return }
+        loadingPersonIdeas = true
+        defer { loadingPersonIdeas = false }
+        guard let fresh = try? await TopicEngine.suggestForCounterpart(
+            persona: appState.persona,
+            counterpart: live,
+            targetLanguage: appState.targetLanguage), !fresh.isEmpty else { return }
+        personIdeas = fresh
+        // Persist only for someone already on file. A stranger becomes a
+        // real row when a scenario is built with them, not when the sheet
+        // that might build one happens to open.
+        if var owned = appState.counterparts.first(where: { $0.id == p.id }) {
+            owned.setSavedScenarios(fresh, in: appState.targetLanguage)
+            appState.saveCounterpart(owned)
+        }
     }
 
     /// What rolls past the empty box. Written to MODEL the detail the field
