@@ -231,6 +231,15 @@ struct WatchTab: View {
 
     // MARK: - 1. People (stories row)
 
+    /// No caption under any section on this page (2026-09-26, user
+    /// decision: "none of them are needed"). Each one had grown into a
+    /// paragraph that mixed what the screen already shows with a rule it
+    /// doesn't — and the mix is what made them read as filler. The rules
+    /// they carried are written down in this file's comments instead: a
+    /// talk alone doesn't keep someone in this row (a bookmark does), the
+    /// two doors mint the same scenario, and every watch writes a fresh
+    /// take. If one has to come back, it comes back as ONE sentence
+    /// carrying only the part the screen cannot say.
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             // No Find button here any more: the page header's person.2 opens
@@ -256,9 +265,6 @@ struct WatchTab: View {
                 .padding(.trailing, -20)
             }
             .padding(.vertical, 6)
-            Text(explain("Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them."))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -327,9 +333,6 @@ struct WatchTab: View {
                         scenarioCard(s)
                     }
                 }
-                Text(explain("Tap a card to review or tweak it, then watch — every watch writes a fresh take. Past takes live in Practice."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -459,9 +462,6 @@ struct WatchTab: View {
                     composer = ComposerConfig(mode: .browse)
                 }
             }
-            Text(explain("Both become a scenario you can watch and talk through. Only where you start differs."))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
     }
 
