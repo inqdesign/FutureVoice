@@ -159,6 +159,16 @@ struct ScenarioComposerSheet: View {
     /// category breadcrumb live.
     private var usesBox: Bool { mode == .custom && editing == nil }
 
+    /// The assembled-scenario window, shown only once there is something in
+    /// it. The BROWSE door's whole job is "pick a category", and until
+    /// 2026-09-26 it opened on an EMPTY field headed "Your scenario" above
+    /// the grid — asking the learner to write the thing they had just chosen
+    /// not to write, with the categories pushed below it. Writing has its own
+    /// door now (`Mode.custom`), so this one leads with the grid and the
+    /// window appears when a pick fills it. A leaf stays editable either way,
+    /// and editing a saved scenario always has content, so it always shows.
+    private var showsOverview: Bool { editing != nil }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -167,10 +177,21 @@ struct ScenarioComposerSheet: View {
                 } else {
                     Form {
                         if let p = person { personHeader(p) }
-                        overviewSection
+                        if showsOverview { overviewSection }
+                        // Browsing is tap-tap-tap: category, area, scenario.
+                        // The path needs somewhere to live so a step can be
+                        // undone, but nothing here asks the learner to write
+                        // — the writing door is the other one, and a saved
+                        // scenario opens with a full editable field.
+                        if !showsOverview && !path.isEmpty { breadcrumbSection }
                         choiceSection
                         if person == nil { attachSection }
-                        if host == .watch { materialSection }
+                        // Attaching belongs to the "your own situation" door.
+                        // The browse door is for PICKING one, and an attach
+                        // row there offered a posting for a scenario the
+                        // learner had not written. Editing keeps the section
+                        // when there is material on the scenario to manage.
+                        if host == .watch && !sources.isEmpty { materialSection }
                         if onDelete != nil { deleteSection }
                     }
                 }
@@ -244,14 +265,17 @@ struct ScenarioComposerSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
-                if !usesBox {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { commit() } label: {
-                            Label(ctaTitle, systemImage: ctaIcon).labelStyle(.titleAndIcon)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                // The CTA lives in the HEADER on both doors. It sat inside
+                // the box on the custom one until 2026-09-26, where its play
+                // glyph never sat right beside a mic circle and its label
+                // was one more thing making the row's width depend on the
+                // language. One primary button, one place, both doors.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { commit() } label: {
+                        Label(ctaTitle, systemImage: ctaIcon).labelStyle(.titleAndIcon)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -313,53 +337,91 @@ struct ScenarioComposerSheet: View {
     /// attaching to it are one gesture rather than two sections.
     private var customBox: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            Text(explain("The real thing coming up. One line — and attach a link or a file if you have one."))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 36)
-                .padding(.bottom, 12)
-            VStack(alignment: .leading, spacing: 10) {
-                if !sources.isEmpty { attachmentChips }
+            VStack(spacing: 6) {
+                Text("Go through it before it happens")
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                Text(explain("The more you write, the closer the scene lands. Tap ＋ to bring the posting, the listing, your CV."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 32)
+            .padding(.top, 20)
+            // Examples roll through the empty middle — the answer to "what
+            // do I even put here", and a demonstration of how much detail is
+            // worth writing. They go away the moment there IS something to
+            // write, so they never compete with the learner's own line.
+            if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !situationFocused {
+                SituationReel(lines: Self.exampleSituations) { line in
+                    programmaticSituation = true
+                    situation = line
+                    customMode = true
+                }
+                .frame(maxHeight: .infinity)
+                .transition(.opacity)
+            } else {
+                Spacer(minLength: 0)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                if !sources.isEmpty {
+                    attachmentChips
+                        .padding(.horizontal, 14)
+                    if sources.contains(where: { $0.kind != .link }) {
+                        Text(explain("Your files stay on your phone. Only what was read is kept here."))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
+                    }
+                }
+                // ONE control strip: the field hosts the attach button and
+                // the person on its left and the CTA on its right, rather
+                // than the box stacking a second toolbar under the field's
+                // own (which is what it did on its first build).
                 SpeakOrTypeField(text: $situation,
                                  locale: $dictationLocale,
-                                 placeholder: explain("What's coming up?"),
+                                 placeholder: explain("What situation should we build? The more detail, the better."),
                                  showsLocalePicker: true,
                                  lineRange: 1...5,
                                  externalFocus: $situationFocused,
-                                 cardBackground: Color.clear)
-                HStack(spacing: 8) {
-                    attachMenu
-                    if person == nil { partnerChip }
-                    Spacer(minLength: 4)
-                    Button { commit() } label: {
-                        Label(ctaTitle, systemImage: ctaIcon)
-                            .labelStyle(.titleAndIcon)
-                            .font(.body.weight(.semibold))
-                            .padding(.horizontal, 4)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+                                 cardBackground: Color.clear,
+                                 micStyle: .plain,
+                                 leadingControls: AnyView(
+                                    HStack(spacing: 8) {
+                                        attachMenu
+                                        if person == nil { partnerChip }
+                                    }
+                                 ))
             }
-            .padding(14)
+            // WITHOUT this the box is only as wide as its content wants to
+            // be, and every control in the row has an intrinsic width that
+            // moves: the person's name, the dictation language's endonym.
+            // So picking a different person or language visibly resized the
+            // whole card (reported 2026-09-26).
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground)))
             .padding(.horizontal, 12)
-            Text(explain("Files stay where they are on your phone. Only what was read is kept, on this scenario."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 36)
-                .padding(.top, 10)
-                .padding(.bottom, 12)
+            .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
+        .animation(.easeInOut(duration: 0.2), value: situationFocused)
         .scrollDismissesKeyboard(.interactively)
     }
+
+    /// What rolls past the empty box. Written to MODEL the detail the field
+    /// asks for — who, where, what is at stake — rather than to name a
+    /// category, which is the other door's job.
+    static let exampleSituations: [String] = [
+        explain("A final-round interview next Thursday, in English, with the hiring manager who wrote the job ad."),
+        explain("Telling my landlord the heating has been broken for three weeks, and getting a date out of them."),
+        explain("Meeting my partner's parents for the first time over dinner at their place."),
+        explain("Explaining a symptom I've had for a week to a doctor, and asking what the options are."),
+        explain("Asking my manager for a raise in our next one-on-one, with the numbers ready."),
+        explain("Returning something expensive without the receipt, to a clerk who doesn't want to take it."),
+    ]
 
     /// "+" — the three ways to attach. `PhotosPicker` cannot sit inside a
     /// `Menu`, so the photo item flips a flag the `.photosPicker` modifier
@@ -380,6 +442,7 @@ struct ScenarioComposerSheet: View {
                 .foregroundStyle(.primary)
         }
         .accessibilityLabel("Attach material")
+        .fixedSize()
     }
 
     /// Who plays the other side, as one chip. Same picker the Form's section
@@ -387,10 +450,14 @@ struct ScenarioComposerSheet: View {
     private var partnerChip: some View {
         Button { showingPartnerPicker = true } label: {
             HStack(spacing: 6) {
-                partnerAvatar.frame(width: 22, height: 22)
+                // 28, and the avatar is BUILT at 28. Framing the 40pt one
+                // down to 22 didn't shrink the circle, it just cropped the
+                // slot — so the disc drew straight through the pill's edge.
+                partnerAvatar(size: 28)
                 Text(partner?.name ?? chrome("Future self"))
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
+                    .truncationMode(.tail)
             }
             .padding(.leading, 6)
             .padding(.trailing, 12)
@@ -596,8 +663,12 @@ struct ScenarioComposerSheet: View {
         } header: {
             Text("Your scenario")
         } footer: {
-            Text(explain("Build it from a category below, type it, or say it with the mic — then \(ctaTitle) it."))
+            Text(explain("Edit it freely, or tap a breadcrumb to go back — then \(ctaTitle) it."))
         }
+    }
+
+    private var breadcrumbSection: some View {
+        Section { breadcrumb.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)) }
     }
 
     private var breadcrumb: some View {
@@ -713,11 +784,24 @@ struct ScenarioComposerSheet: View {
         }
     }
 
+    /// The end of the drill-down. It prints the assembled situation, but
+    /// READ-ONLY: knowing what is about to be generated is not the same as
+    /// being asked to write it, and this door exists for the learner who
+    /// would rather choose. Changing the words is still possible — the saved
+    /// card reopens this sheet in edit mode, where the field is live.
     private var leafHint: some View {
         Section {
-            Label("Specific enough — \(ctaTitle) it, or tap a breadcrumb to explore more.",
-                  systemImage: "checkmark.circle")
-                .font(.subheadline).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 10) {
+                if !situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(situation)
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Label("Specific enough — \(ctaTitle) it, or tap a breadcrumb to explore more.",
+                      systemImage: "checkmark.circle")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
         }
     }
 
@@ -851,7 +935,7 @@ struct ScenarioComposerSheet: View {
         Section {
             Button { showingPartnerPicker = true } label: {
                 HStack(spacing: 12) {
-                    partnerAvatar
+                    partnerAvatar()
                     VStack(alignment: .leading, spacing: 1) {
                         Text(partner?.name ?? chrome("Future self"))
                             .font(.body.weight(.medium))
@@ -874,17 +958,22 @@ struct ScenarioComposerSheet: View {
         }
     }
 
-    @ViewBuilder private var partnerAvatar: some View {
+    @ViewBuilder private func partnerAvatar(size: CGFloat = 40) -> some View {
         ZStack {
-            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
+            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: size, height: size)
             if let p = partner, CounterpartPhotoStore.shared.hasPhoto(p.id) {
-                PersonBubble(name: p.name, photoId: p.id, size: 40)
+                PersonBubble(name: p.name, photoId: p.id, size: size)
             } else if let p = partner {
-                Text(Books.initials(p.name)).font(.caption.weight(.semibold)).foregroundStyle(.tint)
+                Text(Books.initials(p.name))
+                    .font(.system(size: size * 0.34, weight: .semibold))
+                    .foregroundStyle(.tint)
             } else {
-                Image(systemName: "waveform").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
+                Image(systemName: "waveform")
+                    .font(.system(size: size * 0.4, weight: .semibold))
+                    .foregroundStyle(.tint)
             }
         }
+        .frame(width: size, height: size)
     }
 
     private var partnerCaption: String {

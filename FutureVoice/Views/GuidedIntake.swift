@@ -197,6 +197,19 @@ struct SpeakOrTypeField: View {
     /// the grouped-row color instead — on light mode the default is the SAME
     /// gray as the Form's page background and the card disappears.
     var cardBackground = Color(.secondarySystemBackground)
+    /// How loud the mic button is. `.prominent` (the default) is the filled
+    /// accent circle the intake cards want, where dictating IS the card's
+    /// action. `.plain` is for a host whose own primary button shares this
+    /// row — two filled accent shapes side by side read as two primaries.
+    enum MicStyle { case prominent, plain }
+    var micStyle: MicStyle = .prominent
+    /// Controls the HOST puts INSIDE this field's control row. Without them
+    /// a host with its own buttons stacks a second toolbar under the field's
+    /// and the card grows two rows of chrome (reported 2026-09-26 on the
+    /// situation box). Passed as `AnyView` rather than @ViewBuilder generics
+    /// so the dozen existing call sites keep working untouched.
+    var leadingControls: AnyView? = nil
+    var trailingControls: AnyView? = nil
 
     @StateObject private var live = LiveTranscriber()
     @FocusState private var internalFocus: Bool
@@ -225,7 +238,10 @@ struct SpeakOrTypeField: View {
                     .allowsHitTesting(!isRecording)
 
                 // Control row — fixed height; contents swap, geometry doesn't.
-                HStack(spacing: 10) {
+                // The host's own buttons live in HERE, not in a second row
+                // underneath, so the card carries one strip of chrome.
+                HStack(spacing: 8) {
+                    leadingControls
                     if isRecording {
                         HStack(spacing: 5) {
                             Circle().fill(.red).frame(width: 7, height: 7)
@@ -233,10 +249,15 @@ struct SpeakOrTypeField: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    } else if showsLocalePicker, dictationChoices.count > 1 {
+                        .lineLimit(1)
+                    }
+                    Spacer(minLength: 4)
+                    if !isRecording, showsLocalePicker, dictationChoices.count > 1 {
                         // A menu, not a segmented control: the list is every
                         // language the device can hear, which never fits in
-                        // two slots.
+                        // two slots. It wears the same fill as the buttons
+                        // beside it — bare, it read as loose text floating in
+                        // the card rather than a control.
                         Picker("Language", selection: $locale) {
                             ForEach(dictationChoices, id: \.self) { code in
                                 Text(LanguageCatalog.endonym(code)).tag(code)
@@ -244,15 +265,19 @@ struct SpeakOrTypeField: View {
                         }
                         .pickerStyle(.menu)
                         .labelsHidden()
+                        .font(.subheadline)
                         .tint(.secondary)
+                        .padding(.horizontal, 4)
+                        .frame(height: 36)
+                        .background(Capsule().fill(Color(.tertiarySystemFill)))
+                        .fixedSize()
                     }
-                    Spacer()
                     Button {
                         Task { await toggleMic() }
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(isRecording ? Color.red : Color.accentColor)
+                                .fill(micFill)
                                 .frame(width: 40, height: 40)
                                 .scaleEffect(isRecording ? 1.08 : 1.0)
                                 .animation(
@@ -263,11 +288,12 @@ struct SpeakOrTypeField: View {
                                 )
                             Image(systemName: isRecording ? "stop.fill" : "mic.fill")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color(.systemBackground))
+                                .foregroundStyle(micGlyph)
                         }
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(isRecording ? "Stop dictation" : "Dictate")
+                    trailingControls
                 }
                 .frame(height: 44)
                 .padding(.horizontal, 14)
@@ -293,6 +319,16 @@ struct SpeakOrTypeField: View {
         .onDisappear {
             if isRecording { commitRecordingNow() }
         }
+    }
+
+    private var micFill: Color {
+        if isRecording { return .red }
+        return micStyle == .prominent ? Color.accentColor : Color(.tertiarySystemFill)
+    }
+
+    private var micGlyph: Color {
+        if isRecording || micStyle == .prominent { return Color(.systemBackground) }
+        return .primary
     }
 
     // MARK: Recording

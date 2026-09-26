@@ -7222,6 +7222,46 @@
         }
       }
     },
+    "A final-round interview next Thursday, in English, with the hiring manager who wrote the job ad." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrevista final el jueves que viene, en inglés, con quien escribió la oferta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entretien final jeudi prochain, en anglais, avec le manager qui a écrit l’annonce."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来週木曜の最終面接。求人票を書いた採用マネージャーと英語で。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 주 목요일 최종 면접. 공고를 쓴 하이어링 매니저와 영어로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下周四的最后一轮面试，用英文，对方是写那份招聘启事的用人主管。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下週四的最後一輪面試，用英文，對方是寫那份徵才公告的用人主管。"
+          }
+        }
+      }
+    },
     "A friend joined with your code" : {
       "localizations" : {
         "es" : {
@@ -11532,6 +11572,46 @@
         }
       }
     },
+    "Asking my manager for a raise in our next one-on-one, with the numbers ready." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedirle un aumento a mi jefa en el próximo uno a uno, con los números preparados."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demander une augmentation à mon manager au prochain point individuel, chiffres à l’appui."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の1on1で上司に昇給を切り出す。根拠になる数字を用意して。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 1:1에서 팀장에게 연봉 인상을 요청하기. 근거가 될 숫자를 들고."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在下次一对一时向主管提加薪，把数字都准备好。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在下次一對一時向主管提加薪，把數字都準備好。"
+          }
+        }
+      }
+    },
     "Assessed %@ — a while back. Your next talks feed a fresh assessment." : {
       "localizations" : {
         "de" : {
@@ -13428,6 +13508,7 @@
       }
     },
     "Build it from a category below, type it, or say it with the mic — then %@ it." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -22624,6 +22705,46 @@
         }
       }
     },
+    "Edit it freely, or tap a breadcrumb to go back — then %@ it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edítalo a tu gusto, o toca una miga de pan para volver. Luego, %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifie-le librement, ou touche un fil d’Ariane pour revenir. Ensuite, %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由に書き直しても、上のステップを押して戻ってもかまいません。そのあと %@ してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유롭게 고쳐도 되고, 위의 단계를 눌러 되돌아가도 돼요. 그다음 %@ 하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以自由修改，也可以点上面的步骤返回。然后再%@。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以自由修改，也可以點上面的步驟返回。然後再%@。"
+          }
+        }
+      }
+    },
     "Edit persona" : {
       "localizations" : {
         "de" : {
@@ -24514,6 +24635,46 @@
         }
       }
     },
+    "Example situations" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ejemplos de situaciones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exemples de situations"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シチュエーションの例"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황 예시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境示例"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境範例"
+          }
+        }
+      }
+    },
     "Examples" : {
       "localizations" : {
         "de" : {
@@ -24694,6 +24855,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用我的語言解釋"
+          }
+        }
+      }
+    },
+    "Explaining a symptom I've had for a week to a doctor, and asking what the options are." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explicarle a un médico un síntoma que llevo una semana teniendo y preguntar qué opciones hay."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expliquer à un médecin un symptôme que j’ai depuis une semaine et demander les options."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一週間続いている症状を医師に説明して、どんな選択肢があるか聞く。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일째 있는 증상을 의사에게 설명하고, 어떤 방법이 있는지 물어보기."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向医生说明持续一周的症状，并且问清楚有哪些选择。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向醫生說明持續一週的症狀，並且問清楚有哪些選擇。"
           }
         }
       }
@@ -26055,6 +26256,7 @@
       }
     },
     "Files stay where they are on your phone. Only what was read is kept, on this scenario." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -28663,6 +28865,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "詞彙解說"
+          }
+        }
+      }
+    },
+    "Go through it before it happens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pásalo una vez antes de que pase"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis-le une fois avant que ça arrive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その場面を、先に一度くぐってみる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그 일을 미리 한 번 겪어 보세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在事情发生前先走一遍"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在事情發生前先走一遍"
           }
         }
       }
@@ -38735,6 +38977,46 @@
         }
       }
     },
+    "Meeting my partner's parents for the first time over dinner at their place." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conocer a los padres de mi pareja por primera vez, cenando en su casa."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencontrer les parents de mon/ma partenaire pour la première fois, à dîner chez eux."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恋人のご両親に初めて会う日。ご実家での夕食の席で。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "애인의 부모님을 처음 뵙는 자리. 그 집에서 저녁을 먹으면서."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次见伴侣的父母，在他们家吃晚餐。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次見伴侶的父母，在他們家吃晚餐。"
+          }
+        }
+      }
+    },
     "Met on nawana" : {
       "comment" : "Relationship string for a counterpart that was met on nawana.",
       "isCommentAutoGenerated" : true,
@@ -45429,6 +45711,47 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "專為這個情境寫的一段對話。裡面的單字、用語和你的台詞會變成檢查清單。生成一次，就是你的複習本。"
+          }
+        }
+      }
+    },
+    "One line is enough. Tap ＋ to bring the posting, the listing, your CV — whatever the real thing comes with." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con una línea basta. Toca ＋ para traer la oferta, el anuncio, tu CV: lo que venga con la situación real."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une ligne suffit. Touche ＋ pour apporter l’offre, l’annonce, ton CV — ce qui accompagne la vraie situation."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ひとことで大丈夫。求人票や履歴書など、実際についてくるものがあれば ＋ から追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 줄이면 돼요. 채용 공고나 이력서처럼 딸려 있는 게 있으면 ＋로 가져오세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一句话就够。有招聘启事、房源信息或简历之类的东西，就用 ＋ 一起带进来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一句話就夠。有徵才公告、房源資訊或履歷之類的東西，就用 ＋ 一起帶進來。"
           }
         }
       }
@@ -54825,6 +55148,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重試"
+          }
+        }
+      }
+    },
+    "Returning something expensive without the receipt, to a clerk who doesn't want to take it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Devolver algo caro sin el recibo, a un dependiente que no quiere aceptarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapporter un article cher sans le ticket, face à un vendeur qui n’en veut pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レシートなしで高い買い物を返品する。店員は受け付けたくなさそう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "영수증 없이 비싼 물건을 환불받기. 점원은 받아 주기 싫어하는 상황."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有收据要退一件很贵的东西，店员摆明不想收。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有收據要退一件很貴的東西，店員擺明不想收。"
           }
         }
       }
@@ -66337,6 +66700,46 @@
         }
       }
     },
+    "Telling my landlord the heating has been broken for three weeks, and getting a date out of them." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decirle al casero que la calefacción lleva tres semanas rota y sacarle una fecha."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dire au propriétaire que le chauffage est en panne depuis trois semaines et obtenir une date."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大家さんに暖房が三週間壊れたままだと伝えて、直す日を約束させる。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집주인에게 보일러가 3주째 고장이라고 말하고, 언제 고쳐 줄지 날짜를 받아 내기."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟房东说暖气坏了三个星期了，并且问出确切的维修日期。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟房東說暖氣壞了三個星期了，並且問出確切的修繕日期。"
+          }
+        }
+      }
+    },
     "Terms of Use" : {
       "localizations" : {
         "es" : {
@@ -68352,6 +68755,46 @@
         }
       }
     },
+    "The more you write, the closer the scene lands. Tap ＋ to bring the posting, the listing, your CV." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuanto más escribas, más se acercará la escena. Toca ＋ para traer la oferta, el anuncio, tu CV."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus tu en écris, plus la scène tombe juste. Touche ＋ pour apporter l’offre, l’annonce, ton CV."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳しく書くほど、シーンが本番に近づきます。求人票や履歴書があれば ＋ から追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자세히 적을수록 장면이 실제에 가까워져요. 공고나 이력서가 있으면 ＋로 가져오세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写得越细，场景就越贴近真实。有招聘启事或简历，就用 ＋ 带进来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寫得越細，場景就越貼近真實。有徵才公告或履歷，就用 ＋ 帶進來。"
+          }
+        }
+      }
+    },
     "The most ordinary everyday words. One-clause sentences, rarely two." : {
       "localizations" : {
         "es" : {
@@ -68704,6 +69147,7 @@
       }
     },
     "The real thing coming up. One line — and attach a link or a file if you have one." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -76598,6 +77042,46 @@
         }
       }
     },
+    "What situation should we build? The more detail, the better." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué situación montamos? Cuanto más detalle, mejor."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelle situation on construit ? Plus c’est détaillé, mieux c’est."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どんな場面をつくりましょう？ 詳しいほどいいです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떤 상황을 만들어 볼까요? 자세할수록 좋아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要做哪一个情境？写得越详细越好。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要做哪一個情境？寫得越詳細越好。"
+          }
+        }
+      }
+    },
     "What strangers can see" : {
       "localizations" : {
         "es" : {
@@ -77369,6 +77853,48 @@
       }
     },
     "What's coming up?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué se te viene?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qu’est-ce qui t’attend ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どんな場面がある？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떤 일이 있어요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有什么事要发生？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有什麼事要發生？"
+          }
+        }
+      }
+    },
+    "What’s coming up?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -84192,6 +84718,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的意見會直接送到做這個 App 的人手上。"
+          }
+        }
+      }
+    },
+    "Your files stay on your phone. Only what was read is kept here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus archivos se quedan en tu teléfono. Aquí solo se guarda lo leído."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes fichiers restent sur ton téléphone. Ici, seul ce qui a été lu est conservé."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルはスマホに残ったままです。アプリには読み取った内容だけが残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "파일은 폰에 그대로 있어요. 앱에는 읽은 내용만 남아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件留在你的手机里。这里只保留读到的内容。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "檔案留在你的手機裡。這裡只保留讀到的內容。"
           }
         }
       }
