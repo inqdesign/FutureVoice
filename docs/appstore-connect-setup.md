@@ -90,6 +90,7 @@
 | Display Name — English | `Plus` |
 | Display Name — 한국어 | `플러스` |
 | Description — English | `600 min of talk, 30 scenes a month` |
+| **Price — USD** | **$24.99** (raised 2026-09-26 from $19.99; pick *preserve the current price for existing subscribers*). KRW stays ₩29,000 by hand; EUR follows the USD base. |
 | Description — 한국어 | `한 달 통화 600분 · 상황연습 30개` |
 
 ### ④ Plus Annual

@@ -29,15 +29,21 @@ const TEST_IDS = new Set([
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
 // here and nowhere else in this pipeline.
+// The US list price, which is what the margin table is computed in. Keep it
+// equal to App Store Connect — nothing reads ASC from here, so a stale figure
+// silently mis-states every margin on the page. Plus went to $24.99 on
+// 2026-09-26; the annuals are off sale (`20260926160000`) and stay listed
+// only so a historical month still prices.
 const MONTHLY_PRICE: Record<string, number> = {
   light_monthly: 9.99,
   light_annual: 79.99 / 12,
-  plus_monthly: 19.99,
+  plus_monthly: 24.99,
   plus_annual: 143.99 / 12,
 };
 // Credits per character come from the model, not the plan: multilingual_v2
-// (the fidelity model, used by Watch scenes and the onboarding greeting) bills
-// 1.0 credit/char, turbo and flash bill 0.5.
+// bills 1.0 credit/char, turbo and flash 0.5. Since 2026-09-26 every
+// clone-voice surface is turbo (`ElevenLabsClient.cloneModelId`), so the
+// fidelity rate applies to history only.
 const CREDITS_PER_CHAR = { fidelity: 1.0, conversation: 0.5 };
 
 // The same catalog per storefront (docs/launch-billing.md §1 — ASC values,

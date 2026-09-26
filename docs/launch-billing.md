@@ -62,7 +62,7 @@ Korea's ₩0→정가 consent sheet. EL burn was ~$89/mo against ~$59/mo net.
 | Plan | Pool | Full-use cost | USD | KRW | EUR | Margin at full use US / KR / EU |
 |------|------|---------------|-----|-----|-----|---------------------------------|
 | **Light monthly** | 150 min + 10 scenes | $4.5 + $1.2 = $5.7 | **$9.99** (unchanged) | ₩15,000 | €9.99 | **33% / 31% / 27%** |
-| **Plus monthly** | 600 min + 30 scenes | $18.0 + $3.6 = $21.6 | **$19.99** (unchanged) | ₩29,000 | €22.99 | **−$4.6 / −$5.6 / −$3.7** |
+| **Plus monthly** | 600 min + 30 scenes | $18.2 + $2.2 = $20.4 | **$24.99** (raised 2026-09-26) | ₩29,000 | €28.99 (auto) | **+$0.8 / −$4.4 / +$2.1** |
 | +100 min (consumable `talk_100`) — **not on sale yet** | 100 min | $3.0 | $4.99 | ₩7,500 | €4.99 | 29% / 27% / 25% |
 | ~~Light annual~~ **off sale** | same pool | $5.7/mo | $79.99 | ₩110,000 | €89.99 | −$0.03/mo (break-even) |
 | ~~Plus annual~~ **off sale** | same pool | $21.6/mo | $143.99 | ₩209,000 | €149.99 | **−$11.40/mo = −$137/yr** |
@@ -76,8 +76,24 @@ Korea's ₩0→정가 consent sheet. EL burn was ~$89/mo against ~$59/mo net.
   does hit it has Plus to move to, which is what makes ten defensible on the
   entry tier and not on the top one. (An earlier pass cut Light to 100 min +
   20 scenes; `20260926150000` is the correction.)
-- **Plus 600 min = 20 minutes a day, and it loses $4.6 fully used.** Written
-  down rather than argued away: $16.99 of net buys 446 minutes beside 30
+- **The USD price went to $24.99 on 2026-09-26, and KRW did not.** The
+  dollar was the cheapest storefront in real terms — ₩29,000 is $20.7 gross
+  and €22.99 is $25.1, against $19.99 — while the US is the market with the
+  most room ($30 Duolingo Max) and the fewest people to upset: **3 of the 24
+  paying accounts are on USD, against 18 in Korea.** Korea keeps ₩29,000
+  because Speak anchored that number and because the ₩0→정가 consent sheet
+  ([[korea-trial-needs-consent]]) is a real churn mechanism there. EUR is
+  auto-generated from the USD base, so it follows to ~€28.99 — which is the
+  right direction anyway: the EU nets the most per euro and was at −$2.5.
+- **This does NOT fix the economics, and that is the thing to hold on to.**
+  At 600 min + 30 scenes Plus is now +$0.8 in the US and still **−$4.4 in
+  Korea**, where nearly everyone is. The number that works in every
+  storefront at today's prices is **450 min** (US +$1.1, KR +$0.1, EU +$2.0;
+  with the USD rise, US +$5.4). ₩29,000 net buys 455 talk minutes beside 30
+  scenes — that is the whole arithmetic. Either the Korean pool comes down
+  to ~450, or KRW goes to ₩36,000 (−$0.6) / ₩39,000 (+$1.1).
+- **Plus 600 min = 20 minutes a day, and fully used it still loses money
+  outside the US.** Written down rather than argued away: $16.99 of net buys 446 minutes beside 30
   scenes, and the founder chose the size over the price (no price rise, and
   300 min was judged too small). The exposure is bounded and tiny today —
   three live Plus rows, the heaviest of which talked 108 minutes and played
