@@ -48616,6 +48616,7 @@
       }
     },
     "Pick an area to go one step deeper — or type your own above." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -48657,6 +48658,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選一個領域再往下一層，或在上面直接輸入。"
+          }
+        }
+      }
+    },
+    "Pick an area to go one step deeper." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige un área para bajar un nivel más."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis un domaine pour descendre d’un cran."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一段くわしくする領域を選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 단계 더 들어갈 영역을 고르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选一个领域，再往下一层。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選一個領域，再往下一層。"
           }
         }
       }
@@ -65631,6 +65672,7 @@
       }
     },
     "Tap one to fill your scenario above, then edit it freely." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -65852,6 +65894,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "點一個人，就能用對方的聲音建立情境。「找人」會打開共享的人物池，是用預設聲音對話的陌生人。"
+          }
+        }
+      }
+    },
+    "Tap the one closest to what you're going in to do." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca la que más se parezca a lo que vas a hacer."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche celle qui ressemble le plus à ce que tu vas faire."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これからすることに一番近いものを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하려는 일에 가장 가까운 걸 누르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点一个最接近你要做的事。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一個最接近你要做的事。"
           }
         }
       }

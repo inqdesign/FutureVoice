@@ -667,8 +667,17 @@ struct ScenarioComposerSheet: View {
         }
     }
 
+    /// The path, floating — no card behind it. A breadcrumb is where you
+    /// ARE, not content, and a grouped-list row gave it a full white cell
+    /// with a section's worth of air above it, which put a big empty box
+    /// between the title bar and the chips.
     private var breadcrumbSection: some View {
-        Section { breadcrumb.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)) }
+        Section {
+            breadcrumb
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
     }
 
     private var breadcrumb: some View {
@@ -779,8 +788,8 @@ struct ScenarioComposerSheet: View {
             }
         } footer: {
             Text(path.count == 1
-                 ? "Pick an area to go one step deeper — or type your own above."
-                 : "Tap one to fill your scenario above, then edit it freely.")
+                 ? "Pick an area to go one step deeper."
+                 : "Tap the one closest to what you're going in to do.")
         }
     }
 
