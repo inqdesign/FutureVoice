@@ -85,13 +85,22 @@ Korea's ₩0→정가 consent sheet. EL burn was ~$89/mo against ~$59/mo net.
   ([[korea-trial-needs-consent]]) is a real churn mechanism there. EUR is
   auto-generated from the USD base, so it follows to ~€28.99 — which is the
   right direction anyway: the EU nets the most per euro and was at −$2.5.
-- **This does NOT fix the economics, and that is the thing to hold on to.**
-  At 600 min + 30 scenes Plus is now +$0.8 in the US and still **−$4.4 in
-  Korea**, where nearly everyone is. The number that works in every
-  storefront at today's prices is **450 min** (US +$1.1, KR +$0.1, EU +$2.0;
-  with the USD rise, US +$5.4). ₩29,000 net buys 455 talk minutes beside 30
-  scenes — that is the whole arithmetic. Either the Korean pool comes down
-  to ~450, or KRW goes to ₩36,000 (−$0.6) / ₩39,000 (+$1.1).
+- **Korea stays under water at full use, and that is a decision, not an
+  oversight** (founder, 2026-09-26, asked twice). At 600 min + 30 scenes
+  Plus is +$0.8 in the US and **−$4.4 in Korea**, where 18 of the 24 paying
+  accounts are. ₩29,000 of net buys 455 talk minutes beside 30 scenes — that
+  is the whole arithmetic, and the two ways out were both declined: cutting
+  the Korean pool to ~450 min (US +$1.1, KR +$0.1, EU +$2.0) or raising KRW
+  to ₩36,000 (−$0.6) / ₩39,000 (+$1.1). The second would put Apple's
+  ₩0→정가 consent sheet in front of all 18 of them, which is the mechanism
+  that killed the Korean trials, so it is the more expensive of the two by a
+  wide margin. **What makes the bet survivable**: the loss is bounded at
+  −$4.4 per maxed Korean account (so the whole downside if all 18 maxed out
+  is about −$80/month), and nobody is close — the heaviest paying account
+  projects to 232 min per 30 days. **The trigger to revisit** is a Korean
+  Plus account crossing ~450 min in a billing period; watch it in the
+  admin's per-user cost table, and when it happens the answer is the pool
+  size, not the price.
 - **Plus 600 min = 20 minutes a day, and fully used it still loses money
   outside the US.** Written down rather than argued away: $16.99 of net buys 446 minutes beside 30
   scenes, and the founder chose the size over the price (no price rise, and
