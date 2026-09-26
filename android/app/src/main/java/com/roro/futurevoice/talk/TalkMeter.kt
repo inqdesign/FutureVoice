@@ -57,6 +57,15 @@ class TalkMeter(
     /** Polled once a second: is this second part of the conversation? */
     var isBillable: (() -> Boolean)? = null
 
+    /**
+     * Billable seconds so far in this call — what the call's own clock
+     * shows. A wall clock ran while the learner sat thinking about their
+     * answer, so the title counted time nobody was charged for and nobody
+     * spent talking (reported 2026-09-19).
+     */
+    @Volatile var billedSeconds: Long = 0L
+        private set
+
     /** Fired once when the server says the talking is over (402). */
     var onWallHit: ((EdgeError) -> Unit)? = null
 
@@ -84,6 +93,7 @@ class TalkMeter(
 
     fun start(sessionId: String, language: String) {
         stop()
+        billedSeconds = 0L
         sessionKey = sessionId
         this.language = language.lowercase()
         job = scope.launch {
@@ -100,6 +110,7 @@ class TalkMeter(
                 lastPoll = now
                 if (!(isBillable?.invoke() ?: true)) continue
                 live += elapsed
+                billedSeconds += elapsed.toLong()
                 if (live < TICK_SECONDS) continue
                 live -= TICK_SECONDS
                 tick(seconds = TICK_SECONDS, label = i.toString())

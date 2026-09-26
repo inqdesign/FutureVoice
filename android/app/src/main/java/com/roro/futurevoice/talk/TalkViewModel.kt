@@ -169,22 +169,19 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private var learnerSpokeThisCall = false
 
-    /** When the CALL clock started: the learner's first speech, not connect. */
-    private var callStartedAt: Long? = null
-
-    /** Talk time banked across pauses — a pause stops the clock. */
-    private var bankedElapsedMs: Long = 0
-
     /**
-     * How long this call has been up, phone-style. Zero before it starts and
-     * once it is wrapped up; it keeps running while paused, because a call
-     * you put down is still a call you are on.
+     * This call's TALK time, phone-style: the seconds the meter counts — the
+     * fluent self speaking, a reply being written, the learner talking. It
+     * stands still while they think of an answer and while the call is
+     * paused, because a clock that runs through those says the call cost
+     * more than it did (iOS `a422d2c`).
+     *
+     * Readable after the call ends, and cleared only by the next call's
+     * start: the feedback ask and the rating ask both read it on the way
+     * out. It used to return 0 the moment the call was wrapped up, which is
+     * why neither of them could ever fire.
      */
-    fun elapsedSeconds(): Long {
-        if (_state.value.phase == TalkPhase.ENDED) return 0L
-        val start = callStartedAt ?: return bankedElapsedMs / 1000
-        return (bankedElapsedMs + (System.currentTimeMillis() - start)) / 1000
-    }
+    fun elapsedSeconds(): Long = meter.billedSeconds
 
     /** Reconnect after a failed reply — the learner spoke and heard nothing. */
     fun retry() {
@@ -703,7 +700,6 @@ class TalkViewModel(context: Context) : ViewModel() {
             when (_state.value.phase) {
                 TalkPhase.PAUSED -> resumeRealtime()
                 TalkPhase.LISTENING, TalkPhase.THINKING, TalkPhase.SPEAKING -> {
-                    bankCallClock()
                     realtime.hangUp(); flushRealtimeReply()
                     _state.update { it.copy(phase = TalkPhase.PAUSED, partial = "", level = 0f) }
                     config?.let { updateCallNotification(it, TalkPhase.PAUSED) }
@@ -726,7 +722,6 @@ class TalkViewModel(context: Context) : ViewModel() {
      * Every "stop" lands here: the tap and the idle watchdog.
      */
     private fun pauseCall(forIdle: Boolean) {
-        bankCallClock()
         cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
         // Whatever the partial held is discarded, as on iOS — a half-sentence
@@ -740,7 +735,6 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun resume() {
         // The transcript tap and the lock-screen play both land here; on the
         // realtime path picking the call back up is a reconnect.
-        unbankCallClock()
         if (REALTIME) { if (_state.value.phase == TalkPhase.PAUSED) resumeRealtime(); return }
         if (_state.value.phase != TalkPhase.PAUSED) return
         lastActivityAt = System.currentTimeMillis()   // a tap is someone being here
@@ -1084,23 +1078,10 @@ class TalkViewModel(context: Context) : ViewModel() {
      * speaking counts; otherwise only a learner demonstrably talking into the
      * mic does. Silence — a phone put down, a room's babble — bills nothing.
      */
-    /** A pause stops the clock; what it ran is kept for the resume. */
-    private fun bankCallClock() {
-        val start = callStartedAt ?: return
-        bankedElapsedMs += System.currentTimeMillis() - start
-        callStartedAt = null
-    }
-
-    /** Picking the call back up continues the clock where it stopped. */
-    private fun unbankCallClock() {
-        if (learnerSpokeThisCall && callStartedAt == null) callStartedAt = System.currentTimeMillis()
-    }
-
-    /** First speech of the call: starts the clock and opens the meter. */
+    /** First speech of the call — what opens the meter. */
     private fun markLearnerSpoke() {
         if (learnerSpokeThisCall) return
         learnerSpokeThisCall = true
-        if (callStartedAt == null) callStartedAt = System.currentTimeMillis()
     }
 
     private fun isBillableMoment(): Boolean {
