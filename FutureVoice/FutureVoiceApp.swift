@@ -54,6 +54,35 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         SyncBackground.register()
         return true
     }
+
+    /// A silent CloudKit push: the other device changed something. Nothing is
+    /// ever shown — see `SyncPush` — and a push that isn't ours is answered
+    /// `.noData` without touching sync.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any]
+    ) async -> UIBackgroundFetchResult {
+        await SyncPush.handle(userInfo)
+    }
+
+    /// iOS handed us this install's APNs token. CloudKit needs nothing done
+    /// with it — but `push-send` does, and it can only learn it from here.
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        PushTokens.store(deviceToken)
+    }
+
+    /// Worth a record and nothing more: sync keeps working on its own two
+    /// clocks, just without the head start, and nothing the server sends can
+    /// reach this install until the next launch tries again.
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        Analytics.capture("push_register_failed", ["reason": error.localizedDescription])
+    }
 }
 
 @main
@@ -716,6 +745,10 @@ final class AppState: ObservableObject {
             // nothing to sync and no identity to key a zone on.
             let syncUser = change.session.flatMap { $0.user.isAnonymous ? nil : $0.user.id.uuidString }
             SyncEngine.shared.setUser(syncUser)
+            // Every signed-in account gets a token row. Registering asks the
+            // learner nothing — permission is what decides whether a push is
+            // ever drawn — so this is not gated on it.
+            if syncUser != nil { PushTokens.register() } else { PushTokens.forgetUpload() }
             guard let session = change.session else { continue }
             // distinct_id = Supabase user UUID (a random account id, not PII).
             // Only a real account: the onboarding session is anonymous and is

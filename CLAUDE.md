@@ -46,6 +46,54 @@ reasons are the design:
   app open. Every pass is resumable (the index saves per batch), so being cut
   off anywhere costs nothing. Every pass — `enable` included — goes through
   `requestSync`; calling `runSync` directly ran two passes on one index.
+- **The server wakes the other device** (2026-09-25, `SyncPush`). Sync had
+  two clocks and both were the learner's — a foreground pass, and
+  `SyncBackground`'s tasks on iOS's own schedule — so the tablet could only
+  learn about the phone's talk by being picked up, which is the one moment
+  the delay is visible. A **CloudKit zone subscription** is the third, and
+  it is the server's: `CKRecordZoneSubscription` with
+  `shouldSendContentAvailable` only, so it is SILENT — no alert, no badge,
+  no sound, and therefore **no notification permission**; opting into sync
+  can never be the reason a permission sheet appears. The wake runs the
+  same `requestSync` every other trigger runs, `.items` scope (a silent
+  push is granted seconds, and what it is for is that the TALK is here;
+  audio stays with the background tasks). **It is not a guarantee** — iOS
+  drops silent pushes freely — so the foreground pass is still the one that
+  always runs; this only makes it earlier. Three facts to keep: the
+  subscription is **one per ZONE, shared by every device of the account**
+  (a private-database subscription already pushes to all of them, and the
+  zone is in the id because a shared iPad can hold two app accounts); so
+  **turning sync off on one device does NOT delete it** — that device
+  unregisters from APNs instead (`SyncPush.deactivate`), because the
+  learner said nothing about their tablet, and only "Delete from iCloud"
+  speaks for the account; and **a push comes back to the device that caused
+  the change** (CloudKit doesn't exempt the sender), which is left alone —
+  the pull finds its own records, the merge produces nothing, and the pass
+  costs one empty `changes` call, whereas suppressing it would mean
+  guessing which of our own writes a push belongs to. `aps-environment`
+  rides per config (`$(APS_ENVIRONMENT)`), but the SIGNING PROFILE decides —
+  measured: a Release build signed with a development profile comes out
+  `development` whatever the entitlement says, and an archive takes
+  `production` off the distribution profile — so that line documents intent,
+  it is not the switch. The Push Notifications capability is on both App
+  IDs as of 2026-09-25; adding it was what `-allowProvisioningUpdates` was
+  needed for, and `beta.sh`'s API key cannot do it (use
+  `ASC_KEY_ID=none`). It is the app's only SILENT push;
+  everything a learner can read comes from `push-send` (below).
+  **Testing it has three layers and only the first is ours**:
+  `scripts/sync-push-probe.sh` hand-delivers the payload to a booted
+  simulator and `SyncPushTests` pins its shape, because the subscription id
+  sits INSIDE `ck.fet` beside the zone — at the top of `ck`, where anyone
+  would put it, `CKNotification` still returns a zone notification but with
+  a **nil `subscriptionID`**, which reads as "somebody else's push" and is
+  indistinguishable from no push at all. Then the subscription and APNs
+  registration, which need one real device; then delivery, which needs two
+  and is the only layer that says the feature works. A probe against a
+  signed-out install proves nothing: registration only happens once an
+  account has sync ON, so the delegate is never called. Each outcome is an
+  `os.Logger` NOTICE (`subsystem com.roro.futurevoice`, category
+  `sync-push`) — a silent wake draws nothing, and on a device Console.app
+  keeps notice and drops debug.
 - **Nothing a screen waits on includes audio** (same day). `enable()` runs
   an `.items` pass and returns — the second device's "Continue" used to sit
   on "Downloading audio 37 of 412…" until the last file, which is the
@@ -258,6 +306,78 @@ a language school. Rows come from the Supabase table `public_personas`, read ano
 
 Intros are MATERIAL, so they're written in the target language — a persona row serves one `language` and the pool is fetched per `AppState.targetLanguage`. Publishing is gated on intro density (80 chars), not on a privacy toggle: a one-liner can't carry a conversation, and the same bar keeps thin rows out of the pool.
 
+## Push notifications (2026-09-26)
+
+The first thing this app can SAY to someone who isn't holding it. Every
+notification before this was LOCAL — the phone scheduling its own reminders —
+so the app could only ever tell a learner what it already knew when they last
+had it open. Three things it could not say at all, and they are the reason
+this exists: a seat in the Core opened, a trial ends tomorrow, and anything
+the founder needs to tell everyone at once.
+
+- **`push-send` is the only thing that holds the APNs key** (`supabase/functions/push-send`).
+  It signs an ES256 provider token by hand over Web Crypto — the same shape
+  `_shared/apple-jws.ts` verifies Apple's own JWS with, and for the same
+  reason: no library here can do it. The token is cached in module scope for
+  50 minutes, which sits between Apple's two walls (refused if refreshed
+  inside 20 minutes, rejected past 60). `verify_jwt = false`; the caller
+  proves itself with `PUSH_SECRET` in `X-Push-Secret`, and the function
+  refuses everything when that env var is unset — a thing that writes to
+  every learner's lock screen fails closed.
+- **The HOST and the TOPIC are per TOKEN, never global.** A build signed
+  `aps-environment: development` exists only on `api.sandbox.push.apple.com`
+  and a shipped one only on `api.push.apple.com`; the dev bundle id is a
+  different `apns-topic` from the shipped app's. Both are columns on
+  `device_tokens` because the install is the only thing that knows them —
+  and `PushTokens` reads the environment out of the embedded provisioning
+  profile rather than `#if DEBUG`, because the Release scheme run from Xcode
+  is a release build signed for development, which is exactly the
+  configuration used to check prices on a real phone.
+- **A push is CHROME, so it speaks the language the learner PICKED**, never
+  the device's ("UI text has ONE language"). APNs' own `loc-key` would have
+  been the obvious mechanism and is unusable for precisely that reason: it
+  resolves against the app's localization by DEVICE language. So the install
+  reports `app_language` and the sender is handed a `texts` map, picking by
+  that column and falling back to `en`. A caller passing one language is
+  saying "everyone, in these words", which is what a founder writing an
+  announcement by hand means.
+- **`push_sends` makes every sender idempotent**, because all of them run on
+  a schedule and a schedule runs twice. The unique key is
+  (user, kind, dedupe_key) and the row is claimed BEFORE the send, so a
+  failure is not retried: a notification nobody can see twice is worth more
+  than one that might arrive twice. It is a ledger, not a queue — nothing
+  reads it to decide what to say next.
+- **410 and BadDeviceToken are the ONLY things that delete a token.** An
+  install that was deleted or reinstalled is reaped by Apple's own answer;
+  nothing else prunes, and a signed-out device keeps its row (a shared iPad's
+  other account may still want it).
+- **Registering is not permission.** `PushTokens.register()` runs for every
+  signed-in account and asks the learner nothing — a device token is not
+  consent, and `UNUserNotificationCenter` is what decides whether anything is
+  ever drawn. So a learner who has refused notifications still has a row,
+  which is cheaper than having no way to reach them the day they change their
+  mind. The consequence to remember: **Apple accepts and delivers a push to
+  an unauthorized install and iOS silently discards it** — `sent: 1` with no
+  failures and nothing on screen is the signature of missing permission, and
+  an app that has never ASKED does not even appear in Settings → Notifications,
+  so it cannot be granted by hand either. Today permission is only ever
+  requested by the reminder flows (`ReviewNotifications`, `TrialReminder`,
+  the daily call), which means a learner who enabled none of them can never
+  be reached. That gap is open.
+- **Sync must never unregister.** `SyncPush.deactivate` called
+  `unregisterForRemoteNotifications()` until this shipped, which would have
+  meant switching off an iCloud setting silently killed the Core's arrivals,
+  billing notices and announcements. Sync's wakes stop because `handle` drops
+  them when sync is off; that was always the real gate.
+- **Announcements are `scripts/push-broadcast.sh`, and it is a DRY RUN by
+  default.** The text is the founder's — the script never composes a
+  sentence — and `--send` is what delivers it. A push cannot be recalled, so
+  the flag is the whole point. `PUSH_SECRET` lives outside the repo.
+- Deliberately NOT here: anything the phone can schedule itself. The daily
+  call stays AlarmKit (it has to ring through silent mode, which no push can
+  do) and review reminders stay local (the phone knows when a card is due; a
+  push would be a round trip to say something already on the device).
+
 ## The daily call (habit anchor)
 
 Nobody opens a language app because a streak asks them to; they answer a phone that rings. Korean 전화영어 runs on exactly that, and its biggest churn reason is the embarrassment of stumbling in front of a stranger — here the caller IS the learner, so only the schedule's pull is left. Opt-in in Me → Call (`DailyCallStore.isEnabled`, default 08:00).
@@ -391,9 +511,9 @@ yet; add one here, not in the Core.
   comes from `core_my_progress()`; `core_daily_activity` is REVOKED from
   clients because it would expose everyone's talk time.
 - **Arrivals are public, departures are NOT** — the `core_events` read policy
-  filters `kind = 'left'`, so nobody can work out whose seat they took. There
-  is no push infrastructure, so `CoreClubService.announceArrivals()` polls on
-  foreground and posts a quiet LOCAL notification (no sound; the daily call is
+  filters `kind = 'left'`, so nobody can work out whose seat they took.
+  `CoreClubService.announceArrivals()` still polls on foreground and posts a
+  quiet LOCAL notification (no sound; the daily call is
   the habit anchor and must not be competed with).
 
 The bar (`core_club_config.daily_bar_seconds`, 240 s since

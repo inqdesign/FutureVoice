@@ -15,12 +15,23 @@ final class InMemorySyncTransport: SyncTransport {
     var records: [String: Stored] = [:]
     private var seq = 0
     var account: SyncAccountState = .available
+    /// Subscription ids the server holds — the silent-push side.
+    var subscriptions: Set<String> = []
     /// Errors to throw on the next call of each operation, once.
     var nextSaveError: SyncTransportError?
     var nextChangesError: SyncTransportError?
     var saves = 0
 
     func accountAvailable() async -> SyncAccountState { account }
+
+    func subscribeToZoneChanges(_ zone: String, subscriptionID: String) async throws {
+        subscriptions.insert(subscriptionID)
+    }
+
+    func unsubscribeFromZoneChanges(subscriptionID: String) async throws {
+        subscriptions.remove(subscriptionID)
+    }
+
     func ensureZone(_ zone: String) async throws { zones.insert(zone) }
     func zoneExists(_ zone: String) async throws -> Bool { zones.contains(zone) }
     func deleteZone(_ zone: String) async throws {
@@ -91,12 +102,16 @@ final class SyncTests: XCTestCase {
         try await super.setUp()
         UserDefaults.standard.set(["en"], forKey: LanguageScope.enrolledDefaultsKey)
         SyncStore.setEnabled(true, userId: user)
+        // Persisted per account, so one test's subscription would make the
+        // next one's `activate` a no-op.
+        SyncStore.setSubscribedToPush(false, userId: user)
     }
 
     override func tearDown() async throws {
         SyncFiles.documentsOverride = nil
         for root in roots { try? FileManager.default.removeItem(at: root) }
         SyncStore.setEnabled(false, userId: user)
+        SyncStore.setSubscribedToPush(false, userId: user)
         try await super.tearDown()
     }
 
@@ -244,6 +259,48 @@ final class SyncTests: XCTestCase {
         let name = SyncRecord.recordName(kind: .vocabRecord, lang: "ko", key: "김치찌개")
         XCTAssertTrue(name.allSatisfy { $0.isASCII })
         XCTAssertLessThan(name.count, 255)
+    }
+
+    // MARK: - Silent push
+
+    /// `activate` subscribes off the call, so the assertion has to wait for
+    /// it rather than read straight after `enable`.
+    private func eventually(_ condition: () -> Bool, _ message: String) async {
+        for _ in 0..<100 {
+            if condition() { return }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail(message)
+    }
+
+    func testEnablingSubscribesTheZoneToSilentPushes() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        try await a.engine.enable()
+        await eventually({ cloud.subscriptions.contains("changes-nawana-\(self.user)") },
+                         "enable must subscribe the account's own zone")
+    }
+
+    /// One device turning sync off says nothing about the learner's other
+    /// device, and the subscription is the ACCOUNT's — dropping it here would
+    /// quietly stop the tablet being woken too.
+    func testTurningSyncOffLeavesTheAccountsSubscriptionAlone() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        try await a.engine.enable()
+        await eventually({ !cloud.subscriptions.isEmpty }, "expected a subscription")
+        a.engine.disable()
+        XCTAssertEqual(cloud.subscriptions.count, 1)
+    }
+
+    /// "Delete from iCloud" is the one caller that speaks for every device.
+    func testDeletingFromCloudRemovesTheSubscription() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        try await a.engine.enable()
+        await eventually({ !cloud.subscriptions.isEmpty }, "expected a subscription")
+        try await a.engine.deleteFromCloud()
+        XCTAssertTrue(cloud.subscriptions.isEmpty)
     }
 
     // MARK: - Two devices

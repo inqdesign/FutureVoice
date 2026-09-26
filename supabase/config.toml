@@ -512,6 +512,15 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/purge-voice-originals/index.ts"
 
+[functions.push-send]
+enabled = true
+# Called by pg_cron and by the founder's own script, neither of which has a
+# Supabase JWT — authenticity is the PUSH_SECRET header checked inside, which
+# refuses everything when the env var is unset. It holds the APNs key, so it
+# fails closed the same way the cleanup does.
+verify_jwt = false
+entrypoint = "./functions/push-send/index.ts"
+
 [functions.cleanup-anonymous-voices]
 enabled = true
 # Called by pg_cron, which has no Supabase JWT to send — authenticity is the

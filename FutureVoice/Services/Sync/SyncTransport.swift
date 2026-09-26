@@ -37,9 +37,27 @@ protocol SyncTransport: AnyObject {
     /// Several full records in one round trip, keyed by record name; a name
     /// the server doesn't have is simply absent.
     func fetch(recordNames: [String], in zone: String) async throws -> [String: SyncRecord]
+
+    /// Asks the server to wake this app whenever anything in the zone
+    /// changes, so the other device's talk arrives without waiting for this
+    /// one to be opened. Idempotent: the id is stable, so saving it again
+    /// replaces the subscription rather than adding a second one.
+    func subscribeToZoneChanges(_ zone: String, subscriptionID: String) async throws
+
+    /// Stops those wakes for the whole ACCOUNT — every device of it. Only
+    /// "Delete from iCloud" may call this; a single device turning sync off
+    /// unregisters itself instead (`SyncPush.deactivate`), because the
+    /// subscription is the account's and the other device may still want it.
+    /// A subscription the server hasn't got is not an error.
+    func unsubscribeFromZoneChanges(subscriptionID: String) async throws
 }
 
 extension SyncTransport {
+    /// A transport with no push of its own — the tests' in-memory one — has
+    /// nothing to subscribe to, and the engine must not care which it holds.
+    func subscribeToZoneChanges(_ zone: String, subscriptionID: String) async throws {}
+    func unsubscribeFromZoneChanges(subscriptionID: String) async throws {}
+
     func fetch(recordNames: [String], in zone: String) async throws -> [String: SyncRecord] {
         var out: [String: SyncRecord] = [:]
         for name in recordNames {

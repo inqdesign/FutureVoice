@@ -98,6 +98,47 @@ final class CloudKitTransport: SyncTransport {
         }
     }
 
+    // MARK: - Push subscription
+
+    /// One zone subscription per account. A private-database subscription
+    /// pushes to EVERY device the iCloud account is signed into, so a
+    /// per-device id would only mean N pushes for one change; the id carries
+    /// the zone instead, which is what keeps two app accounts on one shared
+    /// iPad from overwriting each other's subscription.
+    func subscribeToZoneChanges(_ zone: String, subscriptionID: String) async throws {
+        let subscription = CKRecordZoneSubscription(
+            zoneID: zoneID(zone), subscriptionID: subscriptionID)
+        let info = CKSubscription.NotificationInfo()
+        // Silent, and it must stay silent: no alert, no badge, no sound. The
+        // push wakes the app to run a pass and says nothing to the learner —
+        // which is also why sync never has to ask for notification
+        // permission, since a content-available push needs none.
+        info.shouldSendContentAvailable = true
+        subscription.notificationInfo = info
+        do {
+            let result = try await database.modifySubscriptions(
+                saving: [subscription], deleting: [])
+            for (_, r) in result.saveResults { _ = try r.get() }
+        } catch {
+            throw Self.mapped(error)
+        }
+    }
+
+    func unsubscribeFromZoneChanges(subscriptionID: String) async throws {
+        do {
+            let result = try await database.modifySubscriptions(
+                saving: [], deleting: [subscriptionID])
+            for (_, r) in result.deleteResults {
+                if case .failure(let e) = r,
+                   let ck = e as? CKError, ck.code == .unknownItem { continue }
+                _ = try r.get()
+            }
+        } catch {
+            if let ck = error as? CKError, ck.code == .unknownItem { return }
+            throw Self.mapped(error)
+        }
+    }
+
     /// CloudKit defers `.utility` work behind everything else on the device
     /// and the network — measured as a first sync crawling while the
     /// learner watched its progress bar. Every pass here is either watched

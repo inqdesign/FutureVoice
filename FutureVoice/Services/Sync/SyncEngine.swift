@@ -84,6 +84,10 @@ final class SyncEngine: ObservableObject {
     static let itemBatch = 150
     static let blobBatch = 20
 
+    /// How many records a push needs before it is worth an analytics event.
+    /// See the note at the capture in `push`.
+    static let reportPushFrom = 20
+
     init(transport: SyncTransport = CloudKitTransport()) {
         self.transport = transport
     }
@@ -114,6 +118,12 @@ final class SyncEngine: ObservableObject {
         index = SyncIndex(userId: id)
         status = .idle
         refreshCounts()
+        // Re-registers this install with APNs every launch (the token can be
+        // reissued) and re-asks for the zone subscription if it was never
+        // confirmed. Both are cheap and neither blocks the pass below.
+        if let zone = zoneName {
+            SyncPush.activate(zone: zone, userId: id, transport: transport)
+        }
         requestSync(kinds: nil)
     }
 
@@ -173,6 +183,9 @@ final class SyncEngine: ObservableObject {
         SyncStore.setEnabled(true, userId: userId)
         index = SyncIndex(userId: userId)
         status = .idle
+        // The zone exists as of the line above, which is the earliest a
+        // subscription can be attached to it.
+        SyncPush.activate(zone: zone, userId: userId, transport: transport)
         Analytics.capture("sync_enabled")
         // Through the one-pass-at-a-time door: calling `runSync` straight
         // let a foreground pass start beside this one on the same index.
@@ -191,6 +204,10 @@ final class SyncEngine: ObservableObject {
         running = nil
         debounce?.cancel()
         SyncStore.setEnabled(false, userId: userId)
+        // Stops this device being woken. The account's subscription stays —
+        // the learner turned sync off HERE, and their other device may still
+        // be syncing; only "Delete from iCloud" speaks for all of them.
+        SyncPush.deactivate(userId: userId)
         index = nil
         status = .off
         progress = nil
@@ -203,6 +220,11 @@ final class SyncEngine: ObservableObject {
     func deleteFromCloud() async throws {
         guard let zone = zoneName else { return }
         disable()
+        // Before the zone: this is the one caller entitled to speak for every
+        // device of the account, and a subscription whose zone is gone would
+        // otherwise sit on the server pushing nothing.
+        try? await transport.unsubscribeFromZoneChanges(
+            subscriptionID: SyncPush.subscriptionID(for: zone))
         do {
             try await transport.deleteZone(zone)
         } catch let e as SyncTransportError {
@@ -353,7 +375,12 @@ final class SyncEngine: ObservableObject {
             // Deleted from another device, or from Settings → iCloud. Stop,
             // forget the server's tags, keep every local file.
             index?.forgetServer()
-            if let userId { SyncStore.setEnabled(false, userId: userId) }
+            if let userId {
+                SyncStore.setEnabled(false, userId: userId)
+                // Sync is off on this device now, so the wakes have nothing
+                // to run; the subscription went with the zone anyway.
+                SyncPush.deactivate(userId: userId)
+            }
             index = nil
             status = .paused(.zoneMissing)
         case .quotaExceeded:
@@ -670,7 +697,16 @@ final class SyncEngine: ObservableObject {
             if quota { throw SyncTransportError.quotaExceeded }
         }
         index.state.lastPushAt = now
-        Analytics.capture("sync_push", ["records": records.count, "blobs": isBlobPush, "conflicts": conflicts])
+        // A pass per CHANGE is the norm here — a write debounces into its own
+        // pass, and a talk's turn audio is one file per pass — so capturing
+        // every push made the first learner who turned sync on 427 events in a
+        // day (measured 2026-09-26; 363 of them carried a single record). What
+        // a diagnosis actually asks is whether the BIG pushes landed and
+        // whether devices are fighting, so only those are recorded; `sync_error`
+        // is untouched and keeps every failure.
+        if records.count >= Self.reportPushFrom || conflicts {
+            Analytics.capture("sync_push", ["records": records.count, "blobs": isBlobPush, "conflicts": conflicts])
+        }
         return conflicts
     }
 
