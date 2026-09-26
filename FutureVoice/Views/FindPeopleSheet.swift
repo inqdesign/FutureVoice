@@ -184,11 +184,7 @@ struct FindPeopleSheet: View {
                     CounterpartDetailView(counterpart: c).environmentObject(appState)
                 } label: {
                     HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
-                            Text(Books.initials(c.name))
-                                .font(.caption.weight(.semibold)).foregroundStyle(.tint)
-                        }
+                        PersonBubble(name: c.name, photoId: c.id, size: 40)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(c.name).font(.body)
                             Text(c.relationship).font(.caption).foregroundStyle(.secondary)
@@ -347,7 +343,7 @@ struct FindPeopleSheet: View {
 
     private func metRow(_ c: Counterpart) -> some View {
         HStack(spacing: 12) {
-            PersonBubble(name: c.name, size: 44)
+            PersonBubble(name: c.name, photoId: c.id, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(c.name).font(.body.weight(.medium))
@@ -493,7 +489,7 @@ struct FindPersonCard: View {
         List {
             Section {
                 HStack(spacing: 14) {
-                    PersonBubble(name: person.name, size: 64)
+                    PersonBubble(name: person.name, photoId: person.id, size: 64)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(person.name).font(.title3.weight(.semibold))
                         if !person.location.isEmpty {

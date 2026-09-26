@@ -32,6 +32,12 @@ struct SceneWatchView: View {
 
     @State private var generating = false
     @State private var generationError: String?
+    /// True while the scenario's attached material is being read — the
+    /// board (`BriefProgressView`) owns the screen, and the scene is written
+    /// only once the brief is on the scenario. Reading happens once per
+    /// change to the material, never per take.
+    @State private var readingBrief = false
+    @State private var briefProgress = ScenarioBriefEngine.Progress()
     /// True from the moment a streaming generation starts, and kept true for
     /// the life of this view once it succeeds — flipping to the saved-scene
     /// branch after the save would recreate WatchView mid-playback.
@@ -81,6 +87,12 @@ struct SceneWatchView: View {
                     .environmentObject(appState)
             } else if let e = generationError {
                 errorState(e)
+            } else if readingBrief, let s = scenario, let b = s.brief {
+                BriefProgressView(sources: b.sources, progress: briefProgress)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemBackground))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar(.hidden, for: .tabBar)
             } else {
                 loadingState
             }
@@ -127,12 +139,44 @@ struct SceneWatchView: View {
     /// NEW take of the template and absorbs it into the book — the latest
     /// scene plays, study items accumulate, mastery survives.
     private func ensureCurriculum(force: Bool = false) async {
-        guard let s = scenario,
-              awaitingFresh || (s.curriculum?.dialogue ?? []).isEmpty,
+        guard let opened = scenario,
+              awaitingFresh || (opened.curriculum?.dialogue ?? []).isEmpty,
               force || !generating else { return }
         guard !generating else { return }
         generating = true
         defer { generating = false }
+        // Material first. A brief that has sources but no reading yet is
+        // read here, once, with the board on screen; the scene below is
+        // then written FROM it. A failed reading is the error state (Try
+        // again reruns both), never a scene quietly written without the
+        // material the learner attached.
+        if var pending = scenario, pending.brief?.needsReading == true {
+            readingBrief = true
+            briefProgress = ScenarioBriefEngine.Progress(sourcesRead: pending.brief!.sources.map { _ in false })
+            do {
+                let read = try await ScenarioBriefEngine.read(
+                    scenario: pending,
+                    persona: appState.persona,
+                    targetLanguage: appState.targetLanguage,
+                    nativeLanguage: appState.nativeLanguage,
+                    onProgress: { briefProgress = $0 })
+                pending.brief = read
+                appState.saveScenario(pending)
+                Analytics.capture("scenario_brief_read", [
+                    "sources": read.sources.count,
+                    "links": read.sources.filter { $0.kind == .link }.count,
+                    "unread": read.sources.filter { !$0.readOK }.count,
+                    "questions": read.likelyQuestions.count,
+                    "expressions": read.keyExpressions.count,
+                ])
+            } catch {
+                readingBrief = false
+                generationError = error.localizedDescription
+                return
+            }
+            readingBrief = false
+        }
+        guard let s = scenario else { return }
         // Fresh conduit per attempt, then flip to the streaming branch —
         // WatchView starts playing turns the moment the model produces them.
         feed.title = nil

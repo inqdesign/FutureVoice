@@ -320,6 +320,10 @@ struct WatchView: View {
     /// often and most never hit it. False on Plus: nothing left to sell
     /// there, and the answer really is next month.
     @State private var canUpgradePlan = false
+    /// A minute pack is on offer at a talk wall: counted subscription, not a
+    /// trial (2026-09-26). Watch's own wall is scenes, which a pack doesn't
+    /// buy — the sheet only draws it for `kind == .talk`.
+    @State private var canTopUpTalk = false
     @State private var accountIsTrialing = false
     @State private var planMinutesAfterTrial: Int?
 
@@ -338,7 +342,7 @@ struct WatchView: View {
     /// Which tier the paywall should open on, when a caller named one.
     @State private var paywallTier: String?
 
-    private enum CapChoice { case upgrade, review }
+    private enum CapChoice { case upgrade, review, topUp }
 
     /// Everything needed to synthesize one line, resolved on the main actor
     /// before any concurrency so a prefetch can't race `turns` growing under
@@ -383,8 +387,10 @@ struct WatchView: View {
             endsInstead: planEndsAtPeriodEnd,
             isTrial: accountIsTrialing,
             planMinutesAfterTrial: planMinutesAfterTrial,
+            canTopUp: canTopUpTalk,
             onReview: { capChoice = .review },
-            onUpgrade: { capChoice = .upgrade })
+            onUpgrade: { capChoice = .upgrade },
+            onTopUp: { capChoice = .topUp })
     }
 
     var body: some View {
@@ -442,6 +448,8 @@ struct WatchView: View {
             // Switching tabs is enough: RootTabView follows the staged route,
             // and this scene stays pushed for whenever they come back to it.
             case .review:  appState.pendingPracticeRoute = .studying
+            // Minutes landed; the next Talk tap spends them.
+            case .topUp:   break
             case nil:      break
             }
             capChoice = nil
@@ -567,6 +575,7 @@ struct WatchView: View {
         // self — label it that way, since the user is watching, not speaking.
         DialogueLine(speaker: isUser ? .user : .other,
                      name: isUser ? "Future self" : counterpart.name,
+                     avatar: isUser ? nil : CounterpartPhotoStore.shared.image(for: counterpart.id),
                      isCurrent: isCurrent) {
             Text(turn.text)
         } accessory: {
@@ -834,6 +843,7 @@ struct WatchView: View {
                 let account = await AccountStatus.fetch()
                 capKind = capped.isDailyCapReached ? .talk : .scenes
                 canUpgradePlan = account.isLightPlan
+                canTopUpTalk = account.isEntitled && !account.isUncappedTalk && !account.isTrialing
                 accountIsTrialing = account.isTrialing
                 planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }
                 capAllowance = capKind == .talk

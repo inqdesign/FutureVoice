@@ -171,10 +171,19 @@ enum TalkGoalPicker {
             .filter { store.state(of: $0) == nil }
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: true) }
 
+        // The brief's key expressions lead the phrases: the learner attached
+        // the posting for exactly this, and the phrases the reading pulled
+        // out of it are the ones the call is there to try. Anything already
+        // used in a talk has done its job and is not asked for again.
+        let briefPhrases = rotated(by: runs, (scenario.brief?.keyExpressions ?? [])
+            .filter { !store.hasUsedExpression($0) && CarryoverDetector.isCreditable($0) }
+            .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
+                                isWord: WordSplitter.isSingleWord($0)) })
+
         // The scene's own material fills the row first; the notebook only
         // tops up what the scene left empty, so a global phrase can never
         // take a slot from a word this book is still teaching.
-        var out = merge(words: bookWords + pickups, phrases: bookPhrases + offered, limit: limit)
+        var out = merge(words: bookWords + pickups, phrases: briefPhrases + bookPhrases + offered, limit: limit)
         if out.count < limit {
             var seen = Set(out.map(\.key))
             for item in pick(limit: limit, now: now, calendar: calendar) where out.count < limit {

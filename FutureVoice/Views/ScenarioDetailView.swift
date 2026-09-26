@@ -29,6 +29,12 @@ struct ScenarioDetailView: View {
     @State private var generating = false
     @State private var generationError: String?
     @State private var confirmDelete = false
+    /// "Read again" on the brief: re-reads the attached material (bookmarks
+    /// reopen the same files) and replaces the brief. The board is the same
+    /// one the first reading showed.
+    @State private var rereadingBrief = false
+    @State private var briefProgress = ScenarioBriefEngine.Progress()
+    @State private var briefError: String?
 
     private struct WordRef: Identifiable {
         let value: String
@@ -269,13 +275,21 @@ struct ScenarioDetailView: View {
     @ViewBuilder
     private func introPage(_ s: Scenario) -> some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 14) {
+            // The cover's avatar sits at the TOP of the title block, not
+            // centred against it: a two-line situation with a "with …"
+            // line under it is three lines tall, and a centred 56pt
+            // circle drifted to the middle of them.
+            HStack(alignment: .top, spacing: 14) {
                 ZStack {
                     Circle().fill(Color.accentColor.opacity(0.15))
                         .frame(width: 56, height: 56)
                     if let name = linkedPersonaName(s) {
-                        Text(Books.initials(name))
-                            .font(.headline.weight(.bold)).foregroundStyle(.tint)
+                        if let pid = s.counterpartId, CounterpartPhotoStore.shared.hasPhoto(pid) {
+                            PersonBubble(name: name, photoId: pid, size: 56)
+                        } else {
+                            Text(Books.initials(name))
+                                .font(.headline.weight(.bold)).foregroundStyle(.tint)
+                        }
                     } else {
                         Image(systemName: Books.roleIcon(for: s.role))
                             .font(.title2).foregroundStyle(.tint)
@@ -338,6 +352,9 @@ struct ScenarioDetailView: View {
             .controlSize(.large)
         }
         .padding(20)
+        if let b = s.brief, b.hasSources {
+            briefRows(s, b)
+        }
         if s.isMastered && !s.isArchived {
             masteredBanner
         }
@@ -345,6 +362,142 @@ struct ScenarioDetailView: View {
             curriculumLoadingRows
         }
         studyRecordRows(s)
+    }
+
+    // MARK: - Brief (the attached material, read once)
+
+    /// What the reading produced, in the two halves it was sorted into, then
+    /// the sources with their read date and "Read again". Nothing here is
+    /// the file: the file is still wherever the learner keeps it.
+    @ViewBuilder
+    private func briefRows(_ s: Scenario, _ b: ScenarioBrief) -> some View {
+        Divider().padding(.leading, 20)
+        groupLabel("Brief", icon: "doc.text.magnifyingglass")
+        if rereadingBrief {
+            BriefProgressView(sources: b.sources, progress: briefProgress)
+        } else {
+            briefContent(b)
+            ForEach(b.sources) { src in briefSourceRow(src) }
+            briefFooter(b)
+        }
+    }
+
+    private func briefContent(_ b: ScenarioBrief) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !b.summary.isEmpty {
+                Text(b.summary)
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !b.likelyQuestions.isEmpty {
+                briefList(title: "What they'll ask", items: b.likelyQuestions, material: true)
+            }
+            if !b.counterpartFacts.isEmpty {
+                briefList(title: "Who you're talking to", items: b.counterpartFacts, material: false)
+            }
+            if !b.learnerFacts.isEmpty {
+                briefList(title: "What to have ready", items: b.learnerFacts, material: false)
+            }
+            if !b.keyExpressions.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Key expressions")
+                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(b.keyExpressions.joined(separator: " · "))
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if b.needsReading && !b.hasContent {
+                Text(explain("Not read yet — it's read the first time you watch this scene."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if let e = briefError {
+                Text(e).font(.caption).foregroundStyle(.red)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 6)
+    }
+
+    private func briefSourceRow(_ src: ScenarioBrief.Source) -> some View {
+        let icon: String = src.kind == .link ? "link" : (src.kind == .image ? "photo" : "doc.text")
+        let title: String = src.kind == .link ? (URL(string: src.label)?.host ?? src.label) : src.label
+        return HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(src.readOK ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let d = src.detail, !d.isEmpty {
+                    Text(d).font(.caption).foregroundStyle(src.readOK ? Color.secondary : Color.red)
+                } else if !src.readOK {
+                    Text("Couldn't read this one").font(.caption).foregroundStyle(.red)
+                }
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 6)
+    }
+
+    private func briefFooter(_ b: ScenarioBrief) -> some View {
+        HStack {
+            if let at = b.readAt {
+                Text("Read \(at, format: .dateTime.month(.abbreviated).day())")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button {
+                Task { await rereadBrief() }
+            } label: {
+                Label("Read again", systemImage: "arrow.clockwise")
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 10)
+    }
+
+    private func briefList(title: LocalizedStringKey, items: [String], material: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            ForEach(items, id: \.self) { line in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(verbatim: "·").foregroundStyle(.tertiary)
+                    Text(line)
+                        .font(.subheadline)
+                        .foregroundStyle(material ? .primary : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func rereadBrief() async {
+        guard var s = scenario, let b = s.brief, b.hasSources, !rereadingBrief else { return }
+        rereadingBrief = true
+        briefError = nil
+        briefProgress = ScenarioBriefEngine.Progress(sourcesRead: b.sources.map { _ in false })
+        defer { rereadingBrief = false }
+        do {
+            let read = try await ScenarioBriefEngine.read(
+                scenario: s,
+                persona: appState.persona,
+                targetLanguage: appState.targetLanguage,
+                nativeLanguage: appState.nativeLanguage,
+                onProgress: { briefProgress = $0 })
+            s.brief = read
+            appState.saveScenario(s)
+        } catch {
+            briefError = error.localizedDescription
+        }
     }
 
     private var masteredBanner: some View {

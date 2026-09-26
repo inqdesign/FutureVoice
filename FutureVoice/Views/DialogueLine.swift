@@ -36,6 +36,10 @@ struct DialogueLine<Content: View, Accessory: View>: View {
     let speaker: DialogueSpeaker
     /// "You", "Future self", or a counterpart's name.
     let name: String
+    /// The counterpart's photo, drawn small beside the name label when the
+    /// person has one (`CounterpartPhotoStore`). nil = name alone, which is
+    /// what every line looked like before photos existed.
+    var avatar: UIImage? = nil
     var scale: Scale = .standard
     /// Playback cursor (Watch) — an accent ring on the line being spoken.
     var isCurrent: Bool = false
@@ -75,12 +79,14 @@ struct DialogueLine<Content: View, Accessory: View>: View {
 
     init(speaker: DialogueSpeaker,
          name: String,
+         avatar: UIImage? = nil,
          scale: Scale = .standard,
          isCurrent: Bool = false,
          @ViewBuilder content: @escaping () -> Content,
          @ViewBuilder accessory: @escaping () -> Accessory) {
         self.speaker = speaker
         self.name = name
+        self.avatar = avatar
         self.scale = scale
         self.isCurrent = isCurrent
         self.content = content
@@ -95,9 +101,18 @@ struct DialogueLine<Content: View, Accessory: View>: View {
             if speaker.isUser { Spacer(minLength: 40) }
 
             VStack(alignment: speaker.alignment, spacing: 4) {
-                Text(name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 5) {
+                    if let avatar {
+                        Image(uiImage: avatar)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 18, height: 18)
+                            .clipShape(Circle())
+                    }
+                    Text(name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 content()
                     .font(scale.font)
@@ -128,10 +143,11 @@ struct DialogueLine<Content: View, Accessory: View>: View {
 extension DialogueLine where Accessory == EmptyView {
     init(speaker: DialogueSpeaker,
          name: String,
+         avatar: UIImage? = nil,
          scale: Scale = .standard,
          isCurrent: Bool = false,
          @ViewBuilder content: @escaping () -> Content) {
-        self.init(speaker: speaker, name: name, scale: scale, isCurrent: isCurrent,
+        self.init(speaker: speaker, name: name, avatar: avatar, scale: scale, isCurrent: isCurrent,
                   content: content, accessory: { EmptyView() })
     }
 }

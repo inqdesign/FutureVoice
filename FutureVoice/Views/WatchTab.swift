@@ -7,12 +7,12 @@ import SwiftUI
 ///
 ///   1. People row (Instagram-stories style) — tap a persona → composer
 ///      scoped to them, with relationship-grounded situation ideas.
-///   2. "Make your own situation" — the default: describe the real thing
-///      coming up ("Lufthansa cabin-crew interview next week") in a blank
-///      composer. No person required; the scene casts whoever fits.
-///   3. Likely situations — light category chips; tapping one opens the
-///      composer pre-scoped to that category, with AI ideas loading right
-///      away.
+///   2. "Your own situation" — the real thing coming up ("Lufthansa
+///      cabin-crew interview next week") in the composer's one-line BOX,
+///      with the posting's link or a CV attached (`ScenarioBrief`). No
+///      person required; the scene casts whoever fits.
+///   3. "Common situations" — the same composer opened on its category
+///      chain (cafe → ordering → order came out wrong).
 ///
 /// Watching mints the scenario book that Practice reviews later.
 struct WatchTab: View {
@@ -44,7 +44,11 @@ struct WatchTab: View {
     struct ComposerConfig: Identifiable {
         let id = UUID()
         var person: Counterpart?
-        /// Pre-selected category (from a "Likely situations" card).
+        /// Which door the composer opens on: `.custom` is the one-line box
+        /// with material attached (the real thing coming up); `.browse`
+        /// starts on the category grid. See `ScenarioComposerSheet.Mode`.
+        var mode: ScenarioComposerSheet.Mode = .browse
+        /// Pre-selected category (browse mode only).
         var category: ScenarioComposerSheet.Category?
         /// Set when a saved scenario card was tapped — the composer opens
         /// prefilled as a settings sheet (edit, delete, or Watch a fresh take)
@@ -62,9 +66,8 @@ struct WatchTab: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     peopleSection
-                    makeYourOwnSection
+                    newSituationSection
                     scenariosSection
-                    likelySection
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -90,6 +93,7 @@ struct WatchTab: View {
                 // review/tweak the settings, delete, or Watch a fresh take.
                 ScenarioComposerSheet(person: cfg.person,
                                       host: .watch,
+                                      mode: cfg.mode,
                                       initialCategory: cfg.category,
                                       editing: cfg.editing,
                                       ctaTitle: "Watch", ctaIcon: "play.fill",
@@ -270,7 +274,7 @@ struct WatchTab: View {
             personCard = c
         } label: {
             VStack(spacing: 6) {
-                PersonBubble(name: c.name)
+                PersonBubble(name: c.name, photoId: c.id)
                 Text(c.name)
                     .font(.caption)
                     .foregroundStyle(.primary)
@@ -356,8 +360,12 @@ struct WatchTab: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     if let personaName {
-                        Text(Books.initials(personaName))
-                            .font(.title3.weight(.bold)).foregroundStyle(.tint)
+                        if let pid = s.counterpartId, CounterpartPhotoStore.shared.hasPhoto(pid) {
+                            PersonBubble(name: personaName, photoId: pid, size: 32)
+                        } else {
+                            Text(Books.initials(personaName))
+                                .font(.title3.weight(.bold)).foregroundStyle(.tint)
+                        }
                     } else {
                         Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
                             .font(.title2).foregroundStyle(.tint)
@@ -425,122 +433,80 @@ struct WatchTab: View {
         }
     }
 
-    // MARK: - 2. Make your own (the default)
+    // MARK: - 2. New situation — two doors, side by side
 
-    private var makeYourOwnSection: some View {
-        Button {
-            composer = ComposerConfig()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "square.and.pencil")
-                    .font(.title3)
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Make your own situation")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-                    Text(explain("The real thing coming up — an interview, a call, a visit. Describe it, watch it handled."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(16)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground)))
-            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - 3. Likely situations (category cards → the unified composer)
-
-    private var likelySection: some View {
+    /// Two ways in, as equals. "Your own situation" is the real thing coming
+    /// up — one line, with the posting's link or a CV attached — and opens
+    /// the composer's box with no category grid in the way. "Common
+    /// situations" opens the same composer on its category chain. Both mint
+    /// the same `Scenario`; only the starting point differs. Until 2026-09-25
+    /// both landed in ONE composer that opened on the category grid, so
+    /// someone writing their own situation scrolled past chips first.
+    private var newSituationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Likely situations")
-            // Deliberately LIGHTER than the scenario cards above: these are
-            // starting points that open the composer, not saved content that
-            // plays. Chip styling (same as the composer's own choice chips)
-            // keeps the two tap behaviors visually distinct.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)],
-                      alignment: .leading, spacing: 8) {
-                ForEach(prioritizedTree) { node in
-                    categoryChip(node)
+            sectionHeader("New situation")
+            HStack(spacing: 10) {
+                doorButton(title: "Your own situation",
+                           subtitle: explain("One line, plus your material"),
+                           icon: "square.and.pencil",
+                           prominent: true) {
+                    composer = ComposerConfig(mode: .custom)
+                }
+                doorButton(title: "Common situations",
+                           subtitle: explain("Pick from categories"),
+                           icon: "square.grid.2x2",
+                           prominent: false) {
+                    composer = ComposerConfig(mode: .browse)
                 }
             }
-            Text(explain("Tap a category — the composer suggests specific scenarios you can watch."))
+            Text(explain("Both become a scenario you can watch and talk through. Only where you start differs."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func categoryChip(_ node: SituationBranch) -> some View {
-        Button {
-            // Jump into the unified composer pre-scoped to this category.
-            composer = ComposerConfig(
-                category: ScenarioComposerSheet.Category(title: node.label, icon: node.icon))
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: node.icon)
-                    .font(.subheadline)
-                    .foregroundStyle(.tint)
-                Text(node.label)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    private func doorButton(title: LocalizedStringKey, subtitle: String, icon: String,
+                            prominent: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            // TOP-aligned, not centred. The two doors are different heights
+            // (one subtitle wraps, the other doesn't) and `minHeight` pads
+            // the short one, so a centred row floated its icon and title
+            // down the card while its neighbour's sat at the top — the two
+            // glyphs never lined up with each other.
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(prominent ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 12).padding(.vertical, 10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.tertiarySystemFill)))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(prominent ? Color.accentColor.opacity(0.12)
+                                : Color(.secondarySystemGroupedBackground)))
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
     }
 
-    /// The grid, reordered so categories matching the persona's "when do you
-    /// most need it" picks come first (tree order within each group). The
-    /// onboarding chips are the whole point of asking — this is where they
-    /// visibly pay off.
-    private var prioritizedTree: [SituationBranch] {
-        let picked = appState.persona?.situations ?? []
-        guard !picked.isEmpty else { return Self.situationTree }
-        let wanted = Set(picked.flatMap { Self.categoryLabels(forSituation: $0) })
-        guard !wanted.isEmpty else { return Self.situationTree }
-        let (hits, rest) = Self.situationTree.reduce(into: ([SituationBranch](), [SituationBranch]())) {
-            acc, node in
-            if wanted.contains(node.label) { acc.0.append(node) } else { acc.1.append(node) }
-        }
-        return hits + rest
-    }
-
-    /// Map one persona situation (an onboarding preset or the user's own
-    /// words) to grid category labels. Presets map explicitly; free text
-    /// matches a category when its label appears in the text.
-    private static func categoryLabels(forSituation s: String) -> [String] {
-        let presetMap: [String: [String]] = [
-            "Work meetings": ["Work"],
-            "Client calls": ["Work"],
-            "Doctor / clinic": ["Health"],
-            "Travel": ["Travel"],
-            "Online shopping": ["Shopping"],
-            "Customer service": ["Shopping"],
-            "Daily small talk": ["Cafe"]
-        ]
-        if let mapped = presetMap[s] { return mapped }
-        let lowered = s.lowercased()
-        return situationTree.map(\.label).filter { lowered.contains($0.lowercased()) }
-    }
-
     // MARK: - The chain data
+
+    /// The situation chain the old "Likely situations" grid was drawn from.
+    /// Not rendered on this page since 2026-09-25 (the "Common situations"
+    /// door opens the composer's category grid instead); kept as the seed
+    /// list of situations the composer's ideas are tuned against.
 
     struct SituationBranch: Identifiable {
         let id = UUID()
@@ -617,16 +583,32 @@ struct WatchTab: View {
 /// visual) renders through this one view so they can't drift apart.
 struct PersonBubble: View {
     let name: String
+    /// The person's id, for their photo (`CounterpartPhotoStore`). nil, or an
+    /// id with no photo on file, draws initials — the look every person had
+    /// until photos existed.
+    var photoId: UUID? = nil
     var size: CGFloat = 64
+
+    @ObservedObject private var photos = CounterpartPhotoStore.shared
 
     var body: some View {
         ZStack {
-            Circle().fill(Color.accentColor.opacity(0.15))
-                .frame(width: size, height: size)
-                .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
-            Text(Books.initials(name))
-                .font(size >= 56 ? .headline.weight(.bold) : .caption.weight(.semibold))
-                .foregroundStyle(.tint)
+            if let id = photoId, let img = photos.image(for: id) {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
+            } else {
+                Circle().fill(Color.accentColor.opacity(0.15))
+                    .frame(width: size, height: size)
+                    .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
+                Text(Books.initials(name))
+                    .font(size >= 56 ? .headline.weight(.bold) : .caption.weight(.semibold))
+                    .foregroundStyle(.tint)
+            }
         }
+        .id(photos.version)
     }
 }

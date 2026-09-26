@@ -115,18 +115,18 @@ struct LevelInfoSheet: View {
             }
         }
 
-        /// Talk's prompt only asks the model to speak AT the level with the
-        /// occasional stretch — there are no length rules, so promising a
-        /// per-band shape here would be a lie. Watch DOES have per-band turn
-        /// counts and sentence lengths (`ScenarioCurriculumEngine.sceneScale`),
-        /// so it can show them.
+        /// Neither surface scales LENGTH with the band any more — the call
+        /// stopped on 2026-08-20 and the scene on 2026-09-26, both for the
+        /// same reason (a learner needs easier turns, not shorter ones). So
+        /// neither line may promise a per-band size; what both can honestly
+        /// say is that the band picks the words.
         var explains: String {
             switch self {
             case .talk:
                 // Flows through a String, so explain() is what localizes it.
                 return explain("Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.")
             case .watch:
-                return explain("Your level sets how long the scene is and how full its sentences are. Vocabulary is picked from just above it — words a learner at your level plausibly doesn't own yet.")
+                return explain("Every scene is the same length and gets just as far into the situation. Your level picks the words and sentence shapes inside it, and the vocabulary it teaches comes from just above — words a learner at your level plausibly doesn't own yet.")
             }
         }
     }
@@ -141,12 +141,21 @@ struct LevelInfoSheet: View {
     /// two screens can never quote different numbers.
     @State private var unlock: WeeklyReportEngine.UnlockState = .ready
 
-    /// The three bands Watch actually branches on, described with the values
-    /// the generator really uses.
-    private static let watchBands: [(band: String, levels: [CEFRLevel], detail: String)] = [
-        ("A1 · A2", [.a1, .a2], explain("8–10 turns, one short sentence each")),
-        ("B1 · B2", [.b1, .b2], explain("8–12 turns, 1–2 sentences each")),
-        ("C1 · C2", [.c1, .c2], explain("10–14 turns, 1–3 sentences, follow-up questions")),
+    /// The three bands, described by what they actually change.
+    ///
+    /// This used to print turn counts and sentences per turn ("8–10 turns,
+    /// one short sentence each"). Both surfaces stopped scaling LENGTH with
+    /// the band — the call on 2026-08-20, the scene on 2026-09-26 — so those
+    /// numbers became a promise the app no longer keeps, and the learner who
+    /// tapped a band here was told the one thing that is now identical for
+    /// everyone. What the band really moves is vocabulary and sentence
+    /// shapes, which is what these lines say, in the same order and the same
+    /// words as `ConversationEngine.speechScale` — the single definition both
+    /// the call and the scene read.
+    private static let bands: [(band: String, levels: [CEFRLevel], detail: String)] = [
+        ("A1 · A2", [.a1, .a2], explain("The most ordinary everyday words. One-clause sentences, rarely two.")),
+        ("B1 · B2", [.b1, .b2], explain("Everyday words plus the common idioms and phrasal verbs. Subordinate clauses and hedging.")),
+        ("C1 · C2", [.c1, .c2], explain("The full range — idiom, precise nuance, register shifts. Asides and self-corrections.")),
     ]
 
     var body: some View {
@@ -161,28 +170,30 @@ struct LevelInfoSheet: View {
                     Text(surface.headline)
                 }
 
-                if surface == .watch {
-                    Section {
-                        ForEach(Self.watchBands, id: \.band) { band in
-                            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                Text(band.band)
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(width: 62, alignment: .leading)
-                                Text(band.detail)
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Spacer(minLength: 0)
-                                if band.levels.contains(level) {
-                                    Image(systemName: "checkmark")
-                                        .font(.footnote.weight(.semibold))
-                                        .foregroundStyle(.tint)
-                                }
+                // Shown on BOTH surfaces: the call and the scene read the
+                // same band definition, so one table is true for both.
+                Section {
+                    ForEach(Self.bands, id: \.band) { band in
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Text(band.band)
+                                .font(.subheadline.weight(.semibold))
+                                .frame(width: 62, alignment: .leading)
+                            Text(band.detail)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                            if band.levels.contains(level) {
+                                Image(systemName: "checkmark")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tint)
                             }
                         }
-                    } header: {
-                        Text("By level")
                     }
+                } header: {
+                    Text("By level")
+                } footer: {
+                    Text(explain("Every level gets the same length and the same amount of substance — only the words and sentence shapes change."))
                 }
 
                 Section {

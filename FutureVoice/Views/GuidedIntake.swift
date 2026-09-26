@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 // Shared building blocks for the guided "tell me about…" intake flows —
 // persona onboarding (`PersonaIntakeView`) and new-People
@@ -207,6 +208,10 @@ struct SpeakOrTypeField: View {
     @State private var dictationBase = ""
     /// What `text` was before the take, restored if nothing was heard.
     @State private var preTakeText = ""
+    /// The mic the take was recorded on, read at start — nil is the phone's
+    /// own. Read at START because the route can change the moment the
+    /// session goes inactive, and the message is about the take.
+    @State private var takeInput: String?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -317,6 +322,7 @@ struct SpeakOrTypeField: View {
         do {
             try live.start(locale: locale)
             preTakeText = text
+            takeInput = Self.externalInputName()
             dictationBase = text.isEmpty ? "" : text + "\n"
             isRecording = true
         } catch {
@@ -332,15 +338,45 @@ struct SpeakOrTypeField: View {
     }
 
     /// Settle the field after a take: final transcript wins; a silent take
-    /// restores exactly what was there before.
+    /// restores exactly what was there before — and now SAYS so.
+    ///
+    /// Until 2026-09-26 a take that heard nothing left the screen
+    /// byte-identical to one where the button had never been pressed: same
+    /// text, no message, no mark. Reported as "I spoke and dictation did
+    /// nothing at all", which is indistinguishable from a broken button and
+    /// sends anyone hunting the wrong bug. Every OTHER failure here already
+    /// says something (permissions, an unavailable language, a mic that
+    /// wouldn't open); silence was the one hole.
+    ///
+    /// The message names the mic when it isn't the phone's own, because
+    /// that is the usual cause: the worn mic wins the route
+    /// (`AudioSessionRouting.engageWornMic`), so an earphone sitting in its
+    /// case records a room nobody is speaking into.
     private func finishTake(with heard: String) {
         let trimmed = heard.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             text = preTakeText
+            error = Self.heardNothing(on: takeInput)
         } else {
             text = dictationBase + trimmed
             usedVoice?.wrappedValue = true
         }
+    }
+
+    /// The current input's name, or nil when it is the phone's own mic —
+    /// the only case the learner needs no explanation for.
+    private static func externalInputName() -> String? {
+        guard let input = AVAudioSession.sharedInstance().currentRoute.inputs.first,
+              input.portType != .builtInMic else { return nil }
+        let name = input.portName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
+
+    private static func heardNothing(on input: String?) -> String {
+        guard let input else {
+            return explain("Say it again, or type it — nothing came through.")
+        }
+        return explain("Say it again — your \(input) is the mic right now.")
     }
 }
 

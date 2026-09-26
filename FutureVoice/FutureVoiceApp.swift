@@ -1045,6 +1045,7 @@ final class AppState: ObservableObject {
 
     func deleteCounterpart(id: UUID) {
         CounterpartStore.shared.delete(id: id)
+        CounterpartPhotoStore.shared.delete(for: id)
         WatchDialogueStore.shared.deleteAll(forCounterpart: id)
         counterparts = CounterpartStore.shared.load()
         watchDialogues = WatchDialogueStore.shared.load()

@@ -52,6 +52,7 @@ const DAILY_CAPS: Record<string, number> = {
   "weekly": 10,
   "enrichment": 200,
   "parse": 60,
+  "brief": 20,                 // a scenario's attached material, read once
   "daily-call-script": 20,
   "clone-script": 20,
 }

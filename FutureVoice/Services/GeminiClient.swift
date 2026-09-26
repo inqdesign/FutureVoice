@@ -62,12 +62,25 @@ final class GeminiClient {
         /// was actually said instead of trusting on-device STT). The audio
         /// part is sent FIRST, the text rides along as the ASR hint.
         var inlineAudio: InlineAudio? = nil
+        /// Documents attached alongside the text — a PDF or an image read
+        /// off the Files app for a scenario brief. Sent before the text,
+        /// like audio; Gemini reads them as first-class parts. Never more
+        /// than `maxInlineBytes` in total per request.
+        var inlineFiles: [InlineFile] = []
 
         struct InlineAudio {
             let mimeType: String     // e.g. "audio/wav"
             let base64Data: String
         }
+        struct InlineFile {
+            let mimeType: String     // "application/pdf", "image/jpeg", "text/plain"
+            let base64Data: String
+        }
     }
+
+    /// Inline request ceiling the API accepts is 20 MB; 10 MB of file bytes
+    /// leaves room for base64 growth and the prompt.
+    static let maxInlineBytes = 10 * 1024 * 1024
 
     // MARK: - Public
 
@@ -95,6 +108,7 @@ final class GeminiClient {
         maxTokens: Int = 512,
         temperature: Double = 0.7,
         searchGrounding: Bool = false,
+        urlContext: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         jsonResponse: Bool = false,
@@ -102,7 +116,7 @@ final class GeminiClient {
     ) async throws -> String {
         try await sendRaw(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
-            temperature: temperature, searchGrounding: searchGrounding,
+            temperature: temperature, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: jsonResponse, requestTimeout: requestTimeout
         ).text
@@ -121,6 +135,7 @@ final class GeminiClient {
         maxTokens: Int = 512,
         temperature: Double = 0.7,
         searchGrounding: Bool = false,
+        urlContext: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         jsonResponse: Bool = false,
@@ -129,7 +144,7 @@ final class GeminiClient {
     ) async throws -> (text: String, finishReason: String?) {
         let request = try await makeRequest(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
-            temperature: temperature, searchGrounding: searchGrounding,
+            temperature: temperature, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: jsonResponse, requestTimeout: requestTimeout, stream: false,
             fastThinking: fastThinking
@@ -166,6 +181,7 @@ final class GeminiClient {
         maxTokens: Int,
         temperature: Double,
         searchGrounding: Bool,
+        urlContext: Bool = false,
         purpose: String?,
         idempotencyKey: String?,
         jsonResponse: Bool,
@@ -195,7 +211,19 @@ final class GeminiClient {
             let responseMimeType: String?   // nil = omitted
         }
         struct EmptyObject: Encodable {}
-        struct Tool: Encodable { let google_search: EmptyObject }
+        // Optionals encode via encodeIfPresent, so each tool object carries
+        // only the key it was asked for. `url_context` lets the model read
+        // the pages a message names (a job posting, a listing) — the
+        // scenario brief's link path; `google_search` grounds on the open
+        // web. Either one disables the JSON response mode below.
+        struct Tool: Encodable {
+            var google_search: EmptyObject? = nil
+            var url_context: EmptyObject? = nil
+        }
+        let usesTools = searchGrounding || urlContext
+        var tools: [Tool] = []
+        if searchGrounding { tools.append(Tool(google_search: EmptyObject())) }
+        if urlContext { tools.append(Tool(url_context: EmptyObject())) }
         struct Body: Encodable {
             let model: String
             let system_instruction: SystemInstruction
@@ -213,6 +241,10 @@ final class GeminiClient {
                 if let audio = msg.inlineAudio {
                     parts.append(Part(inlineData: .init(mimeType: audio.mimeType,
                                                         data: audio.base64Data)))
+                }
+                for file in msg.inlineFiles {
+                    parts.append(Part(inlineData: .init(mimeType: file.mimeType,
+                                                        data: file.base64Data)))
                 }
                 parts.append(Part(text: msg.content))
                 return Content(role: msg.role.rawValue, parts: parts)
@@ -236,9 +268,9 @@ final class GeminiClient {
                 // imitates its own (plain-text) turns in the history.
                 // Incompatible with the google_search tool, so grounded calls
                 // keep relying on the prompt + extractJSON.
-                responseMimeType: (jsonResponse && !searchGrounding) ? "application/json" : nil
+                responseMimeType: (jsonResponse && !usesTools) ? "application/json" : nil
             ),
-            tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil,
+            tools: tools.isEmpty ? nil : tools,
             purpose: purpose,
             stream: stream ? true : nil
         )
@@ -283,6 +315,7 @@ final class GeminiClient {
         maxTokens: Int = 1024,
         temperature: Double = 0.4,
         searchGrounding: Bool = false,
+        urlContext: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil,
@@ -298,6 +331,7 @@ final class GeminiClient {
             maxTokens: maxTokens,
             temperature: temperature,
             searchGrounding: searchGrounding,
+            urlContext: urlContext,
             purpose: purpose,
             idempotencyKey: idempotencyKey,
             jsonResponse: true,
@@ -481,11 +515,13 @@ final class GeminiClient {
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil,
+        searchGrounding: Bool = false,
+        urlContext: Bool = false,
         onPartial: @MainActor @escaping (String) -> Void
     ) async throws -> T {
         let request = try await makeRequest(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
-            temperature: 0.4, searchGrounding: false,
+            temperature: 0.4, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: true, requestTimeout: requestTimeout, stream: true
         )

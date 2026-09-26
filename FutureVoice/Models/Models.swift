@@ -1027,6 +1027,19 @@ struct Counterpart: Codable, Identifiable, Hashable {
         scenariosByLanguage[language] = list
     }
 
+    /// True for a public figure (a singer, an athlete, an author) added under
+    /// the "Public figure" relationship: their profile is filled from PUBLIC
+    /// coverage rather than the learner's own notes, and every stranger-facing
+    /// rule for a preset voice applies — never a clone. Optional so rows saved
+    /// before this decode unchanged.
+    var isPublicFigure: Bool? = nil
+    /// The identity the grounded parse settled on ("BTS Jimin · singer"),
+    /// shown for the learner to confirm. nil for anyone else.
+    var publicIdentity: String? = nil
+    /// When public facts were last looked up. "Refresh public info" re-runs
+    /// the grounded parse and moves this.
+    var factsRefreshedAt: Date? = nil
+
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
@@ -1049,6 +1062,7 @@ extension Counterpart {
         case id, name, relationship, location, howWeMet, background
         case conversationStyle, commonTopics, voicePresetId, freeNotes
         case remoteId, intro, personaKind
+        case isPublicFigure, publicIdentity, factsRefreshedAt
         case scenariosByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
@@ -1074,6 +1088,9 @@ extension Counterpart {
         remoteId = try c.decodeIfPresent(String.self, forKey: .remoteId)
         intro = try c.decodeIfPresent(String.self, forKey: .intro) ?? ""
         personaKind = try c.decodeIfPresent(String.self, forKey: .personaKind)
+        isPublicFigure = try c.decodeIfPresent(Bool.self, forKey: .isPublicFigure)
+        publicIdentity = try c.decodeIfPresent(String.self, forKey: .publicIdentity)
+        factsRefreshedAt = try c.decodeIfPresent(Date.self, forKey: .factsRefreshedAt)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -1307,6 +1324,12 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// where reviewing what came out of it belongs. Optional so old rows
     /// decode unchanged.
     var isMeeting: Bool? = nil
+    /// Material the learner attached to this situation (a job posting's
+    /// link, their CV from the Files app) and what ONE reading of it
+    /// produced. The reading happens once, before the first scene; the
+    /// files themselves are never copied — see `ScenarioBrief`. Optional so
+    /// scenarios saved before this decode unchanged.
+    var brief: ScenarioBrief? = nil
 
     /// Rows minted before the flag existed carry only the category, so read
     /// both — otherwise the meetings already on disk stay in the list this
@@ -1348,6 +1371,67 @@ struct Scenario: Codable, Identifiable, Hashable {
             parts.append("notes=\(notes)")
         }
         return parts.joined(separator: " | ")
+    }
+}
+
+// MARK: - Scenario Brief (what the learner attached, read once)
+
+/// The learner's own material for a situation — a posting's link, a CV or
+/// portfolio picked from the Files app, a photo of a letter — and the facts
+/// one reading of it produced. Two rules:
+///
+///   - **The file is never copied.** A picked file is read where it lives
+///     (security-scoped access, bytes straight into the analysis request)
+///     and only its NAME and an iOS bookmark stay here, so "Read again" can
+///     open the same file and a moved one asks to be picked again. Nothing
+///     lands in the sandbox, the sync payload, or the usage ledger.
+///   - **Two sides, kept apart.** `counterpartFacts` and `likelyQuestions`
+///     are the OTHER side (the company, the position, what they will ask)
+///     and ride into the counterpart block of every prompt; `learnerFacts`
+///     are the learner's own (the 2023 gap, the +18% project) and ride into
+///     the persona block. Mixing them is how a scene hands the learner's CV
+///     to the interviewer to recite.
+struct ScenarioBrief: Codable, Hashable {
+    struct Source: Codable, Hashable, Identifiable {
+        enum Kind: String, Codable { case link, file, image }
+        var id: UUID = UUID()
+        var kind: Kind
+        /// A link's URL, or a file's display name.
+        var label: String
+        /// Security-scoped bookmark for a picked file. nil for links and for
+        /// a file whose bookmark could not be made.
+        var bookmark: Data? = nil
+        /// False once a reading reported it could not open this source.
+        var readOK: Bool = true
+        /// One short line the reading wrote about it ("job posting · Berlin",
+        /// "3 pages").
+        var detail: String? = nil
+    }
+
+    var sources: [Source] = []
+    /// One line naming what the material is about ("Zalando · Senior Product
+    /// Designer · Berlin"). Empty until read.
+    var summary: String = ""
+    /// The other side: who they are, what they want, how they talk.
+    var counterpartFacts: [String] = []
+    /// What the other side is likely to ask or say. Scenes vary which ones
+    /// they use, so a template keeps producing fresh takes.
+    var likelyQuestions: [String] = []
+    /// The learner's side: what to prepare, what to bring up, what to have
+    /// an answer for.
+    var learnerFacts: [String] = []
+    /// Reusable phrases the situation calls for — the scene plants them, the
+    /// call's chip row asks for them.
+    var keyExpressions: [String] = []
+    /// When the sources were last read. nil = attached but not read yet
+    /// (the reading runs before the first scene).
+    var readAt: Date? = nil
+
+    var hasSources: Bool { !sources.isEmpty }
+    var needsReading: Bool { hasSources && readAt == nil }
+    var hasContent: Bool {
+        !counterpartFacts.isEmpty || !likelyQuestions.isEmpty
+            || !learnerFacts.isEmpty || !keyExpressions.isEmpty
     }
 }
 

@@ -3964,6 +3964,9 @@ struct ConversationView: View {
             persona: appState.persona,
             counterpart: counterpart,
             newsFacts: newsFacts,
+            brief: sessionScenarioId.flatMap { sid in
+                appState.scenarios.first { $0.id == sid }?.brief
+            },
             firstMeeting: isFirstMeeting
         )
     }

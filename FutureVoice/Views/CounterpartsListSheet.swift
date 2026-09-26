@@ -11,25 +11,90 @@ struct CounterpartFormView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: Counterpart
+    /// The photo to save with this person on Save — seeded by the intake
+    /// (which picked one before the person existed) or by the form's own
+    /// photo control. nil + `removePhoto` = delete the one on file.
+    @State private var pendingPhoto: UIImage?
+    @State private var removePhoto = false
+    @State private var refreshingFacts = false
+    @State private var refreshError: String?
 
-    init(initial: Counterpart?) {
+    init(initial: Counterpart?, photo: UIImage? = nil) {
         self.initial = initial
         _draft = State(initialValue: initial ?? .empty)
+        _pendingPhoto = State(initialValue: photo)
+    }
+
+    /// The face the form shows right now: a just-picked photo, else the one
+    /// on file, else nothing.
+    private var shownPhoto: UIImage? {
+        if let pendingPhoto { return pendingPhoto }
+        if removePhoto { return nil }
+        return CounterpartPhotoStore.shared.image(for: draft.id)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
+                    HStack {
+                        Spacer()
+                        PersonPhotoButton(onImage: { pendingPhoto = $0; removePhoto = false },
+                                          onRemove: shownPhoto == nil ? nil : { pendingPhoto = nil; removePhoto = true }) {
+                            PersonPhotoCircle(image: shownPhoto, name: draft.name, size: 88)
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                }
+                Section {
                     TextField("Name", text: $draft.name)
                         .textInputAutocapitalization(.words)
                     TextField("Relationship (e.g. Best friend, Kita parent, Manager)",
                               text: $draft.relationship)
                         .textInputAutocapitalization(.sentences)
+                    Toggle("Public figure", isOn: Binding(
+                        get: { draft.isPublicFigure == true },
+                        set: { draft.isPublicFigure = $0 ? true : nil }))
                 } header: {
                     Text("Who")
                 } footer: {
-                    Text(explain("Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person."))
+                    Text(draft.isPublicFigure == true
+                         ? explain("A public figure's profile comes from public coverage. Their voice is a preset, never their real one.")
+                         : explain("Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person."))
+                }
+
+                if draft.isPublicFigure == true {
+                    Section {
+                        if let who = draft.publicIdentity, !who.isEmpty {
+                            HStack {
+                                Text("Who")
+                                Spacer()
+                                Text(who).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                            }
+                        }
+                        Button {
+                            Task { await refreshPublicFacts() }
+                        } label: {
+                            HStack {
+                                Label("Refresh public info", systemImage: "arrow.clockwise")
+                                Spacer()
+                                if refreshingFacts { ProgressView().controlSize(.small) }
+                            }
+                        }
+                        .disabled(refreshingFacts || draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    } header: {
+                        Text("Public info")
+                    } footer: {
+                        if let e = refreshError {
+                            Text(e).foregroundStyle(.red)
+                        } else if let at = draft.factsRefreshedAt {
+                            Text("Looked up \(at, format: .dateTime.month(.abbreviated).day()). Only public facts — nothing private, nothing invented. Edit anything below by hand.")
+                        } else {
+                            Text(explain("Fills the fields below from public coverage."))
+                        }
+                    }
                 }
 
                 Section("About them") {
@@ -85,6 +150,11 @@ struct CounterpartFormView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         appState.saveCounterpart(draft)
+                        if let pendingPhoto {
+                            CounterpartPhotoStore.shared.save(pendingPhoto, for: draft.id)
+                        } else if removePhoto {
+                            CounterpartPhotoStore.shared.delete(for: draft.id)
+                        }
                         dismiss()
                     }
                     .disabled(!draft.isMinimallyComplete)
@@ -105,7 +175,35 @@ struct CounterpartFormView: View {
         guard let initial,
               appState.counterparts.contains(where: { $0.id == initial.id })
         else { return true }
-        return draft != initial
+        return draft != initial || pendingPhoto != nil || removePhoto
+    }
+
+    /// Re-run the grounded parse for a public figure and take its facts into
+    /// the profile. The learner's own fields — name, how they relate to the
+    /// person — are kept; only what coverage can answer is replaced.
+    private func refreshPublicFacts() async {
+        refreshingFacts = true
+        refreshError = nil
+        defer { refreshingFacts = false }
+        var lines = ["Their name: \(draft.name)"]
+        if !draft.relationship.isEmpty { lines.append("Relationship to me: \(draft.relationship)") }
+        if let who = draft.publicIdentity, !who.isEmpty { lines.append("Who they are: \(who)") }
+        if !draft.background.isEmpty { lines.append("What I have on file: \(draft.background)") }
+        do {
+            let fresh = try await CounterpartParser.parse(
+                spokenDescription: lines.joined(separator: "\n"),
+                languageHint: appState.nativeLanguage,
+                nativeLanguage: appState.nativeLanguage,
+                publicFigure: true)
+            draft.publicIdentity = fresh.publicIdentity ?? draft.publicIdentity
+            if !fresh.location.isEmpty { draft.location = fresh.location }
+            if !fresh.background.isEmpty { draft.background = fresh.background }
+            if !fresh.conversationStyle.isEmpty { draft.conversationStyle = fresh.conversationStyle }
+            if !fresh.commonTopics.isEmpty { draft.commonTopics = fresh.commonTopics }
+            draft.factsRefreshedAt = Date()
+        } catch {
+            refreshError = error.localizedDescription
+        }
     }
 }
 

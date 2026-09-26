@@ -145,6 +145,65 @@ reasons are the design:
   devices (`SyncFiles.documentsOverride`) — convergence, deletion cascade,
   conflict → next pass, no ping-pong, blobs as assets.
 
+## Material on a situation, and the two doors into Watch (2026-09-25)
+
+A job interview is the situation people prepare for most, and the composer
+could take only a sentence about it — no posting, no CV, nothing the model
+could read. Now a situation can carry MATERIAL (`ScenarioBrief`, on
+`Scenario.brief`), and the Watch page splits its entry in two.
+
+- **Two doors, side by side** (`WatchTab.newSituationSection`): **Your own
+  situation** opens the composer's BOX (`ScenarioComposerSheet.Mode.custom`
+  — one line, the material as chips above it, one tool row: attach · the
+  other person · the CTA; no category grid anywhere) and **Common
+  situations** opens the same composer on its category chain (`.browse`, the
+  original Form). Both mint the same `Scenario`; only the start differs.
+  The old "Likely situations" chip grid is gone from the page — those
+  categories are the browse door's first screen. Editing a saved scenario
+  always uses the Form, which now carries a **Material** section too.
+- **The file is never copied.** `fileImporter` hands over a security-scoped
+  URL; `ScenarioAttachmentReader` reads the bytes inside the scope, parks
+  them in `BriefAttachmentCache` (memory only) and keeps a bookmark on the
+  source for "Read again". Nothing lands in the sandbox, the sync payload or
+  the usage ledger — the copy on the footer ("Files stay where they are on
+  your phone") is literally true. PDF, images (re-encoded JPEG, EXIF
+  dropped) and plain text, 10 MB in total; links are read by the model.
+- **Read ONCE, before the first scene, with a board** (`SceneWatchView` →
+  `ScenarioBriefEngine.read`, `BriefProgressView`). One streaming call on the
+  default model, `purpose: "brief"` (cap 20/day, no learner charge); links
+  go through `url_context` + `google_search` with a fallback ladder (tools →
+  search only → none), files ride inline via `Message.inlineFiles`. The
+  schema's key order is load-bearing for the board (`sources` → `summary`
+  → `counterpart_facts` → `likely_questions` → `learner_facts` →
+  `key_expressions`). A failed reading is the scene's error state, never a
+  scene quietly written without the material.
+- **Two sides, kept apart, everywhere the brief is used.** `counterpartFacts`
+  + `likelyQuestions` are the OTHER side and ride into the counterpart block
+  (`ScenarioCurriculumEngine.userMessage`, `ConversationEngine`'s
+  `briefBlock`); `learnerFacts` are the learner's and ride into the persona
+  side ("follow up when THEY raise it, never quote it back"). Questions and
+  expressions are MATERIAL (target language); summary, facts and source
+  details are NOTES (native). `keyExpressions` lead the call's chip row
+  (`TalkGoalPicker.pick(forScenario:)`). The book page shows the brief with
+  its sources, read date and **Read again**.
+- **A public figure is a RELATIONSHIP, not "Other"** (`RelationshipKind
+  .publicFigure`): its own three cards (why this person, where you'd meet,
+  what you'd say) and `CounterpartParser.parse(publicFigure: true)` — the
+  default model, search-grounded, filling the profile from PUBLIC coverage
+  (origin, work, most recent activity with its year, interview manner),
+  never health/relationships/money, with an `identity` line ("BTS Jimin ·
+  singer") for the learner to confirm. `Counterpart.isPublicFigure` /
+  `publicIdentity` / `factsRefreshedAt`; the form has a toggle and **Refresh
+  public info**. The framing is "prepare to speak in front of this person",
+  never "talk to Jimin", and the voice is a PRESET — the stranger rule.
+- **People have photos** (`CounterpartPhotoStore`, one square JPEG per id
+  under `Documents/counterpart_photos/`, re-encoded so EXIF/location never
+  survive; deleted with the person). Picked through `PersonPhotoButton`
+  (library · camera · Files) on the intake's first card and on the form,
+  and drawn by `PersonBubble(photoId:)` and `DialogueLine(avatar:)`, so the
+  stories row, the scene's speaker label, the composer and the book cover
+  show one face. Local only — not in the sync payload.
+
 ## Find people (shared persona pool)
 
 Watch's People row is your OWN people. The tab header's `person.2` opens the
@@ -1485,6 +1544,26 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
   - `fidelityModelId` bills ~2x per character upstream while `priceFor("tts")` in the edge function is model-BLIND, so that 2x is pure margin we absorb. Only put a path on it when `PhraseAudioStore` caches the result (making the 2x one-time per unique line) or when it fires once per user, ever. NEVER for live conversation turns.
   - Voice settings are fixed server-side in `supabase/functions/elevenlabs-tts/`. `style` MUST stay `0` — any style exaggeration pulls the output away from the reference speaker.
   - **The level changes WHICH WORDS, not HOW MUCH** (2026-08-20, `ConversationEngine.SpeechScale`). Turn length used to scale with the band (2 sentences at A1, 4 at C1); it now stops at 3 for everyone and says one thing — this is a phone call, nobody monologues. A learner doesn't need shorter turns than a fluent speaker gets, they need easier ones, so the band drives vocabulary + sentence SHAPES and nothing else. The old ceiling made replies stop mid-thought and pushed the model to satisfy the count by writing longer sentences, which is how a rule meant to keep the call spoken made it read written. Keep the ceiling COUNTABLE though — the qualitative version lost to the concrete REACT/VARY bullets and an A1 turn came back at four sentences.
+  - **A SCENE is the same size at every level too** (2026-09-26, user
+    decision — `ScenarioCurriculumEngine.sceneTurnRange` / `sceneTurnStyle`).
+    The same rule as the turn ceiling above, arrived at two ways. It USED to
+    scale: 8–10 turns of one 5–10 word sentence at A1/A2 up to 10–14 turns of
+    1–3 full sentences at C1/C2 — and it read wrong in both directions (an A2
+    scene too thin to hold the situation, a C1 scene too long to sit
+    through), AND length is where a scene's cost lives. Measured on two real
+    watches the same afternoon: 8 lines for $0.090 against 9 lines for
+    $0.401 — ONE more line and 4.4x the ElevenLabs bill, so one scene from
+    the plan's pool meant four different things depending on who played it
+    and `docs/launch-billing.md`'s $0.12-per-scene arithmetic was four times
+    under at the top band. Now: **9–11 turns of 1–2 sentences for everyone**,
+    and the band is read from `ConversationEngine.speechScale` rather than
+    restated, so a band means ONE thing across the call and the scene. Two
+    things follow. **Substance is NOT band-dependent** — the prompt's
+    SUBSTANCE rule asks every level for the complication and the hard
+    question ("a beginner's scene is not a thinner scene, it is the same
+    situation in easier words"), because the A2 complaint was about
+    substance and stripping length must not take that with it. And
+    `LevelHeader` may no longer promise a per-band size on EITHER surface.
   - **Punctuation is the breath** (2026-09-15, rewritten 2026-09-16, `CoachingLanguage.breathPunctuation`). Reported as "when it speaks Korean it reads without breathing". Measured on both TTS models and on the gateway's per-sentence path: the synthesizer pauses at punctuation and nowhere else — a Korean turn with no commas got ~1.1 s of internal pause in 12 s, the same text with a comma at each clause boundary ~1.7 s, and the gap BETWEEN sentences was ~400 ms on every path, so the text never asked. `speed: 0.9` slowed the words and REDUCED the pauses — wrong axis. **The first wording ("a comma between two clauses") made the model end finished sentences on a comma** ("나 방금 너랑 비슷한 사람 봤다, 어찌나 반갑던지, 뭐 하고 지내?"), which keeps the voice suspended on a sentence that is over — 10 of 18 opener lines against 2–6 with no rule. It is now stated as INTONATION: a period finishes, a comma hangs, a comma only after an ending that leaves the sentence open (~는데/~서/~니까/~고/~던지/~면), never after a sentence-final ending (0 wrong commas on both models after the rewrite). Don't delete it to fix choppiness — that brings the breathless reading back. It also carries the other half of the fix: **don't stack three short sentences** — two clauses that are one thought (a reason and what it led to) join with a connective and a comma, which is the take the learner picked by ear from four synthesized voicemails. That is not a licence to merge past the turn ceiling; over it, an idea is still dropped. The older choppiness (short lines on an English skeleton, "지금 괜찮아? 목소리 듣고 싶어서.", in ElevenLabs history since August) is a separate problem this rule doesn't address.
   - **The learner sets the SPEED, and the default is 0.9** (2026-09-23, `SpeechSpeed`, Me → Voice). `voice_settings.speed` (0.7–1.2) was never sent by anything here; it now rides on every synthesis — the three `ElevenLabsClient` bodies, the `elevenlabs-tts` edge function (clamped, out-of-range means no preference) and the gateway's `start` → `ElevenTTS` context settings. It is SYNTHESIS, not playback: the pitch is untouched, so a slowed line still sounds like the learner, and the word timings come back measured against the audio that was actually made, so karaoke and the rhythm grade need no adjustment. Three rungs, **Normal 1.0 · Relaxed 0.9 (default) · Slow 0.8** (보통 · 여유있게 · 천천히 — the middle one is the default and is deliberately not called "slower"): 0.9 was chosen by ear against the production settings as the most natural reading in English and Korean, so it is what everyone gets; 1.0 is the clone at the speed it was recorded, kept because the learner asked for it and labelled Normal, never "fast" — nothing on this control speeds the voice up. Each step is ~12% by `scripts/tts-speed-probe.sh` (five lines, two languages; 0.9 = +13% over 1.0, 0.8 = +27%), while **0.95 is +3.3%, which is INSIDE the synthesizer's take-to-take variance** — two of five lines came back shorter than the un-slowed take. That number is the rule for adding a rung: a rung the learner cannot reliably hear teaches them the control is fake. Nothing below 0.8 has been listened to, so nothing below 0.8 ships. **Audio already produced is never touched** (user decision, same day, after a one-time cache clear was built and reverted): the DEFAULT rung's cache tag is EMPTY, so every `PhraseAudioStore` line made before the setting existed — synthesized with no speed at all — is still found and still plays; a learner who never touches the setting hears old cached lines as they were and new ones at 0.9, a 13% gap accepted over re-billing a whole library. A rung the learner picks on purpose, Normal included, gets its own key — the empty tag cannot tell an old 1.0 line from a new 0.9 one, so it belongs to the default alone. This is the same rule the store has always had for a re-cloned voice, and it holds for any future key change too — never orphan, never prune. **The DEFAULT is tunable from the server** (2026-09-24, `app_release.default_speech_speed`, `scripts/speech-speed.sh`, build 58+): 0.9 was chosen by ear on five probe lines before anyone had lived with it, and a knob added after the setting spreads can only reach the installs that come later — so it went in the day after. `AppUpdateService.check()` mirrors the column into defaults once per launch, BEFORE its own version guards (they stop for reasons about this build, none of which is a reason to ignore a retuned speed), and the mirrored value is read from disk so a launch with no network is a day behind rather than snapped back. NULL means the app's own default — the column is written only to CHANGE the number, so an untouched row can't drift from the code — and a value outside 0.7–1.2 is DROPPED, not clamped, because guessing which edge a typo meant is how it becomes a voice nobody recognises. Only the default rung moves; Normal and Slow are the ladder's ends and stay in the build, where ears can be put on them first. Cached audio is untouched by construction: that rung's cache tag is empty — with ONE exception, the free-talk openers (`FreeTalkOpeners.needsBake`, 2026-09-25). Those are the handful of lines that OPEN a call, and keeping them meant a learner with warm opener audio heard the greeting at the old speed and every answer after it at the new one, on every call, for as long as the pool text held — the first thing a call says is the worst place for that seam. They are re-made whenever the speed moves, recorded per LINE (the pool is per language and per persona name, and the intro and fallback lines are warmed from another path, so a language-wide flag would leave the rest stale). Don't widen the exception: everything else in the library is heard on its own, where 13% is nobody's complaint. The voicemail's character budget (`VoicemailEngine.maxScriptCharacters`) scales with the speed, or the 29 s hard cut would take the closing question off a Slowest voicemail. The same probe retired this list's own note that `speed: 0.9` eats the pauses: across five lines the silence holds or grows (0.69 s → 0.98 s per 10 s of audio), so the breath rule above is what buys breaths and the speed setting does not spend them.
 

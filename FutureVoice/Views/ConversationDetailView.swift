@@ -197,7 +197,11 @@ struct ConversationDetailView: View {
 
     private var coverBlock: some View {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 14) {
+                // The cover's avatar sits at the TOP of the title block, not
+                // centred against it: a two-line situation with a "with …"
+                // line under it is three lines tall, and a centred 56pt
+                // circle drifted to the middle of them.
+                HStack(alignment: .top, spacing: 14) {
                     ZStack {
                         Circle().fill(Color.accentColor.opacity(0.15))
                             .frame(width: 56, height: 56)
