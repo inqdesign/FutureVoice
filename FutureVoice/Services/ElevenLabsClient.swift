@@ -226,8 +226,25 @@ final class ElevenLabsClient {
     static let conversationModelId = "eleven_turbo_v2_5"
     #endif
 
+    /// Watch scene lines — BOTH voices, turbo (2026-09-26, founder's call).
+    ///
+    /// The clone's lines used to take `fidelityModelId` here. The argument
+    /// against it is one sentence: Talk runs the same cloned voice on turbo,
+    /// it is the surface with the most exposure by far, and nobody has said
+    /// the call doesn't sound like them — so a scene cannot need a better
+    /// model than the live conversation does. It is also the app's biggest
+    /// cost lever: the clone's half of the scene lines was 70% of a scene's
+    /// ElevenLabs bill (26,514 credits against the counterpart's 11,354 over
+    /// the launch window), so a scene goes from $0.112 to ~$0.073.
+    static let sceneModelId = "eleven_turbo_v2_5"
+
     /// Model for material the user LISTENS to as their own voice, where
-    /// speaker similarity is the product (Watch scenes today).
+    /// speaker similarity is the product.
+    ///
+    /// What is left on it (2026-09-26): the onboarding greeting and the
+    /// voice-comparison sheet — both fire ONCE per user, at the moment they
+    /// decide whether the clone is them — and the daily call's voicemail.
+    /// Watch scenes moved to turbo; see `sceneModelId`.
     ///
     /// flash/turbo v2.5 are the latency tier — they trade speaker similarity
     /// for time-to-first-audio. multilingual_v2 is the fidelity tier, and it
@@ -237,11 +254,12 @@ final class ElevenLabsClient {
     /// COST: multilingual_v2 bills ~2x per character upstream vs flash/turbo
     /// v2.5, and `priceFor("tts")` in the edge function is character-based and
     /// model-BLIND — the user is charged identically either way, so every
-    /// call on this model is margin we absorb. Only put a path on it when
-    /// `PhraseAudioStore` caches the result, which makes that 2x a ONE-TIME
-    /// cost per unique line rather than a per-play one. Never use it for live
-    /// conversation turns: those are new text every time, so nothing caches
-    /// and the 2x repeats forever (on top of being too slow for a call).
+    /// call on this model is margin we absorb. Only put a path on it when it
+    /// fires ONCE per user, ever. The old rule said "when `PhraseAudioStore`
+    /// caches the result", and scenes are what showed that isn't enough: a
+    /// fresh take writes new text every run, so nothing was reused and the
+    /// premium was paid on every play. Never use it for live conversation
+    /// turns either: new text every time, and too slow for a call.
     static let fidelityModelId = "eleven_multilingual_v2"
 
     /// Deterministic fallback idempotency key for callers that don't pass

@@ -895,16 +895,27 @@ struct WatchView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             return cached
         }
-        // The fluent self gets the fidelity model — this is the screen where
-        // the user listens hardest for "is that me?", and PhraseAudioStore
-        // caches by (voiceId, text), so the pricier synthesis happens once per
-        // line, ever. Counterpart preset voices stay on turbo: they're not the
-        // user's voice, so similarity buys nothing there, and paying 2x for
-        // every other line of every scene is not worth it.
-        let isOwnVoice = voiceId == appState.voiceCloneId
+        // Turbo, both voices (2026-09-26). The fluent self used to get the
+        // fidelity model here, on the argument that a scene is the screen
+        // where the learner listens hardest for "is that me?" — but TALK is
+        // that screen, it has always run turbo, and nobody has ever said the
+        // call doesn't sound like them. A scene cannot need a better model
+        // than the live conversation in the same voice. The founder's call,
+        // and it is the biggest single cost lever in the app: measured over
+        // the launch window the clone's half of the scene lines was 26,514
+        // credits against the counterpart's 11,354 — the same line count at
+        // twice the rate, i.e. 70% of a scene's bill — so a scene drops from
+        // $0.112 to about $0.073.
+        //
+        // The caching argument for the 2x had also stopped being true:
+        // `freshTake` writes new text every run, so nothing is reused and
+        // the premium was paid on every play, which `fidelityModelId`'s own
+        // rule forbids. Lines already cached keep playing as they were made
+        // (the key is (voiceId, speed, text), not the model) — nothing is
+        // orphaned and nothing is re-billed.
         let audio = try await ElevenLabsClient.shared.synthesize(
             voiceId: voiceId, text: text,
-            modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
+            modelId: ElevenLabsClient.sceneModelId,
             purpose: "scene",
             previousText: request.previousText,
             nextText: request.nextText,
@@ -915,10 +926,13 @@ struct WatchView: View {
 
     /// Speak `request` by STREAMING it: audio starts on the first PCM chunk
     /// instead of after the whole file lands. This is the fix for the wait in
-    /// front of the fluent self's lines — its fidelity model takes seconds to
-    /// synthesize a line, and buffered playback spent every one of them
-    /// silent. Prefetched lines keep the buffered path: they arrived while
-    /// the previous line was still speaking, so there is nothing to hide.
+    /// front of the fluent self's lines — a line takes seconds to synthesize
+    /// and buffered playback spent every one of them silent. (It was written
+    /// when those lines ran the fidelity model, which was slower still;
+    /// scenes are turbo on both voices since 2026-09-26, so the wait is
+    /// shorter and this is still what hides it.) Prefetched lines keep the
+    /// buffered path: they arrived while the previous line was still
+    /// speaking, so there is nothing to hide.
     ///
     /// Returns false when streaming isn't available (an edge deploy that
     /// ignored `stream`, or an audio engine that refused) so the caller can
@@ -927,11 +941,10 @@ struct WatchView: View {
         guard !request.voiceId.isEmpty else { return false }
         let latch = PlaybackLatch()
         var started = false
-        let isOwnVoice = request.voiceId == appState.voiceCloneId
         let result = try await ElevenLabsClient.shared.synthesizeStreaming(
             voiceId: request.voiceId,
             text: request.text,
-            modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
+            modelId: ElevenLabsClient.sceneModelId,
             purpose: "scene",
             sceneKey: sceneRunKey
         ) { chunk, sampleRate in
