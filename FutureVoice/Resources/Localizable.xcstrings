@@ -182,6 +182,52 @@
         }
       }
     },
+    "Even if you'd rather I didn't call, notifications are how I reach you — news, and anything about your plan." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Even if you'd rather I didn't call, notifications are how I reach you — news, and anything about your plan."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화는 안 해도 괜찮아. 그래도 새 소식이나 요금제 얘기는 알림으로 전할게."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "電話はしなくてもいいよ。でも新しいお知らせやプランのことは通知で伝えるね。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就算你不想接電話，通知還是我聯絡你的方式 — 新消息，還有跟你方案有關的事。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就算你不想接电话，通知还是我联系你的方式 — 新消息，还有跟你方案有关的事。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aunque prefieras que no te llame, las notificaciones son mi forma de avisarte: novedades y cualquier cosa sobre tu plan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Même si tu préfères que je ne t’appelle pas, c’est par les notifications que je te joins : les nouveautés, et tout ce qui touche à ta formule."
+          }
+        }
+      }
+    },
     "—" : {
       "shouldTranslate" : false
     },

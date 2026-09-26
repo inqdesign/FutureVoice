@@ -61,6 +61,14 @@ struct DailyCallOnboardingView: View {
                         .font(.footnote)
                         .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
+                    // Said on this screen because this is where the prompt
+                    // comes from, on EITHER exit — and because a permission
+                    // asked for one feature, granted, and then used for
+                    // another is a thing learners are right to resent.
+                    Text(explain("Even if you'd rather I didn't call, notifications are how I reach you — news, and anything about your plan."))
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.horizontal, 8)
 
@@ -128,9 +136,23 @@ struct DailyCallOnboardingView: View {
         }
     }
 
+    /// Declining the CALL is not declining to be reached.
+    ///
+    /// This screen is the only place in onboarding that asks about
+    /// notifications, and until 2026-09-26 the skip path asked nothing — so
+    /// everyone who tapped Not now (and anyone who never enabled a review
+    /// reminder either) could never be sent anything at all: not a word about
+    /// their plan, not an announcement, nothing. An app that has never asked
+    /// doesn't even appear in Settings → Notifications, so that silence was
+    /// permanent and invisible from both ends. The prompt is asked here on
+    /// BOTH exits, which is also why the copy above says what notifications
+    /// are for beyond the call.
     private func skip() {
         Analytics.capture("daily_call_onboarding", ["enabled": false])
         DailyCallStore.shared.isEnabled = false
-        onboarded = true
+        Task {
+            await PushTokens.ensurePermission()
+            onboarded = true
+        }
     }
 }

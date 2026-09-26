@@ -2,6 +2,7 @@ import Foundation
 import os
 import Supabase
 import UIKit
+import UserNotifications
 
 /// This install's APNs token, and the three facts the server can't work out
 /// without it.
@@ -76,6 +77,33 @@ enum PushTokens {
                 // token and tries again, and a learner who can't be pushed to
                 // loses nothing they can see.
             }
+        }
+    }
+
+    /// Ask for permission to be SEEN, if it has never been asked.
+    ///
+    /// Registering a token asks nothing and draws nothing; this is the other
+    /// half, and without it Apple accepts every push and iOS discards it
+    /// silently — `sent: 1` and an empty lock screen. Worse, an app that has
+    /// never asked does not appear in Settings → Notifications at all, so the
+    /// learner cannot grant it by hand either: not asking is not a neutral
+    /// default, it is a permanent no.
+    ///
+    /// Notifications ONLY — no alarm authorization. The daily call asks for
+    /// that itself when it is switched on, and someone who just declined the
+    /// call has not agreed to be woken by one.
+    @discardableResult
+    static func ensurePermission() async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        switch await center.notificationSettings().authorizationStatus {
+        case .notDetermined:
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
+            log.notice("permission asked, granted: \(granted, privacy: .public)")
+            return granted
+        case .denied:
+            return false
+        default:
+            return true
         }
     }
 
