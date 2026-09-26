@@ -457,14 +457,14 @@ struct ConversationHome: View {
                 // pool is exactly the thing worth a quiet gauge, and this is
                 // the quiet form: an arc, no digits, figures one tap away.
                 //
-                // NOT on Plus. 1,800 minutes is an hour every single day, so
-                // the arc sits near empty all month for almost everyone on it
-                // — a gauge that never moves is decoration, and putting one on
-                // the home screen of the tier that bought its way out of
-                // counting is the taximeter this design exists to avoid. They
-                // still have the exact figures in Me, where someone who wants
-                // them goes looking.
-                if let account, !account.isPlusPlan,
+                // NOT on an uncapped row — the Plus subscriptions sold before
+                // 2026-09-26, whose talking isn't counted: the arc would sit
+                // near empty all month, and a gauge that never moves is
+                // decoration on the one tier that bought its way out of
+                // counting. A Plus bought since is a 300-minute pool and
+                // gets the ring like Light. They still have the exact
+                // figures in Me, where someone who wants them goes looking.
+                if let account, !account.isUncappedTalk,
                    account.monthlyCapSeconds != nil || !account.isEntitled {
                     ZStack {
                         // strokeBorder / inset keep the 3 pt stroke INSIDE the
@@ -502,7 +502,7 @@ struct ConversationHome: View {
         // there is no ring, so reading out a balance would describe something
         // that isn't on screen.
         .accessibilityLabel(account.flatMap { a -> String? in
-            a.isPlusPlan ? nil
+            a.isUncappedTalk ? nil
                          : "Profile & settings, \(a.balanceLabel) of \(a.tankMinutes) minutes of talk left"
         } ?? "Profile & settings")
     }
@@ -526,12 +526,14 @@ struct ConversationHome: View {
                 ? AccountStatus(email: nil, secondsBalance: 0,
                                 planId: "light_monthly", subscriptionStatus: "active",
                                 secondsUsedPeriod: 3300, monthlyCapSeconds: 9000,
-                                scenesUsedPeriod: 12, monthlyScenesCap: 60,
+                                scenesUsedPeriod: 4, monthlyScenesCap: 10,
                                 fullTankSeconds: 9000)
+                // `home-plus` is a Plus sold BEFORE 2026-09-26 — no cap, so
+                // no ring; a Plus bought since draws one like `home-light`.
                 : capture.hasPrefix("home-plus")
                 ? AccountStatus(email: nil, secondsBalance: 0,
                                 planId: "plus_monthly", subscriptionStatus: "active",
-                                secondsUsedPeriod: 3300, monthlyCapSeconds: 108_000,
+                                secondsUsedPeriod: 3300, monthlyCapSeconds: nil,
                                 scenesUsedPeriod: 12, monthlyScenesCap: 120,
                                 fullTankSeconds: 108_000)
                 : AccountStatus(email: nil, secondsBalance: 2000,

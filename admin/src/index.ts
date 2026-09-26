@@ -98,6 +98,22 @@ async function fetchData(env: Env) {
   });
   if (!r.ok) throw new Error(`admin_raw ${r.status}: ${(await r.text()).slice(0, 300)}`);
   const raw = await r.json() as any;
+  // Per-user talk seconds and the ledger's own turn rows, for the cost table
+  // (2026-09-26): the gateway's TTS never reaches the ledger, so a user's
+  // talk cost is estimated from their seconds instead. Optional — without it
+  // the table falls back to ledger characters, which see about half.
+  raw.talk_cost = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/admin_talk_cost`, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  }).then((t) => t.ok ? t.json() : null).catch((e) => {
+    console.log(`admin_talk_cost: ${(e as Error).message}`);
+    return null;
+  });
   // Never let this card take the whole console down with it.
   raw.recent_ledger = await recentLedger(env).catch((e) => {
     console.log(`recentLedger: ${(e as Error).message}`);

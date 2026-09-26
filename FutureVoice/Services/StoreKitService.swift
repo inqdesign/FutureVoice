@@ -27,6 +27,12 @@ final class StoreKitService: ObservableObject {
         // What is actually enforced: the pool per billing period.
         let monthly_seconds: Int?
         let monthly_scenes: Int?
+        // Whether talking is counted at all. False on every plan sold since
+        // 2026-09-26 (`20260926110000_bounded_plans_and_topups`); the column
+        // has existed since 2026-08-21, so selecting it can no longer empty
+        // the catalog on a build that shipped ahead of a migration. Optional
+        // so a row that somehow lacks it reads as capped, the safe reading.
+        let talk_unlimited: Bool?
         let apple_product_id: String
     }
 
@@ -135,6 +141,14 @@ final class StoreKitService: ObservableObject {
         updatesTask = Task.detached(priority: .background) {
             for await update in Transaction.updates {
                 guard case .verified(let transaction) = update else { continue }
+                // A talk-minute pack finishes itself, and only once the
+                // server has landed it — an unfinished consumable is the
+                // retry, so finishing it here on a failed redeem would
+                // lose a purchase Apple has already charged for.
+                if transaction.productType == .consumable {
+                    await TalkTopUpService.redeem(update)
+                    continue
+                }
                 await claim(update)
                 await transaction.finish()
             }
@@ -258,7 +272,7 @@ final class StoreKitService: ObservableObject {
         do {
             plans = try await SupabaseProvider.shared
                 .from("subscription_plans")
-                .select("id,tier,period,daily_seconds,daily_scenes,monthly_seconds,monthly_scenes,apple_product_id")
+                .select("id,tier,period,daily_seconds,daily_scenes,monthly_seconds,monthly_scenes,talk_unlimited,apple_product_id")
                 .eq("is_active", value: true)
                 .execute()
                 .value

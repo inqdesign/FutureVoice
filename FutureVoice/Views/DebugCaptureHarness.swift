@@ -143,7 +143,7 @@ enum DebugCapture {
     // MARK: - Routing
 
     /// The account every billing capture renders against: a Light subscriber
-    /// mid-period, 55 of 150 minutes and 12 of 60 scenes spent, refilling on
+    /// mid-period, 55 of 150 minutes and 4 of 10 scenes spent, refilling on
     /// the 14th. ONE sample for all three pages on purpose — they quote each
     /// other's numbers, so reviewing them against different accounts would
     /// hide exactly the disagreement the captures exist to catch. It also has
@@ -155,7 +155,7 @@ enum DebugCapture {
             email: nil, secondsBalance: 0,
             planId: "light_monthly", subscriptionStatus: "active",
             secondsUsedPeriod: 3300, monthlyCapSeconds: 9000,
-            scenesUsedPeriod: 12, monthlyScenesCap: 60,
+            scenesUsedPeriod: 4, monthlyScenesCap: 10,
             fullTankSeconds: 9000)
         out.periodEnd = Calendar.current.date(byAdding: .day, value: 18, to: Date())
         out.periodStart = Calendar.current.date(byAdding: .day, value: -12, to: Date())

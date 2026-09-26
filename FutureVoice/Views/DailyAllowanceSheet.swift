@@ -48,8 +48,18 @@ struct DailyAllowanceSheet: View {
     /// the plan starts.
     var planMinutesAfterTrial: Int? = nil
 
+    /// This account can buy a hundred more minutes right now (2026-09-26):
+    /// entitled, counted, not trialing. The pack leads the buttons on a
+    /// spent TALK pool — it is the literal answer to "I want to keep
+    /// talking", and cheaper than moving plans. Never on a scenes wall
+    /// (a pack buys minutes, not scenes).
+    var canTopUp: Bool = false
+
     let onReview: () -> Void
     let onUpgrade: () -> Void
+    /// The minutes are on the account. The sheet dismisses itself; the
+    /// caller decides whether anything resumes.
+    var onTopUp: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
 
@@ -93,36 +103,26 @@ struct DailyAllowanceSheet: View {
             Spacer(minLength: 0)
 
             VStack(spacing: 10) {
-                // Order is the recommendation. On Light the upgrade leads
-                // because it is the answer to "I want to keep talking"; review
-                // stays one tap away and free either way.
+                // Order is the recommendation. A minute pack leads on a spent
+                // talk pool because it is the answer to "I want to keep
+                // talking"; on Light the plan move follows; review stays one
+                // tap away and free either way.
+                if packLeads {
+                    TalkTopUpButton {
+                        onTopUp()
+                        dismiss()
+                    }
+                }
                 if canUpgrade && !isTrial {
-                    Button {
+                    action(explain("Move to Plus"), prominent: !packLeads) {
                         onUpgrade()
                         dismiss()
-                    } label: {
-                        Text("Move to Plus").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-
-                    Button {
-                        onReview()
-                        dismiss()
-                    } label: {
-                        Text("Go to Practice").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                } else {
-                    Button {
-                        onReview()
-                        dismiss()
-                    } label: {
-                        Text("Go to Practice").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                }
+                action(explain("Go to Practice"),
+                       prominent: !packLeads && !(canUpgrade && !isTrial)) {
+                    onReview()
+                    dismiss()
                 }
 
                 Button("Not now") { dismiss() }
@@ -138,6 +138,27 @@ struct DailyAllowanceSheet: View {
         // detent: at accessibility text sizes the copy grows past any fixed
         // height, and a sheet that cannot be dragged bigger clips instead.
         .presentationDetents([.medium, .large])
+    }
+
+    /// The pack is the first button: a spent TALK pool on a counted,
+    /// non-trial subscription.
+    private var packLeads: Bool { canTopUp && kind == .talk && !isTrial }
+
+    /// One full-width button; the leading one is prominent, the rest
+    /// bordered. Two styles are two view types, so this is a branch rather
+    /// than a ternary on `.buttonStyle`.
+    @ViewBuilder
+    private func action(_ title: String, prominent: Bool,
+                        _ perform: @escaping () -> Void) -> some View {
+        if prominent {
+            Button(action: perform) { Text(title).frame(maxWidth: .infinity) }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+        } else {
+            Button(action: perform) { Text(title).frame(maxWidth: .infinity) }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+        }
     }
 
     private var title: String {
@@ -195,6 +216,11 @@ struct DailyAllowanceSheet: View {
             }
             return explain("Your plan starts on \(renewsOn). Review stays free until then.")
         }
+        if canTopUp && kind == .talk {
+            return canUpgrade
+                ? explain("Add minutes to keep going now, move to Plus, or review what this month left you.")
+                : explain("Add minutes to keep going now, or review what this month left you.")
+        }
         return canUpgrade
             ? explain("Review what this month left you, or move to Plus to keep going now.")
             : explain("Review stays free, and always did.")
@@ -234,7 +260,7 @@ struct DailyAllowanceSheet: View {
 #Preview("Plus") {
     Text("host")
         .sheet(isPresented: .constant(true)) {
-            DailyAllowanceSheet(kind: .talk, canUpgrade: false, allowance: 1800,
-                                renewsOn: "Sep 14", onReview: {}, onUpgrade: {})
+            DailyAllowanceSheet(kind: .talk, canUpgrade: false, allowance: 300,
+                                renewsOn: "Sep 14", canTopUp: true, onReview: {}, onUpgrade: {})
         }
 }

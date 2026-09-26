@@ -112,6 +112,9 @@ struct ConversationView: View {
     /// moment the wall lands. False on Plus: nothing left to sell, and the
     /// answer really is next month.
     @State private var canUpgradePlan = false
+    /// A minute pack is on offer at the wall: counted subscription, not a
+    /// trial (2026-09-26).
+    @State private var canTopUpTalk = false
     /// The plan's own pool in whole minutes, from the account snapshot.
     /// Never hardcoded: the number is a plan setting on the server and a
     /// stale constant here would misstate what they bought.
@@ -135,7 +138,7 @@ struct ConversationView: View {
     /// Which tier the paywall should open on, when a caller named one.
     @State private var paywallTier: String?
 
-    private enum CapChoice { case upgrade, review }
+    private enum CapChoice { case upgrade, review, topUp }
     /// Unified beta feedback modal — set to a milestone to present it.
     @State private var feedbackContext: FeedbackSheet.Context?
     /// endAndClose defers its dismiss until the first-talk feedback closes.
@@ -896,6 +899,9 @@ struct ConversationView: View {
                     paywallSource = "talk_spent_month"
                     showingPaywall = true
                 case .review:  leaveForPractice()
+                // The minutes are on the account and the gate is fresh; the
+                // call is still on screen, and the next mic tap spends them.
+                case .topUp:   break
                 case nil:      break
                 }
                 capChoice = nil
@@ -908,8 +914,10 @@ struct ConversationView: View {
                     endsInstead: planEndsAtPeriodEnd,
                     isTrial: accountIsTrialing,
                     planMinutesAfterTrial: planMinutesAfterTrial,
+                    canTopUp: canTopUpTalk,
                     onReview: { capChoice = .review },
-                    onUpgrade: { capChoice = .upgrade })
+                    onUpgrade: { capChoice = .upgrade },
+                    onTopUp: { capChoice = .topUp })
             }
             // Not a sheet and not an upsell: there is nothing to offer and
             // nothing to wait for. One line saying what happened and how to
@@ -958,6 +966,7 @@ struct ConversationView: View {
             .task {
                 let account = await AccountStatus.fetch()
                 canUpgradePlan = account.isLightPlan
+                canTopUpTalk = account.isEntitled && !account.isUncappedTalk && !account.isTrialing
                 poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
                 renewalLabel = account.renewalLabel
                 planEndsAtPeriodEnd = account.cancelAtPeriodEnd

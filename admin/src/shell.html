@@ -731,7 +731,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <section data-tab="money" hidden>
   <h2>유저별 원가</h2>
-  <p class="sub">가입 이후 누적이에요. 달로 끊어 볼 수 있어요.</p>
+  <p class="sub" id="costSub">가입 이후 누적이에요. 달로 끊어 볼 수 있어요.</p>
   <div class="seg" id="costMonths" role="group" aria-label="기간"></div>
   <div class="card scroll"><table id="costTable"></table></div>
 </section>
@@ -2648,10 +2648,15 @@ function renderCostTable(){
     if(costPeriod==='all'){
       const c = (C.byUser||{})[String(idx)]; if(!c) return null;
       const u = DATA.users[idx];
-      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:u.talkSecs, scenes:u.scenes};
+      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:c.talk_secs ?? u.talkSecs, scenes:u.scenes, talk_el:c.talk_el};
     }
     return ((C.byUserMonth||{})[costPeriod]||{})[String(idx)] || null;
   };
+  // Say where the talk half comes from — it is not on the ledger (2026-09-26).
+  const sub = document.getElementById('costSub');
+  if(sub) sub.textContent = C.talk_estimated
+    ? `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 통화 원가는 원장에 글자가 안 남아서(게이트웨이) 통화 초 × 실측 분당 크레딧(${C.talk_credits_per_min}cr, ElevenLabs API)으로 계산해 더했어요 — ElevenLabs 열 안에 들어 있어요.`
+    : `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 지금은 원장 글자만 보여서 통화 원가가 빠져 있어요(admin_talk_cost 미적용) — 실제의 절반쯤이에요.`;
   let html = `<thead><tr><th>유저</th><th>플랜</th><th class="num">통화</th><th class="num">장면</th>`
     + `<th class="num">TTS 글자</th><th class="num">ElevenLabs</th><th class="num">Gemini</th>`
     + `<th class="num">합계</th></tr></thead><tbody>`;
@@ -3048,7 +3053,7 @@ function renderLevers(){
     `<b>Light 장면 단가.</b> Light를 다 쓰면 적자인 이유는 장면(${eur(e.unit.sceneEur,3)} × 60)뿐. 장면 길이 82→55초 −33%, 클론 절반 turbo −33% — launch-billing.md에 있는 레버.`,
     vm ? `<b>보이스메일이 크레딧의 ${Math.round(vm.share*100)}%.</b> 일일 통화를 켠 사람마다 세션 끝마다 합성돼요(${e.window.days}일 ${vm.note}). 무료 사용자 몫이 문제면 “어제 받은 사람만 다음 것을 만든다”가 제품 규칙을 안 깨는 절약이에요.` : '',
     `<b>ElevenLabs 요금제는 용량 레버.</b> 티어를 올려도 단가가 안 내려가요(전부 ≈$0.165/1k). 유일한 할인은 연간 −17%(도달 구독자 ${tg??'—'}→${tgAnnual??'—'}명). 지금 페이스 월 ${kcr(e.cycle.per30)}은 ${e.tier} 한도 ${kcr(e.cycle.limit)}의 ${Math.round(e.cycle.per30/e.cycle.limit*100)}% — 첫 마케팅 푸시에서 넘치니 <b>초과 과금(usage-based billing)을 미리 켜 두세요.</b>`,
-    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’·‘유저별 원가’가 이 섹션과 같은 숫자를 말해요. 그 전까지 원가의 진실은 ElevenLabs API예요.`,
+    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’이 이 섹션과 같은 숫자를 말해요. ‘유저별 원가’는 2026-09-26부터 통화 초 × 실측 분당 크레딧으로 통화분을 채워 넣어요. 원가의 진실은 여전히 ElevenLabs API예요.`,
   ].filter(Boolean);
   document.getElementById('pnlLevers').innerHTML = items.map(t=>`<li style="margin-bottom:10px">${t}</li>`).join('');
 }

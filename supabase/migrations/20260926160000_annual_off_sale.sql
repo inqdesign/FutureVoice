@@ -1,0 +1,46 @@
+-- ---------------------------------------------------------------------------
+-- The annual plans come off sale (2026-09-26, founder: "연간 할인이 너무 크지
+-- 않나?" — it is).
+--
+-- Measured against the pools set an hour earlier (Light 150 min + 10 scenes,
+-- Plus 600 min + 30 scenes; full-use cost $5.70 and $21.60 a month):
+--
+--                     discount   net/mo   margin/mo   margin/yr
+--   Light monthly        —        $8.49     +$2.79      +$33
+--   Light annual        33%       $5.67     −$0.03       −$0.4   (break-even)
+--   Plus  monthly        —       $16.99     −$4.61      −$55
+--   Plus  annual        40%      $10.20    −$11.40     −$137     ← worst product
+--
+-- (Korea 39/40% and the EU 25/46% are the same story; Plus annual is −$144
+-- and −$142 a year there.)
+--
+-- **An annual discount cannot be repaired on its own.** Plus monthly already
+-- loses $4.61 fully used, so any discount MULTIPLIES a loss: to break even at
+-- full use, Plus annual would have to list above 12 × monthly ($305/yr), which
+-- is not a discount. Trimming 40% → 20% only moves −$11.40 to −$8.00. The
+-- annual is a symptom of Plus's own price, and that is where the fix belongs
+-- (pricing principle, `docs/launch-billing.md`) — once real Plus months exist
+-- to price against.
+--
+-- So annual stops being OFFERED rather than being repriced under a guess.
+-- Light annual is break-even and could have stayed, but a period picker whose
+-- Annual tab holds a Plus card with no price is worse than no Annual tab.
+--
+-- This is a CATALOG flag, not an App Store change: `StoreKitService` selects
+-- `is_active`, `PaywallView.availablePeriods` is data-driven off what loaded,
+-- and the segment simply disappears — no ASC edit, no build. The four ASC
+-- products stay exactly where they are (a product id is permanent anyway) and
+-- can be switched back on with one UPDATE.
+--
+-- Nobody live is cut off. `talk_allowance`, `scene_allowance` and
+-- `consume_metered_seconds` all join `subscription_plans` by id with no
+-- `is_active` filter, and every live row carries its own stamp besides. The
+-- one account this touches is the German trial on `plus_annual` converting
+-- 2026-09-27 at €149.99: it converts as normal and keeps the 600 min + 30
+-- scenes it was stamped with. It is also the account to watch — it is the
+-- only annual Plus on the books.
+-- ---------------------------------------------------------------------------
+
+update public.subscription_plans
+   set is_active = false
+ where period = 'annual';

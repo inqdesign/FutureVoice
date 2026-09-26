@@ -422,17 +422,45 @@ export function assemble(raw: any, truth: Truth | null = null) {
     });
   }
 
-  const byUser: Record<string, any> = {};
-  for (const r of raw.cost_user) if (uidx.has(r.id)) byUser[String(uidx.get(r.id))] = {
-    ...r, el: round(r.el * elScale, 4), usd: round(r.el * elScale + r.gm, 4),
+  // A user's ElevenLabs cost is TWO things (2026-09-26): what the ledger
+  // priced (scenes, voicemail, shadowing, previews — and the app-side `turn`
+  // rows), and the CALLS, which the gateway synthesizes without writing a
+  // character anywhere. Until this the table was the ledger alone and summed
+  // to 47% of ElevenLabs' meter over the launch window; a Plus subscriber
+  // with 108 minutes of calls read $0.095. So talk is estimated from the
+  // seconds the meter DID record, at the credits-per-minute measured from
+  // ElevenLabs' usage API (`talkC`), and the ledger's turn rows are
+  // subtracted first so a call on the old path isn't counted twice.
+  // `raw.talk_cost` is optional (an un-applied migration) — without it the
+  // table is the old ledger figure, and `talk_estimated` says so.
+  const talkUsdPerMin = talkC * rate;
+  const tcUser = new Map<string, any>();
+  const tcMonth = new Map<string, any>();
+  for (const r of raw.talk_cost?.user ?? []) tcUser.set(r.id, r);
+  for (const r of raw.talk_cost?.month ?? []) tcMonth.set(`${r.month}|${r.id}`, r);
+  const withTalk = (r: any, tc: any) => {
+    if (!tc) return { el: round(r.el * elScale, 4), talk_el: null, talk_estimated: false };
+    const ledgerEl = Math.max(0, r.el - (tc.turn_usd ?? 0)) * elScale;
+    const talkEl = ((tc.talk_secs ?? 0) / 60) * talkUsdPerMin;
+    return { el: round(ledgerEl + talkEl, 4), talk_el: round(talkEl, 4), talk_estimated: true };
   };
+
+  const byUser: Record<string, any> = {};
+  for (const r of raw.cost_user) if (uidx.has(r.id)) {
+    const t = withTalk(r, tcUser.get(r.id));
+    byUser[String(uidx.get(r.id))] = {
+      ...r, ...t, usd: round(t.el + r.gm, 4),
+      talk_secs: tcUser.get(r.id)?.talk_secs ?? null,
+    };
+  }
 
   const byUserMonth: Record<string, Record<string, any>> = {};
   for (const r of raw.cost_month) {
     if (!uidx.has(r.id)) continue;
+    const t = withTalk(r, tcMonth.get(`${r.month}|${r.id}`));
     (byUserMonth[r.month] ??= {})[String(uidx.get(r.id))] = {
-      usd: round(r.el * elScale + r.gm, 4), el: round(r.el * elScale, 4), gm: r.gm, chars: r.chars,
-      talk_secs: r.talk_secs, scenes: r.scenes,
+      usd: round(t.el + r.gm, 4), el: t.el, talk_el: t.talk_el, talk_estimated: t.talk_estimated,
+      gm: r.gm, chars: r.chars, talk_secs: r.talk_secs, scenes: r.scenes,
     };
   }
 
@@ -459,6 +487,7 @@ export function assemble(raw: any, truth: Truth | null = null) {
       .map((r: any) => [dayIdx.get(r.d), round(r.el * elScale, 4), r.gm]),
     byUser,
     byUserMonth,
+    talk_estimated: !!raw.talk_cost,
     months: Object.keys(byUserMonth).sort().reverse(),
     rates: raw.rates,
     unpriced: raw.unpriced,

@@ -33,6 +33,137 @@ people, which stays true. It is not a licence to price against under-use.
 
 ---
 
+## 2026-09-26 revision — bounded plans, minute packs, 20 free minutes
+
+Founder decision, after two weeks of real numbers (`usage_ledger`, ElevenLabs
+usage API, the trial rows). Migrations `20260926100000_twenty_free_minutes`
+and `20260926110000_bounded_plans_and_topups`; app build 60+.
+
+**Unit costs** (ElevenLabs Pro $0.000165/cr; Apple Small Business 15%):
+talk 1 min ≈ **$0.03** all in (145–170 cr TTS + Gemini), scene ≈ **$0.12**.
+Net revenue: US list × 0.85; KR/EU list ÷ VAT × 0.85 (₩15,000 → ₩11,600 ≈
+$8.3; €9.99 → €7.14 ≈ $7.8).
+
+**Why**: Light fully used (150 min + 30 scenes) cost $8.1 against $8.49 net —
+break-even in the US, a loss in KR/EU. Plus's 120 scenes alone cost $14.4 of
+its $16.99 net, before a minute of talk; one trialer talked 35 min/day, which
+on an uncapped Plus is −$27/mo on that account, and the fair-use guard rails
+(1,800 flag / 3,000 stop) still lose $37–73 on such a month. 0 of 20 trials
+converted (18 expired, all cancelled; the four paying subscribers had all
+bought WITHOUT a trial), and four of the last six purchase attempts died on
+Korea's ₩0→정가 consent sheet. EL burn was ~$89/mo against ~$59/mo net.
+
+### The catalog (new buyers)
+
+| Plan | Pool | Full-use cost | USD | KRW | EUR | Margin at full use US / KR / EU |
+|------|------|---------------|-----|-----|-----|---------------------------------|
+| **Light monthly** | 150 min + 10 scenes | $4.5 + $1.2 = $5.7 | **$9.99** (unchanged) | ₩15,000 | €9.99 | **33% / 31% / 27%** |
+| **Plus monthly** | 600 min + 30 scenes | $18.0 + $3.6 = $21.6 | **$19.99** (unchanged) | ₩29,000 | €22.99 | **−$4.6 / −$5.6 / −$3.7** |
+| +100 min (consumable `talk_100`) — **not on sale yet** | 100 min | $3.0 | $4.99 | ₩7,500 | €4.99 | 29% / 27% / 25% |
+| ~~Light annual~~ **off sale** | same pool | $5.7/mo | $79.99 | ₩110,000 | €89.99 | −$0.03/mo (break-even) |
+| ~~Plus annual~~ **off sale** | same pool | $21.6/mo | $143.99 | ₩209,000 | €149.99 | **−$11.40/mo = −$137/yr** |
+
+- **Light keeps its 150 minutes; the SCENES paid for them.** A scene costs
+  $0.12 against a talk minute's $0.03, so ten scenes buy back forty minutes —
+  cutting scenes 60 → 10 makes Light the healthiest it has ever been (33%)
+  without touching the number people buy the plan for. Nobody is near ten:
+  the heaviest Light account played FOUR scenes in a month, and the only two
+  accounts that ever passed ten in thirty days were Plus. A Light learner who
+  does hit it has Plus to move to, which is what makes ten defensible on the
+  entry tier and not on the top one. (An earlier pass cut Light to 100 min +
+  20 scenes; `20260926150000` is the correction.)
+- **Plus 600 min = 20 minutes a day, and it loses $4.6 fully used.** Written
+  down rather than argued away: $16.99 of net buys 446 minutes beside 30
+  scenes, and the founder chose the size over the price (no price rise, and
+  300 min was judged too small). The exposure is bounded and tiny today —
+  three live Plus rows, the heaviest of which talked 108 minutes and played
+  no scenes in September, i.e. +$10 of margin. If real Plus months ever
+  approach the pool, **the fix is the price**; that is the pricing principle
+  above, and this is the case it was written for. What makes it different
+  from "unlimited" is that the worst case is a known four dollars instead of
+  an open tab ($90 at `abuse_seconds`).
+- **Two products for now.** The minute pack is built end to end (`talk_topups`,
+  `apple-topup`, `TalkTopUpService`, `TalkTopUpButton`) but **no consumable is
+  created in App Store Connect**, and the button draws nothing without a live
+  price — so the app is a two-subscription app with no code change. The
+  consequence to hold: a Plus learner who empties the pool has nothing to
+  buy and no tier to move to, which is exactly why Plus is the generous side
+  of the pair. Selling the pack later is an ASC product plus a build.
+- Scenes: 30-day max observed was 28 (Plus); only two accounts ever passed
+  ten, both Plus. Light 10 is 2.5× its own heaviest month, Plus 30 is 1.1×
+  the all-time maximum. 120 scenes used to cost 85% of Plus's net.
+- **Annual came off sale** (`20260926160000`). At 33/40% off (39/40% in
+  Korea, 25/46% in the EU) Light annual nets $5.67/mo against $5.70 of cost —
+  break-even by coincidence — while Plus annual nets $10.20 against $21.60,
+  i.e. **−$137/yr, −$144 in Korea, −$142 in the EU**: the worst product in
+  the lineup. And it cannot be repaired by trimming the discount, because
+  Plus monthly already loses $4.61 fully used and a discount multiplies a
+  loss — break-even would mean listing Plus annual ABOVE 12 × monthly
+  ($305/yr). So the annual waits for Plus's own price to be re-derived from
+  real months. It is a catalog flag (`is_active = false`), so no ASC edit and
+  no build: `StoreKitService` selects `is_active`, `availablePeriods` is
+  data-driven, and the picker now hides itself at one option. The four ASC
+  products stay where they are. The one account affected is the German
+  `plus_annual` trial converting 2026-09-27 at €149.99 — it converts as
+  normal on its stamp, and it is the only annual Plus on the books.
+- **It is a pause, and the way back is "2 months free"** (10 × monthly —
+  Light $99.99 / ₩150,000 / €99.99, Plus $199.99 / ₩290,000 / €229.99;
+  `20260926170000`, which flips `is_active` back and must run only AFTER the
+  ASC prices are set, with "preserve the current price for existing
+  subscribers"). Ten months is a fact a buyer checks in their head and it is
+  the SAME offer in every storefront, which the old table never was. At the
+  new pools it makes Light annual **+$17/yr** and cuts Plus annual from
+  −$137 to **−$89** — bounded, not fixed, because nothing fixes an annual
+  while its monthly is under water (even 12 × leaves −$55). At today's real
+  usage that same Plus annual is **+$91/yr**. The badge follows the live
+  prices: "2 months free" when they divide that way, a percentage otherwise
+  (`PaywallView.annualSavingLabel`).
+
+### Grandfathering
+
+`user_subscriptions.monthly_seconds`, `.talk_unlimited` and `.monthly_scenes`
+stamp what a row was SOLD, and every meter reads the stamp before the plan.
+The Light row keeps 150 min + 30 scenes. Lapsed rows are not stamped — coming
+back later is buying today's plan. Trials carry today's plan
+(`20260926130000`), since that is what they convert into.
+
+**The three legacy Plus rows are the one deliberate exception**
+(`20260926140000`, founder's call the same day): they were sold uncapped talk
++ 120 scenes, and that tail is the thing the revision exists to remove — the
+only stop on them is `abuse_seconds` (3,000 min ≈ $90 against $16.99 net).
+They are now **900 min + 60 scenes**: 3× the new pool, worst case −$17
+instead of −$73, and 8× above the heaviest real month among them (108 / 93 /
+5 talk minutes, 0 / 28 / 1 scenes in September), so no session that would
+have run will stop. The visible change is the screen — a capped row draws the
+Home ring, reads "N of 900 min" in Me, and can buy packs.
+
+One hole left open on purpose: the stamp survives a plan CHANGE inside the
+group (neither webhook writes those columns — that is what makes it survive
+renewals), so a legacy Plus downgrading to Light would carry 900 minutes onto
+$9.99. Three rows; watch rather than build.
+
+### App Store Connect — by hand, and the real cut-over
+
+1. Delete the intro offers on all four subscriptions (the app draws a trial
+   only while one exists; builds ≤ 53 draw "7 days free" regardless — raise
+   `min_build` if that matters).
+2. No price changes (founder's call — every plan keeps its price).
+3. —
+4. New consumable `com.roro.futurevoice.talk_100`, $4.99, display name
+   "100 minutes of talk" / "통화 100분". Same for Google Play (`talk_100`)
+   when Android catches up.
+5. Subscription descriptions: Light "100 min of talk, 20 scenes a month",
+   Plus "300 min of talk, 60 scenes a month" (`docs/appstore-connect-setup.md`).
+6. Apply both migrations (`scripts/apply-migration.sh`), deploy `apple-topup`.
+   Order: migrations first (the store build 59 reads the balance and the
+   catalog; only the ring's scale and the pack button wait on build 60).
+
+Android: server-side everything above applies (the catalog card already
+reads `talk_unlimited`); the pack (Play consumable + a `google-topup` claim)
+is a master-plan item, not yet built.
+
+---
+
 ## 2026-08-11 revision — credits → minutes
 
 Beta feedback was unanimous: per-click credit charges ("복습만 해도 6~10씩

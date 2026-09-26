@@ -48,8 +48,17 @@ struct PlanPageView: View {
                 // plan cannot run out, so nothing is waiting to be topped up.
                 if !isUncappedTalk, account.hasBonusMinutes {
                     row(icon: "gift.fill",
-                        title: explain("Invite minutes"),
+                        title: explain("Extra minutes"),
+                        subtitle: explain("Invite minutes and packs you bought, spent before the month's pool"),
                         value: explain("+\(account.bonusMinutes) min"))
+                }
+                // A hundred minutes at a time, for a month that ran short —
+                // what replaced "unlimited" (2026-09-26). Subscribers only:
+                // a free account is offered the plans, not a pack. Not in a
+                // trial either, whose pool is the trial's and converts on
+                // its own date.
+                if account.isEntitled, !isUncappedTalk, !account.isTrialing {
+                    TalkTopUpButton(prominent: false)
                 }
                 // Scenes are capped on EVERY tier — a scene plays itself, so a
                 // count is the only limit there is. A real limit is never
@@ -179,16 +188,14 @@ struct PlanPageView: View {
         }
     }
 
-    /// Uncapped talk is decided by the TIER, never by the cap the server
-    /// reports. The deployed `talk_allowance` has no unlimited branch — it
-    /// hands every plan its `monthly_seconds` — so a Plus account was told it
-    /// had 1,795 of 1,800 minutes left, which is a pool that tier does not
-    /// have and a number nothing enforces. Same lesson as the paywall's
-    /// `isUncappedTalk`: read the plan id, and the client never waits on a
-    /// server deploy to be right about what it sold.
-    private var isUncappedTalk: Bool {
-        account.isPlusPlan || (account.isEntitled && account.monthlyCapSeconds == nil)
-    }
+    /// Uncapped talk is the SUBSCRIPTION's stamp as `talk_allowance` reports
+    /// it (nil cap on an entitled account), never the tier: since 2026-09-26
+    /// a Plus bought today is a 300-minute pool and only the rows sold before
+    /// keep no ceiling. (Until then this read the plan id, because the
+    /// deployed `talk_allowance` once lacked the unlimited branch and told a
+    /// Plus account it had 1,795 of 1,800 minutes left; the server has had
+    /// that branch since `20260904130000`.)
+    private var isUncappedTalk: Bool { account.isUncappedTalk }
 
     /// The one number this tier is owed.
     ///
