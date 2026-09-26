@@ -125,7 +125,13 @@ struct WatchTab: View {
                         },
                         onCompose: { p in
                             personCard = nil
-                            composer = ComposerConfig(person: p)
+                            // "Make a situation" on a person is the WRITING
+                            // door. Its own caption promises "something
+                            // specific coming up with them", and a category
+                            // grid answers a different question — you don't
+                            // browse for the talk you're dreading with a
+                            // particular person, you describe it.
+                            composer = ComposerConfig(person: p, mode: .custom)
                         })
                         .environmentObject(appState)
                         .toolbar {
@@ -155,7 +161,7 @@ struct WatchTab: View {
                     },
                     onCompose: { person in
                         showingFind = false
-                        composer = ComposerConfig(person: person)
+                        composer = ComposerConfig(person: person, mode: .custom)
                     })
                     .environmentObject(appState)
             }

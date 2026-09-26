@@ -389,7 +389,17 @@ struct ScenarioComposerSheet: View {
                                  leadingControls: AnyView(
                                     HStack(spacing: 8) {
                                         attachMenu
-                                        if person == nil { partnerChip }
+                                        // Free choice when the box was opened
+                                        // from the tab; a fixed label when it
+                                        // was opened from a person, where the
+                                        // whole point is that it IS them —
+                                        // the box has no other place to say
+                                        // who this situation is with.
+                                        if let p = person {
+                                            fixedPersonChip(p)
+                                        } else {
+                                            partnerChip
+                                        }
                                     }
                                  ))
             }
@@ -467,6 +477,25 @@ struct ScenarioComposerSheet: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("The other person"))
+    }
+
+    /// The person this box was opened for. Not a button: the entry point
+    /// chose them, and offering to change it here would undo the choice the
+    /// learner just made by tapping their card.
+    private func fixedPersonChip(_ p: Counterpart) -> some View {
+        HStack(spacing: 6) {
+            PersonBubble(name: p.name, photoId: p.id, size: 28)
+            Text(p.name)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .padding(.leading, 6)
+        .padding(.trailing, 12)
+        .frame(height: 40)
+        .background(Capsule().fill(Color(.tertiarySystemFill)))
+        .foregroundStyle(.primary)
+        .accessibilityLabel(Text("With \(p.name)"))
     }
 
     private var attachmentChips: some View {
