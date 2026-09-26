@@ -1191,6 +1191,7 @@ final class AppState: ObservableObject {
             let contents = (try? fm.contentsOfDirectory(at: docs, includingPropertiesForKeys: nil)) ?? []
             for url in contents { try? fm.removeItem(at: url) }
         }
+        PublicIntroComposer.clear()
         let defaults = UserDefaults.standard
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("futurevoice.") {
             defaults.removeObject(forKey: key)

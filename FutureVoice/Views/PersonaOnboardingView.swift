@@ -132,8 +132,13 @@ struct PersonaOnboardingView: View {
                 .buttonStyle(.plain)
                 Spacer()
             }
-            .listRowBackground(Color.clear)
-            .padding(.vertical, 4)
+            // On the list's own row background, not a clear one: a floating
+            // avatar over the grouped backdrop reads as cut off from the name
+            // field under it, which is the same card. The separator is hidden
+            // because the list insets it to the row's leading CONTENT, and
+            // this row's content is centered — it drew a half-width line.
+            .padding(.vertical, 8)
+            .listRowSeparator(.hidden)
 
             TextField("What should I call you?", text: $persona.displayName)
                 .textInputAutocapitalization(.words)
@@ -223,14 +228,7 @@ struct PersonaOnboardingView: View {
         }
         if hasFacts || hasRecent {
             Section {
-                let intro = PublicPersonaService.composedIntro(persona)
-                if intro.isEmpty {
-                    Text("Nothing yet")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(intro)
-                        .font(.subheadline)
-                }
+                ComposedIntroLoader(persona: persona, language: appState.targetLanguage)
             } header: {
                 Text("What strangers can see")
             } footer: {

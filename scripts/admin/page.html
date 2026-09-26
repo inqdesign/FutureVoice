@@ -408,6 +408,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   #peopleTable .uid{display:none}
   #peopleTable .chip{white-space:normal; word-break:keep-all}
   #peopleTable .chip .tail{display:none}
+  /* 레벨 표: 레벨 · 명 · 통화한 사람 · 1인당 · 체험. 언어와 이틀 이상은 넓은 화면에서. */
+  #levelTable th:nth-child(3), #levelTable td:nth-child(3),
+  #levelTable th:nth-child(6), #levelTable td:nth-child(6){display:none}
   #costTable th:nth-child(2), #costTable td:nth-child(2),
   #costTable th:nth-child(4), #costTable td:nth-child(4),
   #costTable th:nth-child(5), #costTable td:nth-child(5){display:none}
@@ -596,6 +599,18 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   둘은 다를 수 있어요 — 고르고 아직 말하지 않은 사람이 있으니까요.</p>
   <div class="card bars" id="langs"></div>
   <p class="sub" style="margin-top:10px" id="langsNote"></p>
+</section>
+
+<section data-tab="people" hidden>
+  <h2>어느 레벨이 오나</h2>
+  <p class="sub">온보딩에서 <b>본인이 고른</b> 레벨이에요 — 앱이 매긴 점수가 아니라 자기 신고예요.
+  대화로 추정하는 CEFR은 폰에만 남고 서버로는 안 와요.
+  그래서 숫자 옆에 <b>그 사람들이 실제로 무엇을 했는지</b>를 같이 놓았어요.
+  손댈 곳은 많은 쪽이 아니라 <b>많은데 안 쓰는 쪽</b>이에요.</p>
+  <div class="card bars" id="levels"></div>
+  <p class="sub" style="margin-top:10px" id="levelsNote"></p>
+  <div class="card scroll" style="margin-top:12px"><table id="levelTable"></table></div>
+  <p class="sub" style="margin-top:10px" id="levelsRead"></p>
 </section>
 
 <section data-tab="people" hidden>
@@ -2151,6 +2166,143 @@ function renderLangs(users){
   }
 }
 
+/* ---------------------------------------------------------------- 레벨
+ * 온보딩에서 본인이 고른 CEFR 레벨(`profiles.proficiency`). `LearnerSetupSync`가
+ * 실린 빌드에서만 올라오고, 그 전 계정의 값은 가입 트리거의 기본값이라 읽으면
+ * 안 된다 — `setup`에는 실제로 보고된 행만 들어 있으니, 없으면 '아직 안 들어옴'
+ * 이지 A1이 아니다.
+ *
+ * 앱이 대화로 추정하는 레벨(요약의 `scorecard.cefr_level`)은 폰에만 남고 서버로
+ * 오지 않는다. 그래서 여기 있는 건 전부 자기 신고고, 자기 신고만으로는 어디에
+ * 집중할지 알 수 없다 — 레벨마다 '몇 명인가' 옆에 '그래서 무엇을 했나'를 반드시
+ * 붙이는 이유다. 답은 큰 덩어리가 아니라, 큰데 안 쓰는 덩어리에 있다.
+ */
+const LEVEL_ORDER = ['a1','a2','b1','b2','c1','c2'];
+const LEVEL_KO = {a1:'A1 입문', a2:'A2 기초', b1:'B1 중급',
+                  b2:'B2 중상급', c1:'C1 고급', c2:'C2 최상급'};
+const chosenLevel = idx => {
+  const v = ((DATA.setup||[]).find(r=>r.u===idx) || {}).level;
+  return v ? String(v).toLowerCase() : null;
+};
+/** 그 사람이 통화한 날의 수. `talkDays`는 턴이 있었던 날만 담으므로, 위젯 새로고침
+ *  같은 서버 호출이 '다시 온 날'로 세어지지 않는다. */
+const talkDayCount = idx => Object.keys(talkDays[idx] || {}).length;
+
+/** 한 레벨 묶음이 실제로 한 일. 통화 시간은 이 탭의 다른 표와 같은 창(출시 이후)
+ *  이고, 1인당은 통화한 사람으로 나눈다 — 안 한 사람까지 나누면 묶음이 클수록
+ *  작아지는, 참여도와 무관한 숫자가 된다. */
+function levelStats(list){
+  const talked = list.filter(u => u.talkSecs>0 || u.turns>0);
+  const secs = list.reduce((a,u)=>a+(u.talkSecs||0), 0);
+  const langs = {};
+  for(const u of list){ const c = chosenLang(u.idx); if(c) langs[c] = (langs[c]||0)+1; }
+  return {
+    list, n:list.length, talked:talked.length, secs,
+    per: talked.length ? Math.round(secs/talked.length) : 0,
+    repeat: list.filter(u => talkDayCount(u.idx) >= 2).length,
+    sale: list.filter(isSale).length,
+    langs: Object.entries(langs).sort((a,b)=>b[1]-a[1]),
+  };
+}
+
+function renderLevels(users){
+  const el = document.getElementById('levels');
+  const note = document.getElementById('levelsNote');
+  const read = document.getElementById('levelsRead');
+  if(!el) return;
+  const by = new Map(LEVEL_ORDER.map(l=>[l,[]]));
+  const unknown = [];
+  for(const u of users){
+    const l = chosenLevel(u.idx);
+    if(l && by.has(l)) by.get(l).push(u); else unknown.push(u);
+  }
+  const rows = LEVEL_ORDER.map(l => ({lvl:l, ...levelStats(by.get(l))})).filter(r => r.n);
+  const known = rows.reduce((a,r)=>a+r.n, 0);
+
+  if(!known){
+    el.innerHTML = '<div class="empty">아직 레벨이 들어온 계정이 없어요.</div>';
+    if(note) note.innerHTML = `온보딩에서 고른 레벨은 <code>LearnerSetupSync</code>가 실린`
+      + ` 빌드부터 올라와요. <code>profiles</code>의 나머지 값은 전부 가입 트리거의`
+      + ` 기본값(<code>b1</code>)이라 읽으면 안 돼요.`;
+    document.getElementById('levelTable').innerHTML = '';
+    if(read) read.innerHTML = '';
+    return;
+  }
+
+  // 막대는 사람 수. 옆의 값이 그 레벨이 실제로 한 일이고, 둘을 나란히 봐야
+  // "많은데 안 쓰는 쪽"이 눈에 들어온다.
+  const max = Math.max(...rows.map(r=>r.n));
+  el.innerHTML = rows.map(r => {
+    const who = r.list.slice(0,16).map(u=>esc(nameOf(u))).join(', ');
+    const tip = `<b>${LEVEL_KO[r.lvl]}</b> ${r.n}명`
+      + `${r.langs.length?'<br>'+r.langs.map(([l,n])=>`${langLabel(l)} ${n}`).join(' · '):''}`
+      + `${who?'<br>'+who:''}`;
+    return `<div class="row"><div class="lbl">${LEVEL_KO[r.lvl]}</div>
+      <div class="track" data-tip="${tip.replace(/"/g,'&quot;')}">
+        <div class="fill" style="width:${r.n/max*100}%"></div></div>
+      <div class="val">${r.n}명 · 통화 ${r.talked}`
+      + `${r.per?` · 1인당 ${fmtMin(r.per)}`:''}</div></div>`;
+  }).join('')
+   + (()=>{ // 동점이면 둘 다 부른다 — 한쪽만 부르면 순서가 결론이 돼 버린다.
+        const top = rows.filter(r => r.n === max);
+        return `<div class="legend">가장 많은 건 <b style="color:var(--ink)">`
+          + `${top.map(r=>LEVEL_KO[r.lvl]).join(' · ')}</b> ${top.length>1?'각 ':''}${max}명`
+          + `${unknown.length?` · 레벨 모르는 계정 ${unknown.length}명`:''}</div>`; })();
+
+  if(note){
+    note.innerHTML = `레벨이 들어온 계정 <b>${known}명</b> / ${users.length}명.`
+      + (unknown.length
+          ? ` 나머지 ${unknown.length}명은 아직 <code>LearnerSetupSync</code>가 실린 빌드를`
+            + ` 쓰지 않았어요 — 레벨을 안 골랐다는 뜻이 아니라, 고른 값이 서버로 아직`
+            + ` 안 왔다는 뜻이에요.`
+          : ' 전원의 선택이 들어와 있어요.');
+  }
+
+  // 표: 한 줄이 한 레벨. 사람 수 옆에 늘 행동이 붙는다.
+  const tb = document.getElementById('levelTable');
+  const dash = '<span class="muted">—</span>';
+  const pct = (a,b) => b ? `<span class="muted">${Math.round(a/b*100)}%</span>` : '';
+  const line = (label, r, extra='') =>
+    `<tr${extra}><td>${label}</td>
+      <td class="num"><b>${r.n}</b></td>
+      <td>${r.langs.length ? r.langs.map(([l,n])=>`${langLabel(l)} ${n}`).join(' · ')
+                           : `<span class="muted">모름</span>`}</td>
+      <td class="num">${r.talked ? `${r.talked} ${pct(r.talked, r.n)}` : dash}</td>
+      <td class="num">${r.per ? fmtMin(r.per) : dash}</td>
+      <td class="num">${r.repeat ? `${r.repeat} ${pct(r.repeat, r.n)}` : dash}</td>
+      <td class="num">${r.sale ? `${r.sale} ${pct(r.sale, r.n)}` : dash}</td></tr>`;
+  let html = `<thead><tr><th>레벨</th><th class="num">명</th><th>고른 언어</th>`
+    + `<th class="num">통화한 사람</th>`
+    + `<th class="num" title="통화한 사람 한 명당 통화 시간">1인당 통화</th>`
+    + `<th class="num" title="이틀 이상 통화한 사람 — 한 번 써보고 만 사람과 갈라지는 지점">이틀 이상</th>`
+    + `<th class="num">체험·결제</th></tr></thead><tbody>`;
+  for(const r of rows) html += line(`<b>${LEVEL_KO[r.lvl]}</b>`, r);
+  if(unknown.length)
+    html += line(`<span class="muted">아직 안 들어옴</span>`, levelStats(unknown),
+                 ' style="opacity:.6"');
+  html += line(`<b>합계</b>`, levelStats(users),
+               ' style="border-top:2px solid var(--baseline)"');
+  tb.innerHTML = html + '</tbody>';
+
+  // 읽는 법을 한 줄로 말해 준다. 사람이 적은 묶음은 우연이 커서, 세 명부터만
+  // 이름을 부른다 — 한 명짜리 칸으로 방향을 정하는 게 이 표의 유일한 오용이다.
+  if(read){
+    const solid = rows.filter(r => r.n >= 3);
+    const weak = solid.slice().sort((a,b)=> (a.repeat/a.n) - (b.repeat/b.n)
+                                          || a.per - b.per)[0];
+    const strong = solid.slice().sort((a,b)=> (b.repeat/b.n) - (a.repeat/a.n)
+                                            || b.per - a.per)[0];
+    read.innerHTML = solid.length < 2
+      ? `아직 세 명 이상 모인 레벨이 ${solid.length}개뿐이라, 레벨끼리 비교할 단계는 아니에요.`
+      : `세 명 이상 모인 레벨만 보면, 가장 잘 돌아오는 쪽은 <b>${LEVEL_KO[strong.lvl]}</b>`
+        + ` — ${strong.n}명 중 ${strong.repeat}명이 이틀 이상 통화했어요.`
+        + ` 가장 덜 돌아오는 쪽은 <b>${LEVEL_KO[weak.lvl]}</b> — ${weak.n}명 중 ${weak.repeat}명이에요.`
+        + ` 레벨은 자기 신고라 이건 방향이지 결론이 아니에요.`
+        + ` 누가 들어 있는지는 아래 <b>한 사람씩</b>에서 볼 수 있어요.`;
+  }
+}
+
+
 function personDetail(u){
   const sess = forUser(DATA.recentSessions, u.idx).filter(realSession).slice(0,15);
   const free = {};
@@ -3064,7 +3216,7 @@ function render(){
   renderHoursMetric(); renderHoursToday(users); renderHours(users); renderHoursByUser(users);
   renderDow(users); renderSpanPick(); renderSpan(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
-  renderPeopleTiles(users); renderLangs(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
+  renderPeopleTiles(users); renderLangs(users); renderLevels(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();

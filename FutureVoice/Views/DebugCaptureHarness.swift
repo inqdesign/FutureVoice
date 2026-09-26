@@ -131,6 +131,24 @@ enum DebugCapture {
         ]
         PersonaStore.shared.save(p)
         appState.persona = p
+        // The intro is WRITTEN by a Gemini call, and a capture run has no
+        // session — so without this the two intro routes would render the
+        // offline fallback (the old concatenation) and the screenshots would
+        // review a screen nobody sees. This is the paragraph the real prompt
+        // returned for exactly this persona on 2026-09-25
+        // (`scripts/public-intro-probe.py`), seeded into the composer's own
+        // cache: same view, same code path, a fixture for the one thing a
+        // capture run can't reach — like `sampleLightAccount` above.
+        PublicIntroComposer.save("""
+            Hi, I am Eunggyu, and I have been living here in Munich for a while \
+            now working on my own AI app for language learning. Since I am quite \
+            interested in technology and raising young children, I spend most of \
+            my time balancing those two worlds. My daily life usually involves \
+            picking up my kids from school or handling client calls, so I am \
+            always looking for ways to practice better communication. When I \
+            have some free time, I really enjoy going for a long run along the \
+            Isar river to clear my head.
+            """, for: PublicIntroComposer.sources(p, language: appState.targetLanguage))
     }
 
     /// Idempotent per name — the resolver may evaluate more than once.
@@ -372,6 +390,13 @@ enum DebugCapture {
             // published: work · town · situations · the unlocked lines only.
             once("sample-persona") { seedSamplePersona(appState) }
             return AnyView(PublicIntroPreviewSheet().environmentObject(appState))
+        case "profile-name":
+            // Me → Profile, first step: the avatar sits in the SAME card as
+            // the name field (2026-09-25) — it used to float on the grouped
+            // backdrop, reading as cut off from the row under it.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(PersonaOnboardingView(initialPersona: appState.persona, startStep: 0)
+                .environmentObject(appState))
         case "profile-notes":
             // Me → Profile, "Your life" step: the remembered lines with their
             // locks — two private, one the summary call let out.
@@ -1756,6 +1781,8 @@ private struct DaySpentCaptureHost: View {
     let canUpgrade: Bool
     var allowance: Int? = nil
     var renewsOn: String = "Sep 14"
+    var isTrial: Bool = false
+    var planMinutesAfterTrial: Int? = nil
     @State private var showing = false
 
     var body: some View {
@@ -1764,6 +1791,8 @@ private struct DaySpentCaptureHost: View {
                 DailyAllowanceSheet(kind: kind, canUpgrade: canUpgrade,
                                     allowance: allowance ?? (kind == .talk ? 150 : 60),
                                     renewsOn: renewsOn,
+                                    isTrial: isTrial,
+                                    planMinutesAfterTrial: planMinutesAfterTrial,
                                     onReview: {}, onUpgrade: {})
             }
             .onAppear {
@@ -1786,8 +1815,6 @@ private struct UpdateCaptureHost: View {
 
     말이 늘지 않는 이유는 하나 — 충분히 말하지 않아서예요. 60초 녹음으로 유창해진 미래의 내 목소리를 만들고, 매일 통화하세요. 통화가 끝나면 내가 쓴 단어·표현·문법으로 나만의 교재가 만들어져요.
 
-    var isTrial: Bool = false
-    var planMinutesAfterTrial: Int? = nil
     - 내 관심사에서 시작하는 매일 통화
     - 매 턴 돌아오는 유창한 버전
     - 통화가 끝나면 자동으로 만들어지는 나만의 교재
@@ -1796,8 +1823,6 @@ private struct UpdateCaptureHost: View {
     """
 
     var body: some View {
-                                    isTrial: isTrial,
-                                    planMinutesAfterTrial: planMinutesAfterTrial,
         ConversationHome()
             .sheet(isPresented: $showing) {
                 UpdateAvailableSheet(

@@ -198,7 +198,7 @@ struct RootTabView: View {
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
             // Nothing about this learner reaches the pool until they have
             // seen the paragraph a stranger's phone would speak as "them".
-            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona) {
+            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona, language: appState.targetLanguage) {
                 showingIntroPreview = true
             }
         }

@@ -44,7 +44,19 @@ practice carried more than half of every total. Four tabs, one question each:
   only. Subscription is a SECOND funnel, deliberately: a trial starts within
   minutes of signing up, not after a call, so stacking it under the activity
   bars would state a sequence that never happens.
-- **사람** — one row per account, everything else behind the row.
+- **사람** — one row per account, everything else behind the row, plus two
+  distribution sections above it: which languages are being learned, and
+  **어느 레벨이 오나** — the onboarding level (`profiles.proficiency`, only
+  where `setup_at` says a build reported it) with what each level actually
+  did beside it. The level is SELF-DECLARED and the section says so: the
+  app's measured CEFR lives in the session summary's `scorecard.cefr_level`
+  and never leaves the phone, so a count of levels on its own says nothing
+  about where to put effort — every row carries 통화한 사람 · 1인당 통화 ·
+  이틀 이상 · 체험·결제 next to the headcount, because the group worth
+  working on is the big one that doesn't come back, not the big one.
+  Accounts on a build older than `LearnerSetupSync` are their own row
+  ("아직 안 들어옴"), never folded into B1 — that value is the signup
+  trigger's default.
 - **돈** — MRR, what the running trials are worth, then (since 2026-09-24)
   the P&L as ElevenLabs sees it: the account's own credit usage read from
   the ElevenLabs API (`src/truth.ts`, secret `ELEVENLABS_API_KEY`), split

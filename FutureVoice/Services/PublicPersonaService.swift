@@ -236,11 +236,12 @@ enum PublicPersonaService {
     /// the trigger for `PublicIntroPreviewSheet`. False once they decided
     /// either way, and false while the profile is too thin to publish (there
     /// is nothing to show them yet).
-    static func needsIntroDecision(_ persona: UserPersona?) -> Bool {
+    @MainActor
+    static func needsIntroDecision(_ persona: UserPersona?, language: String) -> Bool {
         let d = UserDefaults.standard
         guard !d.bool(forKey: manualIntroKey), !d.bool(forKey: autoApprovedKey),
               let p = persona, p.isMinimallyComplete else { return false }
-        return composedIntro(p).count >= minIntroLength
+        return composedIntro(p, language: language).count >= minIntroLength
     }
 
     /// 80 because the DATABASE says 80: `public_personas_intro_bounds`
@@ -278,7 +279,7 @@ enum PublicPersonaService {
     /// user id hashed into the preset catalog.
     @discardableResult
     static func publishMirror(_ p: UserPersona, language: String) async -> Bool {
-        let intro = composedIntro(p)
+        let intro = await composeIntro(p, language: language)
         guard intro.count >= minIntroLength else { return false }
         guard let uid = try? await SupabaseProvider.shared.auth.session.user.id else { return false }
         let voice = VoicePreset.catalog[abs(uid.uuidString.hashValue) % VoicePreset.catalog.count]
@@ -303,7 +304,7 @@ enum PublicPersonaService {
     /// only through the preview's yes.
     private static func trimUnapprovedRow(_ p: UserPersona, language: String) async {
         guard let existing = try? await fetchMine(language: language) else { return }
-        let intro = composedIntro(p)
+        let intro = await composeIntro(p, language: language)
         if intro == existing.intro { return }
         if intro.count >= minIntroLength {
             struct Patch: Encodable { let intro: String }
@@ -317,28 +318,27 @@ enum PublicPersonaService {
         }
     }
 
-    /// The onboarding profile, folded into one spoken-style paragraph — what
-    /// a stranger's phone will speak as "you". The user wrote these fields in
-    /// their own words (often their native language); the conversation
-    /// prompt's language guard keeps the talk in the target language
-    /// regardless.
+    /// The paragraph a stranger's phone speaks as "you" — a portrait written
+    /// by `PublicIntroComposer` from the onboarding profile and the remembered
+    /// lines at the rung the learner set (`strangerFacts`: the line itself,
+    /// or its gist, or nothing; standing facts only, never news). `household`
+    /// and `freeNotes` are deliberately NOT read — they were written for the
+    /// fluent self, and until 2026-09-15 "wife and 4yo daughter at Kita" went
+    /// out to every learner in the pool without the author ever seeing the
+    /// paragraph it was in.
     ///
-    /// Only what a person would say on the first day at a language school:
-    /// work, town, what they need the language for, and the remembered lines
-    /// at the rung the learner set (`strangerLines`: the line itself, or its
-    /// gist, or nothing). `household` and `freeNotes` are deliberately NOT
-    /// here — they were written for the fluent self, and until 2026-09-15
-    /// "wife and 4yo daughter at Kita" went out to every learner in the pool
-    /// without the author ever seeing the paragraph it was in.
-    static func composedIntro(_ p: UserPersona) -> String {
-        var parts: [String] = []
-        if !p.occupation.isEmpty { parts.append(p.occupation) }
-        if !p.lengthOfStay.isEmpty, !p.city.isEmpty {
-            parts.append("\(p.city) · \(p.lengthOfStay)")
-        }
-        if !p.situations.isEmpty { parts.append(p.situations.joined(separator: ", ")) }
-        parts.append(contentsOf: p.strangerLines)
-        return parts.joined(separator: "\n")
+    /// This one is synchronous and never asks the model: it returns the
+    /// written paragraph when one exists for exactly the current inputs,
+    /// else the plain fallback. Screens that show the text call
+    /// `composeIntro` and wait for the real one.
+    @MainActor
+    static func composedIntro(_ p: UserPersona, language: String) -> String {
+        PublicIntroComposer.current(p, language: language)
+    }
+
+    /// The written paragraph, asking the model once per change of inputs.
+    static func composeIntro(_ p: UserPersona, language: String) async -> String {
+        await PublicIntroComposer.compose(p, language: language)
     }
 
     // MARK: - Bookmarks (local only)

@@ -19,9 +19,10 @@ struct PublicIntroPreviewSheet: View {
 
     @State private var isPublishing = false
     @State private var failed = false
+    /// Nil until the composer has written (or fetched) the paragraph.
+    @State private var intro: String?
 
     private var persona: UserPersona { appState.persona ?? .empty }
-    private var intro: String { PublicPersonaService.composedIntro(persona) }
     private var languageName: String { LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage) }
 
     var body: some View {
@@ -40,8 +41,7 @@ struct PublicIntroPreviewSheet: View {
                         }
                     }
                     .padding(.vertical, 4)
-                    Text(intro)
-                        .font(.body)
+                    ComposedIntroText(intro: intro)
                         .padding(.vertical, 4)
                 } header: {
                     Text("What they'd hear")
@@ -60,7 +60,7 @@ struct PublicIntroPreviewSheet: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(isPublishing)
+                    .disabled(isPublishing || intro == nil)
                     .listRowSeparator(.hidden)
 
                     NavigationLink {
@@ -90,6 +90,9 @@ struct PublicIntroPreviewSheet: View {
             .interactiveDismissDisabled(isPublishing)
         }
         .onAppear { Analytics.capture("public_intro_preview_shown") }
+        .task(id: PublicIntroComposer.sources(persona, language: appState.targetLanguage).key) {
+            intro = await PublicPersonaService.composeIntro(persona, language: appState.targetLanguage)
+        }
     }
 
     private func publish() async {
@@ -113,5 +116,45 @@ struct PublicIntroPreviewSheet: View {
         let language = appState.targetLanguage
         Task { try? await PublicPersonaService.withdrawMine(language: language) }
         dismiss()
+    }
+}
+
+/// The composed paragraph, or the one-line wait while the composer writes
+/// it. Shared by the preview sheet and the profile page so the two can't
+/// show different texts for the same person.
+struct ComposedIntroText: View {
+    var intro: String?
+
+    var body: some View {
+        if let intro, !intro.isEmpty {
+            Text(intro)
+                .font(.body)
+        } else if intro == nil {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Writing your introduction…")
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("Nothing yet")
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// `ComposedIntroText` that fetches for itself — for a screen that holds a
+/// persona draft rather than the saved one (Me → Profile), so the paragraph
+/// follows the lines as they are edited on that screen.
+struct ComposedIntroLoader: View {
+    var persona: UserPersona
+    var language: String
+    @State private var intro: String?
+
+    var body: some View {
+        ComposedIntroText(intro: intro)
+            .task(id: PublicIntroComposer.sources(persona, language: language).key) {
+                intro = nil
+                intro = await PublicPersonaService.composeIntro(persona, language: language)
+            }
     }
 }

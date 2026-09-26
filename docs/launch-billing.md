@@ -372,6 +372,21 @@ against $8.49 net, and its 150 talk minutes cost $8.66 — either half alone is
 most of the plan's revenue. Fixing Plus only moves the loss-making account down
 a tier. Re-derive Light against the same table before launch.
 
+**Light was cut to 30 scenes on 2026-09-25**
+(`20260925140000_light_thirty_scenes_new_signups_only`), which is that
+$11.42 halved to $5.71 against the same $8.49 net. Only people who buy from
+that day on: the size a subscription was SOLD is stamped on
+`user_subscriptions.monthly_scenes`, and the plan's own figure applies only
+where that column is NULL. Every live row was stamped first, so the one Light
+subscriber kept 60 and both running trials kept 14; a row that had already
+expired was left alone, because coming back later is buying today's plan. A
+new trial of either tier now gets 30 × 7/30 = 7 scenes, since a trial's scene
+count has always been derived from Light's month figure. `daily_scenes`
+followed to 1 and stays descriptive. App Store Connect still carries "150 min
+of talk, 60 scenes a month" on both Light products and has to be edited by
+hand — Apple shows that text on the product page and it is not in this repo.
+Light's TALK half is untouched and still costs $8.66 against $8.49.
+
 ### Blast radius
 
 None beyond the number. `PaywallView` reads `monthly_scenes` off the catalog
