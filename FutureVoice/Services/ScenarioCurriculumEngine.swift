@@ -161,7 +161,17 @@ enum ScenarioCurriculumEngine {
     /// SUBSTANCE rule) — the band only decides how hard the words are.
 
     /// Turns in a scene, at EVERY level.
-    static let sceneTurnRange = "9 to 11"
+    ///
+    /// **9–11 → 8–10 on 2026-09-26**, one turn shorter, for the cost reason
+    /// above read forward instead of backward: a scene's bill IS its
+    /// characters, so a tenth of the lines is a tenth of the money, and the
+    /// measured scene was $0.124 against a plan that prices it at $0.12. One
+    /// turn is the most that can come off without the scene stopping being a
+    /// scene — the SUBSTANCE rule still has to fit (something happens, it is
+    /// complicated, it resolves), and eight turns is four exchanges, which is
+    /// the floor for that. Do not take a second one: below this the scene
+    /// becomes the "표면적" A2 scene the range was widened to fix.
+    static let sceneTurnRange = "8 to 10"
 
     /// How long one turn is, at EVERY level.
     static let sceneTurnStyle = """
