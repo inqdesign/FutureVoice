@@ -55,6 +55,12 @@ struct DailyAllowanceSheet: View {
     /// (a pack buys minutes, not scenes).
     var canTopUp: Bool = false
 
+    /// This account can still earn talk minutes by inviting someone
+    /// (`InviteOffer.load` decides). Nil draws nothing — and it is never
+    /// drawn on a SCENES wall, because an invite buys talk minutes and a
+    /// scene pool cannot be topped up with them.
+    var invite: InviteOffer? = nil
+
     let onReview: () -> Void
     let onUpgrade: () -> Void
     /// The minutes are on the account. The sheet dismisses itself; the
@@ -62,6 +68,11 @@ struct DailyAllowanceSheet: View {
     var onTopUp: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
+
+    /// The pack answered with a live App Store price. Until it does — and
+    /// for as long as the consumable is not on sale — nothing is drawn for
+    /// it and the lead slot belongs to whatever comes next.
+    @State private var packOnSale = false
 
     var body: some View {
         VStack(spacing: 18) {
@@ -107,8 +118,8 @@ struct DailyAllowanceSheet: View {
                 // talk pool because it is the answer to "I want to keep
                 // talking"; on Light the plan move follows; review stays one
                 // tap away and free either way.
-                if packLeads {
-                    TalkTopUpButton {
+                if packOffered {
+                    TalkTopUpButton(onAvailability: { packOnSale = $0 }) {
                         onTopUp()
                         dismiss()
                     }
@@ -123,6 +134,16 @@ struct DailyAllowanceSheet: View {
                        prominent: !packLeads && !(canUpgrade && !isTrial)) {
                     onReview()
                     dismiss()
+                }
+                // LAST, and deliberately the quietest thing here: an invite
+                // is the only free way to get talk minutes back, but it
+                // cannot resume THIS call — the friend has to join first.
+                // Above the pack or the plan move it would read as an
+                // instant fix, which is the one thing it is not. The sheet
+                // stays up behind the share sheet; whatever they do next is
+                // still here.
+                if kind == .talk, let invite {
+                    InviteShareRow(offer: invite)
                 }
 
                 Button("Not now") { dismiss() }
@@ -140,9 +161,16 @@ struct DailyAllowanceSheet: View {
         .presentationDetents([.medium, .large])
     }
 
-    /// The pack is the first button: a spent TALK pool on a counted,
-    /// non-trial subscription.
-    private var packLeads: Bool { canTopUp && kind == .talk && !isTrial }
+    /// The pack is asked for: a spent TALK pool on a counted, non-trial
+    /// subscription. Asking is not selling — see `packLeads`.
+    private var packOffered: Bool { canTopUp && kind == .talk && !isTrial }
+
+    /// The pack is the first button — only once it has a PRICE. It led the
+    /// row on the strength of the account alone until 2026-09-27, and with
+    /// the consumable not yet on sale that handed the lead to a button that
+    /// draws nothing: a Plus subscriber whose month ran out met a sheet
+    /// with no primary action on it at all.
+    private var packLeads: Bool { packOffered && packOnSale }
 
     /// One full-width button; the leading one is prominent, the rest
     /// bordered. Two styles are two view types, so this is a branch rather
@@ -216,7 +244,10 @@ struct DailyAllowanceSheet: View {
             }
             return explain("Your plan starts on \(renewsOn). Review stays free until then.")
         }
-        if canTopUp && kind == .talk {
+        // `packLeads`, not `canTopUp`: this sentence names the pack button,
+        // and a line that says "add minutes" above a sheet with no such
+        // button is the same wrong promise the prominence rule had.
+        if packLeads {
             return canUpgrade
                 ? explain("Add minutes to keep going now, move to Plus, or review what this month left you.")
                 : explain("Add minutes to keep going now, or review what this month left you.")
@@ -261,6 +292,8 @@ struct DailyAllowanceSheet: View {
     Text("host")
         .sheet(isPresented: .constant(true)) {
             DailyAllowanceSheet(kind: .talk, canUpgrade: false, allowance: 300,
-                                renewsOn: "Sep 14", canTopUp: true, onReview: {}, onUpgrade: {})
+                                renewsOn: "Sep 14", canTopUp: true,
+                                invite: InviteOffer(code: "K3MQ9F", invitesUsed: 2),
+                                onReview: {}, onUpgrade: {})
         }
 }

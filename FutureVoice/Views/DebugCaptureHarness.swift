@@ -423,6 +423,15 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 PlanPageView(account: Self.sampleLightAccount, previewUsage: .sample)
             })
+        case "plan-spent":
+            // The same page once the month's minutes are gone: the invite
+            // row has grown into the card, and nothing else moves.
+            var spent = Self.sampleLightAccount
+            spent.secondsUsedPeriod = spent.monthlyCapSeconds ?? 9000
+            return AnyView(NavigationStack {
+                PlanPageView(account: spent, previewUsage: .sample,
+                             previewInvite: InviteOffer(code: "K3MQ9F", invitesUsed: 2))
+            })
         case "plan-trial":
             // The same page during the trial week of a launch-code
             // subscriber: no charge yet, the first one dated and priced, and
@@ -843,13 +852,18 @@ enum DebugCapture {
             // The update notice, both temperaments. Unreachable in a capture
             // run — it needs a server that has moved past this build.
             return AnyView(UpdateCaptureHost(required: name == "update-required"))
-        case "day-spent", "day-spent-unlimited", "day-spent-scenes":
+        case "day-spent", "day-spent-unlimited", "day-spent-scenes", "day-spent-invite":
             // The spent-allowance sheet, both sides of it: Daily (there is
             // something to offer) and Unlimited (there isn't). Unreachable in
             // a capture run — it takes a real account that talked out its day.
+            // `day-spent-invite` is the same sheet with the invite line,
+            // which only a subscriber on a counted pool with rewards left
+            // ever sees.
             return AnyView(DaySpentCaptureHost(
                 kind: name == "day-spent-scenes" ? .scenes : .talk,
-                canUpgrade: name != "day-spent-unlimited")
+                canUpgrade: name != "day-spent-unlimited",
+                invite: name == "day-spent-invite"
+                    ? InviteOffer(code: "K3MQ9F", invitesUsed: 2) : nil)
                 .environmentObject(appState))
         case "day-spent-trial", "day-spent-trial-plus":
             // The same sheet as a TRIAL account meets it: the pool is the
@@ -865,7 +879,20 @@ enum DebugCapture {
                 allowance: 35,
                 renewsOn: account.renewalLabel,
                 isTrial: true,
-                planMinutesAfterTrial: name == "day-spent-trial" ? 150 : nil)
+                planMinutesAfterTrial: name == "day-spent-trial" ? 150 : nil,
+                // A trialer sees the invite line too, and is the one account
+                // for which it is the ONLY thing on the sheet besides review.
+                invite: InviteOffer(code: "K3MQ9F", invitesUsed: 2))
+                .environmentObject(appState))
+        case "day-spent-plus":
+            // What a Plus subscriber meets TODAY: the month's pool spent,
+            // nothing to upgrade to, the minute pack asked for but not on
+            // sale (no ASC consumable), so the invite is the only free way
+            // forward and Practice takes the lead slot the pack didn't fill.
+            return AnyView(DaySpentCaptureHost(
+                kind: .talk, canUpgrade: false, allowance: 300,
+                invite: InviteOffer(code: "K3MQ9F", invitesUsed: 2),
+                canTopUp: true)
                 .environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
@@ -1783,6 +1810,8 @@ private struct DaySpentCaptureHost: View {
     var renewsOn: String = "Sep 14"
     var isTrial: Bool = false
     var planMinutesAfterTrial: Int? = nil
+    var invite: InviteOffer? = nil
+    var canTopUp: Bool = false
     @State private var showing = false
 
     var body: some View {
@@ -1793,6 +1822,8 @@ private struct DaySpentCaptureHost: View {
                                     renewsOn: renewsOn,
                                     isTrial: isTrial,
                                     planMinutesAfterTrial: planMinutesAfterTrial,
+                                    canTopUp: canTopUp,
+                                    invite: invite,
                                     onReview: {}, onUpgrade: {})
             }
             .onAppear {

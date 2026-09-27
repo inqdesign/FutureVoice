@@ -314,6 +314,9 @@ struct WatchView: View {
     /// scene counts (or a free account) still meters scene audio in seconds
     /// off the talk pool, and that lands here as the talk cap.
     @State private var capKind: DailyAllowanceSheet.Kind = .scenes
+    /// Only ever drawn on a TALK wall, which Watch can also reach when a
+    /// scene's own pool is fine but the month's minutes are gone.
+    @State private var inviteOffer: InviteOffer?
 
     /// This account is on Light, so the spent-pool sheet has somewhere to
     /// send them. Resolved when the cap actually lands — Watch views are made
@@ -388,6 +391,7 @@ struct WatchView: View {
             isTrial: accountIsTrialing,
             planMinutesAfterTrial: planMinutesAfterTrial,
             canTopUp: canTopUpTalk,
+            invite: inviteOffer,
             onReview: { capChoice = .review },
             onUpgrade: { capChoice = .upgrade },
             onTopUp: { capChoice = .topUp })
@@ -851,6 +855,7 @@ struct WatchView: View {
                     : account.monthlyScenesCap
                 renewalLabel = account.renewalLabel
                 planEndsAtPeriodEnd = account.cancelAtPeriodEnd
+                if capKind == .talk { inviteOffer = await InviteOffer.load(for: account) }
                 sceneCapReached = true
                 isPlaying = false
                 return

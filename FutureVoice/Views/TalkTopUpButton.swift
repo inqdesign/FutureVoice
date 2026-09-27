@@ -12,6 +12,12 @@ import SwiftUI
 /// account (the gate is already invalidated by then).
 struct TalkTopUpButton: View {
     var prominent = true
+    /// Whether this button drew anything, reported as soon as the pack and
+    /// its price have answered. A host that ORDERS its buttons has to know:
+    /// the pack is not on sale yet (no ASC consumable as of 2026-09-26), so
+    /// a sheet that reserved the lead slot for it was left with no primary
+    /// button at all.
+    var onAvailability: (Bool) -> Void = { _ in }
     var onPurchased: () -> Void = {}
 
     @StateObject private var store = TalkTopUpService()
@@ -37,7 +43,10 @@ struct TalkTopUpButton: View {
                 .modifier(Style(prominent: prominent))
             }
         }
-        .task { await store.load() }
+        .task {
+            await store.load()
+            onAvailability(store.pack?.localizedPrice != nil)
+        }
         .onChange(of: store.state) { _, state in
             if state == .purchased { onPurchased() }
         }

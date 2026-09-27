@@ -60,7 +60,7 @@ struct InviteView: View {
                     // App Store card, not a paragraph they have to act on.
                     ShareLink(item: ReferralService.appStoreURL,
                               subject: Text("nawana"),
-                              message: Text(shareText(code))) {
+                              message: Text(ReferralService.shareMessage(code: code))) {
                         Label("Share invite", systemImage: "square.and.arrow.up")
                     }
                     HStack {
@@ -125,10 +125,6 @@ struct InviteView: View {
         .task {
             if !loaded { loaded = true; await reload() }
         }
-    }
-
-    private func shareText(_ code: String) -> String {
-        explain("I'm practicing speaking with my own AI voice on nawana. Enter my code \(code) when you sign up and we both get \(bonusMinutes) minutes of talk time.")
     }
 
     private func reload() async {

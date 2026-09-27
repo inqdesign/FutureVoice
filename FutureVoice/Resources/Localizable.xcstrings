@@ -3669,6 +3669,52 @@
         }
       }
     },
+    "%lld minutes each, together" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld minutes each, together"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld minutos para cada uno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld minutes chacun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友だちと一緒なら、お互い%lld分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구랑 같이 하면 %lld분씩"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一起练，各得 %lld 分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一起練，各得 %lld 分鐘"
+          }
+        }
+      }
+    },
     "%lld months free" : {
       "localizations" : {
         "es" : {
@@ -16998,6 +17044,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "料理"
+          }
+        }
+      }
+    },
+    "Copy code" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy code"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar código"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier le code"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コードをコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "코드 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制邀请码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製邀請碼"
           }
         }
       }
@@ -33903,6 +33995,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "邀請與通話時間"
+          }
+        }
+      }
+    },
+    "Invite a friend · %lld min each" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite a friend · %lld min each"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invita a un amigo · %lld min cada uno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite un ami · %lld min chacun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友だちを招待して%lld分もらう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구 초대하고 %lld분 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邀请朋友，各得 %lld 分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邀請朋友，各得 %lld 分鐘"
           }
         }
       }
@@ -55975,6 +56113,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "複習"
+          }
+        }
+      }
+    },
+    "Rewarded for your first %lld friends." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rewarded for your first %lld friends."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se te premia por los primeros %lld amigos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La récompense vaut pour tes %lld premiers amis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の%lld人までもらえます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구 %lld명까지 받을 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "奖励以前%lld位朋友为限。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "獎勵以前%lld位朋友為限。"
           }
         }
       }
@@ -78552,6 +78736,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "平常用哪種語言？"
+          }
+        }
+      }
+    },
+    "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si un amigo se registra con tu código, cada uno recibe %lld minutos, y los minutos de invitación se gastan antes que los del mes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si un ami s’inscrit avec ton code, chacun reçoit %lld minutes, et les minutes d’invitation passent avant celles du mois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のコードで友だちが登録すると、ふたりとも通話%lld分もらえます。招待でもらった時間は今月の分より先に使われます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 코드로 친구가 가입하면 둘 다 통화 %lld분이 들어와요. 초대로 받은 시간은 이달 시간보다 먼저 쓰여요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朋友用你的邀请码注册，两人各拿到%lld分钟通话时间。邀请得到的时间会比这个月的额度先用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朋友用你的邀請碼註冊，兩人各拿到%lld分鐘通話時間。邀請得到的時間會比這個月的額度先用。"
           }
         }
       }

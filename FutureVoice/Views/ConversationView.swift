@@ -115,6 +115,9 @@ struct ConversationView: View {
     /// A minute pack is on offer at the wall: counted subscription, not a
     /// trial (2026-09-26).
     @State private var canTopUpTalk = false
+    /// Resolved with the account, long before the wall — the sheet's own
+    /// buttons must not grow a new one under the learner's thumb.
+    @State private var inviteOffer: InviteOffer?
     /// The plan's own pool in whole minutes, from the account snapshot.
     /// Never hardcoded: the number is a plan setting on the server and a
     /// stale constant here would misstate what they bought.
@@ -915,6 +918,7 @@ struct ConversationView: View {
                     isTrial: accountIsTrialing,
                     planMinutesAfterTrial: planMinutesAfterTrial,
                     canTopUp: canTopUpTalk,
+                    invite: inviteOffer,
                     onReview: { capChoice = .review },
                     onUpgrade: { capChoice = .upgrade },
                     onTopUp: { capChoice = .topUp })
@@ -972,6 +976,7 @@ struct ConversationView: View {
                 planEndsAtPeriodEnd = account.cancelAtPeriodEnd
                 accountIsTrialing = account.isTrialing
                 planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }
+                inviteOffer = await InviteOffer.load(for: account)
             }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.

@@ -30,8 +30,12 @@ struct PlanPageView: View {
     /// Screenshot harness only — renders this instead of fetching, so the page
     /// can be reviewed without a signed-in account carrying real usage.
     var previewUsage: UsageBreakdown? = nil
+    /// Screenshot harness only — the invite offer the page would have
+    /// fetched.
+    var previewInvite: InviteOffer? = nil
 
     @State private var usage = UsageBreakdown()
+    @State private var invite: InviteOffer?
 
     var body: some View {
         List {
@@ -81,6 +85,13 @@ struct PlanPageView: View {
                 }
             } header: {
                 Text(account.isEntitled ? explain("This month") : explain("Left to spend"))
+            }
+
+            // Directly under the pool it answers, because that is where the
+            // question is asked: the same card three sections down is the
+            // invite row again, only taller.
+            if let offer = inviteCard {
+                Section { InviteMinutesCard(offer: offer) }
             }
 
             // The subscription itself, as the store bills it (2026-09-12):
@@ -159,12 +170,20 @@ struct PlanPageView: View {
                         title: explain("What uses talk time?"),
                         subtitle: explain("And what's always free"))
                 }
-                NavigationLink {
-                    InviteView()
-                } label: {
-                    row(icon: "gift",
-                        title: explain("Invite & earn talk time"),
-                        subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
+                // The invite is one row all month and the whole card once
+                // the pool is empty (the section above) — the same offer,
+                // said at the size of the question being asked. Never both:
+                // two invitations on one page is the page arguing with
+                // itself, and the card carries everything the row promised
+                // plus the action.
+                if inviteCard == nil {
+                    NavigationLink {
+                        InviteView()
+                    } label: {
+                        row(icon: "gift",
+                            title: explain("Invite & earn talk time"),
+                            subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
+                    }
                 }
             } footer: {
                 // Only where minutes actually run down. On an uncapped plan
@@ -180,6 +199,8 @@ struct PlanPageView: View {
         .navigationTitle("Usage")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            if let previewInvite { invite = previewInvite }
+            else if poolIsSpent { invite = await InviteOffer.load(for: account) }
             // Only an uncapped plan needs the ledger: every other tier's
             // number is the pool the server already reported.
             guard isUncappedTalk else { return }
@@ -196,6 +217,19 @@ struct PlanPageView: View {
     /// Plus account it had 1,795 of 1,800 minutes left; the server has had
     /// that branch since `20260904130000`.)
     private var isUncappedTalk: Bool { account.isUncappedTalk }
+
+    /// Nothing left to talk with: this period's pool is gone and no invite
+    /// or bought minutes are standing in front of it. Under a minute counts
+    /// as spent — the page prints whole minutes, so 40 seconds left reads as
+    /// zero either way, and the wall is one sentence away.
+    /// The card, or nil — read by both the section that draws it and the
+    /// row it stands in for, so the page can never show two invitations.
+    private var inviteCard: InviteOffer? { poolIsSpent ? invite : nil }
+
+    private var poolIsSpent: Bool {
+        account.isEntitled && !isUncappedTalk
+            && account.minutesRemaining == 0 && account.bonusSeconds <= 0
+    }
 
     /// The one number this tier is owed.
     ///
