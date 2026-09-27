@@ -24,8 +24,8 @@ struct ScenarioDetailView: View {
     @StateObject private var exporter = BookExportController()
     @State private var watchPresented = false
     /// The scene run again with the learner reading their own side —
-    /// the same `TeleprompterView` a talk book opens.
-    @State private var teleprompterPresented = false
+    /// the same `SayItAgainView` a talk book opens.
+    @State private var sayItAgainPresented = false
     @State private var shadowTarget: Turn?
     @State private var wordSheet: WordRef?
     @State private var expressionSheet: WordRef?
@@ -98,9 +98,9 @@ struct ScenarioDetailView: View {
         // A cover, not a push, for the reason the talk book's is: it holds
         // the mic for a whole run. Dismissing re-reads mastery, since a
         // passing read files a take under the Shadow chapter's own line.
-        .fullScreenCover(isPresented: $teleprompterPresented, onDismiss: refreshMastery) {
+        .fullScreenCover(isPresented: $sayItAgainPresented, onDismiss: refreshMastery) {
             if let s = scenario, let c = s.curriculum {
-                TeleprompterView(source: .scene(title: s.displayTitle,
+                SayItAgainView(source: .scene(title: s.displayTitle,
                                                 targetLanguage: appState.targetLanguage,
                                                 curriculum: c,
                                                 counterpart: watchCounterpart(for: s)))
@@ -371,9 +371,9 @@ struct ScenarioDetailView: View {
             // scene's first watch filled, and nothing is synthesized.
             if s.curriculum?.dialogue?.contains(where: { $0.speaker == "user" }) == true {
                 Button {
-                    teleprompterPresented = true
+                    sayItAgainPresented = true
                 } label: {
-                    Label("Teleprompter", systemImage: "text.viewfinder")
+                    Label("Say it again", systemImage: "text.viewfinder")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)

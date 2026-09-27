@@ -1,7 +1,7 @@
 import AVFoundation
 import SwiftUI
 
-/// Teleprompter mode — the talk, run AGAIN, with the learner's own lines
+/// Say it again — the talk, run AGAIN, with the learner's own lines
 /// replaced by their corrected versions.
 ///
 /// The third door on a talk book, beside Continue and Replay, and the only
@@ -36,7 +36,7 @@ import SwiftUI
 /// - **It never stops.** A weak read is scored, shown and left behind — the
 ///   run keeps its shape as a conversation — and the line keeps a Retry
 ///   button for as long as the screen is open (user decision, 2026-09-27).
-struct TeleprompterView: View {
+struct SayItAgainView: View {
     /// What is being run again — a finished talk or a Watch book's scene.
     /// Everything that differs between the two is resolved here by the
     /// caller, so the run itself never asks which one it is.
@@ -49,12 +49,12 @@ struct TeleprompterView: View {
         /// counterpart), already localized.
         let otherName: String
         var otherAvatar: UIImage? = nil
-        let steps: [TeleprompterScript.Step]
+        let steps: [SayItAgainScript.Step]
         /// The other side's line as it was ALREADY recorded. Nil means the
         /// line is read, never synthesized: a talk replays for free and a
         /// scene's lines are claimed by count, so a new synthesis here would
         /// be the one metered thing on a screen that promises none.
-        let audio: (TeleprompterScript.Step) -> Data?
+        let audio: (SayItAgainScript.Step) -> Data?
 
         @MainActor
         static func talk(_ session: Session) -> Source {
@@ -62,7 +62,7 @@ struct TeleprompterView: View {
                    title: session.displayTitle,
                    targetLanguage: session.targetLanguage,
                    otherName: chrome("Future self"),
-                   steps: TeleprompterScript.build(session: session),
+                   steps: SayItAgainScript.build(session: session),
                    audio: { TurnAudioStore.shared.data(for: $0.id) })
         }
 
@@ -80,7 +80,7 @@ struct TeleprompterView: View {
                           targetLanguage: targetLanguage,
                           otherName: counterpart.name,
                           otherAvatar: CounterpartPhotoStore.shared.image(for: counterpart.id),
-                          steps: TeleprompterScript.build(scene: curriculum.dialogue ?? [],
+                          steps: SayItAgainScript.build(scene: curriculum.dialogue ?? [],
                                                           shadowLines: curriculum.shadowLines),
                           audio: { PhraseAudioStore.shared.data(text: $0.text, voiceId: voiceId) })
         }
@@ -99,7 +99,7 @@ struct TeleprompterView: View {
     @StateObject private var recorder = AudioRecorder()
     @StateObject private var live = LiveTranscriber()
 
-    @State private var steps: [TeleprompterScript.Step] = []
+    @State private var steps: [SayItAgainScript.Step] = []
     /// The step the run is on. Everything before it is history.
     @State private var index = 0
     @State private var phase: Phase = .intro
@@ -109,7 +109,7 @@ struct TeleprompterView: View {
     @State private var scoreTasks: [UUID: Task<Void, Never>] = [:]
     /// What the prompter is showing. Held separately from `index` so the
     /// one-off retry from the finished screen doesn't wind the history back.
-    @State private var promptStep: TeleprompterScript.Step?
+    @State private var promptStep: SayItAgainScript.Step?
     @State private var oneOffRetry = false
     /// Set by "Done reading" so the wait ends without ending the run, and by
     /// Skip so the step is abandoned unscored.
@@ -171,7 +171,7 @@ struct TeleprompterView: View {
                 .onChange(of: index) { _, _ in scrollToEnd(proxy) }
                 .onChange(of: phase) { _, _ in scrollToEnd(proxy) }
             }
-            .navigationTitle("Teleprompter")
+            .navigationTitle("Say it again")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -206,14 +206,14 @@ struct TeleprompterView: View {
     /// in front of them, not a line of the transcript yet. A one-off retry
     /// from the finished screen is the exception: the run is over, so the
     /// history stays whole underneath it.
-    private var history: [TeleprompterScript.Step] {
+    private var history: [SayItAgainScript.Step] {
         guard phase != .intro else { return [] }
         let upTo = (phase == .reading && !oneOffRetry) ? index : index + 1
         return Array(steps.prefix(max(0, min(upTo, steps.count))))
     }
 
     @ViewBuilder
-    private func historyRow(_ step: TeleprompterScript.Step, isCurrent: Bool) -> some View {
+    private func historyRow(_ step: SayItAgainScript.Step, isCurrent: Bool) -> some View {
         let take = takes[step.id]
         // `DialogueLine.name` is a `String`, so a literal here would be
         // frozen English — see "UI text has ONE language".
@@ -240,7 +240,7 @@ struct TeleprompterView: View {
     }
 
     @ViewBuilder
-    private func takeAccessory(_ step: TeleprompterScript.Step, take: Take?) -> some View {
+    private func takeAccessory(_ step: SayItAgainScript.Step, take: Take?) -> some View {
         HStack(spacing: 8) {
             switch take?.outcome {
             case .scored(let score):
@@ -309,7 +309,12 @@ struct TeleprompterView: View {
             Text(source.title)
                 .font(.title3.weight(.semibold))
                 .multilineTextAlignment(.center)
-            Text(explain("Your lines come back one at a time, corrected. Read each one out loud — the answer you got plays, and the next line comes up."))
+            // Says what the run IS before anything else: the whole
+            // conversation again, with the learner's part spoken right. It
+            // is not a list of fixes — an uncorrected turn is read as said.
+            Text(source.kind == "scene"
+                 ? explain("Do this scene again from the start, and say your part out loud. The other side plays just as it did.")
+                 : explain("Do this talk again from the start, and say your part the corrected way. The answers play just as they did."))
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -464,7 +469,7 @@ struct TeleprompterView: View {
         guard !Task.isCancelled else { return }
         index = max(0, steps.count - 1)
         phase = .finished
-        Telemetry.log("teleprompter_run", [
+        Telemetry.log("say_again_run", [
             "kind": source.kind,
             "lines": "\(spokenCount)",
             "read": "\(readCount)",
@@ -475,7 +480,7 @@ struct TeleprompterView: View {
     /// The fluent self's answer — the audio that call already produced, never
     /// a new synthesis. A turn whose recording didn't survive is READ
     /// instead: the line is on screen, so the pause is all that's missing.
-    private func listenStep(_ step: TeleprompterScript.Step) async {
+    private func listenStep(_ step: SayItAgainScript.Step) async {
         phase = .listening
         skipRequested = false
         guard let data = source.audio(step) else {
@@ -486,7 +491,7 @@ struct TeleprompterView: View {
         justRecorded = false
         playbackDone = false
         do {
-            try player.play(data, source: "teleprompter", forceSessionReset: reset) {
+            try player.play(data, source: "say_again", forceSessionReset: reset) {
                 playbackDone = true
             }
         } catch {
@@ -516,7 +521,7 @@ struct TeleprompterView: View {
     /// they go quiet, and the GRADING is handed to a task of its own so the
     /// fluent self answers immediately — the conversation's own pause is
     /// where the scoring goes.
-    private func readStep(_ step: TeleprompterScript.Step) async {
+    private func readStep(_ step: SayItAgainScript.Step) async {
         phase = .reading
         promptStep = step
         endReadingNow = false
@@ -594,7 +599,7 @@ struct TeleprompterView: View {
     /// (`ShadowEngine`). No coach call: a run is twenty lines, and a bullet
     /// per line is twenty Gemini calls for text nobody reads mid-run. The
     /// full drill, coach and all, stays one tap away from the book.
-    private func score(step: TeleprompterScript.Step, url: URL?, liveText: String) async {
+    private func score(step: SayItAgainScript.Step, url: URL?, liveText: String) async {
         let reading = await ShadowTranscriber.read(
             audioURL: url,
             liveText: liveText,
@@ -645,7 +650,7 @@ struct TeleprompterView: View {
     /// Re-read one line. Mid-run it rejoins the script there — the answer
     /// after it plays again, which is the conversation. On the finished
     /// screen it is a single take and the page stays where it is.
-    private func retry(_ step: TeleprompterScript.Step) {
+    private func retry(_ step: SayItAgainScript.Step) {
         guard let i = steps.firstIndex(where: { $0.id == step.id }) else { return }
         let wasFinished = phase == .finished
         runTask?.cancel()
@@ -686,7 +691,7 @@ struct TeleprompterView: View {
     /// can't be driven from a capture run, so the two states that need one
     /// are seeded instead — the same trick `captureShadow` plays.
     private func seedCaptureStage() {
-        guard let stage = DebugCapture.teleprompterStage, !steps.isEmpty else { return }
+        guard let stage = DebugCapture.sayItAgainStage, !steps.isEmpty else { return }
         let spoken = steps.enumerated().filter { $0.element.isSpoken }
         switch stage {
         case "reading":

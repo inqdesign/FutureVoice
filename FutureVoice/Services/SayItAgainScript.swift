@@ -41,7 +41,7 @@ import Foundation
 /// recognizer's mistake, and putting it on a prompter would ask the learner
 /// to say something they never said. The fluent self's answer to it stays:
 /// it is still what happened next.
-enum TeleprompterScript {
+enum SayItAgainScript {
 
     struct Step: Identifiable, Hashable {
         /// The source turn's id — also the key `TurnAudioStore` holds the

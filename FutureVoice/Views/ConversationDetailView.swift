@@ -42,11 +42,11 @@ struct ConversationDetailView: View {
     @State private var drillCount = 0
     @State private var showingContinue = false
     @State private var showingTranscript = false
-    @State private var showingTeleprompter = false
+    @State private var showingSayItAgain = false
     /// The talk as lines to read back — empty when nothing in it can be
     /// spoken (every user turn misheard, or a talk with no user turns),
     /// which is the only case where the third button has nothing to open.
-    @State private var teleprompterScript: [TeleprompterScript.Step] = []
+    @State private var sayItAgainScript: [SayItAgainScript.Step] = []
     @State private var wordSheet: WordRef?
     /// An expression from this talk, opened as its card. Words in this book
     /// have always been tappable; expressions were static text with a
@@ -124,8 +124,8 @@ struct ConversationDetailView: View {
         }
         // A cover, not a push: it owns the mic for the length of a run, and a
         // swipe-back mid-take would leave the recognizer live.
-        .fullScreenCover(isPresented: $showingTeleprompter, onDismiss: refresh) {
-            TeleprompterView(source: .talk(session))
+        .fullScreenCover(isPresented: $showingSayItAgain, onDismiss: refresh) {
+            SayItAgainView(source: .talk(session))
                 .environmentObject(appState)
         }
         .fullScreenCover(isPresented: $showingContinue, onDismiss: refresh) {
@@ -269,12 +269,12 @@ struct ConversationDetailView: View {
                 // act than either button above it, and three large labels in
                 // one row don't fit a narrow phone in any language. No gate —
                 // nothing here is synthesized or metered (see
-                // `TeleprompterView`).
-                if teleprompterScript.contains(where: \.isSpoken) {
+                // `SayItAgainView`).
+                if sayItAgainScript.contains(where: \.isSpoken) {
                     Button {
-                        showingTeleprompter = true
+                        showingSayItAgain = true
                     } label: {
-                        Label("Teleprompter", systemImage: "text.viewfinder")
+                        Label("Say it again", systemImage: "text.viewfinder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -1037,7 +1037,7 @@ struct ConversationDetailView: View {
         // Held rather than computed in the body: the cover redraws on every
         // mastery change, and the script walks every turn against every
         // summary phrase fix.
-        teleprompterScript = TeleprompterScript.build(session: session)
+        sayItAgainScript = SayItAgainScript.build(session: session)
     }
 
     /// Run the analysis this talk never got. Same engine, same idempotency

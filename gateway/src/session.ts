@@ -114,6 +114,12 @@ export class CallSession implements DurableObject {
   /** Has the learner said anything yet in this call? The meter waits for
    *  it — see the billing predicate. */
   private learnerSpoke = false
+  /** When the transcriber first made words of the learner's FIRST answer.
+   *  The meter's gate lifts only at the first commit, so the answer itself
+   *  was never billed — while the phone's clock (2026-09-27) counts it from
+   *  its first words. At that commit the span is billed once, so the clock
+   *  and the bill agree. 0 = not started. */
+  private firstInterimAt = 0
   private language = "en"
   private lastClientFrameAt = Date.now()
   /** Nothing from the phone for this long → the socket is dead; hang up. */
@@ -680,6 +686,9 @@ export class CallSession implements DurableObject {
       {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
+          if (!this.learnerSpoke && this.firstInterimAt === 0 && text.trim().length > 0) {
+            this.firstInterimAt = Date.now()
+          }
           this.armIdleHangUp()
           if (this.pendingUtterance !== null) {
             // First interim after the final: the pause this learner actually
@@ -968,6 +977,14 @@ export class CallSession implements DurableObject {
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string): void {
     console.log(`commit: "${text.slice(0, 80)}"`)
+    if (!this.learnerSpoke && this.firstInterimAt > 0) {
+      // Capped at the longest a listening turn is held open on the phone
+      // (`maxListenSecondsHard`), so a stray interim long before the answer
+      // can't bill the wait in front of it.
+      const firstAnswer = Math.min((Date.now() - this.firstInterimAt) / 1000, 120)
+      this.billing?.credit(firstAnswer)
+      console.log(`billing: first answer ${firstAnswer.toFixed(1)}s`)
+    }
     this.learnerSpoke = true
     this.lastCommitAt = Date.now()
     this.emit({ type: "user_turn", text })

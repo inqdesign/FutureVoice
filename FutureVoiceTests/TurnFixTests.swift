@@ -46,7 +46,7 @@ final class TurnFixTests: XCTestCase {
     /// A rewrite that changes nothing audible is dropped — but the fixes
     /// survive, and the line that carries them must still be the WHOLE turn.
     /// The first pass fell back to `fixes[0].now`, a lone clause, which the
-    /// teleprompter then read in place of the turn: the reported bug again.
+    /// Say it again then read in place of the turn: the reported bug again.
     func testANoOpRewriteFallsBackToTheWholeTurnWithFixesApplied() {
         withActiveLanguage("en") {
             let said = "we finish only at midnight and I have to unpack everything tomorrow"
@@ -60,7 +60,7 @@ final class TurnFixTests: XCTestCase {
     }
 
     /// `fixes == nil` dates a record as written before the whole-turn
-    /// contract, and the teleprompter demotes those. A clean turn under the
+    /// contract, and Say it again demotes those. A clean turn under the
     /// new contract must therefore say `[]`, never nil.
     func testACleanTurnStillCarriesAnEmptyFixesArray() {
         withActiveLanguage("en") {

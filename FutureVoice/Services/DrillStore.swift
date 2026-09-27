@@ -360,7 +360,7 @@ final class DrillStore: LanguageScopedStore {
             guard let s = turn.suggestion else { continue }
             // A card is a SLIP, drilled: short, with a right answer. Since
             // 2026-09-27 `alternative` is the whole turn re-said, which is
-            // shadow and teleprompter material and makes a terrible card — so
+            // shadow and Say-it-again material and makes a terrible card — so
             // the cards come from `fixes`, which are one clause each.
             if let fixes = s.fixes {
                 for fix in fixes {

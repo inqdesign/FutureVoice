@@ -12,9 +12,9 @@ import SwiftUI
 enum DebugCapture {
     private static var seeded = Set<String>()
 
-    /// Which running state of `TeleprompterView` to park on for a
+    /// Which running state of `SayItAgainView` to park on for a
     /// screenshot ("reading" / "done"), since a capture run has no mic.
-    static var teleprompterStage: String?
+    static var sayItAgainStage: String?
 
     /// True while capturing the Shadow screen: ShadowDrillView then synthesizes
     /// evenly-spaced karaoke timings locally and skips the voice-clone/network
@@ -1125,15 +1125,15 @@ enum DebugCapture {
                     session: session,
                     postTalk: .init(onDone: {}))
             })
-        case "teleprompter", "teleprompter-reading", "teleprompter-done",
-             "teleprompter-scene", "teleprompter-scene-reading", "teleprompter-scene-done":
+        case "say-again", "say-again-reading", "say-again-done",
+             "say-again-scene", "say-again-scene-reading", "say-again-scene-done":
             // The talk read back with the learner's lines corrected — or,
             // "-scene", a Watch book's scene with the learner on their own
             // side. The mic can't be driven from a capture, so the two
             // running states are seeded rather than reached.
             let stage = name.split(separator: "-").last.map(String.init)
-            teleprompterStage = stage == "reading" || stage == "done" ? stage : nil
-            if name.hasPrefix("teleprompter-scene") {
+            sayItAgainStage = stage == "reading" || stage == "done" ? stage : nil
+            if name.hasPrefix("say-again-scene") {
                 var c = ScenarioCurriculum()
                 c.dialogue = [
                     .init(speaker: "counterpart", text: "Oh my god, it's been forever! How have you been?"),
@@ -1146,13 +1146,13 @@ enum DebugCapture {
                 var sarah = Counterpart.empty
                 sarah.name = "Sarah"
                 sarah.voicePresetId = VoicePreset.sceneDefault.id
-                return AnyView(TeleprompterView(source: .scene(title: "Café · catching up",
+                return AnyView(SayItAgainView(source: .scene(title: "Café · catching up",
                                                                targetLanguage: "en",
                                                                curriculum: c,
                                                                counterpart: sarah))
                     .environmentObject(appState))
             }
-            return AnyView(TeleprompterView(source: .talk(talkDetailSession))
+            return AnyView(SayItAgainView(source: .talk(talkDetailSession))
                 .environmentObject(appState))
         case "themes":
             // The settings grid of Futureself themes, in its List habitat.

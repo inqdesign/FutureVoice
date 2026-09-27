@@ -351,6 +351,13 @@ export function assemble(raw: any, truth: Truth | null = null) {
   const dayHours = (raw.day_hours ?? [])
     .filter((r: any) => uidx.has(r.id))
     .map((r: any) => [uidx.get(r.id), r.d, r.h, r.secs, r.events, r.spoke ?? null]);
+  // Reply turns at the same grain: [user idx, "YYYY-MM-DD", hour, turns].
+  // null (not []) when admin_turn_hours() isn't there, so the heatmap can
+  // tell "no turns" from "not measured" and leave the count out of its tip.
+  const turnHours = Array.isArray(raw.turn_hours)
+    ? raw.turn_hours.filter((r: any) => uidx.has(r.id))
+        .map((r: any) => [uidx.get(r.id), r.d, r.h, r.n])
+    : null;
   // The last 8 days, one row per ledger row: [user idx, epoch ms, talk
   // seconds or -1 for a non-talk row]. Same seconds rule as
   // `talk_row_seconds`: metadata.seconds when present, else a negative delta.
@@ -555,7 +562,7 @@ export function assemble(raw: any, truth: Truth | null = null) {
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
     rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours, recentActivity,
-    dayHours,
+    dayHours, turnHours,
     prices: MONTHLY_PRICE,
     storePrices: STORE_PRICES,
   };

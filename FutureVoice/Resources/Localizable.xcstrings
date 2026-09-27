@@ -342,6 +342,86 @@
         }
       }
     },
+    "Do this scene again from the start, and say your part out loud. The other side plays just as it did." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve a hacer esta escena desde el principio y di tu parte en voz alta. La otra persona suena igual que entonces."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette scène depuis le début, en disant ta part à voix haute. L’autre personne est jouée comme la première fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーンを最初からもう一度。自分の番では、自分のセリフを声に出して言ってみましょう。相手の言葉はあのときのまま流れます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 장면을 처음부터 다시 해요. 내 차례엔 내 줄을 소리 내어 말해 보세요. 상대의 말은 그때 그대로 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再演一次这个场景。轮到你时，把你的台词说出来。对方的话会照当时播放。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再演一次這個場景。輪到你時，把你的台詞說出來。對方的話會照當時播放。"
+          }
+        }
+      }
+    },
+    "Do this talk again from the start, and say your part the corrected way. The answers play just as they did." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve a hacer esta conversación desde el principio y di tu parte como quedó corregida. Las respuestas suenan igual que entonces."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette conversation depuis le début, en disant ta part comme elle a été corrigée. Les réponses sont jouées comme la première fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このトークを最初からもう一度。自分の番では、直した言い方で話してみましょう。返事はあのときのまま流れます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화를 처음부터 다시 해요. 내 차례엔 교정된 말로 말해 보세요. 대답은 그때 그대로 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再进行一次这场对话。轮到你时，用修正后的说法说出来。回答会照当时播放。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再進行一次這場對話。輪到你時，用修正後的說法說出來。回答會照當時播放。"
+          }
+        }
+      }
+    },
     "Even if you'd rather I didn't call, notifications are how I reach you — news, and anything about your plan." : {
       "localizations" : {
         "en" : {
@@ -464,6 +544,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "挑一下流利的你長什麼樣、說話多快。"
+          }
+        }
+      }
+    },
+    "Say it again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a decirlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度話す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 말하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重说一次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重說一次"
           }
         }
       }
@@ -90575,86 +90695,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已跳過"
-          }
-        }
-      }
-    },
-    "Teleprompter" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Teleprompter"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prompteur"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "テレプロンプター"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "텔레프롬프터"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提词器"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提詞機"
-          }
-        }
-      }
-    },
-    "Your lines come back one at a time, corrected. Read each one out loud — the answer you got plays, and the next line comes up." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tus frases vuelven de una en una, corregidas. Lee cada una en voz alta: suena la respuesta que recibiste y aparece la siguiente."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tes phrases reviennent une par une, corrigées. Lis chacune à voix haute : la réponse que tu avais reçue est jouée, puis la suivante apparaît."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あなたのセリフが修正された形で一つずつ出てきます。声に出して読むと、あのとき返ってきた答えが流れて、次のセリフが出てきます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내가 한 말이 교정된 채로 하나씩 올라와요. 소리 내어 읽으면 그때 받았던 대답이 재생되고, 다음 문장이 올라와요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你说过的话会一句一句修正后出现。念出来，当时得到的回答就会播放，接着出现下一句。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你說過的話會一句一句修正後出現。唸出來，當時得到的回答就會播放，接著出現下一句。"
           }
         }
       }

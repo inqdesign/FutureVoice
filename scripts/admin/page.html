@@ -514,9 +514,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 <section data-tab="funnel" hidden>
   <h2>누가 어느 날 말했나</h2>
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
-  줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
+  하루는 <b>머리말에서 고른 시간대</b>의 하루예요. 줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
   말은 안 했지만 앱은 쓴 날은 <b>가장 옅은 칸에 점</b>이 찍혀요 — Watch 장면이나 복습만 한 날이에요.
-  테두리 칸은 <b>가입한 날</b>이에요. 줄은 <b>구독 중 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 네 묶음이고,
+  테두리 칸은 <b>가입한 날</b>이에요. 묶음마다 <b>최근에 쓴 사람이 맨 위</b>예요. 줄은 <b>구독 중 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 네 묶음이고,
   <b>구독 중인 줄은 초록</b>(해지 예정도 기간이 끝날 때까진 구독 중), <b>체험 중에 자동갱신을 끄고도 끈 날 이후에
   다시 온 사람은 금색</b>이에요. 금색 밑줄 칸이 자동갱신을 끈 날이라, 그 오른쪽에 불이 켜져 있으면 끄고도 온 거예요.
   이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
@@ -746,7 +746,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <section data-tab="money" hidden>
   <h2>유저별 원가</h2>
-  <p class="sub">가입 이후 누적이에요. 달로 끊어 볼 수 있어요.</p>
+  <p class="sub" id="costSub">가입 이후 누적이에요. 달로 끊어 볼 수 있어요.</p>
   <div class="seg" id="costMonths" role="group" aria-label="기간"></div>
   <div class="card scroll"><table id="costTable"></table></div>
 </section>
@@ -801,9 +801,11 @@ const fmtMin = secs => secs>=3600 ? `${Math.floor(secs/3600)}시간 ${Math.round
  * compared with yesterday's screenshot. Seoul is one click away because the
  * learners are there and the daily-call hour is their decision, not ours.
  *
- * DAY-bucketed charts (일별 · 히트맵 · 코호트) are the server's UTC days and
- * stay that way — they come out of the database already grouped, and the
- * notes say so. Against Berlin that is a two-hour seam, never a day.
+ * DAY-bucketed charts (일별 · 코호트) are the server's UTC days — they come
+ * out of the database already grouped, and the notes say so. The heatmap was
+ * one of them until 2026-09-27 and is not any more (`heatGrid`): "a two-hour
+ * seam, never a day" turned out to be 11% of talk seconds on the wrong day in
+ * Berlin and 35% in Seoul, and that chart is read one cell at a time.
  */
 const PAGE_TZ = [
   ['berlin', '독일',  'Europe/Berlin'],
@@ -973,19 +975,65 @@ const isTrialing = u => { const k = stateOf(u); return k==='trial' || k==='trial
 /** 돈이 들어오고 있는 사람. 해지 예정도 기간이 끝날 때까지는 구독 중이고,
  *  무료 제공(comp)은 매출이 아니라 뺀다 — `isSale`과 같은 기준. */
 const isSubscriber = u => { const k = stateOf(u); return (k==='paid' || k==='cancelling') && u.subSource!=='comp'; };
-/** The UTC day a trial's auto-renew was switched off — the LATEST switch-off,
- *  since a trial can go off, on and off again — or null. */
-const cancelDayOf = u => { const ev = cancelEventOf(u.idx); return ev?.at ? String(ev.at).slice(0,10) : null; };
+/** The day, in the reader's zone, a trial's auto-renew was switched off — the
+ *  LATEST switch-off, since a trial can go off, on and off again — or null. */
+const cancelDayOf = u => { const ev = cancelEventOf(u.idx); return ev?.at ? localDay(ev.at) : null; };
 /** Days a trial-cancelled learner used the app AFTER the day they switched
  *  renewal off. That day itself doesn't count: most switch-offs happen
  *  mid-session, and finishing the session is not coming back. */
 function daysBackAfterCancel(u){
   if(stateOf(u) !== 'trial_cancelled') return 0;
   const cd = cancelDayOf(u); if(!cd) return 0;
+  const g = heatGrid();
   let n = 0;
-  for(const [uu,d,rows,t,secs] of DATA.cells)
-    if(uu === u.idx && DATA.days[d] > cd && (rows > 0 || secs > 0)) n++;
+  for(const [uu,d,rows,t,secs] of g.cells)
+    if(uu === u.idx && g.days[d] > cd && (rows > 0 || secs > 0)) n++;
   return n;
+}
+/** The heatmap's days and cells in the READER's zone (2026-09-27). It used to
+ *  draw `DATA.cells`, which the database groups by UTC day — so with Seoul
+ *  picked in the header a learner's 8 a.m. call sat on yesterday, and the
+ *  column marked 오늘 was the UTC day. Measured over the launch window, 35% of
+ *  all talk seconds land on a different day in Seoul than in UTC, 11% in
+ *  Berlin. `day_hours` keeps the UTC hour, so it re-buckets exactly.
+ *
+ *  Same shape as `DATA.cells` — [user, day index, rows, turns, secs, spoke] —
+ *  with `turns` null when admin_turn_hours() hasn't been applied (the tip then
+ *  leaves the count out rather than print a 0). Falls back to the UTC cells
+ *  when `day_hours` is absent. Memoised per zone: every row asks. */
+let heatGridMemo = null;
+function heatGrid(){
+  const zone = tzZone();
+  if(heatGridMemo && heatGridMemo.zone === zone && heatGridMemo.today === TODAY) return heatGridMemo;
+  const dh = DATA.dayHours || [];
+  if(!dh.length){
+    heatGridMemo = {zone, today: TODAY, days: DATA.days, cells: DATA.cells, todayIdx: DATA.days.length-1};
+    return heatGridMemo;
+  }
+  // Launch day to the reader's today. A zone east of UTC reaches today
+  // before the server does, which is exactly the day that went missing.
+  const days = [];
+  for(let d = DATA.days[0]; d <= TODAY && days.length < 400; d = addDays(d, 1)) days.push(d);
+  const idxOf = new Map(days.map((d,i)=>[d,i]));
+  const dayOf = (d,h) => { const [y,m,dd] = d.split('-').map(Number); return localDay(Date.UTC(y, m-1, dd, h)); };
+  const acc = new Map();
+  const cell = (u, i) => { const k = u*1000+i; let c = acc.get(k);
+    if(!c){ c = [u, i, 0, null, 0, null]; acc.set(k, c); } return c; };
+  for(const [u,d,h,secs,ev,spoke] of dh){
+    const i = idxOf.get(dayOf(d,h)); if(i === undefined) continue;
+    const c = cell(u, i);
+    c[2] += ev; c[4] += secs;
+    if(spoke != null) c[5] = (c[5] ?? 0) + spoke;
+  }
+  if(DATA.turnHours){
+    for(const c of acc.values()) c[3] = 0;
+    for(const [u,d,h,n] of DATA.turnHours){
+      const i = idxOf.get(dayOf(d,h)); if(i === undefined) continue;
+      const c = cell(u, i); c[3] = (c[3] ?? 0) + n;
+    }
+  }
+  heatGridMemo = {zone, today: TODAY, days, cells: [...acc.values()], todayIdx: days.length-1};
+  return heatGridMemo;
 }
 /** When the trial ends, in the reader's zone: "오늘 끝남", "내일 끝남", "3일 남음". */
 function trialEndLabel(u){
@@ -1258,8 +1306,9 @@ function renderNotes(){
      베타 내내 본인 계정이 전체 대화 턴의 절반을 넘겨서, 켜 두면 퍼널과 잔존이 거의 한 사람 숫자가 돼요.
      대신 원가 단가는 그 계정에서 나오니 <b>돈 탭은 토글과 무관하게 전 계정</b>이에요.` : '',
     `<b>이 페이지의 모든 시각은 머리말에서 고른 시간대</b>(기본 독일)로 읽혀요. 다만
-     <b>일별·히트맵·코호트의 '하루'</b>는 서버가 UTC로 묶어 내려준 날짜 그대로예요 —
-     독일 시간과는 두 시간 차이라 날이 바뀌는 새벽에만 한 칸 어긋날 수 있어요.`,
+     <b>일별·코호트의 '하루'</b>는 서버가 UTC로 묶어 내려준 날짜 그대로예요 —
+     날이 바뀌는 시간대에 한 통화는 한 칸 어긋날 수 있어요(한국 기준이면 오전 9시 전).
+     <b>'누가 어느 날 말했나' 히트맵은 고른 시간대의 하루</b>로 다시 묶어요.`,
     `<b>대화 턴</b>은 응답 생성 호출 1건이에요. 전사 호출과 둘로 쪼갠 TTS, 버려지는 투기 호출은 빼요.`,
     `<b>통화 시간</b>은 서버가 실제로 과금한 초예요. 학습자가 말하기 전에는 0이고, 유휴는 세지 않아요.`,
     `<b>통화 끊김</b> 기록은 2026-09-13 이후 빌드부터 올라와요. 그 전 통화는 서버에 흔적이 없어요.`,
@@ -1390,9 +1439,10 @@ function renderCohort(users){
 function renderHeatmap(users){
   const el = document.getElementById('heatmap');
   if(!el) return;
-  const n = DATA.days.length;
+  const grid = heatGrid();
+  const n = grid.days.length;
   const byUser = {};
-  for(const [u,d,rows,t,secs,spoke] of DATA.cells) (byUser[u] ??= {})[d] = [rows,t,secs,spoke ?? null];
+  for(const [u,d,rows,t,secs,spoke] of grid.cells) (byUser[u] ??= {})[d] = [rows,t,secs,spoke ?? null];
   // Intensity is TALK seconds — that is what the grid is for. But a day
   // spent on Watch scenes or the review deck is not an empty day, and drawing
   // it as one is how a Watch-only learner vanished from this chart. A day
@@ -1413,8 +1463,8 @@ function renderHeatmap(users){
   const tail = narrow ? 0 : 80 + 44 + 118 + 190;       // talk · days · plan · ids
   const cs = Math.max(12, Math.min(30, Math.floor((innerW(el, 300) - nameW - tail - 24) / n) - 3));
   const cols = `${nameW}px repeat(${n}, ${cs}px)` + (narrow ? '' : ' 80px 44px 118px minmax(150px,1fr)');
-  const today = DATA.days.length - 1;
-  const signupIdx = u => DATA.days.indexOf((u.signedUpAt||'').slice(0,10) || u.signedUp);
+  const today = grid.todayIdx;
+  const signupIdx = u => grid.days.indexOf(u.signedUpAt ? localDay(u.signedUpAt) : u.signedUp);
 
   // 네 묶음, 돈 순서대로. 이 그림에 묻는 질문이 묶음마다 다르다 — 구독은
   // "계속 쓰고 있나", 체험은 "끝나기 전에 돌아오나", 나머지는 "애초에
@@ -1427,30 +1477,37 @@ function renderHeatmap(users){
   // 쓰고 사라진 사람은 체험 중에 남는다 — 금색 점이 그걸 이미 말해준다.
   const backDays = new Map(rows.map(u => [u.idx, daysBackAfterCancel(u)]));
   const lapsing = u => backDays.get(u.idx) > 0;
-  const payRows = rows.filter(isSubscriber);
-  const trialRows = rows.filter(u => isTrialing(u) && !lapsing(u));
-  const lapseRows = rows.filter(lapsing);
-  // "그 외" reads as an intake queue, not a leaderboard: newest signup DAY
-  // first (by day, not second — a timestamp never ties, and the next key
-  // would never get a say), and within a day the people who actually talked
-  // ahead of those who didn't.
+  // Every group leads with whoever used the app MOST RECENTLY (2026-09-27):
+  // the question asked of this chart each morning is "who was here
+  // yesterday", and a row sorted by lifetime totals buries yesterday's
+  // newcomer under last month's regular. Recency is the last day with any
+  // mark on it — talk or app use — by DAY, so people who were both here
+  // today tie and the old order (the rows sort above) settles them. Someone
+  // with no mark in the window sorts by signup day, newest first.
+  const lastDay = u => {
+    const m = byUser[u.idx] || {};
+    let last = -1;
+    for(const k in m){ const c = m[k]; if((c[0] > 0 || c[2] > 0) && +k > last) last = +k; }
+    return last;
+  };
   const signupDay = u => u.signedUpAt ? localDay(u.signedUpAt) : (u.signedUp || '');
-  const restRows = rows.filter(u => !isSubscriber(u) && !isTrialing(u))
-    .sort((a,b) => signupDay(b).localeCompare(signupDay(a))
-      || ((b.talkSecs > 0) - (a.talkSecs > 0))
-      || (b.talkSecs - a.talkSecs)
-      || (b.signedUpAt||'').localeCompare(a.signedUpAt||''));
+  const byRecent = (a,b) => (lastDay(b) - lastDay(a))
+    || signupDay(b).localeCompare(signupDay(a));
+  const payRows = rows.filter(isSubscriber).sort(byRecent);
+  const trialRows = rows.filter(u => isTrialing(u) && !lapsing(u)).sort(byRecent);
+  const lapseRows = rows.filter(lapsing).sort(byRecent);
+  const restRows = rows.filter(u => !isSubscriber(u) && !isTrialing(u)).sort(byRecent);
   const endingSoon = lapseRows.filter(u => ['오늘 끝남','내일 끝남'].includes(trialEndLabel(u))).length;
   const groups = [
     {ko:'구독 중', note:`${payRows.length}명 · 돈이 들어오고 있는 사람`, rows:payRows},
     {ko:'체험 중', note:`${trialRows.length}명 · 체험이 끝나기 전에 돌아오는지`, rows:trialRows},
     {ko:'체험 취소 · 계속 사용', note:`${lapseRows.length}명 · 자동갱신을 끈 날 이후에도 다시 온 사람`
         + (endingSoon ? ` · 체험이 오늘·내일 끝나는 사람 ${endingSoon}명` : ''), rows:lapseRows},
-    {ko:'그 외', note:`${restRows.length}명 · 플랜 없음 · 만료 · 무료 제공 · 최근 가입순, 같은 날엔 통화한 사람 먼저`, rows:restRows},
+    {ko:'그 외', note:`${restRows.length}명 · 플랜 없음 · 만료 · 무료 제공`, rows:restRows},
   ];
 
   let html = `<div class="hm" style="--cs:${cs}px"><div class="r hd" style="grid-template-columns:${cols}"><span></span>`
-    + DATA.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
+    + grid.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
     + (narrow ? '' : `<span class="num">통화</span><span class="num">일</span><span class="pl">구독</span><span class="ids">ID</span>`)
     + `</div>`;
   for(const g of groups){
@@ -1460,7 +1517,7 @@ function renderHeatmap(users){
     const m = byUser[u.idx] || {};
     const su = signupIdx(u);
     const k = stateOf(u), st = SUB_KO[k];
-    const cxIdx = k === 'trial_cancelled' ? DATA.days.indexOf(cancelDayOf(u)) : -1;
+    const cxIdx = k === 'trial_cancelled' ? grid.days.indexOf(cancelDayOf(u)) : -1;
     html += `<div class="r${isSubscriber(u)?' paying':lapsing(u)?' lapsing':''}" style="grid-template-columns:${cols}">`
       + `<div class="who" title="${esc(u.realEmail||u.email||u.label)}">`
       +   `<div class="n"><span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`
@@ -1474,9 +1531,9 @@ function renderHeatmap(users){
       const before = i < su;
       const usedOnly = !secs && rowsN > 0;      // here, but didn't speak
       const fill = before ? 'transparent' : secs ? ramp(secs) : usedOnly ? 'var(--seq1)' : 'var(--chip)';
-      const head = `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`;
+      const head = `<b>${esc(nameOf(u))}</b><br>${fmtDate(grid.days[i])}`;
       const tip = before ? `${head} · 가입 전`
-        : secs ? `${head} · 통화 ${fmtMin(secs)} · 턴 ${turnsN}`
+        : secs ? `${head} · 통화 ${fmtMin(secs)}${turnsN!=null?` · 턴 ${turnsN}`:''}`
             + `${spokeDay!=null?`<br>${spokeText(spokeDay, secs)}`:''}${i===su?'<br>가입한 날':''}`
         : usedOnly ? `${head}<br>말은 안 했지만 앱은 썼어요 · 기록 ${rowsN}건${i===su?'<br>가입한 날':''}`
         : `${head} · 조용${i===su?'<br>가입한 날':''}`;
@@ -2800,10 +2857,15 @@ function renderCostTable(){
     if(costPeriod==='all'){
       const c = (C.byUser||{})[String(idx)]; if(!c) return null;
       const u = DATA.users[idx];
-      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:u.talkSecs, scenes:u.scenes};
+      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:c.talk_secs ?? u.talkSecs, scenes:u.scenes, talk_el:c.talk_el};
     }
     return ((C.byUserMonth||{})[costPeriod]||{})[String(idx)] || null;
   };
+  // Say where the talk half comes from — it is not on the ledger (2026-09-26).
+  const sub = document.getElementById('costSub');
+  if(sub) sub.textContent = C.talk_estimated
+    ? `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 통화 원가는 원장에 글자가 안 남아서(게이트웨이) 통화 초 × 실측 분당 크레딧(${C.talk_credits_per_min}cr, ElevenLabs API)으로 계산해 더했어요 — ElevenLabs 열 안에 들어 있어요.`
+    : `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 지금은 원장 글자만 보여서 통화 원가가 빠져 있어요(admin_talk_cost 미적용) — 실제의 절반쯤이에요.`;
   let html = `<thead><tr><th>유저</th><th>플랜</th><th class="num">통화</th><th class="num">장면</th>`
     + `<th class="num">TTS 글자</th><th class="num">ElevenLabs</th><th class="num">Gemini</th>`
     + `<th class="num">합계</th></tr></thead><tbody>`;
@@ -3200,7 +3262,7 @@ function renderLevers(){
     `<b>Light 장면 단가.</b> Light를 다 쓰면 적자인 이유는 장면(${eur(e.unit.sceneEur,3)} × 60)뿐. 장면 길이 82→55초 −33%, 클론 절반 turbo −33% — launch-billing.md에 있는 레버.`,
     vm ? `<b>보이스메일이 크레딧의 ${Math.round(vm.share*100)}%.</b> 일일 통화를 켠 사람마다 세션 끝마다 합성돼요(${e.window.days}일 ${vm.note}). 무료 사용자 몫이 문제면 “어제 받은 사람만 다음 것을 만든다”가 제품 규칙을 안 깨는 절약이에요.` : '',
     `<b>ElevenLabs 요금제는 용량 레버.</b> 티어를 올려도 단가가 안 내려가요(전부 ≈$0.165/1k). 유일한 할인은 연간 −17%(도달 구독자 ${tg??'—'}→${tgAnnual??'—'}명). 지금 페이스 월 ${kcr(e.cycle.per30)}은 ${e.tier} 한도 ${kcr(e.cycle.limit)}의 ${Math.round(e.cycle.per30/e.cycle.limit*100)}% — 첫 마케팅 푸시에서 넘치니 <b>초과 과금(usage-based billing)을 미리 켜 두세요.</b>`,
-    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’·‘유저별 원가’가 이 섹션과 같은 숫자를 말해요. 그 전까지 원가의 진실은 ElevenLabs API예요.`,
+    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’이 이 섹션과 같은 숫자를 말해요. ‘유저별 원가’는 2026-09-26부터 통화 초 × 실측 분당 크레딧으로 통화분을 채워 넣어요. 원가의 진실은 여전히 ElevenLabs API예요.`,
   ].filter(Boolean);
   document.getElementById('pnlLevers').innerHTML = items.map(t=>`<li style="margin-bottom:10px">${t}</li>`).join('');
 }

@@ -114,6 +114,21 @@ async function fetchData(env: Env) {
     console.log(`admin_talk_cost: ${(e as Error).message}`);
     return null;
   });
+  // Reply turns per (user, UTC day, UTC hour), so the heatmap can be drawn in
+  // the reader's zone with its turn counts (2026-09-27). Optional — without it
+  // the heatmap still draws, and its tooltip leaves the turn count out.
+  raw.turn_hours = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/admin_turn_hours`, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  }).then((t) => t.ok ? t.json() : null).catch((e) => {
+    console.log(`admin_turn_hours: ${(e as Error).message}`);
+    return null;
+  });
   // Never let this card take the whole console down with it.
   raw.recent_ledger = await recentLedger(env).catch((e) => {
     console.log(`recentLedger: ${(e as Error).message}`);

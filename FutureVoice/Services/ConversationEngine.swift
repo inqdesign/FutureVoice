@@ -1510,7 +1510,7 @@ struct ConversationTurnPayload: Decodable {
         // ALWAYS a non-nil array, empty included. `fixes == nil` is then an
         // exact marker for "saved before 2026-09-27", i.e. before
         // `alternative` meant the whole turn — which is what
-        // `TeleprompterScript.coversWholeTurn` needs to tell a fragment from
+        // `SayItAgainScript.coversWholeTurn` needs to tell a fragment from
         // a turn whose hesitation was simply taken out.
         return TurnSuggestion(alternative: alternative, reason: s.reason, fixes: fixes)
     }

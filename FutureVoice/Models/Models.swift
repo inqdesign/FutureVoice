@@ -236,7 +236,7 @@ struct TurnSuggestion: Codable, Hashable {
     /// **Never a fragment.** It used to be one sentence of at most 15 words,
     /// because a drill card cannot be a paragraph — and that constraint had
     /// leaked into the one place the line has to be complete: the
-    /// teleprompter reads it aloud IN the conversation, so a fragment left
+    /// say-it-again reads it aloud IN the conversation, so a fragment left
     /// the re-run answering a question nobody asked. Cards now come from
     /// `fixes`, which are short by nature, so the line is free to be whole.
     var alternative: String

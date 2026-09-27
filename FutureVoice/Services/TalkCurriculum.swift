@@ -199,7 +199,7 @@ enum TalkCurriculum {
         var bytes = turnId.uuid
         bytes.0 ^= 0xFF
         // Index 0 is byte-for-byte the id this has always produced, so every
-        // shadow attempt and teleprompter read already on disk still lands on
+        // shadow attempt and say-it-again read already on disk still lands on
         // its item. A turn can now carry several fixes, and each needs its
         // own; byte 14 is untouched by `sentenceLineId`, which uses 15.
         if index > 0 { bytes.14 ^= 0xC0 &+ UInt8(index & 0x0F) }
@@ -310,7 +310,7 @@ enum TalkCurriculum {
         /// are found by their own text instead.
         ///
         /// `lineId`: a passing take on the whole corrected turn (the
-        /// teleprompter, or the transcript's Shadow button — both file it
+        /// Say it again, or the transcript's Shadow button — both file it
         /// under `correctionId(for:)`) masters every fix in that turn. The
         /// line contains all of them; reading it right is saying all of them
         /// right, exactly as reading the old one-sentence correction was.
@@ -340,7 +340,7 @@ enum TalkCurriculum {
             // The Drill chapter studies SLIPS as cards, so it lists the
             // turn's fixes — one clause each. `alternative` is the whole turn
             // re-said (2026-09-27) and belongs to Shadow and the
-            // teleprompter, never to a card. A turn with an empty `fixes`
+            // Say it again, never to a card. A turn with an empty `fixes`
             // was grammatically clean and contributes nothing here.
             if let fixes = s.fixes {
                 for (index, fix) in fixes.enumerated() {

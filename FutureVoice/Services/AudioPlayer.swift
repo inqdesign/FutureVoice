@@ -80,7 +80,7 @@ final class AudioPlayer: NSObject, ObservableObject {
     ///   audio. Force-reset clears that.
     /// Playback sources whose own surface already reports itself once —
     /// see the note in `play`.
-    static let unreportedPlaybackSources: Set<String> = ["conversation", "teleprompter"]
+    static let unreportedPlaybackSources: Set<String> = ["conversation", "say_again"]
 
     func play(_ data: Data,
               source: String = "replay",
@@ -90,8 +90,8 @@ final class AudioPlayer: NSObject, ObservableObject {
         // Product analytics — deliberate playbacks only. A source that plays
         // a line PER TURN of something that already reports itself once is
         // skipped: the live call's auto-play ("conversation",
-        // conversation_started/ended) and a teleprompter run
-        // ("teleprompter", one `teleprompter_run` row at the end). Counting
+        // conversation_started/ended) and a say-it-again run
+        // ("say_again", one `say_again_run` row at the end). Counting
         // those would make a twenty-line run twenty events, which is the
         // mistake `sync_push` was cut back for on 2026-09-26.
         if !Self.unreportedPlaybackSources.contains(source) {

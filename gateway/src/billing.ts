@@ -64,6 +64,12 @@ export class TalkBilling {
     }, 1000) as unknown as number
   }
 
+  /** Seconds the per-second poll could not see — the learner's first
+   *  answer, which runs before the gate lifts. Rides on the next flush. */
+  credit(seconds: number): void {
+    if (seconds > 0) this.billable += seconds
+  }
+
   /** Final flush; safe to call more than once. */
   stop(): void {
     if (this.timer !== null) { clearInterval(this.timer); this.timer = null }
