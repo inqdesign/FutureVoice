@@ -85,6 +85,13 @@ struct ConversationView: View {
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
+    /// The call's own settings sheet — the mic pill's only neighbour.
+    @State private var showingCallSettings = false
+    /// Screen state the learner owns while the call runs (`CallSettings`).
+    /// Persisted, so a call opens the way the last one was left.
+    @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
+    @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
+    @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
     /// The call screen is waiting on that pitch to close before it exits.
     @State private var closeAfterPaywall = false
     /// Which of this screen's doors opened the paywall — `PaywallView`'s
@@ -725,7 +732,7 @@ struct ConversationView: View {
                 // Pinned, not part of the feed: material the learner is meant
                 // to reach for has to still be there at minute six, and
                 // anything inside the transcript is gone after two turns.
-                if !goalItems.isEmpty {
+                if !goalItems.isEmpty, showsGoalChips {
                     TalkGoalChipsRow(items: goalItems, used: usedGoalKeys) { item in
                         goalDetail = item
                     }
@@ -752,6 +759,16 @@ struct ConversationView: View {
                 guard !didAutoStart else { return }
                 didAutoStart = true
                 phoneCallActive = true
+                #if DEBUG
+                // A beat, so the presentation isn't requested inside the
+                // screen's own first appear — SwiftUI drops those.
+                if DebugCapture.previewCallSettings {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 900_000_000)
+                        showingCallSettings = true
+                    }
+                }
+                #endif
                 // The in-call meter: wall-clock seconds tick to the server
                 // for the whole life of the seat. When today's minutes run
                 // out mid-call the mic closes; the line the fluent self is
@@ -816,6 +833,20 @@ struct ConversationView: View {
             }
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
+            // On the root, with the screen's other sheets — attached to the
+            // bottom bar it never presented (the bar lives inside
+            // `fadingBottomBar`'s overlay).
+            .sheet(isPresented: $showingCallSettings) {
+                CallSettingsSheet { speed in
+                    // The rung is already stored (the sheet writes the same
+                    // defaults key Me → Voice does), so every later synthesis
+                    // reads it for free. Only a call ALREADY UP has to be
+                    // told, and only on the realtime path — the classic path
+                    // asks `SpeechSpeed.current` at each synthesis.
+                    guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                    realtime.setSpeed(speed)
+                }
+            }
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
@@ -1173,14 +1204,30 @@ struct ConversationView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 40)
                     }
-                    ForEach(turns) { turn in
-                        // No implicit morph between adjacent turns — each
-                        // bubble fades in / out cleanly. Prevents the
-                        // previous bubble's text from being visible inside
-                        // the next one during insertion animation.
-                        TurnView(turn: turn, nativeLanguage: appState.nativeLanguage)
-                            .id(turn.id)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    // Subtitles off: no words on the screen at all, which is
+                    // what a phone call looks like. The Futureself pill is the
+                    // state display (it ignites with the learner's voice,
+                    // scans while thinking, blooms while speaking) and the
+                    // hint under it names the state in words, so nothing is
+                    // lost but the reading.
+                    if !showsTranscript, !turns.isEmpty {
+                        Text(explain("Subtitles are off"))
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 24)
+                    }
+                    if showsTranscript {
+                        ForEach(turns) { turn in
+                            // No implicit morph between adjacent turns — each
+                            // bubble fades in / out cleanly. Prevents the
+                            // previous bubble's text from being visible inside
+                            // the next one during insertion animation.
+                            TurnView(turn: turn, nativeLanguage: appState.nativeLanguage,
+                                     showsCorrections: showsCorrections)
+                                .id(turn.id)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
                     }
                     if RealtimeMode.isEnabled {
                         // Same rule as the classic path below: the listening
@@ -1198,7 +1245,8 @@ struct ConversationView: View {
                             // away as the voice began (reported 2026-09-03).
                             // A learner actually speaking first still shows —
                             // their partial has text.
-                            if !turns.isEmpty || !realtime.partial.isEmpty {
+                            if showsTranscript,
+                               !turns.isEmpty || !realtime.partial.isEmpty {
                                 PartialTurnView(text: realtime.partial)
                                     .id("partial-listening")
                                     .transition(.opacity)
@@ -1210,7 +1258,7 @@ struct ConversationView: View {
                         default:
                             EmptyView()
                         }
-                    } else if phase == .listening {
+                    } else if phase == .listening, showsTranscript {
                         // Separate id from ThinkingIndicator + explicit opacity
                         // transition so SwiftUI doesn't morph one view's text
                         // into another. The previous shared id caused the
@@ -1308,6 +1356,17 @@ struct ConversationView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
+            // A ZStack, not an HStack: the pill is centred by
+            // `frame(maxWidth: .infinity)` on the bar, and a sibling in a row
+            // would push it off centre. The settings button is laid OVER the
+            // pill's row and pinned left, so the pill stays exactly where it
+            // has always been.
+            //
+            // Bottom-left is the only empty corner on this screen: the toolbar
+            // is full (✕ · topic + clock · End) and the bar below held one
+            // control. Nothing is put on the right — a second button invented
+            // for symmetry is what the UI rules exist to prevent.
+            ZStack {
             // The pixel grid lives INSIDE the pill, not across the screen.
             // The shader paints the whole surface theme-aware in a pure-blue
             // mosaic: airy white with blue pixels in light mode, near-black
@@ -1338,6 +1397,13 @@ struct ConversationView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text(micA11yLabel))
 
+            HStack {
+                callSettingsButton
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, 24)
+            }
+
             Text(micHint)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -1365,6 +1431,25 @@ struct ConversationView: View {
             voiceLevel = new
         }
         .onChange(of: phase) { _, _ in voiceLevel = 0 }
+    }
+
+    /// Adjust the call while it runs — speed, subtitles, corrections, chips.
+    /// Deliberately quiet: a bordered accent button next to the pill read as
+    /// a second primary action, and the one primary action on a call screen
+    /// is the pill.
+    private var callSettingsButton: some View {
+        Button {
+            showingCallSettings = true
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemBackground), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(explain("Call settings")))
     }
 
     private var glowMode: Futureself.Mode {
@@ -4002,6 +4087,10 @@ private struct FeedTailOffsetKey: PreferenceKey {
 private struct TurnView: View {
     let turn: Turn
     let nativeLanguage: String
+    /// The learner's own switch (`CallSettings`). The card is still BUILT and
+    /// still saved — this only decides whether it is drawn mid-call, so the
+    /// summary, the drill cards and the talk's book are untouched by it.
+    var showsCorrections = true
 
     @State private var translation: String?
     @State private var showing = false
@@ -4064,7 +4153,7 @@ private struct TurnView: View {
                 // already out) — never while the reply is still loading.
                 // Painting it earlier read as "it corrects me, then answers"
                 // on every turn, whatever the transcript-swap fixes did.
-                if turn.role == .user, let suggestion = turn.suggestion {
+                if turn.role == .user, showsCorrections, let suggestion = turn.suggestion {
                     SuggestionChip(suggestion: suggestion, original: turn.transcript,
                                    nativeLanguage: nativeLanguage)
                 }

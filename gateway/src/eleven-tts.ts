@@ -180,6 +180,18 @@ export class ElevenTTS {
     })
   }
 
+  /** Change the speaking speed for lines not yet started.
+   *
+   *  Safe to call at any moment and never touches the socket: `sendText`
+   *  reads `config.speed` when it OPENS a context, so the line being spoken
+   *  right now finishes at the speed it began with and the next one picks
+   *  this up. Re-sending settings into a live context is precisely what
+   *  ElevenLabs rejects (see `openContexts`), so this must stay a stored
+   *  value rather than a message. */
+  setSpeed(speed: number | undefined): void {
+    this.config.speed = speed
+  }
+
   /** The reply is fully written — synthesize whatever text remains buffered. */
   flush(contextId: string): void {
     void this.enqueue(() => {

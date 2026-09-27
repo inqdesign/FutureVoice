@@ -65,7 +65,24 @@ export interface EndMessage {
   type: "end"
 }
 
-export type ClientMessage = StartMessage | SayMessage | EndMessage
+/** Change a call setting while the call is running.
+ *
+ *  Only the speed so far, and it costs nothing: ElevenLabs takes
+ *  `voice_settings` in the FIRST message of a context, and a context is one
+ *  spoken line — so swapping the stored speed is picked up by the next line
+ *  with no reconnect and no interruption. The line currently playing keeps
+ *  the speed it was synthesized at, which is also what the app's copy
+ *  promises ("applies from the next thing your future self says").
+ *
+ *  An unknown `type` is ignored by `handleClientMessage`, so a new app
+ *  talking to an older gateway simply has no mid-call speed control. */
+export interface SetMessage {
+  type: "set"
+  /** 0.7–1.2, clamped the same way `start.speed` is. */
+  speed?: number
+}
+
+export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage
 
 // ---------------------------------------------------------------------------
 // Gateway -> client events.

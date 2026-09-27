@@ -682,6 +682,23 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "say", "text": line])
     }
 
+    /// Change how fast the fluent self speaks, mid-call.
+    ///
+    /// The gateway stores it and the NEXT line is synthesized with it — the
+    /// line playing right now keeps the speed it was made at, because
+    /// ElevenLabs takes `voice_settings` only in a context's first message
+    /// and a context is one line. That is also the promise the sheet's
+    /// footer makes, so the two agree.
+    ///
+    /// A gateway that predates `set` ignores the message (its
+    /// `handleClientMessage` drops any unknown type), which costs the
+    /// learner the mid-call control and nothing else — the rung is still
+    /// stored and the next call dials with it.
+    func setSpeed(_ speed: SpeechSpeed) {
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "speed": speed.multiplier])
+    }
+
     /// Hang up: tells the gateway, then tears the local side down.
     func hangUp() {
         guard !isTornDown else { return }

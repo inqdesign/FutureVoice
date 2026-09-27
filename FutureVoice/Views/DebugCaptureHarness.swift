@@ -67,6 +67,10 @@ enum DebugCapture {
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
 
+    /// True while capturing the in-call settings sheet: `ConversationView`
+    /// raises it on appear, since a screenshot run can't tap the button.
+    static var previewCallSettings = false
+
     /// Which item kind a freshly built weekly test opens on, so each kind's
     /// screen can be photographed. nil = the engine's own order.
     static var weeklyTestKind: WeeklyTestItem.Kind?
@@ -630,6 +634,13 @@ enum DebugCapture {
             // speaks, and the FIRST CALL prompt block is what would run from
             // the learner's first answer on.
             once("first-call") { seedUnmetPersona(into: appState) }
+            return AnyView(ConversationView().environmentObject(appState))
+        case "call-settings":
+            // The same real call screen as `first-call`, with the settings
+            // sheet up — the sheet's detent and the live screen behind it are
+            // the whole point, so it is never photographed on its own.
+            once("first-call") { seedUnmetPersona(into: appState) }
+            previewCallSettings = true
             return AnyView(ConversationView().environmentObject(appState))
         case "level-sheet":
             once("level") { seedSessions() }

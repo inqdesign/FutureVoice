@@ -544,6 +544,12 @@ export class CallSession implements DurableObject {
       this.applySay({ text, alreadySpoken: msg.alreadySpoken === true })
       return
     }
+    if (msg.type === "set") {
+      // Mid-call settings. Nothing here may end a call: a setting the gateway
+      // cannot honour is dropped, never raised.
+      if (msg.speed !== undefined) this.eleven?.setSpeed(clampSpeed(msg.speed))
+      return
+    }
     if (msg.type !== "start" || this.started) return
 
     // --- Session-start gate: the ONE place auth and ownership are paid. ---
