@@ -32,7 +32,7 @@ import urllib.request
 API = "https://api.appstoreconnect.apple.com/v1"
 APP_ID = "6792794655"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOCALES = {"en-US": "en-US", "ko": "ko"}
+LOCALES = {"en-US": "en-US", "en-GB": "en-US", "ko": "ko"}  # the store's English is en-GB
 
 
 def token() -> str:
