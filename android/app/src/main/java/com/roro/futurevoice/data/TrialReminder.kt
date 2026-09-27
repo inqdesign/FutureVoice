@@ -25,6 +25,29 @@ object TrialReminder {
     /** Days before the end that the notice fires. */
     const val LEAD_DAYS = 2
 
+    /**
+     * Re-arm from the date the STORE knows about, on every foreground.
+     *
+     * Scheduling only at purchase meant a trial started any other way — an
+     * offer code, the store's own page, a restore on a new phone — never got
+     * the notice (iOS `f9f1b8e`). Re-arming is cheap and idempotent: the same
+     * pending intent is replaced, so the latest answer wins.
+     */
+    fun rearm(context: Context, trialEndsAt: String?, isTrialing: Boolean,
+              now: Long = System.currentTimeMillis()) {
+        if (!isTrialing || trialEndsAt.isNullOrBlank()) { cancel(context); return }
+        val endsAt = runCatching {
+            java.time.Instant.parse(trialEndsAt.replace(" ", "T").take(19) + "Z").toEpochMilli()
+        }.getOrNull() ?: return
+        val at = endsAt - LEAD_DAYS * 24L * 3600_000L
+        if (at <= now) return
+        if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(context))
+        com.roro.futurevoice.core.Analytics.capture("trial_reminder",
+            mapOf("days_ahead" to ((at - now) / 86_400_000L).toInt()))
+    }
+
     /** Returns whether the notice will actually arrive, so the caller can
      *  stop claiming it if it won't. */
     fun schedule(context: Context, trialDays: Int, now: Long = System.currentTimeMillis()): Boolean {

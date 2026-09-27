@@ -158,18 +158,22 @@ fun PlanPageScreen(
                     // either, it ends on it.
                     LineRow(
                         icon = when {
-                            a.isTrialing -> Icons.Filled.CalendarToday
+                            // A trial told to stop is not becoming paid; it
+                            // ENDS on that date, and saying otherwise to
+                            // someone who already cancelled is the app
+                            // getting their own decision wrong.
                             a.cancelAtPeriodEnd -> Icons.Filled.EventBusy
+                            a.isTrialing -> Icons.Filled.CalendarToday
                             else -> Icons.Filled.CalendarMonth
                         },
                         title = when {
-                            a.isTrialing ->
-                                stringResource(R.string.your_trial_becomes_paid_on, renews)
                             a.cancelAtPeriodEnd ->
                                 stringResource(R.string.your_plan_ends_on_e00f74, renews)
+                            a.isTrialing ->
+                                stringResource(R.string.your_trial_becomes_paid_on, renews)
                             else -> stringResource(R.string.refills_on_7e5745, renews)
                         },
-                        subtitle = if (a.isTrialing)
+                        subtitle = if (a.isTrialing && !a.cancelAtPeriodEnd)
                             stringResource(R.string.cancel_any_time_before_then_in_google_play)
                         else null,
                     )
@@ -225,7 +229,9 @@ fun PlanPageScreen(
                                 a.renewalLabel(locale))
                         }
                     }
-                    r.offerCodeUntil?.let { until ->
+                    // Nor the launch code's discount: a cancelled trial is not
+                    // going to be charged at all, half price or otherwise.
+                    r.offerCodeUntil?.takeIf { !a.cancelAtPeriodEnd }?.let { until ->
                         rows += {
                             LineRow(Icons.Filled.LocalOffer,
                                 stringResource(R.string.half_price_with_your_launch_code),

@@ -58,6 +58,17 @@ class MainActivity : ComponentActivity() {
         // Friends who joined with my code since last time — polled here
         // because there is no push infrastructure.
         lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }
+        // A trial can start anywhere — an offer code, the store's own page, a
+        // restore on another phone — so the notice is re-armed from what the
+        // SERVER knows rather than only at the moment of purchase.
+        lifecycleScope.launch {
+            runCatching {
+                val account = com.roro.futurevoice.data.AccountStatus.load(
+                    com.roro.futurevoice.data.AuthRepository())
+                com.roro.futurevoice.data.TrialReminder.rearm(
+                    this@MainActivity, account.trialEndsAt, account.isTrialing)
+            }
+        }
         AppUsageLog.begin()
     }
 

@@ -42,6 +42,10 @@ data class AccountStatus(
      *  which — "Refills on…" to someone who cancelled is the same date with
      *  the opposite promise. */
     val cancelAtPeriodEnd: Boolean = false,
+    /** When a trial turns into a charge — what the webhook writes. Read in a
+     *  query of its OWN, so a database without the column can't blank the
+     *  whole status. */
+    val trialEndsAt: String? = null,
 ) {
     val isEntitled: Boolean
         get() = subscriptionStatus in setOf("trialing", "active", "grace")
@@ -70,6 +74,9 @@ data class AccountStatus(
         get() = isEntitled && planId?.startsWith("plus") == true
 
     companion object {
+        @Serializable
+        private data class TrialRow(val trial_ends_at: String? = null)
+
         @Serializable
         private data class CreditRow(val balance: Int = 0, val unlimited: Boolean = false)
 
@@ -109,6 +116,10 @@ data class AccountStatus(
                     out = out.copy(planId = it.plan_id, subscriptionStatus = it.status,
                         cancelAtPeriodEnd = it.cancel_at_period_end == true)
                 }
+            // Its own query: a select naming a column the database has not
+            // got fails everything in it, and this one is only a reminder.
+            table<TrialRow>(auth, "user_subscriptions", "trial_ends_at", userId)
+                ?.firstOrNull()?.let { out = out.copy(trialEndsAt = it.trial_ends_at) }
             rpc(auth, "talk_allowance")?.let {
                 // A null cap on an entitled plan is "uncapped", not "no plan";
                 // `used` is real either way.
@@ -173,6 +184,9 @@ fun AccountStatus.renewalLabel(locale: java.util.Locale): String {
     val raw = periodEnd ?: return ""
     return runCatching {
         java.time.LocalDate.parse(raw.take(10))
-            .format(java.time.format.DateTimeFormatter.ofPattern("MMM d", locale))
+            // The skeleton, not a fixed pattern: "MMM d" reads as "10월 1"
+            // in Korean, which is a date missing its 일.
+            .format(java.time.format.DateTimeFormatter.ofPattern(
+                android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd"), locale))
     }.getOrDefault("")
 }
