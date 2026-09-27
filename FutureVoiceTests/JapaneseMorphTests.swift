@@ -185,7 +185,12 @@ final class JapaneseMorphTests: XCTestCase {
         let ja = ConversationEngine.correctionOnlyPrompt(targetLanguage: "ja", nativeLanguage: "ko", level: .b1)
         let en = ConversationEngine.correctionOnlyPrompt(targetLanguage: "en", nativeLanguage: "ko", level: .b1)
         XCTAssertTrue(ja.contains("return null.\n- ASR SCRIPT GUARD"))
-        XCTAssertTrue(ja.contains("the line was fine: return null.\n- Judge it as SPEECH"))
+        // The guards are spliced whole, each at a line end, in this order:
+        // script → register (2026-09-25) → the next rule. Built from the
+        // functions so a guard's wording can change without this test.
+        XCTAssertTrue(ja.contains(ConversationEngine.scriptGuard("ja")
+                                  + ConversationEngine.registerGuard("ja")
+                                  + "\n- Judge it as SPEECH"))
         XCTAssertFalse(en.contains("SCRIPT GUARD"))
         // Nothing was added to a spaced language's prompt — not even a blank line.
         XCTAssertTrue(en.contains("make, the line was fine: return null.\n- Judge it as SPEECH"))
