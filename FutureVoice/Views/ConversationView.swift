@@ -633,6 +633,12 @@ struct ConversationView: View {
     /// see `isBillableMoment`. Set where a user turn is made (both paths),
     /// cleared with the session.
     @State private var learnerSpokeThisCall = false
+    /// The learner has started their first answer — the gateway is already
+    /// making words of it — even if no turn is committed yet. Lifts the gate
+    /// for the CLOCK on the realtime path, where the local meter only keeps
+    /// the clock and the ring (the gateway bills on its own rule), so the
+    /// first answer is counted while it is being said instead of after it.
+    @State private var learnerStartedThisCall = false
     /// The live call died under the learner — socket gone, reply failed
     /// past its retry, mic lost after a route change. Set from the realtime
     /// state observer; presented as the one alert that offers a way BACK.
@@ -660,7 +666,35 @@ struct ConversationView: View {
         // — the ring showed the wait as talk time (reported 2026-09-07).
         // Per call, not per transcript: Continue reopens a book with its old
         // turns in hand, and those were spoken on another day.
-        guard learnerSpokeThisCall else { return false }
+        if RealtimeMode.isEnabled, !learnerStartedThisCall,
+           realtime.state == .hearing, !realtime.partial.isEmpty {
+            learnerStartedThisCall = true
+        }
+        guard learnerSpokeThisCall || (RealtimeMode.isEnabled && learnerStartedThisCall)
+        else { return false }
+        return somethingIsHappening()
+    }
+
+    /// The clock counts nothing until the first turn is COMMITTED (the gate
+    /// above), so the first answer itself — often the longest thing the
+    /// learner says — never reached it: a 40-second first answer read 0:00
+    /// (founder, 2026-09-27). The realtime path counts it live
+    /// (`learnerStartedThisCall`); the classic path has no such witness, so
+    /// at that commit the answer's own length is added once. The classic
+    /// meter bills too, and the learner is never billed for this — clock only.
+    private func creditFirstAnswerToClock(ms: Int) {
+        guard !learnerSpokeThisCall, ms > 0 else { return }
+        meter.clock.add(Double(ms) / 1000)
+    }
+
+    /// Is anyone in this call right now — the fluent self speaking, a reply
+    /// being written, or the learner audibly talking? The billing predicate
+    /// minus its "not until their first turn" gate. The idle watch asks THIS,
+    /// never `isBillableMoment`: that gate only lifts once a turn is
+    /// COMMITTED, so a first answer longer than the idle bar was paused
+    /// mid-sentence (2026-09-27, founder's call: 23 s of speech, 0 turns,
+    /// paused at 29 s — three times in a row).
+    private func somethingIsHappening() -> Bool {
         if RealtimeMode.isEnabled {
             // Same rule, read off the gateway's state instead of the local
             // VAD: the fluent self speaking, a reply being written, or the
@@ -1104,7 +1138,7 @@ struct ConversationView: View {
                              // the learner's first line (a call opened and left
                              // without a word has no clock, asked 2026-09-02)
                              // and gone once the talk is wrapped up.
-                             callClock: learnerSpokeThisCall
+                             callClock: (learnerSpokeThisCall || learnerStartedThisCall)
                                  && (phoneCallActive || !didSaveCurrentSession)
                                  ? meter.clock : nil)
                 .environmentObject(appState)
@@ -1632,9 +1666,10 @@ struct ConversationView: View {
             while !Task.isCancelled, phoneCallActive, !isTornDown {
                 try? await Task.sleep(for: .seconds(Self.idleWatchTickSeconds))
                 guard !Task.isCancelled, phoneCallActive, !isTornDown else { return }
-                // The same predicate the meter bills on — so the call pauses
-                // on exactly the silence it charges nothing for.
-                if isBillableMoment() { lastActivityAt = Date(); continue }
+                // The meter's predicate without its first-turn gate: silence
+                // it bills nothing for, but a first answer still in progress
+                // is someone being here.
+                if somethingIsHappening() { lastActivityAt = Date(); continue }
                 guard Date().timeIntervalSince(lastActivityAt) >= Self.idlePauseSeconds else { continue }
                 isPausedForIdle = true
                 await pauseCall()
@@ -2753,6 +2788,7 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
+        creditFirstAnswerToClock(ms: userTurn.durationMs)
         learnerSpokeThisCall = true
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
@@ -3950,6 +3986,7 @@ struct ConversationView: View {
         sessionStartedAt = Date()
         turns = []
         learnerSpokeThisCall = false
+        learnerStartedThisCall = false
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
