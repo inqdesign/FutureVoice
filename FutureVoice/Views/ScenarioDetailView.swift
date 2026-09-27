@@ -23,6 +23,9 @@ struct ScenarioDetailView: View {
     @State private var showingPaywall = false
     @StateObject private var exporter = BookExportController()
     @State private var watchPresented = false
+    /// The scene run again with the learner reading their own side —
+    /// the same `TeleprompterView` a talk book opens.
+    @State private var teleprompterPresented = false
     @State private var shadowTarget: Turn?
     @State private var wordSheet: WordRef?
     @State private var expressionSheet: WordRef?
@@ -89,6 +92,18 @@ struct ScenarioDetailView: View {
                 // plain topic call tied to the book by its title only.
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
                                  initialOrigin: .scenario, initialScenarioId: s.id)
+                    .environmentObject(appState)
+            }
+        }
+        // A cover, not a push, for the reason the talk book's is: it holds
+        // the mic for a whole run. Dismissing re-reads mastery, since a
+        // passing read files a take under the Shadow chapter's own line.
+        .fullScreenCover(isPresented: $teleprompterPresented, onDismiss: refreshMastery) {
+            if let s = scenario, let c = s.curriculum {
+                TeleprompterView(source: .scene(title: s.displayTitle,
+                                                targetLanguage: appState.targetLanguage,
+                                                curriculum: c,
+                                                counterpart: watchCounterpart(for: s)))
                     .environmentObject(appState)
             }
         }
@@ -350,6 +365,20 @@ struct ScenarioDetailView: View {
                 }
             }
             .controlSize(.large)
+            // The talk book's third door, on its own row for the same reason
+            // there. It needs the scene AND a line of the learner's in it,
+            // and no gate: the counterpart's lines play from the cache the
+            // scene's first watch filled, and nothing is synthesized.
+            if s.curriculum?.dialogue?.contains(where: { $0.speaker == "user" }) == true {
+                Button {
+                    teleprompterPresented = true
+                } label: {
+                    Label("Teleprompter", systemImage: "text.viewfinder")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+            }
         }
         .padding(20)
         if let b = s.brief, b.hasSources {

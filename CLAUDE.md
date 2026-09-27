@@ -12,7 +12,7 @@ Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`) — do → 
 
 - **Talk** (`ConversationHome`) — the speaking launcher, one tap to start the call. A List: Today status (minutes/goal, streak, talks → ActivityView), Free talk, **Scenarios** (header "+" → builder), **In the news** (`NewsTopicSection`, refresh + interests in its header). Every row tap launches `ConversationView` phone-call-mode conversation (live STT → Gemini structured turn `{reply, suggestion}` → cloned-voice TTS, auto VAD turn-taking; per-turn suggestions as inline chips). `MeTab` opens from this tab's header.
 - **Watch** (`WatchTab`) — simulate a specific situation BEFORE it happens and mine ideas (how the fluent self handles it, which expressions it uses). Three entries, all landing in `ScenarioComposerSheet`: ① a stories-style People row (tap a persona → composer scoped to them, with relationship-grounded ideas from `TopicEngine.suggestForCounterpart`, cached on the counterpart), ② **"Your own situation"** (`Mode.custom`) — describe the real upcoming thing in the composer's BOX, with material attached (no person needed; empty `Scenario.role` makes the scene infer its own counterpart), ③ **"Common situations"** (`Mode.browse`) — the drill-down chain (cafe → ordering → order came out wrong). **The two doors are now genuinely different screens, not one composer opened twice** (2026-09-26, user decision): writing lives in the box and ONLY there, and browsing is tap-tap-tap with no text field at all — a category grid, a breadcrumb to undo a step, and at the leaf the assembled sentence READ-ONLY above the CTA. The old "leaves prefill the composer, always editable" is gone: someone who chose to pick rather than write should not be handed a field, and the words are still changeable because a saved card reopens this sheet in EDIT mode, where the field is live. Attaching is the writing door's alone — the browse door shows the Material section only when the scenario already has sources to manage. **Watch** mints the `Scenario` and plays its scene in `SceneWatchView` (`ScenarioCurriculumEngine` — the same generation stocks the book Practice reviews). A saved `Scenario` is a reusable TEMPLATE: tapping it under "Your scenarios" writes a FRESH take every time (`SceneWatchView(freshTake:)` — per-run idempotency key, previous titles passed as `avoidTitles`), and the new take is `absorb`ed into the scenario's book — latest scene replaces the old, study items accumulate, mastery survives. Replaying past material is Practice's job, never Watch's. No browsing here; books live in Practice. The People row's last bubble is **Find people** (`FindPeopleSheet`) — see below.
-- **Practice** (`PracticeTab`) — the REVIEW home; everything here came out of an activity. Three layers: today's cross-cutting SRS queue (`DrillStore` Leitner boxes 0–5 + shadow picks), the **Books** shelves behind chips (**Talks · Topics · Scenarios**), and the Library dictionaries (vocabulary / expressions / shadowing). Every book has the same anatomy — one scene + words/lines to master, then archive. Watch books = `Scenario` + `ScenarioCurriculum` (`ScenarioDetailView`; scene behind its Watch button). Talk books = a finished `Session` whose material is DERIVED by `TalkCurriculum` (fluent-self pickup words + corrected lines as shadow material, mastery via `VocabStore`/shadow attempts — never persisted); their page is `ConversationDetailView` (Continue / Replay; raw transcript + sequential audio replay behind Replay in `TalkTranscriptView`). **Either book exports** from its ⋯ menu (`BookExportMenu` → `BookExport.swift`): both types flatten into ONE `BookDocument`, rendered as an A4 PDF (annotate on an iPad, or print) or Markdown (paste into a notes app). The PDF goes through `UIMarkupTextPrintFormatter` + `UIPrintPageRenderer` because it's the only thing on iOS that flows arbitrary-length text across pages without hand-rolled CoreText pagination — which is why the document is authored as HTML. Add a field to `BookDocument` and BOTH renderers pick it up; never render a book straight to a format.
+- **Practice** (`PracticeTab`) — the REVIEW home; everything here came out of an activity. Three layers: today's cross-cutting SRS queue (`DrillStore` Leitner boxes 0–5 + shadow picks), the **Books** shelves behind chips (**Talks · Topics · Scenarios**), and the Library dictionaries (vocabulary / expressions / shadowing). Every book has the same anatomy — one scene + words/lines to master, then archive. Watch books = `Scenario` + `ScenarioCurriculum` (`ScenarioDetailView`; scene behind its Watch button). Talk books = a finished `Session` whose material is DERIVED by `TalkCurriculum` (fluent-self pickup words + corrected lines as shadow material, mastery via `VocabStore`/shadow attempts — never persisted); their page is `ConversationDetailView` (Continue / Replay / **Teleprompter** — Watch books carry the same Teleprompter under Talk · Watch; raw transcript + sequential audio replay behind Replay in `TalkTranscriptView`, the talk re-run with the learner in it behind Teleprompter — see below). **Either book exports** from its ⋯ menu (`BookExportMenu` → `BookExport.swift`): both types flatten into ONE `BookDocument`, rendered as an A4 PDF (annotate on an iPad, or print) or Markdown (paste into a notes app). The PDF goes through `UIMarkupTextPrintFormatter` + `UIPrintPageRenderer` because it's the only thing on iOS that flows arbitrary-length text across pages without hand-rolled CoreText pagination — which is why the document is authored as HTML. Add a field to `BookDocument` and BOTH renderers pick it up; never render a book straight to a format.
 - **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages behind swipeable chip tabs, plus the activity/effort panel (14-day rep bars).
 - **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app language, not the phone's — see "UI text has ONE language" below.
   **The refresh is COALESCED and never runs in the write's own run-loop turn** (2026-09-23). `refreshBook` rebuilds every talk book (`TalkCurriculum.build`, NLTagger over the whole session) on the main actor, and a single "I know" on a word card writes three files, each asking for it — measured 30 books ≈ 515 ms in the simulator, paid between the tap and the button repainting, which is what the learner reported as the toggle stuttering. `schedule()` now runs ONE refresh 0.4 s after the last write; the scene-phase edges still call `refresh()` directly. The build itself got cheap the same day: `VocabStore.lemmas(in:)`, `offListContentWords(in:)` and `lookupKey(for:)` memoize per text + tagger language (`TextMemo`, lock-guarded, bounded), and `CarryoverDetector.normalized`, `TalkCurriculum.sentences(in:)`, `WordSplitter.count` are single-pass — a warm rebuild of 30 books is ~37 ms (`TalkCurriculumTimingTests` prints it). Don't put a tagger call back on a per-word path without going through the memo.
@@ -734,6 +734,99 @@ interruption. `-capture daycard` renders it on a sample day.
   Instagram's tall frame, which Threads takes as is — a 9:16 story was the
   first cut and read as a poster, not a card) and square (1080×1080) are the
   same view at two sizes.
+
+## Teleprompter mode — the talk, spoken right (2026-09-27)
+
+The third door on a talk book, and the only one that puts the learner back
+INSIDE the call. Replay plays the conversation at them; Continue starts a new
+one; **Teleprompter re-runs the SAME conversation with them in it** — their
+corrected line comes up on a prompter, they read it out loud, the fluent
+self's stored answer plays, the next line comes up. The founder's own framing:
+실전 쉐도잉 — shadowing in the shape of the call it came from, rather than one
+line at a time in a drill screen. `TeleprompterScript` (pure, tested) +
+`TeleprompterView`.
+
+- **What they read, in order of preference** (`TeleprompterScript.build`): the
+  turn's OWN correction (`Turn.suggestion.alternative` — a whole sentence,
+  rewritten); else the summary's phrase fixes SPLICED back where they were
+  said (`phrasesUsed.userSaid` is a verified quote from that turn, so the fix
+  goes into the line and the rest of the sentence stands); else **what they
+  said**. That last case is the one that keeps this a CONVERSATION instead of
+  a list of fixes (user decision) — a turn nobody corrected is a turn they got
+  right, and it is still their line to say. A turn flagged misheard is dropped
+  outright: its transcript is the recognizer's mistake, and a prompter showing
+  it would ask them to say something they never said. The fluent self's answer
+  to it stays — it is still what happened next.
+- **Only a line that IS material becomes an attempt on file.** A turn
+  correction carries `TalkCurriculum.correctionId(for:)`, so a passing read
+  masters the book's Drill chapter exactly as a shadow take on that line does.
+  A spliced summary fix carries none — that curriculum item is minted with a
+  fresh UUID on every `build`, so no `ShadowAttempt` could ever be matched to
+  it (its drill card is the only thing that masters it) — and an uncorrected
+  line carries none either. Both are still SCORED, still counted (one take,
+  one `PracticeLog` rep — the unit `ShadowDrillView` counts) and their WAV is
+  deleted rather than left in Documents under a filename nothing references.
+- **`rhythmScore` is nil by construction.** Nobody ever spoke a correction, so
+  there is no beat to be measured against; `ShadowAttempt.overallScore` falls
+  back to the match score on its own. This is why the mode needs no target
+  audio and no synthesis for the learner's own lines.
+- **Nothing is synthesized and nothing is metered, so there is no
+  `BillingGate`.** Every fluent-self line is the audio that call already
+  produced (`TurnAudioStore`, never re-synthesized — the same rule Replay
+  holds), and the only network call is the free audio-grounded read of a take
+  (`purpose: "transcribe"`, 0 credits, capped 800/day). A learner whose month
+  is spent can run this all day, which is the "Shadowing · replays —
+  Unlimited" the paywall card already promises.
+- **The score walks through the one door and the coach never runs.**
+  `ShadowTranscriber` reads the take, `ShadowEngine` grades it — and a run is
+  twenty lines, so a bullet per line would be twenty Gemini calls for text
+  nobody reads mid-run. The full drill, coach and all, stays one tap away from
+  the book. The grading is handed to a task of its own so the fluent self
+  answers immediately: **the conversation's own pause is where the scoring
+  goes.** A retry cancels the score task it replaced, and `score` re-checks
+  `Task.isCancelled` after the read — otherwise the old take's number lands on
+  the new one.
+- **It never stops** (user decision). A weak read is scored, shown and left
+  behind; every read line keeps a **Retry** button for as long as the screen is
+  open, and a score under `PracticeStats.retryThreshold` prints what the mic
+  actually heard beside it — which words drifted is the only actionable half
+  of a low number. Mid-run a retry rejoins the script there (the answer after
+  it plays again, which IS the conversation); on the finished screen it is a
+  single take and the page stays where it is.
+- **No countdown, and "quiet" is the shadow surface's 1.5 s.** The mic opens
+  with the line and the take ends when they go quiet — but the earliest it may
+  end is measured from their FIRST WORD, not from the mic opening, because
+  reading a line you have never seen takes a beat (`ShadowDrillView` measures
+  from the go beat, which its 3-2-1 makes the same moment). Silence for
+  `firstVoiceSeconds` (8) moves the conversation along rather than holding it:
+  a silent take is `heardNothing`, which is not a 0 and is never saved.
+- **A run is ONE analytics event, not twenty.** `AudioPlayer` skips
+  `audio_played` for `unreportedPlaybackSources` — the live call's per-turn
+  auto-play and now a teleprompter run, which reports itself once as
+  `teleprompter_run` (lines, read, average) when it finishes. A line-per-event
+  run is the same mistake `sync_push` was cut back for on 2026-09-26.
+- **Watch books have the same door** (2026-09-27, `ScenarioDetailView`, a
+  row under Talk · Watch). A scene is run with the learner reading its
+  "user" lines — the fluent self's side, which IS the book's Shadow chapter
+  (`ScenarioCurriculumEngine` extracts it that way) — between the
+  counterpart's lines. Nothing is marked as a fix (a scene was written
+  fluent), and each line carries its Shadow item's id, matched by normalized
+  text the way `WatchView`'s "Shadow this" is, so a passing read masters the
+  chapter through `refreshScenarioMastery` (run on the cover's dismiss).
+  **The counterpart's lines come only from the audio cache**, under the key
+  `WatchView` wrote them with (text + the counterpart's preset voice): a
+  scene is claimed by COUNT (`begin_scene_play`), so synthesizing a line here
+  would be the one metered act on a screen with no gate; a miss is read, not
+  made. `TeleprompterView.Source` (`.talk` / `.scene`) is the only thing that
+  knows which it is running — title, other side's name and photo, steps,
+  and where the other side's audio lives; `teleprompter_run` carries `kind`.
+- The screen is the app's ONE dialogue surface above (`DialogueLine`, bottom
+  anchored) and the prompter below (`fadingBottomBar`) — the current line lives
+  on the prompter and nowhere else until it is read. Captures:
+  `-capture teleprompter` / `teleprompter-reading` / `teleprompter-done`
+  (and `teleprompter-scene[-reading|-done]` for a Watch scene); the
+  two running states are SEEDED (`DebugCapture.teleprompterStage`) because a
+  capture run has no mic, the same trick `captureShadow` plays.
 
 ## The learning loop (keep it closed)
 

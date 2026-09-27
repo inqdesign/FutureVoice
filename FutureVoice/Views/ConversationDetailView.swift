@@ -42,6 +42,11 @@ struct ConversationDetailView: View {
     @State private var drillCount = 0
     @State private var showingContinue = false
     @State private var showingTranscript = false
+    @State private var showingTeleprompter = false
+    /// The talk as lines to read back — empty when nothing in it can be
+    /// spoken (every user turn misheard, or a talk with no user turns),
+    /// which is the only case where the third button has nothing to open.
+    @State private var teleprompterScript: [TeleprompterScript.Step] = []
     @State private var wordSheet: WordRef?
     /// An expression from this talk, opened as its card. Words in this book
     /// have always been tappable; expressions were static text with a
@@ -115,6 +120,12 @@ struct ConversationDetailView: View {
         }
         .navigationDestination(isPresented: $showingTranscript) {
             TalkTranscriptView(session: session)
+                .environmentObject(appState)
+        }
+        // A cover, not a push: it owns the mic for the length of a run, and a
+        // swipe-back mid-take would leave the recognizer live.
+        .fullScreenCover(isPresented: $showingTeleprompter, onDismiss: refresh) {
+            TeleprompterView(source: .talk(session))
                 .environmentObject(appState)
         }
         .fullScreenCover(isPresented: $showingContinue, onDismiss: refresh) {
@@ -254,6 +265,21 @@ struct ConversationDetailView: View {
                     .buttonStyle(.bordered)
                 }
                 .controlSize(.large)
+                // The third door, on its own row: a run-through is a longer
+                // act than either button above it, and three large labels in
+                // one row don't fit a narrow phone in any language. No gate —
+                // nothing here is synthesized or metered (see
+                // `TeleprompterView`).
+                if teleprompterScript.contains(where: \.isSpoken) {
+                    Button {
+                        showingTeleprompter = true
+                    } label: {
+                        Label("Teleprompter", systemImage: "text.viewfinder")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
             }
             .padding(20)
     }
@@ -984,6 +1010,10 @@ struct ConversationDetailView: View {
         archivedAt = SessionStore.shared.load().first { $0.id == session.id }?.archivedAt
             ?? session.archivedAt
         drillCount = cards.filter { $0.sourceSessionId == session.id }.count
+        // Held rather than computed in the body: the cover redraws on every
+        // mastery change, and the script walks every turn against every
+        // summary phrase fix.
+        teleprompterScript = TeleprompterScript.build(session: session)
     }
 
     /// Run the analysis this talk never got. Same engine, same idempotency

@@ -12,6 +12,10 @@ import SwiftUI
 enum DebugCapture {
     private static var seeded = Set<String>()
 
+    /// Which running state of `TeleprompterView` to park on for a
+    /// screenshot ("reading" / "done"), since a capture run has no mic.
+    static var teleprompterStage: String?
+
     /// True while capturing the Shadow screen: ShadowDrillView then synthesizes
     /// evenly-spaced karaoke timings locally and skips the voice-clone/network
     /// path, so the timeline renders offline for the screenshot.
@@ -1110,6 +1114,35 @@ enum DebugCapture {
                     session: session,
                     postTalk: .init(onDone: {}))
             })
+        case "teleprompter", "teleprompter-reading", "teleprompter-done",
+             "teleprompter-scene", "teleprompter-scene-reading", "teleprompter-scene-done":
+            // The talk read back with the learner's lines corrected — or,
+            // "-scene", a Watch book's scene with the learner on their own
+            // side. The mic can't be driven from a capture, so the two
+            // running states are seeded rather than reached.
+            let stage = name.split(separator: "-").last.map(String.init)
+            teleprompterStage = stage == "reading" || stage == "done" ? stage : nil
+            if name.hasPrefix("teleprompter-scene") {
+                var c = ScenarioCurriculum()
+                c.dialogue = [
+                    .init(speaker: "counterpart", text: "Oh my god, it's been forever! How have you been?"),
+                    .init(speaker: "user", text: "I know! Honestly, so much has happened — where do I even start?"),
+                    .init(speaker: "counterpart", text: "Start with the new job! How's it going?"),
+                    .init(speaker: "user", text: "It turned out to be a bit of a stretch at first, but I'm settling in."),
+                ]
+                c.shadowLines = (c.dialogue ?? []).filter { $0.speaker == "user" }
+                    .map { .init(text: $0.text, note: "") }
+                var sarah = Counterpart.empty
+                sarah.name = "Sarah"
+                sarah.voicePresetId = VoicePreset.sceneDefault.id
+                return AnyView(TeleprompterView(source: .scene(title: "Café · catching up",
+                                                               targetLanguage: "en",
+                                                               curriculum: c,
+                                                               counterpart: sarah))
+                    .environmentObject(appState))
+            }
+            return AnyView(TeleprompterView(source: .talk(talkDetailSession))
+                .environmentObject(appState))
         case "themes":
             // The settings grid of Futureself themes, in its List habitat.
             return AnyView(NavigationStack {
