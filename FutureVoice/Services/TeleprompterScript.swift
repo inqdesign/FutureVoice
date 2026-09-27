@@ -11,10 +11,21 @@ import Foundation
 ///
 /// What a learner reads on their turn, in order of preference:
 ///
-/// 1. **The turn's own correction** (`Turn.suggestion.alternative`) — a whole
-///    sentence, rewritten. This is the one case that is review MATERIAL: it
-///    carries the book's correction id, so a passing read masters the Drill
-///    chapter exactly as a shadow take on that line does.
+/// 1. **The turn's own rewrite** (`Turn.suggestion.alternative`) — their
+///    WHOLE turn, said the way a fluent speaker would say it there. This is
+///    the one case that is review MATERIAL: it carries the book's correction
+///    id, so a passing read masters the Drill chapter exactly as a shadow
+///    take on that line does.
+///
+///    **Only if it actually covers the turn** (`coversWholeTurn`). Until
+///    2026-09-27 the rewrite was specified as ONE sentence of at most 15
+///    words, so on a long utterance this step swapped forty words of
+///    conversation for a twelve-word fragment and the re-run answered
+///    questions nobody had asked — reported from a real replay. Every turn
+///    already on disk still carries such a fragment, and no alignment can
+///    put one back inside a single-sentence turn honestly, so a fragment is
+///    demoted: the prompter reads what they SAID and the better wording
+///    rides along as the note. Nothing is lost and nothing is invented.
 /// 2. **The summary's phrase fixes spliced in** (`SessionSummary.phrasesUsed`).
 ///    Those are PHRASES, not lines — `userSaid` is a verified quote from this
 ///    turn — so the fix is put back where it was said and the rest of the
@@ -70,20 +81,24 @@ enum TeleprompterScript {
                 continue
             }
             guard !turn.excludedFromScoring else { continue }
-            if let s = turn.suggestion {
-                let alternative = s.alternative.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !alternative.isEmpty {
-                    out.append(Step(id: turn.id, isSpoken: true, text: alternative,
-                                    said: transcript, note: s.reason,
-                                    attemptId: TalkCurriculum.correctionId(for: turn.id)))
-                    continue
-                }
+            let rewrite = (turn.suggestion?.alternative ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !rewrite.isEmpty,
+               coversWholeTurn(rewrite, said: transcript,
+                               fromWholeTurnContract: turn.suggestion?.fixes != nil) {
+                out.append(Step(id: turn.id, isSpoken: true, text: rewrite,
+                                said: transcript, note: turn.suggestion?.reason ?? "",
+                                attemptId: TalkCurriculum.correctionId(for: turn.id)))
+                continue
             }
+            // Their own line, with whatever the summary verified put back
+            // where it was said. A fragment rewrite becomes the note.
             let spliced = applyPhraseFixes(to: transcript, fixes: fixes)
+            let note = spliced.note.isEmpty && !rewrite.isEmpty ? rewrite : spliced.note
             out.append(Step(id: turn.id, isSpoken: true,
                             text: spliced.text,
                             said: spliced.changed ? transcript : "",
-                            note: spliced.note,
+                            note: note,
                             attemptId: nil))
         }
         return out
@@ -116,6 +131,33 @@ enum TeleprompterScript {
                         said: "", note: "",
                         attemptId: isLearner ? lineIds[CarryoverDetector.normalized(text)] : nil)
         }
+    }
+
+    /// Does this rewrite stand in for the WHOLE turn, or only part of it?
+    ///
+    /// Answered EXACTLY where it can be, and guessed only where it must be.
+    ///
+    /// A suggestion written under the whole-turn contract carries a `fixes`
+    /// array — empty when the grammar was clean, but never nil — so its
+    /// presence dates the record and settles the question outright. That
+    /// matters because length cannot: measured on the Korean probe,
+    /// `어 그 그니까 그게 뭐냐면 좀 복잡해` comes back as `그게 뭐냐면 좀 복잡해`,
+    /// 4 words against 7, and it is not a fragment at all — it is the same
+    /// turn with the hesitation taken out, which is the contract working.
+    ///
+    /// Only a record from BEFORE that contract has to be judged by size, and
+    /// there the ratio is safe: those rewrites were specified as one sentence
+    /// of at most 15 words, so on any turn long enough to matter they fall
+    /// far under it.
+    static let wholeTurnWordRatio = 0.6
+    static let shortTurnWords = 6
+
+    static func coversWholeTurn(_ rewrite: String, said: String,
+                                fromWholeTurnContract: Bool) -> Bool {
+        if fromWholeTurnContract { return true }
+        let spoken = WordSplitter.count(said)
+        guard spoken > shortTurnWords else { return true }
+        return Double(WordSplitter.count(rewrite)) >= Double(spoken) * wholeTurnWordRatio
     }
 
     /// Put each verified phrase fix back where it was said. A quote that

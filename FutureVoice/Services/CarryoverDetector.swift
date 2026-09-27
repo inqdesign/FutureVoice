@@ -151,19 +151,39 @@ enum CarryoverDetector {
         // ── Suggestions from earlier in THIS call, applied later in it.
         // `Turn.suggestion` hangs off the user turn it rewrites, so adoption
         // can only be claimed from a turn AFTER that one.
+        //
+        // What counts as "the suggestion" depends on when it was written.
+        // Since 2026-09-27 `alternative` is the WHOLE turn re-said — nobody
+        // says a whole turn again word for word, so matching it would credit
+        // nothing ever again. What a learner can adopt is a FIX, and it is
+        // matched as the card it became (`DrillStore.cardPair`), rejecting a
+        // span that still carries the mistake — the same test the deck's
+        // cards get, since `SessionSummarizer` confirms the card by this
+        // item's text. A turn from before `fixes` keeps the old rule: its
+        // `alternative` was the one-sentence correction.
         for (index, turn) in userTurns.enumerated() {
             guard let suggestion = turn.suggestion else { continue }
             let later = Array(userTurns.dropFirst(index + 1))
             guard !later.isEmpty else { continue }
-            let key = normalized(suggestion.alternative)
-            guard available(key) else { continue }
-            // If the turn that EARNED the suggestion already matches it, the
-            // learner was saying this before the suggestion existed — repeating
-            // themselves isn't adopting anything.
-            guard firstMatch(of: suggestion.alternative, in: [turn]) == nil else { continue }
-            guard let hit = firstMatch(of: suggestion.alternative, in: later),
-                  free(hit) else { continue }
-            claim(key, hit, source: .suggestion, item: suggestion.alternative, sourceId: turn.id)
+            let adoptable: [(source: String?, target: String)] = suggestion.fixes.map { fixes in
+                fixes.map { fix in
+                    let pair = DrillStore.cardPair(for: fix, in: turn.transcript)
+                    return (Optional(pair.source), pair.target)
+                }
+            } ?? [(nil, suggestion.alternative)]
+            for item in adoptable {
+                let key = normalized(item.target)
+                guard available(key) else { continue }
+                // If the turn that EARNED the suggestion already matches it,
+                // the learner was saying this before the suggestion existed —
+                // repeating themselves isn't adopting anything.
+                guard firstMatch(of: item.target, in: [turn],
+                                 rejectingMistake: item.source) == nil else { continue }
+                guard let hit = firstMatch(of: item.target, in: later,
+                                           rejectingMistake: item.source),
+                      free(hit) else { continue }
+                claim(key, hit, source: .suggestion, item: item.target, sourceId: turn.id)
+            }
         }
 
         // ── Notebook words. Single words can't go through the phrase matcher

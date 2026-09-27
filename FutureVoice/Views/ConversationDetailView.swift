@@ -702,6 +702,19 @@ struct ConversationDetailView: View {
                 (CarryoverDetector.normalized($0.fluentAlternative), $0.userSaid)
             },
             uniquingKeysWith: { first, _ in first })
+        // A fix quotes the learner itself, so it needs no trimming — the
+        // pair shown is the card's own (`DrillStore.cardPair`), keyed by the
+        // same text the curriculum item carries. The turn rides along
+        // because a fix item's id can't be flipped back to it: index > 0
+        // ids differ from the turn in a second byte.
+        let fixCards: [String: (said: String, turnId: UUID)] = Dictionary(
+            session.turns.flatMap { turn in
+                (turn.suggestion?.fixes ?? []).map { fix in
+                    let pair = DrillStore.cardPair(for: fix, in: turn.transcript)
+                    return (CarryoverDetector.normalized(pair.target), (pair.source, turn.id))
+                }
+            },
+            uniquingKeysWith: { first, _ in first })
         return curriculum.corrections.map { line in
             var bytes = line.id.uuid
             bytes.0 ^= 0xFF
@@ -713,8 +726,13 @@ struct ConversationDetailView: View {
             // — the same reason `ingest` and the drill deck both trim this
             // side.
             let turn = session.turns.first { $0.id == turnId }
-            let said = turn?.transcript
-                ?? saidByPhrase[CarryoverDetector.normalized(line.text)]
+            let key = CarryoverDetector.normalized(line.text)
+            if let fix = fixCards[key] {
+                return CorrectionItem(id: line.id, original: fix.said, fluent: line.text,
+                                      reason: line.note, sourceTurnId: fix.turnId,
+                                      masteredAt: line.masteredAt)
+            }
+            let said = turn?.transcript ?? saidByPhrase[key]
             return CorrectionItem(
                 id: line.id,
                 original: said.map { DrillStore.relevantFragment(of: $0, matching: line.text) },
@@ -730,12 +748,18 @@ struct ConversationDetailView: View {
     /// cards the ingest filtered (and it stays a card from then on).
     private func openCard(for item: CorrectionItem) {
         let cards = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }
+        let needle = CarryoverDetector.normalized(item.fluent)
+        // Text first: a turn with several fixes minted several cards under
+        // ONE turn id, so the turn alone would open whichever came first.
+        if let hit = cards.first(where: { CarryoverDetector.normalized($0.targetPhrase) == needle }) {
+            enrichmentCard = hit
+            return
+        }
         if let turnId = item.sourceTurnId,
            let hit = cards.first(where: { $0.sourceTurnId == turnId }) {
             enrichmentCard = hit
             return
         }
-        let needle = CarryoverDetector.normalized(item.fluent)
         if let hit = cards.first(where: {
             let target = CarryoverDetector.normalized($0.targetPhrase)
             return target == needle || needle.contains(target)
@@ -1496,6 +1520,15 @@ private struct TranscriptRow: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text(s.reason).font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if let fixes = s.fixes, !fixes.isEmpty {
+                Divider().padding(.vertical, 2)
+                // The same word and glyph the scorecard's grammar page uses,
+                // so "this was wrong" reads as one thing wherever it is met.
+                Label("Grammar", systemImage: "checkmark.seal")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                TurnFixRows(fixes: fixes)
+            }
             Button { showingSuggestionShadow = true } label: {
                 Label("Shadow", systemImage: "waveform.badge.mic")
             }
@@ -1583,6 +1616,53 @@ private struct TranscriptRow: View {
             reasonNative = t
             reasonLoading = false
             if t == nil { reasonShowing = false }
+        }
+    }
+}
+
+/// The grammatical slips inside one turn, listed under the rewrite.
+///
+/// The rewrite above answers "how would a fluent speaker say all this?"; this
+/// answers "what did I actually get wrong?", and a learner needs both — the
+/// first is the line they should be able to say, the second is the thing they
+/// can fix. It borrows `GrammarReviewView`'s ✗/✓ grammar deliberately, so
+/// "this was wrong" looks the same wherever it is met.
+struct TurnFixRows: View {
+    let fixes: [TurnFix]
+
+    var body: some View {
+        if !fixes.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(fixes) { fix in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: "xmark")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.red)
+                            Text(fix.was)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .strikethrough()
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: "checkmark")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                            Text(fix.now)
+                                .font(.caption)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if !fix.why.isEmpty {
+                            Text(fix.why)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .padding(.leading, 18)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
         }
     }
 }

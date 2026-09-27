@@ -58,10 +58,17 @@ if "--show" in sys.argv: print(prompt); sys.exit()
 key = dict(l.split("=", 1) for l in open(os.path.join(ROOT, "gateway/.dev.vars")) if "=" in l)["GEMINI_API_KEY"].strip().strip('"')
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={key}"
 
+def content(case):
+    """What the app sends (`requestRealtimeSuggestion`): the line said TO them
+    as context, then their own line."""
+    heard = case.get("heard", "")
+    said = case["line"]
+    return f'They were just told: "{heard}"\nThey said: "{said}"' if heard else f'They said: "{said}"'
+
 def ask(line):
     body = {"systemInstruction": {"parts": [{"text": prompt}]},
             "contents": [{"role": "user", "parts": [{"text": line}]}],
-            "generationConfig": {"maxOutputTokens": 512, "thinkingConfig": {"thinkingLevel": "low"},
+            "generationConfig": {"maxOutputTokens": 900, "thinkingConfig": {"thinkingLevel": "low"},
                                   "responseMimeType": "application/json"}}
     req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     err = None
@@ -77,18 +84,63 @@ cases = json.load(open(sys.argv[2]))
 runs = int(sys.argv[3]) if len(sys.argv) > 3 else 2
 jobs = [(c, i) for c in cases for i in range(runs)]
 with cf.ThreadPoolExecutor(8) as ex:
-    results = list(ex.map(lambda ci: ask(ci[0]["line"]), jobs))
+    results = list(ex.map(lambda ci: ask(content(ci[0])), jobs))
 json.dump([{**c, "run": i, "suggestion": s} for (c, i), s in zip(jobs, results)],
           open(os.path.join(os.environ.get("OUT_DIR", "/tmp"),
                             os.path.basename(sys.argv[2]).replace(".json", ".out.json")), "w"),
           ensure_ascii=False, indent=1)
-fp = fn = 0
+# Since 2026-09-27 the suggestion answers TWO questions, so "was it flagged"
+# is no longer the measure. A line that is grammatically perfect can still get
+# a rewrite — that is the feature. What must hold:
+#   - "ok" lines carry NO fixes (never accuse someone of a mistake they
+#     didn't make). A rewrite on them is fine.
+#   - "err" lines carry at least one fix (the mistake is named).
+#   - every "alternative" covers the WHOLE line, not a fragment of it. This
+#     is the reported bug: a 40-word turn answered by a 12-word clause, read
+#     back by the teleprompter in place of the turn.
+def words(t): return len([w for w in re.split(r"\s+", (t or "").strip()) if w])
+SHORT, RATIO = 6, 0.6
+def whole(alt, said):
+    n = words(said)
+    return True if n <= SHORT else words(alt) >= n * RATIO
+
+# Two more things a fix must be, because a fix becomes a drill card and a
+# card is credited by `CarryoverDetector.firstMatch`, which never matches
+# under 3 tokens in a spaced language (1 in Japanese) — a two-word fix is a
+# card that can never be marked used. And "was" has to be the learner's own
+# words: a fix quoting something they didn't say accuses them of it.
+MIN_TOK = 1 if lang == "ja" else 3
+def norm(t): return re.sub(r"[^\w\s]", "", (t or "").lower()).strip()
+def quoted(was, line):
+    a, b = norm(was), norm(line)
+    if a and a in b: return True
+    if a.replace(" ", "") and a.replace(" ", "") in b.replace(" ", ""): return True
+    aw = set(a.split()); bw = set(b.split())
+    return len(aw) >= 3 and len(aw & bw) / len(aw) >= 0.75
+short = unq = nfix = 0
+
+fp = fn = frag = 0
 for (c, i), s in zip(jobs, results):
-    flagged = s is not None
-    if c["expect"] == "ok" and flagged: fp += 1
-    if c["expect"] == "err" and not flagged: fn += 1
-    mark = "  " if (flagged == (c["expect"] == "err")) else "!!"
+    fixes = (s or {}).get("fixes") or []
+    alt = (s or {}).get("alternative") or ""
+    bad_fix = c["expect"] == "ok" and fixes
+    miss = c["expect"] == "err" and not fixes
+    fragment = bool(alt) and not whole(alt, c["line"])
+    if bad_fix: fp += 1
+    if miss: fn += 1
+    if fragment: frag += 1
+    mark = "!!" if (bad_fix or miss or fragment) else "  "
     print(f"{mark} [{c['expect']}] {c['line']}")
-    if s: print(f"      -> {s.get('alternative')}\n         {s.get('reason')}")
+    if alt: print(f"      -> {alt}   [{words(c['line'])}w -> {words(alt)}w]"
+                  + ("  FRAGMENT" if fragment else ""))
+    for f in fixes:
+        nfix += 1
+        is_short = words(f.get("now")) < MIN_TOK
+        is_unq = not quoted(f.get("was"), c["line"])
+        short += is_short; unq += is_unq
+        tag = ("  SHORT" if is_short else "") + ("  NOT-THEIRS" if is_unq else "")
+        print(f"      fix: {f.get('was')} -> {f.get('now')}  ({f.get('why')}){tag}")
 n_ok = sum(1 for j in jobs if j[0]["expect"] == "ok"); n_err = len(jobs) - n_ok
-print(f"\nfalse corrections on natural lines: {fp}/{n_ok}   missed real errors: {fn}/{n_err}")
+print(f"\nfalse grammar accusations: {fp}/{n_ok}   missed real errors: {fn}/{n_err}"
+      f"   fragment rewrites: {frag}/{len(jobs)}"
+      f"\nfixes too short to credit: {short}/{nfix}   fixes not quoting the learner: {unq}/{nfix}")

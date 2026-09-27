@@ -121,7 +121,16 @@ enum WeeklyReportEngine {
         }
         for session in windowSessions {
             for turn in session.turns where !turn.excludedFromScoring {
-                if let s = turn.suggestion { addPair(said: turn.transcript, alt: s.alternative) }
+                guard let s = turn.suggestion else { continue }
+                // A MISTAKE is what recurs, so feed the fixes. Since
+                // 2026-09-27 `alternative` is the whole turn re-said, which
+                // mixes style with grammar; a turn from before `fixes` keeps
+                // the old pair, whose alternative WAS the correction.
+                if let fixes = s.fixes {
+                    for fix in fixes { addPair(said: fix.was, alt: fix.now) }
+                } else {
+                    addPair(said: turn.transcript, alt: s.alternative)
+                }
             }
             for phrase in session.summary?.phrasesUsed ?? [] {
                 addPair(said: phrase.userSaid, alt: phrase.fluentAlternative)

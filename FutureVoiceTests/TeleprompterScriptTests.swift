@@ -85,6 +85,60 @@ final class TeleprompterScriptTests: XCTestCase {
         XCTAssertNil(steps[0].attemptId)
     }
 
+    // MARK: - The line has to be the whole turn (2026-09-27)
+
+    /// The reported bug, as a test. `alternative` used to be specified as ONE
+    /// sentence of at most 15 words, and this step swapped it in for the
+    /// whole turn — so a 29-word utterance was read back as a 12-word clause
+    /// and the re-run answered a question nobody had asked.
+    func testALegacyFragmentDoesNotReplaceTheTurn() {
+        let said = "Hey, um yeah, we can definitely do so, but I had a bad experience "
+                 + "uh right uh before and checking if that is consistent uh issue or temporal issue."
+        let steps = TeleprompterScript.build(session: session([
+            // fixes == nil is what dates it: written before the whole-turn contract.
+            turn(said, suggestion: TurnSuggestion(
+                alternative: "I want to check if that is a consistent issue or a temporary issue.",
+                reason: "관사와 단어 선택"))
+        ]))
+        XCTAssertEqual(steps[0].text, said, "the prompter must not lose the rest of the turn")
+        XCTAssertEqual(steps[0].note,
+                       "I want to check if that is a consistent issue or a temporary issue.",
+                       "the better wording rides along instead of replacing the line")
+        XCTAssertNil(steps[0].attemptId, "a fragment is not the book's correction")
+    }
+
+    func testAWholeTurnRewriteIsWhatTheLearnerReads() {
+        let id = UUID()
+        let said = "Hey, um yeah, we can definitely do so, but I had a bad experience "
+                 + "uh right uh before and checking if that is consistent uh issue or temporal issue."
+        let rewrite = "Hey, yeah, we can definitely do that, but I had a bad experience right "
+                    + "before, and I'm checking if that's a consistent issue or a temporary issue."
+        let steps = TeleprompterScript.build(session: session([
+            turn(said, suggestion: TurnSuggestion(
+                alternative: rewrite, reason: "더 자연스러운 흐름",
+                fixes: [TurnFix(was: "temporal issue", now: "temporary issue",
+                                why: "'temporal'은 시간에 관한 뜻이에요")]),
+                 id: id)
+        ]))
+        XCTAssertEqual(steps[0].text, rewrite)
+        XCTAssertEqual(steps[0].said, said)
+        XCTAssertEqual(steps[0].attemptId, TalkCurriculum.correctionId(for: id))
+    }
+
+    /// A rewrite is legitimately much shorter when the turn was mostly
+    /// hesitation — measured on the Korean probe, `어 그 그니까 그게 뭐냐면 좀
+    /// 복잡해` comes back as `그게 뭐냐면 좀 복잡해`. Judging that by LENGTH calls
+    /// it a fragment; the `fixes` marker gets it right.
+    func testHesitationRemovalIsNotAFragment() {
+        let steps = TeleprompterScript.build(session: session([
+            turn("어 그 그니까 그게 뭐냐면 좀 복잡해.",
+                 suggestion: TurnSuggestion(alternative: "그게 뭐냐면 좀 복잡해.",
+                                            reason: "군더더기 없이", fixes: []))
+        ]))
+        XCTAssertEqual(steps[0].text, "그게 뭐냐면 좀 복잡해.")
+        XCTAssertNotNil(steps[0].attemptId)
+    }
+
     // MARK: - What never reaches it
 
     func testAMisheardTurnIsDroppedButTheAnswerToItStays() {

@@ -990,7 +990,7 @@ enum ConversationEngine {
 
         OUTPUT FORMAT (overrides nothing above about HOW to talk — only about packaging):
         Return STRICT JSON only — no prose, no code fences:
-        { "reply": "...", "suggestion": { "alternative": "...", "reason": "..." } }
+        { "reply": "...", "suggestion": { "alternative": "...", "reason": "...", "fixes": [ { "was": "...", "now": "...", "why": "..." } ] } }
 
         - FIELD ORDER IS FIXED: "reply" FIRST, then "suggestion". The app
           starts speaking the reply the instant its closing quote arrives —
@@ -1027,10 +1027,12 @@ enum ConversationEngine {
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
           change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))
-        - "suggestion": include whenever the user's most recent line has a
-          grammar slip or wording a fluent speaker wouldn't choose — give the
-          natural version. Set it to null only when the line was already
-          natural as spoken. Don't invent a change for a line that was fine.
+        - "suggestion" answers TWO different questions about the user's most
+          recent line, and both are needed: "alternative" is how a fluent
+          speaker would say THE WHOLE THING here, and "fixes" lists the
+          outright errors inside it. Set the whole object to null only when
+          the line was already exactly what a fluent speaker would say AND
+          had no errors. Don't invent a change for a line that was fine.
         - Judge that line as SPEECH, never as writing. Contractions, casual
           register, and the sentence fragments normal in dialogue ("Sounds
           good.", "Maybe tomorrow?") are how fluent speakers talk — NOT slips.
@@ -1039,14 +1041,44 @@ enum ConversationEngine {
           contractions welcome. Punctuation, capitalization and spelling come
           from the transcriber, not the user's mouth — never build a
           suggestion on them.
-        - "alternative" must be a CONCRETE full utterance the user could say
-          out loud (their corrected sentence), never a rule or category.
-        - "alternative" rewrites ONE sentence only — the single sentence with
-          the most teachable slip. NEVER the whole turn: when the user speaks
-          several sentences, pick the one worth fixing and ignore the rest,
-          even if they also had minor slips. Target ≤ 15 words; a learner
-          drills this line later, and a paragraph is un-drillable.
-        - "reason": ≤ 12 words on why it's better, written in \(nativeName) —
+        - "alternative" is the user's ENTIRE turn, re-said. Not one sentence
+          of it, not the worst clause, not a summary of it — the whole thing,
+          the way a fluent speaker would say it AT THIS POINT IN THIS
+          CONVERSATION. It is read back aloud in place of what they said, so
+          it has to stand where their line stood: every idea they raised
+          survives, in their order, answering whatever was just said to them.
+          A turn of three sentences comes back as three sentences.
+        - Rewriting it means: keep their MEANING, their INTENT and their
+          REGISTER, and change only how it is said. Do not add information
+          they did not give, do not drop an idea because it was clumsy, do
+          not make it more polite or more formal than they were, and never
+          answer for them.
+        - DO drop the hesitation — fillers ("um", "uh", "like"), false
+          starts, a clause abandoned halfway, a word said twice. Those are
+          not errors and never go in "fixes"; they are simply not in the
+          fluent version. Keep the length close to what they said: this is
+          their turn said better, never a longer one.
+        - "alternative" must be a CONCRETE utterance the user could say out
+          loud, never a rule or a category.
+        - "fixes": every outright ERROR in that line, one entry each —
+          "was" quoted VERBATIM from what they said (their words, not the
+          rewrite's), "now" those same words corrected and nothing else
+          restyled, "why" the grammar point in \(nativeName), ≤ 12 words.
+          Each pair is a CLAUSE, never a lone word or two: "was" is the
+          stretch of their line the error sits in, long enough to be said on
+          its own — with its verb — and "now" is that same stretch said
+          right. A learner practises these out loud, and "temporal issue →
+          temporary issue" is too short to practise, while "checking if that
+          is consistent issue or temporal issue → checking if it's a
+          consistent issue or a temporary one" is exactly right. Never the
+          whole line when it has several clauses. An empty list is a perfectly ordinary answer —
+          a turn can be grammatically clean and still not be what a fluent
+          speaker would say, which is exactly what "alternative" is for.
+          Everything the ASR guards above exclude is excluded here too: a
+          contraction, a digit, a spelling, punctuation or a dropped subject
+          pronoun is NEVER a fix.
+        - "reason": ≤ 12 words on why the rewrite reads better AS A WHOLE —
+          flow, word choice, what a native would reach for — in \(nativeName) —
           the learner glances at this mid-conversation and must get it without
           decoding. Quote the \(LanguageCatalog.englishName(targetLanguage))
           words that changed, untranslated, inside the \(nativeName) sentence.
@@ -1083,15 +1115,22 @@ enum ConversationEngine {
         return """
         You are a \(targetName) coach reading ONE line a \(level.rawValue) learner just
         SPOKE on a live phone call. You are not in the conversation and you do
-        not answer them — you only decide whether that line needs a correction.
+        not answer them — you rewrite their line and name their mistakes.
+
+        You may be given the line that was said TO them just before, marked
+        "They were just told". It is CONTEXT so your rewrite fits the
+        conversation — never correct it, never answer it, and never let its
+        wording become the learner's.
 
         Return STRICT JSON only — no prose, no code fences:
-        { "reply": "", "suggestion": { "alternative": "...", "reason": "..." } }
+        { "reply": "", "suggestion": { "alternative": "...", "reason": "...", "fixes": [ { "was": "...", "now": "...", "why": "..." } ] } }
 
         - "reply" is always the empty string. Nothing here is spoken.
-        - "suggestion": null unless the line has a grammar slip or wording a
-          fluent speaker wouldn't choose. Don't invent a change for a line that
-          was already fine.
+        - "suggestion" answers TWO questions and both are needed:
+          "alternative" is how a fluent speaker would say THE WHOLE LINE here,
+          and "fixes" lists the outright errors inside it. Null only when the
+          line was already exactly what a fluent speaker would say AND had no
+          errors.
         - THE LINE IS A GUESS — it came from speech recognition, not a keyboard.
         - ASR DROP GUARD: recognition clips short function words, above all a
           sentence-initial subject pronoun ("I", "he", "we"). Never correct
@@ -1107,13 +1146,56 @@ enum ConversationEngine {
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
-        - "alternative": a CONCRETE full utterance they could say out loud,
-          rewriting ONE sentence only — the single most teachable slip — in
-          their own register. Target ≤ 15 words; a learner drills this later.
-        - "reason": ≤ 12 words in \(nativeName), quoting the \(targetName) words
-          that changed untranslated. Those quotes are the only foreign text;
-          every other word is \(nativeName).
+        - "alternative": their ENTIRE line, re-said — not one sentence of it,
+          not the worst clause, not a summary. It is read back aloud in place
+          of what they said, so every idea they raised has to survive, in
+          their order, still answering what was said to them. Three sentences
+          come back as three sentences.
+        - Keep their MEANING, INTENT and REGISTER; change only how it is said.
+          Add nothing they did not say, drop no idea because it was clumsy,
+          and never make them more formal than they were.
+        - DO drop the hesitation — fillers ("um", "uh", "like"), false starts,
+          a clause abandoned halfway, a word said twice. Those are not errors
+          and never go in "fixes"; they are simply gone from the fluent
+          version. Keep the length close to theirs.
+        - "fixes": every outright ERROR in the line, one entry each — "was"
+          quoted VERBATIM from what they said, "now" those same words
+          corrected, "why" the grammar point in \(nativeName), ≤ 12 words.
+          Each pair is a CLAUSE, never a lone word or two: "was" is the
+          stretch the error sits in, long enough to be said on its own — with
+          its verb — and "now" is that stretch said right. The learner
+          practises these out loud: "temporal issue → temporary issue" is too
+          short to practise, "checking if that is consistent issue or temporal
+          issue → checking if it's a consistent issue or a temporary one" is
+          right. Never the whole line when it has several clauses. An empty list is an ordinary answer: a
+          line can be grammatically clean and still not be what a fluent
+          speaker would say. Nothing the ASR guards exclude may be a fix.
+        - "reason": ≤ 12 words in \(nativeName) on why the rewrite reads
+          better as a whole, quoting the \(targetName) words that changed
+          untranslated. Those quotes are the only foreign text; every other
+          word is \(nativeName).
         """
+    }
+
+    /// Is `quote` something the learner actually said in `line`?
+    ///
+    /// The model quotes loosely — a dropped filler, a different comma — so
+    /// this is the summary's `isTheirs` rule: contained after normalizing,
+    /// or three words in four shared. Spaces are also compared away, because
+    /// in Korean they are the recognizer's (`한번` / `한 번`, see the spacing
+    /// guard) and in Japanese there are none to disagree about.
+    static func quotes(_ quote: String, from line: String) -> Bool {
+        let needle = CarryoverDetector.normalized(quote)
+        let hay = CarryoverDetector.normalized(line)
+        guard !needle.isEmpty else { return false }
+        if hay.contains(needle) { return true }
+        let squeezedNeedle = needle.replacingOccurrences(of: " ", with: "")
+        if !squeezedNeedle.isEmpty,
+           hay.replacingOccurrences(of: " ", with: "").contains(squeezedNeedle) { return true }
+        let words = Set(needle.split(separator: " ").map(String.init))
+        guard words.count >= 3 else { return false }
+        let have = Set(hay.split(separator: " ").map(String.init))
+        return Double(words.intersection(have).count) / Double(words.count) >= 0.75
     }
 
     /// True when a "suggestion" changes nothing the learner actually SAID —
@@ -1358,6 +1440,14 @@ struct ConversationTurnPayload: Decodable {
     struct Suggestion: Decodable {
         let alternative: String
         let reason: String
+        /// Absent on every build before 2026-09-27, and legitimately absent
+        /// on a turn whose grammar was clean.
+        var fixes: [Fix]? = nil
+    }
+    struct Fix: Decodable {
+        let was: String
+        let now: String
+        var why: String = ""
     }
     let reply: String
     let suggestion: Suggestion?
@@ -1377,11 +1467,52 @@ struct ConversationTurnPayload: Decodable {
         guard let s = suggestion else { return nil }
         let alternative = s.alternative.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !alternative.isEmpty else { return nil }
+
+        // The no-op guards run PER PIECE, because the two halves can now
+        // disagree: a turn can be grammatically clean and still worth
+        // re-saying (fixes empty, rewrite real), and a rewrite that only
+        // re-spells what they said is still a no-op however many fixes ride
+        // with it. A fix whose "now" changes nothing a mouth can hear is the
+        // 2026-08-21 contraction bug one level down.
+        let fixes: [TurnFix] = (s.fixes ?? []).compactMap { f in
+            let was = f.was.trimmingCharacters(in: .whitespacesAndNewlines)
+            let now = f.now.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !was.isEmpty, !now.isEmpty,
+                  // A fix accuses the learner of saying `was`. If they didn't
+                  // say it, the accusation is invented — the same gate the
+                  // summary's `phrases_used` has had since 2026-09-23.
+                  ConversationEngine.quotes(was, from: original),
+                  !ConversationEngine.saysTheSameThing(was, now),
+                  !ConversationEngine.changesOnlyWordOrder(was, now),
+                  !DrillStore.looksLikeMetaRule(now) else { return nil }
+            return TurnFix(was: was, now: now, why: f.why)
+        }
+
         // A prompt is a request; this is the guarantee. See
-        // `ConversationEngine.saysTheSameThing`.
-        guard !ConversationEngine.saysTheSameThing(original, alternative),
-              !ConversationEngine.changesOnlyWordOrder(original, alternative) else { return nil }
-        return TurnSuggestion(alternative: alternative, reason: s.reason)
+        // `ConversationEngine.saysTheSameThing`. A rewrite that says the same
+        // thing is dropped — but it must not take surviving fixes with it.
+        // The line is then THEIR turn with the fixes put back where they
+        // were said, never a fix on its own: `alternative` is read aloud in
+        // place of the whole turn, and a lone clause there is the exact
+        // fragment this contract exists to end.
+        if ConversationEngine.saysTheSameThing(original, alternative)
+            || ConversationEngine.changesOnlyWordOrder(original, alternative) {
+            guard !fixes.isEmpty else { return nil }
+            var line = original
+            for fix in fixes {
+                guard let range = line.range(of: fix.was,
+                                             options: [.caseInsensitive, .diacriticInsensitive])
+                else { continue }
+                line.replaceSubrange(range, with: fix.now)
+            }
+            return TurnSuggestion(alternative: line, reason: fixes[0].why, fixes: fixes)
+        }
+        // ALWAYS a non-nil array, empty included. `fixes == nil` is then an
+        // exact marker for "saved before 2026-09-27", i.e. before
+        // `alternative` meant the whole turn — which is what
+        // `TeleprompterScript.coversWholeTurn` needs to tell a fragment from
+        // a turn whose hesitation was simply taken out.
+        return TurnSuggestion(alternative: alternative, reason: s.reason, fixes: fixes)
     }
 }
 

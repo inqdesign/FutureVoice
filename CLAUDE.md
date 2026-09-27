@@ -1000,6 +1000,86 @@ hide); don't bring a delete back on one page without the other.
 
 Every feature should feed this loop. Per-turn suggestions come back in the SAME Gemini call as the reply (structured JSON) — never split the suggestion out, and never remove the field: `ScorecardMetrics.suggestionRate`, drill ingestion, and the weekly report's repeated-mistake detection all depend on `Turn.suggestion`.
 
+**A turn is answered TWICE: the whole thing re-said, and the mistakes named**
+(2026-09-27, user decision, from a replay screenshot). `suggestion.alternative`
+used to be specified as "ONE sentence only — the single sentence with the most
+teachable slip. NEVER the whole turn … ≤ 15 words", and the stated reason was
+the drill card: a paragraph is un-drillable. That constraint was right about
+cards and wrong about everything else, and it leaked into the two places the
+line has to be COMPLETE. On screen a 29-word utterance was answered by a
+12-word clause under the heading *더 자연스럽게* — not what a fluent speaker
+would say, a twelfth of it. Worse, `TeleprompterScript` reads that line back
+IN the conversation, so the re-run replaced the turn with the fragment and
+answered questions nobody had asked ("대화가 하나도 맥락이 없게 되고 있어").
+The two answers are now separate fields and both ship:
+
+- **`alternative` is the learner's WHOLE turn, re-said** — every idea they
+  raised, in their order, in their register, answering what was just said to
+  them, with the hesitation (fillers, false starts, a word said twice) gone.
+  Not longer than what they said. It is the teleprompter's line and the
+  transcript's Shadow target.
+- **`fixes: [{was, now, why}]` is the grammar**, each a CLAUSE (the prompt
+  asked for "SHORT" first and got `temporal issue → temporary issue`, which
+  no card can use — see below), `was` quoted verbatim. **An empty array is an
+  ordinary answer**: a turn can be perfectly grammatical and still not be
+  what a native would say, which is the whole reason the two are separate.
+  Every ASR guard applies to `fixes` unchanged.
+- **`turnSuggestion(for:)` is the gate, per piece.** A fix whose `was` isn't
+  the learner's (`ConversationEngine.quotes` — the summary's `isTheirs` rule,
+  spaces compared away for ko/ja) is dropped: it accuses them of words they
+  never said. A rewrite that changes nothing audible is dropped too, and its
+  fixes then ride on THEIR turn with the fixes spliced in — never on a fix
+  alone, because a lone clause read in place of the turn is this bug again
+  (the first pass did exactly that).
+- **`fixes == nil` DATES the record, and that is load-bearing.** The funnel
+  always writes a non-nil array, so nil means "saved before this contract":
+  `alternative` is a fragment, and `TeleprompterScript.coversWholeTurn`
+  demotes it — the prompter reads what they SAID and the better wording rides
+  as the note. Don't judge this by length: `어 그 그니까 그게 뭐냐면 좀 복잡해`
+  → `그게 뭐냐면 좀 복잡해` is 4 words against 7 and is the contract working.
+- **Every reader of "the correction" reads `fixes` now, and there were five.**
+  Missing any one of them is a silent regression, found only by a review:
+  `DrillStore.ingest` (a card per fix; a clean turn mints none),
+  `TalkCurriculum` (a Drill item per fix; mastery by the card's TEXT, because
+  every fix of a turn shares its `sourceTurnId` and matching by turn let the
+  first graduate card master its siblings; a passing take on the whole line
+  masters all of that turn's fixes), `CarryoverDetector` (adoption later in
+  the call matches the FIX with `rejectingMistake` — nobody repeats a whole
+  turn verbatim, so matching `alternative` would credit nothing ever again),
+  `WeeklyReportEngine` (the recurring-mistake pairs are `was → now`, not
+  whole turns mixing style with grammar), and the book page / export (the
+  Drill row quotes the card's own pair; the transcript prints the fixes under
+  the rewrite — `BookDocument.Line.fixes`). Records without `fixes` keep the
+  old behaviour everywhere.
+- **`DrillStore.cardPair(for:in:)` is the ONE rule for the card a fix
+  becomes**, used by all of the above. Usually the fix as written. But
+  `CarryoverDetector.firstMatch` never credits under three tokens in a spaced
+  language, and a whole Korean clause is often two eojeol (`학교에 갔어`,
+  `빵을 먹었어` — 4 of 24 Korean fixes on the probe); a card that can never be
+  marked used breaks used-outranks-known for that card. Such a fix is widened
+  to the SENTENCE it sits in with the fix applied — the learner's own words,
+  one correction. Two surfaces computing the pair two ways would be a Drill
+  chapter whose items can never find their cards.
+- **`correctionId(for:index:)`** — index 0 is byte-identical to the old id,
+  so every attempt on disk still lands; a fix item's turn can't be recovered
+  by flipping its id back (byte 14 differs), so the page carries the turn id
+  alongside instead.
+- **The correction call is given the line said TO them** (`requestRealtimeSuggestion`,
+  "They were just told: …"), because a whole turn only reads right against
+  what it answers — the coach call had no context at all, which is the gap
+  the 2026-09-25 register bug came through. Context only; the prompt forbids
+  correcting or answering it. `maxTokens` 512 → 900: the call is buffered,
+  so a truncation loses the WHOLE correction, not its tail.
+- Measured with `scripts/correction-probe.py`, rescored for this contract
+  ("was it flagged" is meaningless now): fixes on clean lines · missed errors
+  · fragment rewrites · fixes too short to credit · fixes not quoting the
+  learner. **en** (new `correction-cases-en.json`, the reported utterance
+  first) 0/8 · 0/12 · 0/20 · 0/24 · 0/24; **ko** 1/86 · 1/24 · 0 · 4/24
+  (all widened by `cardPair`) · 0; **ja** 2/72 · 0/24 · 0 · 0 · 0; **de**
+  0/70 · 0/24 · 0 · 0 · 0. The outliers on clean lines are naturalness notes
+  filed as fixes (`やつ、でも → やつだけど`), not invented errors. Re-run all
+  four before touching either prompt. `TurnFixTests` pins the five readers.
+
 **A correction may never be built on something the TRANSCRIBER chose** (2026-08-21). The prompt has said this three ways for a while — the ASR DROP guard (a clipped subject pronoun), the ASR DIGIT guard (spoken numbers written as digits), and "punctuation, capitalization and spelling come from the transcriber". A fourth was missing and shipped as the visible bug: **dictation EXPANDS contractions**, so a learner who said "I'm building" is transcribed "I am building" every single time, and the model dutifully offered "I am" → "I'm" under the heading *더 자연스럽게*. That tells someone they made a mistake they did not make, in their own voice, mid-call. Three layers now, because a prompt is a request and the model had already been asked:
 
 - **The prompt** carries an ASR CONTRACTION GUARD next to the other two.

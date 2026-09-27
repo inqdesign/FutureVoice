@@ -2494,13 +2494,22 @@ struct ConversationView: View {
         guard WordSplitter.count(said) >= 3 else { return }
         let target = appState.targetLanguage
         let native = appState.nativeLanguage
+        // The line said TO them, so the rewrite can be natural IN THIS
+        // conversation rather than natural in a vacuum — the whole turn is
+        // being re-said now, and a turn only reads right against what it
+        // answers. Context only; the prompt says so and forbids correcting it.
+        let heard = turns.last(where: { $0.role == .fluentSelf })?
+            .transcript.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let content = heard.isEmpty
+            ? "They said: \"\(said)\""
+            : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
         Task { @MainActor in
             let payload: ConversationTurnPayload? = try? await GeminiClient.background.sendJSON(
                 system: ConversationEngine.correctionOnlyPrompt(
                     targetLanguage: target, nativeLanguage: native,
                     level: appState.proficiency),
-                messages: [GeminiClient.Message(role: .user, content: said)],
-                maxTokens: 512,
+                messages: [GeminiClient.Message(role: .user, content: content)],
+                maxTokens: 900,
                 purpose: "turn",
                 idempotencyKey: "rt-suggest:\(turnId.uuidString)")
             guard !isTornDown, let payload,
@@ -4210,6 +4219,11 @@ private struct SuggestionChip: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let fixes = suggestion.fixes, !fixes.isEmpty {
+                    TurnFixRows(fixes: fixes)
+                        .padding(.top, 2)
+                }
 
                 Button(action: toggle) {
                     HStack(spacing: 4) {

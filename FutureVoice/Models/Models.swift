@@ -221,9 +221,45 @@ struct WordTiming: Codable, Hashable {
     }
 }
 
+/// One spoken turn, answered in the two ways a learner needs.
+///
+/// **They are different questions and both matter** (2026-09-27, user
+/// decision, after a replay showed a 40-word utterance answered by a
+/// 12-word fragment): "how would a fluent speaker say this whole thing?"
+/// and "what did I actually get wrong?". The first is the line; the second
+/// is the list under it.
 struct TurnSuggestion: Codable, Hashable {
+    /// The learner's WHOLE turn, said the way a fluent speaker would say it
+    /// in this conversation — every idea they raised, in their own register,
+    /// with the hesitation taken out.
+    ///
+    /// **Never a fragment.** It used to be one sentence of at most 15 words,
+    /// because a drill card cannot be a paragraph — and that constraint had
+    /// leaked into the one place the line has to be complete: the
+    /// teleprompter reads it aloud IN the conversation, so a fragment left
+    /// the re-run answering a question nobody asked. Cards now come from
+    /// `fixes`, which are short by nature, so the line is free to be whole.
     var alternative: String
+    /// Why the rewrite reads better, in the learner's native language.
     var reason: String
+    /// The outright ERRORS inside that turn, quoted and fixed one by one.
+    /// Empty is an ordinary answer — a turn can be grammatical and still not
+    /// be what a fluent speaker would say. Optional so every turn saved
+    /// before this decodes (Swift synthesizes `decodeIfPresent` for an
+    /// Optional; a defaulted non-optional would throw).
+    var fixes: [TurnFix]? = nil
+}
+
+/// One grammatical slip inside a turn: what they said, what it should be,
+/// and why — the pair a drill card is made of.
+struct TurnFix: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    /// Quoted from the learner's own line, verbatim.
+    var was: String
+    /// The same words, corrected — nothing else restyled.
+    var now: String
+    /// The grammar point, in the learner's native language.
+    var why: String
 }
 
 struct Session: Codable, Identifiable {
