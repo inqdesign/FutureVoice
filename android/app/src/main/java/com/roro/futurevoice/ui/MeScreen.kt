@@ -836,6 +836,10 @@ fun MeScreen(
             targetLanguage = targetLanguage,
             appliedAccentId = voiceAccentId,
             onApplied = onAccentApplied,
+            // Leaving without applying leaves the learner on the rebuilt,
+            // un-accented clone — the honest state, and the app has to know
+            // which voice it now holds.
+            onCloneRebuilt = { onAccentApplied(it, "") },
             onDismiss = { pickingAccent = false },
         )
     }

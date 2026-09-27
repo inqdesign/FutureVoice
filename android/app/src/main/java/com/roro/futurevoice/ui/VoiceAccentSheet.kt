@@ -66,6 +66,12 @@ fun VoiceAccentSheet(
     /** The accent the live clone was remixed with, if any. */
     appliedAccentId: String?,
     onApplied: (voiceId: String, accentId: String) -> Unit,
+    /**
+     * A fresh, UN-ACCENTED clone was built from the saved recording to remix
+     * from. Whoever presented this sheet is holding the old voice id (and any
+     * audio made with it), so they are told even when nothing is applied.
+     */
+    onCloneRebuilt: (voiceId: String) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -75,6 +81,8 @@ fun VoiceAccentSheet(
 
     val options = remember(targetLanguage) { VoiceAccentCatalog.options(targetLanguage) }
     var accent by remember { mutableStateOf<VoiceAccent?>(null) }
+    /** The voice the takes are remixed FROM — the un-accented clone. */
+    var sourceVoiceId by remember(voiceId) { mutableStateOf(voiceId) }
     var previews by remember { mutableStateOf<List<VoiceRemixClient.Preview>>(emptyList()) }
     var picked by remember { mutableStateOf<String?>(null) }
     var playing by remember { mutableStateOf<String?>(null) }
@@ -121,7 +129,19 @@ fun VoiceAccentSheet(
                         Analytics.capture("voice_accent_previews_requested", mapOf("accent" to chosen.id))
                         scope.launch {
                             runCatching {
-                                client.previews(voiceId, chosen.prompt,
+                                // Takes always come from the UN-ACCENTED
+                                // clone. A second pick used to remix the live
+                                // voice — i.e. the previous remix — so the
+                                // learners who tried hardest to find
+                                // themselves drifted furthest (iOS `84795b6`).
+                                // The phone's own recording is the way back.
+                                if (appliedAccentId != null) {
+                                    rebuiltFromSample(context)?.let { fresh ->
+                                        sourceVoiceId = fresh
+                                        onCloneRebuilt(fresh)
+                                    }
+                                }
+                                client.previews(sourceVoiceId, chosen.prompt,
                                     VoiceAccentCatalog.sampleText(targetLanguage))
                             }.onSuccess { previews = it }
                                 .onFailure {
@@ -217,4 +237,23 @@ fun VoiceAccentSheet(
             }
         }
     }
+}
+
+
+/**
+ * Build a fresh clone from the recording kept on the phone — the only way
+ * back to the un-accented voice, and the same path "Remove accent" takes.
+ * Null when there is no recording to rebuild from, which leaves the live
+ * voice in place.
+ */
+private suspend fun rebuiltFromSample(context: android.content.Context): String? {
+    val sample = VoiceComparison.sampleFile(context.filesDir)
+    if (!sample.exists()) return null
+    return runCatching {
+        com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
+            name = "Future Self",
+            sample = sample,
+            removeBackgroundNoise = false,
+        )
+    }.getOrNull()
 }

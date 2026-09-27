@@ -31,6 +31,16 @@ object VoiceAccentCatalog {
      * person, different accent" — the remix must never drift into a new
      * character, because speaker similarity is the product.
      */
+    /**
+     * How far the remix may drift from the reference audio (upstream
+     * `prompt_strength`: 0 keeps almost everything of the recording, 1 keeps
+     * almost nothing). The prompt ASKS for the same person; this is what
+     * decides it. Low on purpose: an accent that sounds like someone else is
+     * worse than no accent. Chosen by ear with
+     * `scripts/voice-remix-probe.sh` — retune there, never by feel.
+     */
+    const val PROMPT_STRENGTH: Double = 0.3
+
     private fun prompt(accent: String) = "Keep this exact same voice: the same person, timbre, pitch, age and character. Change ONLY the accent — the speaker now has a natural, consistent %s. Do not change anything else about how the voice sounds.".format(accent)
 
     private val all = listOf(

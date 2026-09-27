@@ -232,11 +232,18 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
      */
     suspend fun previews(
         voiceId: String, voiceDescription: String, text: String,
+        promptStrength: Double =
+            com.roro.futurevoice.data.VoiceAccentCatalog.PROMPT_STRENGTH,
     ): List<Preview> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val body = buildJsonObject {
             put("voice_id", voiceId)
             put("voice_description", voiceDescription)
             put("text", text)
+            // How far the remix may leave the RECORDING. The prompt asks for
+            // the same person; this is the parameter that decides it, and
+            // sending nothing let upstream choose — every accent came back
+            // recognisably less like the speaker (iOS `84795b6`).
+            put("prompt_strength", promptStrength)
         }
         val raw = post(body.toString())
         Edge.json.decodeFromString(PreviewsResponse.serializer(), raw).previews.mapNotNull { p ->
