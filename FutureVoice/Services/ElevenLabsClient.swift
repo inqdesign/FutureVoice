@@ -297,14 +297,15 @@ final class ElevenLabsClient {
     }()
 
     private static func deterministicKey(text: String, voiceId: String,
-                                         timestamps: Bool) -> String {
+                                         timestamps: Bool,
+                                         speed: SpeechSpeed? = nil) -> String {
         // Timestamps flag included: plain and karaoke syntheses are separate
         // billable actions and must not dedupe against each other.
         // The chosen speech speed joins the key: the same line at two speeds is
         // two DIFFERENT syntheses and must not dedupe against each other.
         // Normal's tag is empty (see `SpeechSpeed.cacheTag`), so every existing
         // key is unchanged.
-        let speedTag = SpeechSpeed.current.cacheTag
+        let speedTag = (speed ?? .current).cacheTag
         let digest = SHA256.hash(data: Data("\(voiceId)|\(timestamps)|\(speedTag)\(text)".utf8))
         let hex = digest.prefix(12).map { String(format: "%02x", $0) }.joined()
         return "tts:\(installSalt):\(hex)"
@@ -332,7 +333,8 @@ final class ElevenLabsClient {
         purpose: String? = nil,
         previousText: String? = nil,
         nextText: String? = nil,
-        sceneKey: String? = nil
+        sceneKey: String? = nil,
+        speed: SpeechSpeed? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -341,7 +343,8 @@ final class ElevenLabsClient {
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         // Caller-supplied key = retries of the same logical synthesis are
         // charge-deduped by the edge function's usage ledger.
-        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId, timestamps: false),
+        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId,
+                                                                 timestamps: false, speed: speed),
                          forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
@@ -361,7 +364,15 @@ final class ElevenLabsClient {
         // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
         // edge deploy that predates the field ignores it and the line
         // synthesizes exactly as it used to.
-        body["speed"] = SpeechSpeed.current.multiplier
+        //
+        // `speed` overrides the learner's setting for ONE line, and exists for
+        // exactly one caller: the onboarding speed pills, which have to make
+        // three takes of the same sentence at three rungs before the learner
+        // has chosen any of them. It is a rung, never a raw number, so the
+        // idempotency key's speed tag stays the same tag every other path
+        // uses. Everything else must keep passing nil — a surface that picks
+        // its own pace is a voice that changes speed mid-app.
+        body["speed"] = (speed ?? .current).multiplier
         if let purpose { body["purpose"] = purpose }
         // One Watch scene = one key across all its lines, so the plan's daily
         // scene COUNT is charged once and the scene's seconds stop coming out

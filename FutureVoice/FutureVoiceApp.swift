@@ -1306,7 +1306,20 @@ final class AppState: ObservableObject {
     /// (text, voiceId), so a new id silently invalidates all of it at once —
     /// without a re-warm, the first free talk after onboarding (and every
     /// one right after a re-record or accent switch) waits on live TTS.
-    private func warmFreeTalkOpeners() {
+    ///
+    /// **It waits for the meet act to finish** (2026-09-27). The audio is
+    /// keyed by SPEED as well as voice, and the meet act asks for the speed
+    /// moments after the clone lands — so warming here baked the opener and
+    /// the whole pool at the default rung, and a learner who then picked
+    /// Slow had every one of those lines deleted and re-synthesized on their
+    /// first Talk visit (`FreeTalkOpeners.needsBake`). That is the same
+    /// lines paid for twice, and the pool is several of them — more than the
+    /// speed pills spend. `VoiceCloneOnboardingView.finishMeet` calls this
+    /// the moment the act is over, by which time the rung is settled; a
+    /// learner who kills the app on that screen is covered by the Talk
+    /// launcher, which warms on arrival.
+    func warmFreeTalkOpeners() {
+        guard !holdVoiceOnboarding else { return }
         let language = targetLanguage
         let personaName = persona?.displayName
         let level = proficiency

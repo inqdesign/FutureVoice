@@ -90,6 +90,17 @@ struct VoiceCloneOnboardingView: View {
     @State private var greetingData: Data?
     @State private var meetBurst = false
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+    /// The pick the meet act's pills write through, read everywhere else as
+    /// `SpeechSpeed.current`. Nothing here has to be undone on the way out:
+    /// the rung the learner last heard IS the one they chose.
+    @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.default.rawValue
+    /// One take of `paceSample` per rung, in memory only. Warmed during the
+    /// becoming act so a pill never waits on a round trip, and thrown away
+    /// with the voice that spoke them (a re-record or an accent remix).
+    @State private var paceTakes: [SpeechSpeed: Data] = [:]
+    /// The rung whose take is being fetched, so the pill can say so rather
+    /// than looking like a button that did nothing.
+    @State private var paceLoading: SpeechSpeed?
 
     /// The meet act is the first time the user HEARS the clone — and the only
     /// honest moment to judge it. If it doesn't sound like them, they can go
@@ -151,6 +162,11 @@ struct VoiceCloneOnboardingView: View {
     /// exists. Short on purpose (one TTS call per onboarding).
     private var greetingLine: String {
         VoiceCloneScript.greeting(for: appState.targetLanguage)
+    }
+
+    /// The sentence every speed pill speaks — the same one at all three rungs.
+    private var paceLine: String {
+        VoiceCloneScript.paceSample(for: appState.targetLanguage)
     }
 
     /// The words both sides of the comparison say. Uses the LIVE pick while
@@ -312,6 +328,17 @@ struct VoiceCloneOnboardingView: View {
                     .frame(width: orbSize, height: orbSize)
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+                    // On the meet act the orb IS the fluent self, so tapping
+                    // it is how the greeting is heard again — the one replay
+                    // there is, now that the arrival line plays once and
+                    // colour taps are silent. Everywhere else the orb stays
+                    // what it has always been: a picture, not a control.
+                    .contentShape(Circle())
+                    .onTapGesture { replayGreeting() }
+                    .accessibilityAddTraits(canReplayGreeting ? .isButton : [])
+                    .accessibilityLabel(canReplayGreeting
+                                        ? Text(explain("Hear it again"))
+                                        : Text(""))
             }
             .frame(width: 182, height: orbSize + 14)
 
@@ -384,6 +411,10 @@ struct VoiceCloneOnboardingView: View {
 
     private var timerLine: String {
         switch status {
+        case .meet:
+            // The orb's tap has nothing else pointing at it, and an
+            // affordance nobody can see is the same as not having one.
+            return canReplayGreeting ? chrome("Tap to hear it again") : ""
         case .spot:
             return ""   // the gate rows below carry the live readings
         case .recording:
@@ -867,7 +898,7 @@ struct VoiceCloneOnboardingView: View {
     private var meetContent: some View {
         VStack(spacing: 22) {
             stepHeader(explain("It's you — fluent."),
-                       explain("Pick how your fluent self looks."))
+                       explain("Pick how your fluent self looks and sounds."))
 
             HStack(spacing: 14) {
                 ForEach(FutureselfTheme.allCases) { theme in
@@ -895,16 +926,9 @@ struct VoiceCloneOnboardingView: View {
                 }
             }
 
-            VStack(spacing: 14) {
-                if greetingData != nil {
-                    Button {
-                        playGreeting()
-                    } label: {
-                        Label("Hear it again", systemImage: "arrow.clockwise")
-                            .font(.footnote)
-                    }
-                }
+            speedSection
 
+            VStack(spacing: 14) {
                 // The verdict belongs here, not one screen earlier: at review
                 // they judged their own raw take, here they judge the CLONE.
                 // "It doesn't sound like me" with no way back is the one exit
@@ -968,6 +992,79 @@ struct VoiceCloneOnboardingView: View {
             // them credits will settle for a voice that isn't theirs.
             Text(explain("You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one."))
         }
+    }
+
+    /// How fast the fluent self talks, auditioned on the one screen where the
+    /// learner is actually listening to it.
+    ///
+    /// The setting shipped 2026-09-23 with a picker in Me → Voice and nothing
+    /// to listen to, which means the rung was chosen by reading three words —
+    /// and almost nobody chose at all, because onboarding never asked. Here
+    /// the pick and the audition are the same tap: the pill selects the rung
+    /// AND speaks at it, so re-tapping the selected one replays instead of
+    /// being a no-op.
+    ///
+    /// Speed is the one choice on this screen that cannot be judged by eye, so
+    /// it is the only thing that speaks: the greeting is heard once on arrival
+    /// and a colour tap is silent (see `pick(_:)`). Nothing is a wall — the
+    /// default rung is already selected, and Me → Voice keeps all three.
+    private var speedSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(SpeechSpeed.allCases, id: \.rawValue) { speed in
+                    speedPill(speed)
+                }
+            }
+            // What they are about to hear. Material, so the target language.
+            Text(paceLine)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            // Neither pick on this screen is final, and saying so is what
+            // keeps the act a moment rather than a decision: the colour lives
+            // in Me → Appearance and the speed in Me → Voice, so the line
+            // names "settings" and not a path that would be wrong for one of
+            // them.
+            Text("You can change both later in settings.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        // The pills are full-width buttons, so the row needs the act's own
+        // gutter or they run to the screen edges.
+        .padding(.horizontal, 24)
+    }
+
+    @ViewBuilder
+    private func speedPill(_ speed: SpeechSpeed) -> some View {
+        // Two native styles rather than one styled two ways: prominent IS the
+        // selected state, so nothing here draws its own selection chrome.
+        if speechSpeed == speed.rawValue {
+            speedButton(speed).buttonStyle(.borderedProminent)
+        } else {
+            speedButton(speed).buttonStyle(.bordered)
+        }
+    }
+
+    private func speedButton(_ speed: SpeechSpeed) -> some View {
+        let selected = speechSpeed == speed.rawValue
+        return Button {
+            audition(speed)
+        } label: {
+            HStack(spacing: 4) {
+                if paceLoading == speed {
+                    ProgressView().controlSize(.mini)
+                } else if selected, player.isPlaying {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.caption2)
+                }
+                Text(speed.label)
+                    .font(.subheadline)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityHint(Text(explain("Speaks at this speed")))
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func ratingTint(_ r: AudioSampleQuality.Rating) -> Color {
@@ -1370,6 +1467,11 @@ struct VoiceCloneOnboardingView: View {
                     greetingData = try? await ElevenLabsClient.shared.synthesize(
                         voiceId: voiceId, text: greetingLine,
                         modelId: ElevenLabsClient.cloneModelId, purpose: "greeting")
+                    // The takes belong to the voice that spoke them — a new
+                    // clone invalidates every one of them. They are NOT made
+                    // here: see `audition`, which pays for a rung only once
+                    // somebody asks to hear it.
+                    paceTakes = [:]
                 }
                 HapticEngine.success()
                 isReRecordingClone = false
@@ -1397,6 +1499,21 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
+    /// Whether the orb can speak right now: the meet act, with a take on
+    /// hand. It replays the GREETING — the speed pills own the pace line, and
+    /// this take is the arrival line at the default rung whatever rung is
+    /// selected, because it is a recording of a moment rather than a sample
+    /// of a setting.
+    private var canReplayGreeting: Bool {
+        status == .meet && greetingData != nil
+    }
+
+    private func replayGreeting() {
+        guard canReplayGreeting else { return }
+        HapticEngine.light()
+        playGreeting()
+    }
+
     private func playGreeting() {
         guard let data = greetingData else { return }
         player.stop()
@@ -1410,11 +1527,14 @@ struct VoiceCloneOnboardingView: View {
     /// per accent adoption, at the exact moment the user judges the voice.
     private func refreshGreetingForNewVoice() {
         greetingData = nil
+        paceTakes = [:]
         guard let voiceId = appState.voiceCloneId else { return }
         Task {
             greetingData = try? await ElevenLabsClient.shared.synthesize(
                 voiceId: voiceId, text: greetingLine,
                 modelId: ElevenLabsClient.cloneModelId, purpose: "greeting")
+            // The greeting IS replayed here, and only here: the voice itself
+            // changed, so this is a first hearing of a different clone.
             playGreeting()
         }
     }
@@ -1424,13 +1544,87 @@ struct VoiceCloneOnboardingView: View {
         // The study widgets wear the same theme — repaint them at once.
         StudyWidgetRefresher.refresh()
         HapticEngine.light()
-        // Feel the choice: the big orb re-speaks the greeting in this palette.
-        playGreeting()
+        // Deliberately silent (2026-09-27, user decision). It used to replay
+        // the greeting "so the choice is felt", which meant the clone's first
+        // words — a line that ends by asking for a colour — were heard again
+        // on every tap, up to six times, after that question was answered.
+        // The palette is a decision made by eye: the big orb recolours live
+        // and that is the feedback. Only the speed pills speak from here on.
+    }
+
+    /// Pick a rung and hear it. The write is immediate — the rung last heard
+    /// is the rung chosen, so there is nothing to confirm and nothing to undo
+    /// on the way out; the openers re-bake themselves at the new speed on the
+    /// next Talk visit (`FreeTalkOpeners.needsBake`).
+    private func audition(_ speed: SpeechSpeed) {
+        speechSpeed = speed.rawValue
+        HapticEngine.light()
+        // Playing what is already in hand must not depend on there being a
+        // voice to synthesize WITH: the debug preview has takes on disk and
+        // no clone, and gating the whole function on the id made every pill
+        // silent there.
+        if let data = paceTakes[speed] {
+            player.stop()
+            try? player.play(data, forceSessionReset: true)
+            // Tapping one rung is the signal that the other two are about to
+            // be asked for.
+            if let voiceId = appState.voiceCloneId {
+                warmOtherRungs(besides: speed, voiceId: voiceId)
+            }
+            return
+        }
+        guard let voiceId = appState.voiceCloneId else { return }
+        paceLoading = speed
+        Task {
+            let data = try? await ElevenLabsClient.shared.synthesize(
+                voiceId: voiceId, text: paceLine,
+                modelId: ElevenLabsClient.cloneModelId, purpose: "greeting",
+                speed: speed)
+            // Only the rung still being waited on may clear the spinner: a
+            // learner who taps a second rung while the first is in flight is
+            // waiting on the second one now.
+            if paceLoading == speed { paceLoading = nil }
+            guard let data else { return }
+            paceTakes[speed] = data
+            // They may have tapped another rung while this landed; playing it
+            // then would contradict the pill they are looking at.
+            guard speechSpeed == speed.rawValue else { return }
+            player.stop()
+            try? player.play(data, forceSessionReset: true)
+            warmOtherRungs(besides: speed, voiceId: voiceId)
+        }
+    }
+
+    /// The other two rungs, fetched once the learner has tapped ANY of them.
+    ///
+    /// These takes are free to the LEARNER (`purpose: "greeting"` under 120
+    /// characters) but not to us: at ~$0.0001 per character they are about
+    /// 1.4¢ (Korean) to 3.3¢ (English) per signup if all three are made. An
+    /// earlier cut made all three during the becoming act, which spends that
+    /// on every learner including the ones who accept the default rung
+    /// without touching it. Now the first tap pays its own ~1 s wait and
+    /// buys the other two with it, so comparing three rungs costs one wait
+    /// and never touching the control costs nothing at all.
+    private func warmOtherRungs(besides tapped: SpeechSpeed, voiceId: String) {
+        let line = paceLine
+        Task {
+            for speed in SpeechSpeed.allCases where speed != tapped && paceTakes[speed] == nil {
+                if let data = try? await ElevenLabsClient.shared.synthesize(
+                    voiceId: voiceId, text: line,
+                    modelId: ElevenLabsClient.cloneModelId, purpose: "greeting",
+                    speed: speed) {
+                    paceTakes[speed] = data
+                }
+            }
+        }
     }
 
     private func finishMeet() {
         player.stop()
         appState.holdVoiceOnboarding = false   // RootView moves on to the tabs
+        // Now that the rung is settled, bake the first call's opener at it —
+        // once, instead of once at the default and again after the pick.
+        appState.warmFreeTalkOpeners()
     }
 
     /// Abandon the take mid-recording (before the minimum) and return to the
@@ -1585,9 +1779,33 @@ struct VoiceCloneOnboardingView: View {
             status = .reviewing
         case "account":   status = .account
         case "uploading": status = .uploading
-        case "meet":      status = .meet
+        case "meet":
+            status = .meet
+            loadDebugMeetAudio()
         default:          status = .intro
         }
         #endif
     }
+
+    #if DEBUG
+    /// DEBUG-only: play a real voice on the meet act without an account.
+    ///
+    /// The act's audio comes from a clone that only exists behind a signed-in
+    /// session, so `-cloneStage meet` could be looked at and never heard —
+    /// and the one thing this screen has to be judged on is how the three
+    /// rungs SOUND. Drop mp3s into the app container as
+    /// `Documents/debug_pace/{greeting,normal,slow,slower}.mp3` (any voice)
+    /// and the act behaves exactly as it does after a real clone: the
+    /// greeting on arrival, a silent colour tap, a pill that speaks.
+    private func loadDebugMeetAudio() {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("debug_pace")
+        guard FileManager.default.fileExists(atPath: dir.path) else { return }
+        for speed in SpeechSpeed.allCases {
+            paceTakes[speed] = try? Data(contentsOf: dir.appendingPathComponent("\(speed.rawValue).mp3"))
+        }
+        greetingData = try? Data(contentsOf: dir.appendingPathComponent("greeting.mp3"))
+        if greetingData != nil { openMeet() }
+    }
+    #endif
 }
