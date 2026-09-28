@@ -69,6 +69,23 @@ while f"${tag}$" in t: tag += "n"
 print(f"${tag}${t}${tag}$")'
 }
 
+# The notes as the in-app update sheet gets them. The file is written for the
+# App Store, in SECTIONS ("New" / "Fixed", a heading line over each list), but
+# the sheet's `ReleaseNotes` parser draws one lead paragraph + one list and
+# glues any line after the list onto the last bullet — and the sheet is drawn
+# by the OLD build, so its parser can't be fixed from here. So the headings
+# are dropped for the sheet and it shows the bullets as one list. A file with
+# no bullets goes through untouched.
+sheet_notes() {
+  python3 -c '
+import sys
+lines = open(sys.argv[1]).read().splitlines()
+marks = ("- ", "• ", "· ", "* ")
+if any(l.strip().startswith(marks) for l in lines):
+    lines = [l for l in lines if l.strip().startswith(marks)]
+print("\n".join(lines).strip())' "$1"
+}
+
 # --- 0. `released`: the build is live on the App Store ----------------------
 # Run after App Review approves and the version shows on the store. Checks the
 # store first — announcing a build the store hasn't got is exactly the bug
@@ -83,7 +100,7 @@ if [[ "${1:-}" == "released" ]]; then
     echo "  Not released yet, or the lookup cache is behind (it can lag ~an hour). Try again later." >&2
     exit 1
   fi
-  notes_ko=$(cat "$NOTES_KO_FILE"); notes_en=$(cat "$NOTES_EN_FILE")
+  notes_ko=$(sheet_notes "$NOTES_KO_FILE"); notes_en=$(sheet_notes "$NOTES_EN_FILE")
   supabase_sql "update public.app_release set latest_build = $BUILD, latest_version = $(sql_text "$VERSION"), notes_ko = $(sql_text "$notes_ko"), notes_en = $(sql_text "$notes_en"), updated_at = now() where platform = 'ios';" >/dev/null \
     && echo "✓ app_release.latest_build → $BUILD ($VERSION). App Store installs now see the update sheet." \
     || { echo "✗ app_release update failed" >&2; exit 1; }
@@ -140,8 +157,8 @@ fi
 # Shown to every install behind this build (UpdateAvailableSheet) and pasted
 # into App Store Connect. A placeholder here is a placeholder on both. Checked
 # BEFORE the ten-minute archive so a bad note costs seconds, not a rebuild.
-notes_ko=$(cat "$NOTES_KO_FILE" 2>/dev/null || true)
-notes_en=$(cat "$NOTES_EN_FILE" 2>/dev/null || true)
+notes_ko=$(sheet_notes "$NOTES_KO_FILE" 2>/dev/null || true)
+notes_en=$(sheet_notes "$NOTES_EN_FILE" 2>/dev/null || true)
 if [[ -z "$notes_ko" || -z "$notes_en" ]]; then
   echo "✗ Release notes missing ($NOTES_KO_FILE / $NOTES_EN_FILE). Write them first." >&2
   exit 1

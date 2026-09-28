@@ -1,8 +1,11 @@
-• Nuevo · Modo coach: de vez en cuando, tu yo del futuro te pregunta algo que puedes responder con una palabra que estás estudiando, y te la muestra como pista mientras piensas. Actívalo en Ajustes de la llamada.
-• Nuevo · Cada persona habla a su manera. Un amigo habla como un amigo y una persona famosa, como ella misma. Al añadir a alguien, puedes elegir qué tan formal se hablan.
-• Nuevo · Cuando practicas coreano o japonés, tus interlocutores hablan con voces y nombres de ese idioma.
-• Nuevo · La app ya está disponible en alemán.
-• Corregido · El primer saludo de una llamada a veces sonaba sin audio.
-• Corregido · Tu yo del futuro a veces se confundía con la fecha y la hora, como decir «¡cuánto tiempo!» en tu segunda llamada del día.
-• Corregido · La pantalla «¿No suena como tú?» se cerraba nada más abrirse.
-• Mejorado · La primera pantalla ya no se queda trabada un momento al abrir la app.
+Novedades
+• Modo coach: de vez en cuando, tu yo del futuro te pregunta algo que puedes responder con una palabra que estás estudiando, y te la muestra como pista mientras piensas. Actívalo en Ajustes de la llamada.
+• Cada persona habla a su manera. Un amigo habla como un amigo y una persona famosa, como ella misma. Al añadir a alguien, puedes elegir qué tan formal se hablan.
+• Cuando practicas coreano o japonés, tus interlocutores hablan con voces y nombres de ese idioma.
+• La app ya está disponible en alemán.
+
+Correcciones
+• El primer saludo de una llamada a veces sonaba sin audio.
+• Tu yo del futuro a veces se confundía con la fecha y la hora, como decir «¡cuánto tiempo!» en tu segunda llamada del día.
+• La pantalla «¿No suena como tú?» se cerraba nada más abrirse.
+• La primera pantalla ya no se queda trabada un momento al abrir la app.

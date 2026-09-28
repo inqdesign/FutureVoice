@@ -1,8 +1,11 @@
-• New · Coach mode: now and then your future self asks something you can answer with a word you're studying, and shows that word as a hint while you think. Turn it on in Call settings.
-• New · People sound like themselves. A friend talks like a friend, a public figure like themselves. When you add someone, you can choose how casually the two of you talk.
-• New · When you're learning Korean or Japanese, your conversation partners speak with voices and names from that language.
-• New · The app is now available in German.
-• Fixed · The first greeting of a call sometimes played without sound.
-• Fixed · Your future self sometimes lost track of the date and time, like saying "long time no see" on your second call of the day.
-• Fixed · The "Doesn't sound like you?" screen closed as soon as it opened.
-• Improved · The first screen no longer stutters for a moment when you open the app.
+New
+• Coach mode: now and then your future self asks something you can answer with a word you're studying, and shows that word as a hint while you think. Turn it on in Call settings.
+• People sound like themselves. A friend talks like a friend, a public figure like themselves. When you add someone, you can choose how casually the two of you talk.
+• When you're learning Korean or Japanese, your conversation partners speak with voices and names from that language.
+• The app is now available in German.
+
+Fixed
+• The first greeting of a call sometimes played without sound.
+• Your future self sometimes lost track of the date and time, like saying "long time no see" on your second call of the day.
+• The "Doesn't sound like you?" screen closed as soon as it opened.
+• The first screen no longer stutters for a moment when you open the app.
