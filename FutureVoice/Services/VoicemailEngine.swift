@@ -37,9 +37,13 @@ enum VoicemailEngine {
         /// Naming one is what makes the call sound like a continuation instead
         /// of a generated greeting.
         var lastPhrases: [String]
-        /// Days since the last talk. 0 = they practiced today. Drives tone:
-        /// picking up a thread vs. coming back after a gap.
-        var daysSinceLastTalk: Int?
+        /// When the last talk ended. Drives tone: picking up a thread vs.
+        /// coming back after a gap. A DATE, not a day count, because the
+        /// script is written at the end of a talk and heard at the next ring
+        /// — often the next morning — and the gap has to be measured to the
+        /// ring. Counted as "0 days" at writing time, last night's talk was
+        /// announced as "you already practiced today" at 8 a.m.
+        var lastTalkAt: Date?
         /// How many SRS cards are waiting. Mentioned only as a reason to talk,
         /// never as a number to feel bad about.
         var dueCount: Int
@@ -58,6 +62,11 @@ enum VoicemailEngine {
         /// Calls in a row that went unanswered. The caller's sense of "I
         /// haven't got hold of you in a while".
         var consecutiveUnanswered: Int = 0
+
+        /// Every time this script will ring, ascending — all on one day
+        /// (`DailyCallScheduler.fireDates`). Filled in by the scheduler; empty
+        /// means "now", which only a test or a preview ever wants.
+        var ringDates: [Date] = []
     }
 
     /// One Gemini call. Cheap tier: this is six seconds of warm small talk, not
@@ -95,6 +104,27 @@ enum VoicemailEngine {
         return clipped
     }
 
+    /// The day and the time(s) the script rings, in words the prompt can use.
+    /// One ring names its part of the day; several (the learner's later
+    /// times, armed with the same message) are listed, and the prompt then
+    /// forbids a time-of-day greeting — "good morning" at 13:00 is the
+    /// complaint this exists to prevent.
+    static func whenHeard(_ ringDates: [Date], calendar: Calendar = .current) -> String {
+        let dates = ringDates.isEmpty ? [Date()] : ringDates.sorted()
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
+        f.timeZone = calendar.timeZone
+        f.dateFormat = "HH:mm"
+        let day = PromptClock.dayLine(dates[0], calendar: calendar)
+        if dates.count == 1 {
+            let part = PromptClock.partOfDay(hour: calendar.component(.hour, from: dates[0]))
+            return "It rings on \(day), at \(f.string(from: dates[0])) — \(part)."
+        }
+        let times = dates.map { f.string(from: $0) }.joined(separator: ", ")
+        return "It rings on \(day), at \(times) — the same message each time until they pick up, so you cannot know which part of the day they hear it in."
+    }
+
     /// ~25 s of speech at a natural pace, at speed 1.0. Nobody listens to a
     /// longer voicemail, and the learner is meant to answer a question, not
     /// sit through a monologue. Enforced twice: here in characters, and again
@@ -116,7 +146,7 @@ enum VoicemailEngine {
     /// budget anyway.
     static let maxVoicemailSeconds: Double = 29
 
-    private static func systemPrompt(_ c: Context) -> String {
+    static func systemPrompt(_ c: Context, calendar: Calendar = .current) -> String {
         let targetName = LanguageCatalog.englishName(c.targetLanguage)
         let name = (c.personaName?.isEmpty == false) ? c.personaName! : "the learner"
 
@@ -128,8 +158,10 @@ enum VoicemailEngine {
             grounding.append("Phrases that came up in it: "
                              + c.lastPhrases.prefix(4).map { "\"\($0)\"" }.joined(separator: ", "))
         }
-        if let days = c.daysSinceLastTalk {
-            grounding.append(days == 0 ? "They already practiced today."
+        let ringDay = c.ringDates.min() ?? Date()
+        if let last = c.lastTalkAt {
+            let days = PromptClock.calendarDays(from: last, to: ringDay, calendar: calendar)
+            grounding.append(days == 0 ? "They already had a talk earlier today."
                              : days == 1 ? "Their last talk was yesterday."
                              : "It has been \(days) days since their last talk.")
         }
@@ -163,6 +195,9 @@ enum VoicemailEngine {
         WHAT YOU KNOW ABOUT THEM
         \(groundingBlock)
 
+        WHEN THEY HEAR IT
+        \(whenHeard(c.ringDates, calendar: calendar))
+
         YOU ARE CALLING THEM, and that is not a figure of speech. You remember
         how the last call went and you open like someone who does. If they
         couldn't talk last time, acknowledge it lightly and move on. If you
@@ -191,6 +226,12 @@ enum VoicemailEngine {
         - Address \(name) by name at most ONCE, and only if it sounds natural.
         - No numbers read as statistics. If review cards are waiting, that is a
           reason to bring up a phrase, not a count to recite.
+
+        TIME: write for the moment it is HEARD, never the moment it is
+        written. "Today" is the day above; "yesterday" is the day before it.
+        Name a time of day only when WHEN THEY HEAR IT gives exactly one, and
+        never guess a date, a count of calls, or a gap that isn't written
+        above.
 
         OUTPUT LANGUAGE: the script is MATERIAL — every word is in
         \(targetName). Nothing in \(LanguageCatalog.englishName(c.nativeLanguage))

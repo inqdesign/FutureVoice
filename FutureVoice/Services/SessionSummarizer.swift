@@ -123,7 +123,11 @@ enum SessionSummarizer {
             shareCorrections: appState.persona?.shareCorrections ?? [],
             // What a talk is allowed to yield follows how much was said in it.
             expressionBudget: ConversationEngine.expressionBudget(
-                fluentTurns: turns.filter { $0.role == .fluentSelf }.count)
+                fluentTurns: turns.filter { $0.role == .fluentSelf }.count),
+            // The talk's own day, not the summary's: a rescued summary runs
+            // days later, and "tomorrow" in the transcript means the day
+            // after the talk.
+            talkDate: turns.last?.timestamp ?? session.startedAt
         )
         let transcript = ConversationEngine.formatTranscript(turns)
         let metrics = ScorecardMetrics.compute(turns: turns)

@@ -578,9 +578,6 @@ final class AppState: ObservableObject {
         let phrases = (last?.summary?.expressionsUsed ?? [])
             + (last?.summary?.newWordsUsed ?? [])
 
-        let days = (last?.endedAt).map {
-            Calendar.current.dateComponents([.day], from: $0, to: Date()).day ?? 0
-        }
 
         return VoicemailEngine.Context(
             targetLanguage: targetLanguage,
@@ -589,7 +586,8 @@ final class AppState: ObservableObject {
             personaName: persona?.displayName,
             lastTopic: last?.displayTitle,
             lastPhrases: Array(phrases.prefix(4)),
-            daysSinceLastTalk: days,
+            // Measured to the RING, by the engine — see `Context.lastTalkAt`.
+            lastTalkAt: last?.endedAt,
             dueCount: DrillStore.shared.dueCount()
         )
     }

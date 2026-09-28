@@ -158,6 +158,9 @@ enum DailyCallScheduler {
         context.lastOutcome = store.history().first?.outcome
         context.lastCallbacks = store.history().first?.callbacks ?? 0
         context.consecutiveUnanswered = store.consecutiveUnanswered()
+        // Written now, heard then: the script is dated to the rings
+        // `schedule` is about to arm, not to this moment.
+        context.ringDates = Array(Set(fireDates(after: now) + [fireDate])).sorted()
 
         guard let script = try? await VoicemailEngine.writeScript(context),
               !script.isEmpty else { return }

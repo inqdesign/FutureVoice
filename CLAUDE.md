@@ -622,6 +622,47 @@ talk is spent meeting them, and what it hears is written down.
   just asked those three questions out loud, and a form re-asking them reads as
   the app not having listened.
 
+## The prompts have a clock (2026-09-28)
+
+Reported by a learner as three symptoms: "long time no see" on a second call
+the same day, "this afternoon" at eight in the morning, "our third call" on
+the first call of the day. One cause: no conversation prompt carried a date,
+a time or a talk history (only `ScenarioBriefEngine` said what day it was),
+while the KNOWLEDGE block tells the model never to say it doesn't know — so
+it guessed, confidently. `PromptClock` (`Services/PromptClock.swift`) is the
+fix and the one implementation; the call-header `TalkClock` in `TalkMeter` is
+a different thing.
+
+- **The call prompt carries WHEN THIS IS**: the day, the start time and its
+  part of the day, talks earlier today (with how long ago the latest ended),
+  the last talk before today, and — on Continue — how long the resumed talk
+  was paused, since its old lines otherwise read as said a moment ago. It is
+  PINNED once per call (`ConversationView.pinPromptClock`, onAppear and
+  `startNewSession`): the prompt is rebuilt every turn and handed to the
+  gateway once, and both must describe the same call. Talks are counted
+  across every language, only if the learner spoke, dated by their last line.
+  The history is left out for a cast stranger and for the first meeting (their
+  own blocks define the relationship); a scene character is told the history
+  isn't theirs. The guard: anything about time not written there, the model
+  does not know.
+- **Every day count is a CALENDAR count** (`PromptClock.calendarDays`).
+  `ConversationEngine.age` and the voicemail's day count divided elapsed
+  seconds by 86,400, so a line heard at 23:00 was "today" at 08:00. Never
+  compute a prompt's "yesterday" any other way.
+- **The voicemail is dated to its RING, not its writing.** It is written at
+  a talk's end and heard at the next ring, usually the next morning, so it
+  takes `lastTalkAt` + `ringDates` and measures to the ring. With several
+  times armed it may name no time of day.
+- **The summary is told the talk's date** (the talk's, not the summary's, as
+  a rescued summary runs days later), and `about_user` writes relative times
+  as dates ("interview on Thu 1 Oct"); "next week" read a month later points
+  at the wrong week.
+- **Lines that are REUSED must be timeless**: the scenario opener pool (saved
+  on the scenario) and the free-talk pool are told so, and the bundled
+  fallback opener no longer asks "how was your day". Pools already on phones
+  were left alone rather than regenerated.
+- Tests: `PromptClockTests`.
+
 ## The day card — today's share card (2026-08-28)
 
 A running app hands you a card the moment the run is saved: a map over a

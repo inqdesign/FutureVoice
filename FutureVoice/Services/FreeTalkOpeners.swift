@@ -134,16 +134,19 @@ final class FreeTalkOpeners {
         "zh": "你好。我是流利说中文的未来的你。我很期待我们接下来的每一次聊天。别放弃，我们一起，让现在的你变成我。对了，你最近都在忙什么？",
     ]
 
+    // Time-neutral since 2026-09-28: "how was your day?" is heard at 8 a.m.
+    // as often as at 8 p.m., and a call that opens as if the day were over is
+    // the "it thinks it's the afternoon" complaint in its first line.
     private static let fallbackOpeners: [String: String] = [
-        "en": "Hey, good to hear you. What's been going on today?",
-        "de": "Hey, schön dich zu hören. Was war heute bei dir los?",
-        "ko": "안녕, 목소리 들으니까 좋다. 오늘 하루 어땠어?",
-        "ja": "やあ、話せてうれしいよ。今日はどんな一日だった？",
-        "es": "Hola, qué bueno escucharte. ¿Cómo va tu día?",
-        "fr": "Salut, ça fait plaisir de t'entendre. Comment se passe ta journée ?",
-        "it": "Ciao, che bello sentirti. Com'è andata la tua giornata?",
-        "pt": "Oi, que bom te ouvir. Como está sendo o seu dia?",
-        "zh": "嘿，听到你的声音真好。今天过得怎么样？",
+        "en": "Hey, good to hear you. What were you up to just now?",
+        "de": "Hey, schön dich zu hören. Was hast du gerade gemacht?",
+        "ko": "안녕, 목소리 들으니까 좋다. 방금 뭐 하고 있었어?",
+        "ja": "やあ、話せてうれしいよ。いま何してたの？",
+        "es": "Hola, qué bueno escucharte. ¿Qué estabas haciendo?",
+        "fr": "Salut, ça fait plaisir de t'entendre. Tu faisais quoi, là\u{00A0}?",
+        "it": "Ciao, che bello sentirti. Cosa stavi facendo?",
+        "pt": "Oi, que bom te ouvir. O que você estava fazendo agora?",
+        "zh": "嘿，听到你的声音真好。你刚才在忙什么？",
     ]
 
     /// The next greeting in rotation, or nil when no valid pool exists yet
@@ -382,7 +385,9 @@ final class FreeTalkOpeners {
         - In a language that separates formal from informal address (Korean
           반말, Japanese plain form, German du, French tu, Spanish tú…), use the
           INFORMAL form — it is you talking to yourself.
-        - No references to specific shared events, dates, news, or time of day.
+        - No references to specific shared events, dates, news, or time of day —
+          and nothing that assumes the day is over or just starting ("how was
+          your day", "good morning", "tonight"): each line is heard at any hour.
         - Speakable as-is: no placeholders, brackets, or stage directions.
 
         Return STRICT JSON only — no prose, no code fences:

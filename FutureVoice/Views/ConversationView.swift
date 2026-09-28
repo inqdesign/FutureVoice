@@ -46,6 +46,11 @@ struct ConversationView: View {
     @State private var summaryProgress = SessionSummarizer.Progress()
     @State private var didAutoStart = false
     @State private var isResuming = false
+    /// When this call started, and what the learner's talk history looked
+    /// like then — pinned once per call (`pinPromptClock`), because the system
+    /// prompt is rebuilt every turn and the realtime gateway is handed it
+    /// once, and both must describe the same call.
+    @State private var promptClock: PromptClock?
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
@@ -851,6 +856,7 @@ struct ConversationView: View {
                     "origin": sessionOrigin.rawValue,
                     "resumed": isResuming
                 ])
+                pinPromptClock()
                 if isResuming {
                     // Continue from the loaded transcript — open the mic so the
                     // user picks up where they left off (Gemini already has the
@@ -2579,6 +2585,8 @@ struct ConversationView: View {
                     Be IN the scenario — don't summarize it, don't explain it. Each line is the first
                     thing you'd say if this were really happening, in a way the user can respond to.
                     Make the three genuinely different angles, not rephrasings.
+                    These lines are SAVED and reused in later talks, on other days and at
+                    other hours — nothing tied to the time of day, the date, or an earlier talk.
                     Return STRICT JSON only — no prose: { "openers": ["...", "...", "..."] }
                     """
                 )],
@@ -3985,6 +3993,7 @@ struct ConversationView: View {
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
+        pinPromptClock()
         learnerSpokeThisCall = false
         learnerStartedThisCall = false
         didSaveCurrentSession = false
@@ -4097,7 +4106,22 @@ struct ConversationView: View {
         appState.persona?.metAt == nil && topic.isEmpty && counterpart == nil
     }
 
+    /// Read the clock for a call that is starting. A resumed talk's saved
+    /// lines are from whenever it paused, so the prompt says how long ago —
+    /// otherwise a talk from last week is continued as if it never stopped.
+    private func pinPromptClock() {
+        promptClock = PromptClock.make(
+            now: Date(),
+            sessions: SessionStore.shared.loadAcrossLanguages(),
+            excluding: sessionId,
+            resumedFrom: isResuming ? turns.last?.timestamp : nil
+        )
+    }
+
     private func systemPrompt() -> String {
+        // Pinned in onAppear; a prompt asked for before that still gets a
+        // clock rather than none.
+        if promptClock == nil { pinPromptClock() }
         let composedTopic = topicBlurb.isEmpty ? topic : "\(topic). \(topicBlurb)"
         return ConversationEngine.conversationSystemPrompt(
             targetLanguage: appState.targetLanguage,
@@ -4112,7 +4136,8 @@ struct ConversationView: View {
             brief: sessionScenarioId.flatMap { sid in
                 appState.scenarios.first { $0.id == sid }?.brief
             },
-            firstMeeting: isFirstMeeting
+            firstMeeting: isFirstMeeting,
+            clock: promptClock
         )
     }
 }

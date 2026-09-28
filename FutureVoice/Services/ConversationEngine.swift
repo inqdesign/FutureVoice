@@ -111,7 +111,8 @@ enum ConversationEngine {
         counterpart: Counterpart? = nil,
         newsFacts: [String] = [],
         brief: ScenarioBrief? = nil,
-        firstMeeting: Bool = false
+        firstMeeting: Bool = false,
+        clock: PromptClock? = nil
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -262,12 +263,19 @@ enum ConversationEngine {
           biography.
         """ : ""
 
+        // When this is (`PromptClock`). The history is left out for a cast
+        // stranger (no shared past, by that block's own rule) and for the
+        // first meeting (whose block already says you have never spoken).
+        let clockBlock = clock?.promptBlock(
+            includeHistory: counterpart == nil && !firstMeeting
+        ) ?? ""
+
         return """
         You're in a real-feeling SPOKEN \(languageName) conversation with the user. \
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(personaBlock(persona, languageName: languageName, forStranger: counterpart != nil))\(counterpartBlock)\(firstMeetingBlock)
+        \(personaBlock(persona, languageName: languageName, forStranger: counterpart != nil))\(counterpartBlock)\(firstMeetingBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))
@@ -418,6 +426,10 @@ enum ConversationEngine {
         - Only for fast-moving specifics you genuinely can't know (today's
           prices, this morning's headlines) admit the limit plainly and
           pivot — never fake precision.
+        - The date, the time of day and how often you two have talked are
+          NOT knowledge — they come only from what this prompt says about
+          time. If it isn't written here, you don't know it, and saying so
+          is fine.
 
         Role-play caveat: if a scenario role is set, you still know things
         — the role mostly governs TONE / FORMALITY / your relationship with
@@ -591,8 +603,15 @@ enum ConversationEngine {
     /// how long ago a remembered line was learned, for the prompts. Coarse on
     /// purpose: the model needs the order and the rough distance, not a
     /// timestamp it would quote back.
-    static func age(of date: Date, at now: Date = Date()) -> String {
-        let days = max(0, Int(now.timeIntervalSince(date) / 86_400))
+    ///
+    /// CALENDAR days (`PromptClock.calendarDays`), not elapsed seconds: until
+    /// 2026-09-28 this divided by 86,400, so a line heard at 23:00 read
+    /// "today" at 08:00 the next morning and one heard two mornings ago read
+    /// "yesterday" — off by a day in exactly the direction that makes the
+    /// fluent self misplace what the learner told it.
+    static func age(of date: Date, at now: Date = Date(),
+                    calendar: Calendar = .current) -> String {
+        let days = PromptClock.calendarDays(from: date, to: now, calendar: calendar)
         switch days {
         case 0: return "today"
         case 1: return "yesterday"
@@ -633,6 +652,7 @@ enum ConversationEngine {
                                     rememberedNotes: [PersonaNote] = [],
                                     shareCorrections: [UserPersona.ShareCorrection] = [],
                                     expressionBudget: Int = 6,
+                                    talkDate: Date? = nil,
                                     now: Date = Date()) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
@@ -643,7 +663,7 @@ enum ConversationEngine {
         )) ?? "{}"
 
         return """
-        The user just finished a conversation in \(languageName).
+        The user just finished a conversation in \(languageName), on \(PromptClock.dayLine(talkDate ?? now)) (their local date).
         You will be given the full transcript with role labels.
 
         \(contract)
@@ -865,6 +885,11 @@ enum ConversationEngine {
             cold, visitors in town, a job interview next week. A `now` line is
             forgotten after a month on its own; a `fact` is kept until it is
             replaced.
+          - A time they gave RELATIVE to the talk ("tomorrow", "next week",
+            "on Thursday", "this weekend") is written as the DATE it means,
+            counted from the talk's date above ("interview on Thu 1 Oct",
+            "trip to Seoul around 5 Oct"). The line is read weeks later;
+            "next week" by then points at the wrong week.
           - `replaces`: the NUMBER of a remembered line (the numbered list
             above) that today's talk shows has CHANGED or ENDED — the trip
             they were planning has happened, they moved, the project shipped,
