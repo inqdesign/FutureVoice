@@ -7,17 +7,32 @@ and the submission sent — four screens by hand. This does the four:
 
   1. waits for build <build> of <version> to finish processing (VALID),
   2. creates the App Store version (or reuses one still being prepared),
-  3. attaches the build and writes `whatsNew` from
-     fastlane/metadata/<locale>/release_notes.txt for every locale on file,
+  3. attaches the build and writes the WHOLE store page for every locale on
+     file (see LOCALES): the version's description, keywords, promotional
+     text, what's new, support and marketing URLs, and — when App Store
+     Connect lets the app info be edited — its name, subtitle and privacy
+     URL. A locale the store doesn't have yet is created,
   4. opens a review submission with that version and submits it.
+
+Every field comes from fastlane/metadata/<folder>/<field>.txt. The dry run
+prints, per locale and field, whether it would be CREATED, CHANGED (with the
+old and new length) or left alone — read it before --send, because a field
+that differs from the live page is about to replace it.
+
+The app info (name · subtitle · privacy URL) can only be written while an
+app info is being prepared — i.e. not while another version is in review or
+between approval and release. When none is editable the script says so and
+writes the rest; run it again later with --metadata-only to fill them in.
 
 Release type is AFTER_APPROVAL: the version goes live when Apple approves it.
 The update sheet still waits on `./scripts/beta.sh released` after that.
 
 Dry run by default; `--send` does it.
 
-    scripts/asc-submit.py 1.0.10 61           # plan only
-    scripts/asc-submit.py 1.0.10 61 --send    # do it
+    scripts/asc-submit.py 1.0.10 61                  # plan only
+    scripts/asc-submit.py 1.0.10 61 --send           # do it
+    scripts/asc-submit.py 1.0.10 61 --metadata-only  # plan the page, no build/submit
+    scripts/asc-submit.py 1.0.10 61 --metadata-only --send
 """
 
 import base64
@@ -32,7 +47,27 @@ import urllib.request
 API = "https://api.appstoreconnect.apple.com/v1"
 APP_ID = "6792794655"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOCALES = {"en-US": "en-US", "en-GB": "en-US", "ko": "ko"}  # the store's English is en-GB
+# App Store locale → fastlane/metadata folder. The store's primary English is
+# en-GB and shares the en-US copy; Spanish is one neutral text in two storefronts.
+LOCALES = {
+    "en-GB": "en-US", "en-US": "en-US", "ko": "ko", "ja": "ja",
+    "zh-Hans": "zh-Hans", "zh-Hant": "zh-Hant",
+    "es-ES": "es-ES", "es-MX": "es-MX", "fr-FR": "fr-FR", "de-DE": "de-DE",
+}
+# field on appStoreVersionLocalizations → file
+VERSION_FIELDS = {
+    "description": "description.txt", "keywords": "keywords.txt",
+    "promotionalText": "promotional_text.txt", "whatsNew": "release_notes.txt",
+    "supportUrl": "support_url.txt", "marketingUrl": "marketing_url.txt",
+}
+# field on appInfoLocalizations → file
+INFO_FIELDS = {"name": "name.txt", "subtitle": "subtitle.txt",
+               "privacyPolicyUrl": "privacy_url.txt"}
+LIMITS = {"name": 30, "subtitle": 30, "keywords": 100, "promotionalText": 170,
+          "description": 4000, "whatsNew": 4000}
+# An app info in one of these can't be edited.
+LOCKED_INFO = {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION", "WAITING_FOR_REVIEW",
+               "IN_REVIEW", "PENDING_RELEASE", "ACCEPTED", "PENDING_DEVELOPER_RELEASE"}
 
 
 def token() -> str:
@@ -81,8 +116,77 @@ def call(method: str, path: str, body=None):
         raise RuntimeError(f"{method} {url.split('?')[0]} → {e.code} {detail}") from None
 
 
-def notes(locale_dir: str) -> str:
-    return open(os.path.join(ROOT, "fastlane/metadata", locale_dir, "release_notes.txt")).read().strip()
+def field(folder: str, filename: str) -> str | None:
+    path = os.path.join(ROOT, "fastlane/metadata", folder, filename)
+    return open(path).read().strip() if os.path.exists(path) else None
+
+
+def wanted(fields: dict) -> dict:
+    """{locale: {attribute: text}} for every locale whose folder exists."""
+    out = {}
+    for loc, folder in LOCALES.items():
+        if not os.path.isdir(os.path.join(ROOT, "fastlane/metadata", folder)):
+            continue
+        vals = {attr: field(folder, f) for attr, f in fields.items()}
+        out[loc] = {k: v for k, v in vals.items() if v}
+    return out
+
+
+def check_limits(*pages: dict) -> None:
+    bad = [f"{loc}.{attr}: {len(v)} > {LIMITS[attr]}"
+           for page in pages for loc, vals in page.items()
+           for attr, v in vals.items() if attr in LIMITS and len(v) > LIMITS[attr]]
+    if bad:
+        sys.exit("over App Store limits:\n  " + "\n  ".join(bad))
+
+
+def sync_localizations(kind: str, parent_rel: str, parent_type: str, parent_id: str,
+                       live: list, page: dict, send: bool) -> None:
+    """Create or update one set of localizations (version or app info).
+    Prints a line per locale; writes only with `send`."""
+    by_locale = {l["attributes"]["locale"]: l for l in live}
+    for loc, vals in page.items():
+        cur = by_locale.get(loc)
+        if cur is None:
+            print(f"  {kind} {loc}: CREATE ({', '.join(vals)})")
+            if send:
+                call("POST", f"/{kind}", {"data": {
+                    "type": kind, "attributes": {"locale": loc, **vals},
+                    "relationships": {parent_rel: {"data": {"type": parent_type, "id": parent_id}}}}})
+            continue
+        changed = {k: v for k, v in vals.items() if (cur["attributes"].get(k) or "").strip() != v}
+        if not changed:
+            print(f"  {kind} {loc}: unchanged")
+            continue
+        desc = ", ".join(f"{k} {len(cur['attributes'].get(k) or '')}→{len(v)}" for k, v in changed.items())
+        print(f"  {kind} {loc}: CHANGE {desc}")
+        if send:
+            call("PATCH", f"/{kind}/{cur['id']}", {"data": {
+                "type": kind, "id": cur["id"], "attributes": changed}})
+
+
+def sync_page(ver: dict | None, send: bool) -> None:
+    version_page, info_page = wanted(VERSION_FIELDS), wanted(INFO_FIELDS)
+    check_limits(version_page, info_page)
+    print(f"locales on file: {', '.join(version_page)}")
+
+    if ver is None:
+        print("  (version not created yet — every version localization would be CREATED)")
+    else:
+        live = call("GET", f"/appStoreVersions/{ver['id']}/appStoreVersionLocalizations?limit=50")["data"]
+        sync_localizations("appStoreVersionLocalizations", "appStoreVersion", "appStoreVersions",
+                           ver["id"], live, version_page, send)
+
+    infos = call("GET", f"/apps/{APP_ID}/appInfos")["data"]
+    editable = [i for i in infos if i["attributes"].get("appStoreState") not in LOCKED_INFO]
+    if not editable:
+        states = ", ".join(i["attributes"].get("appStoreState", "?") for i in infos)
+        print(f"  app info (name · subtitle · privacy URL): locked ({states}) — "
+              f"re-run with --metadata-only once a version is being prepared")
+        return
+    info = editable[0]
+    live = call("GET", f"/appInfos/{info['id']}/appInfoLocalizations?limit=50")["data"]
+    sync_localizations("appInfoLocalizations", "appInfo", "appInfos", info["id"], live, info_page, send)
 
 
 def main() -> None:
@@ -91,6 +195,15 @@ def main() -> None:
         sys.exit(__doc__)
     version, build_no = args
     send = "--send" in sys.argv
+
+    if "--metadata-only" in sys.argv:
+        d = call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS&limit=10")
+        ver = next((v for v in d["data"] if v["attributes"]["versionString"] == version), None)
+        print(f"version {version}: {ver['attributes']['appStoreState'] if ver else 'not created'}")
+        sync_page(ver, send)
+        if not send:
+            print("dry run — re-run with --send")
+        return
 
     # 1. The build, processed.
     build = None
@@ -126,9 +239,8 @@ def main() -> None:
             "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}})["data"]
         print(f"version {version}: created {ver['id']}")
 
-    for loc, folder in LOCALES.items():
-        print(f"whatsNew[{loc}]: {notes(folder)!r}")
     if not send:
+        sync_page(ver, send=False)
         print("dry run — re-run with --send")
         return
 
@@ -144,15 +256,7 @@ def main() -> None:
             "attributes": {"usesNonExemptEncryption": False}}})
     print("build attached")
 
-    locs = call("GET", f"/appStoreVersions/{vid}/appStoreVersionLocalizations")["data"]
-    for l in locs:
-        folder = LOCALES.get(l["attributes"]["locale"])
-        if not folder:
-            continue
-        call("PATCH", f"/appStoreVersionLocalizations/{l['id']}", {"data": {
-            "type": "appStoreVersionLocalizations", "id": l["id"],
-            "attributes": {"whatsNew": notes(folder)}}})
-        print(f"whatsNew written: {l['attributes']['locale']}")
+    sync_page(ver, send=True)
 
     # 4. Submit. Reuse a submission still being assembled, else open one.
     subs = call("GET", f"/reviewSubmissions?filter[app]={APP_ID}&filter[platform]=IOS"
