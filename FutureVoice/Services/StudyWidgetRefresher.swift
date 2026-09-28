@@ -15,6 +15,31 @@ enum StudyWidgetRefresher {
 
     @MainActor
     static func refresh() {
+        refreshCheapParts()
+        refreshBook()
+        // The Free Talk widget has no data snapshot, but it wears the theme too
+        // — reload it so a theme change repaints it like the others.
+        WidgetCenter.shared.reloadTimelines(ofKind: freeTalkWidgetKind)
+    }
+
+    /// The same refresh, handing the main thread back between books. The
+    /// book pass rebuilds every talk book, and a cold one (first tagger use
+    /// of the launch) is ~17 ms a book in the simulator — held in one piece
+    /// it was the stutter under the Talk ring on launch and under the first
+    /// tab switch (2026-09-28). Only the background edge needs the snapshot
+    /// written before it returns; everything else comes through here.
+    @MainActor
+    private static func refreshYielding() async {
+        refreshCheapParts()
+        await Task.yield()
+        guard let best = await bestBookYielding() else { return }
+        StudyWidgetSnapshotStore.saveBook(best)
+        WidgetCenter.shared.reloadTimelines(ofKind: bookWidgetKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: freeTalkWidgetKind)
+    }
+
+    @MainActor
+    private static func refreshCheapParts() {
         // Mirror the app's Futureself palette so the widget's pixel surface
         // wears the same theme the user picked in-app.
         StudyWidgetSnapshotStore.themeIndex = UserDefaults.standard.integer(forKey: "futureselfTheme")
@@ -24,10 +49,6 @@ enum StudyWidgetRefresher {
         refreshWords()
         refreshExpressions()
         refreshProgress()
-        refreshBook()
-        // The Free Talk widget has no data snapshot, but it wears the theme too
-        // — reload it so a theme change repaints it like the others.
-        WidgetCenter.shared.reloadTimelines(ofKind: freeTalkWidgetKind)
     }
 
     /// Fire-and-forget hook for nonisolated call sites (store writes may not
@@ -48,7 +69,7 @@ enum StudyWidgetRefresher {
                 try? await Task.sleep(nanoseconds: UInt64(coalesceSeconds * 1_000_000_000))
                 guard !Task.isCancelled else { return }
                 pending = nil
-                refresh()
+                await refreshYielding()
             }
         }
     }
@@ -141,49 +162,86 @@ enum StudyWidgetRefresher {
     /// own curriculum for watch books.
     @MainActor
     private static func refreshBook() {
-        struct Candidate { var date: Date; var snapshot: StudyBookSnapshot }
-        var candidates: [Candidate] = []
+        let inputs = BookInputs()
+        var best = BookPick()
+        for session in inputs.talks { best.consider(talkBook(session, inputs)) }
+        best.considerScenarios()
+        StudyWidgetSnapshotStore.saveBook(best.snapshot)
+        WidgetCenter.shared.reloadTimelines(ofKind: bookWidgetKind)
+    }
 
-        // Talk books — started, not yet fully mastered.
+    /// `refreshBook`, one talk book per turn of the main thread. nil when a
+    /// newer pass cancelled this one — it then writes nothing.
+    @MainActor
+    private static func bestBookYielding() async -> StudyBookSnapshot? {
+        let inputs = BookInputs()
+        var best = BookPick()
+        for session in inputs.talks {
+            best.consider(talkBook(session, inputs))
+            await Task.yield()
+            if Task.isCancelled { return nil }
+        }
+        best.considerScenarios()
+        return best.snapshot
+    }
+
+    @MainActor
+    private struct BookInputs {
         let proficiency = CEFRLevel(rawValue:
             UserDefaults.standard.string(forKey: "futurevoice.proficiency") ?? "") ?? .b1
         let shadowAttempts = ShadowAttemptStore.shared.load()
         let drillCards = DrillStore.shared.load()
+        // Talk books — started, not yet fully mastered.
         let talks = SessionStore.shared.load()
             .filter { $0.endedAt != nil && $0.archivedAt == nil }
-        for session in talks {
-            let cur = TalkCurriculum.build(session: session,
-                                           proficiency: proficiency,
-                                           shadowAttempts: shadowAttempts,
-                                           drillCards: drillCards)
-            guard cur.masteredCount > 0, !cur.isMastered else { continue }
-            let date = cur.lastStudiedAt ?? session.endedAt ?? session.startedAt
-            candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(
-                updatedAt: Date(), hasBook: true, kind: "talk",
-                id: session.id.uuidString, title: session.displayTitle,
-                // Subtitles are DATA by the time the widget sees them, so they
-                // have to be resolved here — the extension can only draw them.
-                subtitle: chrome("Talk"), mastered: cur.masteredCount, total: cur.totalCount)))
+    }
+
+    /// The most recently studied book wins.
+    @MainActor
+    private struct BookPick {
+        private var bestDate: Date?
+        private(set) var snapshot = StudyBookSnapshot.empty
+
+        mutating func consider(_ candidate: (date: Date, snapshot: StudyBookSnapshot)?) {
+            guard let candidate else { return }
+            if let bestDate, candidate.date <= bestDate { return }
+            bestDate = candidate.date
+            snapshot = candidate.snapshot
         }
 
-        // Watch books — scenarios with progress that aren't archived/mastered.
-        for sc in ScenarioStore.shared.load() where !sc.isArchived && !sc.isMastered {
-            guard let cur = sc.curriculum, cur.masteredCount > 0 else { continue }
-            let masteryDate = (cur.words + cur.expressions + cur.shadowLines)
-                .compactMap(\.masteredAt).max()
-            let date = masteryDate ?? sc.lastUsedAt ?? sc.createdAt
-            let subtitle = sc.role.isEmpty
-                ? (sc.isTopic == true ? chrome("News topic") : chrome("Situation"))
-                : String(format: chrome("with %@"), sc.role)
-            candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(
-                updatedAt: Date(), hasBook: true, kind: "watch",
-                id: sc.id.uuidString, title: sc.cardTitle,
-                subtitle: subtitle, mastered: cur.masteredCount, total: cur.totalCount)))
+        /// Watch books — scenarios with progress that aren't archived/mastered.
+        mutating func considerScenarios() {
+            for sc in ScenarioStore.shared.load() where !sc.isArchived && !sc.isMastered {
+                guard let cur = sc.curriculum, cur.masteredCount > 0 else { continue }
+                let masteryDate = (cur.words + cur.expressions + cur.shadowLines)
+                    .compactMap(\.masteredAt).max()
+                let date = masteryDate ?? sc.lastUsedAt ?? sc.createdAt
+                let subtitle = sc.role.isEmpty
+                    ? (sc.isTopic == true ? chrome("News topic") : chrome("Situation"))
+                    : String(format: chrome("with %@"), sc.role)
+                consider((date, StudyBookSnapshot(
+                    updatedAt: Date(), hasBook: true, kind: "watch",
+                    id: sc.id.uuidString, title: sc.cardTitle,
+                    subtitle: subtitle, mastered: cur.masteredCount, total: cur.totalCount)))
+            }
         }
+    }
 
-        let best = candidates.max { $0.date < $1.date }?.snapshot ?? .empty
-        StudyWidgetSnapshotStore.saveBook(best)
-        WidgetCenter.shared.reloadTimelines(ofKind: bookWidgetKind)
+    @MainActor
+    private static func talkBook(_ session: Session,
+                                 _ inputs: BookInputs) -> (date: Date, snapshot: StudyBookSnapshot)? {
+        let cur = TalkCurriculum.build(session: session,
+                                       proficiency: inputs.proficiency,
+                                       shadowAttempts: inputs.shadowAttempts,
+                                       drillCards: inputs.drillCards)
+        guard cur.masteredCount > 0, !cur.isMastered else { return nil }
+        let date = cur.lastStudiedAt ?? session.endedAt ?? session.startedAt
+        return (date, StudyBookSnapshot(
+            updatedAt: Date(), hasBook: true, kind: "talk",
+            id: session.id.uuidString, title: session.displayTitle,
+            // Subtitles are DATA by the time the widget sees them, so they
+            // have to be resolved here — the extension can only draw them.
+            subtitle: chrome("Talk"), mastered: cur.masteredCount, total: cur.totalCount))
     }
 
     /// Stored expression keys are lowercased; show with a capital first letter.

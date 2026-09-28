@@ -53,7 +53,16 @@ Deno.serve(async (req) => {
   })
   if (!upstream.ok) {
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
+    // Already gone is the outcome the caller asked for. ElevenLabs answers a
+    // DELETE on a missing voice with 400 `voice_does_not_exist` (see
+    // cleanup-anonymous-voices) — a voice parked by park-idle-voices, or one
+    // an earlier attempt deleted before its row update landed. Passing that
+    // 400 through left the client retrying the same delete on every launch.
+    const alreadyGone = upstream.status === 404 ||
+      (upstream.status === 400 && detail.includes("voice_does_not_exist"))
+    if (!alreadyGone) {
+      return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
+    }
   }
 
   await supabase

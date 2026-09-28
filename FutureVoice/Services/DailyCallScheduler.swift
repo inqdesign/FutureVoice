@@ -119,6 +119,14 @@ enum DailyCallScheduler {
             await cancel()
             return
         }
+        // A parked voice (see `VoiceParking`) can't write tomorrow's voicemail,
+        // and answering would open a call straight into the paywall. Stand
+        // down; the next refresh after the voice comes back arms it again.
+        // The learner's setting is untouched.
+        guard !VoiceParking.isParked(voiceId) else {
+            await cancel()
+            return
+        }
         guard await isAuthorized() else { return }
 
         let now = Date()

@@ -249,17 +249,50 @@ struct ConversationHome: View {
     /// every time the ring is revealed again (call close, cover dismiss).
     /// The reset must NOT animate (and must land in its own transaction) or
     /// the sweep starts mid-flight — hence the explicit two-step.
+    ///
+    /// The FIRST sweep of a launch waits until the page is fully on screen
+    /// (user decision, 2026-09-28): the hero's layout has settled AND the
+    /// launch fade (`RootView`, 0.25 s) is over, then a short beat. Started
+    /// together with the page, the sweep stuttered with it. A sweep still
+    /// waiting is not restarted — it reads `goalProgress` when it fires, so
+    /// a server backfill landing meanwhile is simply included.
     private func drawRing() {
+        if ringSweep != nil { return }
         var snap = Transaction()
         snap.disablesAnimations = true
         withTransaction(snap) { displayedProgress = 0 }
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 80_000_000)
+        let first = !Self.hasSweptThisLaunch
+        Self.hasSweptThisLaunch = true
+        ringSweep = Task { @MainActor in
+            if first {
+                await waitUntilPageIsShown()
+            } else {
+                try? await Task.sleep(nanoseconds: 80_000_000)
+            }
+            ringSweep = nil
             withAnimation(.easeOut(duration: 0.55)) {
                 displayedProgress = goalProgress
             }
         }
     }
+
+    /// Settled layout, past the launch fade, plus a beat. Capped, so a
+    /// layout that never reports settled can't leave the ring empty.
+    private func waitUntilPageIsShown() async {
+        let start = Date()
+        while !heroSettled, Date().timeIntervalSince(start) < 2 {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        let pastFade = 0.35 - Date().timeIntervalSince(start)
+        if pastFade > 0 { try? await Task.sleep(nanoseconds: UInt64(pastFade * 1_000_000_000)) }
+        try? await Task.sleep(nanoseconds: 150_000_000)
+    }
+
+    @State private var ringSweep: Task<Void, Never>?
+    @State private var heroSettled = false
+    /// Per process, not per view: the home is rebuilt on a language switch,
+    /// and that is not a launch.
+    @MainActor private static var hasSweptThisLaunch = false
 
     /// The hero is its own view (`TalkHeroSection`) so its per-frame scroll
     /// state never re-evaluates this page. The tap writes the ring's pose
@@ -272,6 +305,7 @@ struct ConversationHome: View {
             accessibilityLabel: "Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.",
             hidden: appState.talkRingProxyActive,
             onRestFrame: { appState.talkRingFrame = $0 },
+            onSettled: { heroSettled = true },
             onTap: { frame in
                 appState.talkRingFrame = frame
                 appState.pendingFreeTalk = true
@@ -710,6 +744,8 @@ private struct TalkHeroSection: View {
     /// The ring surface's global frame at REST (scroll offset 0) — the pose
     /// a widget-launched call flies in from.
     let onRestFrame: (CGRect) -> Void
+    /// The hero's layout is final — its measured top has been adopted.
+    let onSettled: () -> Void
     /// Tap on the ring, with the surface's global frame at that instant.
     let onTap: (CGRect) -> Void
 
@@ -804,6 +840,7 @@ private struct TalkHeroSection: View {
                 let current = latestHeroTopReport
                 if current > 40, abs(current - previous) < 0.5 {
                     heroTopY = current
+                    onSettled()
                     return
                 }
                 previous = current
@@ -833,8 +870,25 @@ private struct TalkHeroSection: View {
     /// — everything above it: status bar, inline nav bar, top padding.
     /// Seeded with a close guess so the first frame is near-correct; the
     /// settle-sample above then replaces it with the measured value.
-    @State private var heroTopY: CGFloat = 106
-    @State private var latestHeroTopReport: CGFloat = 106
+    @State private var heroTopY: CGFloat = TalkHeroSection.restTopGuess
+    @State private var latestHeroTopReport: CGFloat = TalkHeroSection.restTopGuess
+
+    /// The first frame's guess, from the window itself: status bar + the
+    /// inline nav bar + the page's top padding (8). The old fixed 106 was
+    /// 18 pt short on iOS 26 (measured 124 = 62 + 54 + 8 on a 17 Pro), so
+    /// the settle-sample adopted a different value a few frames in and the
+    /// whole hero — question and ring — jumped up right after the launch
+    /// fade (2026-09-28, frame-by-frame recording). The sample still runs;
+    /// with this it adopts what the first frame already used.
+    static var restTopGuess: CGFloat {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first
+        let navBar: CGFloat
+        if #available(iOS 26, *) { navBar = 54 } else { navBar = 44 }
+        guard let top = window?.safeAreaInsets.top, top > 0 else { return 62 + navBar + 8 }
+        return top + navBar + 8
+    }
     /// Ring center must sit at screenHeight/2. The ring's center is 160pt
     /// above the hero's bottom (140 half-ring + 20 tail), so:
     /// heroTop + heroHeight − 160 = screenHeight/2.

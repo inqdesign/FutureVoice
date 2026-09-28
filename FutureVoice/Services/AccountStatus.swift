@@ -57,11 +57,17 @@ struct AccountStatus {
     /// work). Watch is unaffected; `monthlyScenesCap` is always set on a plan.
     var monthlyCapSeconds: Int?
     /// Watch scenes started this period, and the pool's size
-    /// (`monthly_scenes`: 60 on Light, 120 on Plus). Nil cap = no
+    /// (`monthly_scenes`: 10 on Light, 30 on Plus). Nil cap = no
     /// entitlement, so scenes are still priced in seconds out of the balance
     /// and no count applies.
     var scenesUsedPeriod: Int = 0
     var monthlyScenesCap: Int?
+    /// A FREE account's scenes, ever, and how many it gets (2, since
+    /// `20260928160000_free_accounts_two_scenes`). Nil cap = no free ceiling:
+    /// an entitled account (its pool is `monthlyScenesCap`), the admin flag,
+    /// or a server that predates the migration.
+    var freeScenesUsed: Int = 0
+    var freeScenesCap: Int?
     /// When this pool refills — the end of the billing period. Nil for free
     /// accounts, whose balance never refills at all.
     var periodEnd: Date?
@@ -207,6 +213,12 @@ struct AccountStatus {
     /// this now, because those were all rules about an UNCOUNTED pool.
     var isUncappedTalk: Bool {
         isEntitled && monthlyCapSeconds == nil
+    }
+
+    /// A free account that has had its scenes — the next one is the plans.
+    var freeScenesSpent: Bool {
+        guard !isEntitled, !unlimited, let cap = freeScenesCap else { return false }
+        return freeScenesUsed >= cap
     }
 
     /// Scenes left in this period's pool.
@@ -589,6 +601,8 @@ struct AccountStatus {
             let bonus: Int?
             let period_start: String?
             let period_end: String?
+            let free_used: Int?
+            let free_cap: Int?
         }
         if let talk: AllowanceRow = try? await SupabaseProvider.shared
             .rpc("talk_allowance")
@@ -612,6 +626,8 @@ struct AccountStatus {
             .value {
             out.scenesUsedPeriod = scenes.used
             out.monthlyScenesCap = scenes.cap
+            out.freeScenesUsed = scenes.free_used ?? 0
+            out.freeScenesCap = scenes.free_cap
         }
         return out
     }

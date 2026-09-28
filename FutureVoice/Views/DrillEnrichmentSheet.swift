@@ -18,6 +18,15 @@ struct DrillEnrichmentSheet: View {
     @State private var synthesizingExample = false
 
     var body: some View {
+        bodyContent
+            // A parked voice (see `VoiceParking`) can't make new audio;
+            // the answer to the tap is the paywall, not a dead button.
+            .sheet(isPresented: $parkedPaywall) { PaywallView(source: "drill_audio") }
+    }
+
+    @State private var parkedPaywall = false
+
+    @ViewBuilder private var bodyContent: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -258,6 +267,7 @@ struct DrillEnrichmentSheet: View {
             }
         } catch {
             playingExample = nil
+            if error.isOutOfCredits { parkedPaywall = true }
         }
     }
 }

@@ -117,6 +117,15 @@ struct DrillView: View {
     private static let cancelThreshold: CGFloat = 44
 
     var body: some View {
+        bodyContent
+            // A parked voice (see `VoiceParking`) can't make new audio;
+            // the answer to the tap is the paywall, not a dead button.
+            .sheet(isPresented: $parkedPaywall) { PaywallView(source: "drill_audio") }
+    }
+
+    @State private var parkedPaywall = false
+
+    @ViewBuilder private var bodyContent: some View {
         Group {
             if !queue.isEmpty {
                 cardDeck
@@ -1215,9 +1224,13 @@ private extension DrillView {
             // Out of credits: only HEARING a never-synthesized line is
             // blocked — grading itself is on-device and stays free. Say so,
             // instead of surfacing the raw 402.
-            self.error = error.isOutOfCredits
-                ? "Hearing this line for the first time needs credits — Say-it grading is still free."
-                : error.localizedDescription
+            if error.isOutOfCredits {
+                // Grading itself is on-device and stays free; hearing a
+                // never-synthesized line is what the plans are for.
+                parkedPaywall = true
+            } else {
+                self.error = error.localizedDescription
+            }
         }
     }
 }

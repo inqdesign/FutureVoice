@@ -44,5 +44,17 @@ fi
 echo "  ok"
 
 echo "▸ recording $VERSION as applied"
-supabase migration repair --status applied "$VERSION" >/dev/null
-echo "  ok — run 'supabase migration list' to confirm"
+# Through the same Management API as the apply, not `supabase migration
+# repair`: that one dials the session pooler on :5432, which refused every
+# connection on 2026-09-28 while the API worked — the migration landed and
+# the record didn't.
+NAME="$(basename "$FILE" .sql | cut -d_ -f2-)"
+rec="$(curl -s -w '\n%{http_code}' -X POST \
+  "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+  -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+  -d "{\"query\":\"insert into supabase_migrations.schema_migrations (version, name) values ('$VERSION', '$NAME') on conflict (version) do nothing\"}")"
+if [[ "${rec##*$'\n'}" != "200" && "${rec##*$'\n'}" != "201" ]]; then
+  echo "  ! applied, but NOT recorded: ${rec%$'\n'*}" >&2
+  exit 1
+fi
+echo "  ok"

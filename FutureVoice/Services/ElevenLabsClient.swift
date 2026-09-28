@@ -145,6 +145,8 @@ final class ElevenLabsClient {
     /// and what pulled the voice away from the speaker.
     func remixVoicePreviews(voiceId: String, voiceDescription: String,
                             text: String, promptStrength: Double? = nil) async throws -> [RemixPreview] {
+        // A remix is built FROM the voice; a parked one no longer exists.
+        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -336,6 +338,10 @@ final class ElevenLabsClient {
         sceneKey: String? = nil,
         speed: SpeechSpeed? = nil
     ) async throws -> Data {
+        // A parked voice no longer exists upstream (see `VoiceParking`).
+        // Refused here, before the network, with the error every surface
+        // already turns into its paywall.
+        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
@@ -426,6 +432,10 @@ final class ElevenLabsClient {
         sceneKey: String? = nil,
         onPCMChunk: @MainActor @escaping (Data, _ sampleRate: Double) -> Void
     ) async throws -> StreamedAudio {
+        // A parked voice no longer exists upstream (see `VoiceParking`).
+        // Refused here, before the network, with the error every surface
+        // already turns into its paywall.
+        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
@@ -556,6 +566,10 @@ final class ElevenLabsClient {
         idempotencyKey: String? = nil,
         purpose: String? = nil
     ) async throws -> (Data, [WordTiming]) {
+        // A parked voice no longer exists upstream (see `VoiceParking`).
+        // Refused here, before the network, with the error every surface
+        // already turns into its paywall.
+        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice

@@ -1186,7 +1186,10 @@ struct ScenarioComposerSheet: View {
             // Watch writes a scene — so the account is asked here, before
             // anything is generated. Blocked means the plans and nothing
             // else: no categorize call, no scenario minted, no host callback.
-            if await BillingGate.shared.blocks() {
+            let blocked = host == .watch
+                ? await BillingGate.shared.blocksScene()
+                : await BillingGate.shared.blocks()
+            if blocked {
                 showingPaywall = true
                 return
             }

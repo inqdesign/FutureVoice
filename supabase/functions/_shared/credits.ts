@@ -532,7 +532,7 @@ export async function beginScenePlay(opts: {
   sceneKey: string
 }): Promise<
   | { ok: true; counted: boolean; used?: number; cap?: number }
-  | { ok: false; reason: "scene_cap" | "db_error"; detail?: string }
+  | { ok: false; reason: "scene_cap" | "free_scene_cap" | "db_error"; detail?: string }
 > {
   const { data, error } = await billingClient().rpc("begin_scene_play", {
     p_user_id: opts.userId,
@@ -541,6 +541,11 @@ export async function beginScenePlay(opts: {
   if (error) {
     if (error.message?.includes("SCENE_CAP_REACHED")) {
       return { ok: false, reason: "scene_cap", detail: error.message }
+    }
+    // A FREE account past its two scenes (20260928160000). Its wall is the
+    // paywall, not the subscriber's spent-pool sheet.
+    if (error.message?.includes("FREE_SCENE_CAP")) {
+      return { ok: false, reason: "free_scene_cap", detail: error.message }
     }
     return { ok: false, reason: "db_error", detail: error.message }
   }

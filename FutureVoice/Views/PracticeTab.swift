@@ -113,6 +113,7 @@ struct PracticeTab: View {
     /// Derived talk-book progress, filled in a follow-up pass (pickup-word
     /// extraction is too heavy for first paint).
     @State private var talkSnapshots: [UUID: TalkCurriculum.Snapshot] = [:]
+    @State private var snapshotTask: Task<Void, Never>?
 
     enum Shelf: String, CaseIterable, Hashable {
         // Split by ACTIVITY, not source: Talk = the calls you had, Watch = the
@@ -1350,8 +1351,13 @@ struct PracticeTab: View {
 
         // Second pass: derived talk-book progress (pickup-word extraction is
         // too heavy to block first paint with).
+        // It hands the main thread back after every book: held in one piece
+        // it was the stutter on the FIRST switch to this tab (the tagger is
+        // cold then, ~17 ms a book), landing mid tab transition. A newer
+        // reload cancels the pass it replaces.
         let toSnapshot = finished
-        Task { @MainActor in
+        snapshotTask?.cancel()
+        snapshotTask = Task { @MainActor in
             var out: [UUID: TalkCurriculum.Snapshot] = [:]
             let drillCards = DrillStore.shared.load()
             for s in toSnapshot {
@@ -1359,6 +1365,8 @@ struct PracticeTab: View {
                                                  proficiency: appState.proficiency,
                                                  shadowAttempts: appState.shadowAttempts,
                                                  drillCards: drillCards)
+                await Task.yield()
+                if Task.isCancelled { return }
             }
             talkSnapshots = out
         }

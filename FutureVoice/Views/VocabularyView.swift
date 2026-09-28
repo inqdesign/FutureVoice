@@ -457,6 +457,15 @@ struct WordCard: View {
     }
 
     var body: some View {
+        bodyContent
+            // A parked voice (see `VoiceParking`) can't make new audio;
+            // the answer to the tap is the paywall, not a dead button.
+            .sheet(isPresented: $parkedPaywall) { PaywallView(source: "word_audio") }
+    }
+
+    @State private var parkedPaywall = false
+
+    @ViewBuilder private var bodyContent: some View {
         Group {
             if isExpanded {
                 fullCard
@@ -700,6 +709,7 @@ struct WordCard: View {
             try? player.play(data, forceSessionReset: true)
         } catch {
             // network/credits failure — leave the button idle, nothing to play
+            if error.isOutOfCredits { parkedPaywall = true }
         }
     }
 

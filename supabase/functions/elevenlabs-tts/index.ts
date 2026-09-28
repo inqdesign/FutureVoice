@@ -157,13 +157,23 @@ Deno.serve(async (req) => {
       : (async () => {
           const { data: owned, error: ownErr } = await billingClient()
             .from("voice_clones")
-            .select("id")
+            .select("id, parked_at")
             .eq("user_id", user.id)
             .eq("elevenlabs_voice_id", body.voice_id!)
             .limit(1)
             .maybeSingle()
           if (ownErr) return errorResponse(500, "voice ownership check failed", ownErr.message)
           if (!owned) return errorResponse(403, "voice_id not permitted")
+          // PARKED (park-idle-voices): the voice no longer exists upstream
+          // because nobody was paying for it. Answered as a spent pool — the
+          // same 402 body — so every build, old ones included, shows its
+          // paywall instead of an upstream "voice not found". Never cached as
+          // verified: the answer changes the day they subscribe.
+          if ((owned as { parked_at?: string | null }).parked_at) {
+            return new Response(JSON.stringify({ error: "insufficient_credits", reason: "voice_parked" }), {
+              status: 402, headers: { "Content-Type": "application/json", ...cors() },
+            })
+          }
           verifiedVoiceOwners.add(ownerKey)
           return null
         })()
@@ -246,6 +256,7 @@ Deno.serve(async (req) => {
     })
     if (!claim.ok) {
       if (claim.reason === "scene_cap") return sceneCapResponse(cors())
+      if (claim.reason === "free_scene_cap") return insufficientCreditsResponse(cors())
       return errorResponse(500, "scene claim failed", claim.detail)
     }
     // Only an entitled user's scene was paid for with a count; a free user's

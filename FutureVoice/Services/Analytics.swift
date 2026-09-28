@@ -90,3 +90,45 @@ enum Analytics {
         PostHogSDK.shared.reset()
     }
 }
+
+// MARK: - Person properties
+
+extension Analytics {
+    /// WHO this learner is set up as — the onboarding answers and the goals
+    /// they chose. Every one of these lived only in UserDefaults (and the
+    /// learner's own iCloud), so nothing outside the phone could say what
+    /// anybody's daily goal was: a question like "do the 5-minute learners
+    /// stay?" had no data behind it at all (2026-09-28).
+    ///
+    /// These are PERSON properties, not events: the current answer, replaced
+    /// in place, which is what a cohort filter reads. Nothing here is PII —
+    /// a goal, a level and two language codes.
+    ///
+    /// It is sent only when something CHANGED (`personSignatureKey`), so the
+    /// common foreground costs no event; a `$set` on every launch would be
+    /// one of the app's noisiest events for a number that moves twice a year.
+    @MainActor
+    static func notePerson(_ state: AppState, goals: GoalStore = .shared) {
+        let props: [String: Any] = [
+            "daily_goal_minutes": UserDefaults.standard.object(forKey: dailyGoalMinutesKey) as? Int ?? 10,
+            "goal_sentences_per_day": goals.sentencesPerDay,
+            "goal_words_per_day": goals.wordsPerDay,
+            "goal_expressions_per_day": goals.expressionsPerDay,
+            "goal_shadows_per_day": goals.shadowsPerDay,
+            "target_language": state.targetLanguage,
+            "native_language": state.nativeLanguage,
+            "level": state.proficiency.rawValue,
+            "app_language": LanguageCatalog.currentNative
+        ]
+        let signature = props.keys.sorted().map { "\($0)=\(props[$0] ?? "")" }.joined(separator: "|")
+        guard signature != UserDefaults.standard.string(forKey: personSignatureKey) else { return }
+        UserDefaults.standard.set(signature, forKey: personSignatureKey)
+        // `$set` is PostHog's own property-only event.
+        PostHogSDK.shared.capture("$set", properties: nil, userProperties: props)
+    }
+
+    /// The goal the setup flow writes (`SetupFlowView.finish`), read here so
+    /// the two surfaces can't disagree about the key.
+    static let dailyGoalMinutesKey = "futurevoice.dailyGoalMinutes"
+    private static let personSignatureKey = "futurevoice.analytics.personSignature"
+}

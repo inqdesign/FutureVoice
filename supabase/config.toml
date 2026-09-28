@@ -529,6 +529,14 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/cleanup-anonymous-voices/index.ts"
 
+[functions.park-idle-voices]
+enabled = true
+# Called by pg_cron (hourly, created DISABLED — see 20260928140000), which has
+# no Supabase JWT to send; authenticity is the CLEANUP_SECRET header checked
+# inside the function, which refuses everything when the env var is unset.
+verify_jwt = false
+entrypoint = "./functions/park-idle-voices/index.ts"
+
 [functions.owner-watch]
 enabled = true
 # Called by pg_cron every minute, which has no Supabase JWT to send —

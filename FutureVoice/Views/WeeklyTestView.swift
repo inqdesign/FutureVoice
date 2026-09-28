@@ -72,6 +72,15 @@ struct WeeklyTestView: View {
 
 
     var body: some View {
+        bodyContent
+            // A parked voice (see `VoiceParking`) can't make new audio;
+            // the answer to the tap is the paywall, not a dead button.
+            .sheet(isPresented: $parkedPaywall) { PaywallView(source: "weekly_test_audio") }
+    }
+
+    @State private var parkedPaywall = false
+
+    @ViewBuilder private var bodyContent: some View {
         NavigationStack {
             Group {
                 switch phase {
@@ -930,6 +939,7 @@ struct WeeklyTestView: View {
             try? player.play(data, source: "weekly_test", forceSessionReset: true)
         } catch {
             // Offline or out of allowance: the line is still on screen to read.
+            if error.isOutOfCredits { parkedPaywall = true }
         }
     }
 }

@@ -621,8 +621,15 @@ export class CallSession implements DurableObject {
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
         preflight,
       ])
-      if (!owns) {
+      if (owns === "forbidden") {
         return this.fail("voice_forbidden", "voice_id not permitted")
+      }
+      // A parked voice is gone upstream; the call could only be silent. The
+      // wall every build already turns into its paywall.
+      if (owns === "parked") {
+        this.endReason ??= "insufficient_credits"
+        this.emit({ type: "error", code: "insufficient_credits", message: "voice parked" })
+        return this.teardown()
       }
       if (wall) {
         this.endReason ??= wall

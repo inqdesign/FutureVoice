@@ -718,7 +718,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <h2>요금제별 사용량과 갱신일</h2>
   <p class="sub">서버가 벽을 세울 때 쓰는 그 숫자예요 — 각자의 <b>결제 주기</b>(달력 달이 아니라
   구독이 시작된 날 기준) 안에서 쓴 통화 초와 장면 수를, 그 요금제의 한도에 대고 셉니다.
-  체험은 한도가 7/30로 깎여요(Light 기준). Plus는 통화 상한이 없어요.</p>
+  한도는 각 구독이 <b>팔린 그대로</b>(행에 찍힌 스탬프 먼저, 없으면 지금 요금제) — 이전 구독자는
+  예전 크기를 유지해요. 체험은 한도가 7/30로 깎여요. <b>+N분</b>은 팩·초대로 받은 추가 분이고
+  요금제 풀보다 먼저 써요.</p>
   <div class="card scroll"><table id="planUsage"></table></div>
   <p class="sub" style="margin-top:10px" id="planUsageNote"></p>
 </section>
@@ -2401,6 +2403,7 @@ function personDetail(u){
           + `${left!=null?` <span class="muted">(${left<=0?'오늘':left+'일 남음'})</span>`:''}`
           + ` · 이번 주기 통화 ${fmtMin(pu.talk_used)}`
           + `${pu.unlimited?'':` / ${fmtMin(pu.talk_cap)}`}`
+          + `${pu.bonus>0?` <span class="muted">(+${fmtMin(pu.bonus)} 추가)</span>`:''}`
           + ` · 장면 ${pu.scenes_used}/${pu.scenes_cap}</li>`; })(),
       (()=>{ const uh = usualHour(u.idx);
         return uh ? `<li>주로 <b>${uh}</b>에 써요 <span class="muted">`
@@ -2671,6 +2674,7 @@ function renderPlanUsage(){
           ? '<span class="muted">' + fmtMin(r.talk_used) + '</span>'
           : `${fmtMin(r.talk_used)} <span class="muted">/ ${fmtMin(r.talk_cap)}</span>`
             + (talkPct!=null?`<div class="usub">${talkPct}%</div>`:'')}
+        ${r.bonus>0?`<div class="usub">+${fmtMin(r.bonus)} 추가</div>`:''}
         ${bar(r.talk_used, r.unlimited?null:r.talk_cap, 'var(--s1)')}</td>
       <td class="num">${r.scenes_used} <span class="muted">/ ${r.scenes_cap}</span>
         ${scenePct!=null?`<div class="usub">${scenePct}%</div>`:''}

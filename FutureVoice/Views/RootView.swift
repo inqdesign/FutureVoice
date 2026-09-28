@@ -112,9 +112,16 @@ struct RootView: View {
             preview
         } else {
             gatedContent
+                .animation(.easeOut(duration: 0.25), value: auth.didResolveInitialSession)
         }
         #else
         gatedContent
+            // The launch-screen twin gives way to the page as a short fade,
+            // not a cut: the cut read as the page snapping in under the
+            // logo on every cold launch (2026-09-28). Keyed to the one
+            // change that ends the twin, so nothing else in the gate
+            // animates.
+            .animation(.easeOut(duration: 0.25), value: auth.didResolveInitialSession)
         #endif
     }
 

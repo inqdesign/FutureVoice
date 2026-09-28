@@ -588,7 +588,7 @@ struct FindPersonCard: View {
                 // than from the tab behind this card, which couldn't show
                 // them while this is on screen.
                 Button {
-                    BillingGate.start(orShow: $showingPaywall) { onWatch(savedPerson()) }
+                    BillingGate.startScene(orShow: $showingPaywall) { onWatch(savedPerson()) }
                 } label: {
                     Label("Watch", systemImage: "play.fill")
                         .frame(maxWidth: .infinity)

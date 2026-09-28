@@ -130,6 +130,15 @@ struct StudyDeckView: View {
     private static let cancelThreshold: CGFloat = 44
 
     var body: some View {
+        bodyContent
+            // A parked voice (see `VoiceParking`) can't make new audio;
+            // the answer to the tap is the paywall, not a dead button.
+            .sheet(isPresented: $parkedPaywall) { PaywallView(source: "study_audio") }
+    }
+
+    @State private var parkedPaywall = false
+
+    @ViewBuilder private var bodyContent: some View {
         // The deck reads the height it was OFFERED, never the height it ended
         // up at. Those differ exactly when it matters: a card whose meaning
         // has overrun its slab reports the overrun as available room, so
@@ -623,6 +632,7 @@ struct StudyDeckView: View {
             try? player.play(data, forceSessionReset: true)
         } catch {
             // network/credits failure — leave the button idle, nothing to play
+            if error.isOutOfCredits { parkedPaywall = true }
         }
     }
 

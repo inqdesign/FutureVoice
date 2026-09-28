@@ -49,20 +49,23 @@ export async function verifyUser(env: Env, token: string): Promise<string | null
 
 /** May this user speak with this voice? Same deepfake rule as the TTS edge
  *  function: a preset voice, or a clone row owned by the user — never another
- *  user's voice id. */
-export async function ownsVoice(env: Env, userId: string, voiceId: string): Promise<boolean> {
-  if (PRESET_VOICE_IDS.has(voiceId)) return true
+ *  user's voice id. `parked` = their own clone, deleted upstream because
+ *  nobody was paying for it (park-idle-voices): answered as a spent pool, not
+ *  as a forbidden voice, so the app shows its paywall. */
+export async function ownsVoice(env: Env, userId: string, voiceId: string): Promise<"ok" | "forbidden" | "parked"> {
+  if (PRESET_VOICE_IDS.has(voiceId)) return "ok"
   const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
     `?user_id=eq.${encodeURIComponent(userId)}` +
     `&elevenlabs_voice_id=eq.${encodeURIComponent(voiceId)}` +
-    `&select=id&limit=1`
+    `&select=id,parked_at&limit=1`
   const r = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     },
   })
-  if (!r.ok) return false
-  const rows = (await r.json()) as unknown[]
-  return Array.isArray(rows) && rows.length > 0
+  if (!r.ok) return "forbidden"
+  const rows = (await r.json()) as { parked_at?: string | null }[]
+  if (!Array.isArray(rows) || rows.length === 0) return "forbidden"
+  return rows[0]?.parked_at ? "parked" : "ok"
 }

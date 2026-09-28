@@ -97,6 +97,15 @@ struct FutureVoiceApp: App {
         // resolve their paths against the scoped directory on first touch.
         LanguageScope.migrateIfNeeded()
         Analytics.start()
+        // The CEFR wordlist and the NL tagger load on first touch, and the
+        // first touch used to be a main-thread widget refresh while the Talk
+        // ring was drawing (~230 ms in the simulator, 2026-09-28). Both are
+        // lock-guarded, so warm them here, off the main thread.
+        Task.detached(priority: .userInitiated) {
+            _ = CoreVocabulary.total
+            _ = VocabStore.lookupKey(for: "warming")
+            _ = VocabStore.lemmas(in: ["Warming up the tagger."])
+        }
     }
 
     var body: some Scene {
@@ -129,8 +138,15 @@ struct FutureVoiceApp: App {
             if phase == .active { SyncEngine.shared.foregrounded() }
             // Cards drift due over time even with no store writes, so re-snapshot
             // the widget's study queue at both edges of a foreground stint.
-            if phase == .active || phase == .background {
+            //
+            // Only the background edge writes in place — iOS may suspend us
+            // right after it. The active edge lands on a cold launch at the
+            // moment the Talk ring draws, so it goes through the coalesced,
+            // yielding pass (see `StudyWidgetRefresher.schedule`).
+            if phase == .background {
                 StudyWidgetRefresher.refresh()
+            } else if phase == .active {
+                StudyWidgetRefresher.schedule()
             }
             // Re-arm the daily call. Cheap and idempotent: a plan that still
             // matches the learner's language and clone and hasn't fired yet is
@@ -139,8 +155,16 @@ struct FutureVoiceApp: App {
             // silent forever — a reinstall (pending requests gone), a plan
             // whose time passed unanswered, or a language switch.
             if phase == .active {
+                // The onboarding answers and the goals, as person properties.
+                // Sent from here rather than from each picker: they are edited
+                // in Me, in the goals sheet and by a language switch, and the
+                // call is free unless something actually moved.
+                Analytics.notePerson(appState)
                 // Before the daily call re-arms on a voice that may be gone.
                 appState.checkForReclaimedVoice()
+                // A voice parked while the app was closed, or one that can
+                // come back now (a purchase made on another device).
+                Task { await appState.refreshParkedVoice() }
                 appState.refreshDailyCall()
                 // The Core has no push infrastructure, so an arrival is
                 // noticed here and announced locally. Late by design — the
@@ -370,8 +394,11 @@ final class AppState: ObservableObject {
             if setupComplete && !oldValue {
                 Analytics.capture("setup_completed", [
                     "target_language": targetLanguage,
-                    "level": proficiency.rawValue
+                    "level": proficiency.rawValue,
+                    "goal_minutes": UserDefaults.standard
+                        .object(forKey: Analytics.dailyGoalMinutesKey) as? Int ?? 10
                 ])
+                Analytics.notePerson(self)
             }
         }
     }
@@ -524,6 +551,14 @@ final class AppState: ObservableObject {
         // here so an install that predates it still resolves its own audio.
         PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
 
+        // A purchase or claim can bring a parked voice back at once, without
+        // waiting for the next foreground.
+        NotificationCenter.default.addObserver(
+            forName: .billingStateChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in await self?.refreshParkedVoice(force: true) }
+        }
+
         SyncEngine.shared.onApplied = { [weak self] kinds in
             self?.adoptSyncedChanges(kinds)
         }
@@ -541,6 +576,86 @@ final class AppState: ObservableObject {
         guard voiceCloneId != nil, let since = unclaimedVoiceSince,
               Date().timeIntervalSince(since) > Self.reclaimGraceMinutes * 60 else { return }
         voiceWasDeleted(reason: "unclaimed_grace")
+    }
+
+    /// Last time the server was asked whether this phone's voice is parked.
+    private var parkedCheckedAt: Date?
+    private var revivingParkedVoice = false
+
+    /// Is this phone's voice PARKED (see `VoiceParking`), and can it come back?
+    ///
+    /// Asks the server at most every 10 minutes (`force` skips that — sign-in,
+    /// a purchase). A parked voice is revived the moment the account has
+    /// something to spend it with: a subscription, or free minutes left.
+    /// Read in a query of its OWN: a `.select()` naming `parked_at` on a
+    /// database without it would fail, and this must never break the restore.
+    func refreshParkedVoice(force: Bool = false) async {
+        guard let voiceId = voiceCloneId, !holdVoiceOnboarding,
+              let session = SupabaseProvider.shared.auth.currentSession,
+              !session.user.isAnonymous else { return }
+        let alreadyParked = VoiceParking.isParked(voiceId)
+        if !alreadyParked, !force, let at = parkedCheckedAt,
+           Date().timeIntervalSince(at) < 600 { return }
+
+        if !alreadyParked || force {
+            struct Row: Decodable { let parked_at: String? }
+            do {
+                let rows: [Row] = try await SupabaseProvider.shared
+                    .from("voice_clones")
+                    .select("parked_at")
+                    .eq("elevenlabs_voice_id", value: voiceId)
+                    .limit(1)
+                    .execute()
+                    .value
+                parkedCheckedAt = Date()
+                guard let row = rows.first else { return }
+                if row.parked_at == nil {
+                    if alreadyParked { VoiceParking.parkedVoiceId = nil }
+                    return
+                }
+                if !alreadyParked {
+                    VoiceParking.parkedVoiceId = voiceId
+                    Analytics.capture("voice_parked_notice")
+                    Telemetry.log("voice_parked_notice")
+                }
+            } catch {
+                // Offline, or a database without the column yet. Whatever was
+                // known stays known.
+                if !alreadyParked { return }
+            }
+        }
+
+        // Parked. Back only for someone who can use it — the paywall is the
+        // answer for everyone else, and `ElevenLabsClient` already gives it.
+        guard let account = await BillingGate.shared.snapshot(force: true),
+              !account.needsSubscription else { return }
+        await reviveParkedVoice()
+    }
+
+    /// Rebuild a parked voice from the recording on this phone. No recording
+    /// (a reinstall, a second device — the sample is never synced) → the same
+    /// "let's make your voice again" screen a reclaimed voice gets.
+    private func reviveParkedVoice() async {
+        guard !revivingParkedVoice, let parked = voiceCloneId,
+              VoiceParking.isParked(parked) else { return }
+        revivingParkedVoice = true
+        defer { revivingParkedVoice = false }
+        guard let sample = VoiceSampleStore.shared.url else {
+            Analytics.capture("voice_parked_revive", ["result": "no_sample"])
+            VoiceParking.parkedVoiceId = nil
+            voiceWasDeleted(reason: "parked_no_sample")
+            return
+        }
+        do {
+            try await regenerateVoiceClone(fromSampleAt: sample)
+            Analytics.capture("voice_parked_revive", ["result": "ok"])
+            Telemetry.log("voice_parked_revive", ["result": "ok"])
+        } catch {
+            // Stays parked; the next foreground tries again.
+            Analytics.capture("voice_parked_revive", ["result": "failed"])
+            Telemetry.log("voice_parked_revive", ["result": "failed",
+                                                  "error": String(describing: error).prefix(200).description])
+        }
     }
 
     /// The voice this phone holds no longer exists upstream. Drop it and send
@@ -768,6 +883,7 @@ final class AppState: ObservableObject {
                 unclaimedVoiceSince = nil
             }
             await self.restoreVoiceCloneFromCloud()
+            await self.refreshParkedVoice(force: true)
             // Retry any delete that never landed — an orphaned clone holds an
             // account voice slot hostage, and the ceiling is shared by every
             // user.
@@ -1285,7 +1401,12 @@ final class AppState: ObservableObject {
             reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: false)
             throw error
         }
-        if let old = voiceCloneId, old != newId { pendingDeleteVoiceId = old }
+        if let old = voiceCloneId, old != newId {
+            // A parked voice is already gone upstream; its row went inactive
+            // when the clone function inserted this one. Nothing to delete.
+            if VoiceParking.isParked(old) { VoiceParking.parkedVoiceId = nil }
+            else { pendingDeleteVoiceId = old }
+        }
         voiceCloneId = newId
         voiceWasReclaimed = false
         // A clone straight off the recording is un-remixed again, whatever

@@ -301,6 +301,15 @@ struct ExpressionCard: View {
     private var isStudying: Bool { store.isStudyingExpression(phrase) }
 
     var body: some View {
+        bodyContent
+            // A parked voice (see `VoiceParking`) can't make new audio;
+            // the answer to the tap is the paywall, not a dead button.
+            .sheet(isPresented: $parkedPaywall) { PaywallView(source: "expression_audio") }
+    }
+
+    @State private var parkedPaywall = false
+
+    @ViewBuilder private var bodyContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 HStack(alignment: .center, spacing: 14) {
@@ -628,6 +637,7 @@ struct ExpressionCard: View {
             try? player.play(data, forceSessionReset: true)
         } catch {
             // network/credits failure — leave the button idle, nothing to play
+            if error.isOutOfCredits { parkedPaywall = true }
         }
     }
 

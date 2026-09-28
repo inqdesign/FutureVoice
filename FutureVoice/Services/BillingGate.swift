@@ -54,6 +54,19 @@ final class BillingGate: ObservableObject {
         return await snapshot(force: account != nil)?.needsSubscription ?? false
     }
 
+    /// `blocks()` for a tap that is about to WRITE A SCENE: also true for a
+    /// free account that has had its two scenes, which can still talk off its
+    /// balance but not start a third scene. Same cache rule — a yes from
+    /// cache, a no only from a fresh fetch.
+    func blocksScene() async -> Bool {
+        if let cached = account, !cached.needsSubscription, !cached.freeScenesSpent {
+            Task { await refreshIfStale() }
+            return false
+        }
+        guard let fresh = await snapshot(force: account != nil) else { return false }
+        return fresh.needsSubscription || fresh.freeScenesSpent
+    }
+
     /// The current snapshot, fetched when stale. Nil means "couldn't ask" —
     /// callers treat that as a pass, never as a refusal.
     @discardableResult
@@ -78,7 +91,13 @@ final class BillingGate: ObservableObject {
 
     /// Drop the cached answer — after anything that can change it (a
     /// purchase, a finished call).
-    func invalidate() { fetchedAt = nil }
+    func invalidate() {
+        fetchedAt = nil
+        // A purchase is what brings a PARKED voice back (see `VoiceParking`).
+        if VoiceParking.parkedVoiceId != nil {
+            NotificationCenter.default.post(name: .billingStateChanged, object: nil)
+        }
+    }
 
     /// Run `start`, or raise the paywall in its place. Every metered launch
     /// goes through here so the paywall lands on the tap rather than on top of
@@ -91,6 +110,13 @@ final class BillingGate: ObservableObject {
     static func start(orShow paywall: Binding<Bool>, _ start: @escaping () -> Void) {
         Task { @MainActor in
             if await shared.blocks() { paywall.wrappedValue = true } else { start() }
+        }
+    }
+
+    /// `start(orShow:)` for a launch that writes a Watch scene.
+    static func startScene(orShow paywall: Binding<Bool>, _ start: @escaping () -> Void) {
+        Task { @MainActor in
+            if await shared.blocksScene() { paywall.wrappedValue = true } else { start() }
         }
     }
 
@@ -116,4 +142,10 @@ final class BillingGate: ObservableObject {
         guard (try? await SupabaseProvider.shared.auth.session) != nil else { return nil }
         return await AccountStatus.fetch()
     }
+}
+
+extension Notification.Name {
+    /// Posted when something that can change what the account may start has
+    /// just happened (a purchase, a claim) and a voice is parked.
+    static let billingStateChanged = Notification.Name("futurevoice.billingStateChanged")
 }

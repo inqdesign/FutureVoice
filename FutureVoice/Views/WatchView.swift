@@ -859,6 +859,14 @@ struct WatchView: View {
                 sceneCapReached = true
                 isPlaying = false
                 return
+            } catch where error.isOutOfCredits {
+                // A free account past its two scenes (or its seconds): the
+                // answer is the plans, not an error. `BillingGate.blocksScene`
+                // normally says so at the tap; this is the stale-cache path.
+                BillingGate.shared.invalidate()
+                showingPaywall = true
+                isPlaying = false
+                return
             } catch {
                 self.error = error.localizedDescription
                 isPlaying = false

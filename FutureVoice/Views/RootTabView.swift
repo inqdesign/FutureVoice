@@ -173,7 +173,8 @@ struct RootTabView: View {
             // refresh only fires on background↔active transitions, so a cold
             // launch that goes straight to foreground wouldn't otherwise
             // publish a fresh snapshot.
-            StudyWidgetRefresher.refresh()
+            // Coalesced + yielding: this is the frame the Talk ring draws on.
+            StudyWidgetRefresher.schedule()
             consumeFreeTalk()   // cold launch from the Free Talk widget
             Analytics.capture("screen_viewed", ["screen": Self.screenName(selection)])
             // Existing users appear in Find people automatically — mirror the

@@ -15,7 +15,7 @@ Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`) — do → 
 - **Practice** (`PracticeTab`) — the REVIEW home; everything here came out of an activity. Three layers: today's cross-cutting SRS queue (`DrillStore` Leitner boxes 0–5 + shadow picks), the **Books** shelves behind chips (**Talks · Topics · Scenarios**), and the Library dictionaries (vocabulary / expressions / shadowing). Every book has the same anatomy — one scene + words/lines to master, then archive. Watch books = `Scenario` + `ScenarioCurriculum` (`ScenarioDetailView`; scene behind its Watch button). Talk books = a finished `Session` whose material is DERIVED by `TalkCurriculum` (fluent-self pickup words + corrected lines as shadow material, mastery via `VocabStore`/shadow attempts — never persisted); their page is `ConversationDetailView` (Continue / Replay / **Say it again** (다시 말하기) — Watch books carry the same button under Talk · Watch; raw transcript + sequential audio replay behind Replay in `TalkTranscriptView`, the whole talk done again, the learner's part spoken the corrected way, behind Say it again — see below). **Either book exports** from its ⋯ menu (`BookExportMenu` → `BookExport.swift`): both types flatten into ONE `BookDocument`, rendered as an A4 PDF (annotate on an iPad, or print) or Markdown (paste into a notes app). The PDF goes through `UIMarkupTextPrintFormatter` + `UIPrintPageRenderer` because it's the only thing on iOS that flows arbitrary-length text across pages without hand-rolled CoreText pagination — which is why the document is authored as HTML. Add a field to `BookDocument` and BOTH renderers pick it up; never render a book straight to a format.
 - **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages behind swipeable chip tabs, plus the activity/effort panel (14-day rep bars).
 - **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app language, not the phone's — see "UI text has ONE language" below.
-  **The refresh is COALESCED and never runs in the write's own run-loop turn** (2026-09-23). `refreshBook` rebuilds every talk book (`TalkCurriculum.build`, NLTagger over the whole session) on the main actor, and a single "I know" on a word card writes three files, each asking for it — measured 30 books ≈ 515 ms in the simulator, paid between the tap and the button repainting, which is what the learner reported as the toggle stuttering. `schedule()` now runs ONE refresh 0.4 s after the last write; the scene-phase edges still call `refresh()` directly. The build itself got cheap the same day: `VocabStore.lemmas(in:)`, `offListContentWords(in:)` and `lookupKey(for:)` memoize per text + tagger language (`TextMemo`, lock-guarded, bounded), and `CarryoverDetector.normalized`, `TalkCurriculum.sentences(in:)`, `WordSplitter.count` are single-pass — a warm rebuild of 30 books is ~37 ms (`TalkCurriculumTimingTests` prints it). Don't put a tagger call back on a per-word path without going through the memo.
+  **The refresh is COALESCED and never runs in the write's own run-loop turn** (2026-09-23). `refreshBook` rebuilds every talk book (`TalkCurriculum.build`, NLTagger over the whole session) on the main actor, and a single "I know" on a word card writes three files, each asking for it — measured 30 books ≈ 515 ms in the simulator, paid between the tap and the button repainting, which is what the learner reported as the toggle stuttering. `schedule()` now runs ONE refresh 0.4 s after the last write; only the BACKGROUND edge still calls `refresh()` directly (iOS may suspend right after it). The active edge and `RootTabView.onAppear` go through `schedule()`, whose pass yields the main thread after every talk book (2026-09-28): on a cold launch both used to rebuild every book synchronously while the Talk ring drew, and the first `coreLevelLabel` loaded the CEFR list + tagger on main (~230 ms) — those two are now warmed off-main in `FutureVoiceApp.init`. Practice's talk-book pass yields per book for the same reason (first tab switch). The build itself got cheap the same day: `VocabStore.lemmas(in:)`, `offListContentWords(in:)` and `lookupKey(for:)` memoize per text + tagger language (`TextMemo`, lock-guarded, bounded), and `CarryoverDetector.normalized`, `TalkCurriculum.sentences(in:)`, `WordSplitter.count` are single-pass — a warm rebuild of 30 books is ~37 ms (`TalkCurriculumTimingTests` prints it). Don't put a tagger call back on a per-word path without going through the memo.
 
 ## Sync between the learner's own devices (iCloud, opt-in) — 2026-09-18
 
@@ -1816,6 +1816,53 @@ each from a way the voice stopped sounding like the learner:
   is NOT a fallback for this: it is kept for 24 h to listen to a clone that
   came out wrong, and the consent screen says exactly that. A remixed voice's
   `voice_clones` row has no `original_path` of its own.
+
+## A voice nobody pays for is PARKED (2026-09-28)
+
+ElevenLabs Pro holds 160 custom voices for the WHOLE account, and every
+learner's clone is one. Measured that day: 96 used — 87 learners' clones (6
+subscribers, 25 lapsed, 56 free), 19 accent remixes, the founder's own — and
+37 of the non-paying clones had been idle over a week. So a clone with nobody
+paying is deleted upstream after **7 days** (founder's call) and rebuilt from
+the phone's recording when it is wanted again. `park-idle-voices` (hourly,
+`20260928140000`, cron created DISABLED) + `VoiceParking.swift`.
+
+- **Two rules, both 7 days** (`parkable_voice_owners`): not entitled and
+  nothing left to spend → 7 days after the balance was last spent or the
+  subscription last ran; not entitled but free minutes left → 7 days with no
+  activity at all. Grants are not activity (the 09-26 top-up wrote a row on
+  every account). Anonymous users stay with `cleanup-anonymous-voices`.
+- **Parking is a stamp, not `is_active = false`.** The row stays active and
+  `parked_at` is set, because an old build that finds no active row runs
+  `voiceWasDeleted` → re-record → a free clone that takes the slot straight
+  back. `elevenlabs-tts` and the gateway's `ownsVoice` read `parked_at` and
+  answer with the SPENT-POOL 402 (`insufficient_credits`, `reason:
+  voice_parked`), so every build, old ones included, shows its paywall.
+  `elevenlabs-voice-clone` refuses the same way to an account with a parked
+  row and nothing to spend (`voice_clone_allowed`) — a brand-new account never
+  has one.
+- **Stop generating, never stop playing** (founder: "that isn't generation").
+  `AppState.voiceCloneId` KEEPS the parked id: every cache lookup is keyed by
+  it, and nil would both hide audio on disk and route the learner into
+  onboarding. `ElevenLabsClient` refuses a parked id before the network with
+  `.insufficientCredits`; the word, expression, study-deck, drill,
+  enrichment and weekly-test players now answer that with their own
+  `PaywallView` (they used to stay silent), the rest already did. The daily
+  call stands down while parked.
+- **It comes back by itself** (`AppState.refreshParkedVoice`, foreground ·
+  sign-in · every `BillingGate.invalidate` while parked): once the account has
+  something to spend — a plan, or free minutes — `regenerateVoiceClone` runs
+  on `VoiceSampleStore`. The sample is never synced and the server copy lives
+  24 h, so a phone without it gets the reclaimed-voice "make your voice again"
+  screen. A parked id is never staged for deletion (it's already gone), and
+  `elevenlabs-voice-delete` now treats `voice_does_not_exist` as done.
+  Re-cloning drops the accent remix, and each re-clone spends one of the
+  account's monthly voice add/edits (Pro: 290).
+- **Deploy order is load-bearing.** Migration FIRST (the TTS function and the
+  gateway select `parked_at`; without the column every TTS call 500s and every
+  call is `voice_forbidden`), then `elevenlabs-tts` / `-voice-clone` /
+  `-voice-delete` / `park-idle-voices` and the gateway, then the app build in
+  the store, then `?dry=1` read by a person, then the cron switched on.
 
 ## The voice is heard BEFORE the sign-up (2026-08-18)
 

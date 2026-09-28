@@ -74,6 +74,22 @@ Deno.serve(async (req) => {
   // a faucet needs more. (The cap row stamps this attempt's idempotency key
   // BEFORE upstream, so a failed upstream burns one slot — acceptable for
   // an abuse bound.)
+  // A voice that was PARKED (park-idle-voices) comes back only to someone
+  // with something to spend it on. Without this, "re-record" in Me would
+  // mint, free, the exact slot the sweep just gave back. A brand-new account
+  // has no parked row and is never refused. Same 402 body as a spent pool, so
+  // every build shows its paywall. Fails OPEN on a lookup error — refusing a
+  // paying learner their voice is worse than one slot held a little longer.
+  {
+    const { data: allowed, error: allowErr } = await billingClient()
+      .rpc("voice_clone_allowed", { p_user_id: user.id })
+    if (!allowErr && allowed === false) {
+      return new Response(JSON.stringify({ error: "insufficient_credits", reason: "voice_parked" }), {
+        status: 402, headers: { "Content-Type": "application/json", ...cors() },
+      })
+    }
+  }
+
   if (!isFree) {
     const rec = await recordFreeUsage({
       supabase, userId: user.id, action, purpose: "voice_clone",
