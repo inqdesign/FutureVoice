@@ -31,6 +31,7 @@ Dry run by default; `--send` does it.
 
     scripts/asc-submit.py 1.0.10 61                  # plan only
     scripts/asc-submit.py 1.0.10 61 --send           # do it
+    scripts/asc-submit.py 1.0.10 61 --send --prepare # everything but the submission
     scripts/asc-submit.py 1.0.10 61 --metadata-only  # plan the page, no build/submit
     scripts/asc-submit.py 1.0.10 61 --metadata-only --send
 """
@@ -257,6 +258,13 @@ def main() -> None:
     print("build attached")
 
     sync_page(ver, send=True)
+
+    # `--prepare`: a draft a person can read in App Store Connect before it
+    # goes anywhere. Re-run with --send (no --prepare) to submit it.
+    if "--prepare" in sys.argv:
+        print(f"prepared {version} ({build_no}) — not submitted. Check it in App Store Connect,"
+              f" then: scripts/asc-submit.py {version} {build_no} --send")
+        return
 
     # 4. Submit. Reuse a submission still being assembled, else open one.
     subs = call("GET", f"/reviewSubmissions?filter[app]={APP_ID}&filter[platform]=IOS"
