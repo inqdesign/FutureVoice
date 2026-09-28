@@ -1,2 +1,8 @@
-Tes interlocuteurs en coréen et en japonais parlent désormais avec des voix et des prénoms de ces langues.
-Les amis parlent comme des amis, les personnalités comme elles-mêmes, et le nouveau mode coach t’aide à placer dans l’appel les mots que tu étudies.
+• Nouveau · Mode coach : de temps en temps, ton futur moi te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et te le montre comme indice pendant que tu réfléchis. Active-le dans Réglages de l’appel.
+• Nouveau · Chaque personne parle à sa façon. Un ami parle comme un ami, une personnalité connue comme elle-même. Quand tu ajoutes quelqu’un, tu peux choisir si vous vous tutoyez ou vous vouvoyez.
+• Nouveau · Quand tu pratiques le coréen ou le japonais, tes interlocuteurs parlent avec des voix et des prénoms de cette langue.
+• Nouveau · L’app est maintenant disponible en allemand.
+• Corrigé · Le premier bonjour d’un appel passait parfois sans le son.
+• Corrigé · Ton futur moi se trompait parfois de date ou d’heure, par exemple en disant « ça fait longtemps ! » lors de ton deuxième appel de la journée.
+• Corrigé · L’écran « On ne dirait pas ta voix ? » se refermait dès son ouverture.
+• Amélioré · Le premier écran ne se fige plus un instant à l’ouverture de l’app.

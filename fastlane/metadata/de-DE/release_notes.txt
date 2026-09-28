@@ -1,2 +1,8 @@
-Deine Gesprächspartner auf Koreanisch und Japanisch sprechen jetzt mit Stimmen und Namen aus diesen Sprachen.
-Freunde reden wie Freunde, Prominente wie sie selbst, und der neue Coach-Modus hilft dir, die Wörter, die du gerade lernst, im Gespräch zu benutzen.
+• Neu · Die App gibt es jetzt komplett auf Deutsch.
+• Neu · Coach-Modus: Ab und zu fragt dein fließendes Ich etwas, das du mit einem Wort beantworten kannst, das du gerade lernst, und zeigt es dir als Hinweis, während du nachdenkst. Einschalten kannst du ihn in den Anruf-Einstellungen.
+• Neu · Jede Person spricht auf ihre Art. Freunde reden wie Freunde, bekannte Personen wie sie selbst. Wenn du jemanden hinzufügst, legst du fest, ob ihr euch duzt oder siezt.
+• Neu · Wenn du Koreanisch oder Japanisch übst, sprechen deine Gesprächspartner mit Stimmen und Namen aus dieser Sprache.
+• Behoben · Die erste Begrüßung eines Anrufs lief manchmal ohne Ton.
+• Behoben · Dein fließendes Ich hat manchmal Datum und Uhrzeit verwechselt, zum Beispiel „Lange nicht gesehen“ beim zweiten Anruf am selben Tag.
+• Behoben · Der Bildschirm „Klingt nicht nach dir?“ hat sich direkt nach dem Öffnen wieder geschlossen.
+• Verbessert · Der erste Bildschirm stockt beim Öffnen der App nicht mehr kurz.
