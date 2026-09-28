@@ -309,6 +309,18 @@ struct MeTab: View {
                 VoiceAccentSheet()
                     .environmentObject(appState)
             }
+            // Same reason as the accent sheet: attached inside the voice
+            // Section it opened and closed itself in the same instant.
+            .sheet(isPresented: $comparingVoice) {
+                VoiceComparisonSheet(
+                    scriptOpening: VoiceCloneScript.comparisonOpening(
+                        scriptLanguage: appState.cloneScriptLanguage,
+                        targetLanguage: appState.targetLanguage),
+                    // Outside onboarding a re-record is the full destructive path,
+                    // so hand it to the confirmation that already guards it.
+                    onRerecord: { confirmingVoiceReset = true })
+                    .environmentObject(appState)
+            }
             .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
                 Button("Cancel", role: .cancel) {}
                 Button("Start over", role: .destructive) {
@@ -837,16 +849,6 @@ struct MeTab: View {
                 }
                 .disabled(regeneratingVoice)
             }
-        }
-        .sheet(isPresented: $comparingVoice) {
-            VoiceComparisonSheet(
-                scriptOpening: VoiceCloneScript.comparisonOpening(
-                    scriptLanguage: appState.cloneScriptLanguage,
-                    targetLanguage: appState.targetLanguage),
-                // Outside onboarding a re-record is the full destructive path,
-                // so hand it to the confirmation that already guards it.
-                onRerecord: { confirmingVoiceReset = true })
-                .environmentObject(appState)
         }
         .alert("Rebuild your voice?", isPresented: $confirmingVoiceRegenerate) {
             Button("Cancel", role: .cancel) {}
