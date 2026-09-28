@@ -186,7 +186,8 @@ struct ConversationHome: View {
                 PersonaDeepenSheet().environmentObject(appState)
             }
             .sheet(isPresented: $showingBuilder) {
-                ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
+                ScenarioComposerSheet(person: nil, mode: .custom,
+                                      ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
                     appState.saveScenario(newScenario)
                     // Straight into the conversation with the fresh scenario.
                     runScenario(newScenario)
@@ -1067,7 +1068,8 @@ struct TalkScenariosListView: View {
             }
         }
         .sheet(isPresented: $showingBuilder) {
-            ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
+            ScenarioComposerSheet(person: nil, mode: .custom,
+                                  ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
                 appState.saveScenario(newScenario)
                 // Straight into the conversation with the fresh scenario.
                 onPick(newScenario)

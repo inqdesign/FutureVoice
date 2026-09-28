@@ -184,6 +184,13 @@ enum TopicEngine {
                      + "language — CONTEXT ONLY: never quote it back, and never "
                      + "let its language change the language you write in)")
         lines.append("- name: \(counterpart.name)")
+        if counterpart.cast == .publicFigure {
+            // Identity only — the model knows the person; a stored summary
+            // narrows every idea to the one fact in it.
+            let who = counterpart.publicIdentity.flatMap { $0.isEmpty ? nil : $0 } ?? counterpart.name
+            lines.append("- who: \(who), the real public figure — draw on everything publicly known about them")
+            return lines.joined(separator: "\n")
+        }
         if !counterpart.relationship.isEmpty {
             lines.append("- relationship: \(counterpart.relationship)")
         }
@@ -320,10 +327,15 @@ enum TopicEngine {
             lines.append("")
             lines.append("COUNTERPART (the scene is WITH this person):")
             lines.append("- name: \(c.name)")
-            if !c.relationship.isEmpty { lines.append("- relationship: \(c.relationship)") }
-            if !c.howWeMet.isEmpty { lines.append("- how they met: \(c.howWeMet)") }
-            if !c.background.isEmpty { lines.append("- shared context: \(c.background)") }
-            if !c.commonTopics.isEmpty { lines.append("- common topics: \(c.commonTopics)") }
+            if c.cast == .publicFigure {
+                let who = c.publicIdentity.flatMap { $0.isEmpty ? nil : $0 } ?? c.name
+                lines.append("- who: \(who), the real public figure — draw on everything publicly known about them")
+            } else {
+                if !c.relationship.isEmpty { lines.append("- relationship: \(c.relationship)") }
+                if !c.howWeMet.isEmpty { lines.append("- how they met: \(c.howWeMet)") }
+                if !c.background.isEmpty { lines.append("- shared context: \(c.background)") }
+                if !c.commonTopics.isEmpty { lines.append("- common topics: \(c.commonTopics)") }
+            }
         }
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,

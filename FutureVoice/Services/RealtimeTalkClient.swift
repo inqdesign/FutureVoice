@@ -721,6 +721,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "set", "speed": speed.multiplier])
     }
 
+    /// Coach mode's per-turn steer: appended to the gateway's system prompt
+    /// for every reply written until it is changed. Empty clears it. A
+    /// gateway older than the field ignores it — the hint still shows, only
+    /// without a question written for it.
+    func setSteer(_ steer: String) {
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "steer": steer])
+    }
+
     /// Hang up: tells the gateway, then tears the local side down.
     func hangUp() {
         guard !isTornDown else { return }

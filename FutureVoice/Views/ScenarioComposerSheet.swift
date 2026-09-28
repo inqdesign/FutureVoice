@@ -26,8 +26,10 @@ struct ScenarioComposerSheet: View {
     /// category grid (the original composer); `.custom` is the one-line BOX
     /// — text, the material attached as chips above it, and one tool row
     /// (attach · the other person · the CTA) — with no category grid at all.
-    /// Watch's "Your own situation" opens `.custom`; "Common situations" and
-    /// every other caller open `.browse`. Editing always uses the Form.
+    /// Watch's "Your own situation" and Talk's "+" open `.custom` — adding a
+    /// situation is WRITING one, and the "+" landed on the category grid until
+    /// 2026-09-27; "Common situations" and every other caller open `.browse`.
+    /// Editing always uses the Form.
     enum Mode { case browse, custom }
 
     var person: Counterpart?

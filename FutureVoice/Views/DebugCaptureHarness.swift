@@ -224,9 +224,15 @@ enum DebugCapture {
         return out
     }
 
+    /// True from the moment a capture run resolves its screen. A surface
+    /// that would otherwise START on appear (a run, a countdown) checks it
+    /// and holds still, so the screenshot catches the state it was asked for.
+    static var isCapturing = false
+
     /// Seeds synchronously (before the child view's onAppear reads the stores),
     /// then returns the REAL screen. nil for an unknown name.
     static func view(for name: String, appState: AppState) -> AnyView? {
+        isCapturing = true
         switch name {
         case "vocab":
             once("vocab") { seedVocab() }
@@ -1087,6 +1093,12 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 WordCard(word: "慌てる", currentWord: .constant("慌てる"))
             }.environmentObject(appState))
+        case "transcript":
+            // The English talk's transcript (Replay) — corrections under the
+            // learner's lines, for the feature-series carousel.
+            return AnyView(NavigationStack {
+                TalkTranscriptView(session: talkDetailSession)
+            }.environmentObject(appState))
         case "transcript-ja", "talkdetail-ja":
             // A Japanese talk — the one target with no spaces. The transcript
             // has to draw its 、。 back around highlighted words, the
@@ -1245,6 +1257,13 @@ enum DebugCapture {
             turns: turns, summary: summary)
     }
 
+    /// Sample coaching text in the learner's language — coaching is native
+    /// (see "Two languages"), so an English note on a Korean screenshot
+    /// would show something the app never does.
+    private static func coachNote(_ en: String, _ ko: String) -> String {
+        LanguageCatalog.currentNative == "ko" ? ko : en
+    }
+
     static var talkDetailSession: Session {
         let started = Date().addingTimeInterval(-900)
         let turns = [
@@ -1255,7 +1274,7 @@ enum DebugCapture {
                  transcript: "Honestly, it go really well. I felt prepared.", durationMs: 62_000,
                  timestamp: started.addingTimeInterval(6),
                  suggestion: TurnSuggestion(alternative: "Honestly, it went really well — I felt prepared.",
-                                            reason: "past tense")),
+                                            reason: coachNote("past tense", "지난 일이라 과거형이에요"))),
             Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
                  transcript: "That's a compelling perspective — you clearly took the initiative to prioritize what mattered.", durationMs: 4200,
                  timestamp: started.addingTimeInterval(70), suggestion: nil),
@@ -1263,12 +1282,12 @@ enum DebugCapture {
                  transcript: "How relaxed I stayed, even on hard question.", durationMs: 58_000,
                  timestamp: started.addingTimeInterval(80),
                  suggestion: TurnSuggestion(alternative: "How relaxed I stayed, even on the hard questions.",
-                                            reason: "article + plural"))
+                                            reason: coachNote("article + plural", "the를 붙이고 복수형으로")))
         ]
         var summary = SessionSummary(
             phrasesUsed: [PhraseFeedback(userSaid: "it go really well",
                                          fluentAlternative: "it went really well",
-                                         reason: "past tense")],
+                                         reason: coachNote("past tense", "지난 일이라 과거형이에요"))],
             newPatternsDetected: [],
             suggestedDrills: ["I'd say the trade-off was worth it.",
                               "Looking back, I would have prepared differently."],
@@ -1281,10 +1300,10 @@ enum DebugCapture {
         summary.grammarIssues = [
             GrammarIssue(quote: "Honestly, it go really well.",
                          correction: "Honestly, it went really well.",
-                         note: "past tense needed"),
+                         note: coachNote("past tense needed", "지난 일이라 과거형이에요")),
             GrammarIssue(quote: "even on hard question",
                          correction: "even on the hard questions",
-                         note: "article + plural")
+                         note: coachNote("article + plural", "the를 붙이고 복수형으로"))
         ]
         return Session(
             id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D1")!,
@@ -1381,9 +1400,9 @@ enum DebugCapture {
 
         // A few review cards due NOW, so Home's "Review N cards" action shows.
         let due: [(String, String, String)] = [
-            ("it go really well", "it went really well", "past tense"),
-            ("I very like it", "I really like it", "adverb choice"),
-            ("more easy", "easier", "comparative form"),
+            ("it go really well", "it went really well", coachNote("past tense", "지난 일이라 과거형이에요")),
+            ("I very like it", "I really like it", coachNote("adverb choice", "very는 동사를 꾸미지 못해요")),
+            ("more easy", "easier", coachNote("comparative form", "짧은 형용사는 -er로 비교해요")),
         ]
         for (src, tgt, why) in due {
             DrillStore.shared.seed(DrillCard(

@@ -14,9 +14,10 @@ struct CounterpartVoiceIntakeView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
-    // who → relationship → 3 tailored narrative cards → interests → style
+    // who → relationship → how you talk → 3 tailored narrative cards →
+    // interests → style
     private enum Step: Int, CaseIterable {
-        case who, relationship, narrative1, narrative2, narrative3, interests, style
+        case who, relationship, speech, narrative1, narrative2, narrative3, interests, style
     }
 
     @State private var step: Step = .who
@@ -33,6 +34,14 @@ struct CounterpartVoiceIntakeView: View {
     @State private var interests: [String] = []
     @State private var styleTraits: [String] = []
     @State private var styleNotes = ""
+    // How the two of them talk — the card right after the relationship,
+    // prefilled from it so it reads as a confirmation. `speechTouched` stops
+    // a later change of relationship from overwriting what they picked.
+    @State private var myRegister: SpeechRegister = .polite
+    @State private var theirRegister: SpeechRegister = .polite
+    @State private var iCallThem = ""
+    @State private var theyCallMe = ""
+    @State private var speechTouched = false
     @State private var isParsing = false
     @State private var error: String?
     @State private var prefilled: Counterpart?
@@ -49,7 +58,8 @@ struct CounterpartVoiceIntakeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
+                ProgressView(value: Double((steps.firstIndex(of: step) ?? 0) + 1),
+                             total: Double(steps.count))
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                 ScrollView {
@@ -73,10 +83,10 @@ struct CounterpartVoiceIntakeView: View {
                 .animation(.snappy, value: step)
                 IntakeBottomBar(
                     backVisible: step != .who,
-                    nextTitle: step == .style ? chrome("Continue") : chrome("Next"),
+                    nextTitle: neighbor(1) == nil ? chrome("Continue") : chrome("Next"),
                     nextEnabled: canAdvance,
                     isWorking: isParsing,
-                    onBack: { withAnimation { step = Step(rawValue: step.rawValue - 1) ?? .who } },
+                    onBack: { withAnimation { step = neighbor(-1) ?? .who } },
                     onNext: advance
                 )
             }
@@ -98,6 +108,12 @@ struct CounterpartVoiceIntakeView: View {
                 CounterpartFormView(initial: nil, photo: photo)
                     .environmentObject(appState)
             }
+            .onChange(of: kind) { _, k in
+                guard !speechTouched else { return }
+                let d = Counterpart.defaultRegisters(forKind: k?.rawValue)
+                myRegister = d.mine
+                theirRegister = d.theirs
+            }
             .onAppear {
                 locale = SpeakOrTypeField.defaultLocale(
                     appLanguage: appState.nativeLanguage,
@@ -107,7 +123,9 @@ struct CounterpartVoiceIntakeView: View {
                 if let raw = UserDefaults.standard.string(forKey: "intakeStep"),
                    let i = Int(raw), let s = Step(rawValue: i) {
                     name = "Boram"
-                    kind = .fellowParent
+                    // `-intakeKind "Public figure"` picks another relationship.
+                    kind = UserDefaults.standard.string(forKey: "intakeKind")
+                        .flatMap(RelationshipKind.init(rawValue:)) ?? .fellowParent
                     step = s
                 }
                 #endif
@@ -122,6 +140,7 @@ struct CounterpartVoiceIntakeView: View {
         switch step {
         case .who:          whoStep
         case .relationship: relationshipStep
+        case .speech:       speechStep
         case .narrative1:   narrativeStep(0)
         case .narrative2:   narrativeStep(1)
         case .narrative3:   narrativeStep(2)
@@ -186,8 +205,61 @@ struct CounterpartVoiceIntakeView: View {
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             if kind == .publicFigure {
-                Text(explain("A public figure's profile is filled from public coverage — where they're from, what they're known for, how they talk in interviews. Their voice is a preset, never their real one."))
+                Text(explain("We'll find who they are — you just confirm. Their voice is a preset, never their real one."))
                     .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// How the learner and this person speak to each other. The profile
+    /// cards say who the person IS; nothing said how the two of them TALK,
+    /// so a best friend was voiced in polite speech. Both directions, because
+    /// Korean and Japanese let them differ.
+    private var speechStep: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            IntakeStepHeader(
+                question: name.isEmpty
+                    ? explain("How do you two talk?")
+                    : explain("How do you and \(name) talk?"),
+                detail: explain("Calls and scenes speak this way. You can change it later."))
+            VStack(alignment: .leading, spacing: 18) {
+                registerPicker(title: explain("You talk to them"), selection: $myRegister)
+                registerPicker(title: name.isEmpty
+                                   ? explain("They talk to you")
+                                   : explain("\(name) talks to you"),
+                               selection: $theirRegister)
+            }
+            .padding(14)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(spacing: 0) {
+                TextField("What you call them (optional)", text: $iCallThem)
+                    .padding(14)
+                Divider().padding(.leading, 14)
+                TextField("What they call you (optional)", text: $theyCallMe)
+                    .padding(14)
+            }
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func registerPicker(title: String, selection: Binding<SpeechRegister>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Picker(title, selection: Binding(
+                get: { selection.wrappedValue },
+                set: { speechTouched = true; selection.wrappedValue = $0 })) {
+                ForEach(SpeechRegister.allCases) { r in
+                    Text(r.title).tag(r)
+                }
+            }
+            .pickerStyle(.segmented)
+            if let term = selection.wrappedValue.term(in: appState.targetLanguage) {
+                Text(explain("In \(LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage)): \(term)"))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -240,6 +312,29 @@ struct CounterpartVoiceIntakeView: View {
 
     // MARK: - Flow
 
+    /// The steps this person actually has. A relationship can ask fewer
+    /// than three narrative questions (a public figure asks two), and a card
+    /// kept only to fill a slot is one the learner can't see the point of.
+    private var steps: [Step] {
+        // A public figure is known to the model: the name is the intake, and
+        // the grounded lookup fills the rest for the form to confirm.
+        if kind == .publicFigure { return [.who, .relationship] }
+        let cardCount = (kind ?? .other).cards.count
+        return Step.allCases.filter { s in
+            switch s {
+            case .narrative1: return cardCount > 0
+            case .narrative2: return cardCount > 1
+            case .narrative3: return cardCount > 2
+            default: return true
+            }
+        }
+    }
+
+    private func neighbor(_ offset: Int) -> Step? {
+        guard let i = steps.firstIndex(of: step), steps.indices.contains(i + offset) else { return nil }
+        return steps[i + offset]
+    }
+
     private var canAdvance: Bool {
         switch step {
         case .who:          return !name.trimmingCharacters(in: .whitespaces).isEmpty
@@ -249,10 +344,10 @@ struct CounterpartVoiceIntakeView: View {
     }
 
     private func advance() {
-        if step == .style {
+        if neighbor(1) == nil {
             Task { await parseAndContinue() }
         } else {
-            withAnimation { step = Step(rawValue: step.rawValue + 1) ?? .style }
+            withAnimation { step = neighbor(1) ?? .style }
         }
     }
 
@@ -260,6 +355,29 @@ struct CounterpartVoiceIntakeView: View {
         isParsing = true
         defer { isParsing = false }
         error = nil
+
+        // A public figure: the model already knows the person, so the only
+        // question is WHICH one — look that up and hand the form an identity
+        // to confirm. Nothing else about them is written down. Not found
+        // still opens the form, where the name can be fixed and looked up
+        // again; that is the one place to confirm or correct.
+        if kind == .publicFigure {
+            var draft = Counterpart.empty
+            draft.name = name
+            draft.relationship = kindDetail.isEmpty ? RelationshipKind.publicFigure.rawValue : kindDetail
+            draft.relationshipKind = RelationshipKind.publicFigure.rawValue
+            draft.isPublicFigure = true
+            do {
+                draft.publicIdentity = try await CounterpartParser.identifyPublicFigure(
+                    name: name, nativeLanguage: appState.nativeLanguage)
+                draft.factsRefreshedAt = Date()
+            } catch {
+                self.error = "Couldn't look them up: \(error.localizedDescription)"
+                return
+            }
+            prefilled = draft
+            return
+        }
 
         let kindLabel = [kind?.rawValue ?? "", kindDetail]
             .filter { !$0.isEmpty }.joined(separator: " — ")
@@ -287,11 +405,7 @@ struct CounterpartVoiceIntakeView: View {
         }
         if !styleLine.isEmpty { sections.append("How they talk: \(styleLine)") }
 
-        // A public figure is looked up whatever the learner said — the
-        // profile comes from coverage, not from the cards — so the
-        // skip-the-model shortcut below never applies to one.
-        if kind != .publicFigure,
-           narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty })
+        if narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty })
             && narrativeChips.allSatisfy(\.isEmpty) {
             // Nothing to extract — skip the LLM and go straight to the form.
             var draft = Counterpart.empty
@@ -299,6 +413,7 @@ struct CounterpartVoiceIntakeView: View {
             draft.relationship = kindDetail.isEmpty ? (kind?.rawValue ?? "") : kindDetail
             draft.conversationStyle = styleLine
             draft.commonTopics = interests.joined(separator: ", ")
+            applySpeech(to: &draft)
             prefilled = draft
             return
         }
@@ -307,8 +422,7 @@ struct CounterpartVoiceIntakeView: View {
             var draft = try await CounterpartParser.parse(
                 spokenDescription: sections.joined(separator: "\n\n"),
                 languageHint: locale,
-                nativeLanguage: appState.nativeLanguage,
-                publicFigure: kind == .publicFigure)
+                nativeLanguage: appState.nativeLanguage)
             // What the user typed outright wins over the parse.
             draft.name = name
             // The relationship card is REQUIRED, so the user always gave one —
@@ -319,10 +433,23 @@ struct CounterpartVoiceIntakeView: View {
             if draft.relationship.trimmingCharacters(in: .whitespaces).isEmpty {
                 draft.relationship = kindDetail.isEmpty ? (kind?.rawValue ?? "") : kindDetail
             }
+            applySpeech(to: &draft)
             prefilled = draft
         } catch {
             self.error = "Couldn't parse: \(error.localizedDescription)"
         }
+    }
+
+    /// What the speech card settled, onto the draft the form opens with.
+    private func applySpeech(to draft: inout Counterpart) {
+        draft.relationshipKind = kind?.rawValue
+        // Only what the learner actually saw and settled; a skipped card
+        // leaves the person on its cast's default (polite, never corrected).
+        guard steps.contains(.speech) else { return }
+        draft.myRegister = myRegister
+        draft.theirRegister = theirRegister
+        draft.iCallThem = iCallThem.trimmingCharacters(in: .whitespacesAndNewlines)
+        draft.theyCallMe = theyCallMe.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -483,22 +610,13 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
                           "Talks fast", "Recent school events",
                           "I want to ask more questions"])
         ]
-        case .publicFigure: return [
-            .init(question: "Why this person?",
-                  detail: Self.tapOrTalk,
-                  chips: ["Fan for years", "Their music", "Their films or shows",
-                          "Their sport", "Their interviews",
-                          "They're why I'm learning this language"]),
-            .init(question: "Where would you meet them?",
-                  detail: "The scene is built around this moment.",
-                  chips: ["Fan meeting", "An interview", "Backstage",
-                          "At the airport", "By chance, in a cafe", "A signing event"]),
-            .init(question: "What would you want to say to them?",
-                  detail: "Say it in your own language — the fluent self says it in theirs.",
-                  chips: ["Thank them", "Tell them what their work meant to me",
-                          "Ask about their work", "Ask for advice",
-                          "Just say hello properly", "A question I've always had"])
-        ]
+        // No cards: the model already knows a public figure, so their name
+        // is the whole intake (see `steps`). Cards asking where you'd meet
+        // them, what you'd say, which side of them you follow and what you'd
+        // talk about were each tried and cut on 2026-09-28 — every one either
+        // shrank the person to a scene or asked the learner to do the
+        // model's job.
+        case .publicFigure: return []
         case .other: return [
             .init(question: "How do you know each other?",
                   detail: Self.tapOrTalk,

@@ -127,7 +127,12 @@ enum SessionSummarizer {
             // The talk's own day, not the summary's: a rescued summary runs
             // days later, and "tomorrow" in the transcript means the day
             // after the talk.
-            talkDate: turns.last?.timestamp ?? session.startedAt
+            talkDate: turns.last?.timestamp ?? session.startedAt,
+            // A talk with someone the learner set a form of address for may
+            // be corrected on it (`relationshipRegisterLine`).
+            counterpart: session.counterpartId.flatMap { id in
+                appState.counterparts.first { $0.id == id }
+            }
         )
         let transcript = ConversationEngine.formatTranscript(turns)
         let metrics = ScorecardMetrics.compute(turns: turns)

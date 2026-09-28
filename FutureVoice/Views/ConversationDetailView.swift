@@ -1435,7 +1435,7 @@ private struct TranscriptRow: View {
 
     var body: some View {
         DialogueLine(speaker: speaker,
-                     name: turn.role == .user ? "You" : "Future self",
+                     name: turn.role == .user ? chrome("You") : chrome("Future self"),
                      isCurrent: isCurrent) {
             if turn.role == .fluentSelf {
                 // One Text with normal word spacing — only the few words worth

@@ -94,8 +94,10 @@ struct ChipPickerField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             let all = presets + selection.filter { !presets.contains($0) }
-            let columns = [GridItem(.adaptive(minimum: 110), spacing: 8)]
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            // Flow, not a grid: an adaptive grid gives every chip the same
+            // column, so a long answer wrapped to three lines inside its cell
+            // while a short one sat in half-empty space beside it.
+            FlowLayout(spacing: 8, lineSpacing: 8) {
                 ForEach(all, id: \.self) { tag in
                     Button {
                         toggle(tag)

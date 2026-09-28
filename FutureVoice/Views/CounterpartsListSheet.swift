@@ -66,59 +66,83 @@ struct CounterpartFormView: View {
                 }
 
                 if draft.isPublicFigure == true {
+                    // The whole profile of a public figure: WHO it is, for the
+                    // learner to confirm. The model knows the rest.
                     Section {
-                        if let who = draft.publicIdentity, !who.isEmpty {
-                            HStack {
-                                Text("Who")
-                                Spacer()
+                        HStack {
+                            Text("Who")
+                            Spacer()
+                            if let who = draft.publicIdentity, !who.isEmpty {
                                 Text(who).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                            } else if draft.factsRefreshedAt != nil {
+                                Text("Not found").foregroundStyle(.secondary)
                             }
                         }
                         Button {
-                            Task { await refreshPublicFacts() }
+                            Task { await lookUpAgain() }
                         } label: {
                             HStack {
-                                Label("Refresh public info", systemImage: "arrow.clockwise")
+                                Label("Look up again", systemImage: "magnifyingglass")
                                 Spacer()
                                 if refreshingFacts { ProgressView().controlSize(.small) }
                             }
                         }
                         .disabled(refreshingFacts || draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
                     } header: {
-                        Text("Public info")
+                        Text("Who they are")
                     } footer: {
                         if let e = refreshError {
                             Text(e).foregroundStyle(.red)
-                        } else if let at = draft.factsRefreshedAt {
-                            Text("Looked up \(at, format: .dateTime.month(.abbreviated).day()). Only public facts — nothing private, nothing invented. Edit anything below by hand.")
+                        } else if draft.publicIdentity?.isEmpty == false {
+                            Text(explain("Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again."))
+                        } else if draft.factsRefreshedAt != nil {
+                            Text(explain("Nobody public came up for that name. Check the spelling and look up again."))
                         } else {
-                            Text(explain("Fills the fields below from public coverage."))
+                            Text(explain("Look up to find who they are, then confirm."))
                         }
+                    }
+                } else {
+                    Section("About them") {
+                        TextField("Where they live, what they do",
+                                  text: $draft.location, axis: .vertical)
+                            .lineLimit(1...4)
+                    }
+
+                    Section("Your history together") {
+                        TextField("How you met (and how long)",
+                                  text: $draft.howWeMet, axis: .vertical)
+                            .lineLimit(1...3)
+                        TextField("Shared context, memories, inside jokes",
+                                  text: $draft.background, axis: .vertical)
+                            .lineLimit(2...8)
+                    }
+
+                    Section("How they talk") {
+                        TextField("Style (e.g. Direct, loves jokes / Formal, careful)",
+                                  text: $draft.conversationStyle, axis: .vertical)
+                            .lineLimit(1...3)
+                        TextField("What you usually talk about",
+                                  text: $draft.commonTopics, axis: .vertical)
+                            .lineLimit(1...3)
                     }
                 }
 
-                Section("About them") {
-                    TextField("Where they live, what they do",
-                              text: $draft.location, axis: .vertical)
-                        .lineLimit(1...4)
-                }
-
-                Section("Your history together") {
-                    TextField("How you met (and how long)",
-                              text: $draft.howWeMet, axis: .vertical)
-                        .lineLimit(1...3)
-                    TextField("Shared context, memories, inside jokes",
-                              text: $draft.background, axis: .vertical)
-                        .lineLimit(2...8)
-                }
-
-                Section("How they talk") {
-                    TextField("Style (e.g. Direct, loves jokes / Formal, careful)",
-                              text: $draft.conversationStyle, axis: .vertical)
-                        .lineLimit(1...3)
-                    TextField("What you usually talk about",
-                              text: $draft.commonTopics, axis: .vertical)
-                        .lineLimit(1...3)
+                Section {
+                    registerPicker(explain("You talk to them"), selection: $draft.myRegister)
+                    registerPicker(explain("They talk to you"), selection: $draft.theirRegister)
+                    TextField("What you call them", text: $draft.iCallThem)
+                    TextField("What they call you", text: $draft.theyCallMe)
+                    if draft.cast == .ownPerson {
+                        Toggle("Knows your life", isOn: Binding(
+                            get: { draft.knowsLearnersLife },
+                            set: { draft.knowsMyLife = $0 }))
+                    }
+                } header: {
+                    Text("How you two talk")
+                } footer: {
+                    Text(draft.cast == .ownPerson
+                         ? explain("Calls and scenes speak this way. Someone who knows your life knows what you've told your future self, the way a close friend would.")
+                         : explain("Calls and scenes speak this way."))
                 }
 
                 Section("Voice") {
@@ -135,10 +159,12 @@ struct CounterpartFormView: View {
                     }
                 }
 
-                Section("Anything else") {
-                    TextField("Free notes — quirks, recent events, anything that helps",
-                              text: $draft.freeNotes, axis: .vertical)
-                        .lineLimit(2...6)
+                if draft.isPublicFigure != true {
+                    Section("Anything else") {
+                        TextField("Free notes — quirks, recent events, anything that helps",
+                                  text: $draft.freeNotes, axis: .vertical)
+                            .lineLimit(2...6)
+                    }
                 }
             }
             .navigationTitle(initial == nil ? "New persona" : "Edit persona")
@@ -169,6 +195,18 @@ struct CounterpartFormView: View {
         .interactiveDismissDisabled(hasUnsavedWork)
     }
 
+    /// One form-of-address row. "Automatic" is nil: the relationship decides,
+    /// which is what every person made before the field existed does.
+    private func registerPicker(_ title: String, selection: Binding<SpeechRegister?>) -> some View {
+        Picker(title, selection: selection) {
+            Text("Automatic").tag(SpeechRegister?.none)
+            ForEach(SpeechRegister.allCases) { r in
+                Text(r.term(in: appState.targetLanguage).map { "\(r.title) · \($0)" } ?? r.title)
+                    .tag(SpeechRegister?.some(r))
+            }
+        }
+    }
+
     /// A person not on file yet is unsaved by definition (the intake's
     /// parsed draft included); an existing one only once something changed.
     private var hasUnsavedWork: Bool {
@@ -178,28 +216,15 @@ struct CounterpartFormView: View {
         return draft != initial || pendingPhoto != nil || removePhoto
     }
 
-    /// Re-run the grounded parse for a public figure and take its facts into
-    /// the profile. The learner's own fields — name, how they relate to the
-    /// person — are kept; only what coverage can answer is replaced.
-    private func refreshPublicFacts() async {
+    /// Ask again WHO this name is — after the learner fixed a spelling, or
+    /// when the first answer was the wrong person.
+    private func lookUpAgain() async {
         refreshingFacts = true
         refreshError = nil
         defer { refreshingFacts = false }
-        var lines = ["Their name: \(draft.name)"]
-        if !draft.relationship.isEmpty { lines.append("Relationship to me: \(draft.relationship)") }
-        if let who = draft.publicIdentity, !who.isEmpty { lines.append("Who they are: \(who)") }
-        if !draft.background.isEmpty { lines.append("What I have on file: \(draft.background)") }
         do {
-            let fresh = try await CounterpartParser.parse(
-                spokenDescription: lines.joined(separator: "\n"),
-                languageHint: appState.nativeLanguage,
-                nativeLanguage: appState.nativeLanguage,
-                publicFigure: true)
-            draft.publicIdentity = fresh.publicIdentity ?? draft.publicIdentity
-            if !fresh.location.isEmpty { draft.location = fresh.location }
-            if !fresh.background.isEmpty { draft.background = fresh.background }
-            if !fresh.conversationStyle.isEmpty { draft.conversationStyle = fresh.conversationStyle }
-            if !fresh.commonTopics.isEmpty { draft.commonTopics = fresh.commonTopics }
+            draft.publicIdentity = try await CounterpartParser.identifyPublicFigure(
+                name: draft.name, nativeLanguage: appState.nativeLanguage)
             draft.factsRefreshedAt = Date()
         } catch {
             refreshError = error.localizedDescription

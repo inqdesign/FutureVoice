@@ -91,6 +91,20 @@ struct SayItAgainView: View {
     init(source: Source) {
         self.source = source
         _steps = State(initialValue: source.steps)
+        // The opening state is decided HERE, not in `onAppear`. A run that
+        // skips the intro used to start one frame late, so the intro was
+        // drawn and then taken away — "인트로가 나오다가 자동으로 닫혀" — which
+        // is worse than the screen it was meant to remove. The first frame is
+        // now already the conversation's first line; `onAppear` only sets it
+        // playing. `UserDefaults` directly because `@AppStorage` isn't
+        // readable before `self` exists; it is the same store the property
+        // wrapper writes.
+        let seen = UserDefaults.standard.bool(forKey: Self.introSeenKey)
+        guard seen, let first = source.steps.first,
+              source.steps.contains(where: { $0.isSpoken }) else { return }
+        _index = State(initialValue: 0)
+        _phase = State(initialValue: first.isSpoken ? .reading : .listening)
+        if first.isSpoken { _promptStep = State(initialValue: first) }
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -120,6 +134,15 @@ struct SayItAgainView: View {
     /// The last step held the mic, so the next playback has to put the audio
     /// session back — capture leaves it configured for capture.
     @State private var justRecorded = false
+    /// Whether the learner has been told what this screen is. Shown ONCE
+    /// and then never again: they arrived by tapping "Say it again" on the
+    /// book, so from the second run the same paragraph plus a Start button is
+    /// a page between them and the thing they already asked for. The first
+    /// run keeps it — the mode is unusual enough to need a sentence, and it
+    /// is also where the mic permission prompt belongs, in front of a tap
+    /// the learner made rather than on top of a run already going.
+    static let introSeenKey = "futurevoice.sayItAgain.introSeen"
+    @AppStorage(introSeenKey) private var introSeen = false
     @State private var micError: String?
     @State private var askingMicChoice = false
     @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
@@ -194,7 +217,14 @@ struct SayItAgainView: View {
         .onAppear {
             #if DEBUG
             seedCaptureStage()
+            // A capture asked for one state; running would leave it. The
+            // opening state itself still comes from `init`, so a capture can
+            // photograph either one by flipping `introSeenKey`.
+            guard !DebugCapture.isCapturing else { return }
             #endif
+            // `init` skipped the intro, so the run is already on screen and
+            // only needs to start. Guarded so a re-appear can't restart it.
+            if phase != .intro, runTask == nil { start(from: 0) }
         }
         .onDisappear(perform: tearDown)
     }
@@ -337,6 +367,7 @@ struct SayItAgainView: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 Button {
+                    introSeen = true      // shown once; from here it opens straight into the run
                     start(from: 0)
                 } label: {
                     Label("Start", systemImage: "text.viewfinder")
@@ -457,6 +488,14 @@ struct SayItAgainView: View {
     /// pacing — there is no timer anywhere on this screen.
     private func run(from start: Int) async {
         oneOffRetry = false
+        // Leave the intro BEFORE the mic question, not after it: on a run
+        // that started by itself the learner never asked for that screen,
+        // and it would sit behind the sheet as the thing they came to skip.
+        if steps.indices.contains(start) {
+            index = start
+            if steps[start].isSpoken { promptStep = steps[start] }
+            phase = steps[start].isSpoken ? .reading : .listening
+        }
         await askMicChoiceIfNeeded()
         var i = start
         while !Task.isCancelled, i < steps.count {

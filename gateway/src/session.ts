@@ -29,6 +29,10 @@ const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
 const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
 const CONVERSATION_MODEL = "eleven_turbo_v2_5"
 
+/** Coach mode's steer is a sentence or two; anything longer is not what the
+ *  app sends, and it rides straight into the system prompt. */
+const MAX_STEER_CHARS = 600
+
 /** The app's speech-speed setting, made safe. Anything outside ElevenLabs'
  *  0.7–1.2 window is refused by upstream for the WHOLE line, which would be a
  *  silent call — so a nonsense value becomes "no preference", never an error. */
@@ -169,6 +173,9 @@ export class CallSession implements DurableObject {
   /** A `say` that arrived before the session finished starting — see the
    *  handler. Spoken the moment `ready` goes out. */
   private pendingSay: { text: string; alreadySpoken: boolean } | null = null
+  /** Coach mode's steer, kept so one that arrives before `start` has built
+   *  the reply engine still applies. */
+  private pendingSteer = ""
 
   /** Sliding window of what the fluent self RECENTLY said out loud — the
    *  reference the echo judgement compares against. The server is the one
@@ -554,6 +561,11 @@ export class CallSession implements DurableObject {
       // Mid-call settings. Nothing here may end a call: a setting the gateway
       // cannot honour is dropped, never raised.
       if (msg.speed !== undefined) this.eleven?.setSpeed(clampSpeed(msg.speed))
+      if (typeof msg.steer === "string") {
+        const steer = msg.steer.trim().slice(0, MAX_STEER_CHARS)
+        this.pendingSteer = steer
+        if (this.replyEngine) this.replyEngine.steer = steer
+      }
       return
     }
     if (msg.type !== "start" || this.started) return
@@ -631,6 +643,7 @@ export class CallSession implements DurableObject {
       model: this.env.GEMINI_REPLY_MODEL ?? DEFAULT_REPLY_MODEL,
       system: msg.system,
     })
+    this.replyEngine.steer = this.pendingSteer
 
     this.eleven = new ElevenTTS(
       {

@@ -197,6 +197,24 @@ enum TalkGoalPicker {
     /// Interleave so the row opens with something short: a phrase first
     /// would fill the visible width on its own and the words would only
     /// exist for whoever scrolls. Phrases are capped at `maxExpressions`.
+    /// Coach mode's extra pool: notebook words a TALK kept on its own
+    /// (`VocabStore.autoKept`) that the chip row leaves out. The row is about
+    /// what the learner chose, but most notebooks fill this way, and a coach
+    /// with nothing to coach is a switch that does nothing (the first device
+    /// test, 2026-09-28: eleven words on file, all auto-kept, no hint ever).
+    /// These are words the fluent self taught them — fair to steer toward.
+    static func coachExtras(excluding keys: Set<String>,
+                            now: Date = Date(),
+                            calendar: Calendar = .current) -> [TalkGoalItem] {
+        let store = VocabStore.shared
+        let practiced = Set(store.practicedStudyingWords)
+        return ordered(store.studying.filter { !practiced.contains($0) },
+                       kind: .word, now: now, calendar: calendar)
+            .filter { WordSplitter.isSingleWord($0) }
+            .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: true) }
+            .filter { !keys.contains($0.key) }
+    }
+
     private static func merge(words: [TalkGoalItem], phrases: [TalkGoalItem],
                               limit: Int) -> [TalkGoalItem] {
         let phrases = Array(phrases.prefix(maxExpressions))
@@ -459,5 +477,47 @@ struct TalkGoalSheet: View {
         entry = fetched
         failed = fetched == nil
         loading = false
+    }
+}
+
+/// Coach mode's hint: the word, and a tick once it has been said. Worded so
+/// the item never needs a particle or an article attached to it ("Try using ·
+/// rest"), which no language's grammar can agree with for an arbitrary word.
+struct CoachHintLabel: View {
+    let item: TalkGoalItem
+    let used: Bool
+
+    var body: some View {
+        Label {
+            HStack(spacing: 4) {
+                Text(used ? "Used it" : "Try using")
+                    .foregroundStyle(.secondary)
+                Text("·").foregroundStyle(.tertiary)
+                Text(item.text).bold()
+            }
+        } icon: {
+            Image(systemName: used ? "checkmark.circle.fill" : "lightbulb")
+                .foregroundStyle(used ? Color.green : Color.accentColor)
+        }
+        .font(.subheadline)
+    }
+}
+
+/// Coach mode's line above the pill, for a call with subtitles off (the
+/// hint's home is the listening bubble, which isn't drawn then).
+/// Tapping opens the same one-sense sheet a chip does — a beginner handed a
+/// word mid-call may need its meaning before they can use it.
+struct CoachHintLine: View {
+    let item: TalkGoalItem
+    let used: Bool
+    var onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            CoachHintLabel(item: item, used: used)
+                .padding(.horizontal, 24)
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.25), value: used)
     }
 }

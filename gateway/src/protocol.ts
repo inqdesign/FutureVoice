@@ -80,6 +80,13 @@ export interface SetMessage {
   type: "set"
   /** 0.7–1.2, clamped the same way `start.speed` is. */
   speed?: number
+  /** Coach mode (2026-09-28): a short instruction appended to the system
+   *  prompt for every reply written from now on, until the app changes it.
+   *  The app sets it before the learner answers — "if it fits, ask something
+   *  whose natural answer uses X" — and clears it ("") once that reply has
+   *  been spoken. Length-capped here; an older gateway ignores the field, and
+   *  the app's hint then simply appears without a question built for it. */
+  steer?: string
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage

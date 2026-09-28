@@ -48,6 +48,7 @@ struct CallSettingsSheet: View {
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
     @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
     @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
+    @AppStorage(CoachMode.key) private var coachMode = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -69,6 +70,16 @@ struct CallSettingsSheet: View {
                     Text("Voice")
                 } footer: {
                     Text(explain("Applies from the next thing your future self says."))
+                }
+
+                // Off by default: it trades a little of the call's pace for
+                // being walked toward the words being studied (`CoachMode`).
+                Section {
+                    Toggle(isOn: $coachMode) {
+                        Label("Coach mode", systemImage: "lightbulb")
+                    }
+                } footer: {
+                    Text(explain("Now and then your future self asks something you can answer with a word you're studying, and a hint shows while you think."))
                 }
 
                 Section {

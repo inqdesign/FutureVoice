@@ -97,6 +97,7 @@ struct ConversationView: View {
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
     @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
     @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
+    @AppStorage(CoachMode.key) private var coachMode = false
     /// The call screen is waiting on that pitch to close before it exits.
     @State private var closeAfterPaywall = false
     /// Which of this screen's doors opened the paywall — `PaywallView`'s
@@ -595,6 +596,15 @@ struct ConversationView: View {
     /// The chip the learner tapped — its meaning + an example to say. The call
     /// keeps running underneath; this never pauses anything.
     @State private var goalDetail: TalkGoalItem?
+    /// Coach mode's ration for this call, and the hint on screen while the
+    /// learner answers the question it was built for (`CoachMode.swift`).
+    @State private var coach = CoachPlan()
+    /// The steer last sent to the gateway ("" = none).
+    @State private var coachSteerSent = ""
+    /// Words coach mode may steer toward beyond the chip row — see
+    /// `TalkGoalPicker.coachExtras`. Picked with the row, once per call.
+    @State private var coachExtras: [TalkGoalItem] = []
+    @State private var coachHint: TalkGoalItem?
 
     /// Live lookup, not a copy — resolves through appState so edits to the
     /// person elsewhere are picked up, and resume restores it from the saved
@@ -1037,7 +1047,14 @@ struct ConversationView: View {
                 Text(explain("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."))
             }
             .task { refreshDashboard() }
-            .task { goalItems = pickGoalItems() }
+            .task {
+                goalItems = pickGoalItems()
+                coachExtras = TalkGoalPicker.coachExtras(excluding: Set(goalItems.map(\.key)))
+            }
+            .onChange(of: coachMode) { _, on in
+                syncCoachSteer()
+                if !on { coachHint = nil }
+            }
             .task {
                 let account = await AccountStatus.fetch()
                 canUpgradePlan = account.isLightPlan
@@ -1287,7 +1304,10 @@ struct ConversationView: View {
                             // their partial has text.
                             if showsTranscript,
                                !turns.isEmpty || !realtime.partial.isEmpty {
-                                PartialTurnView(text: realtime.partial)
+                                PartialTurnView(text: realtime.partial, coach: coachHint,
+                                                coachUsed: coachHint.map { usedGoalKeys.contains($0.key) } ?? false) {
+                                    goalDetail = coachHint
+                                }
                                     .id("partial-listening")
                                     .transition(.opacity)
                             }
@@ -1396,6 +1416,14 @@ struct ConversationView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
+            // The hint lives in the learner's own listening bubble; only with
+            // subtitles off (no bubble) does it fall back to a line here.
+            if let item = coachHint, !showsTranscript {
+                CoachHintLine(item: item, used: usedGoalKeys.contains(item.key)) {
+                    goalDetail = item
+                }
+                .transition(.opacity)
+            }
             // A ZStack, not an HStack: the pill is centred by
             // `frame(maxWidth: .infinity)` on the bar, and a sibling in a row
             // would push it off centre. The settings button is laid OVER the
@@ -2433,6 +2461,13 @@ struct ConversationView: View {
             learnerSpokeThisCall = true
             didSaveCurrentSession = false
             creditGoalChips(turnId: turn.id)
+            // A coach hint on a word outside the chip row is judged the same
+            // way; its key joins `usedGoalKeys` so the line can tick.
+            if let hint = coachHint, !usedGoalKeys.contains(hint.key),
+               !TalkGoalPicker.hits(in: turn, among: [hint]).isEmpty {
+                withAnimation(.easeInOut(duration: 0.25)) { _ = usedGoalKeys.insert(hint.key) }
+                HapticEngine.success()
+            }
             requestRealtimeSuggestion(for: turn.id, said: text)
         }
         // The bubble appears WITH the voice and fills as the line is written —
@@ -2440,6 +2475,10 @@ struct ConversationView: View {
         // split speech. Audio is attached at the end, to the same turn.
         realtime.onReplyBegan = { context in
             guard !isTornDown else { return }
+            // The hint belonged to the question just answered.
+            if coachHint != nil {
+                withAnimation(.easeInOut(duration: 0.2)) { coachHint = nil }
+            }
             let turn = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
                             transcript: "", durationMs: 0, timestamp: Date(),
                             suggestion: nil)
@@ -2472,6 +2511,7 @@ struct ConversationView: View {
                 try? FileManager.default.removeItem(at: url)
             }
             didSaveCurrentSession = false
+            advanceCoach(afterReply: text, turnId: id)
         }
         await realtime.connect(
             voiceId: voiceId,
@@ -2513,6 +2553,7 @@ struct ConversationView: View {
         lastActivityAt = Date()
         isPausedForIdle = false
         startIdleWatch()
+        syncCoachSteer()
     }
 
     /// The gateway speaks prose, not the `{reply, suggestion}` JSON the HTTP
@@ -2551,7 +2592,7 @@ struct ConversationView: View {
             let payload: ConversationTurnPayload? = try? await GeminiClient.background.sendJSON(
                 system: ConversationEngine.correctionOnlyPrompt(
                     targetLanguage: target, nativeLanguage: native,
-                    level: appState.proficiency),
+                    level: appState.proficiency, counterpart: counterpart),
                 messages: [GeminiClient.Message(role: .user, content: content)],
                 maxTokens: 900,
                 purpose: "turn",
@@ -3288,6 +3329,49 @@ struct ConversationView: View {
                                    proficiency: appState.proficiency)
     }
 
+    /// What coach mode may still offer this call, in the chip row's order.
+    private func coachCandidates() -> [TalkGoalItem] {
+        coach.candidates(from: (goalItems + coachExtras).filter { !usedGoalKeys.contains($0.key) })
+    }
+
+    /// Put the steer on the gateway — or take it off — to match the ration.
+    /// Only sent when it changes; the gateway keeps it until told otherwise.
+    private func syncCoachSteer() {
+        let items = coachMode && coach.mayHint ? coachCandidates() : []
+        let steer = items.isEmpty ? "" : ConversationEngine.coachSteer(for: items)
+        guard steer != coachSteerSent else { return }
+        coachSteerSent = steer
+        realtime.setSteer(steer)
+    }
+
+    /// Coach mode's one step per fluent-self line: if a hint may be drawn and
+    /// the line asked something, ask `CoachJudge` which studied item a
+    /// natural answer to THAT question uses — the hint is the question's,
+    /// never the list's. Then re-set the steer for the next line.
+    private func advanceCoach(afterReply text: String, turnId: UUID) {
+        guard coachMode else { return }
+        let mayHint = coach.mayHint
+        coach.replyFinished()
+        let candidates = coachCandidates()
+        if mayHint, !candidates.isEmpty, CoachPlan.endsInQuestion(text) {
+            let learnerSaid = turns.last(where: { $0.role == .user })?.transcript
+            Task { @MainActor in
+                guard let item = await CoachJudge.pick(question: text, learnerSaid: learnerSaid,
+                                                       candidates: candidates,
+                                                       key: turnId.uuidString),
+                      coachMode, !isTornDown,
+                      // Still the line being answered — a late verdict must
+                      // never label the NEXT question.
+                      turns.last(where: { $0.role == .fluentSelf })?.id == turnId,
+                      !usedGoalKeys.contains(item.key) else { return }
+                coach.hintShown(item)
+                withAnimation(.easeInOut(duration: 0.25)) { coachHint = item }
+                syncCoachSteer()
+            }
+        }
+        syncCoachSteer()
+    }
+
     private func creditGoalChips(turnId: UUID) {
         guard !goalItems.isEmpty,
               let turn = turns.first(where: { $0.id == turnId }) else { return }
@@ -3350,7 +3434,8 @@ struct ConversationView: View {
                 system: systemPrompt()
                     + ConversationEngine.turnOutputInstruction(
                         targetLanguage: appState.targetLanguage,
-                        nativeLanguage: appState.nativeLanguage),
+                        nativeLanguage: appState.nativeLanguage,
+                        counterpart: counterpart),
                 messages: messages,
                 // Headroom for reply + suggestion: a MAX_TOKENS truncation
                 // shows up here as a DecodingError-failed turn. gen-3 counts
@@ -3830,6 +3915,14 @@ struct ConversationView: View {
         // Close the live call before the transcript is frozen for the summary:
         // a turn still arriving mid-wrap-up would land after the draft save.
         realtime.hangUp()
+        // One row per coached call — how many hints, how many were answered
+        // with the word — which is how "does it feel forced" gets measured.
+        if coach.hintsShown > 0 {
+            Telemetry.log("talk_coach", [
+                "hints": "\(coach.hintsShown)",
+                "used": "\(coach.hinted.filter { usedGoalKeys.contains($0) }.count)",
+            ])
+        }
         phase = .thinking
         withAnimation(.easeInOut(duration: 0.2)) { isEnding = true }
         defer { withAnimation(.easeInOut(duration: 0.2)) { isEnding = false } }
@@ -4339,14 +4432,29 @@ private struct SuggestionChip: View {
 
 private struct PartialTurnView: View {
     let text: String
+    /// Coach mode's word for this answer, drawn INSIDE the bubble the answer
+    /// is being spoken into — the one place the learner is already looking.
+    var coach: TalkGoalItem? = nil
+    var coachUsed = false
+    var onCoachTap: () -> Void = {}
 
     /// The in-progress user line — same slot and fill as the finished turn it
     /// becomes, so nothing jumps sideways when the final transcript lands.
     var body: some View {
         DialogueLine(speaker: .user, name: "You", scale: .call) {
-            Text(text.isEmpty ? "Listening…" : text)
-                .foregroundStyle(.secondary)
-                .italic(text.isEmpty)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(text.isEmpty ? "Listening…" : text)
+                    .foregroundStyle(.secondary)
+                    .italic(text.isEmpty)
+                if let coach {
+                    Button(action: onCoachTap) {
+                        CoachHintLabel(item: coach, used: coachUsed)
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: coachUsed)
         }
     }
 }

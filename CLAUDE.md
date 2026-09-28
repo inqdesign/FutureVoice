@@ -250,15 +250,9 @@ could read. Now a situation can carry MATERIAL (`ScenarioBrief`, on
   (`TalkGoalPicker.pick(forScenario:)`). The book page shows the brief with
   its sources, read date and **Read again**.
 - **A public figure is a RELATIONSHIP, not "Other"** (`RelationshipKind
-  .publicFigure`): its own three cards (why this person, where you'd meet,
-  what you'd say) and `CounterpartParser.parse(publicFigure: true)` — the
-  default model, search-grounded, filling the profile from PUBLIC coverage
-  (origin, work, most recent activity with its year, interview manner),
-  never health/relationships/money, with an `identity` line ("BTS Jimin ·
-  singer") for the learner to confirm. `Counterpart.isPublicFigure` /
-  `publicIdentity` / `factsRefreshedAt`; the form has a toggle and **Refresh
-  public info**. The framing is "prepare to speak in front of this person",
-  never "talk to Jimin", and the voice is a PRESET — the stranger rule.
+  .publicFigure`), and since 2026-09-28 its whole profile is WHO it is: see
+  "A person is a RELATIONSHIP" below. The voice is a PRESET — the stranger
+  rule.
 - **People have photos** (`CounterpartPhotoStore`, one square JPEG per id
   under `Documents/counterpart_photos/`, re-encoded so EXIF/location never
   survive; deleted with the person). Picked through `PersonPhotoButton`
@@ -1873,6 +1867,49 @@ had never heard. What the server needs is a **session**, not an account.
   drops the id, signs an anonymous session out, and the voice-clone screen opens
   on "Let's make your voice again" (positive first, the deletion is the second line) until the next clone lands. The silent anonymous
   sign-in in `accessToken` is DEBUG-only.
+
+## Coach mode — the listening moment, used (2026-09-28)
+
+Talk time was high and review low, and the chip row only waits for a studied
+word to come up by chance. Coach mode (Call settings, **off by default**, a
+beginner's slower call) makes it come up on purpose: the fluent self asks a
+question whose natural answer uses a studied item, and while the learner
+thinks, their own "Listening…" bubble carries "💡 Try using · **profound**"
+and ticks when they do (the chips' own `CarryoverDetector`; tap = the chip
+sheet). Worded so the word never needs a particle or article. A line above
+the pill only when subtitles are off (no bubble). The pool is the chip row
+PLUS talk-kept notebook words (`coachExtras`) — the first device test had
+eleven words on file, all auto-kept, and the chip row alone was empty.
+`CoachMode.swift` + `CoachHintLabel`.
+
+- **The hint comes FROM the question, never from a list.** The first cut
+  steered one word at a time in list order and hinted it whenever the line
+  ended in "?" — the model rightly ignored words that didn't fit but asks
+  questions anyway, so the learner saw words in list order with no relation
+  to what they'd been asked. Now the steer offers the whole candidate list
+  as permission, and after each line `CoachJudge` (flash-lite,
+  `purpose: "coach"`, free) reads the question actually asked and names the
+  candidate a natural answer would carry — or null, the usual answer. Probe
+  (`judge.py`-style, 8 cases): 7/8, the miss a conservative null; the prompt
+  had to rule out reaction words ("awesome") and small words ("one") that
+  fit any answer.
+- **The steer is permission, not an order** ("if one fits what you're
+  already talking about…; never steer the topic; don't say the word"). The
+  feature is judged by whether it feels forced.
+- **It rides on the gateway's `set` as `steer`**, appended to the reply's
+  system prompt until the app clears it — set when a line FINISHES (the next
+  reply is generated the moment the learner stops, speculative ones included,
+  so later is too late) and cleared once the steered line has been spoken.
+  An older gateway ignores the field; the hint then appears without a
+  question built for it.
+- **A hint is drawn only if the steered line ends in a question**, and
+  `CoachPlan` rations in code: never before the learner has spoken, 3 per
+  call, 2 plain replies between. `talk_coach` (hints, used) is one row per
+  coached call — the measure of "forced".
+- Step 1 is words from the chip row only. Next, if it holds up by ear:
+  recurring-mistake reminders (`fixes` `was → now`, a concrete pair, never a
+  rule name) and a one-time offer on the wrap-up for low levels / repeated
+  mistakes — offered, never switched on silently.
 
 ## Source of truth
 

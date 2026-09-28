@@ -1076,6 +1076,32 @@ struct Counterpart: Codable, Identifiable, Hashable {
     /// the grounded parse and moves this.
     var factsRefreshedAt: Date? = nil
 
+    // How the two of them talk (2026-09-28). The profile above says who the
+    // person IS; none of it said how they and the learner SPEAK to each
+    // other, so every call and scene had to guess the level of address —
+    // and the call prompt, which cast everyone as a new acquaintance,
+    // guessed polite for a best friend.
+    /// The intake's relationship chip (`"Friend"`, `"Manager"` …), kept as
+    /// its English raw value because `relationship` is the learner's own
+    /// words and can say anything. nil for people made before this, and for
+    /// strangers from the pool.
+    var relationshipKind: String? = nil
+    /// How the LEARNER speaks to this person. nil = not set: the relationship
+    /// decides, as it always did.
+    var myRegister: SpeechRegister? = nil
+    /// How this person speaks to the learner. Its own field because Korean
+    /// and Japanese let the two differ (a manager in 반말, the learner in 존댓말).
+    var theirRegister: SpeechRegister? = nil
+    /// What the learner calls them ("형", "부장님", "Sarah").
+    var iCallThem: String = ""
+    /// What they call the learner.
+    var theyCallMe: String = ""
+    /// Whether this person knows the learner's life the way someone close
+    /// does — the whole notebook, private lines included — or only what a
+    /// stranger is allowed to hear. nil = the relationship's default
+    /// (`knowsMyLifeByDefault`).
+    var knowsMyLife: Bool? = nil
+
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
@@ -1099,6 +1125,7 @@ extension Counterpart {
         case conversationStyle, commonTopics, voicePresetId, freeNotes
         case remoteId, intro, personaKind
         case isPublicFigure, publicIdentity, factsRefreshedAt
+        case relationshipKind, myRegister, theirRegister, iCallThem, theyCallMe, knowsMyLife
         case scenariosByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
@@ -1127,6 +1154,14 @@ extension Counterpart {
         isPublicFigure = try c.decodeIfPresent(Bool.self, forKey: .isPublicFigure)
         publicIdentity = try c.decodeIfPresent(String.self, forKey: .publicIdentity)
         factsRefreshedAt = try c.decodeIfPresent(Date.self, forKey: .factsRefreshedAt)
+        relationshipKind = try c.decodeIfPresent(String.self, forKey: .relationshipKind)
+        // A rung this build doesn't know (a newer build's) reads as "not
+        // set" rather than failing the whole person.
+        myRegister = (try? c.decodeIfPresent(SpeechRegister.self, forKey: .myRegister)) ?? nil
+        theirRegister = (try? c.decodeIfPresent(SpeechRegister.self, forKey: .theirRegister)) ?? nil
+        iCallThem = try c.decodeIfPresent(String.self, forKey: .iCallThem) ?? ""
+        theyCallMe = try c.decodeIfPresent(String.self, forKey: .theyCallMe) ?? ""
+        knowsMyLife = try c.decodeIfPresent(Bool.self, forKey: .knowsMyLife)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -1164,6 +1199,17 @@ extension Counterpart {
         try c.encodeIfPresent(remoteId, forKey: .remoteId)
         try c.encode(intro, forKey: .intro)
         try c.encodeIfPresent(personaKind, forKey: .personaKind)
+        // These three were decoded but never written until 2026-09-28, so a
+        // public figure stopped being one on the first save-and-reload.
+        try c.encodeIfPresent(isPublicFigure, forKey: .isPublicFigure)
+        try c.encodeIfPresent(publicIdentity, forKey: .publicIdentity)
+        try c.encodeIfPresent(factsRefreshedAt, forKey: .factsRefreshedAt)
+        try c.encodeIfPresent(relationshipKind, forKey: .relationshipKind)
+        try c.encodeIfPresent(myRegister, forKey: .myRegister)
+        try c.encodeIfPresent(theirRegister, forKey: .theirRegister)
+        try c.encode(iCallThem, forKey: .iCallThem)
+        try c.encode(theyCallMe, forKey: .theyCallMe)
+        try c.encodeIfPresent(knowsMyLife, forKey: .knowsMyLife)
         try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)

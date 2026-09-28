@@ -56,7 +56,8 @@ enum ScenarioCurriculumEngine {
                 counterpart: counterpart,
                 weakVocabAreas: weakVocabAreas,
                 recurringMistakes: recurringMistakes,
-                avoidTitles: avoidTitles
+                avoidTitles: avoidTitles,
+                targetLanguage: targetLanguage
             )
         )]
         // v2: the scene-based schema — a v1 cached response (no turns)
@@ -277,7 +278,8 @@ enum ScenarioCurriculumEngine {
         counterpart: Counterpart?,
         weakVocabAreas: [String],
         recurringMistakes: [LearnerPattern],
-        avoidTitles: [String] = []
+        avoidTitles: [String] = [],
+        targetLanguage: String = "en"
     ) -> String {
         var lines: [String]
         if scenario.isTopic == true {
@@ -335,13 +337,32 @@ enum ScenarioCurriculumEngine {
             lines.append("  (the notes above may be in the learner's native language — context only, never let it change the language you write in)")
         }
         if let c = counterpart, !isBuiltin(c) {
-            lines.append("- the other person is \(c.name) (\(c.relationship))")
-            if !c.background.isEmpty { lines.append("  shared context: \(c.background)") }
-            // Their topics and manner: the hooks that make a scene belong to
-            // THIS person. Without them every counterpart reads the same and
-            // the scene drifts back to generic small talk.
-            if !c.commonTopics.isEmpty { lines.append("  what they talk about: \(c.commonTopics)") }
-            if !c.conversationStyle.isEmpty { lines.append("  how they talk: \(c.conversationStyle)") }
+            if c.cast == .publicFigure {
+                // Identity only: the model knows the person, and a stored
+                // summary becomes the whole person (see `publicFigureBlock`).
+                let who = c.publicIdentity.flatMap { $0.isEmpty ? nil : $0 } ?? c.name
+                lines.append("- the other person is \(who), the real public figure — draw on everything publicly known about them (their work, what they've said in interviews, their manner), not just the most famous facts")
+            } else {
+                lines.append("- the other person is \(c.name) (\(c.relationship))")
+                if !c.background.isEmpty { lines.append("  shared context: \(c.background)") }
+                // Their topics and manner: the hooks that make a scene belong to
+                // THIS person. Without them every counterpart reads the same and
+                // the scene drifts back to generic small talk.
+                if !c.commonTopics.isEmpty { lines.append("  what they talk about: \(c.commonTopics)") }
+                if !c.conversationStyle.isEmpty { lines.append("  how they talk: \(c.conversationStyle)") }
+            }
+            // How the two address each other — BOTH sides, because the
+            // user's lines are the material: a scene with a manager the
+            // learner speaks 해요체 to has to teach 해요체. Unset on an own
+            // person = the relationship decides, as before.
+            if let r = c.effectiveMyRegister {
+                lines.append("  the USER's lines speak to them in: \(r.promptDescription(in: targetLanguage))")
+            }
+            if let r = c.effectiveTheirRegister {
+                lines.append("  they speak to the user in: \(r.promptDescription(in: targetLanguage))")
+            }
+            if !c.iCallThem.isEmpty { lines.append("  the user calls them: \(c.iCallThem)") }
+            if !c.theyCallMe.isEmpty { lines.append("  they call the user: \(c.theyCallMe)") }
             // Dictated by the user in their own language — context, not output.
             lines.append("  (the lines above are the user's own note, in "
                          + "their native language — never let it change the "
@@ -353,7 +374,7 @@ enum ScenarioCurriculumEngine {
             // implies — the cast must never change WHAT the scene is.
             let stock = counterpart.map { StockPerson.by(voiceId: $0.voicePresetId) }
                 ?? StockPerson.by(voiceId: scenario.voicePresetId)
-            lines.append("- who PLAYS that counterpart: \(stock.identity). "
+            lines.append("- who PLAYS that counterpart: \(stock.identity(in: targetLanguage)). "
                          + "Use this name and temperament; their role, job and "
                          + "knowledge come from the situation above.")
         }

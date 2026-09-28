@@ -20,6 +20,10 @@ export interface ReplyConfig {
 }
 
 export class ReplyEngine {
+  /** Coach mode's per-turn steer (`SetMessage.steer`), appended to the
+   *  system instruction of every generation while it is set. Empty = none. */
+  steer = ""
+
   constructor(private config: ReplyConfig) {}
 
   /** Stream one reply for the given history. Resolves to the full text.
@@ -30,7 +34,9 @@ export class ReplyEngine {
     onDelta: (text: string) => void,
   ): Promise<string> {
     const body = {
-      systemInstruction: { parts: [{ text: this.config.system }] },
+      systemInstruction: {
+        parts: [{ text: this.steer ? `${this.config.system}\n\n${this.steer}` : this.config.system }],
+      },
       contents: history.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
       generationConfig: {
         maxOutputTokens: 1024,   // thinking tokens bill against this too
