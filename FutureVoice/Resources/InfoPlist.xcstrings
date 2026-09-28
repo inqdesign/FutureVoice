@@ -33,7 +33,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana plant deinen täglichen Anruf als Wecker, damit dein fließendes Ich dich zur gewählten Zeit erreicht — auch wenn das Telefon stumm ist."
+            "value" : "nawana plant deinen täglichen Anruf als Wecker, damit dein fließendes Ich dich zur gewählten Zeit erreicht – auch wenn das Telefon stumm ist."
           }
         },
         "es" : {
@@ -134,8 +134,8 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "nawana nimmt deine Stimme auf, um sie zu klonen und dich in einer anderen Sprache fließend sprechen zu hören."
+            "state" : "translated",
+            "value" : "nawana nimmt deine Stimme auf, klont sie und lässt dich hören, wie du eine andere Sprache fließend sprichst."
           }
         },
         "en" : {
@@ -188,8 +188,8 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "nawana transkribiert deine Sprache auf dem Gerät, um sie mit der fließenden Version deiner Stimme zu vergleichen."
+            "state" : "translated",
+            "value" : "nawana schreibt auf dem Gerät mit, was du sagst, und vergleicht es mit der fließenden Version deiner Stimme."
           }
         },
         "en" : {

@@ -196,12 +196,12 @@ enum LanguageCatalog {
     }
 
     /// Bundled but NOT finished. A `.lproj` exists so the bundle answers yes,
-    /// yet roughly a third of `de` is still English — it is a TARGET language
-    /// here, never a launch native one, and its column has been knowingly
-    /// deferred. Sitting it under "Fully translated" was a promise the screen
-    /// could not keep; from the lower group it under-promises instead, which is
-    /// the right direction. Empty this set as a column is finished.
-    private static let partialUILanguages: Set<String> = ["de"]
+    /// but a column that is partly English doesn't belong under "Fully
+    /// translated" — from the lower group it under-promises instead, which is
+    /// the right direction. Put a language here while its column is being
+    /// filled; empty it once every key has a value. `de` sat here until
+    /// 2026-09-28, when its last 736 keys were written.
+    private static let partialUILanguages: Set<String> = []
 
     static func language(_ code: String) -> Language? {
         let base = code.split(separator: "-").first.map(String.init) ?? code
