@@ -537,7 +537,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <h3 style="margin:22px 0 4px;font-size:15px">한 사람씩</h3>
   <p class="sub">한 줄이 한 사람, 한 칸이 한 시간이에요. 색은 <b>그 사람 안에서</b> 가장 많이 쓴 시간을 기준으로
   진해져요 — 많이 쓴 사람과 적게 쓴 사람의 패턴을 같은 눈으로 보려고요. 칸에 올리면 그 시간에 쓴 양과
-  <b>며칠</b> 그 시간에 왔는지가 나와요. 오른쪽은 전체 양과 주로 쓰는 시간대예요.</p>
+  <b>며칠</b> 그 시간에 왔는지가 나와요. 오른쪽은 전체 양과 주로 쓰는 시간대예요.
+  <b>최근에 가입한 사람이 맨 위</b>예요.</p>
   <div class="card scroll" id="hoursByUser"></div>
 </section>
 
@@ -1812,8 +1813,14 @@ function renderHoursByUser(users){
     row.v[h] += v; row.days[h] = Math.max(row.days[h], r.days||0); row.total += v;
     byUser.set(r.u, row);
   }
+  // Newest signup first (2026-09-28): the question here is what a person's
+  // day looks like, and the people whose rhythm is still unknown are the ones
+  // who just arrived — a lifetime-total sort buries every one of them under
+  // the regulars. Volume is still on the right of each row.
+  const signupDay = u => u.signedUpAt ? localDay(u.signedUpAt) : (u.signedUp || '');
   const rows = users.filter(u => byUser.has(u.idx))
-    .sort((a,b) => byUser.get(b.idx).total - byUser.get(a.idx).total);
+    .sort((a,b) => signupDay(b).localeCompare(signupDay(a))
+      || byUser.get(b.idx).total - byUser.get(a.idx).total);
   if(!rows.length){ el.innerHTML='<div class="empty">아직 기록이 없어요.</div>'; return; }
 
   const nameW = innerWNarrow() ? 88 : 186, gap = 2;
