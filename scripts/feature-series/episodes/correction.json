@@ -1,0 +1,52 @@
+{
+  "ko": {
+    "series": "기능 소개 · 교정",
+    "slides": [
+      {
+        "kind": "zoom",
+        "shot": "transcript",
+        "crop": [
+          20,
+          935,
+          1186,
+          1675
+        ],
+        "title": "틀려도 괜찮아요\n[유창한 내가] 고쳐 말해줘요",
+        "body": "통화가 끝나면, 내가 한 말 바로 아래에."
+      },
+      {
+        "kind": "top",
+        "shot": "transcript",
+        "title": "고칠 곳이\n[한눈에] 보여요",
+        "body": "바뀐 단어만 파랗게, 이유는 내 언어로."
+      },
+      {
+        "kind": "top",
+        "shot": "talkdetail-cards",
+        "title": "고친 문장은\n[복습 카드]가 돼요",
+        "body": "틀린 말엔 줄을 긋고, 고친 문장을 외워요."
+      },
+      {
+        "kind": "bottom",
+        "shot": "say-again-reading",
+        "title": "같은 대화를 다시\n이번엔 [제대로]",
+        "body": "고친 문장을 소리 내 읽으면\n미래의 내가 그때처럼 답해요.",
+        "phone_width": 720
+      },
+      {
+        "kind": "bottom",
+        "shot": "say-again-done",
+        "title": "읽은 문장마다\n[점수]가 나와요",
+        "body": "아쉬운 문장은 바로 다시 읽어요."
+      },
+      {
+        "kind": "outro",
+        "tag": [
+          "유창한 나에게",
+          "언어를 배우세요."
+        ],
+        "foot": "기능 소개 · 교정 편"
+      }
+    ]
+  }
+}
