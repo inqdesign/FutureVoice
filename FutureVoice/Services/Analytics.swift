@@ -56,7 +56,10 @@ enum Analytics {
     ]
 
     static func capture(_ event: String, _ props: [String: Any] = [:]) {
-        PostHogSDK.shared.capture(event, properties: props)
+        // Per event rather than a super property: both settings change while
+        // the app runs, and a registered value would go stale until relaunch.
+        let settings: [String: Any] = Telemetry.callSettings()
+        PostHogSDK.shared.capture(event, properties: settings.merging(props) { _, caller in caller })
     }
 
     /// Tie events to the signed-in account. `userId` is the Supabase UUID —

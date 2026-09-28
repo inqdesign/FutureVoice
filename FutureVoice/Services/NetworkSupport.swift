@@ -49,7 +49,27 @@ enum Telemetry {
     private static let version =
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
 
+    /// How the learner has the call set up, stamped on every event (here and
+    /// on PostHog's `Analytics.capture`). Added 2026-09-28: retention fell
+    /// by self-reported level (A1 8% came back, B2+ 57%) and nothing on the
+    /// server could say whether the slower voice or coach mode changed that —
+    /// the speed rode to ElevenLabs and was written nowhere, and `talk_coach`
+    /// exists only for calls that drew a hint, so "on, no hint" and "off"
+    /// looked the same. `speed_picked` separates a learner who chose a rung
+    /// (onboarding or Me) from one who never touched the default.
+    static func callSettings() -> [String: String] {
+        let defaults = UserDefaults.standard
+        return [
+            "speed": String(format: "%.2f", SpeechSpeed.current.multiplier),
+            "speed_picked": defaults.string(forKey: SpeechSpeed.key) == nil ? "0" : "1",
+            "coach": CoachMode.isOn ? "on" : "off",
+        ]
+    }
+
     static func log(_ event: String, _ properties: [String: String] = [:]) {
+        // Read now, not in the detached task: the event describes the call as
+        // it was set up at this moment.
+        let settings = callSettings()
         Task.detached(priority: .utility) {
             struct Row: Encodable {
                 let user_id: String
@@ -57,7 +77,7 @@ enum Telemetry {
                 let properties: [String: String]
             }
             guard let session = try? await SupabaseProvider.shared.auth.session else { return }
-            var props = properties
+            var props = settings.merging(properties) { _, caller in caller }
             props["network"] = NetworkPathStatus.shared.label
             // Which build produced this event. Without it, every gap in
             // server-side data is unfalsifiable: talk-tick rows missing for an
