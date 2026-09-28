@@ -1456,7 +1456,8 @@ struct PartnerPickerSheet: View {
         defer { loadingVoiceId = nil }
         do {
             let data: Data
-            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
+            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId,
+                                                        allowLineage: false) {
                 data = cached
             } else {
                 data = try await ElevenLabsClient.shared.synthesize(

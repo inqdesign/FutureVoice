@@ -232,7 +232,7 @@ struct VoicePresetPickerView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else {
-                    Text(explain("Tap ▶ to hear a sample in \(LanguageCatalog.englishName(appState.targetLanguage))."))
+                    Text(explain("Tap ▶ to hear a sample in \(LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage))."))
                 }
             }
         }
@@ -264,7 +264,7 @@ struct VoicePresetPickerView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(preset.displayName)
-                Text("\(preset.gender) · \(preset.accent) · \(preset.description)")
+                Text(preset.caption(in: appState.targetLanguage))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -297,7 +297,8 @@ struct VoicePresetPickerView: View {
         defer { loadingId = nil }
         do {
             let data: Data
-            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: preset.id) {
+            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: preset.id,
+                                                        allowLineage: false) {
                 data = cached
             } else {
                 data = try await ElevenLabsClient.shared.synthesize(
@@ -316,17 +317,23 @@ struct VoicePresetPickerView: View {
 
     /// One neutral greeting per target language — phrasings chosen to avoid
     /// speaker-gender agreement so any voice can say them naturally.
+    ///
+    /// The `<break>` is ElevenLabs' pause tag. The synthesizer pauses at
+    /// punctuation only loosely, and measured on the Korean line the period
+    /// after 반가워요 gave NO pause at all — the question ran straight on. The
+    /// tag is spoken as silence (~0.5 s), never read out; this line is audio
+    /// only, never drawn as text.
     static func previewLine(for languageCode: String) -> String {
         switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
-        case "es": return "¡Hola! Qué alegría verte. ¿Empezamos?"
-        case "de": return "Hallo! Schön, dich zu sehen. Sollen wir anfangen?"
-        case "fr": return "Bonjour ! Ça me fait plaisir de te voir. On commence ?"
-        case "it": return "Ciao! Che bello vederti. Iniziamo?"
-        case "pt": return "Oi! Que bom te ver. Vamos começar?"
-        case "ja": return "こんにちは！会えてうれしいです。始めましょうか？"
-        case "ko": return "안녕하세요! 만나서 반가워요. 시작해 볼까요?"
-        case "zh": return "你好！很高兴见到你。我们开始吧？"
-        default:   return "Hi! It's good to see you. Shall we get started?"
+        case "es": return "¡Hola! Qué alegría verte. <break time=\"0.5s\" /> ¿Empezamos?"
+        case "de": return "Hallo! Schön, dich zu sehen. <break time=\"0.5s\" /> Sollen wir anfangen?"
+        case "fr": return "Bonjour ! Ça me fait plaisir de te voir. <break time=\"0.5s\" /> On commence ?"
+        case "it": return "Ciao! Che bello vederti. <break time=\"0.5s\" /> Iniziamo?"
+        case "pt": return "Oi! Que bom te ver. <break time=\"0.5s\" /> Vamos começar?"
+        case "ja": return "こんにちは！会えてうれしいです。<break time=\"0.5s\" />始めましょうか？"
+        case "ko": return "안녕하세요! 만나서 반가워요. <break time=\"0.5s\" /> 시작해 볼까요?"
+        case "zh": return "你好！很高兴见到你。<break time=\"0.5s\" />我们开始吧？"
+        default:   return "Hi! It's good to see you. <break time=\"0.5s\" /> Shall we get started?"
         }
     }
 }

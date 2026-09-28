@@ -77,10 +77,21 @@ final class PhraseAudioStore {
         UserDefaults.standard.removeObject(forKey: lineageKey)
     }
 
-    /// Keys to try, in order: the asked-for voice first, then the user's older
-    /// clones (only when the asked-for voice IS the user's own).
+    /// Keys to try, in order: the voice that actually speaks first, then the
+    /// user's older clones (only when the asked-for voice IS the user's own).
+    ///
+    /// A preset SLOT resolves to the target language's own voice
+    /// (`VoicePreset.speaking`, 2026-09-28), and new lines are saved under that
+    /// voice. Lines made before then were saved under the slot id in the old
+    /// English voice; they stay reachable as the fallback, for the same reason
+    /// the lineage exists — a scene already watched replays as it was instead
+    /// of re-billing. `allowLineage: false` turns this off too, for anything
+    /// that must be heard in the voice speaking NOW (a preview, a call).
     private func candidateVoiceIds(_ voiceId: String, allowLineage: Bool) -> [String] {
-        guard allowLineage, ownVoiceLineage.contains(voiceId) else { return [voiceId] }
+        let speaking = VoicePreset.speaking(voiceId)
+        guard allowLineage else { return [speaking] }
+        if speaking != voiceId { return [speaking, voiceId] }
+        guard ownVoiceLineage.contains(voiceId) else { return [voiceId] }
         return [voiceId] + ownVoiceLineage.filter { $0 != voiceId }
     }
 
@@ -89,7 +100,7 @@ final class PhraseAudioStore {
     /// different take than the one playing.
     private func resolvedKey(text: String, voiceId: String, allowLineage: Bool) -> String? {
         for candidate in candidateVoiceIds(voiceId, allowLineage: allowLineage) {
-            let k = key(text: text, voiceId: candidate)
+            let k = rawKey(text: text, voiceId: candidate)
             if FileManager.default.fileExists(atPath: dir.appendingPathComponent("\(k).mp3").path) {
                 return k
             }
@@ -176,6 +187,12 @@ final class PhraseAudioStore {
     /// a cache clear to "fix" that was built and reverted the same day
     /// (user decision: what is already produced stays).
     private func key(text: String, voiceId: String) -> String {
+        rawKey(text: text, voiceId: VoicePreset.speaking(voiceId))
+    }
+
+    /// The key for exactly this voice id, with no preset resolution — only the
+    /// lookup's fallback to a slot's pre-2026-09-28 files needs it.
+    private func rawKey(text: String, voiceId: String) -> String {
         let speedTag = SpeechSpeed.current.cacheTag
         let normalized = "\(voiceId)\n\(speedTag)\(text.trimmingCharacters(in: .whitespacesAndNewlines))"
         let digest = SHA256.hash(data: Data(normalized.utf8))

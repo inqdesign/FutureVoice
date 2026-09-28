@@ -28,6 +28,10 @@ export interface Env {
 const PRESET_VOICE_IDS = new Set([
   "NDTYOmYEjbDIVCKB35i3", "UgBBYS2sOqTuMpoF3BR0",
   "FF59babHL8N8gfTgtBMT", "L0Dsvb3SLTyegXwtm47J",
+  // The same four slots voiced natively for Korean and Japanese learners
+  // (VoicePreset.speaking, 2026-09-28): Sian, KO-Calm, Han, Joon.
+  "5n5gqmaQi9Ewevrz7bOS", "L4az9Gb378GIycFl2nAB",
+  "8jHHF8rMqMlg8if2mOUe", "AKF7f2y1L8ktV5vxXILw",
 ])
 
 /** Resolve the Supabase access token to a user id, or null. */

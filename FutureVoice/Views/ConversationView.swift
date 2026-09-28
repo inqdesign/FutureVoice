@@ -2484,8 +2484,11 @@ struct ConversationView: View {
             // the moment the call is up instead of waiting on the gateway's
             // own round trip for a line the phone already has. A miss is a
             // nil and the gateway speaks it exactly as before.
+            // A stranger's opener must be the voice the gateway will answer
+            // in — never a take cached before their slot got a native voice.
             openerAudio: opener.flatMap {
-                PhraseAudioStore.shared.url(text: $0, voiceId: voiceId)
+                PhraseAudioStore.shared.url(text: $0, voiceId: voiceId,
+                                            allowLineage: VoicePreset.speaking(voiceId) == voiceId)
             },
             // A resumed talk carries its history so the fluent self knows what
             // was already said.

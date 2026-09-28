@@ -337,6 +337,10 @@ final class ElevenLabsClient {
         speed: SpeechSpeed? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+        // A preset slot speaks in the target language's own voice (see
+        // `VoicePreset.speaking`); the idempotency key below follows the voice
+        // that actually speaks.
+        let voiceId = VoicePreset.speaking(voiceId)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -423,6 +427,10 @@ final class ElevenLabsClient {
         onPCMChunk: @MainActor @escaping (Data, _ sampleRate: Double) -> Void
     ) async throws -> StreamedAudio {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+        // A preset slot speaks in the target language's own voice (see
+        // `VoicePreset.speaking`); the idempotency key below follows the voice
+        // that actually speaks.
+        let voiceId = VoicePreset.speaking(voiceId)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -549,6 +557,10 @@ final class ElevenLabsClient {
         purpose: String? = nil
     ) async throws -> (Data, [WordTiming]) {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+        // A preset slot speaks in the target language's own voice (see
+        // `VoicePreset.speaking`); the idempotency key below follows the voice
+        // that actually speaks.
+        let voiceId = VoicePreset.speaking(voiceId)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

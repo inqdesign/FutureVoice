@@ -325,6 +325,10 @@ final class AppState: ObservableObject {
         didSet {
             UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey)
             SyncEngine.noteChanged(.defaults)
+            // A built-in person is named per language — Paige in English is
+            // 시안 in Korean (StockPerson.localized).
+            let lang = targetLanguage
+            counterparts = counterparts.map { StockPerson.localized($0, language: lang) }
         }
     }
     /// Target languages the user has enrolled in, enrollment order. The

@@ -1175,7 +1175,9 @@ extension Counterpart {
 /// user can pick quickly instead of scrolling through hundreds.
 struct VoicePreset: Hashable, Identifiable {
     let id: String           // ElevenLabs voice id
-    let displayName: String
+    /// The English voice's own name. What screens show is `displayName`,
+    /// which follows the target language (see `localNames`).
+    let englishName: String
     let gender: String
     let accent: String
     let description: String
@@ -1189,21 +1191,96 @@ struct VoicePreset: Hashable, Identifiable {
     // fine but fall back to catalog[0] for display.
     static let catalog: [VoicePreset] = [
         VoicePreset(id: "NDTYOmYEjbDIVCKB35i3",
-                    displayName: "Paige", gender: "Female", accent: "American",
+                    englishName: "Paige", gender: "Female", accent: "American",
                     description: "Engaging, natural"),
         VoicePreset(id: "UgBBYS2sOqTuMpoF3BR0",
-                    displayName: "Mark", gender: "Male", accent: "American",
+                    englishName: "Mark", gender: "Male", accent: "American",
                     description: "Natural, conversational"),
         VoicePreset(id: "FF59babHL8N8gfTgtBMT",
-                    displayName: "Emma", gender: "Female", accent: "British",
+                    englishName: "Emma", gender: "Female", accent: "British",
                     description: "Clear, friendly"),
         VoicePreset(id: "L0Dsvb3SLTyegXwtm47J",
-                    displayName: "James", gender: "Male", accent: "British",
+                    englishName: "James", gender: "Male", accent: "British",
                     description: "Warm, easygoing"),
     ]
 
     static func by(id: String) -> VoicePreset {
         catalog.first(where: { $0.id == id }) ?? catalog[0]
+    }
+
+    // MARK: - A preset is a SLOT, voiced per target language (2026-09-28)
+    //
+    // The four voices above are American/British speakers, and reading Korean
+    // they sounded like exactly that — every Korean scene partner and stranger
+    // was an English speaker reading Korean. So a preset id is now a SLOT: what
+    // is stored (on a Counterpart, a Scenario, a public persona row, a
+    // StockPerson) is still the English id, and the voice that actually speaks
+    // is resolved from it at synthesis time, for the language being spoken.
+    // Nothing stored changes, and a person — who is shared by every target
+    // language — speaks natively in each one.
+    //
+    // Korean voices picked by ear by the founder from the ElevenLabs library
+    // (native ko speakers, added to the account 2026-09-28 — a library voice
+    // must be in "My Voices" to synthesize). Japanese uses the same four by
+    // the founder's decision; German and English keep the originals. Every id
+    // here must also be in the two server allowlists (gateway/src/supabase.ts,
+    // supabase/functions/elevenlabs-tts) or the server refuses it.
+    private static let voicedBySlot: [String: [String: String]] = {
+        let korean = [
+            "NDTYOmYEjbDIVCKB35i3": "5n5gqmaQi9Ewevrz7bOS",  // Paige → Sian (F)
+            "UgBBYS2sOqTuMpoF3BR0": "L4az9Gb378GIycFl2nAB",  // Mark  → "KO - Calm, Friendly, Warm" (M)
+            "FF59babHL8N8gfTgtBMT": "8jHHF8rMqMlg8if2mOUe",  // Emma  → Han (F)
+            "L0Dsvb3SLTyegXwtm47J": "AKF7f2y1L8ktV5vxXILw",  // James → Joon (M)
+        ]
+        return ["ko": korean, "ja": korean]
+    }()
+
+    /// The voice that speaks a stored voice id in `language`. Anything that
+    /// isn't a preset slot — the learner's clone, a retired preset id —
+    /// passes through untouched.
+    static func speaking(_ voiceId: String, in language: String) -> String {
+        voicedBySlot[language]?[voiceId] ?? voiceId
+    }
+
+    /// Where a slot speaks in another language's own voice, it goes by a name
+    /// from that language too — a Korean speaker introduced as "Paige" reads
+    /// as a mistake. MATERIAL, so the TARGET language (the name is said in
+    /// scenes), not the app language. Japanese keeps the founder's Korean
+    /// voices but takes Japanese names, because the scene is written in
+    /// Japanese around them.
+    private static let localNames: [String: [String: String]] = [
+        "ko": ["NDTYOmYEjbDIVCKB35i3": "시안", "UgBBYS2sOqTuMpoF3BR0": "민준",
+               "FF59babHL8N8gfTgtBMT": "한별", "L0Dsvb3SLTyegXwtm47J": "준호"],
+        "ja": ["NDTYOmYEjbDIVCKB35i3": "美咲", "UgBBYS2sOqTuMpoF3BR0": "翔太",
+               "FF59babHL8N8gfTgtBMT": "陽菜", "L0Dsvb3SLTyegXwtm47J": "健太"],
+    ]
+
+    func name(in language: String) -> String {
+        Self.localNames[language]?[id] ?? englishName
+    }
+
+    /// The name for the language being practised right now — every screen
+    /// that shows a preset reads this.
+    var displayName: String {
+        name(in: UserDefaults.standard.string(
+            forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en")
+    }
+
+    /// The picker's caption. The accent and description are the ENGLISH
+    /// voice's, so a slot voiced by someone else in `language` shows only
+    /// what is still true of it: the gender.
+    func caption(in language: String) -> String {
+        Self.speaking(id, in: language) == id
+            ? "\(gender) · \(accent) · \(description)"
+            : gender
+    }
+
+    /// Same, for the language being practised right now. Every synthesis runs
+    /// in the active target language (scenes, strangers and books are all
+    /// per-language), which is why the network layer can resolve on its own.
+    static func speaking(_ voiceId: String) -> String {
+        speaking(voiceId, in: UserDefaults.standard.string(
+            forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en")
     }
 
     /// UserDefaults key for the fallback voice of Watch scenes that have no
@@ -1272,6 +1349,35 @@ struct StockPerson: Identifiable, Hashable {
         ]
     }
 
+    /// `identity` for a scene in `language`. It names the ENGLISH voice's
+    /// nationality ("Paige — American, …"); where the slot speaks in another
+    /// native voice (`VoicePreset.speaking`) that would cast an American
+    /// speaking Korean, so the nationality is dropped and the rest stands.
+    func identity(in language: String) -> String {
+        guard VoicePreset.speaking(voice.id, in: language) != voice.id else { return identity }
+        let rest = identity.replacingOccurrences(
+            of: #"(American|British), "#, with: "", options: .regularExpression)
+        // …and the name is the one this language gives the slot.
+        guard rest.hasPrefix(voice.englishName) else { return rest }
+        return voice.name(in: language) + rest.dropFirst(voice.englishName.count)
+    }
+
+    /// A built-in person's saved row, named for `language`. The row is saved
+    /// the first time the person is picked, under whatever name they had
+    /// then, and one row serves every target language (people are global),
+    /// so the name and the scene identity are rewritten on read — on load
+    /// (`CounterpartStore.load`) and on a language switch. Any other row
+    /// passes through untouched.
+    static func localized(_ c: Counterpart, language: String) -> Counterpart {
+        guard let rid = c.remoteId, rid.hasPrefix("builtin:"),
+              let stock = catalog.first(where: { $0.remoteKey == rid }) else { return c }
+        var out = c
+        out.name = stock.voice.name(in: language)
+        out.background = stock.identity(in: language)
+        out.intro = stock.identity(in: language)
+        return out
+    }
+
     /// Resolve a scenario's stored voice id (nil = the Me-tab default) to its
     /// person. Retired legacy voice ids resolve to the first person, matching
     /// `VoicePreset.by`'s display fallback.
@@ -1284,8 +1390,10 @@ struct StockPerson: Identifiable, Hashable {
     /// row when they've been used before (books and sessions link on the
     /// local id, so it must stay stable — and it does, see `localId`).
     func asCounterpart(existing: [Counterpart]) -> Counterpart {
+        let language = UserDefaults.standard.string(
+            forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
         if let known = existing.first(where: { $0.remoteId == remoteKey || $0.id == localId }) {
-            return known
+            return Self.localized(known, language: language)
         }
         var c = Counterpart(
             id: localId,
@@ -1298,7 +1406,7 @@ struct StockPerson: Identifiable, Hashable {
         c.remoteId = remoteKey
         c.intro = identity
         c.personaKind = PublicPersonaService.Group.character.rawValue
-        return c
+        return Self.localized(c, language: language)
     }
 }
 

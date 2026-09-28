@@ -79,7 +79,7 @@ struct PublicIntroView: View {
             Section {
                 Picker("Voice", selection: $voicePresetId) {
                     ForEach(VoicePreset.catalog) { v in
-                        Text("\(v.displayName) — \(v.gender), \(v.accent)").tag(v.id)
+                        Text("\(v.displayName) — \(v.caption(in: appState.targetLanguage))").tag(v.id)
                     }
                 }
             } footer: {

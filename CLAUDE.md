@@ -315,11 +315,77 @@ a language school. Rows come from the Supabase table `public_personas`, read ano
   Counterpart (`voicePresetId`), which wins forever because `asCounterpart`
   returns the saved row over the pool's. Still never a clone — the footer
   says so out loud.
+- **A preset voice id is a SLOT, voiced per target language** (2026-09-28). The four presets are American/British speakers and read Korean like one. What is stored (Counterpart, Scenario, persona row, StockPerson) stays the English id; `VoicePreset.speaking(_:in:)` swaps in the language's own voice at the network edge (`ElevenLabsClient`, the gateway `start`) and in `PhraseAudioStore`'s key. ko and ja use four native Korean library voices (founder's pick, added to the ElevenLabs account — a library voice must be in My Voices to synthesize); de and en keep the originals. Lines cached under the slot before this still play as the lookup's fallback (produced audio is never orphaned); previews and a call's opener pass `allowLineage: false` so they are always the voice speaking now. Every id must also be in BOTH server allowlists (gateway `PRESET_VOICE_IDS`, `elevenlabs-tts`), deployed before any build that resolves to it. A revoiced slot also takes a name from that language (`VoicePreset.localNames`: ko 시안·민준·한별·준호, ja 美咲·翔太·陽菜·健太) — `displayName` follows the target language, and a saved built-in person's row is renamed on read (`StockPerson.localized`, in `CounterpartStore.load` and on a language switch), since one row serves every language.
 - **Talk** starts a normal `ConversationView` call with `initialCounterpart:`. Two things change and nothing else: `ConversationEngine`'s `YOUR CHARACTER` block casts the model AS that person (it outranks ROLE/SCENE inference and the future-self framing, and carries the same context-not-instructions + language guard as the Watch engines), and `activeVoiceId` uses the persona's **preset** voice. Their voice is never a clone — the person on the other end is a stranger, not the fluent self.
 - The talk saves as an ordinary `Session` with `counterpartId`, so its review material, transcript and Practice book all come from the existing machinery for free. The person's card lists every talk you've had with them.
 - Bookmarks are local only (`UserDefaults`). Nothing a learner does here reaches the persona's author: no notification, no shared record.
 
 Intros are MATERIAL, so they're written in the target language — a persona row serves one `language` and the pool is fetched per `AppState.targetLanguage`. Publishing is gated on intro density (80 chars), not on a privacy toggle: a one-liner can't carry a conversation, and the same bar keeps thin rows out of the pool.
+
+## A person is a RELATIONSHIP, and a call knows which kind (2026-09-28)
+
+Reported by the founder: a friend in a call spoke like a polite stranger,
+and BTS RM steered every call back to art museums. Both came from one place.
+`ConversationEngine`'s character block was written for a Find-people
+STRANGER — "new acquaintances with no shared history", open on something
+concrete from your own life — and it was handed to everyone. It never
+carried the relationship (Watch scenes did; the call didn't), so the STRICT
+rule "under YOUR CHARACTER the relationship chooses the form of address" had
+nothing to choose from, and it labelled the learner's note about their
+shared history as the person's "self-introduction". For a public figure the
+3–4 sentences of coverage WERE the person, so the model opened on the one
+fact everyone knows every time. `isPublicFigure` was never read by a prompt
+— and was never even SAVED: the hand-written `Counterpart.encode` dropped it
+along with `publicIdentity` / `factsRefreshedAt` (fixed the same day).
+
+- **A public figure is its IDENTITY, confirmed — nothing else is written
+  down** (founder: "the model finds exactly who it is, the learner confirms,
+  and the call runs on that"). The intake is name → "Public figure" → done;
+  `CounterpartParser.identifyPublicFigure` (search-grounded, default model)
+  returns one line ("BTS RM · rapper") or not-found, and the form shows it
+  with **Look up again** and hides every descriptive field. The model already
+  knows the person's work, manner and interests, so asking the learner for
+  them is asking them to do the model's job — four different cards were
+  tried and cut the same day (where you'd meet, what you'd say, which side
+  you follow, what you'd talk about), each either shrinking the person to a
+  scene or duplicating what the model knows. A search-written 3–4 sentence
+  profile was the old design, and it WAS the museum bug: the one fact that
+  stood out in it opened every call. Old rows keep those fields on disk; no
+  prompt reads them for a public figure (call, scene, idea suggestions).
+- **Three casts, three blocks** (`Counterpart.Cast`,
+  `ConversationEngine+Character.swift`). `ownPerson` (made by the learner):
+  they ALREADY KNOW each other, the note is shared history, no introductions,
+  no interview, and a close one talks loose and quick; the model may invent
+  ordinary detail of its own day but never a big event in the SHARED history,
+  because the learner was there. `stranger` (the pool): the old block
+  verbatim. `publicFigure`: the confirmed identity and the whole public
+  record, told not to fall back on the most famous facts; public ground
+  only, private questions deflected like an interview.
+- **How the two TALK is its own card** (`SpeechRegister`: casual · polite ·
+  formal, in BOTH directions, plus what each calls the other), right after
+  the relationship chip in the intake and in the form. Abstract on purpose —
+  a person is shared by every target language — and each language names the
+  rung (반말/해요체/합니다체, タメ口/です・ます/敬語, du/Sie, tu/vous…);
+  English reads it as tone. The intake prefills from the chip
+  (`defaultRegisters`: friend/partner/family casual, everyone else polite) so
+  it reads as a confirmation. Unset on an own person = the relationship
+  decides (every person made before this); a stranger or public figure unset
+  = polite. The call, the scene prompt (both sides — the learner's lines are
+  the material) and the corrections all read it.
+- **The one exception to "the speech level is the learner's"**
+  (`relationshipRegisterLine`): if the learner SET how they speak to this
+  person and a line comes out in another form, it may be corrected, with the
+  relationship as the reason. It is appended only in that case and only for
+  a language that marks address, so every other prompt is byte-identical to
+  the measured one (`CounterpartCharacterTests` pins it). Not yet measured
+  with `scripts/correction-probe.py` — do that before trusting it widely.
+- **Someone close knows the learner's life** (`knowsMyLife`, default on for
+  friend/partner/family): the whole notebook, private rungs included, framed
+  as "you know this from being close to them". A stranger or public figure
+  never gets past `strangerLines`, whatever the toggle says.
+- Not built yet: per-person MEMORY across calls (the relationship ledger —
+  what was talked about, what each said, open loops). Every call with the
+  same person still starts without the previous one.
 
 ## Push notifications (2026-09-26)
 

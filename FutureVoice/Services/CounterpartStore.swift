@@ -29,7 +29,11 @@ final class CounterpartStore {
               let list = try? decoder.decode([Counterpart].self, from: data) else {
             return []
         }
-        return list.sorted { $0.updatedAt > $1.updatedAt }
+        // Built-in people take the active language's name (StockPerson.localized).
+        let language = UserDefaults.standard.string(
+            forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        return list.map { StockPerson.localized($0, language: language) }
+            .sorted { $0.updatedAt > $1.updatedAt }
     }
 
     func save(_ counterpart: Counterpart) {
