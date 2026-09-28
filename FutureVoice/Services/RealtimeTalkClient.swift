@@ -329,7 +329,27 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var linesStarted = 0
     /// The greeting, already synthesized and sitting in `PhraseAudioStore`,
     /// decoded and waiting for `ready`. See `playLocalOpener`.
-    private var localOpener: (text: String, buffer: AVAudioPCMBuffer, rate: Double)?
+    private var localOpener: LocalOpener?
+    private struct LocalOpener {
+        let text: String
+        let buffer: AVAudioPCMBuffer
+        let rate: Double
+        /// Set on a REPLAY — a rebuild cut the line and it is being played
+        /// again from the top: the bubble is already up under this context
+        /// and the buffer is already levelled.
+        var context: String? = nil
+    }
+    /// The greeting while it is on the speaker, kept until it has played to
+    /// its end. The local opener is ONE buffer with no bytes arriving, so the
+    /// watchdogs' "a line is in the air" test (`playedBuffers` /
+    /// `replyBytesReceived`) read it as silence for its whole length — and a
+    /// rebuild in that window cut the only line the learner had heard nothing
+    /// of yet. `until` bounds it, so a wedged engine can't hold them off.
+    private var openerInAir: (opener: LocalOpener, until: Date)?
+    private var openerIsAudible: Bool {
+        guard let inAir = openerInAir else { return false }
+        return Date() < inAir.until
+    }
 
     private var isTornDown = false
     /// The gateway's `ended` record has been written for this call. It can
@@ -369,6 +389,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         state = .connecting
         linesStarted = 0
         localOpener = nil
+        openerInAir = nil
         playedBuffers = 0
         replyBytesReceived = 0
         tapWatchdogStrikes = 0
@@ -403,7 +424,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             var startHistory = history
             if let openerAudio, let opener, !opener.isEmpty,
                let decoded = Self.decodeOpener(openerAudio) {
-                localOpener = (opener, decoded.buffer, decoded.rate)
+                localOpener = LocalOpener(text: opener, buffer: decoded.buffer, rate: decoded.rate)
                 startHistory.append((role: "model", text: opener))
                 startOpener = nil
                 Self.step("opener: playing the cached take locally")
@@ -574,7 +595,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 // deadline on the greeting — measured as audio ARRIVING or
                 // being HEARD, never as queue depth, which a wedged engine
                 // keeps climbing forever.
-                if self.playedBuffers > lastPlayed || self.replyBytesReceived > lastBytes {
+                if self.playedBuffers > lastPlayed || self.replyBytesReceived > lastBytes
+                    || self.openerIsAudible {
                     lastPlayed = self.playedBuffers
                     lastBytes = self.replyBytesReceived
                     waited = 0
@@ -672,7 +694,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isTornDown, !line.isEmpty, linesStarted == 0 else { return }
         if let audio, let decoded = Self.decodeOpener(audio) {
-            localOpener = (line, decoded.buffer, decoded.rate)
+            localOpener = LocalOpener(text: line, buffer: decoded.buffer, rate: decoded.rate)
             // `ready` may have been and gone already — then play it now; if the
             // call is still connecting, `ready` will.
             if case .connecting = state {} else { playLocalOpener() }
@@ -1076,6 +1098,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         armTapWatchdog()
         // The tap is live from here — hand the audio thread what it needs.
         mic.set(converter: converter, format: uplinkFormat, socket: socket)
+        // A greeting still waiting here means the engine was down when it was
+        // due: `ready` landed inside a rebuild's gap (the pre-flight's 300 ms,
+        // a route's 1.2 s) and `playLocalOpener` found no engine — or a
+        // rebuild cut it mid-line (`stopAudio`). Nothing else would ever play
+        // it, and the gateway, told it was already said, stays silent.
+        if localOpener != nil {
+            switch state {
+            case .idle, .connecting, .failed: break
+            default: playLocalOpener()
+            }
+        }
     }
 
     /// Rebuild the audio stack when the route changes under the call.
@@ -1211,7 +1244,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 // check — never the queue depth, which a wedged engine keeps
                 // climbing forever. Both stop when the line does, so the
                 // rebuild this defers happens a beat later, in silence.
-                if self.playedBuffers > lastPlayed || self.replyBytesReceived > lastBytes {
+                if self.playedBuffers > lastPlayed || self.replyBytesReceived > lastBytes
+                    || self.openerIsAudible {
                     lastPlayed = self.playedBuffers
                     lastBytes = self.replyBytesReceived
                     continue
@@ -1393,14 +1427,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let buffer = opener.buffer
         guard let samples = buffer.floatChannelData?[0] else { return }
         let frames = Int(buffer.frameLength)
+        let isReplay = opener.context != nil
 
-        linesStarted += 1
-        let context = "opener-\(UUID().uuidString)"
+        let context = opener.context ?? "opener-\(UUID().uuidString)"
         replyContext = context
         replyText = opener.text
-        replyPCM = Data()
-        onReplyBegan?(context)
-        onReplyDelta?(context, "\u{0}" + opener.text)
+        if !isReplay {
+            linesStarted += 1
+            replyPCM = Data()
+            onReplyBegan?(context)
+            onReplyDelta?(context, "\u{0}" + opener.text)
+        }
 
         // Same rule as `audio_start`: the call's first line on the open
         // speaker is half-duplex, because the echo canceller has not heard
@@ -1414,18 +1451,24 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // The same loudness law every streamed line goes through — without it
         // the greeting plays at whatever level ElevenLabs rendered it, next to
         // replies that are levelled ("인사말만 크고 나머지는 안 들리던" in reverse).
-        updateStreamGain(samples: samples, count: frames)
-        if streamGain != 1 {
-            for i in 0..<frames {
-                samples[i] = max(-0.985, min(0.985, samples[i] * streamGain))
+        // A replay's buffer was levelled in place the first time round.
+        if !isReplay {
+            updateStreamGain(samples: samples, count: frames)
+            if streamGain != 1 {
+                for i in 0..<frames {
+                    samples[i] = max(-0.985, min(0.985, samples[i] * streamGain))
+                }
             }
+            // Keep the take for Replay, in the Int16 form `handOverReply` expects.
+            var ints = [Int16](repeating: 0, count: frames)
+            for i in 0..<frames {
+                ints[i] = Int16(max(-32768, min(32767, samples[i] * 32767))).littleEndian
+            }
+            replyPCM = ints.withUnsafeBufferPointer { Data(buffer: $0) }
         }
-        // Keep the take for Replay, in the Int16 form `handOverReply` expects.
-        var ints = [Int16](repeating: 0, count: frames)
-        for i in 0..<frames {
-            ints[i] = Int16(max(-32768, min(32767, samples[i] * 32767))).littleEndian
-        }
-        replyPCM = ints.withUnsafeBufferPointer { Data(buffer: $0) }
+        openerInAir = (LocalOpener(text: opener.text, buffer: buffer,
+                                   rate: opener.rate, context: context),
+                       Date().addingTimeInterval(Double(frames) / opener.rate + 0.5))
 
         pendingBuffers += 1
         mic.markPlaybackStarted()
@@ -1434,8 +1477,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
+                    // Cut by a rebuild and queued again — it was not heard.
+                    if self.localOpener?.context == context { return }
                     self.pendingBuffers = max(0, self.pendingBuffers - 1)
                     self.playedBuffers += 1
+                    if self.openerInAir?.opener.context == context { self.openerInAir = nil }
                     guard self.replyContext == context else { return }
                     self.level = 0
                     self.closeEchoGateAfterTail()
@@ -1448,6 +1494,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // The player refused it — fall back to the state the call would
             // have been in, and let the learner speak first.
             pendingBuffers = max(0, pendingBuffers - 1)
+            openerInAir = nil
             state = .listening
             mic.setEchoGate(active: false)
             handOverReply()
@@ -1479,6 +1526,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private func stopAudio(endingCall: Bool = false) {
         guard engineRunning else { return }
         engineRunning = false
+        // The greeting is mid-line and the player is about to drop it: queue
+        // it again, whole, for the rebuilt engine (`startAudio`). Set BEFORE
+        // `player.stop()`, whose completion must see it and not hand the
+        // line over as heard.
+        if !endingCall, let inAir = openerInAir,
+           replyContext == inAir.opener.context, state == .speaking {
+            localOpener = inAir.opener
+            Self.step("opener: cut by a rebuild — replaying it on the new engine")
+        }
+        openerInAir = nil
         engine.inputNode.removeTap(onBus: 0)
         player.stop()
         engine.stop()
@@ -1640,7 +1697,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         var payload: [String: Any] = [
             "type": "start",
             "token": token,
-            "voiceId": voiceId,
+            // A stranger's preset slot speaks in this language's own voice.
+            "voiceId": VoicePreset.speaking(voiceId, in: language),
             "language": language,
             "system": system,
         ]
@@ -1772,6 +1830,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             state = said.isEmpty ? .listening : .thinkingReply
         case "audio_start":
             Self.step("reply audio starting")
+            openerInAir = nil
             streamLevel = AudioLoudness.StreamingLevelEstimator()
             replyPCM = Data()
             replyText = ""
@@ -1842,6 +1901,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
             // player is a voice arguing with them.
+            openerInAir = nil
             Self.avGuard("interrupt.stop") { self.player.stop() }
             pendingBuffers = 0
             // `play()` RAISES if the engine died underneath us (a route blip

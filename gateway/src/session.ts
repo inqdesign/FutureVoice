@@ -647,6 +647,7 @@ export class CallSession implements DurableObject {
           // barge-in can still have chunks in flight, and playing them would
           // talk over the learner who just interrupted.
           if (contextId !== this.activeContext || !this.client) return
+          this.audioSeenFor = contextId
           // Play-out clock: the DO SENDS a reply's audio in a burst, but the
           // phone plays it for its real duration — the echo of a long line's
           // TAIL lands seconds after `lastSpokeAt`, outside any window
@@ -1223,12 +1224,37 @@ export class CallSession implements DurableObject {
    *  clears this. */
   private lineEndTimer: number | null = null
   private static readonly lineEndGraceMs = 1500
+  /** The last context whose audio actually reached the client. */
+  private audioSeenFor: string | null = null
+  /** How long a line may go with NO audio at all before it is given up on.
+   *  Well past a slow first chunk on a cold socket (~1–2 s), short enough
+   *  that a voice that never answers still hands the turn back. */
+  private static readonly noAudioCapMs = 8000
 
+  /** The play-out clock can only say a line is OVER once the line has
+   *  STARTED. Until 2026-09-28 it judged every line against `playoutEndAt`
+   *  alone — which only moves when audio arrives, so on a line with none yet
+   *  it was still the previous line's end, and on a call's FIRST line it was
+   *  0. The first tick (500 ms after the text was flushed) then declared the
+   *  greeting over before ElevenLabs had sent a byte, and every chunk that
+   *  followed was dropped as a stale context: the text on screen, no voice.
+   *  Device log 2026-09-28, `audio_start` → `audio_end` in 485 ms, "why
+   *  suddenly I can't hear your voice?". The first line is the one that
+   *  opens the ElevenLabs socket, so it is the slow one — hence "sometimes,
+   *  and only the first line". */
   private armLineEndFallback(context: string): void {
     if (this.lineEndTimer !== null) clearInterval(this.lineEndTimer)
+    const armedAt = Date.now()
     this.lineEndTimer = setInterval(() => {
       if (this.ended || this.activeContext !== context) {
         if (this.lineEndTimer !== null) { clearInterval(this.lineEndTimer); this.lineEndTimer = null }
+        return
+      }
+      if (this.audioSeenFor !== context) {
+        if (Date.now() > armedAt + CallSession.noAudioCapMs) {
+          this.warn("tts", `no audio for ${CallSession.noAudioCapMs} ms — ending line`)
+          this.endLine(context)
+        }
         return
       }
       if (Date.now() > this.playoutEndAt + CallSession.lineEndGraceMs) {

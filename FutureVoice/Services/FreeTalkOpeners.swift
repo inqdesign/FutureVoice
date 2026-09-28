@@ -1,6 +1,7 @@
 import Foundation
 
-/// Rotating pool of Free-talk greeting lines (`Documents/freetalk_openers.json`).
+/// Rotating pools of Free-talk greeting lines, one per language + persona
+/// (`Documents/freetalk_openers_by_language.json`).
 ///
 /// A free talk opens with more or less the same kind of greeting every time,
 /// so paying a Gemini call per session to write one (and an ElevenLabs call
@@ -28,13 +29,17 @@ final class FreeTalkOpeners {
         let openers: [String]
     }
 
+    /// The single-pool file from before 2026-09-28 — read for migration only.
     private let fileURL: URL
+    private let storeURL: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "freetalk_openers.json") {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         self.fileURL = dir.appendingPathComponent(filename)
+        self.storeURL = dir.appendingPathComponent(
+            (filename as NSString).deletingPathExtension + "_by_language.json")
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -145,8 +150,7 @@ final class FreeTalkOpeners {
     /// (caller falls back to a generated opener). Advances and persists the
     /// cursor so consecutive free talks don't repeat the same line.
     func next(language: String, personaName: String?) -> String? {
-        guard var pool = load(),
-              pool.key == Self.key(language: language, personaName: personaName),
+        guard var pool = load(key: Self.key(language: language, personaName: personaName)),
               !pool.lines.isEmpty else { return nil }
         let line = pool.lines[pool.cursor % pool.lines.count]
         pool.cursor = (pool.cursor + 1) % pool.lines.count
@@ -159,8 +163,7 @@ final class FreeTalkOpeners {
     /// tap, so the call opens on cached audio instead of an ElevenLabs round
     /// trip. Must stay in sync with `next()`'s index arithmetic.
     func peek(language: String, personaName: String?) -> String? {
-        guard let pool = load(),
-              pool.key == Self.key(language: language, personaName: personaName),
+        guard let pool = load(key: Self.key(language: language, personaName: personaName)),
               !pool.lines.isEmpty else { return nil }
         return pool.lines[pool.cursor % pool.lines.count]
     }
@@ -169,8 +172,7 @@ final class FreeTalkOpeners {
     /// launcher warms EACH line's TTS once, so any rotation position opens
     /// the call on cached audio.
     func lines(language: String, personaName: String?) -> [String] {
-        guard let pool = load(),
-              pool.key == Self.key(language: language, personaName: personaName),
+        guard let pool = load(key: Self.key(language: language, personaName: personaName)),
               !pool.lines.isEmpty else { return [] }
         return pool.lines
     }
@@ -202,12 +204,29 @@ final class FreeTalkOpeners {
         if stale { PhraseAudioStore.shared.removeAudio(text: line, voiceId: voiceId) }
         guard stale || PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
                                                     allowLineage: false) == nil else { return }
-        let audio = try await ElevenLabsClient.shared.synthesize(
-            voiceId: voiceId, text: line,
-            modelId: ElevenLabsClient.conversationModelId,
-            purpose: "turn")
+        let audio: Data
+        do {
+            audio = try await ElevenLabsClient.shared.synthesize(
+                voiceId: voiceId, text: line,
+                modelId: ElevenLabsClient.conversationModelId,
+                purpose: "turn")
+        } catch {
+            Self.report("opener_audio_failed", language: nil, error: error)
+            throw error
+        }
         PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
         markBaked(line)
+    }
+
+    /// Failures only — one row each, never a success, so the volume is the
+    /// number of things that went wrong.
+    private static func report(_ event: String, language: String?, error: Error) {
+        guard !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
+        let reason = String(String(describing: error).prefix(200))
+        RealtimeTalkClient.step("\(event): \(reason)")
+        var props = ["error": reason]
+        if let language { props["language"] = language }
+        Telemetry.log(event, props)
     }
 
     // MARK: - The opener follows the speaking speed
@@ -289,8 +308,7 @@ final class FreeTalkOpeners {
     /// True when a valid pool exists for this language/persona. Read-only —
     /// unlike `next()` it never advances the rotation cursor.
     func hasPool(language: String, personaName: String?) -> Bool {
-        guard let pool = load(),
-              pool.key == Self.key(language: language, personaName: personaName),
+        guard let pool = load(key: Self.key(language: language, personaName: personaName)),
               !pool.lines.isEmpty else { return false }
         return true
     }
@@ -312,6 +330,21 @@ final class FreeTalkOpeners {
     func generatePool(language: String,
                       personaName: String?,
                       proficiency: CEFRLevel) async throws -> String {
+        do {
+            return try await writePool(language: language, personaName: personaName,
+                                       proficiency: proficiency)
+        } catch {
+            // Every caller discards this with `try?`, and a pool that is never
+            // written is a call that opens on the fallback line forever — each
+            // one a fresh ElevenLabs take nobody can see the reason for.
+            Self.report("freetalk_openers_failed", language: language, error: error)
+            throw error
+        }
+    }
+
+    private func writePool(language: String,
+                           personaName: String?,
+                           proficiency: CEFRLevel) async throws -> String {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: Self.systemPrompt(language: language, personaName: personaName,
                                       proficiency: proficiency),
@@ -359,13 +392,46 @@ final class FreeTalkOpeners {
 
     // MARK: - Disk
 
-    private func load() -> Pool? {
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        return try? decoder.decode(Pool.self, from: data)
+    /// One pool PER language + persona, in one file. Until 2026-09-28 the file
+    /// held a single pool, so a learner who talked in two languages threw one
+    /// language's pool away every time they used the other — each switch
+    /// meant a new Gemini call, the bundled fallback line in the meantime,
+    /// and new ElevenLabs takes of lines whose audio had already been paid
+    /// for. The old single-pool file is read once and folded in.
+    private struct Store: Codable {
+        var pools: [String: Pool]
+    }
+    /// Languages × persona names a learner actually uses is a handful; the
+    /// cap only stops a long history of renames from growing the file.
+    private static let maxPools = 8
+
+    private func loadStore() -> Store {
+        if let data = try? Data(contentsOf: storeURL),
+           let store = try? decoder.decode(Store.self, from: data) {
+            return store
+        }
+        if let data = try? Data(contentsOf: fileURL),
+           let legacy = try? decoder.decode(Pool.self, from: data) {
+            return Store(pools: [legacy.key: legacy])
+        }
+        return Store(pools: [:])
+    }
+
+    private func load(key: String) -> Pool? {
+        guard let pool = loadStore().pools[key], pool.key == key else { return nil }
+        return pool
     }
 
     private func save(_ pool: Pool) {
-        guard let data = try? encoder.encode(pool) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        var store = loadStore()
+        store.pools[pool.key] = pool
+        if store.pools.count > Self.maxPools {
+            let keep = store.pools.values
+                .sorted { $0.generatedAt > $1.generatedAt }
+                .prefix(Self.maxPools)
+            store.pools = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0) })
+        }
+        guard let data = try? encoder.encode(store) else { return }
+        try? data.write(to: storeURL, options: .atomic)
     }
 }
