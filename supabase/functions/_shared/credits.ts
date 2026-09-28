@@ -394,18 +394,30 @@ export async function refund(opts: {
  * Ping the owner on Telegram. Best-effort and silent: every caller is on a
  * path that must not fail because a notification did.
  */
-export async function notifyOwner(text: string): Promise<void> {
+export async function notifyOwner(text: string): Promise<boolean> {
   try {
     const token = Deno.env.get("TELEGRAM_BOT_TOKEN")
     const chatId = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID")
-    if (!token || !chatId) return
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    if (!token || !chatId) {
+      console.warn("notifyOwner: TELEGRAM_BOT_TOKEN / TELEGRAM_ADMIN_CHAT_ID unset")
+      return false
+    }
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text }),
     })
+    if (!res.ok) {
+      // Telegram answers a WRONG CHAT ID or a blocked bot with a 400 and a
+      // description, and this used to be discarded — which is how a
+      // notification path can look wired up and deliver nothing for weeks.
+      console.error("notifyOwner: telegram refused", res.status, await res.text())
+      return false
+    }
+    return true
   } catch (e) {
     console.error("notifyOwner failed (non-fatal)", e)
+    return false
   }
 }
 
