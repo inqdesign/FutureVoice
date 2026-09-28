@@ -345,7 +345,7 @@ final class GeminiClient {
             throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: raw)
         }
         do {
-            return try JSONDecoder().decode(T.self, from: jsonData)
+            return try Self.decodeRepairing(T.self, from: jsonData)
         } catch {
             if truncated { throw GeminiError.truncated }
             throw error
@@ -424,7 +424,7 @@ final class GeminiClient {
                 throw candidate?.finishReason == "MAX_TOKENS"
                     ? GeminiError.truncated : GeminiError.jsonNotFound(raw: text)
             }
-            return try JSONDecoder().decode(T.self, from: jsonData)
+            return try Self.decodeRepairing(T.self, from: jsonData)
         }
 
         var raw = ""                 // model text accumulated across events
@@ -480,7 +480,7 @@ final class GeminiClient {
             throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: trimmed)
         }
         do {
-            return try JSONDecoder().decode(T.self, from: jsonData)
+            return try Self.decodeRepairing(T.self, from: jsonData)
         } catch {
             // The reply already shipped; a malformed or cut-off tail must not
             // undo a turn the user has heard.
@@ -555,7 +555,7 @@ final class GeminiClient {
                 throw candidate?.finishReason == "MAX_TOKENS"
                     ? GeminiError.truncated : GeminiError.jsonNotFound(raw: text)
             }
-            return try JSONDecoder().decode(T.self, from: jsonData)
+            return try Self.decodeRepairing(T.self, from: jsonData)
         }
 
         var raw = ""
@@ -588,7 +588,7 @@ final class GeminiClient {
             throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: trimmed)
         }
         do {
-            return try JSONDecoder().decode(T.self, from: jsonData)
+            return try Self.decodeRepairing(T.self, from: jsonData)
         } catch {
             if truncated { throw GeminiError.truncated }
             // Every one of these used to reach telemetry as `dataCorrupted@`
@@ -835,6 +835,70 @@ final class GeminiClient {
         let start = target.index(target.startIndex, offsetBy: lo)
         let end = target.index(target.startIndex, offsetBy: hi)
         return String(target[start..<end])
+    }
+
+    /// Decodes the model's JSON, and only if that fails, once more after
+    /// `repairingInteriorQuotes`. Every summary failure with an excerpt in
+    /// the week of 2026-09-25 was the same thing: a native-language coaching
+    /// field quoting target-language words as `「"had"」` with the inner quotes
+    /// unescaped — the shape `CoachingLanguage.contract`'s own example shows.
+    /// A retry sends the same prompt and often gets the same slip (one talk
+    /// failed five times running), so the fix has to be on the reading side.
+    /// A body that decodes is never touched, and a repair that still doesn't
+    /// decode throws the ORIGINAL error, so telemetry keeps describing what
+    /// the model actually wrote.
+    static func decodeRepairing<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            guard let text = String(data: data, encoding: .utf8),
+                  let fixed = repairingInteriorQuotes(text),
+                  let fixedData = fixed.data(using: .utf8),
+                  let value = try? JSONDecoder().decode(T.self, from: fixedData)
+            else { throw error }
+            return value
+        }
+    }
+
+    /// Escapes `"` characters that sit INSIDE a JSON string value. Inside a
+    /// string, a quote is taken as the string's real end only when the next
+    /// non-space character is one JSON allows after a string (`,` `}` `]`
+    /// `:`) — and never when it touches a corner bracket (`「"had"」`), which
+    /// is the reported shape. Anything else is escaped. Returns nil when
+    /// nothing needed escaping.
+    static func repairingInteriorQuotes(_ text: String) -> String? {
+        let chars = Array(text)
+        var out = ""
+        out.reserveCapacity(chars.count + 16)
+        var inString = false
+        var escaped = false
+        var changed = false
+        for i in chars.indices {
+            let c = chars[i]
+            if !inString {
+                if c == "\"" { inString = true }
+                out.append(c)
+                continue
+            }
+            if escaped { escaped = false; out.append(c); continue }
+            if c == "\\" { escaped = true; out.append(c); continue }
+            guard c == "\"" else { out.append(c); continue }
+            let prev: Character? = i > 0 ? chars[i - 1] : nil
+            var j = i + 1
+            while j < chars.count, chars[j].isWhitespace { j += 1 }
+            let next: Character? = j < chars.count ? chars[j] : nil
+            let touchesBracket = prev == "「" || prev == "『"
+                || (i + 1 < chars.count && (chars[i + 1] == "」" || chars[i + 1] == "』"))
+            let endsString = next == nil || [",", "}", "]", ":"].contains(next!)
+            if endsString && !touchesBracket {
+                inString = false
+                out.append(c)
+            } else {
+                out.append("\\\"")
+                changed = true
+            }
+        }
+        return changed ? out : nil
     }
 
     private static func extractJSON(from text: String) -> Data? {
