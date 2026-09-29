@@ -461,7 +461,7 @@
 
 **P1 돈** — 과금·결제 게이트·한도가 iOS와 다른 것
 - ☐ 4.0 **100분 팩(소모성)** — iOS `apple-topup`/`TalkTopUpService`/`TalkTopUpButton`(2026-09-26)의 짝. Play 소모성 `talk_100`(`talk_topups.google_product_id`) → `google-topup` 엣지 함수(구매 토큰 검증) → `apply_talk_topup(…, 'google', purchaseToken)` → 소진 시트·Usage 페이지에 버튼. 서버 응답 뒤에만 consume. 상한 풀·무료 20분·`isUncappedTalk`는 2026-09-26에 맞춰 둠(`9c67c41` 이후 미커밋).
-- ☐ 4.1 책 페이지의 장면 다시 만들기(Watch)가 결제 게이트를 거치지 않는지
+- ☑ 4.1 (확인만, 2026-09-29 — `RootScreen` 책 `onWatch = { id -> gate { … } }`, Watch 탭 카드도 같은 `gate`, 컴포저 CTA는 `BillingGate.start`; 코드 변경 없음) 책 페이지의 장면 다시 만들기(Watch)가 결제 게이트를 거치지 않는지
   확인하고, 거치지 않으면 게이트에 넣는다.
 - (2.16, 2.18, 2.27)
 
