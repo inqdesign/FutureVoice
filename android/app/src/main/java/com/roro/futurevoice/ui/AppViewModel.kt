@@ -151,6 +151,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                             )
                         }
                         auth.userId?.let { com.roro.futurevoice.core.Analytics.identify(it) }
+                        // An account now owns the session: a linked anonymous
+                        // user keeps its id and its voice is off the clock.
+                        if (!auth.isAnonymous) com.roro.futurevoice.data.VoiceReclaim.clear(appContext)
                         restoreVoiceClone()
                     }
 

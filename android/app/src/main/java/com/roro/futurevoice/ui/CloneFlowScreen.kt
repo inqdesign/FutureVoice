@@ -121,6 +121,12 @@ fun CloneFlowScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var act by remember { mutableStateOf(CloneAct.INTRO) }
+    // Came back after the unclaimed voice was collected (see [VoiceReclaim]).
+    val reclaimed = remember { com.roro.futurevoice.data.VoiceReclaim.wasReclaimed(context) }
+    LaunchedEffect(reclaimed) {
+        if (reclaimed) com.roro.futurevoice.core.Analytics.capture("voice_reclaimed_notice",
+            mapOf("reason" to "unclaimed_grace"))
+    }
     val room = remember { RoomCheck() }
     var ambient by remember { mutableFloatStateOf(-90f) }
     var echoTail by remember { mutableStateOf<Double?>(null) }
@@ -215,6 +221,10 @@ fun CloneFlowScreen(
                     removeBackgroundNoise = (snr ?: 0f) < 22f,
                 )
                 clonedVoiceId = voiceId
+                // Before sign-up the voice is on the reclaim clock; a signed-in
+                // clone is not.
+                if (signedIn) com.roro.futurevoice.data.VoiceReclaim.clear(context)
+                else com.roro.futurevoice.data.VoiceReclaim.markUnclaimed(context)
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_succeeded")
                 // First words in the user's own voice. Fidelity model on
                 // purpose — fires once per user, and it's the moment they
@@ -251,7 +261,8 @@ fun CloneFlowScreen(
         topBar = {
             TopAppBar(title = {
                 Text(stringResource(when (act) {
-                    CloneAct.INTRO -> R.string.your_fluent_self
+                    CloneAct.INTRO -> if (reclaimed) R.string.let_s_make_your_voice_again
+                        else R.string.your_fluent_self
                     CloneAct.CONSENT -> R.string.your_voice_in_safe_hands
                     CloneAct.MIC -> R.string.mic_check
                     CloneAct.SPOT -> R.string.find_a_quiet_spot
@@ -346,7 +357,18 @@ fun CloneFlowScreen(
             when (act) {
                 // Why they are about to read their own voice aloud. Without
                 // it the first thing a learner meets is a consent form.
-                CloneAct.INTRO -> {
+                CloneAct.INTRO -> if (reclaimed) {
+                    StepHeader(
+                        stringResource(R.string.one_minute_of_reading_brings_your_fluent_self_back),
+                        stringResource(R.string.you_didn_t_finish_signing_up_so_we_deleted_the_voice_you_mad_f40409),
+                    )
+                    Text(stringResource(R.string.everything_else_is_still_here),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = { act = CloneAct.CONSENT }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.continue_))
+                    }
+                } else {
                     StepHeader(
                         stringResource(R.string.another_you_already_fluent),
                         stringResource(R.string.dont_imitate_a_stranger),
