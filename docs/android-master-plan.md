@@ -399,12 +399,26 @@
   "같은 합치기 규칙, 다른 운송"으로 나중에 한다고 iOS 쪽에 이미 적혀 있다.
   출시 범위 밖.
 
-- ☐ **2.29 안드로이드 요약 프롬프트를 빌드 54의 iOS 요약과 맞춘다** — 안드로이드는
+- ◐ **2.29 안드로이드 요약 프롬프트를 빌드 54의 iOS 요약과 맞춘다** — 안드로이드는
   요약을 서버 함수 `session-summary`(안드로이드 전용, iOS는 안 부름)로 받는데, 그
   프롬프트가 빌드 54 이전 모양이다. `about_user`가 문자열뿐이라 새 기억 줄이 전부
   "비공개·사실·근거 없음"으로 들어오고, 번호 붙은 기존 기억과 `replaces`도 없다.
   iOS의 `summarySystemPrompt`(4a5e8df)와 스키마·필드 순서를 맞춘다. **배포는 서버
   반영이라 사장님 확인 뒤.**
+  **한 것:** 프롬프트를 손으로 옮기지 않고 생성한다 —
+  `scripts/android/gen-summary-prompt.py`가 iOS `18661cf`의 Swift에서
+  `summarySystemPrompt`·`CoachingLanguage.contract`·`registerGuard`·
+  `unspacedExpressionNote`를 읽어 `session-summary/prompt.ts`를 쓴다(목록 세 줄·
+  `age`·`englishName`·`writesSpaces`만 손으로 옮기고, 원본 Swift가 바뀌면 생성기가
+  멈춘다). 이제 `about_user`는 `{text, heard, kind, share, gist, why, replaces}`,
+  번호·나이 붙은 기억 목록, 공개 단계 손수 옮긴 기록, 표현 개수 예산, 한·일 말투
+  가드, 띄어쓰기 없는 언어 표현 설명까지 iOS와 같다(시계 기능 `632c2ce`는 기준선
+  뒤라 안 넣음). 요청 새 필드 `remembered_notes`·`share_corrections`는 선택이라
+  옛 빌드도 그대로 된다. 클라이언트는 `known_about_user`를 iOS처럼 직접 쓴 사실
+  (`knownFacts`)로 바꾸고 기억은 번호 목록으로 따로 보낸다. `about_user` 읽기는
+  iOS처럼 text는 문자열만·replaces는 숫자만. 테스트 6개(`SessionSummaryRequestTest`),
+  `deno check` 통과. **배포 대기** — `supabase functions deploy session-summary`는
+  사장님 확인 뒤.
 
 애플 결제 전용 변경(`d87b7f1`, `c8b17b1`)과 게이트웨이·어드민 변경은 서버
 쪽이라 안드로이드에 할 일이 없다.
@@ -635,3 +649,4 @@
 | 2026-09-29 | 2.46 Watch 두 문·자료 | 에이전트 `cdf4db8`, 통화 브리프 `4eb440b`, 캡처 5장 | 이 커밋 |
 | 2026-09-29 | 2.42 People 맨 위 내 프로필 | You 섹션, 같은 행 모양 | 이 커밋 |
 | 2026-09-29 | 4.17b 카드 상세·이 통화 복습 | Drill 줄 → 공부 카드, 통화별 덱, saveIfNew | 이 커밋 |
+| 2026-09-29 | 2.29 요약 프롬프트 iOS 1.1.1과 맞춤 | 생성기로 추출, 새 필드 선택, 테스트 6개, 빌드 통과, 배포 대기 | 이 커밋 |

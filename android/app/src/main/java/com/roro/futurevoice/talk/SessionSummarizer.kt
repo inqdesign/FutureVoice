@@ -148,17 +148,15 @@ object SessionSummarizer {
         // `replaces` in the payload is a 1-based index into THIS list, so it
         // is captured once here and never re-read from the persona after the
         // call (iOS `rememberedNotes`). Expired `now` lines are not in it.
-        val rememberedNotes = PersonaStore.shared(context).load()?.currentNotes().orEmpty()
-        val body = SessionSummaryClient.RequestBody(
-            target_language = session.targetLanguage,
-            native_language = nativeLanguage,
+        val persona = PersonaStore.shared(context).load()
+        val rememberedNotes = persona?.currentNotes().orEmpty()
+        val body = requestBody(
+            session = session,
+            nativeLanguage = nativeLanguage,
             profile = Json.parseToJsonElement(
                 StoreJson.json.encodeToString(LearnerProfile.serializer(), profile)).jsonObject,
-            // What the fluent self already knows about the person, so the
-            // model doesn't re-learn their job every call.
-            known_about_user = rememberedNotes.map { it.text },
-            expression_budget = expressionBudget(turns.count { it.role == TurnRole.FLUENT_SELF }),
-            transcript = formatTranscript(turns),
+            persona = persona,
+            rememberedNotes = rememberedNotes,
             metrics = metrics.promptJson(),
         )
         // Stable key: a retry re-runs the SAME logical request for free as
@@ -355,6 +353,40 @@ object SessionSummarizer {
         return saved
     }
 
+    /**
+     * The request, as iOS `SessionSummarizer` feeds `summarySystemPrompt`:
+     * what the learner TYPED about themselves as the "already on file" list
+     * (`knownFacts`), the notebook numbered and dated as the lines the call
+     * may UPDATE, the learner's last share-rung moves, and the expression
+     * budget from how much the fluent self said. [rememberedNotes] must be
+     * the SAME list the caller later maps `replaces` onto.
+     */
+    fun requestBody(
+        session: Session,
+        nativeLanguage: String,
+        profile: JsonObject,
+        persona: UserPersona?,
+        rememberedNotes: List<PersonaNote>,
+        metrics: JsonObject,
+    ): SessionSummaryClient.RequestBody = SessionSummaryClient.RequestBody(
+        target_language = session.targetLanguage,
+        native_language = nativeLanguage,
+        profile = profile,
+        known_about_user = persona?.knownFacts.orEmpty(),
+        remembered_notes = rememberedNotes.map {
+            SessionSummaryClient.RememberedNote(
+                text = it.text, kind = it.kind.wire,
+                learned_at = java.time.Instant.ofEpochMilli(it.learnedAt)
+                    .truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString())
+        },
+        share_corrections = persona?.shareCorrections.orEmpty().map {
+            SessionSummaryClient.ShareCorrection(text = it.text, from = it.from.wire, to = it.to.wire)
+        },
+        expression_budget = expressionBudget(session.turns.count { it.role == TurnRole.FLUENT_SELF }),
+        transcript = formatTranscript(session.turns),
+        metrics = metrics,
+    )
+
     /** `ConversationEngine.formatTranscript` — role-labelled lines. */
     fun formatTranscript(turns: List<Turn>): String =
         turns.joinToString("\n") { t ->
@@ -410,7 +442,11 @@ object SessionSummarizer {
         (p["about_user"] as? JsonArray)?.mapNotNull { e ->
             (e as? JsonPrimitive)?.takeIf { it.isString }?.let { return@mapNotNull AboutUser(it.content) }
             val o = e as? JsonObject ?: return@mapNotNull null
-            val text = str(o, "text") ?: return@mapNotNull null
+            // iOS decodes `text` as a String and `replaces` as an Int: a
+            // number where text belongs, or "2" where a number belongs, is
+            // not read as one.
+            val text = (o["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                ?: return@mapNotNull null
             val share = PersonaNote.Share.from(str(o, "share"))
                 ?: (o["private"] as? JsonPrimitive)?.booleanOrNull
                     ?.let { if (it) PersonaNote.Share.NOTHING else PersonaNote.Share.ALL }
@@ -419,7 +455,7 @@ object SessionSummarizer {
                 text = text, share = share,
                 kind = PersonaNote.Kind.from(str(o, "kind")) ?: PersonaNote.Kind.FACT,
                 heard = str(o, "heard"), gist = str(o, "gist"), why = str(o, "why"),
-                replaces = (o["replaces"] as? JsonPrimitive)?.intOrNull,
+                replaces = (o["replaces"] as? JsonPrimitive)?.takeIf { !it.isString }?.intOrNull,
             )
         }.orEmpty()
 

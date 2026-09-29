@@ -29,12 +29,29 @@ class SessionSummaryClient(private val auth: AuthRepository) {
         val target_language: String,
         val native_language: String,
         val profile: JsonObject,
+        /** What the learner TYPED about themselves (iOS `UserPersona.knownFacts`). */
         val known_about_user: List<String>,
+        /**
+         * The notebook, numbered in THIS order — `about_user.replaces` is a
+         * 1-based index into it, so the caller captures it once and maps the
+         * reply back onto the same list.
+         */
+        val remembered_notes: List<RememberedNote> = emptyList(),
+        /** The learner's last hand moves between share rungs, oldest first. */
+        val share_corrections: List<ShareCorrection> = emptyList(),
         val expression_budget: Int,
         val transcript: String,
         val metrics: JsonObject,
         val stream: Boolean = true,
     )
+
+    /** One remembered line: `kind` "fact"|"now", `learned_at` ISO-8601 (the server writes its age). */
+    @Serializable
+    data class RememberedNote(val text: String, val kind: String, val learned_at: String)
+
+    /** One hand move: `from`/`to` are "nothing"|"gist"|"all". */
+    @Serializable
+    data class ShareCorrection(val text: String, val from: String, val to: String)
 
     @Serializable
     private data class PartR(val text: String? = null)
