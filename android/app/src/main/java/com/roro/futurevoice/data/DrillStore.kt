@@ -89,12 +89,47 @@ object DrillIngest {
 
         for (turn in userTurns) {
             val s = turn.suggestion ?: continue
+            // A card is a SLIP, drilled. Since the two-answer contract
+            // `alternative` is the whole turn re-said — shadow material, a
+            // terrible card — so cards come from `fixes`, one clause each. No
+            // fixes = a grammatically clean turn: nothing to drill.
+            val fixes = s.fixes
+            if (fixes != null) {
+                for (fix in fixes) {
+                    val (source, target) = cardPair(fix, turn.transcript)
+                    add(source, target, fix.why, turn.id)
+                }
+                continue
+            }
+            // Saved before `fixes` existed: `alternative` IS one sentence.
             add(relevantFragment(turn.transcript, s.alternative), s.alternative, s.reason, turn.id)
         }
         for (p in summary.phrasesUsed) add(p.userSaid, p.fluentAlternative, p.reason, sourceTurnId(p.userSaid))
         for (p in summary.newPatternsDetected) add(p.mistake, p.correction, p.context, sourceTurnId(p.mistake))
         for (d in summary.suggestedDrills) add("", d, "Suggested for you to practice.")
         return newCards
+    }
+
+    /**
+     * The card a grammar fix becomes — the ONE rule, shared by card minting,
+     * the talk book's Drill chapter and adoption, so all of them talk about
+     * the same sentence (iOS `DrillStore.cardPair`). Usually the fix itself;
+     * but a fix too short for [CarryoverDetector.isCreditable] (a Korean
+     * clause is often two eojeol) could never be marked used, so it is
+     * widened to the SENTENCE it sits in, with the fix applied.
+     */
+    fun cardPair(fix: com.roro.futurevoice.talk.TurnFix, transcript: String): Pair<String, String> {
+        if (com.roro.futurevoice.talk.CarryoverDetector.isCreditable(fix.now)) return fix.was to fix.now
+        val sentences = transcript.split(Regex("[.!?。！？\\n]"))
+            .map { it.trim() }.filter { it.isNotEmpty() }
+        for (sentence in sentences) {
+            val at = sentence.indexOf(fix.was, ignoreCase = true)
+            if (at < 0) continue
+            val widened = sentence.replaceRange(at, at + fix.was.length, fix.now)
+            if (!com.roro.futurevoice.talk.CarryoverDetector.isCreditable(widened)) break
+            return sentence to widened
+        }
+        return fix.was to fix.now
     }
 
     /** Keep the sentence that corresponds to the correction; prefix-cut otherwise. */

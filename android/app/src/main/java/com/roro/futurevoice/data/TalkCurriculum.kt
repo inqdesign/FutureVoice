@@ -83,7 +83,20 @@ object TalkCurriculum {
      *  transcript's suggestion-shadow uses, so attempts made from either
      *  surface land on the same line. (It was `shadowLineId` while the
      *  corrections WERE the curriculum's shadow lines.) */
-    fun correctionId(turnId: String): String = xorFirstHexDigit(turnId)
+    fun correctionId(turnId: String, index: Int = 0): String {
+        val base = xorFirstHexDigit(turnId)
+        // Index 0 is exactly the id this always produced, so every attempt on
+        // disk still lands. A turn can now carry several fixes; each other
+        // one moves the SECOND hex digit, which neither this nor
+        // [sentenceLineId] (the last) touches.
+        if (index <= 0) return base
+        val digits = base.withIndex().filter { it.value.isLetterOrDigit() }
+        val pos = digits.getOrNull(1)?.index ?: return base
+        val v = Character.digit(base[pos], 16)
+        if (v < 0) return base
+        val flipped = Character.forDigit(v xor (0x8 + (index and 0x7)), 16)
+        return base.substring(0, pos) + flipped + base.substring(pos + 1)
+    }
 
     /** The turn a correction id was derived from (the transform is its own
      *  inverse). */
@@ -260,12 +273,20 @@ object TalkCurriculum {
         // Mastered by its drill card reaching the top box — the Drill chapter
         // studies corrections as CARDS — or by a shadow take on the line,
         // which the transcript still offers.
-        fun masteryAt(text: String, turnId: String?, itemId: String): Long? {
+        // `oneCardPerTurn`: a turn saved before `fixes` minted ONE card, so
+        // its turn id identifies it. A turn with fixes mints one per fix, all
+        // sharing the turn id — matched by turn, the first to graduate would
+        // master every fix. Those are found by their own text instead.
+        // `lineId`: a passing take on the whole corrected turn masters every
+        // fix in it — reading the line right is saying all of them right.
+        fun masteryAt(text: String, turnId: String?, itemId: String,
+                      lineId: String? = null, oneCardPerTurn: Boolean = true): Long? {
             bestTakeAt(attempts, itemId)?.let { return it }
+            lineId?.let { id -> bestTakeAt(attempts, id)?.let { return it } }
             val needle = CarryoverDetector.normalized(text)
             val card = sessionCards.firstOrNull {
                 it.box >= DrillIngest.MAX_BOX &&
-                    ((turnId != null && it.sourceTurnId == turnId) ||
+                    ((oneCardPerTurn && turnId != null && it.sourceTurnId == turnId) ||
                         CarryoverDetector.normalized(it.targetPhrase) == needle)
             } ?: return null
             return card.lastReviewedAt ?: card.createdAt
@@ -275,6 +296,21 @@ object TalkCurriculum {
         for (turn in session.turns) {
             if (turn.role != TurnRole.USER || turn.excludedFromScoring) continue
             val s = turn.suggestion ?: continue
+            // The Drill chapter studies SLIPS as cards: a turn's fixes, one
+            // clause each, by the card's own text (`DrillIngest.cardPair`, the
+            // rule the card was minted by). An empty list = a clean turn.
+            val fixes = s.fixes
+            if (fixes != null) {
+                fixes.forEachIndexed { index, fix ->
+                    val target = DrillIngest.cardPair(fix, turn.transcript).second
+                    if (!seenCorrections.add(CarryoverDetector.normalized(target))) return@forEachIndexed
+                    val id = correctionId(turn.id, index)
+                    corrections.add(ScenarioCurriculum.Item(id = id, text = target, note = fix.why,
+                        masteredAt = masteryAt(target, turn.id, id,
+                            lineId = correctionId(turn.id), oneCardPerTurn = false)))
+                }
+                continue
+            }
             if (!seenCorrections.add(CarryoverDetector.normalized(s.alternative))) continue
             val id = correctionId(turn.id)
             corrections.add(ScenarioCurriculum.Item(id = id, text = s.alternative, note = s.reason,

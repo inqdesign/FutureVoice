@@ -35,7 +35,47 @@ object SpokenWords {
             val ja = com.roro.futurevoice.data.JapaneseMorph::soundSpelling
             return ja(a.filter { it.isLetterOrDigit() }) == ja(b.filter { it.isLetterOrDigit() })
         }
-        return of(a) == of(b)
+        // Digits spelled out (the recognizer writes "3" for "three") and, in
+        // Korean, word spacing folded away: 띄어쓰기 is the transcriber's
+        // (한번 / 한 번), so a rewrite that only re-spaces changes nothing.
+        return comparable(a, language).let { it.isNotEmpty() && it == comparable(b, language) }
+    }
+
+    private fun comparable(text: String, language: String): String {
+        val words = of(ShadowScore.expandForDiff(text, language))
+        return words.joinToString(if (language.substringBefore('-') == "ko") "" else " ")
+    }
+
+    /**
+     * Korean only: the "fix" puts the SAME words in another order. Spoken
+     * Korean orders freely ("먹었어, 아까 라면") — an afterthought, not a slip.
+     * In English a reorder can be a real correction, so no other language.
+     */
+    fun changesOnlyWordOrder(a: String, b: String, language: String): Boolean {
+        if (language.substringBefore('-') != "ko") return false
+        val left = of(ShadowScore.expandForDiff(a, "ko"))
+        val right = of(ShadowScore.expandForDiff(b, "ko"))
+        if (left.size < 2 || left == right) return false
+        return left.sorted() == right.sorted()
+    }
+
+    /**
+     * Is [quote] something the learner actually said in [line]? The model
+     * quotes loosely, so: contained after normalizing, contained with spaces
+     * compared away (Korean spacing is the recognizer's; Japanese has none),
+     * or three words in four shared (iOS `ConversationEngine.quotes`).
+     */
+    fun quotes(quote: String, line: String): Boolean {
+        val needle = CarryoverDetector.normalized(quote)
+        val hay = CarryoverDetector.normalized(line)
+        if (needle.isEmpty()) return false
+        if (hay.contains(needle)) return true
+        val squeezed = needle.replace(" ", "")
+        if (squeezed.isNotEmpty() && hay.replace(" ", "").contains(squeezed)) return true
+        val words = needle.split(' ').filter { it.isNotEmpty() }.toSet()
+        if (words.size < 3) return false
+        val have = hay.split(' ').filter { it.isNotEmpty() }.toSet()
+        return words.intersect(have).size.toDouble() / words.size >= 0.75
     }
 
     /**

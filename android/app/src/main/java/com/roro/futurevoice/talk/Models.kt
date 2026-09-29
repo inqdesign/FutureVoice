@@ -56,7 +56,31 @@ data class Turn(
 )
 
 @Serializable
-data class TurnSuggestion(val alternative: String, val reason: String)
+data class TurnSuggestion(
+    /** The learner's WHOLE turn, re-said as a fluent speaker would — never a
+     *  fragment (it is read back in place of the turn). */
+    val alternative: String,
+    /** Why the rewrite reads better, in the learner's native language. */
+    val reason: String,
+    /**
+     * The outright ERRORS inside the turn, one clause each (iOS `TurnFix`,
+     * 2026-09-27). Empty is an ordinary answer. NULL dates the record: it was
+     * saved before this contract, when `alternative` was one sentence at most.
+     */
+    val fixes: List<TurnFix>? = null,
+)
+
+/** One slip inside a turn: what they said, what it should be, and why. */
+@Serializable
+data class TurnFix(
+    val id: String = StoreJson.newId(),
+    /** Quoted from the learner's own line, verbatim. */
+    val was: String,
+    /** The same words corrected — nothing else restyled. */
+    val now: String,
+    /** The grammar point, in the learner's native language. */
+    val why: String = "",
+)
 
 @Serializable
 enum class SessionMode {
@@ -206,13 +230,54 @@ data class ConversationTurnPayload(
     val transcript: String? = null,
 ) {
     @Serializable
-    data class SuggestionDto(val alternative: String = "", val reason: String = "")
+    data class SuggestionDto(
+        val alternative: String = "",
+        val reason: String = "",
+        val fixes: List<FixDto>? = null,
+    )
 
-    /** Drops junk — empty alternatives and rule-like "suggestions". */
-    fun turnSuggestion(): TurnSuggestion? {
+    @Serializable
+    data class FixDto(val was: String = "", val now: String = "", val why: String = "")
+
+    /**
+     * The gate every live correction passes (iOS `turnSuggestion(for:)`),
+     * run PER PIECE because the two halves can disagree: a turn can be
+     * grammatical and still worth re-saying, and a rewrite that only
+     * re-spells what they said is a no-op however many fixes ride with it.
+     *
+     * [original] is the line the MODEL saw.
+     */
+    fun turnSuggestion(original: String, language: String): TurnSuggestion? {
         val s = suggestion ?: return null
-        if (s.alternative.isBlank()) return null
-        return TurnSuggestion(s.alternative.trim(), s.reason.trim())
+        val alternative = s.alternative.trim()
+        if (alternative.isEmpty() || com.roro.futurevoice.data.DrillIngest.looksLikeMetaRule(alternative)) return null
+        val fixes = s.fixes.orEmpty().mapNotNull { f ->
+            val was = f.was.trim(); val now = f.now.trim()
+            // A fix accuses the learner of saying `was`; if they didn't, the
+            // accusation is invented.
+            if (was.isEmpty() || now.isEmpty() || !SpokenWords.quotes(was, original) ||
+                SpokenWords.saysTheSameThing(was, now, language) ||
+                SpokenWords.changesOnlyWordOrder(was, now, language) ||
+                com.roro.futurevoice.data.DrillIngest.looksLikeMetaRule(now)) null
+            else TurnFix(was = was, now = now, why = f.why.trim())
+        }
+        if (original.isNotBlank() && (SpokenWords.saysTheSameThing(original, alternative, language) ||
+                SpokenWords.changesOnlyWordOrder(original, alternative, language))) {
+            // The rewrite says nothing new — but it must not take surviving
+            // fixes with it. The line is then THEIR turn with the fixes put
+            // back where they were said, never a fix on its own: a lone
+            // clause read in place of the turn is the fragment this ends.
+            if (fixes.isEmpty()) return null
+            var line = original
+            for (fix in fixes) {
+                val at = line.indexOf(fix.was, ignoreCase = true)
+                if (at >= 0) line = line.replaceRange(at, at + fix.was.length, fix.now)
+            }
+            return TurnSuggestion(line, fixes.first().why, fixes)
+        }
+        // Always non-null, empty included: `fixes == null` marks a record
+        // saved before this contract.
+        return TurnSuggestion(alternative, s.reason.trim(), fixes)
     }
 }
 

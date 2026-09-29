@@ -14,35 +14,47 @@ import com.roro.futurevoice.data.LanguageCatalog
  */
 object CorrectionOnlyPrompt {
 
-    /**
-     * Japanese only: the recognizer, not the learner, decides kanji or kana.
-     * Empty for every other target, and appended at a line end, so their
-     * prompts stay byte-identical.
-     */
+    /** Japanese only: the recognizer, not the learner, decides kanji or kana. */
     private fun scriptGuard(targetLanguage: String): String =
-        if (targetLanguage.substringBefore('-') != "ja") "" else
-            "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji" +
-                "\n  or kana and which kanji (分かる / わかる, 下さい / ください," +
-                "\n  綺麗 / きれい). A suggestion whose only change is how a word is" +
-                "\n  WRITTEN corrects nothing they said. If that is the only change you" +
-                "\n  would make, the line was fine: return null."
+        if (targetLanguage.substringBefore('-') != "ja") "" else "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji\n  or kana and which kanji (分かる / わかる, 下さい / ください,\n  綺麗 / きれい). A suggestion whose only change is how a word is\n  WRITTEN corrects nothing they said. If that is the only change you\n  would make, the line was fine: return null."
+
+    /** Korean only: word spacing is the recognizer's (띄어쓰기). */
+    private fun spacingGuard(targetLanguage: String): String =
+        if (targetLanguage.substringBefore('-') != "ko") "" else "\n- ASR SPACING GUARD: the recognizer, not the learner, decides word\n  spacing (띄어쓰기: 한번 / 한 번, 할수 / 할 수, 못해요 / 못 해요). A\n  suggestion whose only change is spacing corrects nothing they said.\n  If that is the only change you would make, the line was fine: return null."
+
+    /** Korean and Japanese: the speech level is the learner's, never a slip. */
+    private fun registerGuard(targetLanguage: String): String =
+        when (targetLanguage.substringBefore('-')) {
+            "ko" -> "\n- SPEECH LEVEL is the learner's choice, never a slip. Talking to their\n  own future self they use the informal level (반말 / plain form); in a\n  scene or with a stranger they may use the polite one. Either way the\n  level they spoke in is correct. NEVER change it — not a single\n  ending — and \"alternative\" stays in the level the line was said in,\n  even when it fixes something else." + "\n- KOREAN HONORIFICS: a subject honorific about a third person (계시다,\n  주무시다, 드시다, 말씀하시다, -시-) combines freely with a 반말 ending\n  to the listener — \"할아버지 지금 주무셔\", \"체험을 하고 계시는 거야\"\n  are correct Korean, not mixed politeness. Never add 요 / 예요 to them.\n- KOREAN WORD ORDER in speech is free: an afterthought after the verb\n  (\"먹었어, 아까 라면\") is how people talk. A suggestion that only\n  reorders the same words corrects nothing; return null."
+            "ja" -> "\n- SPEECH LEVEL is the learner's choice, never a slip. Talking to their\n  own future self they use the informal level (반말 / plain form); in a\n  scene or with a stranger they may use the polite one. Either way the\n  level they spoke in is correct. NEVER change it — not a single\n  ending — and \"alternative\" stays in the level the line was said in,\n  even when it fixes something else." + "\n- JAPANESE HONORIFICS: 尊敬語 / 謙譲語 about a third person (いらっしゃる,\n  おっしゃる, なさる, 召し上がる) combine freely with a plain ending to the\n  listener — \"社長がいらっしゃるまで待ってて\", \"先生がそうおっしゃってた\"\n  are correct Japanese, not inconsistent. Never add です / ます / ください\n  to them."
+            else -> ""
+        }
 
     fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel): String {
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()
         val scriptGuard = scriptGuard(targetLanguage)
+        val spacingGuard = spacingGuard(targetLanguage)
+        val registerGuard = registerGuard(targetLanguage)
         return """You are a $targetName coach reading ONE line a $levelCode learner just
 SPOKE on a live phone call. You are not in the conversation and you do
-not answer them — you only decide whether that line needs a correction.
+not answer them — you rewrite their line and name their mistakes.
+
+You may be given the line that was said TO them just before, marked
+"They were just told". It is CONTEXT so your rewrite fits the
+conversation — never correct it, never answer it, and never let its
+wording become the learner's.
 
 Return STRICT JSON only — no prose, no code fences:
-{ "reply": "", "suggestion": { "alternative": "...", "reason": "..." } }
+{ "reply": "", "suggestion": { "alternative": "...", "reason": "...", "fixes": [ { "was": "...", "now": "...", "why": "..." } ] } }
 
 - "reply" is always the empty string. Nothing here is spoken.
-- "suggestion": null unless the line has a grammar slip or wording a
-  fluent speaker wouldn't choose. Don't invent a change for a line that
-  was already fine.
+- "suggestion" answers TWO questions and both are needed:
+  "alternative" is how a fluent speaker would say THE WHOLE LINE here,
+  and "fixes" lists the outright errors inside it. Null only when the
+  line was already exactly what a fluent speaker would say AND had no
+  errors.
 - THE LINE IS A GUESS — it came from speech recognition, not a keyboard.
 - ASR DROP GUARD: recognition clips short function words, above all a
   sentence-initial subject pronoun ("I", "he", "we"). Never correct
@@ -54,15 +66,37 @@ Return STRICT JSON only — no prose, no code fences:
   building" arrives as "I am building" every time. A suggestion whose
   only change is contracting what you received is correcting the
   transcriber, not the learner. If that is the only change you would
-  make, the line was fine: return null.$scriptGuard
+  make, the line was fine: return null.$scriptGuard$spacingGuard$registerGuard
 - Judge it as SPEECH, never as writing. Contractions, casual register
   and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
   speakers talk, not slips.
-- "alternative": a CONCRETE full utterance they could say out loud,
-  rewriting ONE sentence only — the single most teachable slip — in
-  their own register. Target ≤ 15 words; a learner drills this later.
-- "reason": ≤ 12 words in $nativeName, quoting the $targetName words
-  that changed untranslated. Those quotes are the only foreign text;
-  every other word is $nativeName.""".trimIndent()
+- "alternative": their ENTIRE line, re-said — not one sentence of it,
+  not the worst clause, not a summary. It is read back aloud in place
+  of what they said, so every idea they raised has to survive, in
+  their order, still answering what was said to them. Three sentences
+  come back as three sentences.
+- Keep their MEANING, INTENT and REGISTER; change only how it is said.
+  Add nothing they did not say, drop no idea because it was clumsy,
+  and never make them more formal than they were.
+- DO drop the hesitation — fillers ("um", "uh", "like"), false starts,
+  a clause abandoned halfway, a word said twice. Those are not errors
+  and never go in "fixes"; they are simply gone from the fluent
+  version. Keep the length close to theirs.
+- "fixes": every outright ERROR in the line, one entry each — "was"
+  quoted VERBATIM from what they said, "now" those same words
+  corrected, "why" the grammar point in $nativeName, ≤ 12 words.
+  Each pair is a CLAUSE, never a lone word or two: "was" is the
+  stretch the error sits in, long enough to be said on its own — with
+  its verb — and "now" is that stretch said right. The learner
+  practises these out loud: "temporal issue → temporary issue" is too
+  short to practise, "checking if that is consistent issue or temporal
+  issue → checking if it's a consistent issue or a temporary one" is
+  right. Never the whole line when it has several clauses. An empty list is an ordinary answer: a
+  line can be grammatically clean and still not be what a fluent
+  speaker would say. Nothing the ASR guards exclude may be a fix.
+- "reason": ≤ 12 words in $nativeName on why the rewrite reads
+  better as a whole, quoting the $targetName words that changed
+  untranslated. Those quotes are the only foreign text; every other
+  word is $nativeName.""".trimIndent()
     }
 }

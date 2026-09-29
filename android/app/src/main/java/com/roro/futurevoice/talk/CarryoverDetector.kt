@@ -62,7 +62,10 @@ object CarryoverDetector {
             if (card.sourceSessionId == sessionId || card.createdAt >= sessionStartedAt) continue
             val key = normalized(card.targetPhrase)
             if (!available(key)) continue
-            val hit = firstMatch(card.targetPhrase, userTurns) ?: continue
+            // Repeating the card's mistake inside a match is no credit — and
+            // under used-outranks-known it would retire the card as confirmed.
+            val hit = firstMatch(card.targetPhrase, userTurns,
+                rejectingMistake = card.sourcePhrase.takeIf { it.isNotBlank() }) ?: continue
             if (!free(hit)) continue
             claim(key, hit, Carryover.Source.DRILL_CARD, card.targetPhrase, card.id)
         }
@@ -103,13 +106,24 @@ object CarryoverDetector {
             val suggestion = turn.suggestion ?: continue
             val later = userTurns.drop(index + 1)
             if (later.isEmpty()) continue
-            val key = normalized(suggestion.alternative)
-            if (!available(key)) continue
-            // Already saying it in the turn that EARNED the suggestion isn't adoption.
-            if (firstMatch(suggestion.alternative, listOf(turn)) != null) continue
-            val hit = firstMatch(suggestion.alternative, later) ?: continue
-            if (!free(hit)) continue
-            claim(key, hit, Carryover.Source.SUGGESTION, suggestion.alternative, turn.id)
+            // Since the two-answer contract `alternative` is the WHOLE turn
+            // re-said — nobody repeats a whole turn verbatim, so matching it
+            // would credit nothing. What can be adopted is a FIX, matched as
+            // the card it became and rejecting a span that still carries the
+            // mistake. Older turns keep the old one-sentence rule.
+            val adoptable: List<Pair<String?, String>> = suggestion.fixes?.map { fix ->
+                val (source, target) = DrillIngest.cardPair(fix, turn.transcript)
+                source to target
+            } ?: listOf(null to suggestion.alternative)
+            for ((source, target) in adoptable) {
+                val key = normalized(target)
+                if (!available(key)) continue
+                // Already saying it in the turn that EARNED it isn't adoption.
+                if (firstMatch(target, listOf(turn), rejectingMistake = source) != null) continue
+                val hit = firstMatch(target, later, rejectingMistake = source) ?: continue
+                if (!free(hit)) continue
+                claim(key, hit, Carryover.Source.SUGGESTION, target, turn.id)
+            }
         }
 
         // ── Notebook words, by lemma; skipped inside credited phrases; hardest
@@ -156,15 +170,33 @@ object CarryoverDetector {
 
     // MARK: - Matching
 
-    fun firstMatch(item: String, userTurns: List<Turn>): Hit? {
+    /**
+     * The first user turn that says [item]. With [rejectingMistake] (the
+     * card's own source line) a match that still CARRIES the mistake is no
+     * credit: the matcher tolerates inserted words, so "give me a feedback"
+     * satisfied the card "give me feedback" — the learner repeated the exact
+     * mistake and was credited (iOS 2026-09-16, `showsTheFix`).
+     */
+    fun firstMatch(item: String, userTurns: List<Turn>, rejectingMistake: String? = null): Hit? {
         val needle = tokens(item)
         val core = contentTokens(item)
         if (needle.size < MIN_TOKENS || core.size < MIN_CONTENT_TOKENS) return null
         for (turn in userTurns) {
-            if (!contains(needle, core, tokens(turn.transcript))) continue
+            val span = matchedSpan(needle, core, tokens(turn.transcript)) ?: continue
+            if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span)) continue
             return Hit(DrillIngest.relevantFragment(turn.transcript, item), turn.id)
         }
         return null
+    }
+
+    /** Every token the correction ADDED is in the span; every one it REMOVED is not. */
+    fun showsTheFix(source: String, target: String, span: List<String>): Boolean {
+        val before = tokens(source); val after = tokens(target)
+        if (before.isEmpty() || before == after) return true
+        val added = after.toSet() - before.toSet()
+        val removed = before.toSet() - after.toSet()
+        val said = span.toSet()
+        return said.containsAll(added) && removed.none { it in said }
     }
 
     fun isCreditable(phrase: String): Boolean =
@@ -182,18 +214,21 @@ object CarryoverDetector {
      * In-order coverage inside a bounded window; EVERY content word must land
      * in order (function words may slip — that's what [MIN_COVERAGE] is for).
      */
-    private fun contains(needle: List<String>, core: List<String>, hay: List<String>): Boolean {
-        if (needle.isEmpty() || hay.size < MIN_TOKENS) return false
+    private fun matchedSpan(needle: List<String>, core: List<String>, hay: List<String>): List<String>? {
+        if (needle.isEmpty() || hay.size < MIN_TOKENS) return null
         val window = needle.size * 2 + 4
         val required = Math.ceil(needle.size * MIN_COVERAGE).toInt()
-        if (hay.size < required) return false
+        if (hay.size < required) return null
         for (start in 0..(hay.size - required)) {
             val slice = hay.subList(start, minOf(hay.size, start + window))
             if (lcsLength(needle, slice) < required) continue
             if (lcsLength(core, slice.filter { it !in FILLER }) != core.size) continue
-            return true
+            // Trim to the phrase: from where its first word lands to its last.
+            val lo = slice.indexOf(needle.first()).takeIf { it >= 0 } ?: 0
+            val hi = slice.lastIndexOf(needle.last()).takeIf { it >= 0 }?.let { maxOf(it, lo) } ?: (slice.size - 1)
+            return slice.subList(lo, hi + 1)
         }
-        return false
+        return null
     }
 
     /** Longest common subsequence length. */

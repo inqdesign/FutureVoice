@@ -831,6 +831,10 @@ private fun SuggestionChip(suggestion: com.roro.futurevoice.talk.TurnSuggestion,
         Text(line, style = MaterialTheme.typography.bodyMedium)
         Text(suggestion.reason, style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // The second answer: the outright errors, one clause each.
+        suggestion.fixes?.takeIf { it.isNotEmpty() }?.let {
+            TurnFixRows(it, Modifier.padding(top = 4.dp))
+        }
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.clickable {
@@ -854,6 +858,37 @@ private fun SuggestionChip(suggestion: com.roro.futurevoice.talk.TurnSuggestion,
         if (showing) reasonNative?.let {
             Text(it, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * A turn's grammar slips, one per row — ✗ what they said (struck through),
+ * ✓ the same words corrected, the reason underneath (iOS `TurnFixRows`).
+ */
+@Composable
+fun TurnFixRows(fixes: List<com.roro.futurevoice.talk.TurnFix>, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (fix in fixes) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("✕", style = MaterialTheme.typography.labelSmall,
+                        color = androidx.compose.ui.graphics.Color(0xFFFF3B30))
+                    Text(fix.was, style = MaterialTheme.typography.labelSmall.copy(
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("✓", style = MaterialTheme.typography.labelSmall,
+                        color = androidx.compose.ui.graphics.Color(0xFF34C759))
+                    Text(fix.now, style = MaterialTheme.typography.labelSmall)
+                }
+                if (fix.why.isNotBlank()) {
+                    Text(fix.why, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 18.dp))
+                }
+            }
         }
     }
 }

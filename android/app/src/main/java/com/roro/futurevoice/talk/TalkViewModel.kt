@@ -629,13 +629,24 @@ class TalkViewModel(context: Context) : ViewModel() {
         // Never count words on " ": Japanese writes none, so every turn
         // measured one word and no Japanese line was ever corrected.
         if (com.roro.futurevoice.data.WordSplitter.count(said, cfg.targetLanguage) < 3) return
+        // The line said TO them, so the rewrite is natural in THIS
+        // conversation — the whole turn is re-said now, and a turn only reads
+        // right against what it answers. Context only; the prompt forbids
+        // correcting it (iOS `requestRealtimeSuggestion`).
+        val heard = _state.value.turns.lastOrNull { it.role == TurnRole.FLUENT_SELF }
+            ?.transcript?.trim().orEmpty()
+        val content = if (heard.isEmpty()) "They said: \"$said\""
+            else "They were just told: \"$heard\"\nThey said: \"$said\""
         viewModelScope.launch {
             val payload = runCatching {
                 GeminiClient(auth).sendJson(
                     system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level),
-                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, said)),
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, content)),
                     serializer = ConversationTurnPayload.serializer(),
-                    maxTokens = 512, purpose = "turn",
+                    // Buffered: a truncation loses the WHOLE correction, and
+                    // the whole-turn rewrite plus fixes runs longer than the
+                    // one-sentence answer 512 was sized for.
+                    maxTokens = 900, purpose = "turn",
                     idempotencyKey = "rt-suggest:$turnId",
                 )
             }.getOrNull() ?: return@launch
@@ -1036,12 +1047,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         // transcribed "I am" — and a suggestion rewriting it back tells them
         // they made a mistake they did not make, in their own voice. The
         // prompt asks the model not to; this is what makes it true.
-        val suggestion = payload.turnSuggestion()
-            ?.takeUnless {
-                said.isNotBlank() &&
-                    SpokenWords.saysTheSameThing(it.alternative, said,
-                        config?.targetLanguage ?: "en")
-            }
+        val suggestion = payload.turnSuggestion(said, config?.targetLanguage ?: "en")
         val upgraded = payload.transcript?.takeIf { it.isNotBlank() }
         if (suggestion == null && upgraded == null) return
         _state.update { state ->
