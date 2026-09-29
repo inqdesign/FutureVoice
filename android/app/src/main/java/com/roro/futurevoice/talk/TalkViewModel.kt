@@ -474,6 +474,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         cfg.cast?.name ?: cfg.topic.ifBlank { appContext.getString(com.roro.futurevoice.R.string.talk) }
 
     private fun updateCallNotification(cfg: TalkConfig, phase: TalkPhase) {
+        // A state change that lands AFTER the call ended (a late socket
+        // event, the opener's finally block) must not bring the "in a call"
+        // foreground notification back — it outlived the call on device.
+        val now = _state.value.phase
+        if (now == TalkPhase.ENDED || now == TalkPhase.IDLE) return
         val hint = appContext.getString(when (phase) {
             TalkPhase.PAUSED -> com.roro.futurevoice.R.string.paused
             TalkPhase.SPEAKING -> com.roro.futurevoice.R.string.speaking
@@ -517,7 +522,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
             if (st == RealtimeTalkClient.State.LISTENING) speakLocalOpener()
             if (st == RealtimeTalkClient.State.HEARING) markLearnerSpoke()
-            if (phase != null) {
+            val over = _state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE
+            if (phase != null && !over) {
                 lastActivityAt = System.currentTimeMillis()
                 _state.update { it.copy(phase = phase, level = realtime.level) }
                 updateCallNotification(cfg, phase)
@@ -691,7 +697,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             } finally {
                 realtime.micGated = false
                 lastActivityAt = System.currentTimeMillis()
-                _state.update { it.copy(phase = TalkPhase.LISTENING) }
+                _state.update { if (it.phase == TalkPhase.ENDED || it.phase == TalkPhase.IDLE) it
+                    else it.copy(phase = TalkPhase.LISTENING) }
             }
         }
     }
