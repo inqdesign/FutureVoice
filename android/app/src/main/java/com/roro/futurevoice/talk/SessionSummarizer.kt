@@ -314,7 +314,7 @@ object SessionSummarizer {
         // reset Leitner progress), mint, then credit live production.
         drills.clearUnreviewedCards(session.id, language)
         val minted = DrillIngest.mint(drills.load(language), computed, turns, session.id,
-            System.currentTimeMillis())
+            System.currentTimeMillis(), language = language)
         drills.upsertMany(minted, language)
         // New cards have return times; something has to ring for them.
         com.roro.futurevoice.data.DrillReminder.reschedule(context)

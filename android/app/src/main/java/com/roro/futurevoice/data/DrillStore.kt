@@ -65,7 +65,7 @@ object DrillIngest {
      * traced back to their turn.
      */
     fun mint(existing: List<DrillCard>, summary: SessionSummary, turns: List<Turn>,
-             sessionId: String, now: Long): List<DrillCard> {
+             sessionId: String, now: Long, language: String? = null): List<DrillCard> {
         val seenTargets = existing.map { normalizedForMatch(it.targetPhrase) }.toHashSet()
         val newCards = mutableListOf<DrillCard>()
         val userTurns = turns.filter { it.role == TurnRole.USER }
@@ -81,6 +81,9 @@ object DrillIngest {
             val key = normalizedForMatch(core)
             if (key.isEmpty() || key in seenTargets) return
             if (!isDrillable(core)) return
+            // Both sides in the target script, or it isn't material.
+            if (language != null && (!TextScript.isInTargetScript(core, language) ||
+                    (source.isNotBlank() && !TextScript.isInTargetScript(source, language)))) return
             seenTargets.add(key)
             newCards.add(DrillCard(sourcePhrase = source, targetPhrase = core, reason = reason,
                 createdAt = now, nextReviewAt = now, box = 0,
