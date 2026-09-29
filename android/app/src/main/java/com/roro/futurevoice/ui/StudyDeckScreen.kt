@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -129,6 +130,15 @@ fun StudyDeckScreen(
      *  probe: a card is taller than a bin, so its centre clears the bins by
      *  hundreds of pixels while the finger is still on one. */
     var pointer by remember { mutableStateOf(0f to 0f) }
+    /** Pulled UP past the cancel line: letting go files nothing (the
+     *  sentence deck's target, iOS `StudyDeckView`). */
+    var cancelActive by remember { mutableStateOf(false) }
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val cancelPull = with(density) { 90.dp.toPx() }
+    val hovered = if (dragging && !cancelActive) binBounds.entries
+        .firstOrNull { it.value.contains(androidx.compose.ui.geometry.Offset(pointer.first, pointer.second)) }?.key
+        else null
 
     val top = queue.firstOrNull()
 
@@ -176,6 +186,7 @@ fun StudyDeckScreen(
         resolved += 1
         dragOffset = 0f to 0f
         dragging = false
+        cancelActive = false
     }
 
     Scaffold(
@@ -241,19 +252,26 @@ fun StudyDeckScreen(
                                         pointer = cardOrigin.first + start.x to
                                             cardOrigin.second + start.y
                                     },
-                                    onDragCancel = { dragging = false; dragOffset = 0f to 0f },
+                                    onDragCancel = { dragging = false; cancelActive = false; dragOffset = 0f to 0f },
                                     onDragEnd = {
                                         val p = androidx.compose.ui.geometry.Offset(
                                             pointer.first, pointer.second)
                                         val hit = binBounds.entries
                                             .firstOrNull { it.value.contains(p) }?.key
-                                        if (hit != null) file(top, hit)
-                                        else { dragging = false; dragOffset = 0f to 0f }
+                                        if (hit != null && !cancelActive) file(top, hit)
+                                        else { dragging = false; cancelActive = false; dragOffset = 0f to 0f }
                                     },
                                 ) { change, delta ->
                                     change.consume()
                                     dragOffset = dragOffset.first + delta.x to dragOffset.second + delta.y
                                     pointer = pointer.first + delta.x to pointer.second + delta.y
+                                    // Pulling up is away from every folder.
+                                    val nowCancel = dragOffset.second < -cancelPull
+                                    if (nowCancel != cancelActive) {
+                                        cancelActive = nowCancel
+                                        if (nowCancel) haptics.performHapticFeedback(
+                                            androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    }
                                 }
                             }
                             .combinedClickable(
@@ -282,9 +300,27 @@ fun StudyDeckScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
+                if (dragging) {
+                    // On the path back to the card, not at the row's end where
+                    // it would read as a fifth folder.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Box(
+                            Modifier.size(44.dp).background(
+                                if (cancelActive) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.surfaceVariant,
+                                androidx.compose.foundation.shape.CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Filled.Close, contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = if (cancelActive) MaterialTheme.colorScheme.surface
+                                else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 VerdictRow(
                     dragging = dragging,
-                    active = null,
+                    active = hovered,
                     tappable = true,
                     counts = { bin ->
                         if (bin == DrillBin.GOT_IT) finished.size else (scheduled[bin]?.size ?: 0)
@@ -293,6 +329,25 @@ fun StudyDeckScreen(
                     onOpen = { bin -> openFolder = bin },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+                // What happens if you let go HERE.
+                if (dragging) {
+                    Row(Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        horizontalArrangement = Arrangement.Center) {
+                        Text(
+                            when {
+                                cancelActive -> stringResource(R.string.leave_it_undecided)
+                                hovered != null -> stringResource(hovered.dropHintRes)
+                                else -> stringResource(R.string.drop_it_on_a_folder)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.surface,
+                                    androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                                .padding(horizontal = 12.dp, vertical = 5.dp),
+                        )
+                    }
+                }
             }
         }
     }
