@@ -76,10 +76,12 @@ fun AllowanceSpentSheet(
     // an arbitrary stop, and the size was on the card before the purchase.
     // Loaded here rather than passed in, so every caller gets the same sheet.
     var account by remember { mutableStateOf<AccountStatus?>(null) }
+    var inviteOffer by remember { mutableStateOf<InviteOffer?>(null) }
     LaunchedEffect(Unit) {
         // Screenshot harness only: a sample account instead of the network.
         account = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
             ?: AccountStatus.load(AuthRepository())
+        if (pool == SpentPool.TALK) account?.let { inviteOffer = InviteOffer.load(it) }
     }
 
     // Same line every billing surface uses, so one date format reaches them all.
@@ -177,6 +179,10 @@ fun AllowanceSpentSheet(
                         Text(stringResource(R.string.go_to_practice))
                     }
                 }
+                // Last, and on a TALK wall only: an invite can't resume this
+                // call (the friend has to join first), and a scene pool can't
+                // be topped up with talk minutes at all.
+                if (pool == SpentPool.TALK) inviteOffer?.let { InviteShareRow(it) }
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.not_now),
                         style = MaterialTheme.typography.bodyMedium,

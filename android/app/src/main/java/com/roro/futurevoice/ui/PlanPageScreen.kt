@@ -85,6 +85,7 @@ fun PlanPageScreen(
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     var account by remember { mutableStateOf<AccountStatus?>(null) }
+    var inviteOffer by remember { mutableStateOf<InviteOffer?>(null) }
     var receipt by remember { mutableStateOf<SubscriptionReceipt?>(null) }
     LaunchedEffect(Unit) {
         // Screenshot harness only: a sample account instead of the network.
@@ -99,6 +100,9 @@ fun PlanPageScreen(
         // Only an entitled account has a subscription to describe, and the
         // read is a nicety — the section simply has less to say when it fails.
         if (loaded.isEntitled) receipt = SubscriptionReceipt.load(auth)
+        val cap = loaded.monthlyCapSeconds
+        val poolIsSpent = cap != null && loaded.secondsUsedPeriod >= cap && loaded.secondsBalance < 60
+        if (poolIsSpent) inviteOffer = InviteOffer.load(loaded)
     }
     val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
@@ -178,6 +182,14 @@ fun PlanPageScreen(
                         else null,
                     )
                 }
+            }
+
+            // The pool is spent: the one free way back, directly under the
+            // pool it answers — and standing in for the ordinary invite row
+            // below, never both (iOS `InviteMinutesCard`).
+            if (inviteOffer != null) {
+                GroupedSectionSpacer()
+                GroupedCard { InviteMinutesCard(inviteOffer!!) }
             }
 
             // The subscription itself, as the store bills it: since when, what
@@ -276,8 +288,8 @@ fun PlanPageScreen(
                     stringResource(R.string.what_uses_talk_time),
                     stringResource(R.string.and_what_s_always_free),
                     onClick = onOpenCreditGuide)
-                GroupedRowDivider()
-                LineRow(Icons.Filled.CardGiftcard,
+                if (inviteOffer == null) GroupedRowDivider()
+                if (inviteOffer == null) LineRow(Icons.Filled.CardGiftcard,
                     stringResource(R.string.invite_earn_talk_time),
                     stringResource(R.string.lld_minutes_each_per_friend, ReferralClient.bonusMinutes),
                     onClick = onOpenInvite)
