@@ -78,6 +78,7 @@ section{margin-top:56px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:6px 14px;font-size:13.5px;color:var(--dim);text-decoration:none}
 .chip:hover{color:var(--tx);border-color:var(--faint)}
+.chip.on{background:var(--tx);border-color:var(--tx);color:var(--bg)}
 .cat{padding-top:18px}
 .cat + .cat{margin-top:28px;border-top:1px solid var(--line);padding-top:36px}
 .cat-h{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:500;margin-bottom:8px}
@@ -394,7 +395,30 @@ function renderFeatures(){
         </article>`;
       }).join("")}
     </div>`).join("");
+  spyCat = null; requestAnimationFrame(spy);
 }
+// Scroll-spy: the chip of the section under the sticky bar is lit.
+let spyCat = null, spyTick = false;
+function spy(){
+  spyTick = false;
+  const secs = [...document.querySelectorAll("#grid .cat")];
+  if (!secs.length) return;
+  const line = document.querySelector(".top").offsetHeight + $("#chips").offsetHeight + 24;
+  let cur = null;
+  for (const s of secs) if (s.getBoundingClientRect().top <= line) cur = s.id.slice(4);
+  // Above the first section (the news) nothing is lit; at the very bottom the last one is.
+  if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = secs.at(-1).id.slice(4);
+  if (cur === spyCat) return;
+  spyCat = cur;
+  document.querySelectorAll("#chips .chip").forEach(c => {
+    const on = c.dataset.jump === cur;
+    c.classList.toggle("on", on);
+    on ? c.setAttribute("aria-current", "true") : c.removeAttribute("aria-current");
+    if (on) { const box = $("#chips"); box.scrollTo({ left: c.offsetLeft - box.clientWidth / 2 + c.offsetWidth / 2, behavior: "smooth" }); }
+  });
+}
+addEventListener("scroll", () => { if (!spyTick) { spyTick = true; requestAnimationFrame(spy); } }, { passive: true });
+addEventListener("resize", () => { spyCat = null; spy(); });
 $("#chips").addEventListener("click", e => {
   const a = e.target.closest("[data-jump]"); if (!a) return;
   e.preventDefault();
