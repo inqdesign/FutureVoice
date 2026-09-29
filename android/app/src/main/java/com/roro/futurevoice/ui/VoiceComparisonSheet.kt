@@ -108,7 +108,7 @@ fun VoiceComparisonSheet(voiceId: String, targetLanguage: String, onRerecord: ()
         loading = true
         runCatching {
             ElevenLabsClient(AuthRepository()).synthesize(voiceId, opening,
-                modelId = ElevenLabsClient.FIDELITY_MODEL_ID, purpose = "voice_comparison")
+                modelId = ElevenLabsClient.CLONE_MODEL_ID, purpose = "voice_comparison")
         }.onSuccess { data ->
             cloneAudio = data
             withContext(Dispatchers.IO) { cache.parentFile?.mkdirs(); cache.writeBytes(data) }

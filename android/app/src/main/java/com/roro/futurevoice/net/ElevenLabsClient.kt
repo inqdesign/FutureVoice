@@ -37,6 +37,16 @@ class ElevenLabsClient(private val auth: AuthRepository) {
          */
         const val FIDELITY_MODEL_ID = "eleven_multilingual_v2"
 
+        /**
+         * Every line in the learner's CLONED voice — scene lines, the
+         * greeting, the comparison — speaks on the same model the call does
+         * (iOS `cloneModelId`, 2026-09-26). Talk has always run the clone on
+         * turbo, so nothing can need a better model than the live call; the
+         * fidelity tier billed 2x per character and was 70% of a scene's
+         * cost. FIDELITY stays defined for A/B only.
+         */
+        const val CLONE_MODEL_ID = CONVERSATION_MODEL_ID
+
         /** Server streams 16-bit LE mono PCM at this rate. */
         const val STREAM_SAMPLE_RATE = 22_050
     }

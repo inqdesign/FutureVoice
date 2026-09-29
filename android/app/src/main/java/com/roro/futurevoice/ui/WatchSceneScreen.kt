@@ -170,7 +170,7 @@ fun WatchSceneScreen(
                         // The learner's own lines on the fidelity model —
                         // similarity IS the product here; preset lines don't
                         // need it (server allowlists fidelity per purpose).
-                        modelId = if (isUser) ElevenLabsClient.FIDELITY_MODEL_ID
+                        modelId = if (isUser) ElevenLabsClient.CLONE_MODEL_ID
                         else ElevenLabsClient.CONVERSATION_MODEL_ID,
                         purpose = "scene",
                         sceneKey = sceneKey,
