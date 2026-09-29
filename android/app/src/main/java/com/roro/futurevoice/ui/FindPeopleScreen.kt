@@ -66,6 +66,7 @@ import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.StockPerson
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.CoreSeal
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -91,6 +92,8 @@ import java.util.Locale
 @Composable
 fun FindPeopleScreen(
     language: String,
+    /** For the editor behind the learner's own row. */
+    persona: com.roro.futurevoice.talk.UserPersona? = null,
     onTalk: (PublicPersonaClient.PublicPersona) -> Unit,
     onOpenPerson: (String) -> Unit,
     onBack: () -> Unit,
@@ -122,6 +125,13 @@ fun FindPeopleScreen(
     /** The stranger whose card is open, if any. */
     var card by remember { mutableStateOf<PublicPersonaClient.PublicPersona?>(null) }
     var reloadToken by remember { mutableStateOf(0) }
+    /** The learner's OWN published row. The pool leaves it out on purpose —
+     *  you don't meet yourself — but this page is the only place the pool is
+     *  looked at, so without it a learner could never see what they
+     *  published. Null (no section at all) when unpublished OR when the read
+     *  failed: "not published" and "couldn't ask" must never look alike. */
+    var mine by remember { mutableStateOf<PublicPersonaClient.PublicPersona?>(null) }
+    var editingIntro by remember { mutableStateOf(false) }
 
     val client = remember { PublicPersonaClient(AuthRepository()) }
     suspend fun loadPool() {
@@ -131,22 +141,40 @@ fun FindPeopleScreen(
         }
         loading = true
         loadFailed = false
+        // Alongside the pool, never in front of it.
+        val mineRow = scope.async { runCatching { client.fetchMine(language) }.getOrNull() }
         runCatching { client.fetchPool(language) }
             .onSuccess { pool = it }
             .onFailure { loadFailed = pool.isEmpty() }
         loading = false
+        mine = mineRow.await()
         // Badges last and unguarded: the page is fully usable without them,
         // so a Core outage must never keep anyone from meeting people. The
         // badge is public but the membership LIST is not — the server only
         // answers about ids we already name.
         badges = runCatching {
-            CoreClubClient(AuthRepository()).badges(pool.mapNotNull { it.owner_user_id }, language)
+            // The learner's own id rides along, so their row wears the seal a
+            // stranger would see on it.
+            CoreClubClient(AuthRepository()).badges(
+                pool.mapNotNull { it.owner_user_id } + listOfNotNull(mine?.owner_user_id), language)
         }.getOrDefault(emptyMap())
     }
     LaunchedEffect(language, reloadToken) { loadPool() }
 
     // Back closes the card first — it is a page, not a sheet over this one.
     androidx.activity.compose.BackHandler { if (card != null) card = null else onBack() }
+
+    if (editingIntro) {
+        PublicIntroScreen(
+            persona = persona,
+            targetLanguage = language,
+            // Publishing or taking down changes the row — re-read it on the
+            // way back so the page doesn't keep the old face.
+            onBack = { editingIntro = false; reloadToken++ },
+            onDecided = { scope.launch { mine = runCatching { client.fetchMine(language) }.getOrNull() } },
+        )
+        return
+    }
 
     val open = card
     if (open != null) {
@@ -203,6 +231,22 @@ fun FindPeopleScreen(
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
 
             LazyColumn(Modifier.fillMaxWidth()) {
+                val me = mine
+                if (!searching && me != null) {
+                    // You, as the pool has you — the same row everyone else
+                    // gets, so this can't drift from what a stranger sees.
+                    item {
+                        GroupedSectionHeader(stringResource(R.string.you))
+                        GroupedCard {
+                            PoolRow(me, badges, emptySet(), onClick = { editingIntro = true })
+                        }
+                        Text(stringResource(R.string.this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                        GroupedSectionSpacer()
+                    }
+                }
                 if (!searching) {
                     item {
                         GroupedSectionHeader(stringResource(R.string.your_people))

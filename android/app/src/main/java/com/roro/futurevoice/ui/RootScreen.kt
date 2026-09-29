@@ -557,6 +557,7 @@ fun RootScreen() {
 
         showPeople -> FindPeopleScreen(
             language = state.targetLanguage,
+            persona = state.persona,
             onOpenPerson = { personDetailId = it },
             onTalk = { p ->
                 callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
