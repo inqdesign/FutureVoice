@@ -290,6 +290,37 @@ fun RootScreen() {
     var shadowHand by remember { mutableStateOf<List<com.roro.futurevoice.data.ShadowPicks.Pick>>(emptyList()) }
     var shadowAt by remember { mutableIntStateOf(0) }
     var bookScenarioId by remember { mutableStateOf<String?>(null) }
+    // Widget taps that carry more than a tab (iOS RootTabView "talk" /
+    // "book" / "freetalk"). A free talk goes through the SAME gate the Talk ring does,
+    // and waits for the voice to load rather than being dropped on a cold start.
+    val widgetRoute by DeepLinkInbox.widgetRoute.collectAsStateWithLifecycle()
+    LaunchedEffect(widgetRoute, state.voiceId) {
+        val route = widgetRoute ?: return@LaunchedEffect
+        if (route is DeepLinkInbox.WidgetRoute.FreeTalk && state.voiceId == null) return@LaunchedEffect
+        DeepLinkInbox.widgetRoute.value = null
+        when (route) {
+            // Streak widget: the Talk tab itself, not a page left open over it.
+            DeepLinkInbox.WidgetRoute.Talk -> {
+                showMe = false; showDeck = false; library = null; detailSessionId = null
+                bookScenarioId = null; watchScenarioId = null; shadowLine = null
+                tab = HomeTab.TALK
+            }
+            is DeepLinkInbox.WidgetRoute.Book -> {
+                tab = HomeTab.PRACTICE
+                showMe = false; showDeck = false; library = null; watchScenarioId = null
+                if (route.kind == "watch") bookScenarioId = route.id else detailSessionId = route.id
+            }
+            DeepLinkInbox.WidgetRoute.FreeTalk -> {
+                tab = HomeTab.TALK
+                gate {
+                    showMe = false; showDeck = false; library = null; detailSessionId = null
+                    bookScenarioId = null; watchScenarioId = null; shadowLine = null
+                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    inCall = true
+                }
+            }
+        }
+    }
     val callAnswered by com.roro.futurevoice.data.DailyCallInbox.answered.collectAsStateWithLifecycle()
     LaunchedEffect(callAnswered) {
         // Answering the daily call IS starting the talk — no second tap, and

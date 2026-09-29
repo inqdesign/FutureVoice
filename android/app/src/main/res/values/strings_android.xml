@@ -254,4 +254,11 @@
     <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
     <string name="sign_in_subtitle">Sign in with Google or Apple. Already using nawana on iPhone? Use the same account and your voice comes with you.</string>
     <string name="opening_ellipsis">Opening…</string>
+    <!-- Home-screen widgets (4.7): picker descriptions + the Progress widget's review label. -->
+    <string name="widget_streak_description">Keep your daily streak alive.</string>
+    <string name="widget_continue_studying">Continue studying</string>
+    <string name="widget_book_description">Jump back into the book you\'re working through.</string>
+    <string name="widget_progress_description">Today\'s goal, streak, and what\'s left to study.</string>
+    <string name="widget_free_talk_description">One tap to call your fluent self.</string>
+    <string name="widget_to_review">to review</string>
 </resources>

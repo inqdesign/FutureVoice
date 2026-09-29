@@ -124,5 +124,55 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_expressions_info" />
         </receiver>
+
+        <!-- The other four (iOS StudyWidget.swift, plan 4.7): streak, the book
+             in progress, today's progress, and one-tap free talk. -->
+        <receiver
+            android:name=".widget.StreakWidgetReceiver"
+            android:label="@string/streak"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_streak_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.BookWidgetReceiver"
+            android:label="@string/widget_continue_studying"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_book_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ProgressWidgetReceiver"
+            android:label="@string/progress"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_progress_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.FreeTalkWidgetReceiver"
+            android:label="@string/free_talk"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_freetalk_info" />
+        </receiver>
     </application>
 </manifest>

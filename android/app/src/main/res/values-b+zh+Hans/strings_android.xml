@@ -238,4 +238,11 @@
     <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
     <string name="sign_in_subtitle">用 Google 或 Apple 登录。如果你在 iPhone 上用 nawana，请用同一个账号，你的声音会一起带过来。</string>
     <string name="opening_ellipsis">正在打开…</string>
+    <!-- Home-screen widgets (4.7): picker descriptions + the Progress widget's review label. -->
+    <string name="widget_streak_description">每天学一点，让连续天数延续下去。</string>
+    <string name="widget_continue_studying">继续学习</string>
+    <string name="widget_book_description">直接回到正在看的复习本。</string>
+    <string name="widget_progress_description">今天的目标、连续天数和剩下的学习量，一目了然。</string>
+    <string name="widget_free_talk_description">点击，打给流利的自己。</string>
+    <string name="widget_to_review">待复习</string>
 </resources>

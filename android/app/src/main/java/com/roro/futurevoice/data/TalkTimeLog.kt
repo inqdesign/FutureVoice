@@ -111,13 +111,7 @@ object TalkTimeLog {
             cal.add(Calendar.DAY_OF_YEAR, -1)
             return cal.timeInMillis
         }
-        fun active(at: Long): Boolean {
-            val prefix = dayKey(at)
-            val talked = load(context).entries.any { (k, v) ->
-                v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
-            }
-            return talked || PracticeLog.day(context, at)?.didSomething == true
-        }
+        fun active(at: Long): Boolean = studied(context, at)
         var cursor = startOfDay(now)
         if (!active(cursor)) {
             cursor = dayBefore(cursor)
@@ -126,6 +120,20 @@ object TalkTimeLog {
         var count = 0
         while (active(cursor)) { count += 1; cursor = dayBefore(cursor) }
         return count
+    }
+
+    /**
+     * Does this day count toward the Home streak? The ONE predicate
+     * [streakDays] counts with, public so the widget's "done today" face is
+     * decided by the same rule as the number beside it (iOS
+     * `PracticeStats.studied`).
+     */
+    fun studied(context: Context, at: Long = System.currentTimeMillis()): Boolean {
+        val prefix = dayKey(at)
+        val talked = load(context).entries.any { (k, v) ->
+            v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
+        }
+        return talked || PracticeLog.day(context, at)?.didSomething == true
     }
 
     private fun dayKey(now: Long): String =

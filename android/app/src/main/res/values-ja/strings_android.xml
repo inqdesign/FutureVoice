@@ -238,4 +238,11 @@
     <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
     <string name="sign_in_subtitle">GoogleかAppleでログインしてください。iPhoneでnawanaを使っているなら、同じアカウントで。自分の声がそのまま引き継がれます。</string>
     <string name="opening_ellipsis">開いています…</string>
+    <!-- Home-screen widgets (4.7): picker descriptions + the Progress widget's review label. -->
+    <string name="widget_streak_description">毎日の連続記録を続けましょう。</string>
+    <string name="widget_continue_studying">続けて学ぶ</string>
+    <string name="widget_book_description">読んでいたブックにすぐ戻ります。</string>
+    <string name="widget_progress_description">今日の目標と連続記録、残りの学習量をひと目で。</string>
+    <string name="widget_free_talk_description">ワンタップで流暢な自分に電話します。</string>
+    <string name="widget_to_review">復習待ち</string>
 </resources>

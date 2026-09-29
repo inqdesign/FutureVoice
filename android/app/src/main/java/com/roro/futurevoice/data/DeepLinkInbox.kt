@@ -15,6 +15,16 @@ object DeepLinkInbox {
 
     enum class Destination { VOCABULARY, EXPRESSIONS, PRACTICE, REVIEW, REVIEW_ITEM }
 
+    /** A widget tap that has to clear whatever page is open: the Talk tab, a
+     *  book, or a call to start (iOS RootTabView "talk" / "book" / "freetalk"). */
+    sealed interface WidgetRoute {
+        data object Talk : WidgetRoute
+        data class Book(val kind: String, val id: String) : WidgetRoute
+        data object FreeTalk : WidgetRoute
+    }
+
+    val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
+
     val pending = MutableStateFlow<Destination?>(null)
 
     /** The one item a per-item reminder named: (kind, value). Read by the
@@ -39,6 +49,14 @@ object DeepLinkInbox {
             "vocab" -> Destination.VOCABULARY
             "expressions" -> Destination.EXPRESSIONS
             "practice" -> Destination.PRACTICE
+            // Streak widget: open Talk so the learner does something today.
+            "talk" -> { widgetRoute.value = WidgetRoute.Talk; return }
+            "freetalk" -> { widgetRoute.value = WidgetRoute.FreeTalk; return }
+            // Continue widget: that book's page, else the shelf.
+            "book" -> uri.getQueryParameter("id")?.takeIf { it.isNotBlank() }?.let { id ->
+                widgetRoute.value = WidgetRoute.Book(uri.getQueryParameter("type") ?: "talk", id)
+                return
+            } ?: Destination.PRACTICE
             // The weekly test lives on the Practice tab; the tab opens it.
             "weeklytest" -> { WeeklyTestInbox.pending.value = true; Destination.PRACTICE }
             else -> return          // login, and anything we don't own

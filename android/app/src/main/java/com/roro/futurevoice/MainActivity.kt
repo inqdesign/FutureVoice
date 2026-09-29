@@ -72,11 +72,20 @@ class MainActivity : ComponentActivity() {
             }
         }
         AppUsageLog.begin()
+        // Widgets follow the app at its edges too — a drill or a talk minute
+        // doesn't bump the store revision the refresher also listens to.
+        com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(this)
     }
 
     override fun onPause() {
         super.onPause()
         AppUsageLog.end(this)
+        // The background edge refreshes NOW, not after the coalescing delay:
+        // the process may be frozen right after this returns.
+        val app = applicationContext
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            com.roro.futurevoice.widget.StudyWidgetRefresher.refresh(app)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

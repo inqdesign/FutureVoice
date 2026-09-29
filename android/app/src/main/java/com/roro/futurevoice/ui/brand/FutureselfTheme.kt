@@ -61,6 +61,8 @@ enum class FutureselfTheme(val label: String) {
             context.getSharedPreferences("futurevoice", 0).edit()
                 .putInt(PREF_KEY, theme.ordinal).apply()
             live.value = theme
+            // The home-screen widgets wear the palette too.
+            com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(context)
         }
     }
 }

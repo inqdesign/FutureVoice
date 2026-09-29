@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.exp
@@ -67,6 +68,43 @@ fun FutureselfPixels(
             )
         }
     }
+}
+
+/**
+ * The same still as a BITMAP, for surfaces that can't run a Compose Canvas —
+ * the home-screen widget (`FreeTalkCard`'s `FutureselfPixels`). Identical
+ * per-cell math; [cell] is in pixels. Gaps stay transparent so the graph
+ * paper behind shows through, as it does on iOS (`opaqueGaps: false`).
+ */
+fun futureselfPixelsBitmap(
+    widthPx: Int,
+    heightPx: Int,
+    theme: Int = 0,
+    mode: FutureselfMode = FutureselfMode.SPEAKING,
+    level: Float = 0.36f,
+    time: Float = 3.2f,
+    cell: Float = 12.8f,
+    colourFalloff: Float = 1f,
+    maxStep: Int = 4,
+    dark: Boolean = true,
+): android.graphics.Bitmap {
+    val bmp = android.graphics.Bitmap.createBitmap(
+        widthPx.coerceAtLeast(1), heightPx.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
+    if (cell <= 0f) return bmp
+    val canvas = android.graphics.Canvas(bmp)
+    val size = Size(bmp.width.toFloat(), bmp.height.toFloat())
+    val paint = android.graphics.Paint()
+    val cols = ceil(size.width / cell).toInt()
+    val rows = ceil(size.height / cell).toInt()
+    val gap = 1f
+    for (cy in 0 until rows) for (cx in 0 until cols) {
+        val ox = cx * cell; val oy = cy * cell
+        val center = Offset(ox + cell / 2, oy + cell / 2)
+        paint.color = shade(cx, cy, center, size, theme, mode, level, time,
+            colourFalloff, maxStep, dark).toArgb()
+        canvas.drawRect(ox + gap / 2, oy + gap / 2, ox + cell - gap / 2, oy + cell - gap / 2, paint)
+    }
+    return bmp
 }
 
 /** The shader, on the CPU. */
