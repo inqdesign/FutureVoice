@@ -42,7 +42,8 @@ val CoreClubColor = Color(0xFF5856D6)   // systemIndigo
  */
 @Composable
 fun CoreSeal(size: Dp = 13.dp) {
-    Canvas(Modifier.size(size).semantics { contentDescription = "The Core" }) {
+    val label = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.the_core)
+    Canvas(Modifier.size(size).semantics { contentDescription = label }) {
         // A scalloped disc — SF Symbols' `seal.fill`, drawn.
         val r = this.size.minDimension / 2f
         val cx = this.size.width / 2f

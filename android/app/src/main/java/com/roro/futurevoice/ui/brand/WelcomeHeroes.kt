@@ -193,7 +193,7 @@ fun BookHero(modifier: Modifier = Modifier) {
             modifier = Modifier.height(150.dp),
         )
         HeroPanel {
-            Text("Words", style = MaterialTheme.typography.titleSmall)
+            Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.words_d26d55), style = MaterialTheme.typography.titleSmall)
             listOf("deposit" to "the money held during a tenancy",
                 "wear and tear" to "normal damage from regular use",
                 "deducted" to "taken off the total").forEach { (w, note) ->
@@ -268,7 +268,7 @@ fun LevelHero(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Spacer(Modifier.weight(1f))
         HeroPanel {
-            Text("Estimated level", style = MaterialTheme.typography.labelMedium,
+            Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.estimated_level), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(level, style = DisplayFace.style(level,
                 MaterialTheme.typography.displayMedium),
@@ -279,17 +279,17 @@ fun LevelHero(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium)
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Row(Modifier.fillMaxWidth()) {
-                Text("Next assessment", style = MaterialTheme.typography.labelMedium,
+                Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.next_assessment), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f))
-                Text("New talk ${Math.round(progress * 10)}/10 min",
+                Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.new_talk_lld_10_min, Math.round(progress * 10)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
         }
         HeroPanel {
-            Text("Across skills", style = MaterialTheme.typography.titleSmall)
+            Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.across_skills), style = MaterialTheme.typography.titleSmall)
             listOf("Vocabulary" to level, "Fluency" to "≈B1", "Grammar" to "≈B2").forEach { (k, v) ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(k, style = MaterialTheme.typography.bodyMedium,
