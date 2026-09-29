@@ -90,17 +90,18 @@ section{margin-top:56px}
 .all{flex:0 0 auto;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--dim);white-space:nowrap}
 .all:hover{color:var(--tx)}
 /* One row per episode, scrolled sideways; big enough to read without tapping, and the next card peeks. */
-.slides{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:0;padding:4px 2px 14px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;overscroll-behavior-x:contain}
+.slides{--bleed:24px;display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:var(--bleed);margin:-14px calc(-1 * var(--bleed)) 0;padding:14px var(--bleed) 26px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;overscroll-behavior-x:contain}
 .slides::-webkit-scrollbar{height:6px}
 .slides::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
-.sl{flex:0 0 clamp(240px,calc((100% - 32px) / 2.4),440px);scroll-snap-align:start}
+.sl{flex:0 0 clamp(240px,calc((100% - 32px - 2 * var(--bleed)) / 2.4),440px);scroll-snap-align:start}
+.slides::after{content:"";flex:0 0 1px}  /* keeps the right padding when scrolled to the end */
 /* The row says there is more: a fade and a floating arrow on whichever side still has cards. */
 .rowwrap{position:relative}
-.rowwrap::before,.rowwrap::after{content:"";position:absolute;top:0;bottom:14px;width:72px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
-.rowwrap::before{left:0;background:linear-gradient(90deg,var(--bg),rgba(246,245,241,0))}
-.rowwrap::after{right:0;background:linear-gradient(270deg,var(--bg),rgba(246,245,241,0))}
+.rowwrap::before,.rowwrap::after{content:"";position:absolute;top:-14px;bottom:26px;width:72px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
+.rowwrap::before{left:-24px;background:linear-gradient(90deg,var(--bg),rgba(246,245,241,0))}
+.rowwrap::after{right:-24px;background:linear-gradient(270deg,var(--bg),rgba(246,245,241,0))}
 .rowwrap.can-l::before,.rowwrap.can-r::after{opacity:1}
-.edge{position:absolute;top:calc(50% - 7px);transform:translateY(-50%);z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--tx);font-size:20px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 18px rgba(27,26,24,.14);opacity:0;pointer-events:none;transition:opacity .2s, transform .15s}
+.edge{position:absolute;top:calc(50% - 6px);transform:translateY(-50%);z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--tx);font-size:20px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 18px rgba(27,26,24,.14);opacity:0;pointer-events:none;transition:opacity .2s, transform .15s}
 .edge.l{left:8px}
 .edge.r{right:8px}
 .rowwrap.can-l .edge.l,.rowwrap.can-r .edge.r{opacity:1;pointer-events:auto}
@@ -212,6 +213,9 @@ footer a{color:var(--faint)}
   .intro h1{font-size:34px}
   .store span{display:none}
   .store{padding:0 11px}
+  .slides{--bleed:16px}
+  .rowwrap::before{left:-16px}
+  .rowwrap::after{right:-16px}
   .sl{flex-basis:82vw}
   .edge{width:38px;height:38px;font-size:17px}
   .ep-h{flex-direction:column;align-items:flex-start;gap:8px}
