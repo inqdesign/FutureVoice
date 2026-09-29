@@ -26,6 +26,7 @@ import { TalkBilling, type WallCode } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
 const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
+const DEFAULT_REPLY_FALLBACK_MODEL = "gemini-3.1-flash-lite"
 const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
 const CONVERSATION_MODEL = "eleven_turbo_v2_5"
 
@@ -648,9 +649,20 @@ export class CallSession implements DurableObject {
       // (point it at a model that does not exist and every generation
       // fails while the transcriber keeps working).
       model: this.env.GEMINI_REPLY_MODEL ?? DEFAULT_REPLY_MODEL,
+      // Hedge target when the primary stalls or errors (reply.ts). Set the
+      // var to the primary's own name to turn the hedge off.
+      fallbackModel: this.env.GEMINI_REPLY_FALLBACK_MODEL ?? DEFAULT_REPLY_FALLBACK_MODEL,
       system: msg.system,
     })
     this.replyEngine.steer = this.pendingSteer
+    // Once per call, not per turn: during an outage every turn falls back,
+    // and a warning row per turn is the telemetry flood of 2026-09-26.
+    let fellBack = false
+    this.replyEngine.onFallback = (detail) => {
+      if (fellBack) return
+      fellBack = true
+      this.warn("reply_fallback", detail)
+    }
 
     this.eleven = new ElevenTTS(
       {
