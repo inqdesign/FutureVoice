@@ -205,6 +205,10 @@ data class SessionScorecard(
     val pronunciation: AxisScore? = null,
     val topLine: String = "",
     val cefrLevel: String? = null,
+    /** The band of the grammatical STRUCTURES the learner produced (a1…c2),
+     *  written by the summary beside the score — range, where the score is
+     *  accuracy (iOS `SessionScorecard.grammarRange`, 2026-09-24). */
+    val grammarRange: String? = null,
 ) {
     /** Mean of the axes (+ pronunciation when present) — the headline number. */
     val overall: Int
@@ -697,6 +701,9 @@ data class Scenario(
     val categoryIcon: String? = null,
     val summary: String? = null,
     val isMeeting: Boolean? = null,
+    /** Material the learner attached, and what ONE reading of it produced
+     *  (iOS `Scenario.brief`). Optional so old rows decode unchanged. */
+    val brief: ScenarioBrief? = null,
 ) {
     val cardTitle: String
         get() = summary?.trim()?.takeIf { it.isNotEmpty() } ?: environment

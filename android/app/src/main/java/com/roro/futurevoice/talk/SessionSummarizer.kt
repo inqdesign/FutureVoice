@@ -441,6 +441,10 @@ object SessionSummarizer {
                 else axis("fluency")!!,
                 topLine = str(sc, "top_line").orEmpty(),
                 cefrLevel = str(sc, "cefr_level")?.lowercase(),
+                // Kept only when it names a real band, so a stray value can
+                // never cap the Progress page on nothing.
+                grammarRange = ((sc["grammar"] as? JsonObject)?.let { str(it, "range") })
+                    ?.trim()?.lowercase()?.takeIf { r -> com.roro.futurevoice.data.CefrLevel.entries.any { it.code == r } },
             )
         }
         return SessionSummary(

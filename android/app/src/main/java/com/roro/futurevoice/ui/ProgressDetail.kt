@@ -117,6 +117,8 @@ data class ProgressMetrics(
     val wordsPerTurn: Int = 0,
     val grammarScore: Int = 0,
     val slipsPer100Words: Double = 0.0,
+    /** Median structural range over the same window (null: no talk has one). */
+    val grammarRange: CefrLevel? = null,
     val perLevel: Map<CefrLevel, Int> = emptyMap(),
     val usedTotal: Int = 0,
     val vocabLevel: CefrLevel? = null,
@@ -137,12 +139,13 @@ data class ProgressMetrics(
 
     /** Slip density first, the 0–100 score only when no slips were ever
      *  captured — absent data must not read as perfect grammar. */
-    val grammarLevel: CefrLevel?
-        get() = when {
-            scoredCount == 0 -> null
-            slipsPer100Words > 0 -> ProgressBands.band(slipsPer100Words, ProgressBands.grammarDensity)
-            else -> LevelBands.grammarBand(grammarScore)
-        }
+    val grammarLevel: CefrLevel? get() = grammarRead?.first
+
+    /** Non-null when range, not accuracy, decided the band. */
+    val grammarCeiling: GrammarCeiling? get() = grammarRead?.second
+
+    private val grammarRead: Pair<CefrLevel, GrammarCeiling?>?
+        get() = GrammarCeiling.band(scoredCount, slipsPer100Words, grammarScore, grammarRange, vocabLevel)
 
     val expressionLevel: CefrLevel?
         get() = LevelBands.expressionBand(wordsPerTurn.toDouble())
@@ -151,11 +154,45 @@ data class ProgressMetrics(
      *  line, derived from the same table as the mapping. */
     val grammarNextThreshold: Double?
         get() {
-            if (slipsPer100Words <= 0) return null
+            // A ceiling decided the band: fewer slips would move nothing.
+            if (slipsPer100Words <= 0 || grammarCeiling != null) return null
             val lv = grammarLevel ?: return null
             val i = ProgressBands.grammarDensity.indexOfFirst { it.level == lv }
             return if (i > 0) ProgressBands.grammarDensity[i - 1].to else null
         }
+}
+
+/**
+ * What held the ≈Grammar band below its accuracy read (iOS `GrammarCeiling`).
+ * A CEFR grammar level is the structures you COMMAND and how cleanly: slip
+ * density alone read a beginner in short present-tense clauses as C2 — no
+ * slips because nothing was attempted. Two reads, the LOWER wins.
+ */
+sealed class GrammarCeiling {
+    abstract val level: CefrLevel
+    /** The measured structural range of the assessed talks. */
+    data class Range(override val level: CefrLevel) : GrammarCeiling()
+    /** No talk has a range yet: graded vocabulary + one band stands in. */
+    data class Vocabulary(override val level: CefrLevel) : GrammarCeiling()
+
+    companion object {
+        fun band(scoredCount: Int, slipsPer100Words: Double, grammarScore: Int,
+                 range: CefrLevel?, vocabLevel: CefrLevel?): Pair<CefrLevel, GrammarCeiling?>? {
+            if (scoredCount == 0) return null
+            val accuracy = when {
+                slipsPer100Words > 0 -> ProgressBands.band(slipsPer100Words, ProgressBands.grammarDensity)
+                else -> LevelBands.grammarBand(grammarScore)
+            } ?: return null
+            val all = CefrLevel.entries
+            val ceiling: GrammarCeiling = when {
+                range != null -> Range(range)
+                vocabLevel != null -> Vocabulary(all[minOf(all.indexOf(vocabLevel) + 1, all.size - 1)])
+                else -> return accuracy to null
+            }
+            return if (all.indexOf(ceiling.level) < all.indexOf(accuracy)) ceiling.level to ceiling
+            else accuracy to null
+        }
+    }
 }
 
 object ProgressMath {
@@ -234,6 +271,12 @@ object ProgressMath {
                 recent.mapNotNull { it.summary?.scorecard?.grammar?.score }
                     .filter { it in 0..100 }.map { it.toDouble() })).toInt(),
             slipsPer100Words = if (densityWords > 0) slips.toDouble() / densityWords * 100 else 0.0,
+            // The MEDIAN range over the window: one attempted conditional is
+            // not a range you command.
+            grammarRange = recent.mapNotNull { s -> s.summary?.scorecard?.grammarRange
+                ?.let { r -> CefrLevel.entries.firstOrNull { it.code == r } } }
+                .sortedBy { CefrLevel.entries.indexOf(it) }
+                .let { l -> if (l.isEmpty()) null else l[(l.size - 1) / 2] },
             perLevel = vocabByLevel,
             usedTotal = vocabByLevel.values.sum(),
             vocabLevel = LevelBands.vocabularyLevel(vocabByLevel),
@@ -433,7 +476,12 @@ fun ProgressSkillPage(
             big = m.grammarLevel?.let { "≈" + it.code.uppercase() } ?: "—",
             unit = stringResource(R.string.grammatical_control),
             band = null,
-            measured = if (m.slipsPer100Words > 0)
+            measured = if (m.grammarCeiling != null) when (val c = m.grammarCeiling!!) {
+                is GrammarCeiling.Range -> stringResource(
+                    R.string.accurate_within_structures_the_sentences_you_build_set_this_628af6, c.level.code.uppercase())
+                is GrammarCeiling.Vocabulary -> stringResource(
+                    R.string.capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf, c.level.code.uppercase())
+            } else if (m.slipsPer100Words > 0)
                 stringResource(R.string.grammar_measured_line,
                     String.format(Locale.getDefault(), "%.1f", m.slipsPer100Words),
                     grammarTargetHint(m))
