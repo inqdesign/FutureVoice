@@ -339,6 +339,11 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private fun startRealtime(config: TalkConfig) {
         lastActivityAt = System.currentTimeMillis()
+        // Nobody-there watch on THIS path too (iOS `f41d045`): it was only
+        // armed by the per-turn path, so a quiet realtime call kept the mic
+        // open until the gateway's 3-minute drop, which ends the call instead
+        // of pausing it.
+        startIdleWatch()
         com.roro.futurevoice.core.Analytics.capture("conversation_started", mapOf(
             "origin" to when { config.scenarioId != null -> "scenario"; config.newsFacts.isNotEmpty() -> "news"; config.cast != null -> "person"; else -> "free" },
             "language" to config.targetLanguage, "realtime" to true))
@@ -448,6 +453,9 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private fun resumeRealtime() {
         val cfg = config ?: return
+        // A reconnect must not inherit a clock that already ran out.
+        lastActivityAt = System.currentTimeMillis()
+        startIdleWatch()
         _state.update { it.copy(phase = TalkPhase.CONNECTING, pausedForIdle = false) }
         viewModelScope.launch {
             connectRealtime(cfg, null,
@@ -734,6 +742,14 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private fun pauseCall(forIdle: Boolean) {
         cancelIdleWatch()
+        if (REALTIME) {
+            // Pausing IS hanging up on this path — the same as the pill tap;
+            // resuming reconnects with the turns so far as history.
+            realtime.hangUp(); flushRealtimeReply()
+            _state.update { it.copy(phase = TalkPhase.PAUSED, partial = "", level = 0f, pausedForIdle = forIdle) }
+            config?.let { updateCallNotification(it, TalkPhase.PAUSED) }
+            return
+        }
         endpointJob?.cancel(); endpointJob = null
         // Whatever the partial held is discarded, as on iOS — a half-sentence
         // from before a pause is not something to answer later.
@@ -771,7 +787,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                 delay(IDLE_WATCH_TICK_SECONDS * 1000L)
                 val phase = _state.value.phase
                 if (phase == TalkPhase.ENDED || phase == TalkPhase.PAUSED) return@launch
-                if (isBillableMoment()) { lastActivityAt = System.currentTimeMillis(); continue }
+                // NOT the billing rule: that one is zero until the learner
+                // first speaks, and read here it paused the call in the
+                // middle of the opener or of their first answer (iOS `366266a`).
+                if (somethingIsHappening()) { lastActivityAt = System.currentTimeMillis(); continue }
                 if (System.currentTimeMillis() - lastActivityAt < IDLE_PAUSE_SECONDS * 1000L) continue
                 pauseCall(forIdle = true)
                 return@launch
@@ -1091,11 +1110,17 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun isBillableMoment(): Boolean {
-        val phase = _state.value.phase
-        if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return false
         // The opener speaks whether or not it is answered. A call that was
         // opened, listened to and left behind is not a minute of theirs.
         if (!learnerSpokeThisCall) return false
+        return somethingIsHappening()
+    }
+
+    /** Someone is speaking, being answered or being heard — billing's
+     *  predicate without its "not before the first turn" gate. */
+    private fun somethingIsHappening(): Boolean {
+        val phase = _state.value.phase
+        if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return false
         if (REALTIME) {
             // Same rule, read off the gateway's state rather than a local VAD.
             return when (realtime.state) {
