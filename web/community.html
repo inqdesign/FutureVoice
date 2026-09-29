@@ -162,6 +162,7 @@ section{margin-top:56px}
 .viewer[hidden]{display:none!important}
 .v-top{width:min(560px,100%);display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .v-top b{font-size:16px}
+.v-top .v-cat{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8C8983;border:1px solid #3A3834;border-radius:999px;padding:1px 8px}
 .v-top span{font-family:var(--mono);font-size:12px;color:#8C8983}
 .v-top button{margin-left:auto;background:none;border:0;color:#BDBAB3;font-size:24px;line-height:1;padding:4px 8px}
 .track{width:min(560px,100%);display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:14px}
@@ -260,7 +261,7 @@ footer a{color:var(--faint)}
 <button class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span data-i="chat">채팅</span></button>
 
 <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
-  <div class="v-top"><b id="vTitle"></b><span id="vCount"></span><button id="vClose" aria-label="닫기">✕</button></div>
+  <div class="v-top"><span class="v-cat" id="vCat"></span><b id="vTitle"></b><span id="vCount"></span><button id="vClose" aria-label="닫기">✕</button></div>
   <div class="track" id="track"></div>
   <div class="v-nav"><button id="vPrev" aria-label="이전">←</button><div class="dots" id="dots"></div><button id="vNext" aria-label="다음">→</button></div>
   <p class="v-cta"><span data-i="tryIt">직접 해보고 싶다면</span> · <a href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" data-i="store">App Store에서 받기</a></p>
@@ -428,36 +429,61 @@ $("#chips").addEventListener("click", e => {
 });
 
 /* ---------- viewer ---------- */
-let vEp = null, vIdx = 0, lastFocus = null;
+// One continuous strip of every slide in the series: swiping past an episode's
+// last slide lands on the next episode's first, with no close-and-reopen.
+let flat = [], vIdx = 0, vOpen = false, lastFocus = null, openedEp = null;
+function buildFlat(){
+  const order = CAT_ORDER.flatMap(c => series.filter(e => e.cat === c));
+  flat = order.flatMap(e => e.slides.map((src, si) => ({ e, si, src })));
+}
 function openViewer(id, start = 0){
-  vEp = series.find(e => e.id === id); if (!vEp) return;
-  lastFocus = document.activeElement;
-  $("#vTitle").textContent = vEp[lang].title;
-  $("#track").innerHTML = vEp.slides.map((src, i) => `<img src="${esc(src)}" alt="${esc(vEp[lang].title)} ${i+1}/${vEp.slides.length}" ${i > 1 ? 'loading="lazy"' : ""}>`).join("");
-  $("#dots").innerHTML = vEp.slides.map(() => "<i></i>").join("");
+  buildFlat();
+  const first = flat.findIndex(x => x.e.id === id); if (first < 0) return;
+  const idx = first + Math.min(start, flat[first].e.slides.length - 1);
+  lastFocus = document.activeElement; openedEp = id; vOpen = true;
+  $("#track").innerHTML = flat.map((x, k) =>
+    `<img src="${esc(x.src)}" alt="${esc(x.e[lang].title)} ${x.si + 1}/${x.e.slides.length}" ${Math.abs(k - idx) > 2 ? 'loading="lazy"' : ""}>`).join("");
   $("#viewer").hidden = false; document.body.style.overflow = "hidden";
-  const tr = $("#track"); requestAnimationFrame(() => { tr.scrollLeft = start * tr.clientWidth; setIdx(start); });
-  setIdx(start); $("#vNext").focus();
+  const tr = $("#track");
+  vIdx = -1; setIdx(idx);
+  requestAnimationFrame(() => { tr.scrollLeft = idx * tr.clientWidth; setIdx(idx); });
+  $("#vNext").focus();
 }
-function closeViewer(){ $("#viewer").hidden = true; document.body.style.overflow = ""; vEp = null; lastFocus?.focus(); }
+function closeViewer(){
+  $("#viewer").hidden = true; document.body.style.overflow = ""; vOpen = false;
+  // If they swiped on to another episode, leave the page at that one.
+  const cur = flat[vIdx]?.e.id;
+  if (cur && cur !== openedEp) document.getElementById("ep-" + cur)?.scrollIntoView({ block: "start" });
+  else lastFocus?.focus();
+}
 function setIdx(i){
-  vIdx = i;
-  $("#vCount").textContent = `${i+1} / ${vEp.slides.length}`;
-  [...$("#dots").children].forEach((d, j) => d.classList.toggle("on", j === i));
-  $("#vPrev").disabled = i === 0; $("#vNext").disabled = i === vEp.slides.length - 1;
+  if (i === vIdx || !flat[i]) return;
+  const prevEp = flat[vIdx]?.e; vIdx = i;
+  const { e, si } = flat[i];
+  if (e !== prevEp) {
+    $("#vCat").textContent = t("cats")[e.cat];
+    $("#vTitle").textContent = e[lang].title;
+    $("#dots").innerHTML = e.slides.map(() => "<i></i>").join("");
+  }
+  $("#vCount").textContent = `${si + 1} / ${e.slides.length}`;
+  [...$("#dots").children].forEach((d, j) => d.classList.toggle("on", j === si));
+  $("#vPrev").disabled = i === 0; $("#vNext").disabled = i === flat.length - 1;
+  // warm the neighbours so a swipe never lands on a blank frame
+  [i - 1, i + 1, i + 2].forEach(k => { const im = $("#track").children[k]; if (im) im.loading = "eager"; });
 }
-function go(i){ const tr = $("#track"); tr.scrollTo({ left: i * tr.clientWidth, behavior: "smooth" }); }
+function go(i){ if (i < 0 || i >= flat.length) return; const tr = $("#track"); tr.scrollTo({ left: i * tr.clientWidth, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
 $("#grid").addEventListener("click", e => { const b = e.target.closest("[data-ep]"); if (b) openViewer(b.dataset.ep, +b.dataset.at || 0); });
-$("#track").addEventListener("scroll", () => { if (!vEp) return; const tr = $("#track"); const i = Math.round(tr.scrollLeft / tr.clientWidth); if (i !== vIdx) setIdx(i); }, { passive: true });
+$("#track").addEventListener("scroll", () => { if (!vOpen) return; const tr = $("#track"); setIdx(Math.round(tr.scrollLeft / tr.clientWidth)); }, { passive: true });
 $("#vPrev").addEventListener("click", () => go(vIdx - 1));
 $("#vNext").addEventListener("click", () => go(vIdx + 1));
 $("#vClose").addEventListener("click", closeViewer);
 $("#viewer").addEventListener("click", e => { if (e.target.id === "viewer") closeViewer(); });
+addEventListener("resize", () => { if (vOpen) { const tr = $("#track"); tr.scrollLeft = vIdx * tr.clientWidth; } });
 document.addEventListener("keydown", e => {
-  if (!vEp) return;
+  if (!vOpen) return;
   if (e.key === "Escape") closeViewer();
-  if (e.key === "ArrowRight" && vIdx < vEp.slides.length - 1) go(vIdx + 1);
-  if (e.key === "ArrowLeft" && vIdx > 0) go(vIdx - 1);
+  if (e.key === "ArrowRight") go(vIdx + 1);
+  if (e.key === "ArrowLeft") go(vIdx - 1);
 });
 
 /* ---------- chat ---------- */
