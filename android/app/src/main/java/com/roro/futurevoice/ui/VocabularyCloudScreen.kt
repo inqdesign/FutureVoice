@@ -12,6 +12,11 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -138,6 +144,10 @@ fun VocabularyCloudScreen(
     var openWord by remember { mutableStateOf(
         com.roro.futurevoice.capture.flags.PracticeCaptureFlags.cloudOpenWord) }
 
+    /** The word the always-up notebook peek shows (iOS `NotebookSheet` at its
+     *  resting height). Null = the notebook's first word. */
+    var peekWord by remember(language) { mutableStateOf<String?>(null) }
+
     LaunchedEffect(language, revision) { marks = loadMarks(context, language) }
 
     // Off the main thread, as iOS lays out on a detached task — opening the
@@ -199,13 +209,24 @@ fun VocabularyCloudScreen(
             )
         }
     ) { padding ->
-        Cloud(
-            modifier = Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground),
-            cloud = cloud,
-            marks = marks,
-            hideKnown = hideKnown,
-            onTap = { openWord = it },
-        )
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            Cloud(
+                modifier = Modifier.fillMaxSize().background(AppSurfaces.ground),
+                cloud = cloud,
+                marks = marks,
+                hideKnown = hideKnown,
+                // Stay on the peek — it shows the meaning, so tapping through
+                // the cloud is a quick-check loop with no sheet to close.
+                onTap = { peekWord = it },
+            )
+            NotebookPeek(
+                word = peekWord ?: marks.studyingOrder.firstOrNull(),
+                studyingCount = marks.studyingOrder.size,
+                language = language,
+                onOpen = { openWord = it },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 
     openWord?.let { word ->
@@ -225,6 +246,93 @@ fun VocabularyCloudScreen(
             onShadow = { line -> openWord = null; onShadow(line) },
             onDismiss = { openWord = null },
         )
+    }
+}
+
+/**
+ * The notebook, always up under the cloud (iOS `NotebookSheet` at its
+ * `peekHeight`): the word, its part of speech and its FIRST meaning. A tap
+ * opens the full card — dragging a sheet is the slowest way to ask for more.
+ * Docked rather than a modal sheet, because a modal one would take the cloud's
+ * pan away (iOS lets the background through; Compose's sheet does not).
+ */
+@Composable
+private fun NotebookPeek(
+    word: String?,
+    studyingCount: Int,
+    language: String,
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val lore = remember { com.roro.futurevoice.net.WordLore(com.roro.futurevoice.data.AuthRepository()) }
+    val nativeLanguage = remember {
+        context.getSharedPreferences("futurevoice", 0).getString("futurevoice.nativeLanguage", null) ?: "en"
+    }
+    var entry by remember { mutableStateOf<com.roro.futurevoice.net.WordLore.Entry?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    LaunchedEffect(word, language) {
+        // `loading` FIRST: clearing the entry before it flashes "no entry".
+        loading = true
+        entry = null
+        entry = word?.let { runCatching { lore.entry(it, nativeLanguage, language) }.getOrNull() }
+        loading = false
+    }
+    androidx.compose.material3.Surface(
+        modifier = modifier.fillMaxWidth().height(220.dp)
+            .then(if (word != null) Modifier.clickable { onOpen(word) } else Modifier),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 22.dp)) {
+            Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(width = 36.dp, height = 5.dp).background(
+                    MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape))
+            }
+            Text(stringResource(R.string.my_words_lld, studyingCount),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if (word == null) {
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.tap_a_word_in_the_cloud_to_start_your_notebook),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+                return@Column
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(word, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurface)
+            val sub = listOfNotNull(CoreVocabulary.reading(word, language),
+                entry?.pos?.takeIf { it.isNotBlank() }).joinToString(" · ")
+            if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Spacer(Modifier.height(10.dp))
+            val first = entry?.senses?.firstOrNull()
+            when {
+                first != null -> {
+                    Text(first.meaning, style = MaterialTheme.typography.bodyLarge, maxLines = 2,
+                        color = MaterialTheme.colorScheme.onSurface)
+                    // More than one sense: say so, rather than letting the peek
+                    // read as the whole truth.
+                    val extra = (entry?.senses?.size ?: 1) - 1
+                    if (extra > 0) Text(
+                        if (extra == 1) stringResource(R.string.s_1_more_meaning)
+                        else stringResource(R.string.lld_more_meanings, extra),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                loading -> androidx.compose.material3.CircularProgressIndicator(
+                    Modifier.size(20.dp), strokeWidth = 2.dp)
+                else -> Text(stringResource(R.string.no_dictionary_entry_yet_tap_to_open_the_card),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
