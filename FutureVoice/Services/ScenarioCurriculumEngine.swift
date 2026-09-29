@@ -71,7 +71,7 @@ enum ScenarioCurriculumEngine {
             payload = try await GeminiClient.shared.sendJSONStreamAccumulating(
                 system: system,
                 messages: messages,
-                maxTokens: sceneScale(for: proficiency).maxTokens,
+                maxTokens: sceneMaxTokens,
                 purpose: "scenario-curriculum",
                 idempotencyKey: idempotencyKey,
                 onPartial: { partial in
@@ -100,7 +100,7 @@ enum ScenarioCurriculumEngine {
             payload = try await GeminiClient.shared.sendJSON(
                 system: system,
                 messages: messages,
-                maxTokens: sceneScale(for: proficiency).maxTokens,
+                maxTokens: sceneMaxTokens,
                 purpose: "scenario-curriculum",
                 idempotencyKey: idempotencyKey
             )
@@ -125,52 +125,70 @@ enum ScenarioCurriculumEngine {
 
     // MARK: - Prompts
 
-    /// Scene size scales with the learner's level: beginners get short,
-    /// ownable turns; advanced learners get more turns and fuller sentences —
-    /// depth the scene needs, not a fixed cap. Token budget scales with it.
-    struct SceneScale {
-        let turnRange: String     // e.g. "8 to 10"
-        let turnStyle: String     // per-band sentence-length guidance
-        let maxTokens: Int
-    }
+    /// A scene is the SAME SIZE at every level, and the band changes only
+    /// which WORDS and sentence shapes fill it — the rule the live call
+    /// settled on 2026-08-20 (`ConversationEngine.SpeechScale`) and that
+    /// Watch never followed. It arrived here on 2026-09-26 from two
+    /// directions at once.
+    ///
+    /// **It read wrong in BOTH directions.** Size used to scale with the
+    /// band: 8–10 turns of one 5–10 word sentence at A1/A2, up to 10–14
+    /// turns of 1–3 full sentences at C1/C2. Reported the same day by the
+    /// founder, after watching one of each: the A2 scene was too thin to
+    /// hold a situation ("표면적"), the C1 scene too long to sit through.
+    /// A learner does not need a SHORTER scene than a fluent one, they need
+    /// an EASIER one — and a scene that can't carry the complication isn't
+    /// easier, it's emptier.
+    ///
+    /// **And length is where the money is.** Measured on those two watches:
+    /// 8 lines for $0.090 against 9 lines for $0.401 — ONE more line and
+    /// 4.4x the ElevenLabs bill, because the band was expressed as length
+    /// and a scene's cost is its characters. That made one scene from the
+    /// plan's pool mean four different things depending on who played it,
+    /// and put the $0.12-per-scene arithmetic `docs/launch-billing.md`
+    /// prices on four times under at the top band.
+    ///
+    /// So: one middle length for everybody, and the band drives vocabulary
+    /// and sentence shapes alone — read from `ConversationEngine.speechScale`
+    /// rather than restated here, so there is ONE definition of what a band
+    /// means and the call and the scene can't drift apart. Keep the count
+    /// COUNTABLE for the same reason the call does: a qualitative ceiling
+    /// loses to the concrete content rules around it.
+    ///
+    /// What is NOT band-dependent any more, and must stay that way: how much
+    /// actually HAPPENS in the scene. The A2 complaint was about substance,
+    /// and substance is now asked for at every level (see the systemPrompt's
+    /// SUBSTANCE rule) — the band only decides how hard the words are.
 
-    static func sceneScale(for proficiency: CEFRLevel) -> SceneScale {
-        switch proficiency {
-        case .a1, .a2:
-            return SceneScale(
-                turnRange: "8 to 10",
-                turnStyle: """
-                Each turn is ONE short, simple sentence (roughly 5–10 words) —
-                clear everyday phrasing the learner can fully own.
-                """,
-                maxTokens: 2200
-            )
-        case .b1, .b2:
-            return SceneScale(
-                turnRange: "8 to 12",
-                turnStyle: """
-                Each turn is 1–2 sentences, as long as the moment naturally
-                calls for — never padded, never artificially clipped.
-                """,
-                maxTokens: 2800
-            )
-        case .c1, .c2:
-            return SceneScale(
-                turnRange: "10 to 14",
-                turnStyle: """
-                Each turn is 1–3 full sentences at natural native pacing —
-                subordinate clauses, nuance, and follow-up questions welcome.
-                Go deeper into the substance of the situation; an advanced
-                learner should hear a conversation with real depth.
-                """,
-                maxTokens: 3600
-            )
-        }
-    }
+    /// Turns in a scene, at EVERY level.
+    ///
+    /// **9–11 → 8–10 on 2026-09-26**, one turn shorter, for the cost reason
+    /// above read forward instead of backward: a scene's bill IS its
+    /// characters, so a tenth of the lines is a tenth of the money, and the
+    /// measured scene was $0.124 against a plan that prices it at $0.12. One
+    /// turn is the most that can come off without the scene stopping being a
+    /// scene — the SUBSTANCE rule still has to fit (something happens, it is
+    /// complicated, it resolves), and eight turns is four exchanges, which is
+    /// the floor for that. Do not take a second one: below this the scene
+    /// becomes the "표면적" A2 scene the range was widened to fix.
+    static let sceneTurnRange = "8 to 10"
+
+    /// How long one turn is, at EVERY level.
+    static let sceneTurnStyle = """
+        Each turn is 1–2 sentences — as long as the moment naturally calls
+          for, never padded to reach the count and never clipped mid-thought.
+          This is two people talking, not paragraphs read aloud.
+        """
+
+    /// One ceiling: the payload is the same size for every learner now.
+    /// Sized well over a full scene plus its study lists, because gen-3
+    /// spends thinking tokens out of the same budget and the failure is a
+    /// lost call, not a shorter one.
+    static let sceneMaxTokens = 3000
 
     private static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
-        let scale = sceneScale(for: proficiency)
+        let band = ConversationEngine.speechScale(for: proficiency)
         return """
         You are a \(languageName) curriculum designer. Given ONE real-life
         scenario a learner (CEFR \(proficiency.rawValue.uppercased())) wants to master, write the SCENE
@@ -190,7 +208,7 @@ enum ScenarioCurriculumEngine {
         counterpart is thanked, not the reverse.
 
         Content rules:
-        - turns: \(scale.turnRange), alternating naturally. WHOEVER'S MOVE THE
+        - turns: \(sceneTurnRange), alternating naturally. WHOEVER'S MOVE THE
           SCENARIO NAMES OPENS IT — when the learner is the one going in to do
           something, the FIRST turn is "user". The counterpart opens only when
           the situation is something that happens TO the learner (called in by
@@ -199,7 +217,7 @@ enum ScenarioCurriculumEngine {
           either may open.
           Real spoken \(languageName) — contractions, hedges, natural register.
           \(CoachingLanguage.breathPunctuation)
-          \(scale.turnStyle)
+          \(sceneTurnStyle)
           The USER speaks as a confident, fluent version of the learner
           (slightly above \(proficiency.rawValue.uppercased()), never textbook-stiff). Every user turn must
           be a complete, speakable line — it will be shadowed ALOUD. No stage
@@ -215,6 +233,21 @@ enum ScenarioCurriculumEngine {
         - title: 2–5 words in \(languageName) naming what happens in THIS scene.
         - Everything specific to THIS scenario and persona — never generic
           textbook content. All content in \(languageName); notes in simple \(languageName).
+
+        SUBSTANCE — the same at EVERY level. Something has to actually HAPPEN:
+        the specific thing the learner is going in to do, the complication it
+        runs into, the question that is hard to answer, and how it lands. A
+        beginner's scene is not a thinner scene — it is the same situation in
+        easier words. Never fill the turns with greetings and pleasantries and
+        stop before the difficult part; that part is the reason they are
+        watching.
+
+        WHAT \(proficiency.rawValue.uppercased()) CHANGES — the words and the sentence shapes, and
+        nothing else. The scene is the same length and carries the same amount
+        of substance for every learner; the band only decides how hard it is
+        to say.
+        - Vocabulary: \(band.vocabulary)
+        - Sentence shapes: \(band.structure)
 
         Return STRICT JSON only — no prose, no code fences:
         {
@@ -274,6 +307,32 @@ enum ScenarioCurriculumEngine {
             if !scenario.notes.trimmingCharacters(in: .whitespaces).isEmpty {
                 lines.append("- context: \(scenario.notes)")
             }
+        }
+        // The learner's attached material, read once (`ScenarioBrief`). Two
+        // sides, and they must stay on their sides: the other side's facts
+        // and questions belong to the counterpart, the learner's facts to the
+        // USER's lines. Handing the CV to the interviewer is the failure
+        // this ordering exists to prevent.
+        if let b = scenario.brief, b.hasContent {
+            lines.append("")
+            lines.append("material the learner attached for THIS situation (read once — facts only, never invent beyond them):")
+            if !b.summary.isEmpty { lines.append("- about: \(b.summary)") }
+            if !b.counterpartFacts.isEmpty {
+                lines.append("- the OTHER side (this is who the counterpart is and what they want):")
+                b.counterpartFacts.forEach { lines.append("    · \($0)") }
+            }
+            if !b.likelyQuestions.isEmpty {
+                lines.append("- what the other side is likely to say or ask — use SOME of these, not all, and not in this order; a fresh take picks different ones:")
+                b.likelyQuestions.forEach { lines.append("    · \($0)") }
+            }
+            if !b.learnerFacts.isEmpty {
+                lines.append("- the LEARNER's own side (the user's lines draw on these; the counterpart may only know what such a person would plausibly have been sent):")
+                b.learnerFacts.forEach { lines.append("    · \($0)") }
+            }
+            if !b.keyExpressions.isEmpty {
+                lines.append("- expressions this situation calls for — work several into the dialogue naturally where they fit, and prefer them for the study lists: \(b.keyExpressions.joined(separator: " · "))")
+            }
+            lines.append("  (the notes above may be in the learner's native language — context only, never let it change the language you write in)")
         }
         if let c = counterpart, !isBuiltin(c) {
             lines.append("- the other person is \(c.name) (\(c.relationship))")

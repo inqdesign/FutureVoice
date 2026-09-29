@@ -34,9 +34,17 @@ enum TrialReminder {
     /// write the same event every time the app opens.
     private static let loggedKey = "futurevoice.trialReminder.logged"
 
-    /// Days before the trial ends that the notice fires. Two is enough to
-    /// cancel without hurrying and late enough to still be about this week.
-    private static let leadDays = 2
+    /// Days before the trial ends that the notice fires, from the LENGTH of
+    /// the trial (2026-09-23, when the week became three days). Two is right
+    /// for a week — enough to cancel without hurrying, late enough to still
+    /// be about this week — but on a three-day trial it lands on the day of
+    /// purchase, telling someone their trial is nearly over the same
+    /// afternoon they started it. A short trial gets one day.
+    static func leadDays(forTrialDays days: Int) -> Int { days <= 4 ? 1 : 2 }
+
+    /// What a trial is assumed to be when its length can't be worked out —
+    /// no subscription start date on file, which is an older webhook write.
+    private static let assumedTrialDays = 7
 
     /// Ask for permission, then schedule. Returns whether the notice will
     /// actually arrive, so the caller can stop claiming it if it won't.
@@ -49,6 +57,7 @@ enum TrialReminder {
     /// re-times the same request to the store's exact trial end.
     @discardableResult
     static func schedule(trialDays: Int) async -> Bool {
+        let leadDays = leadDays(forTrialDays: trialDays)
         guard trialDays > leadDays else { return false }
 
         let center = UNUserNotificationCenter.current()
@@ -62,7 +71,7 @@ enum TrialReminder {
             log("denied", path: "purchase", fireAt: fireAt, trialEnd: nil)
             return false
         }
-        await add(fireAt: fireAt)
+        await add(fireAt: fireAt, leadDays: leadDays)
         log("scheduled", path: "purchase", fireAt: fireAt, trialEnd: nil)
         return true
     }
@@ -108,7 +117,14 @@ enum TrialReminder {
             log("no_trial_end", path: "reconcile", fireAt: nil, trialEnd: nil)
             return
         }
-        let fireAt = fireDate(before: trialEnd)
+        // How long this trial IS, so the notice keeps its distance from the
+        // end rather than from a week that may not be what was bought. The
+        // start is the subscription's own, never "today".
+        let start = account.startedAt ?? account.periodStart
+        let length = start.map {
+            max(1, Int((trialEnd.timeIntervalSince($0) / 86_400).rounded()))
+        } ?? Self.assumedTrialDays
+        let fireAt = fireDate(before: trialEnd, trialDays: length)
         guard fireAt > Date().addingTimeInterval(60) else {
             // Already inside the last two days — too late for this notice to
             // say what it says. The Usage page names the date.
@@ -123,15 +139,17 @@ enum TrialReminder {
         }
         // Same identifier, so this REPLACES whatever the purchase scheduled —
         // re-adding on every foreground is idempotent.
-        await add(fireAt: fireAt)
+        await add(fireAt: fireAt, leadDays: leadDays(forTrialDays: length))
         log("scheduled", path: "reconcile", fireAt: fireAt, trialEnd: trialEnd)
     }
 
     /// `leadDays` before the trial ends — moved EARLIER, never later, when
     /// that lands at night: a trial that started at 2am would otherwise be
     /// announced at 2am. Earlier only ever gives more time to decide.
-    static func fireDate(before trialEnd: Date, calendar: Calendar = .current) -> Date {
-        let raw = trialEnd.addingTimeInterval(-TimeInterval(leadDays * 24 * 60 * 60))
+    static func fireDate(before trialEnd: Date, trialDays: Int = assumedTrialDays,
+                         calendar: Calendar = .current) -> Date {
+        let lead = leadDays(forTrialDays: trialDays)
+        let raw = trialEnd.addingTimeInterval(-TimeInterval(lead * 24 * 60 * 60))
         let hour = calendar.component(.hour, from: raw)
         if (9..<21).contains(hour) { return raw }
         // 21:00–23:59 → 20:00 the same evening; 00:00–08:59 → 20:00 the
@@ -144,7 +162,9 @@ enum TrialReminder {
         status == .authorized || status == .provisional || status == .ephemeral
     }
 
-    private static func add(fireAt: Date) async {
+    /// `leadDays` is passed in rather than read here: it depends on how long
+    /// THIS trial is, and the body says the number out loud.
+    private static func add(fireAt: Date, leadDays: Int) async {
         let content = UNMutableNotificationContent()
         content.title = explain("Your free trial ends soon")
         content.body = explain("Your trial becomes a paid subscription in \(leadDays) days. You can cancel any time in the App Store.")

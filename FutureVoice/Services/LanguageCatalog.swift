@@ -65,7 +65,7 @@ enum LanguageCatalog {
         base(a) == base(b)
     }
 
-    private static func base(_ code: String) -> String {
+    static func base(_ code: String) -> String {
         code.split(separator: "-").first.map(String.init) ?? code
     }
 

@@ -14,6 +14,8 @@ struct ProgressTab: View {
 
     // Optional because it doubles as the pager's scrollPosition binding.
     @State private var selected: Dim? = .overall
+    /// DEBUG captures only: open on a skill page instead of Overall.
+    var initialDim: Dim? = nil
     /// False until the first pass over the archive has landed. Every number
     /// below starts at zero, and zero is a CLAIM here ("nothing measured yet,
     /// 0/10 min") — so the pages must not be drawn from it before it's been
@@ -55,6 +57,11 @@ struct ProgressTab: View {
     /// turns). Drives the ≈Grammar band so the sheet and the verdict tell
     /// one story; the 0–100 score stays as the Grammar page's "recent form".
     @State private var slipsPer100Words = 0.0
+    /// Median structural RANGE of the assessed talks (`SessionScorecard.
+    /// grammarRange`, written by the summary since 2026-09-24) — the band of
+    /// grammar the learner actually reached for. Nil while every talk in the
+    /// window predates the field.
+    @State private var grammarRange: CEFRLevel?
     // Qualitative coaching notes (LLM), per dimension
     @State private var notesByDim: [Dim: [String]] = [:]
     @State private var scoredCount = 0
@@ -143,6 +150,10 @@ struct ProgressTab: View {
     }
 
     var body: some View {
+        content.onAppear { if let initialDim { selected = initialDim } }
+    }
+
+    private var content: some View {
         NavigationStack {
             Group {
                 // The paged scaffold shows from day one — before the first
@@ -291,7 +302,7 @@ struct ProgressTab: View {
                 }
             case .grammar:
                 explainerPanel("Grammatical control",
-                               "Read from verified grammar slips per 100 spoken words — fewer reads higher.")
+                               "Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.")
                 explainerChartPanel("Trend",
                                     "One point per talk — down is progress.") {
                     trendChart(sampleTrend([6.5, 5.4, 5.8, 4.2, 3.4, 2.8]),
@@ -1004,25 +1015,96 @@ struct ProgressTab: View {
         return Self.band(for: Double(adjusted), in: Self.fluencyBands)
     }
 
-    /// Grammar → CEFR band from verified slip DENSITY — the same evidence
-    /// the assessment cites for grammatical control, so this row and the
-    /// verdict's rationale always tell one story. (The 0–100 score can't do
-    /// that: it's calibrated to the user's level setting, so a high-slip
-    /// speaker can still score 70+.) Falls back to the score only when no
-    /// slip data exists, so absent data doesn't read as perfect grammar.
-    private var grammarCEFR: CEFRLevel? {
+    /// What held the ≈Grammar band below its accuracy read, if anything.
+    enum GrammarCeiling: Equatable {
+        /// The measured structural range of the assessed talks.
+        case range(CEFRLevel)
+        /// No talk in the window carries a range yet: the graded vocabulary
+        /// (words actually used) plus one band stands in for it.
+        case vocabulary(CEFRLevel)
+    }
+
+    /// Grammar → CEFR band. Two measurements, the LOWER wins:
+    /// - ACCURACY from verified slip density (the same evidence the
+    ///   assessment cites — the 0–100 score can't serve: it's calibrated
+    ///   to the level setting, so a high-slip speaker still scores 70+; it
+    ///   is the fallback only when no slip exists, so absent data doesn't
+    ///   read as perfect grammar).
+    /// - RANGE: the structures the learner actually produced. Accuracy
+    ///   alone read a beginner in short present-tense clauses as C2 — no
+    ///   slips because nothing was attempted. A level is what you command
+    ///   AND how cleanly, so range is a ceiling on the accuracy band.
+    ///   Talks summarized before the field have no range; then the graded
+    ///   vocabulary + 1 band caps it — nobody's grammar outruns the words
+    ///   they use by more than a band — and the page says so.
+    /// Pure so the rule is testable; the view reads the two wrappers below.
+    static func grammarBand(slipsPer100Words: Double, grammarScore: Int, scoredCount: Int,
+                            range: CEFRLevel?, vocabLevel: CEFRLevel?)
+        -> (level: CEFRLevel, ceiling: GrammarCeiling?)? {
         guard scoredCount > 0 else { return nil }
+        let accuracy: CEFRLevel?
         if slipsPer100Words > 0 {
-            return Self.band(for: slipsPer100Words, in: Self.grammarBands)
+            accuracy = band(for: slipsPer100Words, in: grammarBands)
+        } else if grammarScore > 0 {
+            switch grammarScore {
+            case ..<40:     accuracy = .a1
+            case 40..<55:   accuracy = .a2
+            case 55..<70:   accuracy = .b1
+            case 70..<82:   accuracy = .b2
+            case 82..<92:   accuracy = .c1
+            default:        accuracy = .c2
+            }
+        } else {
+            accuracy = nil
         }
-        guard grammarScore > 0 else { return nil }
-        switch grammarScore {
-        case ..<40:     return .a1
-        case 40..<55:   return .a2
-        case 55..<70:   return .b1
-        case 70..<82:   return .b2
-        case 82..<92:   return .c1
-        default:        return .c2
+        guard let accuracy else { return nil }
+        let ceiling: GrammarCeiling?
+        if let range {
+            ceiling = .range(range)
+        } else if let vocabLevel {
+            let all = CEFRLevel.allCases
+            let i = min(CoreVocabulary.levelRank(vocabLevel) + 1, all.count - 1)
+            ceiling = .vocabulary(all[i])
+        } else {
+            ceiling = nil
+        }
+        guard let ceiling else { return (accuracy, nil) }
+        let cap: CEFRLevel
+        switch ceiling {
+        case .range(let l), .vocabulary(let l): cap = l
+        }
+        return CoreVocabulary.levelRank(cap) < CoreVocabulary.levelRank(accuracy)
+            ? (cap, ceiling) : (accuracy, nil)
+    }
+
+    private var grammarRead: (level: CEFRLevel, ceiling: GrammarCeiling?)? {
+        Self.grammarBand(slipsPer100Words: slipsPer100Words, grammarScore: grammarScore,
+                         scoredCount: scoredCount, range: grammarRange, vocabLevel: vocabLevel)
+    }
+
+    private var grammarCEFR: CEFRLevel? { grammarRead?.level }
+
+    /// Non-nil when range, not accuracy, decided the band above.
+    private var grammarCeiling: GrammarCeiling? { grammarRead?.ceiling }
+
+    /// The one line under the ≈Grammar band. When a ceiling applied it names
+    /// the ceiling — the density alone would be quoting a number the band
+    /// does not follow.
+    private var grammarDetail: String {
+        switch grammarCeiling {
+        case .range(let l):
+            return String(format: explain("Accurate, within ≈%@ structures — the sentences you build set this band; the slips would read higher."),
+                          l.rawValue.uppercased())
+        case .vocabulary(let l):
+            return String(format: explain("Capped at ≈%@ by the words you use — your next talk will be read for the structures you build."),
+                          l.rawValue.uppercased())
+        case nil:
+            if slipsPer100Words > 0 {
+                return String(format: explain("%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs."), slipsPer100Words)
+            }
+            return grammarScore > 0
+                ? explain("Scoring \(grammarScore)/100 across recent talks — each talk graded from the verified grammar slips in what you said.")
+                : explain("Verified grammar slips per 100 spoken words — fewer reads higher.")
         }
     }
 
@@ -1240,11 +1322,7 @@ struct ProgressTab: View {
                                     : "Words per minute of voiced speech — pauses and think-time removed.")
                     assessedRow(name: "Grammar",
                                 level: grammarCEFR.map { "≈" + $0.rawValue.uppercased() },
-                                detail: slipsPer100Words > 0
-                                    ? String(format: "%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.", slipsPer100Words)
-                                    : (grammarScore > 0
-                                        ? "Scoring \(grammarScore)/100 across recent talks — each talk graded from the verified grammar slips in what you said."
-                                        : "Verified grammar slips per 100 spoken words — fewer reads higher."))
+                                detail: grammarDetail)
                     assessedRow(name: "Expression",
                                 level: expressionCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: wordsPerTurn > 0
@@ -1433,17 +1511,25 @@ struct ProgressTab: View {
             big: grammarCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—",
             bigUnit: "grammatical control",
             band: nil,
-            measuredLine: slipsPer100Words > 0
-                ? String(format: "%.1f verified grammar slips per 100 spoken words across your assessed talks%@.",
-                         slipsPer100Words, grammarTargetHint)
-                : "Verified grammar slips per 100 spoken words — fewer reads higher.",
-            measures: "Counted from transcript-verified slips only — STT artifacts and style suggestions are excluded. This is the exact number your level assessment weighs.",
-            improve: "Run your review cards — they're built from your own slips and target exactly these.",
-            action: reviewSlipsAction,
+            measuredLine: grammarCeiling != nil
+                ? grammarDetail
+                : (slipsPer100Words > 0
+                    ? String(format: "%.1f verified grammar slips per 100 spoken words across your assessed talks%@.",
+                             slipsPer100Words, grammarTargetHint)
+                    : "Verified grammar slips per 100 spoken words — fewer reads higher."),
+            measures: "Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high.",
+            improve: grammarCeiling == nil
+                ? "Run your review cards — they're built from your own slips and target exactly these."
+                : "Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.",
+            action: grammarCeiling == nil ? reviewSlipsAction : startTalkAction,
             trend: grammarTrend,
-            trendCaption: "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one.",
+            // Under a ceiling the accuracy zones would label the curve with a
+            // band the headline doesn't follow ("C2" behind a ≈A2 page).
+            trendCaption: grammarCeiling == nil
+                ? "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one."
+                : "Verified slips per 100 words, one point per talk — your accuracy. The band above comes from the structures you build, so this curve alone can't move it.",
             trendTarget: grammarNextBandThreshold,
-            trendBands: Self.grammarBands
+            trendBands: grammarCeiling == nil ? Self.grammarBands : []
         )
     }
 
@@ -1457,6 +1543,9 @@ struct ProgressTab: View {
     /// Upper density bound of the NEXT band up (nil at ≈C2 / no data) —
     /// derived from the same band table as the mapping and the chart zones.
     private var grammarNextBandThreshold: Double? {
+        // Under a range ceiling the next band is not a density — fewer
+        // slips would move nothing.
+        guard grammarCeiling == nil else { return nil }
         guard slipsPer100Words > 0, let lv = grammarCEFR,
               let idx = Self.grammarBands.firstIndex(where: { $0.level == lv }),
               idx > 0 else { return nil }
@@ -1708,10 +1797,16 @@ struct ProgressTab: View {
                                  action: seeWordsAction(at: next)))
         }
         if lags(grammarCEFR) {
-            tips.append(FocusTip(icon: "checkmark.seal",
-                                 text: String(format: explain("You're at %.1f verified slips per 100 words%@."),
-                                              slipsPer100Words, grammarTargetHint),
-                                 action: reviewSlipsAction))
+            if grammarCeiling != nil {
+                tips.append(FocusTip(icon: "checkmark.seal",
+                                     text: explain("Your sentences stay simple — link two ideas in one: a reason, a condition, what happened before."),
+                                     action: startTalkAction))
+            } else {
+                tips.append(FocusTip(icon: "checkmark.seal",
+                                     text: String(format: explain("You're at %.1f verified slips per 100 words%@."),
+                                                  slipsPer100Words, grammarTargetHint),
+                                     action: reviewSlipsAction))
+            }
         }
         if lags(fluencyCEFR) {
             tips.append(FocusTip(icon: "gauge.with.needle",
@@ -1813,6 +1908,7 @@ struct ProgressTab: View {
         var wordsPerTurn = 0
         var grammarScore = 0
         var slipsPer100Words = 0.0
+        var grammarRange: CEFRLevel?
         var fluencyTrend: [TrendPoint] = []
         var grammarTrend: [TrendPoint] = []
         var expressionTrend: [TrendPoint] = []
@@ -1887,6 +1983,7 @@ struct ProgressTab: View {
         wordsPerTurn = result.wordsPerTurn
         grammarScore = result.grammarScore
         slipsPer100Words = result.slipsPer100Words
+        grammarRange = result.grammarRange
         fluencyTrend = result.fluencyTrend
         grammarTrend = result.grammarTrend
         expressionTrend = result.expressionTrend
@@ -2084,6 +2181,13 @@ struct ProgressTab: View {
         let slips = densitySessions.reduce(0) { $0 + ($1.summary?.grammarIssues.count ?? 0) }
         let words = densityMets.reduce(0) { $0 + $1.userWordCount }
         out.slipsPer100Words = words > 0 ? Double(slips) / Double(words) * 100 : 0
+        // Structural range over the same window: the median of the talks
+        // that carry one (older summaries have none and contribute nothing).
+        // A median, not the max — one talk where they attempted a
+        // conditional is not a range they command.
+        let ranges = densitySessions.compactMap { $0.summary?.scorecard?.grammarRangeLevel }
+            .sorted { CoreVocabulary.levelRank($0) < CoreVocabulary.levelRank($1) }
+        out.grammarRange = ranges.isEmpty ? nil : ranges[(ranges.count - 1) / 2]
 
         // --- Per-skill trends: one point per analyzed talk, oldest first.
         // The SAME deterministic measurements as the headline numbers above,

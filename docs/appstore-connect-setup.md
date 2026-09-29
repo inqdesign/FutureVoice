@@ -59,8 +59,8 @@
 | Price (한국) | **₩15,000** — 직접 지정 |
 | Display Name — English | `Light` |
 | Display Name — 한국어 | `라이트` |
-| Description — English | `150 min of talk, 60 scenes a month` |
-| Description — 한국어 | `한 달 통화 150분 · 상황연습 60개` |
+| Description — English | `150 min of talk, 10 scenes a month` |
+| Description — 한국어 | `한 달 통화 150분 · 상황연습 10개` |
 
 ### ② Light Annual
 
@@ -74,8 +74,8 @@
 | Price (한국) | **₩110,000** — 직접 지정 (39%) |
 | Display Name — English | `Light` |
 | Display Name — 한국어 | `라이트` |
-| Description — English | `150 min of talk, 60 scenes a month` |
-| Description — 한국어 | `한 달 통화 150분 · 상황연습 60개` |
+| Description — English | `150 min of talk, 10 scenes a month` |
+| Description — 한국어 | `한 달 통화 150분 · 상황연습 10개` |
 
 ### ③ Plus Monthly
 
@@ -89,8 +89,9 @@
 | Price (한국) | **₩29,000** — 직접 지정 |
 | Display Name — English | `Plus` |
 | Display Name — 한국어 | `플러스` |
-| Description — English | `Unlimited talk, 120 scenes a month` |
-| Description — 한국어 | `통화 무제한 · 상황연습 월 120개` |
+| Description — English | `600 min of talk, 30 scenes a month` |
+| **Price — USD** | **$24.99** (raised 2026-09-26 from $19.99; pick *preserve the current price for existing subscribers*). KRW stays ₩29,000 by hand; EUR follows the USD base. |
+| Description — 한국어 | `한 달 통화 600분 · 상황연습 30개` |
 
 ### ④ Plus Annual
 
@@ -104,8 +105,8 @@
 | Price (한국) | **₩209,000** — 직접 지정 (40%) |
 | Display Name — English | `Plus` |
 | Display Name — 한국어 | `플러스` |
-| Description — English | `Unlimited talk, 120 scenes a month` |
-| Description — 한국어 | `통화 무제한 · 상황연습 월 120개` |
+| Description — English | `600 min of talk, 30 scenes a month` |
+| Description — 한국어 | `한 달 통화 600분 · 상황연습 30개` |
 
 > **상위 티어의 할인이 하위보다 얕으면 안 됩니다.** 플러스 40% ≥ 라이트 33%.
 > 2026-08-21 이전에는 반대였고(17% vs 33%), 페이월에 `39% 절약` 옆에 `14% 절약`이
@@ -185,10 +186,13 @@ App Store Connect → Apps → nawana → (좌측) Subscriptions
 ```
 Test account: <계정> / <비밀번호>
 The subscription unlocks talk time with the user's own cloned voice.
-Light = 150 min of talk and 60 Watch scenes per month;
-Plus = unlimited talk and 120 Watch scenes per month.
+Light = 150 min of talk and 10 Watch scenes per month;
+Plus = 600 min of talk and 30 Watch scenes per month (2026-09-26 — subscribers
+from before that date keep what they bought).
+A +100 min consumable (`com.roro.futurevoice.talk_100`, $4.99) is built but
+NOT created in ASC: two products for now.
 Reviewing, drills, replays and progress are free without a subscription.
-The 7-day free trial is metered at the Light allowance.
+There is no free trial since 2026-09-26; every account gets 20 free minutes of talk before the paywall.
 ```
 
 > 2026-09-04까지 이 노트는 Daily/Unlimited 시절 문구였습니다. 카드에 찍히는

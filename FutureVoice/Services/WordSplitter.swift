@@ -22,7 +22,23 @@ enum WordSplitter {
             : JapaneseMorph.segments(in: text)
     }
 
-    static func count(_ text: String) -> Int { words(text).count }
+    /// `words(text).count` without building the words: this is asked of
+    /// every sentence of every talk on each book build, and the split's
+    /// substring allocations were measurable there (2026-09-23).
+    static func count(_ text: String) -> Int {
+        guard spaced else { return words(text).count }
+        var n = 0
+        var inWord = false
+        for c in text {
+            if c.isWhitespace {
+                inWord = false
+            } else if !inWord {
+                inWord = true
+                n += 1
+            }
+        }
+        return n
+    }
 
     /// The words a TIMELINE is cut into — what karaoke lights, a tap
     /// selects and the rhythm dots sit under. Unlike `words`, nothing is

@@ -26,6 +26,8 @@ export interface ElevenTTSConfig {
   modelId: string
   /** e.g. "pcm_22050"; must be allowed on the ElevenLabs plan. */
   outputFormat: string
+  /** Optional speaking speed (0.7–1.2). Omitted = upstream default. */
+  speed?: number
 }
 
 export class ElevenTTS {
@@ -167,11 +169,27 @@ export class ElevenTTS {
               similarity_boost: 0.9,
               style: 0,
               use_speaker_boost: true,
+              // The learner's chosen speed, and only when they chose one:
+              // sending 1.0 explicitly is not the same request as sending
+              // nothing, and the default call must stay what it was.
+              ...(this.config.speed !== undefined ? { speed: this.config.speed } : {}),
             },
           }
         : {}),
     }))
     })
+  }
+
+  /** Change the speaking speed for lines not yet started.
+   *
+   *  Safe to call at any moment and never touches the socket: `sendText`
+   *  reads `config.speed` when it OPENS a context, so the line being spoken
+   *  right now finishes at the speed it began with and the next one picks
+   *  this up. Re-sending settings into a live context is precisely what
+   *  ElevenLabs rejects (see `openContexts`), so this must stay a stored
+   *  value rather than a message. */
+  setSpeed(speed: number | undefined): void {
+    this.config.speed = speed
   }
 
   /** The reply is fully written — synthesize whatever text remains buffered. */

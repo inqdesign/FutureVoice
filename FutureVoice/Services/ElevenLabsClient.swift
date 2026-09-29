@@ -226,8 +226,45 @@ final class ElevenLabsClient {
     static let conversationModelId = "eleven_turbo_v2_5"
     #endif
 
-    /// Model for material the user LISTENS to as their own voice, where
-    /// speaker similarity is the product (Watch scenes today).
+    /// EVERYTHING the learner hears in their own cloned voice, outside the
+    /// live call's own path: Watch scene lines (both voices), the daily
+    /// call's voicemail, the onboarding greeting and the voice-comparison
+    /// sheet. Turbo, all of it (2026-09-26, founder's call, confirmed by
+    /// ear) — the same model the live call has always used.
+    ///
+    /// The clone's lines used to take `fidelityModelId` here. The argument
+    /// against it is one sentence: Talk runs the same cloned voice on turbo,
+    /// it is the surface with the most exposure by far, and nobody has said
+    /// the call doesn't sound like them — so a scene cannot need a better
+    /// model than the live conversation does. It is also the app's biggest
+    /// cost lever: the clone's half of the scene lines was 70% of a scene's
+    /// ElevenLabs bill (26,514 credits against the counterpart's 11,354 over
+    /// the launch window), so a scene goes from $0.112 to ~$0.073.
+    ///
+    /// And it was settled the way this app settles voice questions — by ear,
+    /// not by arithmetic. `scripts/tts-model-probe.sh` synthesized the same
+    /// scene lines both ways in the founder's own clone, with the production
+    /// voice settings and speed, weighted toward the cross-lingual case that
+    /// is the only place multilingual_v2 should earn its 2x (a clone recorded
+    /// in Korean speaking English and German). Verdict the same day: turbo
+    /// holds up, and in places sounds BETTER. Re-run the probe before moving
+    /// anything back.
+    ///
+    /// The ONCE-PER-USER surfaces went with it — the onboarding greeting and
+    /// the voice-comparison sheet — and their reason is not the money, which
+    /// was never more than a few cents. They are where the learner decides
+    /// "is that me?", so they must be a SAMPLE of what the app will actually
+    /// sound like. A greeting synthesized on a better model than every line
+    /// that follows is a demo, and the gap it hides is exactly the
+    /// disappointment it would be setting up.
+    static let cloneModelId = "eleven_turbo_v2_5"
+
+    /// The fidelity tier. **Nothing in a release build speaks on it any more**
+    /// (2026-09-26): its last three users — Watch scenes, the voicemail, the
+    /// onboarding greeting — all moved to `cloneModelId` after the founder
+    /// A/B'd the two on their own clone and turbo held up. It stays defined
+    /// as the DEBUG A/B target below (`conversationModelId`) and as the thing
+    /// to reach for if a future surface ever earns 2x per character.
     ///
     /// flash/turbo v2.5 are the latency tier — they trade speaker similarity
     /// for time-to-first-audio. multilingual_v2 is the fidelity tier, and it
@@ -237,11 +274,12 @@ final class ElevenLabsClient {
     /// COST: multilingual_v2 bills ~2x per character upstream vs flash/turbo
     /// v2.5, and `priceFor("tts")` in the edge function is character-based and
     /// model-BLIND — the user is charged identically either way, so every
-    /// call on this model is margin we absorb. Only put a path on it when
-    /// `PhraseAudioStore` caches the result, which makes that 2x a ONE-TIME
-    /// cost per unique line rather than a per-play one. Never use it for live
-    /// conversation turns: those are new text every time, so nothing caches
-    /// and the 2x repeats forever (on top of being too slow for a call).
+    /// call on this model is margin we absorb. Only put a path on it when it
+    /// fires ONCE per user, ever. The old rule said "when `PhraseAudioStore`
+    /// caches the result", and scenes are what showed that isn't enough: a
+    /// fresh take writes new text every run, so nothing was reused and the
+    /// premium was paid on every play. Never use it for live conversation
+    /// turns either: new text every time, and too slow for a call.
     static let fidelityModelId = "eleven_multilingual_v2"
 
     /// Deterministic fallback idempotency key for callers that don't pass
@@ -259,10 +297,16 @@ final class ElevenLabsClient {
     }()
 
     private static func deterministicKey(text: String, voiceId: String,
-                                         timestamps: Bool) -> String {
+                                         timestamps: Bool,
+                                         speed: SpeechSpeed? = nil) -> String {
         // Timestamps flag included: plain and karaoke syntheses are separate
         // billable actions and must not dedupe against each other.
-        let digest = SHA256.hash(data: Data("\(voiceId)|\(timestamps)|\(text)".utf8))
+        // The chosen speech speed joins the key: the same line at two speeds is
+        // two DIFFERENT syntheses and must not dedupe against each other.
+        // Normal's tag is empty (see `SpeechSpeed.cacheTag`), so every existing
+        // key is unchanged.
+        let speedTag = (speed ?? .current).cacheTag
+        let digest = SHA256.hash(data: Data("\(voiceId)|\(timestamps)|\(speedTag)\(text)".utf8))
         let hex = digest.prefix(12).map { String(format: "%02x", $0) }.joined()
         return "tts:\(installSalt):\(hex)"
     }
@@ -289,7 +333,8 @@ final class ElevenLabsClient {
         purpose: String? = nil,
         previousText: String? = nil,
         nextText: String? = nil,
-        sceneKey: String? = nil
+        sceneKey: String? = nil,
+        speed: SpeechSpeed? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -298,7 +343,8 @@ final class ElevenLabsClient {
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         // Caller-supplied key = retries of the same logical synthesis are
         // charge-deduped by the edge function's usage ledger.
-        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId, timestamps: false),
+        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId,
+                                                                 timestamps: false, speed: speed),
                          forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
@@ -314,6 +360,19 @@ final class ElevenLabsClient {
         ]
         // Feature tag for the usage ledger (spend attribution) — the edge
         // function records it in metadata, never forwards it upstream.
+        // How fast the fluent self talks (Me → Voice). Always sent, because
+        // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
+        // edge deploy that predates the field ignores it and the line
+        // synthesizes exactly as it used to.
+        //
+        // `speed` overrides the learner's setting for ONE line, and exists for
+        // exactly one caller: the onboarding speed pills, which have to make
+        // three takes of the same sentence at three rungs before the learner
+        // has chosen any of them. It is a rung, never a raw number, so the
+        // idempotency key's speed tag stays the same tag every other path
+        // uses. Everything else must keep passing nil — a surface that picks
+        // its own pace is a voice that changes speed mid-app.
+        body["speed"] = (speed ?? .current).multiplier
         if let purpose { body["purpose"] = purpose }
         // One Watch scene = one key across all its lines, so the plan's daily
         // scene COUNT is charged once and the scene's seconds stop coming out
@@ -380,6 +439,11 @@ final class ElevenLabsClient {
             "stream": true,
             "stream_formats": Self.streamFormats,
         ]
+        // How fast the fluent self talks (Me → Voice). Always sent, because
+        // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
+        // edge deploy that predates the field ignores it and the line
+        // synthesizes exactly as it used to.
+        body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         if let sceneKey { body["scene_key"] = sceneKey }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -500,6 +564,11 @@ final class ElevenLabsClient {
             "model_id": modelId,
             "with_timestamps": true,
         ]
+        // How fast the fluent self talks (Me → Voice). Always sent, because
+        // Normal is 0.9 rather than upstream's 1.0 — see `SpeechSpeed`. An
+        // edge deploy that predates the field ignores it and the line
+        // synthesizes exactly as it used to.
+        body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

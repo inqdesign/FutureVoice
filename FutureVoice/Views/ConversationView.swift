@@ -85,14 +85,29 @@ struct ConversationView: View {
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
+    /// The call's own settings sheet — the mic pill's only neighbour.
+    @State private var showingCallSettings = false
+    /// Screen state the learner owns while the call runs (`CallSettings`).
+    /// Persisted, so a call opens the way the last one was left.
+    @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
+    @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
+    @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
     /// The call screen is waiting on that pitch to close before it exits.
     @State private var closeAfterPaywall = false
     /// Which of this screen's doors opened the paywall — `PaywallView`'s
     /// `source`, set beside every `showingPaywall = true`.
     @State private var paywallSource = "talk"
-    /// Set by Done so the summary sheet's dismiss can tell Done from a swipe
-    /// (`talk_summary_closed`). Both then take the same exit.
-    @State private var summaryClosedByDone = false
+    /// How the summary sheet is going away, read by its `onDismiss`: Done
+    /// and a swipe take the same exit (and are told apart in
+    /// `talk_summary_closed`); `.code` is `startNewSession` clearing it,
+    /// which must not exit. That function has no caller today — the case
+    /// keeps the protection it always had, now that Done exits too.
+    enum SummaryClose: String { case done, swipe, code }
+    @State private var summaryClose: SummaryClose = .swipe
+    /// The summary sheet's `onDismiss` has run once. It is terminal for this
+    /// screen (every exit goes through `close()`), so nothing resets it
+    /// except the unreferenced `startNewSession`.
+    @State private var postCallExitStarted = false
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -104,10 +119,21 @@ struct ConversationView: View {
     /// moment the wall lands. False on Plus: nothing left to sell, and the
     /// answer really is next month.
     @State private var canUpgradePlan = false
+    /// A minute pack is on offer at the wall: counted subscription, not a
+    /// trial (2026-09-26).
+    @State private var canTopUpTalk = false
+    /// Resolved with the account, long before the wall — the sheet's own
+    /// buttons must not grow a new one under the learner's thumb.
+    @State private var inviteOffer: InviteOffer?
     /// The plan's own pool in whole minutes, from the account snapshot.
     /// Never hardcoded: the number is a plan setting on the server and a
     /// stale constant here would misstate what they bought.
     @State private var poolMinutes: Int?
+    /// Trialing: the sheet must speak of the trial's pool, not the month's,
+    /// and never offer Plus. With the plan's monthly minutes so it can say
+    /// what starts when the trial converts.
+    @State private var accountIsTrialing = false
+    @State private var planMinutesAfterTrial: Int?
     /// When the pool refills, for the sheet's "back on the 14th" line.
     @State private var renewalLabel = ""
     /// The plan stops on that date instead of refilling (cancelled).
@@ -122,7 +148,7 @@ struct ConversationView: View {
     /// Which tier the paywall should open on, when a caller named one.
     @State private var paywallTier: String?
 
-    private enum CapChoice { case upgrade, review }
+    private enum CapChoice { case upgrade, review, topUp }
     /// Unified beta feedback modal — set to a milestone to present it.
     @State private var feedbackContext: FeedbackSheet.Context?
     /// endAndClose defers its dismiss until the first-talk feedback closes.
@@ -607,6 +633,12 @@ struct ConversationView: View {
     /// see `isBillableMoment`. Set where a user turn is made (both paths),
     /// cleared with the session.
     @State private var learnerSpokeThisCall = false
+    /// The learner has started their first answer — the gateway is already
+    /// making words of it — even if no turn is committed yet. Lifts the gate
+    /// for the CLOCK on the realtime path, where the local meter only keeps
+    /// the clock and the ring (the gateway bills on its own rule), so the
+    /// first answer is counted while it is being said instead of after it.
+    @State private var learnerStartedThisCall = false
     /// The live call died under the learner — socket gone, reply failed
     /// past its retry, mic lost after a route change. Set from the realtime
     /// state observer; presented as the one alert that offers a way BACK.
@@ -634,7 +666,35 @@ struct ConversationView: View {
         // — the ring showed the wait as talk time (reported 2026-09-07).
         // Per call, not per transcript: Continue reopens a book with its old
         // turns in hand, and those were spoken on another day.
-        guard learnerSpokeThisCall else { return false }
+        if RealtimeMode.isEnabled, !learnerStartedThisCall,
+           realtime.state == .hearing, !realtime.partial.isEmpty {
+            learnerStartedThisCall = true
+        }
+        guard learnerSpokeThisCall || (RealtimeMode.isEnabled && learnerStartedThisCall)
+        else { return false }
+        return somethingIsHappening()
+    }
+
+    /// The clock counts nothing until the first turn is COMMITTED (the gate
+    /// above), so the first answer itself — often the longest thing the
+    /// learner says — never reached it: a 40-second first answer read 0:00
+    /// (founder, 2026-09-27). The realtime path counts it live
+    /// (`learnerStartedThisCall`); the classic path has no such witness, so
+    /// at that commit the answer's own length is added once. The classic
+    /// meter bills too, and the learner is never billed for this — clock only.
+    private func creditFirstAnswerToClock(ms: Int) {
+        guard !learnerSpokeThisCall, ms > 0 else { return }
+        meter.clock.add(Double(ms) / 1000)
+    }
+
+    /// Is anyone in this call right now — the fluent self speaking, a reply
+    /// being written, or the learner audibly talking? The billing predicate
+    /// minus its "not until their first turn" gate. The idle watch asks THIS,
+    /// never `isBillableMoment`: that gate only lifts once a turn is
+    /// COMMITTED, so a first answer longer than the idle bar was paused
+    /// mid-sentence (2026-09-27, founder's call: 23 s of speech, 0 turns,
+    /// paused at 29 s — three times in a row).
+    private func somethingIsHappening() -> Bool {
         if RealtimeMode.isEnabled {
             // Same rule, read off the gateway's state instead of the local
             // VAD: the fluent self speaking, a reply being written, or the
@@ -706,7 +766,7 @@ struct ConversationView: View {
                 // Pinned, not part of the feed: material the learner is meant
                 // to reach for has to still be there at minute six, and
                 // anything inside the transcript is gone after two turns.
-                if !goalItems.isEmpty {
+                if !goalItems.isEmpty, showsGoalChips {
                     TalkGoalChipsRow(items: goalItems, used: usedGoalKeys) { item in
                         goalDetail = item
                     }
@@ -733,6 +793,16 @@ struct ConversationView: View {
                 guard !didAutoStart else { return }
                 didAutoStart = true
                 phoneCallActive = true
+                #if DEBUG
+                // A beat, so the presentation isn't requested inside the
+                // screen's own first appear — SwiftUI drops those.
+                if DebugCapture.previewCallSettings {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 900_000_000)
+                        showingCallSettings = true
+                    }
+                }
+                #endif
                 // The in-call meter: wall-clock seconds tick to the server
                 // for the whole life of the seat. When today's minutes run
                 // out mid-call the mic closes; the line the fluent self is
@@ -797,25 +867,60 @@ struct ConversationView: View {
             }
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
+            // On the root, with the screen's other sheets — attached to the
+            // bottom bar it never presented (the bar lives inside
+            // `fadingBottomBar`'s overlay).
+            .sheet(isPresented: $showingCallSettings) {
+                CallSettingsSheet { speed in
+                    // The rung is already stored (the sheet writes the same
+                    // defaults key Me → Voice does), so every later synthesis
+                    // reads it for free. Only a call ALREADY UP has to be
+                    // told, and only on the realtime path — the classic path
+                    // asks `SpeechSpeed.current` at each synthesis.
+                    guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                    realtime.setSpeed(speed)
+                }
+            }
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
             }
             .sheet(item: summaryBinding, onDismiss: {
-                let how = summaryClosedByDone ? "done" : "swipe"
-                summaryClosedByDone = false
-                let props = ["how": how, "free_call_spent": freeCallSpent ? "1" : "0"]
+                let how = summaryClose
+                summaryClose = .swipe
+                // Closed by code (`startNewSession`) — nothing to log,
+                // nothing to exit.
+                guard how != .code else { return }
+                // This closure has fired twice for one call (prod, d48b0216,
+                // 2026-09-24): the second run logged a second close and
+                // pitched the plans on top of the first.
+                guard !postCallExitStarted else { return }
+                postCallExitStarted = true
+                let props = ["how": how.rawValue, "free_call_spent": freeCallSpent ? "1" : "0"]
                 Telemetry.log("talk_summary_closed", props)
                 Analytics.capture("talk_summary_closed", props)
-                // A swipe is the same exit as Done. It used to leave the
-                // learner on a finished call screen — and skip the plans a
-                // spent free pool is owed.
-                if how == "swipe" { endAndClose() }
+                // BOTH exits go on from here, and only from here — after the
+                // sheet is GONE. Done used to call `endAndClose()` directly,
+                // which nil'd the summary and raced the plans pitch against
+                // the sheet's own dismiss animation: whenever the billing
+                // snapshot answered inside ~0.4 s, `showingPaywall` flipped
+                // while the summary sheet was still sliding out, SwiftUI
+                // presented the paywall, tore it down and presented it again,
+                // and the torn-down copy's `.task` was cancelled mid
+                // `Product.products(for:)` — which threw, was swallowed, and
+                // left the paywall with no prices and a "Subscribe" button
+                // that answered "not available on the App Store yet". Prod
+                // 2026-09-24: four of the five accounts that met the free
+                // pool's end saw exactly that screen; the one that didn't had
+                // a 1.4 s snapshot. A swipe was already routed through this
+                // closure, and it broke the same way once (d48b0216) because
+                // the summary landed a second time — hence the guard above.
+                endAndClose()
             }) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
                              onDone: {
-                                 summaryClosedByDone = true
-                                 endAndClose()
+                                 summaryClose = .done
+                                 summary = nil
                              })
                     .environmentObject(appState)
             }
@@ -862,6 +967,9 @@ struct ConversationView: View {
                     paywallSource = "talk_spent_month"
                     showingPaywall = true
                 case .review:  leaveForPractice()
+                // The minutes are on the account and the gate is fresh; the
+                // call is still on screen, and the next mic tap spends them.
+                case .topUp:   break
                 case nil:      break
                 }
                 capChoice = nil
@@ -872,8 +980,13 @@ struct ConversationView: View {
                     allowance: poolMinutes,
                     renewsOn: renewalLabel,
                     endsInstead: planEndsAtPeriodEnd,
+                    isTrial: accountIsTrialing,
+                    planMinutesAfterTrial: planMinutesAfterTrial,
+                    canTopUp: canTopUpTalk,
+                    invite: inviteOffer,
                     onReview: { capChoice = .review },
-                    onUpgrade: { capChoice = .upgrade })
+                    onUpgrade: { capChoice = .upgrade },
+                    onTopUp: { capChoice = .topUp })
             }
             // Not a sheet and not an upsell: there is nothing to offer and
             // nothing to wait for. One line saying what happened and how to
@@ -918,13 +1031,17 @@ struct ConversationView: View {
                 Text(explain("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."))
             }
             .task { refreshDashboard() }
-            .task { goalItems = TalkGoalPicker.pick() }
+            .task { goalItems = pickGoalItems() }
             .task {
                 let account = await AccountStatus.fetch()
                 canUpgradePlan = account.isLightPlan
+                canTopUpTalk = account.isEntitled && !account.isUncappedTalk && !account.isTrialing
                 poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
                 renewalLabel = account.renewalLabel
                 planEndsAtPeriodEnd = account.cancelAtPeriodEnd
+                accountIsTrialing = account.isTrialing
+                planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }
+                inviteOffer = await InviteOffer.load(for: account)
             }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.
@@ -1021,7 +1138,7 @@ struct ConversationView: View {
                              // the learner's first line (a call opened and left
                              // without a word has no clock, asked 2026-09-02)
                              // and gone once the talk is wrapped up.
-                             callClock: learnerSpokeThisCall
+                             callClock: (learnerSpokeThisCall || learnerStartedThisCall)
                                  && (phoneCallActive || !didSaveCurrentSession)
                                  ? meter.clock : nil)
                 .environmentObject(appState)
@@ -1121,14 +1238,30 @@ struct ConversationView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 40)
                     }
-                    ForEach(turns) { turn in
-                        // No implicit morph between adjacent turns — each
-                        // bubble fades in / out cleanly. Prevents the
-                        // previous bubble's text from being visible inside
-                        // the next one during insertion animation.
-                        TurnView(turn: turn, nativeLanguage: appState.nativeLanguage)
-                            .id(turn.id)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    // Subtitles off: no words on the screen at all, which is
+                    // what a phone call looks like. The Futureself pill is the
+                    // state display (it ignites with the learner's voice,
+                    // scans while thinking, blooms while speaking) and the
+                    // hint under it names the state in words, so nothing is
+                    // lost but the reading.
+                    if !showsTranscript, !turns.isEmpty {
+                        Text(explain("Subtitles are off"))
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 24)
+                    }
+                    if showsTranscript {
+                        ForEach(turns) { turn in
+                            // No implicit morph between adjacent turns — each
+                            // bubble fades in / out cleanly. Prevents the
+                            // previous bubble's text from being visible inside
+                            // the next one during insertion animation.
+                            TurnView(turn: turn, nativeLanguage: appState.nativeLanguage,
+                                     showsCorrections: showsCorrections)
+                                .id(turn.id)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
                     }
                     if RealtimeMode.isEnabled {
                         // Same rule as the classic path below: the listening
@@ -1146,7 +1279,8 @@ struct ConversationView: View {
                             // away as the voice began (reported 2026-09-03).
                             // A learner actually speaking first still shows —
                             // their partial has text.
-                            if !turns.isEmpty || !realtime.partial.isEmpty {
+                            if showsTranscript,
+                               !turns.isEmpty || !realtime.partial.isEmpty {
                                 PartialTurnView(text: realtime.partial)
                                     .id("partial-listening")
                                     .transition(.opacity)
@@ -1158,7 +1292,7 @@ struct ConversationView: View {
                         default:
                             EmptyView()
                         }
-                    } else if phase == .listening {
+                    } else if phase == .listening, showsTranscript {
                         // Separate id from ThinkingIndicator + explicit opacity
                         // transition so SwiftUI doesn't morph one view's text
                         // into another. The previous shared id caused the
@@ -1256,6 +1390,17 @@ struct ConversationView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
+            // A ZStack, not an HStack: the pill is centred by
+            // `frame(maxWidth: .infinity)` on the bar, and a sibling in a row
+            // would push it off centre. The settings button is laid OVER the
+            // pill's row and pinned left, so the pill stays exactly where it
+            // has always been.
+            //
+            // Bottom-left is the only empty corner on this screen: the toolbar
+            // is full (✕ · topic + clock · End) and the bar below held one
+            // control. Nothing is put on the right — a second button invented
+            // for symmetry is what the UI rules exist to prevent.
+            ZStack {
             // The pixel grid lives INSIDE the pill, not across the screen.
             // The shader paints the whole surface theme-aware in a pure-blue
             // mosaic: airy white with blue pixels in light mode, near-black
@@ -1286,6 +1431,13 @@ struct ConversationView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text(micA11yLabel))
 
+            HStack {
+                callSettingsButton
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, 24)
+            }
+
             Text(micHint)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -1313,6 +1465,25 @@ struct ConversationView: View {
             voiceLevel = new
         }
         .onChange(of: phase) { _, _ in voiceLevel = 0 }
+    }
+
+    /// Adjust the call while it runs — speed, subtitles, corrections, chips.
+    /// Deliberately quiet: a bordered accent button next to the pill read as
+    /// a second primary action, and the one primary action on a call screen
+    /// is the pill.
+    private var callSettingsButton: some View {
+        Button {
+            showingCallSettings = true
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemBackground), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(explain("Call settings")))
     }
 
     private var glowMode: Futureself.Mode {
@@ -1495,9 +1666,10 @@ struct ConversationView: View {
             while !Task.isCancelled, phoneCallActive, !isTornDown {
                 try? await Task.sleep(for: .seconds(Self.idleWatchTickSeconds))
                 guard !Task.isCancelled, phoneCallActive, !isTornDown else { return }
-                // The same predicate the meter bills on — so the call pauses
-                // on exactly the silence it charges nothing for.
-                if isBillableMoment() { lastActivityAt = Date(); continue }
+                // The meter's predicate without its first-turn gate: silence
+                // it bills nothing for, but a first answer still in progress
+                // is someone being here.
+                if somethingIsHappening() { lastActivityAt = Date(); continue }
                 guard Date().timeIntervalSince(lastActivityAt) >= Self.idlePauseSeconds else { continue }
                 isPausedForIdle = true
                 await pauseCall()
@@ -2318,7 +2490,20 @@ struct ConversationView: View {
             // realtime.state observer) — don't stack an error alert on it.
             if realtime.wallCode == nil { error = message }
             phase = .idle
+            return
         }
+        // The nobody-is-here watchdog. It was armed only in the classic
+        // path's `startRecording`, so from the day realtime became the only
+        // call path (2026-09-05) a quiet screen never put itself down: the
+        // mic stayed hot until the gateway's own 3-minute hang-up ENDED the
+        // call, with no "tap to pick it back up". The loop already reads
+        // `isBillableMoment`'s realtime branch and `pauseCall`'s, so arming
+        // it here is the whole fix. Stamped here too, not only by the callers:
+        // a reconnect mid-call must not inherit a clock that is already 25 s
+        // into the 30, or the picked-up call pauses before anyone can speak.
+        lastActivityAt = Date()
+        isPausedForIdle = false
+        startIdleWatch()
     }
 
     /// The gateway speaks prose, not the `{reply, suggestion}` JSON the HTTP
@@ -2344,13 +2529,22 @@ struct ConversationView: View {
         guard WordSplitter.count(said) >= 3 else { return }
         let target = appState.targetLanguage
         let native = appState.nativeLanguage
+        // The line said TO them, so the rewrite can be natural IN THIS
+        // conversation rather than natural in a vacuum — the whole turn is
+        // being re-said now, and a turn only reads right against what it
+        // answers. Context only; the prompt says so and forbids correcting it.
+        let heard = turns.last(where: { $0.role == .fluentSelf })?
+            .transcript.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let content = heard.isEmpty
+            ? "They said: \"\(said)\""
+            : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
         Task { @MainActor in
             let payload: ConversationTurnPayload? = try? await GeminiClient.background.sendJSON(
                 system: ConversationEngine.correctionOnlyPrompt(
                     targetLanguage: target, nativeLanguage: native,
                     level: appState.proficiency),
-                messages: [GeminiClient.Message(role: .user, content: said)],
-                maxTokens: 512,
+                messages: [GeminiClient.Message(role: .user, content: content)],
+                maxTokens: 900,
                 purpose: "turn",
                 idempotencyKey: "rt-suggest:\(turnId.uuidString)")
             guard !isTornDown, let payload,
@@ -2594,6 +2788,7 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
+        creditFirstAnswerToClock(ms: userTurn.durationMs)
         learnerSpokeThisCall = true
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
@@ -3063,6 +3258,25 @@ struct ConversationView: View {
     /// never removed: the same detector runs over the finished transcript at
     /// session end, so the wrap-up is where the count is settled, and a check
     /// that vanished mid-call would read as the app taking something back.
+    /// A talk on a scenario book leads with THAT book's unmastered material
+    /// and what its previous runs offered; any other call gets the notebook.
+    /// Previous runs are matched by id, and by title for talks saved before
+    /// the book page passed one (2026-09-25 — its Talk button launched with
+    /// no scenario id, so every talk it started was linked by title alone).
+    private func pickGoalItems() -> [TalkGoalItem] {
+        guard let sid = sessionScenarioId,
+              let scenario = appState.scenarios.first(where: { $0.id == sid }) else {
+            return TalkGoalPicker.pick()
+        }
+        let title = scenario.displayTitle
+        let previous = SessionStore.shared.load().filter {
+            $0.id != sessionId && $0.endedAt != nil
+                && ($0.originScenarioId == sid || $0.topic == title)
+        }
+        return TalkGoalPicker.pick(forScenario: scenario, previousTalks: previous,
+                                   proficiency: appState.proficiency)
+    }
+
     private func creditGoalChips(turnId: UUID) {
         guard !goalItems.isEmpty,
               let turn = turns.first(where: { $0.id == turnId }) else { return }
@@ -3765,12 +3979,14 @@ struct ConversationView: View {
     private func startNewSession() {
         failedTurnId = nil
         // Closed by code, not a swipe — the sheet's onDismiss must not exit.
-        if summary != nil { summaryClosedByDone = true }
+        if summary != nil { summaryClose = .code }
         summary = nil
+        postCallExitStarted = false
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
         learnerSpokeThisCall = false
+        learnerStartedThisCall = false
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
@@ -3787,8 +4003,12 @@ struct ConversationView: View {
         }
     }
 
-    /// Done from the summary sheet → leave the talk seat entirely, back to the
-    /// Talk home. Summary is already saved to History.
+    /// The summary sheet is GONE (its `onDismiss`, Done or swipe) → leave the
+    /// talk seat entirely, back to the Talk home, offering the plans first
+    /// when the free pool is spent. Summary is already saved to History.
+    /// Only ever called from that `onDismiss`: the plans are a second sheet
+    /// on the same presenter, and presenting it while the first is still
+    /// animating out is what emptied the paywall (see the sheet).
     private func endAndClose() {
         summary = nil
         phoneCallActive = false
@@ -3889,6 +4109,9 @@ struct ConversationView: View {
             persona: appState.persona,
             counterpart: counterpart,
             newsFacts: newsFacts,
+            brief: sessionScenarioId.flatMap { sid in
+                appState.scenarios.first { $0.id == sid }?.brief
+            },
             firstMeeting: isFirstMeeting
         )
     }
@@ -3910,6 +4133,10 @@ private struct FeedTailOffsetKey: PreferenceKey {
 private struct TurnView: View {
     let turn: Turn
     let nativeLanguage: String
+    /// The learner's own switch (`CallSettings`). The card is still BUILT and
+    /// still saved — this only decides whether it is drawn mid-call, so the
+    /// summary, the drill cards and the talk's book are untouched by it.
+    var showsCorrections = true
 
     @State private var translation: String?
     @State private var showing = false
@@ -3972,7 +4199,7 @@ private struct TurnView: View {
                 // already out) — never while the reply is still loading.
                 // Painting it earlier read as "it corrects me, then answers"
                 // on every turn, whatever the transcript-swap fixes did.
-                if turn.role == .user, let suggestion = turn.suggestion {
+                if turn.role == .user, showsCorrections, let suggestion = turn.suggestion {
                     SuggestionChip(suggestion: suggestion, original: turn.transcript,
                                    nativeLanguage: nativeLanguage)
                 }
@@ -4029,6 +4256,11 @@ private struct SuggestionChip: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let fixes = suggestion.fixes, !fixes.isEmpty {
+                    TurnFixRows(fixes: fixes)
+                        .padding(.top, 2)
+                }
 
                 Button(action: toggle) {
                     HStack(spacing: 4) {

@@ -28,6 +28,15 @@ enum ReferralService {
     /// friend still gets theirs.
     static let rewardedInviteCap = 10
 
+    /// The sentence that rides along with the shared link. One place, because
+    /// three surfaces share it now — the invite page, the spent-pool sheet's
+    /// row and the Usage card — and a code shared with two different promises
+    /// is how the number on the page stops matching the one the friend was
+    /// told.
+    static func shareMessage(code: String) -> String {
+        explain("I'm practicing speaking with my own AI voice on nawana. Enter my code \(code) when you sign up and we both get \(bonusMinutes) minutes of talk time.")
+    }
+
     /// Where a shared invite sends the friend. The code alone was the whole
     /// message until 2026-08-21, which left the recipient holding six letters
     /// and no way to get the app — they had to go and find it by name.

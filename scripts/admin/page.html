@@ -96,11 +96,19 @@
 .tlrow .tw{font-weight:600; font-size:13.5px}
 .tlrow .tw small{font-weight:400; color:var(--muted); font-size:12px}
 .tlrow .tp{font-size:12.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* Supabase user id + ElevenLabs voice id under the row — the two handles a
+   log line, a ledger query or the ElevenLabs dashboard are searched by.
+   Monospace, muted, select-all so a click grabs the whole id. */
+.tlrow .tid{grid-column:3 / -1; margin-top:-3px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:10.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tlrow .tid span{user-select:all; cursor:text}
+.tlrow .tid i{font-style:normal; margin:0 4px 0 10px; opacity:.7}
 .tlrow .nowdot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--good);
   margin-right:5px; animation:beat 1.6s ease-out infinite; vertical-align:1px}
 @media (max-width:640px){
   .tlrow{grid-template-columns:70px 22px minmax(0,1fr)}
   .tlrow .tp{grid-column:3; margin-top:-4px}
+  .tlrow .tid{grid-column:3}
   .kchip{margin:3px 4px 0 0}
 }
 .lsec{font-size:11.5px; font-weight:600; letter-spacing:.04em; color:var(--muted); margin:6px 0 0}
@@ -324,6 +332,28 @@ svg text{font-family:inherit}
 
 /* --- tier cards --------------------------------------------------------- */
 .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px}
+
+/* --- 돈: 실제 원가·손익 모델 (2026-09-24) ------------------------------- */
+.gone{display:none!important}
+.eurnote{font-size:12px; color:var(--muted); font-weight:400; margin-left:8px}
+.tile.good .v{color:var(--good-text)}
+.rec{display:inline-block; font-size:11px; font-weight:600; padding:1px 7px; border-radius:999px; background:var(--chip); color:var(--ink-2)}
+.rec.no{background:#fbe3e3; color:var(--crit)}
+.rec.part{background:#fdf0d5; color:var(--warn)}
+.rec.yes{background:#e3f4e3; color:var(--good-text)}
+.pnlctl{display:grid; grid-template-columns:repeat(3,1fr); gap:12px 20px; margin-top:14px}
+.pnlctl label{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2); margin-bottom:3px}
+.pnlctl output{font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink)}
+.pnlctl input[type=range]{width:100%; accent-color:var(--s1); margin:0}
+.pnlctl .chk{display:flex; align-items:center; gap:8px; align-self:end; font-size:12.5px; color:var(--ink-2); padding-bottom:2px}
+.pnlctl .chk input{accent-color:var(--s1); width:15px; height:15px; margin:0}
+@media (max-width:760px){.pnlctl{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.pnlctl{grid-template-columns:1fr}}
+.pnl-line{fill:none; stroke-width:2; stroke-linejoin:round}
+.pnl-target{stroke:var(--ink-2); stroke-width:1.5; stroke-dasharray:6 4}
+.pnl-zero{stroke:var(--baseline); stroke-width:1}
+.pnl-grid{stroke:var(--grid); stroke-width:1; stroke-dasharray:2 4}
+.pnl-lbl{font-size:11px; fill:var(--ink-2)}
 .tiercard{background:var(--surface); border:1px solid var(--ring); border-radius:10px;
   padding:15px 17px; display:flex; flex-direction:column; gap:10px}
 .tiercard.risk{border-color:var(--crit)}
@@ -378,6 +408,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   #peopleTable .uid{display:none}
   #peopleTable .chip{white-space:normal; word-break:keep-all}
   #peopleTable .chip .tail{display:none}
+  /* 레벨 표: 레벨 · 명 · 통화한 사람 · 1인당 · 체험. 언어와 이틀 이상은 넓은 화면에서. */
+  #levelTable th:nth-child(3), #levelTable td:nth-child(3),
+  #levelTable th:nth-child(6), #levelTable td:nth-child(6){display:none}
   #costTable th:nth-child(2), #costTable td:nth-child(2),
   #costTable th:nth-child(4), #costTable td:nth-child(4),
   #costTable th:nth-child(5), #costTable td:nth-child(5){display:none}
@@ -481,9 +514,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 <section data-tab="funnel" hidden>
   <h2>누가 어느 날 말했나</h2>
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
-  줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
+  하루는 <b>머리말에서 고른 시간대</b>의 하루예요. 줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
   말은 안 했지만 앱은 쓴 날은 <b>가장 옅은 칸에 점</b>이 찍혀요 — Watch 장면이나 복습만 한 날이에요.
-  테두리 칸은 <b>가입한 날</b>이에요. 줄은 <b>구독 중 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 네 묶음이고,
+  테두리 칸은 <b>가입한 날</b>이에요. 묶음마다 <b>최근에 쓴 사람이 맨 위</b>예요. 줄은 <b>구독 중 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 네 묶음이고,
   <b>구독 중인 줄은 초록</b>(해지 예정도 기간이 끝날 때까진 구독 중), <b>체험 중에 자동갱신을 끄고도 끈 날 이후에
   다시 온 사람은 금색</b>이에요. 금색 밑줄 칸이 자동갱신을 끈 날이라, 그 오른쪽에 불이 켜져 있으면 끄고도 온 거예요.
   이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
@@ -569,6 +602,18 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </section>
 
 <section data-tab="people" hidden>
+  <h2>어느 레벨이 오나</h2>
+  <p class="sub">온보딩에서 <b>본인이 고른</b> 레벨이에요 — 앱이 매긴 점수가 아니라 자기 신고예요.
+  대화로 추정하는 CEFR은 폰에만 남고 서버로는 안 와요.
+  그래서 숫자 옆에 <b>그 사람들이 실제로 무엇을 했는지</b>를 같이 놓았어요.
+  손댈 곳은 많은 쪽이 아니라 <b>많은데 안 쓰는 쪽</b>이에요.</p>
+  <div class="card bars" id="levels"></div>
+  <p class="sub" style="margin-top:10px" id="levelsNote"></p>
+  <div class="card scroll" style="margin-top:12px"><table id="levelTable"></table></div>
+  <p class="sub" style="margin-top:10px" id="levelsRead"></p>
+</section>
+
+<section data-tab="people" hidden>
   <h2>출시 이후 가입한 사람, 기간별로</h2>
   <p class="sub">9/12 출시 이후 가입한 사람만이에요. <b>통화</b>는 요금이 매겨지는 대화 시간(미래의 나가 말하고 답을
   만드는 시간 포함), <b>말함</b>은 그중 본인 목소리가 들린 시간과 그 비율이에요(9/21부터 기록). <b>턴</b>은 미래의 나가
@@ -598,6 +643,68 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub" style="margin:10px 0 0">체험은 결제가 아니에요. 위 금액은 지금 걸려 있는 월 매출이고,
   실제로 청구되는 건 체험이 끝나는 날부터예요. 본인 계정은 매출에서 빼요.
   <b id="cancelShape"></b></p>
+</section>
+
+<section data-tab="money" hidden id="econHeadSec">
+  <h2>손익 한눈에 <span class="eurnote" id="econAsOf"></span></h2>
+  <p class="sub">여기서부터는 <b>ElevenLabs 계정이 직접 말하는 숫자</b>예요. 원장(usage_ledger)은 게이트웨이 통화 TTS를
+  기록하지 않아서 실제 크레딧의 절반쯤만 봅니다. 금액은 전부 €이고, 순매출은 Apple 수수료·VAT·런칭 코드를 뺀 값이에요.</p>
+  <div class="tiles" id="econTiles"></div>
+  <div id="econMissing" class="empty" hidden></div>
+</section>
+
+<section data-tab="money" hidden id="econCatsSec">
+  <h2>크레딧은 어디로 갔나</h2>
+  <p class="sub">출시일부터 ElevenLabs가 센 크레딧을 활동별로 나눈 것. 통화 TTS는 ElevenLabs의 turbo 합계에서
+  원장이 다른 용도로 기록한 turbo를 뺀 값이라, 원장의 turn 행보다 큰 만큼이 게이트웨이의 미기록분이에요.</p>
+  <div class="card">
+    <div class="alloc" id="econStack" style="height:24px"></div>
+    <div class="legend" id="econLegend" style="margin-top:8px"></div>
+    <div class="scroll" style="margin-top:12px"><table id="econCats"></table></div>
+    <div class="notes" id="econNote" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<section data-tab="money" hidden id="econDaySec">
+  <h2>일별: ElevenLabs가 센 것 vs 원장이 본 것</h2>
+  <p class="sub">연한 막대가 실제, 진한 막대가 원장. 둘의 차이가 그날 게이트웨이 통화와 악센트 미리듣기예요.
+  ElevenLabs의 하루는 UTC 기준.</p>
+  <div class="card" id="econDaily"></div>
+</section>
+
+<section data-tab="money" hidden id="econUnitSec">
+  <h2>단위 경제 — 구독자 한 명이 남기는 돈</h2>
+  <p class="sub" id="econUnitSub"></p>
+  <div class="card scroll"><table id="econPlans"></table></div>
+  <p class="sub" style="margin-top:10px" id="econUnitNote"></p>
+</section>
+
+<section data-tab="money" hidden id="pnlSec">
+  <h2>€3,000까지 — 계산기</h2>
+  <p class="sub">슬라이더를 움직이면 월 손익, 유지에 필요한 가입자 수, ElevenLabs 크레딧과 요금제가 같이 바뀌어요.
+  기본값은 위 실측 + 보수적 가정(해지 8%/월, 가입→유료 5%). 설정은 이 브라우저에 남아요.</p>
+  <div class="card">
+    <div class="seg" id="pnlPresets" role="group" aria-label="시나리오"></div>
+    <div class="pnlctl" id="pnlControls"></div>
+    <div class="tiles" id="pnlOut" style="margin-top:14px"></div>
+    <div id="pnlCurve" style="margin-top:12px"></div>
+    <p class="sub" id="pnlNote" style="margin:8px 0 0"></p>
+  </div>
+</section>
+
+<section data-tab="money" hidden id="growSec">
+  <h2>성장 경로 — 하루 가입자 수별 36개월</h2>
+  <p class="sub">계산기의 해지율·전환율·사용 가정을 그대로 두고 하루 가입자 수만 바꿔 돌린 것.
+  구독자 수는 매달 <b>남은 사람 + 가입 × 전환</b>. 지금의 하루 가입자 수가 첫 줄이에요.</p>
+  <div class="card">
+    <div id="pnlGrowth"></div>
+    <div class="scroll" style="margin-top:12px"><table id="pnlGrowRows"></table></div>
+  </div>
+</section>
+
+<section data-tab="money" hidden id="leverSec">
+  <h2>레버 — 숫자가 말하는 순서</h2>
+  <div class="card"><div class="notes"><ol id="pnlLevers" style="padding-left:20px;margin:0"></ol></div></div>
 </section>
 
 <section data-tab="money" hidden>
@@ -639,7 +746,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <section data-tab="money" hidden>
   <h2>유저별 원가</h2>
-  <p class="sub">가입 이후 누적이에요. 달로 끊어 볼 수 있어요.</p>
+  <p class="sub" id="costSub">가입 이후 누적이에요. 달로 끊어 볼 수 있어요.</p>
   <div class="seg" id="costMonths" role="group" aria-label="기간"></div>
   <div class="card scroll"><table id="costTable"></table></div>
 </section>
@@ -694,9 +801,11 @@ const fmtMin = secs => secs>=3600 ? `${Math.floor(secs/3600)}시간 ${Math.round
  * compared with yesterday's screenshot. Seoul is one click away because the
  * learners are there and the daily-call hour is their decision, not ours.
  *
- * DAY-bucketed charts (일별 · 히트맵 · 코호트) are the server's UTC days and
- * stay that way — they come out of the database already grouped, and the
- * notes say so. Against Berlin that is a two-hour seam, never a day.
+ * DAY-bucketed charts (일별 · 코호트) are the server's UTC days — they come
+ * out of the database already grouped, and the notes say so. The heatmap was
+ * one of them until 2026-09-27 and is not any more (`heatGrid`): "a two-hour
+ * seam, never a day" turned out to be 11% of talk seconds on the wrong day in
+ * Berlin and 35% in Seoul, and that chart is read one cell at a time.
  */
 const PAGE_TZ = [
   ['berlin', '독일',  'Europe/Berlin'],
@@ -815,20 +924,49 @@ const REVIEW_CTX = {first_talk:'첫 통화 후', first_watch:'첫 Watch 장면 �
   subscription_survey:'구독 가격 설문'};
 const RT_REASON_KO = {
   hangup:'직접 종료', idle:'말이 없어 종료', client_gone:'앱과 끊김', socket_closed:'소켓 끊김',
-  transcriber:'받아쓰기 실패', internal:'서버 오류', session_ceiling:'1시간 상한',
+  socket:'소켓 끊김', transcriber:'받아쓰기 실패', internal:'서버 오류', session_ceiling:'1시간 상한',
   unauthorized:'인증 실패', bad_json:'프로토콜 오류', voice_forbidden:'보이스 권한',
+  mic_silent:'마이크 무음', audio_start:'마이크 열기 실패', route:'이어폰 전환 실패', gateway:'게이트웨이 오류',
   insufficient_credits:'무료 통화 소진', daily_cap_reached:'이번 달 소진', fair_use_limit:'공정사용 확인',
 };
-const RT_OK = new Set(['hangup']);
-// A warning is something the call SURVIVED, and a cancelled drill is the
-// learner tapping cancel. Neither is a red dot beside a name.
-const NOT_A_FAILURE = new Set(['shadow_attempt_cancelled','talk_rt_warning',
-                               'talk_rt_reconnect','talk_summary_retry']);
+// How a call ended, in three kinds. `RT_OK` is an end somebody chose (idle
+// is the call putting itself down after 30 s of nobody). `RT_WALL` is the
+// allowance running out — the free call's designed wrap-up since 2026-09-18,
+// and a spent month on Light — which the app records through the same
+// `talk_rt_failed` door as a dead socket. Neither is a failure; everything
+// else is.
+const RT_OK   = new Set(['hangup','idle']);
+const RT_WALL = new Set(['insufficient_credits','daily_cap_reached','fair_use_limit']);
+const isDroppedCall = r => !RT_OK.has(r.reason) && !RT_WALL.has(r.reason);
+// A problem is something that BROKE. `client_events` carries every kind of
+// record the app writes — shadowing timings, paywall views, the wrap-up
+// closing — and the week of 2026-09-16 the console drew all of it as red
+// dots: 33 of 34 people had "문제", 13 had a failure. So this is an
+// allowlist, never a denylist; a new telemetry event is not a problem until
+// it is named here. `talk_rt_failed` counts by its code (see RT_WALL).
+const FAILURE_EVENTS = new Set(['talk_turn_error','talk_summary_error',
+  'talk_tts_split_open_failed','talk_tts_split_rest_failed','shadow_rescore_failed',
+  'talk_rt_failed']);
+const isFailure = e => {
+  if(!FAILURE_EVENTS.has(e.event)) return false;
+  // `code` arrives with 20260923150000; a Worker on the older function sees
+  // none and counts every rt failure, as before.
+  if(e.event==='talk_rt_failed' && e.code) return isDroppedCall({reason:e.code});
+  return true;
+};
+/** "통화 끊김 · 소켓 끊김" — the event, then which failure it was. */
+const failureLabel = e => (EVENT_KO[e.event]||e.event)
+  + (e.code ? ` · ${RT_REASON_KO[e.code]||e.code}` : '');
 
 /* ------------------------------------------------------- user helpers */
 const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
 const badge = u => u.owner ? '<span class="ownchip">본인</span>'
-  : u.dev ? '<span class="devchip">TEST</span>' : '';
+  : u.dev ? '<span class="devchip">TEST</span>'
+  // Cloned a voice, never reached Apple sign-in — not a signup. Swept 30 min
+  // after creation, so one on screen is either mid-onboarding right now or
+  // the sweep is stuck (2026-09-23: it was, on ElevenLabs' 400 for a voice
+  // already gone).
+  : u.anonymous ? '<span class="devchip">미가입</span>' : '';
 const stateOf = u => u.subState || ({active:'paid', trialing:'trial'}[u.subStatus] || u.subStatus || 'none');
 const isSale = u => stateOf(u)!=='none' && stateOf(u)!=='comp' && u.subSource!=='comp';
 /** 체험 중 — 자동갱신을 꺼둔 체험도 기간이 끝나기 전까지는 체험이다. 되살릴지
@@ -837,19 +975,65 @@ const isTrialing = u => { const k = stateOf(u); return k==='trial' || k==='trial
 /** 돈이 들어오고 있는 사람. 해지 예정도 기간이 끝날 때까지는 구독 중이고,
  *  무료 제공(comp)은 매출이 아니라 뺀다 — `isSale`과 같은 기준. */
 const isSubscriber = u => { const k = stateOf(u); return (k==='paid' || k==='cancelling') && u.subSource!=='comp'; };
-/** The UTC day a trial's auto-renew was switched off — the LATEST switch-off,
- *  since a trial can go off, on and off again — or null. */
-const cancelDayOf = u => { const ev = cancelEventOf(u.idx); return ev?.at ? String(ev.at).slice(0,10) : null; };
+/** The day, in the reader's zone, a trial's auto-renew was switched off — the
+ *  LATEST switch-off, since a trial can go off, on and off again — or null. */
+const cancelDayOf = u => { const ev = cancelEventOf(u.idx); return ev?.at ? localDay(ev.at) : null; };
 /** Days a trial-cancelled learner used the app AFTER the day they switched
  *  renewal off. That day itself doesn't count: most switch-offs happen
  *  mid-session, and finishing the session is not coming back. */
 function daysBackAfterCancel(u){
   if(stateOf(u) !== 'trial_cancelled') return 0;
   const cd = cancelDayOf(u); if(!cd) return 0;
+  const g = heatGrid();
   let n = 0;
-  for(const [uu,d,rows,t,secs] of DATA.cells)
-    if(uu === u.idx && DATA.days[d] > cd && (rows > 0 || secs > 0)) n++;
+  for(const [uu,d,rows,t,secs] of g.cells)
+    if(uu === u.idx && g.days[d] > cd && (rows > 0 || secs > 0)) n++;
   return n;
+}
+/** The heatmap's days and cells in the READER's zone (2026-09-27). It used to
+ *  draw `DATA.cells`, which the database groups by UTC day — so with Seoul
+ *  picked in the header a learner's 8 a.m. call sat on yesterday, and the
+ *  column marked 오늘 was the UTC day. Measured over the launch window, 35% of
+ *  all talk seconds land on a different day in Seoul than in UTC, 11% in
+ *  Berlin. `day_hours` keeps the UTC hour, so it re-buckets exactly.
+ *
+ *  Same shape as `DATA.cells` — [user, day index, rows, turns, secs, spoke] —
+ *  with `turns` null when admin_turn_hours() hasn't been applied (the tip then
+ *  leaves the count out rather than print a 0). Falls back to the UTC cells
+ *  when `day_hours` is absent. Memoised per zone: every row asks. */
+let heatGridMemo = null;
+function heatGrid(){
+  const zone = tzZone();
+  if(heatGridMemo && heatGridMemo.zone === zone && heatGridMemo.today === TODAY) return heatGridMemo;
+  const dh = DATA.dayHours || [];
+  if(!dh.length){
+    heatGridMemo = {zone, today: TODAY, days: DATA.days, cells: DATA.cells, todayIdx: DATA.days.length-1};
+    return heatGridMemo;
+  }
+  // Launch day to the reader's today. A zone east of UTC reaches today
+  // before the server does, which is exactly the day that went missing.
+  const days = [];
+  for(let d = DATA.days[0]; d <= TODAY && days.length < 400; d = addDays(d, 1)) days.push(d);
+  const idxOf = new Map(days.map((d,i)=>[d,i]));
+  const dayOf = (d,h) => { const [y,m,dd] = d.split('-').map(Number); return localDay(Date.UTC(y, m-1, dd, h)); };
+  const acc = new Map();
+  const cell = (u, i) => { const k = u*1000+i; let c = acc.get(k);
+    if(!c){ c = [u, i, 0, null, 0, null]; acc.set(k, c); } return c; };
+  for(const [u,d,h,secs,ev,spoke] of dh){
+    const i = idxOf.get(dayOf(d,h)); if(i === undefined) continue;
+    const c = cell(u, i);
+    c[2] += ev; c[4] += secs;
+    if(spoke != null) c[5] = (c[5] ?? 0) + spoke;
+  }
+  if(DATA.turnHours){
+    for(const c of acc.values()) c[3] = 0;
+    for(const [u,d,h,n] of DATA.turnHours){
+      const i = idxOf.get(dayOf(d,h)); if(i === undefined) continue;
+      const c = cell(u, i); c[3] = (c[3] ?? 0) + n;
+    }
+  }
+  heatGridMemo = {zone, today: TODAY, days, cells: [...acc.values()], todayIdx: days.length-1};
+  return heatGridMemo;
 }
 /** When the trial ends, in the reader's zone: "오늘 끝남", "내일 끝남", "3일 남음". */
 function trialEndLabel(u){
@@ -900,7 +1084,7 @@ const cancelledBeforeUse = u => {
 };
 const realSession = s => s.secs>=10;
 const failuresOf = idx => forUser(DATA.recentEvents, idx)
-  .filter(e => !NOT_A_FAILURE.has(e.event)).reduce((a,e)=>a+e.n, 0);
+  .filter(isFailure).reduce((a,e)=>a+e.n, 0);
 
 /** Signed up on or after launch day. The funnel and the cohort are claims
  *  ABOUT that intake, so they must not quietly include the beta accounts the
@@ -1001,16 +1185,16 @@ function renderAttention(users){
   }
   // 3. Something actually broke for them.
   for(const u of users){
-    const fails = forUser(DATA.recentEvents, u.idx).filter(e=>!NOT_A_FAILURE.has(e.event));
+    const fails = forUser(DATA.recentEvents, u.idx).filter(isFailure);
     for(const e of fails){
       items.push({at: e.last, pri:0, color:'var(--crit)',
-        t:`<b>${esc(nameOf(u))}</b> ${EVENT_KO[e.event]||e.event} ${e.n}회`,
+        t:`<b>${esc(nameOf(u))}</b> ${failureLabel(e)} ${e.n}회`,
         w: e.detail ? esc(e.detail) : `빌드 ${e.build||'?'}`});
     }
   }
   // 4. Calls that ended for a reason nobody chose.
   for(const u of users){
-    const dropped = forUser(DATA.rtSessions, u.idx).filter(r=>!RT_OK.has(r.reason));
+    const dropped = forUser(DATA.rtSessions, u.idx).filter(isDroppedCall);
     if(!dropped.length) continue;
     const last = dropped[0];
     items.push({at:last.at, pri:0, color:'var(--crit)',
@@ -1047,8 +1231,8 @@ function buildFeed(users){
     for(const r of (u.reviews||[])) add(r.at || (r.d+'T12:00:00Z'), 'trouble','var(--s2)',
         `${who} 리뷰 “${esc(r.body)}”`, REVIEW_CTX[r.context]||r.context);
     for(const e of forUser(DATA.recentEvents, u.idx)){
-      if(NOT_A_FAILURE.has(e.event)) continue;
-      add(e.last, 'trouble','var(--crit)', `${who} ${EVENT_KO[e.event]||e.event} ${e.n}회`,
+      if(!isFailure(e)) continue;
+      add(e.last, 'trouble','var(--crit)', `${who} ${failureLabel(e)} ${e.n}회`,
           e.detail ? esc(e.detail) : '');
     }
     for(const s of forUser(DATA.recentSessions, u.idx)){
@@ -1058,6 +1242,10 @@ function buildFeed(users){
     }
     for(const r of forUser(DATA.rtSessions, u.idx)){
       if(RT_OK.has(r.reason)) continue;
+      if(RT_WALL.has(r.reason)){
+        add(r.at, 'talk','var(--s2)', `${who} 통화 끝남`, `${RT_REASON_KO[r.reason]} · 턴 ${r.turns}`);
+        continue;
+      }
       add(r.at, 'trouble','var(--crit)', `${who} 통화 끊김`, RT_REASON_KO[r.reason]||r.reason);
     }
   }
@@ -1118,8 +1306,9 @@ function renderNotes(){
      베타 내내 본인 계정이 전체 대화 턴의 절반을 넘겨서, 켜 두면 퍼널과 잔존이 거의 한 사람 숫자가 돼요.
      대신 원가 단가는 그 계정에서 나오니 <b>돈 탭은 토글과 무관하게 전 계정</b>이에요.` : '',
     `<b>이 페이지의 모든 시각은 머리말에서 고른 시간대</b>(기본 독일)로 읽혀요. 다만
-     <b>일별·히트맵·코호트의 '하루'</b>는 서버가 UTC로 묶어 내려준 날짜 그대로예요 —
-     독일 시간과는 두 시간 차이라 날이 바뀌는 새벽에만 한 칸 어긋날 수 있어요.`,
+     <b>일별·코호트의 '하루'</b>는 서버가 UTC로 묶어 내려준 날짜 그대로예요 —
+     날이 바뀌는 시간대에 한 통화는 한 칸 어긋날 수 있어요(한국 기준이면 오전 9시 전).
+     <b>'누가 어느 날 말했나' 히트맵은 고른 시간대의 하루</b>로 다시 묶어요.`,
     `<b>대화 턴</b>은 응답 생성 호출 1건이에요. 전사 호출과 둘로 쪼갠 TTS, 버려지는 투기 호출은 빼요.`,
     `<b>통화 시간</b>은 서버가 실제로 과금한 초예요. 학습자가 말하기 전에는 0이고, 유휴는 세지 않아요.`,
     `<b>통화 끊김</b> 기록은 2026-09-13 이후 빌드부터 올라와요. 그 전 통화는 서버에 흔적이 없어요.`,
@@ -1250,9 +1439,10 @@ function renderCohort(users){
 function renderHeatmap(users){
   const el = document.getElementById('heatmap');
   if(!el) return;
-  const n = DATA.days.length;
+  const grid = heatGrid();
+  const n = grid.days.length;
   const byUser = {};
-  for(const [u,d,rows,t,secs,spoke] of DATA.cells) (byUser[u] ??= {})[d] = [rows,t,secs,spoke ?? null];
+  for(const [u,d,rows,t,secs,spoke] of grid.cells) (byUser[u] ??= {})[d] = [rows,t,secs,spoke ?? null];
   // Intensity is TALK seconds — that is what the grid is for. But a day
   // spent on Watch scenes or the review deck is not an empty day, and drawing
   // it as one is how a Watch-only learner vanished from this chart. A day
@@ -1273,8 +1463,8 @@ function renderHeatmap(users){
   const tail = narrow ? 0 : 80 + 44 + 118 + 190;       // talk · days · plan · ids
   const cs = Math.max(12, Math.min(30, Math.floor((innerW(el, 300) - nameW - tail - 24) / n) - 3));
   const cols = `${nameW}px repeat(${n}, ${cs}px)` + (narrow ? '' : ' 80px 44px 118px minmax(150px,1fr)');
-  const today = DATA.days.length - 1;
-  const signupIdx = u => DATA.days.indexOf((u.signedUpAt||'').slice(0,10) || u.signedUp);
+  const today = grid.todayIdx;
+  const signupIdx = u => grid.days.indexOf(u.signedUpAt ? localDay(u.signedUpAt) : u.signedUp);
 
   // 네 묶음, 돈 순서대로. 이 그림에 묻는 질문이 묶음마다 다르다 — 구독은
   // "계속 쓰고 있나", 체험은 "끝나기 전에 돌아오나", 나머지는 "애초에
@@ -1287,30 +1477,37 @@ function renderHeatmap(users){
   // 쓰고 사라진 사람은 체험 중에 남는다 — 금색 점이 그걸 이미 말해준다.
   const backDays = new Map(rows.map(u => [u.idx, daysBackAfterCancel(u)]));
   const lapsing = u => backDays.get(u.idx) > 0;
-  const payRows = rows.filter(isSubscriber);
-  const trialRows = rows.filter(u => isTrialing(u) && !lapsing(u));
-  const lapseRows = rows.filter(lapsing);
-  // "그 외" reads as an intake queue, not a leaderboard: newest signup DAY
-  // first (by day, not second — a timestamp never ties, and the next key
-  // would never get a say), and within a day the people who actually talked
-  // ahead of those who didn't.
+  // Every group leads with whoever used the app MOST RECENTLY (2026-09-27):
+  // the question asked of this chart each morning is "who was here
+  // yesterday", and a row sorted by lifetime totals buries yesterday's
+  // newcomer under last month's regular. Recency is the last day with any
+  // mark on it — talk or app use — by DAY, so people who were both here
+  // today tie and the old order (the rows sort above) settles them. Someone
+  // with no mark in the window sorts by signup day, newest first.
+  const lastDay = u => {
+    const m = byUser[u.idx] || {};
+    let last = -1;
+    for(const k in m){ const c = m[k]; if((c[0] > 0 || c[2] > 0) && +k > last) last = +k; }
+    return last;
+  };
   const signupDay = u => u.signedUpAt ? localDay(u.signedUpAt) : (u.signedUp || '');
-  const restRows = rows.filter(u => !isSubscriber(u) && !isTrialing(u))
-    .sort((a,b) => signupDay(b).localeCompare(signupDay(a))
-      || ((b.talkSecs > 0) - (a.talkSecs > 0))
-      || (b.talkSecs - a.talkSecs)
-      || (b.signedUpAt||'').localeCompare(a.signedUpAt||''));
+  const byRecent = (a,b) => (lastDay(b) - lastDay(a))
+    || signupDay(b).localeCompare(signupDay(a));
+  const payRows = rows.filter(isSubscriber).sort(byRecent);
+  const trialRows = rows.filter(u => isTrialing(u) && !lapsing(u)).sort(byRecent);
+  const lapseRows = rows.filter(lapsing).sort(byRecent);
+  const restRows = rows.filter(u => !isSubscriber(u) && !isTrialing(u)).sort(byRecent);
   const endingSoon = lapseRows.filter(u => ['오늘 끝남','내일 끝남'].includes(trialEndLabel(u))).length;
   const groups = [
     {ko:'구독 중', note:`${payRows.length}명 · 돈이 들어오고 있는 사람`, rows:payRows},
     {ko:'체험 중', note:`${trialRows.length}명 · 체험이 끝나기 전에 돌아오는지`, rows:trialRows},
     {ko:'체험 취소 · 계속 사용', note:`${lapseRows.length}명 · 자동갱신을 끈 날 이후에도 다시 온 사람`
         + (endingSoon ? ` · 체험이 오늘·내일 끝나는 사람 ${endingSoon}명` : ''), rows:lapseRows},
-    {ko:'그 외', note:`${restRows.length}명 · 플랜 없음 · 만료 · 무료 제공 · 최근 가입순, 같은 날엔 통화한 사람 먼저`, rows:restRows},
+    {ko:'그 외', note:`${restRows.length}명 · 플랜 없음 · 만료 · 무료 제공`, rows:restRows},
   ];
 
   let html = `<div class="hm" style="--cs:${cs}px"><div class="r hd" style="grid-template-columns:${cols}"><span></span>`
-    + DATA.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
+    + grid.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
     + (narrow ? '' : `<span class="num">통화</span><span class="num">일</span><span class="pl">구독</span><span class="ids">ID</span>`)
     + `</div>`;
   for(const g of groups){
@@ -1320,7 +1517,7 @@ function renderHeatmap(users){
     const m = byUser[u.idx] || {};
     const su = signupIdx(u);
     const k = stateOf(u), st = SUB_KO[k];
-    const cxIdx = k === 'trial_cancelled' ? DATA.days.indexOf(cancelDayOf(u)) : -1;
+    const cxIdx = k === 'trial_cancelled' ? grid.days.indexOf(cancelDayOf(u)) : -1;
     html += `<div class="r${isSubscriber(u)?' paying':lapsing(u)?' lapsing':''}" style="grid-template-columns:${cols}">`
       + `<div class="who" title="${esc(u.realEmail||u.email||u.label)}">`
       +   `<div class="n"><span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`
@@ -1334,9 +1531,9 @@ function renderHeatmap(users){
       const before = i < su;
       const usedOnly = !secs && rowsN > 0;      // here, but didn't speak
       const fill = before ? 'transparent' : secs ? ramp(secs) : usedOnly ? 'var(--seq1)' : 'var(--chip)';
-      const head = `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`;
+      const head = `<b>${esc(nameOf(u))}</b><br>${fmtDate(grid.days[i])}`;
       const tip = before ? `${head} · 가입 전`
-        : secs ? `${head} · 통화 ${fmtMin(secs)} · 턴 ${turnsN}`
+        : secs ? `${head} · 통화 ${fmtMin(secs)}${turnsN!=null?` · 턴 ${turnsN}`:''}`
             + `${spokeDay!=null?`<br>${spokeText(spokeDay, secs)}`:''}${i===su?'<br>가입한 날':''}`
         : usedOnly ? `${head}<br>말은 안 했지만 앱은 썼어요 · 기록 ${rowsN}건${i===su?'<br>가입한 날':''}`
         : `${head} · 조용${i===su?'<br>가입한 날':''}`;
@@ -2026,19 +2223,157 @@ function renderLangs(users){
   }
 }
 
+/* ---------------------------------------------------------------- 레벨
+ * 온보딩에서 본인이 고른 CEFR 레벨(`profiles.proficiency`). `LearnerSetupSync`가
+ * 실린 빌드에서만 올라오고, 그 전 계정의 값은 가입 트리거의 기본값이라 읽으면
+ * 안 된다 — `setup`에는 실제로 보고된 행만 들어 있으니, 없으면 '아직 안 들어옴'
+ * 이지 A1이 아니다.
+ *
+ * 앱이 대화로 추정하는 레벨(요약의 `scorecard.cefr_level`)은 폰에만 남고 서버로
+ * 오지 않는다. 그래서 여기 있는 건 전부 자기 신고고, 자기 신고만으로는 어디에
+ * 집중할지 알 수 없다 — 레벨마다 '몇 명인가' 옆에 '그래서 무엇을 했나'를 반드시
+ * 붙이는 이유다. 답은 큰 덩어리가 아니라, 큰데 안 쓰는 덩어리에 있다.
+ */
+const LEVEL_ORDER = ['a1','a2','b1','b2','c1','c2'];
+const LEVEL_KO = {a1:'A1 입문', a2:'A2 기초', b1:'B1 중급',
+                  b2:'B2 중상급', c1:'C1 고급', c2:'C2 최상급'};
+const chosenLevel = idx => {
+  const v = ((DATA.setup||[]).find(r=>r.u===idx) || {}).level;
+  return v ? String(v).toLowerCase() : null;
+};
+/** 그 사람이 통화한 날의 수. `talkDays`는 턴이 있었던 날만 담으므로, 위젯 새로고침
+ *  같은 서버 호출이 '다시 온 날'로 세어지지 않는다. */
+const talkDayCount = idx => Object.keys(talkDays[idx] || {}).length;
+
+/** 한 레벨 묶음이 실제로 한 일. 통화 시간은 이 탭의 다른 표와 같은 창(출시 이후)
+ *  이고, 1인당은 통화한 사람으로 나눈다 — 안 한 사람까지 나누면 묶음이 클수록
+ *  작아지는, 참여도와 무관한 숫자가 된다. */
+function levelStats(list){
+  const talked = list.filter(u => u.talkSecs>0 || u.turns>0);
+  const secs = list.reduce((a,u)=>a+(u.talkSecs||0), 0);
+  const langs = {};
+  for(const u of list){ const c = chosenLang(u.idx); if(c) langs[c] = (langs[c]||0)+1; }
+  return {
+    list, n:list.length, talked:talked.length, secs,
+    per: talked.length ? Math.round(secs/talked.length) : 0,
+    repeat: list.filter(u => talkDayCount(u.idx) >= 2).length,
+    sale: list.filter(isSale).length,
+    langs: Object.entries(langs).sort((a,b)=>b[1]-a[1]),
+  };
+}
+
+function renderLevels(users){
+  const el = document.getElementById('levels');
+  const note = document.getElementById('levelsNote');
+  const read = document.getElementById('levelsRead');
+  if(!el) return;
+  const by = new Map(LEVEL_ORDER.map(l=>[l,[]]));
+  const unknown = [];
+  for(const u of users){
+    const l = chosenLevel(u.idx);
+    if(l && by.has(l)) by.get(l).push(u); else unknown.push(u);
+  }
+  const rows = LEVEL_ORDER.map(l => ({lvl:l, ...levelStats(by.get(l))})).filter(r => r.n);
+  const known = rows.reduce((a,r)=>a+r.n, 0);
+
+  if(!known){
+    el.innerHTML = '<div class="empty">아직 레벨이 들어온 계정이 없어요.</div>';
+    if(note) note.innerHTML = `온보딩에서 고른 레벨은 <code>LearnerSetupSync</code>가 실린`
+      + ` 빌드부터 올라와요. <code>profiles</code>의 나머지 값은 전부 가입 트리거의`
+      + ` 기본값(<code>b1</code>)이라 읽으면 안 돼요.`;
+    document.getElementById('levelTable').innerHTML = '';
+    if(read) read.innerHTML = '';
+    return;
+  }
+
+  // 막대는 사람 수. 옆의 값이 그 레벨이 실제로 한 일이고, 둘을 나란히 봐야
+  // "많은데 안 쓰는 쪽"이 눈에 들어온다.
+  const max = Math.max(...rows.map(r=>r.n));
+  el.innerHTML = rows.map(r => {
+    const who = r.list.slice(0,16).map(u=>esc(nameOf(u))).join(', ');
+    const tip = `<b>${LEVEL_KO[r.lvl]}</b> ${r.n}명`
+      + `${r.langs.length?'<br>'+r.langs.map(([l,n])=>`${langLabel(l)} ${n}`).join(' · '):''}`
+      + `${who?'<br>'+who:''}`;
+    return `<div class="row"><div class="lbl">${LEVEL_KO[r.lvl]}</div>
+      <div class="track" data-tip="${tip.replace(/"/g,'&quot;')}">
+        <div class="fill" style="width:${r.n/max*100}%"></div></div>
+      <div class="val">${r.n}명 · 통화 ${r.talked}`
+      + `${r.per?` · 1인당 ${fmtMin(r.per)}`:''}</div></div>`;
+  }).join('')
+   + (()=>{ // 동점이면 둘 다 부른다 — 한쪽만 부르면 순서가 결론이 돼 버린다.
+        const top = rows.filter(r => r.n === max);
+        return `<div class="legend">가장 많은 건 <b style="color:var(--ink)">`
+          + `${top.map(r=>LEVEL_KO[r.lvl]).join(' · ')}</b> ${top.length>1?'각 ':''}${max}명`
+          + `${unknown.length?` · 레벨 모르는 계정 ${unknown.length}명`:''}</div>`; })();
+
+  if(note){
+    note.innerHTML = `레벨이 들어온 계정 <b>${known}명</b> / ${users.length}명.`
+      + (unknown.length
+          ? ` 나머지 ${unknown.length}명은 아직 <code>LearnerSetupSync</code>가 실린 빌드를`
+            + ` 쓰지 않았어요 — 레벨을 안 골랐다는 뜻이 아니라, 고른 값이 서버로 아직`
+            + ` 안 왔다는 뜻이에요.`
+          : ' 전원의 선택이 들어와 있어요.');
+  }
+
+  // 표: 한 줄이 한 레벨. 사람 수 옆에 늘 행동이 붙는다.
+  const tb = document.getElementById('levelTable');
+  const dash = '<span class="muted">—</span>';
+  const pct = (a,b) => b ? `<span class="muted">${Math.round(a/b*100)}%</span>` : '';
+  const line = (label, r, extra='') =>
+    `<tr${extra}><td>${label}</td>
+      <td class="num"><b>${r.n}</b></td>
+      <td>${r.langs.length ? r.langs.map(([l,n])=>`${langLabel(l)} ${n}`).join(' · ')
+                           : `<span class="muted">모름</span>`}</td>
+      <td class="num">${r.talked ? `${r.talked} ${pct(r.talked, r.n)}` : dash}</td>
+      <td class="num">${r.per ? fmtMin(r.per) : dash}</td>
+      <td class="num">${r.repeat ? `${r.repeat} ${pct(r.repeat, r.n)}` : dash}</td>
+      <td class="num">${r.sale ? `${r.sale} ${pct(r.sale, r.n)}` : dash}</td></tr>`;
+  let html = `<thead><tr><th>레벨</th><th class="num">명</th><th>고른 언어</th>`
+    + `<th class="num">통화한 사람</th>`
+    + `<th class="num" title="통화한 사람 한 명당 통화 시간">1인당 통화</th>`
+    + `<th class="num" title="이틀 이상 통화한 사람 — 한 번 써보고 만 사람과 갈라지는 지점">이틀 이상</th>`
+    + `<th class="num">체험·결제</th></tr></thead><tbody>`;
+  for(const r of rows) html += line(`<b>${LEVEL_KO[r.lvl]}</b>`, r);
+  if(unknown.length)
+    html += line(`<span class="muted">아직 안 들어옴</span>`, levelStats(unknown),
+                 ' style="opacity:.6"');
+  html += line(`<b>합계</b>`, levelStats(users),
+               ' style="border-top:2px solid var(--baseline)"');
+  tb.innerHTML = html + '</tbody>';
+
+  // 읽는 법을 한 줄로 말해 준다. 사람이 적은 묶음은 우연이 커서, 세 명부터만
+  // 이름을 부른다 — 한 명짜리 칸으로 방향을 정하는 게 이 표의 유일한 오용이다.
+  if(read){
+    const solid = rows.filter(r => r.n >= 3);
+    const weak = solid.slice().sort((a,b)=> (a.repeat/a.n) - (b.repeat/b.n)
+                                          || a.per - b.per)[0];
+    const strong = solid.slice().sort((a,b)=> (b.repeat/b.n) - (a.repeat/a.n)
+                                            || b.per - a.per)[0];
+    read.innerHTML = solid.length < 2
+      ? `아직 세 명 이상 모인 레벨이 ${solid.length}개뿐이라, 레벨끼리 비교할 단계는 아니에요.`
+      : `세 명 이상 모인 레벨만 보면, 가장 잘 돌아오는 쪽은 <b>${LEVEL_KO[strong.lvl]}</b>`
+        + ` — ${strong.n}명 중 ${strong.repeat}명이 이틀 이상 통화했어요.`
+        + ` 가장 덜 돌아오는 쪽은 <b>${LEVEL_KO[weak.lvl]}</b> — ${weak.n}명 중 ${weak.repeat}명이에요.`
+        + ` 레벨은 자기 신고라 이건 방향이지 결론이 아니에요.`
+        + ` 누가 들어 있는지는 아래 <b>한 사람씩</b>에서 볼 수 있어요.`;
+  }
+}
+
+
 function personDetail(u){
   const sess = forUser(DATA.recentSessions, u.idx).filter(realSession).slice(0,15);
   const free = {};
   for(const f of forUser(DATA.freeRecent, u.idx)) free[f.purpose]=(free[f.purpose]||0)+f.n;
   const freeRows = Object.entries(free).sort((a,b)=>b[1]-a[1]);
   const subs = forUser(DATA.subEvents, u.idx);
-  const errs = forUser(DATA.recentEvents, u.idx);
+  const errs = forUser(DATA.recentEvents, u.idx).filter(isFailure);
   const rt = forUser(DATA.rtSessions, u.idx).slice(0,12);
   const col = (title, items, empty) =>
     `<div><h4>${title}</h4>${items.length?`<ul>${items.join('')}</ul>`:`<div class="muted">${empty}</div>`}</div>`;
   const mail = u.realEmail
     ? `${esc(u.realEmail)} <span class="muted">· 앱 로그인 ${esc(u.email||'')}</span>`
-    : esc(u.email||'이메일 없음');
+    : u.anonymous ? '가입 전 — 목소리만 만들고 Apple 로그인은 안 했어요 (30분 뒤 자동 삭제)'
+    : esc(u.email||'이메일 없음 — Apple이 이메일 클레임 없이 로그인시킨 계정');
   const cost = (DATA.cost.byUser||{})[String(u.idx)];
   return `<div class="dl">
     ${col('프로필', [
@@ -2081,17 +2416,19 @@ function personDetail(u){
       + ` · ${s.summarized?'<span class="ok">요약 ✓</span>':'<span class="muted">요약 없음</span>'}</li>`),
       '통화 기록 없음')}
     ${col('통화 종료', rt.map(r => {
-      const good = RT_OK.has(r.reason);
-      return `<li>${fmtTs(r.at)} · <b class="${good?'ok':'bad'}">${RT_REASON_KO[r.reason]||r.reason}</b>`
-        + ` · 턴 ${r.turns} · ${fmtMin(r.secs)}`
+      const cls = RT_OK.has(r.reason) ? 'ok' : RT_WALL.has(r.reason) ? 'muted' : 'bad';
+      return `<li>${fmtTs(r.at)} · <b class="${cls}">${RT_REASON_KO[r.reason]||r.reason}</b>`
+        + ` · 턴 ${r.turns}${r.src==='failed'?'':` · ${fmtMin(r.secs)}`}`
         + (r.p50?` · 응답 ${(r.p50/1000).toFixed(1)}초`:'')
-        + (r.warnings?` <span class="muted">복구 ${r.warnings}회</span>`:'') + `</li>`;
+        + (r.warnings?` <span class="muted">복구 ${r.warnings}회</span>`:'')
+        + (r.src==='failed' && r.detail && !RT_WALL.has(r.reason)
+            ? ` <span class="muted">${esc(r.detail)}</span>`:'') + `</li>`;
     }), '기록 없음 (2026-09-13 이후 빌드부터)')}
     ${col('그 밖의 활동', freeRows.map(([p,n])=>`<li>${PURPOSE_KO[p]||p} <b>${n}</b>회</li>`), '없음')}
     ${col('구독 이벤트', subs.map(e =>
       `<li>${fmtTs(e.at)} · ${subEventLabel(e)} · ${PLAN_KO[e.plan]||e.plan}</li>`), '없음')}
     ${col('문제 (7일)', errs.map(e =>
-      `<li>${EVENT_KO[e.event]||e.event} <b>${e.n}</b>회 · ${ago(e.last)}`
+      `<li>${failureLabel(e)} <b>${e.n}</b>회 · ${ago(e.last)}`
       + `${e.detail?` <span class="muted">${esc(e.detail)}</span>`:''}</li>`), '없음')}
     ${(u.reviews||[]).length ? `<div><h4>리뷰</h4>${(u.reviews||[]).map(r =>
       `<div class="quote">${esc(r.body)}<span class="ctx">${REVIEW_CTX[r.context]||r.context}`
@@ -2140,7 +2477,7 @@ function renderPeople(users){
     + `<th class="num">시간</th><th class="num">장면</th><th>구독</th><th>마지막</th><th>신호</th></tr></thead><tbody>`;
   for(const u of rows){
     const errs = failuresOf(u.idx);
-    const dropped = forUser(DATA.rtSessions, u.idx).filter(r=>!RT_OK.has(r.reason)).length;
+    const dropped = forUser(DATA.rtSessions, u.idx).filter(isDroppedCall).length;
     const sig = [];
     if(u.reviewCount) sig.push(`<span class="chip">리뷰 ${u.reviewCount}</span>`);
     if(errs) sig.push(`<span class="chip"><span class="dot" style="background:var(--crit)"></span>문제 ${errs}</span>`);
@@ -2520,10 +2857,15 @@ function renderCostTable(){
     if(costPeriod==='all'){
       const c = (C.byUser||{})[String(idx)]; if(!c) return null;
       const u = DATA.users[idx];
-      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:u.talkSecs, scenes:u.scenes};
+      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:c.talk_secs ?? u.talkSecs, scenes:u.scenes, talk_el:c.talk_el};
     }
     return ((C.byUserMonth||{})[costPeriod]||{})[String(idx)] || null;
   };
+  // Say where the talk half comes from — it is not on the ledger (2026-09-26).
+  const sub = document.getElementById('costSub');
+  if(sub) sub.textContent = C.talk_estimated
+    ? `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 통화 원가는 원장에 글자가 안 남아서(게이트웨이) 통화 초 × 실측 분당 크레딧(${C.talk_credits_per_min}cr, ElevenLabs API)으로 계산해 더했어요 — ElevenLabs 열 안에 들어 있어요.`
+    : `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 지금은 원장 글자만 보여서 통화 원가가 빠져 있어요(admin_talk_cost 미적용) — 실제의 절반쯤이에요.`;
   let html = `<thead><tr><th>유저</th><th>플랜</th><th class="num">통화</th><th class="num">장면</th>`
     + `<th class="num">TTS 글자</th><th class="num">ElevenLabs</th><th class="num">Gemini</th>`
     + `<th class="num">합계</th></tr></thead><tbody>`;
@@ -2575,6 +2917,356 @@ function renderFairUse(){
 }
 
 /* ============================================================ wiring */
+
+/* ============================================================ 돈: 실제 원가·손익 모델
+ * DATA.econ is built in assemble.ts from ElevenLabs' own usage API (truth.ts)
+ * with the ledger beside it. null when the Worker has no ELEVENLABS_API_KEY.
+ * Everything here is EUR; the older sections above stay in USD list prices.
+ */
+const ECON = () => DATA.econ;
+const eur = (n,d=0) => (n<0?'−':'') + '€' + Math.abs(Number(n||0)).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const kcr = n => n>=1e6 ? (n/1e6).toFixed(2)+'M' : n>=1e3 ? Math.round(n/1e3)+'k' : String(Math.round(n||0));
+const ECON_SECS = ['econCatsSec','econDaySec','econUnitSec','pnlSec','growSec','leverSec'];
+const ECON_COLOR = {talk:'var(--s1)', scene:'var(--s2)', vm:'var(--s3)', accent:'var(--warn)', review:'#e87ba4',
+                   onb:'#4a3aa7', misc_rec:'#9aa3b2', v3:'#7b8494', other:'#c3c2b7'};
+const ECON_REC = {yes:['yes','기록됨'], partial:['part','일부'], no:['no','없음']};
+
+/** EUR per month this subscriber leaves after Apple, VAT and any launch code. */
+function netEurOfUser(u){
+  const e = ECON(); if(!e) return 0;
+  const sp = DATA.storePrices[u.plan]; if(!sp) return 0;
+  const c = 1 - DATA.revenue.commission, usdToEur = 1/e.fx.USD;
+  const o = u.offer;
+  if(o && o.price && o.currency){
+    const p = o.price, cur = o.currency;
+    const net = cur==='KRW' ? p/1.1*c/e.fx.KRW : cur==='EUR' ? p/1.19*c : p*c*usdToEur;
+    return net / sp.months;
+  }
+  const pl = e.plans.find(x=>x.id===u.plan);
+  return pl ? pl.net.avg : 0;
+}
+function currentNetEur(){
+  let net=0, count=0;
+  for(const u of DATA.users){
+    if(u.dev || u.owner) continue;
+    const st = stateOf(u);
+    if(st==='paid' || st==='cancelling'){ net += netEurOfUser(u); count++; }
+  }
+  return {net, count};
+}
+function econSignupsPerDay(){ const e=ECON(); return e && e.window.days ? e.window.signups/e.window.days : 0; }
+
+function renderEcon(){
+  const e = ECON();
+  const tiles = document.getElementById('econTiles'), miss = document.getElementById('econMissing');
+  ECON_SECS.forEach(id => document.getElementById(id).classList.toggle('gone', !e));
+  if(!e){
+    tiles.innerHTML = '';
+    miss.hidden = false;
+    miss.innerHTML = 'ElevenLabs 키가 없어서 원장 숫자만 보여요 — 원장은 게이트웨이 통화를 못 봅니다. '
+      + '<code>bash admin/deploy.sh secret ELEVENLABS_API_KEY</code> (게이트웨이의 키 그대로).';
+    document.getElementById('econAsOf').textContent = '';
+    return;
+  }
+  miss.hidden = true;
+  document.getElementById('econAsOf').textContent =
+    `ElevenLabs ${fmtClock(e.fetchedAt)} 조회 · €1 = $${e.fx.USD} = ₩${num(Math.round(e.fx.KRW))}${e.fx.source==='fallback'?' (환율 고정값)':''}`;
+  const cur = currentNetEur();
+  const usdToEur = 1/e.fx.USD;
+  const gm30 = e.window.days ? e.window.gmEur/e.window.days*30 : 0;
+  const planEur = e.tierPrice*usdToEur;
+  const profitNow = cur.net - (planEur + e.fixed.eur + gm30);
+  const tierName = e.tier.charAt(0).toUpperCase()+e.tier.slice(1);
+  const over = e.cycle.per30 > e.cycle.limit;
+  const t = [
+    {k:'ElevenLabs 이번 주기', v:`${kcr(e.cycle.used)} / ${kcr(e.cycle.limit)}`,
+      d:`${tierName} · 하루 ${kcr(e.cycle.perDay)} · 월 환산 ${kcr(e.cycle.per30)}${e.cycle.resetAt?' · '+fmtDate(e.cycle.resetAt.slice(0,10))+' 리셋':''}`, alert:over},
+    {k:`출시 후 ${e.window.days}일 변동 원가`, v:eur(e.window.elEur+e.window.gmEur,1),
+      d:`EL ${eur(e.window.elEur,1)} + Gemini ${eur(e.window.gmEur,1)} · 하루 ${eur(e.window.perDayEur,2)}`},
+    {k:'월 순매출 (지금)', v:eur(cur.net,1), d:`결제 ${cur.count}명 · 수수료·VAT·코드 반영`},
+    {k:'지금의 월 손익', v:eur(profitNow), d:`EL ${tierName} $${e.tierPrice} + 고정 ${eur(e.fixed.eur)} + Gemini ${eur(gm30)}`,
+      alert: profitNow<0, good: profitNow>=0},
+    {k:'원장이 본 비율', v: e.window.recordedShare==null ? '—' : `${Math.round(e.window.recordedShare*100)}%`,
+      d:`원장 ${kcr(e.window.recorded)} / 실제 ${kcr(e.window.credits)} 크레딧`, alert: e.window.recordedShare!=null && e.window.recordedShare<0.9},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+}
+
+function renderEconCats(){
+  const e = ECON(); if(!e) return;
+  const total = e.cats.reduce((a,c)=>a+c.credits,0) || 1;
+  document.getElementById('econStack').innerHTML = e.cats.map(c =>
+    `<div style="width:${(c.credits/total*100).toFixed(2)}%;background:${ECON_COLOR[c.key]||'#999'}" data-tip="${esc(c.label)} · ${num(c.credits)} cr"></div>`).join('');
+  document.getElementById('econLegend').innerHTML = e.cats.map(c =>
+    `<span><span class="swatch" style="background:${ECON_COLOR[c.key]||'#999'}"></span> ${esc(c.label)}</span>`).join('');
+  const rows = e.cats.map(c => {
+    const [cls,lbl] = ECON_REC[c.recorded] || ['','?'];
+    return `<tr><td><span class="swatch" style="background:${ECON_COLOR[c.key]||'#999'};margin-right:6px"></span>${esc(c.label)}</td>`
+      + `<td class="num">${num(c.credits)}</td><td class="num">${Math.round(c.share*100)}%</td>`
+      + `<td class="num">${eur(c.credits*e.eurPerCredit,2)}</td>`
+      + `<td><span class="rec ${cls}">${lbl}</span> <span style="color:var(--muted);font-size:12px">${esc(c.note)}</span></td></tr>`;
+  });
+  document.getElementById('econCats').innerHTML =
+    `<thead><tr><th>활동</th><th class="num">크레딧</th><th class="num">비중</th><th class="num">원가</th><th>원장</th></tr></thead>`
+    + `<tbody>${rows.join('')}<tr><td><b>합계</b></td><td class="num"><b>${num(e.window.credits)}</b></td><td class="num">100%</td>`
+    + `<td class="num"><b>${eur(e.window.elEur,2)}</b></td><td style="color:var(--muted);font-size:12px">원장 ${num(e.window.recorded)} = ${Math.round((e.window.recordedShare||0)*100)}%</td></tr></tbody>`;
+  const rateNote = Math.abs(e.rateDb - e.rate) > 1e-7
+    ? `<li>DB의 크레딧 단가는 <b>$${e.rateDb}</b>(Creator 시절 씨앗값)인데 실제 티어는 <b>${e.tier}</b>($${e.tierPrice} / ${kcr(e.tierCredits)} = $${e.rate.toFixed(6)}). 이 탭의 모든 $·€ 원가는 실제 티어 단가로 다시 계산했어요. DB를 맞추려면 <code>select set_elevenlabs_usd_per_credit(${e.rate.toFixed(6)});</code></li>`
+    : '';
+  document.getElementById('econNote').innerHTML = `<ul>
+    <li><b>원장은 실제 크레딧의 ${Math.round((e.window.recordedShare||0)*100)}%만 봅니다.</b> 리얼타임 게이트웨이(통화의 본 경로)는 ElevenLabs에 직접 붙고 글자 수를 어디에도 남기지 않아요(<code>gateway/src/billing.ts</code>는 초만 보냄). 악센트 미리듣기는 행만 있고 크레딧이 없어요. 고치려면 게이트웨이가 통화 끝에 TTS 글자 수를 원장에 한 줄 남기면 돼요.</li>
+    ${rateNote}
+    <li>ElevenLabs 요금제는 <b>용량 레버지 단가 레버가 아니에요</b>: Pro $99/600k, Scale $299/1.8M, Business $990/6M 모두 1k당 약 $0.165, 초과분도 $0.17. 유일한 할인은 연간 결제 −17%.</li>
+  </ul>`;
+}
+
+function renderEconDaily(){
+  const e = ECON(); if(!e) return;
+  const el = document.getElementById('econDaily');
+  const rows = e.byDay;
+  if(!rows.length){ el.innerHTML = '<div class="empty">기록이 없어요.</div>'; return; }
+  const W = innerW(el, 240), H = 130, LEFT = 44, RIGHT = 8, top = 10, bh = H-top-18;
+  const n = rows.length, bw = (W-LEFT-RIGHT)/n;
+  const max = Math.max(1, ...rows.map(r=>r.actual));
+  let s = `<div class="panel-label"><span class="swatch" style="background:var(--seq2)"></span>실제
+      <span class="swatch" style="background:var(--s1);margin-left:10px"></span>원장
+      <span style="font-weight:400;color:var(--muted);margin-left:auto">합계 ${num(e.window.credits)} cr · 원장 ${num(e.window.recorded)}</span></div>`
+    + `<svg width="${W}" height="${H}" role="img" aria-label="일별 크레딧, 실제와 원장">`
+    + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`
+    + `<text x="${LEFT-6}" y="${top+8}" text-anchor="end" class="axis">${kcr(max)}</text>`;
+  rows.forEach((r,i)=>{
+    const x = LEFT+i*bw, w = Math.max(2, bw-2);
+    const ha = Math.max(1, r.actual/max*bh), hr = r.recorded/max*bh;
+    const tip = `<b>${fmtDate(r.d)}</b><br>실제 ${num(r.actual)} cr · ${eur(r.actual*e.eurPerCredit,2)}<br>원장 ${num(r.recorded)} cr (${r.actual?Math.round(r.recorded/r.actual*100):0}%)`;
+    s += `<rect x="${x.toFixed(1)}" y="${(top+bh-ha).toFixed(1)}" width="${w.toFixed(1)}" height="${ha.toFixed(1)}" rx="1.5" fill="var(--seq2)" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+    if(hr>0) s += `<rect x="${x.toFixed(1)}" y="${(top+bh-hr).toFixed(1)}" width="${w.toFixed(1)}" height="${hr.toFixed(1)}" rx="1.5" fill="var(--s1)" pointer-events="none"/>`;
+    if(n<=20 || i%Math.ceil(n/12)===0) s += `<text x="${(x+w/2).toFixed(1)}" y="${H-4}" text-anchor="middle" class="axis">${fmtD(r.d)}</text>`;
+  });
+  el.innerHTML = s + '</svg>';
+}
+
+// ---- unit economics ------------------------------------------------------
+const PLAN_KO_SHORT = {light_monthly:'Light 월', light_annual:'Light 연간(월 환산)', plus_monthly:'Plus 월', plus_annual:'Plus 연간(월 환산)'};
+function subCostEur(min, scenes){
+  const u = ECON().unit;
+  return min*u.talkEurPerMin + scenes*u.sceneEur + u.vmEurPerSubMonth;
+}
+function renderEconPlans(){
+  const e = ECON(); if(!e) return;
+  const u = e.unit;
+  document.getElementById('econUnitSub').innerHTML =
+    `순매출은 미국·한국·독일 스토어의 평균(Apple 85%, VAT 제외). 원가는 출시 후 실측 단가: <b>통화 1분 ${eur(u.talkEurPerMin,3)}</b>`
+    + ` (TTS ${u.talkCreditsPerMin} cr + Gemini ${eur(u.gmEurPerMin,4)}), <b>장면 1개 ${eur(u.sceneEur,3)}</b> (${num(u.sceneCredits)} cr),`
+    + ` 보이스메일 ${eur(u.vmEurPerSubMonth,2)}/구독자·월 (회당 ${u.vmPerSynth} cr, 하루 한 통 가정).`;
+  const pl = id => e.plans.find(p=>p.id===id).net;
+  const rows = [
+    ['plus_monthly', pl('plus_monthly'), '150분 · 8장면', subCostEur(150,8), `300분 + 30장면이면 원가 ${eur(subCostEur(300,30),1)} — 여전히 흑자`],
+    ['plus_annual',  pl('plus_annual'),  '150분 · 8장면', subCostEur(150,8), `통화 ${Math.round((pl('plus_annual').avg - u.vmEurPerSubMonth - 8*u.sceneEur)/u.talkEurPerMin)}분 넘기면 적자`],
+    ['light_monthly',pl('light_monthly'),'60분 · 4장면',  subCostEur(60,4),  `150분 + 60장면(다 쓰면) 원가 ${eur(subCostEur(150,60),1)} → <span style="color:${subCostEur(150,60)>pl('light_monthly').avg?'var(--crit)':'var(--good-text)'}">${subCostEur(150,60)>pl('light_monthly').avg?'적자':'흑자'} ${eur(Math.abs(pl('light_monthly').avg-subCostEur(150,60)),1)}</span>`],
+    ['light_annual', pl('light_annual'), '60분 · 4장면',  subCostEur(60,4),  `다 쓰면 ${eur(pl('light_annual').avg-subCostEur(150,60),1)}`],
+  ].map(([id,n,use,c,full]) => {
+    const m = n.avg - c;
+    return `<tr><td><b>${PLAN_KO_SHORT[id]}</b></td>`
+      + `<td class="num">${eur(n.avg,1)}<div style="font-size:11px;color:var(--muted)">KR ${eur(n.KR,1)} · US ${eur(n.US,1)} · DE ${eur(n.DE,1)}</div></td>`
+      + `<td style="color:var(--ink-2)">${use}</td><td class="num">${eur(c,2)}</td>`
+      + `<td class="num" style="color:${m<0?'var(--crit)':'var(--good-text)'};font-weight:600">${eur(m,1)}</td>`
+      + `<td style="color:var(--ink-2);font-size:12.5px">${full}</td></tr>`;
+  });
+  const code = pl('plus_monthly').avg/2, codeM = code - subCostEur(150,8);
+  rows.push(`<tr><td>Plus 50% 코드 (12개월)</td><td class="num">${eur(code,1)}</td><td style="color:var(--ink-2)">150분 · 8장면</td>`
+    + `<td class="num">${eur(subCostEur(150,8),2)}</td><td class="num" style="color:${codeM<0?'var(--crit)':'var(--good-text)'};font-weight:600">${eur(codeM,1)}</td>`
+    + `<td style="color:var(--ink-2);font-size:12.5px">정가의 절반, 원가는 그대로</td></tr>`);
+  rows.push(`<tr><td>무료 가입자</td><td class="num">—</td><td style="color:var(--ink-2)">무료 ${u.freeMinutes}분 + 온보딩</td>`
+    + `<td class="num">${eur(u.signupEur,2)}</td><td class="num" style="color:var(--crit);font-weight:600">${eur(-u.signupEur,2)}</td>`
+    + `<td style="color:var(--ink-2);font-size:12.5px">인사·악센트 미리듣기 ${num(u.onboardingCredits)} cr + 통화 ${u.freeMinutes}분 — 가입 1명당 확정 지출</td></tr>`);
+  document.getElementById('econPlans').innerHTML =
+    `<thead><tr><th>플랜</th><th class="num">순매출 /월</th><th>가정 사용</th><th class="num">원가 /월</th><th class="num">기여이익</th><th>다 쓰면</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  const lightFull = subCostEur(150,60) - pl('light_monthly').avg;
+  document.getElementById('econUnitNote').innerHTML = lightFull > 0
+    ? `<b>Light를 다 쓰면 ${eur(lightFull,1)} 적자</b>이고 이유는 장면(${eur(60*u.sceneEur,1)}) 하나예요. 가격 원칙(“못 쓰게 해서 벌지 않는다”)대로면 답은 장면 단가(길이 82→55초, 클론 절반 turbo — launch-billing.md의 레버)나 Light 가격이지 상한이 아니에요.`
+    : `Light는 다 써도 흑자예요.`;
+}
+
+// ---- the calculator --------------------------------------------------------
+const PNL_KEY = 'nawana.admin.pnl';
+const PNL_FIELDS = [
+  ['n','구독자 수',0,1000,5,'명'], ['plusShare','Plus 비중',0,100,5,'%'], ['codeShare','50% 코드 구독자 비중',0,100,5,'%'],
+  ['plusMin','Plus 월 통화',0,600,10,'분'], ['plusScenes','Plus 월 장면',0,120,1,'장면'],
+  ['lightMin','Light 월 통화',0,150,5,'분'], ['lightScenes','Light 월 장면',0,60,1,'장면'],
+  ['churn','월 해지율',2,20,1,'%'], ['conv','가입→유료 전환율',1,20,1,'%'],
+];
+const PNL_DEFAULT = {n:400, plusShare:60, codeShare:0, plusMin:150, plusScenes:8, lightMin:60, lightScenes:4, churn:8, conv:5, elAnnual:false};
+let pnl = {...PNL_DEFAULT};
+try{ const s = JSON.parse(localStorage.getItem(PNL_KEY)||'null'); if(s) pnl = {...PNL_DEFAULT, ...s}; }catch(e){}
+
+/** Cheapest ElevenLabs tier for this many credits a month — never below the
+ *  tier the account is on today, so the "지금" preset and the tile above agree.
+ *  Overage is billed per credit at about the same rate as the tiers. */
+function elTierFor(credits){
+  const e = ECON(); let best = Infinity, pick = null;
+  for(const t of e.tiers){
+    if(t.credits < e.tierCredits) continue;
+    const c = t.price + Math.max(0, credits - t.credits)*0.00017;
+    if(c<best){ best=c; pick=t; }
+  }
+  return {usd: best, tier: pick, over: pick ? credits > pick.credits : false};
+}
+function elPlanEur(credits, annual){
+  const e = ECON();
+  return elTierFor(credits).usd*(annual?0.8333:1)/e.fx.USD;
+}
+function elTierName(credits){
+  const r = elTierFor(credits); if(!r.tier) return '—';
+  return `${r.tier.name.charAt(0).toUpperCase()+r.tier.name.slice(1)}${r.over?' + 초과분':''} ≈ $${Math.round(r.usd)}`;
+}
+function pnlModel(N, p){
+  const e = ECON(), u = e.unit;
+  const plus = p.plusShare/100, code = p.codeShare/100, churn = p.churn/100, conv = p.conv/100;
+  const signups = conv>0 ? N*churn/conv : 0;
+  const plusNet = e.plans.find(x=>x.id==='plus_monthly').net.avg, lightNet = e.plans.find(x=>x.id==='light_monthly').net.avg;
+  const rev = N*(plus*plusNet + (1-plus)*lightNet)*(1-0.5*code);
+  const mins = N*(plus*p.plusMin + (1-plus)*p.lightMin) + signups*u.freeMinutes;
+  const gem = mins*u.gmEurPerMin;
+  const credits = N*(plus*(p.plusMin*u.talkCreditsPerMin + p.plusScenes*u.sceneCredits)
+                   + (1-plus)*(p.lightMin*u.talkCreditsPerMin + p.lightScenes*u.sceneCredits)
+                   + u.vmCreditsPerSubMonth) + signups*u.signupCredits;
+  const el = elPlanEur(credits, p.elAnnual);
+  const cost = el + gem + e.fixed.eur;
+  return {profit: rev-cost, rev, cost, credits, signups, el, gem};
+}
+function pnlSolve(p, target){ for(let N=0; N<=3000; N++){ if(pnlModel(N,p).profit >= target) return N; } return null; }
+
+function renderPnlControls(){
+  const c = document.getElementById('pnlControls');
+  if(c.dataset.built) return;
+  c.dataset.built = '1';
+  c.innerHTML = PNL_FIELDS.map(([k,lbl,min,max,step]) =>
+    `<div><label for="pnl_${k}">${lbl} <output id="pnlo_${k}"></output></label>`
+    + `<input type="range" id="pnl_${k}" min="${min}" max="${max}" step="${step}"></div>`).join('')
+    + `<label class="chk"><input type="checkbox" id="pnl_elAnnual"> ElevenLabs 연간 결제 (−17%)</label>`;
+  PNL_FIELDS.forEach(([k]) => document.getElementById('pnl_'+k).addEventListener('input', ev => { pnl[k] = +ev.target.value; renderPnl(); }));
+  document.getElementById('pnl_elAnnual').addEventListener('change', ev => { pnl.elAnnual = ev.target.checked; renderPnl(); });
+  const presets = [
+    ['now','지금', () => { const paid = DATA.users.filter(u=>!u.dev&&!u.owner&&(stateOf(u)==='paid'||stateOf(u)==='cancelling'));
+        const n = paid.length || 1;
+        return {n: paid.length, plusShare: Math.round(paid.filter(u=>String(u.plan).startsWith('plus')).length/n*20)*5,
+                codeShare: Math.round(paid.filter(u=>u.offer).length/n*20)*5}; }],
+    ['funnel','현재 퍼널의 한계', () => { const spd = econSignupsPerDay(); return {n: Math.round(spd*30*(pnl.conv/100)/(pnl.churn/100)), codeShare:0}; }],
+    ['target','€3,000 도달점', () => { const q = {...pnl, codeShare:0}; return {n: pnlSolve(q,3000) ?? 1000, codeShare:0}; }],
+    ['allplus','전원 Plus 정가', () => { const q = {...pnl, plusShare:100, codeShare:0}; return {n: pnlSolve(q,3000) ?? 1000, plusShare:100, codeShare:0}; }],
+  ];
+  document.getElementById('pnlPresets').innerHTML = presets.map(([k,l]) => `<button type="button" data-preset="${k}">${l}</button>`).join('');
+  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+    const f = presets.find(x=>x[0]===b.dataset.preset)[2]; Object.assign(pnl, f()); renderPnl();
+  }));
+}
+function renderPnl(){
+  const e = ECON(); if(!e) return;
+  renderPnlControls();
+  PNL_FIELDS.forEach(([k,,,,,unit]) => { document.getElementById('pnl_'+k).value = pnl[k]; document.getElementById('pnlo_'+k).textContent = pnl[k]+unit; });
+  document.getElementById('pnl_elAnnual').checked = !!pnl.elAnnual;
+  const m = pnlModel(pnl.n, pnl);
+  const spdNow = econSignupsPerDay();
+  const tiles = [
+    {k:'월 순이익', v:eur(m.profit), d: m.profit>=3000 ? '목표 도달' : m.profit<0 ? '적자' : `€3,000까지 ${eur(3000-m.profit)}`, alert:m.profit<0, good:m.profit>=3000},
+    {k:'월 순매출 / 원가', v:eur(m.rev), d:`원가 ${eur(m.cost)} = EL ${eur(m.el)} + Gemini ${eur(m.gem)} + 고정 ${eur(e.fixed.eur)}`},
+    {k:'유지에 필요한 가입자', v:`${Math.round(m.signups)}/월`, d:`하루 ${(m.signups/30).toFixed(1)}명 (지금 ${spdNow.toFixed(1)}명) · 무료 사용자 원가 ${eur(m.signups*e.unit.signupEur)}`},
+    {k:'ElevenLabs 크레딧 / 월', v:kcr(m.credits), d:`${elTierName(m.credits)}${pnl.elAnnual?' (연간)':''}`},
+  ];
+  document.getElementById('pnlOut').innerHTML = tiles.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  drawPnlCharts();
+  try{ localStorage.setItem(PNL_KEY, JSON.stringify(pnl)); }catch(e){}
+}
+function drawPnlCharts(){
+  const e = ECON(); if(!e || !document.getElementById('pnlControls').dataset.built) return;
+  // -- profit vs subscribers
+  const cEl = document.getElementById('pnlCurve');
+  const W = innerW(cEl, 260), H = 240, L = 50, R = 12, T = 14, B = 30;
+  const maxN = Math.max(600, Math.ceil(pnl.n*1.25/100)*100);
+  const step = Math.max(1, Math.round(maxN/160));
+  const pts = []; for(let N=0; N<=maxN; N+=step) pts.push([N, pnlModel(N,pnl).profit]);
+  if(pts[pts.length-1][0] !== maxN) pts.push([maxN, pnlModel(maxN,pnl).profit]);
+  const lo = Math.min(0, ...pts.map(q=>q[1])) - 200, hi = Math.max(3400, ...pts.map(q=>q[1])) + 200;
+  const x = N => L + N/maxN*(W-L-R), y = v => T + (1-(v-lo)/(hi-lo))*(H-T-B);
+  let s = `<svg width="${W}" height="${H}" role="img" aria-label="구독자 수에 따른 월 순이익">`;
+  const gstep = hi-lo > 8000 ? 2000 : 1000;
+  for(let v=Math.ceil(lo/gstep)*gstep; v<=hi; v+=gstep)
+    s += `<line class="${v===0?'pnl-zero':'pnl-grid'}" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="axis">${v/1000}k</text>`;
+  for(let N=0; N<=maxN; N+=maxN/6) s += `<text x="${x(N)}" y="${H-B+16}" text-anchor="middle" class="axis">${Math.round(N)}</text>`;
+  s += `<text x="${W-R}" y="${H-3}" text-anchor="end" class="axis">구독자 수 →</text>`;
+  s += `<line class="pnl-target" x1="${L}" x2="${W-R}" y1="${y(3000)}" y2="${y(3000)}"/><text x="${W-R-4}" y="${y(3000)-5}" text-anchor="end" class="pnl-lbl">€3,000</text>`;
+  s += `<path class="pnl-line" style="stroke:var(--s1)" d="${pts.map((q,i)=>(i?'L':'M')+x(q[0]).toFixed(1)+' '+y(q[1]).toFixed(1)).join('')}"/>`;
+  const be = pnlSolve(pnl,0), tg = pnlSolve(pnl,3000);
+  if(be!==null && be<=maxN) s += `<circle r="5" cx="${x(be)}" cy="${y(0)}" fill="var(--warn)" stroke="var(--surface)" stroke-width="2"/><text x="${x(be)+8}" y="${y(0)-8}" class="pnl-lbl">손익분기 ${be}명</text>`;
+  if(tg!==null && tg<=maxN) s += `<circle r="5" cx="${x(tg)}" cy="${y(3000)}" fill="var(--good)" stroke="var(--surface)" stroke-width="2"/><text x="${x(tg)+8}" y="${y(3000)+16}" class="pnl-lbl">€3,000 = ${tg}명</text>`;
+  const curP = pnlModel(pnl.n,pnl).profit;
+  s += `<circle r="6" cx="${x(pnl.n)}" cy="${y(curP)}" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" data-tip="${pnl.n}명 → ${eur(curP)}/월"/>`;
+  // hover targets: one thin column per sample
+  const colW = (W-L-R)/pts.length;
+  pts.forEach(q => { const mm = pnlModel(q[0],pnl);
+    s += `<rect x="${(x(q[0])-colW/2).toFixed(1)}" y="${T}" width="${Math.max(2,colW).toFixed(1)}" height="${H-T-B}" fill="transparent" data-tip="${q[0]}명 → ${eur(mm.profit)}/월 · 가입 ${Math.round(mm.signups)}/월 · ${kcr(mm.credits)} cr"/>`; });
+  cEl.innerHTML = s + '</svg>';
+  document.getElementById('pnlNote').textContent =
+    (be!==null ? `손익분기 ${be}명, ` : '') + (tg!==null ? `€3,000은 ${tg}명${pnl.elAnnual?' (EL 연간 결제 반영)':''}. ` : '€3,000에 닿지 않는 가정이에요. ')
+    + '곡선의 굴곡은 ElevenLabs 요금제 계단(600k · 1.8M · 6M)이에요.';
+
+  // -- 36-month growth by signups/day
+  const gEl = document.getElementById('pnlGrowth');
+  const spdNow = econSignupsPerDay();
+  const scen = [[spdNow, `지금 ${spdNow.toFixed(1)}명/일`, 'var(--s1)'], [12,'12명/일','var(--s2)'], [22,'22명/일','var(--s3)'], [30,'30명/일','var(--warn)']];
+  const N0 = currentNetEur().count;
+  const sim = spd => { let N=N0; const out=[]; for(let m=1;m<=36;m++){ N = N*(1-pnl.churn/100) + spd*30*(pnl.conv/100); out.push([m, N, pnlModel(N,pnl).profit]); } return out; };
+  const series = scen.map(([spd,name,color]) => ({spd,name,color,pts:sim(spd)}));
+  const W2 = innerW(gEl, 260), H2 = 240;
+  const all = series.flatMap(sr=>sr.pts.map(q=>q[2]));
+  const lo2 = Math.min(0,...all)-200, hi2 = Math.max(3400,...all)+300;
+  const x2 = m => L + m/36*(W2-L-R), y2 = v => T + (1-(v-lo2)/(hi2-lo2))*(H2-T-B);
+  let g = `<div class="legend">${series.map(sr=>`<span><span class="swatch" style="background:${sr.color}"></span>${sr.name}</span>`).join('')}</div>`
+    + `<svg width="${W2}" height="${H2}" role="img" aria-label="36개월 순이익 전망">`;
+  const gs2 = hi2-lo2 > 8000 ? 2000 : 1000;
+  for(let v=Math.ceil(lo2/gs2)*gs2; v<=hi2; v+=gs2)
+    g += `<line class="${v===0?'pnl-zero':'pnl-grid'}" x1="${L}" x2="${W2-R}" y1="${y2(v)}" y2="${y2(v)}"/><text x="${L-6}" y="${y2(v)+4}" text-anchor="end" class="axis">${v/1000}k</text>`;
+  [6,12,18,24,30,36].forEach(m => { g += `<text x="${x2(m)}" y="${H2-B+16}" text-anchor="middle" class="axis">${m}개월</text>`; });
+  g += `<line class="pnl-target" x1="${L}" x2="${W2-R}" y1="${y2(3000)}" y2="${y2(3000)}"/><text x="${L+4}" y="${y2(3000)-5}" class="pnl-lbl">€3,000</text>`;
+  series.forEach(sr => { g += `<path class="pnl-line" style="stroke:${sr.color}" d="${sr.pts.map((q,i)=>(i?'L':'M')+x2(q[0]).toFixed(1)+' '+y2(q[2]).toFixed(1)).join('')}"/>`; });
+  for(let m=1;m<=36;m++){
+    const tip = `<b>${m}개월</b><br>` + series.map(sr=>`${sr.name}: ${eur(sr.pts[m-1][2])} (${Math.round(sr.pts[m-1][1])}명)`).join('<br>');
+    g += `<rect x="${(x2(m)-(W2-L-R)/72).toFixed(1)}" y="${T}" width="${((W2-L-R)/36).toFixed(1)}" height="${H2-T-B}" fill="transparent" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+  }
+  gEl.innerHTML = g + '</svg>';
+  document.getElementById('pnlGrowRows').innerHTML =
+    `<thead><tr><th>하루 가입자</th><th class="num">정착 구독자</th><th class="num">12개월 후</th><th class="num">24개월 후</th><th class="num">€3,000 도달</th></tr></thead><tbody>`
+    + series.map(sr => { const hit = sr.pts.find(q=>q[2]>=3000); const steady = sr.spd*30*(pnl.conv/100)/(pnl.churn/100);
+        return `<tr><td><span class="swatch" style="background:${sr.color};margin-right:6px"></span>${sr.name}</td><td class="num">${Math.round(steady)}명</td>`
+          + `<td class="num" style="color:${sr.pts[11][2]<0?'var(--crit)':'inherit'}">${eur(sr.pts[11][2])}</td><td class="num" style="color:${sr.pts[23][2]<0?'var(--crit)':'inherit'}">${eur(sr.pts[23][2])}</td>`
+          + `<td class="num">${hit ? hit[0]+'개월째' : '<span style="color:var(--crit)">도달 못 함</span>'}</td></tr>`; }).join('') + '</tbody>';
+  renderLevers();
+}
+function renderLevers(){
+  const e = ECON(); if(!e) return;
+  const spd = econSignupsPerDay();
+  const base = {...pnl, codeShare:0};
+  const tg = pnlSolve(base,3000), tgAnnual = pnlSolve({...base, elAnnual:true},3000);
+  const need = tg!==null ? pnlModel(tg,base).signups : null;
+  const steadyNow = spd*30*(pnl.conv/100)/(pnl.churn/100);
+  const steadyProfit = pnlModel(steadyNow, pnl).profit;
+  const cur = currentNetEur();
+  const codeUsers = DATA.users.filter(u=>!u.dev&&!u.owner&&(stateOf(u)==='paid'||stateOf(u)==='cancelling')&&u.offer).length;
+  const vm = e.cats.find(c=>c.key==='vm');
+  const items = [
+    `<b>가입자 수가 전부예요.</b> 지금 퍼널(하루 ${spd.toFixed(1)}명, 전환 ${pnl.conv}%, 해지 ${pnl.churn}%)은 ${Math.round(steadyNow)}명에서 정착하고 월 ${eur(steadyProfit)}에서 멈춰요.`
+      + (tg!==null ? ` €3,000은 구독자 ${tg}명이고, 유지하려면 <b>월 ${Math.round(need)}명, 하루 ${(need/30).toFixed(0)}명</b>이 가입해야 해요 — 지금의 ${spd>0?(need/30/spd).toFixed(1):'∞'}배.` : ''),
+    `<b>전환율은 두 배가 가능한 구간.</b> 첫 통화 무료(09-18)와 무료 10분(09-22) 이후 코호트를 따로 재 보세요. 전환 ${pnl.conv}% → ${pnl.conv*2}%면 필요한 가입자가 절반이 돼요.`,
+    `<b>50% 코드는 12개월간 매출을 반으로 잘라요.</b> 지금 결제 ${cur.count}명 중 ${codeUsers}명이 코드. 웨이트리스트 이후엔 더 뿌리지 않는 게 맞아요.`,
+    `<b>Light 장면 단가.</b> Light를 다 쓰면 적자인 이유는 장면(${eur(e.unit.sceneEur,3)} × 60)뿐. 장면 길이 82→55초 −33%, 클론 절반 turbo −33% — launch-billing.md에 있는 레버.`,
+    vm ? `<b>보이스메일이 크레딧의 ${Math.round(vm.share*100)}%.</b> 일일 통화를 켠 사람마다 세션 끝마다 합성돼요(${e.window.days}일 ${vm.note}). 무료 사용자 몫이 문제면 “어제 받은 사람만 다음 것을 만든다”가 제품 규칙을 안 깨는 절약이에요.` : '',
+    `<b>ElevenLabs 요금제는 용량 레버.</b> 티어를 올려도 단가가 안 내려가요(전부 ≈$0.165/1k). 유일한 할인은 연간 −17%(도달 구독자 ${tg??'—'}→${tgAnnual??'—'}명). 지금 페이스 월 ${kcr(e.cycle.per30)}은 ${e.tier} 한도 ${kcr(e.cycle.limit)}의 ${Math.round(e.cycle.per30/e.cycle.limit*100)}% — 첫 마케팅 푸시에서 넘치니 <b>초과 과금(usage-based billing)을 미리 켜 두세요.</b>`,
+    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’이 이 섹션과 같은 숫자를 말해요. ‘유저별 원가’는 2026-09-26부터 통화 초 × 실측 분당 크레딧으로 통화분을 채워 넣어요. 원가의 진실은 여전히 ElevenLabs API예요.`,
+  ].filter(Boolean);
+  document.getElementById('pnlLevers').innerHTML = items.map(t=>`<li style="margin-bottom:10px">${t}</li>`).join('');
+}
+
 function render(){
   TODAY = localDay(new Date());
   YESTERDAY = localDay(new Date(Date.now()-86400000));
@@ -2586,16 +3278,18 @@ function render(){
   renderHoursMetric(); renderHoursToday(users); renderHours(users); renderHoursByUser(users);
   renderDow(users); renderSpanPick(); renderSpan(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
-  renderPeopleTiles(users); renderLangs(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
+  renderPeopleTiles(users); renderLangs(users); renderLevels(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
+  renderEcon(); renderEconCats(); renderEconDaily(); renderEconPlans(); renderPnl();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a
  *  redraw can never disagree with it. */
 function redrawCharts(){
   const users = visibleUsers();
   renderDaily(users); renderHeatmap(users); renderHoursToday(users); renderHours(users); renderHoursByUser(users); renderBurn();
+  renderEconDaily(); drawPnlCharts();
 }
 /* ============================================================ 라이브
  * Polls __ADMIN_BASE__/live.json (admin_live()) every 15 s while the tab is
@@ -2784,6 +3478,13 @@ function renderLive(){
     ? {city: ph.city, country: ph.cc, lat: ph.lat, lon: ph.lon} : null;
   const dir = new Map([...(liveData.placed||[]), ...(liveData.users||[])].map(u=>[u.id, u]));
   const person = id => dir.get(id) || {id};
+  // admin_live rows carry neither voice nor plan; the day's data does, by the
+  // same id (a session created since the page loaded has no row → null).
+  const dayUser = id => (DATA.users||[]).find(x => x.id === id) || null;
+  const voiceOf = id => (dayUser(id) || {}).voiceId || null;
+  // The same dot + two-word label the people tab uses, so 구독 중 / 체험 중 /
+  // 플랜 없음 read the same colour everywhere.
+  const subOf = id => { const f = dayUser(id); return f ? `${subDot(f)}${subShort(f)}` : ''; };
   const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
 
   const note = document.getElementById('liveNote');
@@ -2897,7 +3598,10 @@ function renderLive(){
         e.end - e.start >= 60e3 && !e.app ? `–${fmtClock(new Date(e.end).toISOString())}` : ''}</span>
       <span class="te">${emojiOf(e)}</span>
       <span class="tw">${esc(label(e))} <small>${detail(e)}</small>${chips(e)}</span>
-      <span class="tp"><b>${esc(liveName(u))}</b>${e.u===owner?'<span class="ownchip">본인</span>':''} · ${where(g)}</span>
+      <span class="tp"><b>${esc(liveName(u))}</b>${e.u===owner?'<span class="ownchip">본인</span>':''}${
+        subOf(e.u) ? ` · ${subOf(e.u)}` : ''} · ${where(g)}</span>
+      <span class="tid"><span title="Supabase 유저 ID — 클릭하면 전체 선택">${esc(e.u)}</span>${
+        voiceOf(e.u) ? `<i>voice</i><span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택">${esc(voiceOf(e.u))}</span>` : ''}</span>
     </div>`;
   }
   document.getElementById('tlList').innerHTML = html
@@ -2948,7 +3652,8 @@ function renderLive(){
     if(!mk) return;
     el.addEventListener('mouseenter', () => mk.openTooltip());
     el.addEventListener('mouseleave', () => mk.closeTooltip());
-    el.addEventListener('click', () => {
+    el.addEventListener('click', ev => {
+      if(ev.target.closest('.tid')) return;   // selecting an id is not a tap
       liveMap.flyTo(mk.getLatLng(), Math.max(liveMap.getZoom(), 3.5), {duration:.6});
       setTimeout(()=>mk.openTooltip(), 650);
     });

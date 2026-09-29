@@ -84,15 +84,23 @@ final class AppUpdateService: ObservableObject {
             let latest_version: String?
             let notes_ko: String?
             let notes_en: String?
+            /// Optional (NULL when nobody has retuned it) — see
+            /// `SpeechSpeed.remoteDefaultMultiplier`.
+            let default_speech_speed: Double?
         }
         guard let rows: [Row] = try? await SupabaseProvider.shared
             .from("app_release")
-            .select("latest_build,latest_testflight_build,min_build,latest_version,notes_ko,notes_en")
+            .select("latest_build,latest_testflight_build,min_build,latest_version,notes_ko,notes_en,default_speech_speed")
             .eq("platform", value: "ios")
             .limit(1)
             .execute()
             .value,
               let row = rows.first else { return }
+
+        // Before any of the update-notice guards below. They stop for reasons
+        // about THIS build's version — none of which is a reason to ignore a
+        // speaking speed the server has retuned.
+        SpeechSpeed.storeRemoteDefault(row.default_speech_speed)
 
         let build = Self.currentBuild
         // A build of 0 means the plist couldn't be read at all. Treat that as

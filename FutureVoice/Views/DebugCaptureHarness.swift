@@ -12,6 +12,10 @@ import SwiftUI
 enum DebugCapture {
     private static var seeded = Set<String>()
 
+    /// Which running state of `SayItAgainView` to park on for a
+    /// screenshot ("reading" / "done"), since a capture run has no mic.
+    static var sayItAgainStage: String?
+
     /// True while capturing the Shadow screen: ShadowDrillView then synthesizes
     /// evenly-spaced karaoke timings locally and skips the voice-clone/network
     /// path, so the timeline renders offline for the screenshot.
@@ -62,6 +66,17 @@ enum DebugCapture {
     /// True while capturing the drill bin tray: `DrillView` opens already
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
+
+    /// True while capturing the in-call settings sheet: `ConversationView`
+    /// raises it on appear, since a screenshot run can't tap the button.
+    static var previewCallSettings = false
+
+    /// Which item kind a freshly built weekly test opens on, so each kind's
+    /// screen can be photographed. nil = the engine's own order.
+    static var weeklyTestKind: WeeklyTestItem.Kind?
+    /// Pre-answer the first item: true = the right answer, false = a wrong
+    /// one, so the graded state can be photographed.
+    static var weeklyTestAnswer: Bool?
 
     /// Same trick for the study deck, with the cancel target lit: a drag can
     /// only be photographed from inside itself, and XCUITest has no way to
@@ -124,6 +139,24 @@ enum DebugCapture {
         ]
         PersonaStore.shared.save(p)
         appState.persona = p
+        // The intro is WRITTEN by a Gemini call, and a capture run has no
+        // session — so without this the two intro routes would render the
+        // offline fallback (the old concatenation) and the screenshots would
+        // review a screen nobody sees. This is the paragraph the real prompt
+        // returned for exactly this persona on 2026-09-25
+        // (`scripts/public-intro-probe.py`), seeded into the composer's own
+        // cache: same view, same code path, a fixture for the one thing a
+        // capture run can't reach — like `sampleLightAccount` above.
+        PublicIntroComposer.save("""
+            Hi, I am Eunggyu, and I have been living here in Munich for a while \
+            now working on my own AI app for language learning. Since I am quite \
+            interested in technology and raising young children, I spend most of \
+            my time balancing those two worlds. My daily life usually involves \
+            picking up my kids from school or handling client calls, so I am \
+            always looking for ways to practice better communication. When I \
+            have some free time, I really enjoy going for a long run along the \
+            Isar river to clear my head.
+            """, for: PublicIntroComposer.sources(p, language: appState.targetLanguage))
     }
 
     /// Idempotent per name — the resolver may evaluate more than once.
@@ -136,7 +169,7 @@ enum DebugCapture {
     // MARK: - Routing
 
     /// The account every billing capture renders against: a Light subscriber
-    /// mid-period, 55 of 150 minutes and 12 of 60 scenes spent, refilling on
+    /// mid-period, 55 of 150 minutes and 4 of 10 scenes spent, refilling on
     /// the 14th. ONE sample for all three pages on purpose — they quote each
     /// other's numbers, so reviewing them against different accounts would
     /// hide exactly the disagreement the captures exist to catch. It also has
@@ -148,7 +181,7 @@ enum DebugCapture {
             email: nil, secondsBalance: 0,
             planId: "light_monthly", subscriptionStatus: "active",
             secondsUsedPeriod: 3300, monthlyCapSeconds: 9000,
-            scenesUsedPeriod: 12, monthlyScenesCap: 60,
+            scenesUsedPeriod: 4, monthlyScenesCap: 10,
             fullTankSeconds: 9000)
         out.periodEnd = Calendar.current.date(byAdding: .day, value: 18, to: Date())
         out.periodStart = Calendar.current.date(byAdding: .day, value: -12, to: Date())
@@ -282,6 +315,11 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
+        case "sync-other-device":
+            // The second device when the first never turned sync on: the
+            // screen that stands where onboarding otherwise would.
+            return AnyView(SyncOtherDeviceHintView(onFound: {}, onSkip: {})
+                .environmentObject(appState))
         case "sync":
             return AnyView(NavigationStack {
                 List { SyncSection() }
@@ -360,6 +398,13 @@ enum DebugCapture {
             // published: work · town · situations · the unlocked lines only.
             once("sample-persona") { seedSamplePersona(appState) }
             return AnyView(PublicIntroPreviewSheet().environmentObject(appState))
+        case "profile-name":
+            // Me → Profile, first step: the avatar sits in the SAME card as
+            // the name field (2026-09-25) — it used to float on the grouped
+            // backdrop, reading as cut off from the row under it.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(PersonaOnboardingView(initialPersona: appState.persona, startStep: 0)
+                .environmentObject(appState))
         case "profile-notes":
             // Me → Profile, "Your life" step: the remembered lines with their
             // locks — two private, one the summary call let out.
@@ -385,6 +430,15 @@ enum DebugCapture {
             // once — which is what the two-capture split kept failing to do.
             return AnyView(NavigationStack {
                 PlanPageView(account: Self.sampleLightAccount, previewUsage: .sample)
+            })
+        case "plan-spent":
+            // The same page once the month's minutes are gone: the invite
+            // row has grown into the card, and nothing else moves.
+            var spent = Self.sampleLightAccount
+            spent.secondsUsedPeriod = spent.monthlyCapSeconds ?? 9000
+            return AnyView(NavigationStack {
+                PlanPageView(account: spent, previewUsage: .sample,
+                             previewInvite: InviteOffer(code: "K3MQ9F", invitesUsed: 2))
             })
         case "plan-trial":
             // The same page during the trial week of a launch-code
@@ -581,6 +635,13 @@ enum DebugCapture {
             // the learner's first answer on.
             once("first-call") { seedUnmetPersona(into: appState) }
             return AnyView(ConversationView().environmentObject(appState))
+        case "call-settings":
+            // The same real call screen as `first-call`, with the settings
+            // sheet up — the sheet's detent and the live screen behind it are
+            // the whole point, so it is never photographed on its own.
+            once("first-call") { seedUnmetPersona(into: appState) }
+            previewCallSettings = true
+            return AnyView(ConversationView().environmentObject(appState))
         case "level-sheet":
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
@@ -641,6 +702,43 @@ enum DebugCapture {
         case "practice-watch":
             once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
+        case "monthly-test":
+            // The month's paper: two finished weekly tests with misses, dated
+            // into the month behind the current month's first opening.
+            once("monthly-test") { seedWeeklyTestWeek(); seedMonthOfMisses() }
+            return AnyView(WeeklyTestView(kind: .monthly).environmentObject(appState))
+        case "practice-monthly":
+            once("practice-monthly") {
+                seedVocab(); seedSessions(); seedScenarios(into: appState); seedMonthOfMisses()
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+        case "weekly-test", "weekly-test-word", "weekly-test-gap", "weekly-test-build", "weekly-test-listen",
+             "weekly-test-speak",
+             "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right":
+            // The test sheet, opened on a chosen item kind. Material is the
+            // seeded week; the dictionary is stubbed so a meaning item can be
+            // built offline.
+            once("weekly-test") { seedWeeklyTestWeek() }
+            stubWordEntry = fatWordEntry
+            weeklyTestKind = switch name {
+                case "weekly-test-word", "weekly-test-word-right": .meaning
+                case "weekly-test-gap", "weekly-test-gap-wrong": .gap
+                case "weekly-test-build", "weekly-test-build-wrong", "weekly-test-build-right": .build
+                case "weekly-test-listen": .listen
+                case "weekly-test-speak": .speak
+                default: nil
+            }
+            weeklyTestAnswer = name.hasSuffix("-right") ? true : (name.hasSuffix("-wrong") ? false : nil)
+            return AnyView(WeeklyTestView().environmentObject(appState))
+        case "weekly-test-result":
+            once("weekly-test-result") { seedFinishedWeeklyTest() }
+            return AnyView(WeeklyTestView().environmentObject(appState))
+        case "practice-weekly":
+            // The Today card carrying the weekly test row, finished state.
+            once("practice-weekly") {
+                seedVocab(); seedSessions(); seedScenarios(into: appState); seedFinishedWeeklyTest()
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "practice-due":
             // The Today card with items back from an earlier snooze — the
             // non-notification entry point into the review deck.
@@ -769,13 +867,18 @@ enum DebugCapture {
             // The update notice, both temperaments. Unreachable in a capture
             // run — it needs a server that has moved past this build.
             return AnyView(UpdateCaptureHost(required: name == "update-required"))
-        case "day-spent", "day-spent-unlimited", "day-spent-scenes":
+        case "day-spent", "day-spent-unlimited", "day-spent-scenes", "day-spent-invite":
             // The spent-allowance sheet, both sides of it: Daily (there is
             // something to offer) and Unlimited (there isn't). Unreachable in
             // a capture run — it takes a real account that talked out its day.
+            // `day-spent-invite` is the same sheet with the invite line,
+            // which only a subscriber on a counted pool with rewards left
+            // ever sees.
             return AnyView(DaySpentCaptureHost(
                 kind: name == "day-spent-scenes" ? .scenes : .talk,
-                canUpgrade: name != "day-spent-unlimited")
+                canUpgrade: name != "day-spent-unlimited",
+                invite: name == "day-spent-invite"
+                    ? InviteOffer(code: "K3MQ9F", invitesUsed: 2) : nil)
                 .environmentObject(appState))
         case "day-spent-trial", "day-spent-trial-plus":
             // The same sheet as a TRIAL account meets it: the pool is the
@@ -789,7 +892,22 @@ enum DebugCapture {
                 kind: .talk,
                 canUpgrade: name == "day-spent-trial",
                 allowance: 35,
-                renewsOn: account.renewalLabel)
+                renewsOn: account.renewalLabel,
+                isTrial: true,
+                planMinutesAfterTrial: name == "day-spent-trial" ? 150 : nil,
+                // A trialer sees the invite line too, and is the one account
+                // for which it is the ONLY thing on the sheet besides review.
+                invite: InviteOffer(code: "K3MQ9F", invitesUsed: 2))
+                .environmentObject(appState))
+        case "day-spent-plus":
+            // What a Plus subscriber meets TODAY: the month's pool spent,
+            // nothing to upgrade to, the minute pack asked for but not on
+            // sale (no ASC consumable), so the invite is the only free way
+            // forward and Practice takes the lead slot the pack didn't fill.
+            return AnyView(DaySpentCaptureHost(
+                kind: .talk, canUpgrade: false, allowance: 300,
+                invite: InviteOffer(code: "K3MQ9F", invitesUsed: 2),
+                canTopUp: true)
                 .environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
@@ -840,6 +958,31 @@ enum DebugCapture {
                 appState.weeklyReports = [report]
             }
             return AnyView(ProgressTab().environmentObject(appState))
+        case "progress-beginner", "progress-beginner-grammar", "progress-grammar":
+            // The 2026-09-24 report: short accurate sentences, no slips —
+            // used to read ≈C2. The talks carry a range of a2, so the
+            // Grammar row must show ≈A2 with the range line under it.
+            // `progress-grammar` seeds the ordinary talks (no range on
+            // file) — the vocabulary stand-in ceiling.
+            if name == "progress-grammar" {
+                once("progress-grammar") { seedVocab(); seedSessions(scored: true) }
+                return AnyView(ProgressTab(initialDim: .grammar).environmentObject(appState))
+            }
+            once("progress-beginner") {
+                seedVocab(); seedSessions(scored: true, beginner: true)
+                let report = WeeklyReport(
+                    id: UUID(),
+                    periodStart: Date().addingTimeInterval(-7 * 86_400),
+                    periodEnd: Date(),
+                    sessionCount: 3, targetLanguage: "en",
+                    newExpressions: [], repeatedMistakes: [], suggestedExpressions: [],
+                    summary: "Short, clear sentences — start linking two ideas in one.",
+                    cefrLevel: "a2", generatedAt: Date())
+                WeeklyReportStore.shared.save(report)
+                appState.weeklyReports = [report]
+            }
+            return AnyView(ProgressTab(initialDim: name == "progress-beginner-grammar" ? .grammar : nil)
+                            .environmentObject(appState))
         case "shadow-ja":
             // A Japanese line in karaoke: words, not one run — each lights
             // and taps on its own, punctuation riding on the word before.
@@ -860,6 +1003,25 @@ enum DebugCapture {
         case "expr":
             once("expr") { seedVocab(); seedSessions(scored: true) }
             return AnyView(NavigationStack { ExpressionsView() })
+        case "expr-card":
+            // One phrase's card, open over the list — the widget's deep-link
+            // path, staged in a .task like `vocab-loading`.
+            once("expr") { seedVocab(); seedSessions(scored: true) }
+            // Offline, so the card is handed a phrase-shaped entry: one sense
+            // with the register line, two examples, two near-variants.
+            stubWordEntry = WordEntry(
+                pos: "구동사 · 일상 대화",
+                senses: [.init(pos: "", meaning: "제안이나 결정에 반대 의견을 내다; 밀어내듯 저항하다.",
+                               note: "회의나 협상에서 정중하게 반대할 때 자주 써요.")],
+                examples: [.init(text: "I had to push back on the deadline — two weeks wasn't realistic.",
+                                 meaning: "마감에 반대 의견을 내야 했어요. 2주는 현실적이지 않았거든요."),
+                           .init(text: "Don't be afraid to push back on feedback you disagree with.",
+                                 meaning: "동의하지 않는 피드백에는 주저 말고 반대 의견을 내세요.")],
+                phrases: [.init(phrase: "raise concerns about", meaning: "~에 대해 우려를 제기하다"),
+                          .init(phrase: "challenge", meaning: "이의를 제기하다")],
+                properNoun: nil)
+            return AnyView(NavigationStack { ExpressionsView() }
+                .task { appState.focusPhrase = "push back on" })
         case "score":
             once("score") { seedVocab() }
             return AnyView(NavigationStack {
@@ -963,6 +1125,35 @@ enum DebugCapture {
                     session: session,
                     postTalk: .init(onDone: {}))
             })
+        case "say-again", "say-again-reading", "say-again-done",
+             "say-again-scene", "say-again-scene-reading", "say-again-scene-done":
+            // The talk read back with the learner's lines corrected — or,
+            // "-scene", a Watch book's scene with the learner on their own
+            // side. The mic can't be driven from a capture, so the two
+            // running states are seeded rather than reached.
+            let stage = name.split(separator: "-").last.map(String.init)
+            sayItAgainStage = stage == "reading" || stage == "done" ? stage : nil
+            if name.hasPrefix("say-again-scene") {
+                var c = ScenarioCurriculum()
+                c.dialogue = [
+                    .init(speaker: "counterpart", text: "Oh my god, it's been forever! How have you been?"),
+                    .init(speaker: "user", text: "I know! Honestly, so much has happened — where do I even start?"),
+                    .init(speaker: "counterpart", text: "Start with the new job! How's it going?"),
+                    .init(speaker: "user", text: "It turned out to be a bit of a stretch at first, but I'm settling in."),
+                ]
+                c.shadowLines = (c.dialogue ?? []).filter { $0.speaker == "user" }
+                    .map { .init(text: $0.text, note: "") }
+                var sarah = Counterpart.empty
+                sarah.name = "Sarah"
+                sarah.voicePresetId = VoicePreset.sceneDefault.id
+                return AnyView(SayItAgainView(source: .scene(title: "Café · catching up",
+                                                               targetLanguage: "en",
+                                                               curriculum: c,
+                                                               counterpart: sarah))
+                    .environmentObject(appState))
+            }
+            return AnyView(SayItAgainView(source: .talk(talkDetailSession))
+                .environmentObject(appState))
         case "themes":
             // The settings grid of Futureself themes, in its List habitat.
             return AnyView(NavigationStack {
@@ -991,6 +1182,20 @@ enum DebugCapture {
             pronunciation: AxisScore(score: 80, note: "Clear, with good linking."),
             topLine: "Confident, natural talk — tighten a few articles.",
             cefrLevel: "b1")
+    }
+
+    /// Accurate but simple: a near-perfect score with no slips, and a range
+    /// of a2 — the pair the Progress grammar band has to read as ≈A2.
+    static var beginnerScorecard: SessionScorecard {
+        SessionScorecard(
+            vocabulary: AxisScore(score: 60, note: "Everyday words, used correctly."),
+            grammar: AxisScore(score: 96, note: "No slips in what you said."),
+            expressiveness: AxisScore(score: 40, note: "Short answers — add a detail."),
+            fluency: AxisScore(score: 55, note: "Even pace, short turns."),
+            pronunciation: nil,
+            topLine: "Clear and simple — try linking two ideas.",
+            cefrLevel: "a2",
+            grammarRange: "a2")
     }
 
     /// One fully-populated finished talk — every section of the session
@@ -1294,12 +1499,172 @@ enum DebugCapture {
         return session
     }
 
-    static func seedSessions(scored: Bool = false) {
+
+    // MARK: - Weekly test
+
+    /// A week with something on every shelf: notebook words, a talk whose
+    /// summary offered phrases the fluent self actually said, corrections
+    /// with the learner's own wording, and fluent lines with audio on disk
+    /// (the bundled ringtone stands in for a saved line).
+    static func seedWeeklyTestWeek() {
+        WeeklyTestStore.shared.removeAll()
+        seedVocab()
+        let uid = UUID()
+        let ended = Date().addingTimeInterval(-2 * 3600)
+        let started = ended.addingTimeInterval(-900)
+        let lines: [(TurnRole, String)] = [
+            (.fluentSelf, "So how did the move go? Did you end up hiring movers?"),
+            (.user, "It was okay. I end up carrying most boxes myself."),
+            (.fluentSelf, "That sounds exhausting. Honestly, next time I'd push back on doing it alone."),
+            (.user, "Yeah, my back is still sore from it."),
+            (.fluentSelf, "Give yourself a day off. You can always catch up on the unpacking later."),
+            (.user, "I have to unpack the kitchen first, it's a chore."),
+            (.fluentSelf, "Kitchens are the worst part. Let me walk you through how I did mine."),
+        ]
+        var turns: [Turn] = []
+        for (i, line) in lines.enumerated() {
+            var t = Turn(id: UUID(), role: line.0, audioURL: nil, transcript: line.1,
+                         durationMs: line.0 == .user ? 9_000 : 3_500,
+                         timestamp: started.addingTimeInterval(Double(i) * 20), suggestion: nil)
+            if line.0 == .user, i == 1 {
+                t.suggestion = TurnSuggestion(alternative: "I ended up carrying most of the boxes myself.",
+                                              reason: "Past tense, and \"most of the\" before a noun.")
+            }
+            if line.0 == .fluentSelf,
+               let wav = Bundle.main.url(forResource: "ringtone", withExtension: "wav"),
+               let data = try? Data(contentsOf: wav) {
+                // The store reads mp3/m4a only; AVAudioPlayer sniffs the bytes.
+                TurnAudioStore.shared.save(data, turnId: t.id, fileExtension: "mp3")
+            }
+            turns.append(t)
+        }
+        var summary = SessionSummary(phrasesUsed: [
+            PhraseFeedback(userSaid: "my back is still sore from it",
+                           fluentAlternative: "my back is still sore from all that lifting",
+                           reason: "Name what caused it."),
+        ], newPatternsDetected: [], suggestedDrills: [],
+           overallNote: "Relaxed and clear.", scorecard: sampleScorecard)
+        summary.expressionsOffered = ["end up", "push back on", "catch up on", "walk you through"]
+        summary.expressionsUsed = ["a chore"]
+        let session = Session(id: UUID(), userId: uid, targetLanguage: "en", mode: .conversation,
+                              topic: nil, startedAt: started, endedAt: ended,
+                              turns: turns, summary: summary, origin: .free)
+        SessionStore.shared.save(session)
+        for turn in turns where turn.suggestion != nil {
+            DrillStore.shared.seed(DrillCard(
+                sourcePhrase: turn.transcript, targetPhrase: turn.suggestion!.alternative,
+                reason: turn.suggestion!.reason, createdAt: ended, lastReviewedAt: nil,
+                nextReviewAt: ended.addingTimeInterval(86_400), box: 0,
+                sourceSessionId: session.id, sourceTurnId: turn.id))
+        }
+        DrillStore.shared.seed(DrillCard(
+            sourcePhrase: "I have to unpack the kitchen first, it's a chore.",
+            targetPhrase: "I have to unpack the kitchen first. It's such a chore.",
+            reason: "Two sentences read better out loud.", createdAt: ended, lastReviewedAt: nil,
+            nextReviewAt: ended.addingTimeInterval(86_400), box: 0,
+            sourceSessionId: session.id, sourceTurnId: turns[5].id))
+        VocabStore.shared.addStudying("chore")
+        VocabStore.shared.addStudying("exhausting")
+    }
+
+    /// Two finished weekly tests, each with misses, inside the month that
+    /// the monthly paper collects from.
+    static func seedMonthOfMisses() {
+        WeeklyTestStore.shared.removeAll()
+        let schedule = WeeklyTestSettings.shared.schedule
+        let opening = schedule.monthOpening()
+        for weeksBack in [1, 2] {
+            let at = opening.addingTimeInterval(Double(-weeksBack) * 7 * 86_400 + 3_600)
+            let items: [WeeklyTestItem] = [
+                .init(id: UUID(), kind: .meaning, prompt: "Making you feel very tired.",
+                      answer: "exhausting", options: ["thrilling", "exhausting", "soothing", "spare"]),
+                .init(id: UUID(), kind: .gap, prompt: "Honestly, next time I'd ______ doing it alone.",
+                      answer: "push back on", options: ["end up", "push back on", "catch up on", "walk you through"]),
+                .init(id: UUID(), kind: .build, prompt: "I end up carrying most boxes myself.",
+                      answer: "I ended up carrying most of the boxes myself.",
+                      options: ["most", "I", "myself.", "ended", "the", "up", "boxes", "carrying", "of", "end"]),
+                .init(id: UUID(), kind: .meaning, prompt: weeksBack == 1 ? "A task you have to do regularly and find tedious." : "In a careless or lazy way.",
+                      answer: weeksBack == 1 ? "chore" : "slackly",
+                      options: weeksBack == 1 ? ["chore", "errand", "hobby", "shift"] : ["slackly", "briskly", "neatly", "gladly"]),
+                .init(id: UUID(), kind: .speak, prompt: "", answer: "Give yourself a day off.", options: []),
+            ]
+            var test = WeeklyTest(id: UUID(), targetLanguage: "en",
+                                  periodStart: at.addingTimeInterval(-7 * 86_400), periodEnd: at,
+                                  createdAt: at, items: items)
+            test.startedAt = at
+            for (i, item) in items.enumerated() {
+                let ok = i == 1 && weeksBack == 2
+                test.answers.append(WeeklyTestAnswer(itemId: item.id, given: ok ? item.answer : "",
+                                                     correct: ok, at: at.addingTimeInterval(Double(i) * 30)))
+            }
+            test.finishedAt = at.addingTimeInterval(600)
+            test.appliedAt = test.finishedAt
+            WeeklyTestStore.shared.save(test)
+        }
+    }
+
+    /// A finished test on file for this week, so the result page and the
+    /// Today card's done row render.
+    static func seedFinishedWeeklyTest() {
+        WeeklyTestStore.shared.removeAll()
+        let now = Date()
+        var items: [WeeklyTestItem] = [
+            .init(id: UUID(), kind: .meaning, prompt: "A task you have to do regularly and find tedious.",
+                  answer: "chore", options: ["chore", "errand", "hobby", "shift"]),
+            .init(id: UUID(), kind: .meaning, prompt: "Making you feel very tired.",
+                  answer: "exhausting", options: ["thrilling", "exhausting", "soothing", "spare"]),
+            .init(id: UUID(), kind: .gap, prompt: "Honestly, next time I'd ______ doing it alone.",
+                  answer: "push back on", options: ["end up", "push back on", "catch up on", "walk you through"]),
+            .init(id: UUID(), kind: .gap, prompt: "You can always ______ the unpacking later.",
+                  answer: "catch up on", options: ["catch up on", "push back on", "end up", "walk you through"]),
+            .init(id: UUID(), kind: .build, prompt: "I end up carrying most boxes myself.",
+                  answer: "I ended up carrying most of the boxes myself.",
+                  options: ["most", "I", "myself.", "ended", "the", "up", "boxes", "carrying", "of", "end"]),
+            .init(id: UUID(), kind: .listen, prompt: "", answer: "Give yourself a day off.",
+                  options: ["Give yourself a day off.", "Kitchens are the worst part.", "That sounds exhausting."]),
+            .init(id: UUID(), kind: .build, prompt: "my back is still sore from it",
+                  answer: "my back is still sore from all that lifting",
+                  options: ["sore", "from", "my", "all", "back", "that", "is", "lifting", "still", "it"]),
+        ]
+        let wrong: Set<Int> = [1, 4]
+        var test = WeeklyTest(id: UUID(), targetLanguage: "en",
+                              periodStart: now.addingTimeInterval(-7 * 86_400), periodEnd: now,
+                              createdAt: now.addingTimeInterval(-600), items: items)
+        test.startedAt = now.addingTimeInterval(-600)
+        for (i, item) in items.enumerated() {
+            let ok = !wrong.contains(i)
+            let given = ok ? item.answer : (item.kind == .build ? "I end up carrying most of the boxes myself." : item.options.first { $0 != item.answer } ?? "")
+            test.answers.append(WeeklyTestAnswer(itemId: item.id, given: given, correct: ok,
+                                                 at: now.addingTimeInterval(Double(i) * 30 - 600)))
+        }
+        test.bestStreak = 3
+        test.finishedAt = now.addingTimeInterval(-60)
+        test.appliedAt = test.finishedAt
+        items.removeAll()
+        WeeklyTestStore.shared.save(test)
+    }
+
+    static func seedSessions(scored: Bool = false, beginner: Bool = false) {
         let uid = UUID()
         for day in 0..<3 {
             let ended = Date().addingTimeInterval(Double(-day) * 86_400 + 3_600)
             let started = ended.addingTimeInterval(-600)
-            let turns = [
+            // beginner: one-clause present-tense replies with no slips — the
+            // shape that read ≈C2 before grammar range existed.
+            let turns = beginner ? [
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "How are you today?", durationMs: 1800,
+                     timestamp: started, suggestion: nil),
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "I am fine. I am tired.", durationMs: 4_000,
+                     timestamp: started.addingTimeInterval(4), suggestion: nil),
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "What did you do?", durationMs: 1500,
+                     timestamp: started.addingTimeInterval(10), suggestion: nil),
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "I go to work. I eat lunch. I like pasta.", durationMs: 6_000,
+                     timestamp: started.addingTimeInterval(14), suggestion: nil)
+            ] : [
                 Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
                      transcript: "So — how did the interview go?", durationMs: 3200,
                      timestamp: started, suggestion: nil),
@@ -1318,8 +1683,9 @@ enum DebugCapture {
             // empty state.
             var summary = scored ? SessionSummary(
                 phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
-                overallNote: "Confident, natural talk — tighten a few articles.",
-                scorecard: sampleScorecard) : nil
+                overallNote: beginner ? "Clear and simple — try linking two ideas."
+                                      : "Confident, natural talk — tighten a few articles.",
+                scorecard: beginner ? beginnerScorecard : sampleScorecard) : nil
             // Phrases the fluent self offered — the library and the daily deck
             // read these off the session, so a capture run needs them to show
             // the heard-in-a-call rows at all.
@@ -1486,6 +1852,10 @@ private struct DaySpentCaptureHost: View {
     let canUpgrade: Bool
     var allowance: Int? = nil
     var renewsOn: String = "Sep 14"
+    var isTrial: Bool = false
+    var planMinutesAfterTrial: Int? = nil
+    var invite: InviteOffer? = nil
+    var canTopUp: Bool = false
     @State private var showing = false
 
     var body: some View {
@@ -1494,6 +1864,10 @@ private struct DaySpentCaptureHost: View {
                 DailyAllowanceSheet(kind: kind, canUpgrade: canUpgrade,
                                     allowance: allowance ?? (kind == .talk ? 150 : 60),
                                     renewsOn: renewsOn,
+                                    isTrial: isTrial,
+                                    planMinutesAfterTrial: planMinutesAfterTrial,
+                                    canTopUp: canTopUp,
+                                    invite: invite,
                                     onReview: {}, onUpgrade: {})
             }
             .onAppear {

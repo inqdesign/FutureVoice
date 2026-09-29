@@ -30,14 +30,19 @@ struct PlanPageView: View {
     /// Screenshot harness only — renders this instead of fetching, so the page
     /// can be reviewed without a signed-in account carrying real usage.
     var previewUsage: UsageBreakdown? = nil
+    /// Screenshot harness only — the invite offer the page would have
+    /// fetched.
+    var previewInvite: InviteOffer? = nil
 
     @State private var usage = UsageBreakdown()
+    @State private var invite: InviteOffer?
 
     var body: some View {
         List {
             Section {
                 row(icon: "bolt.fill",
-                    title: explain("Talk time"),
+                    title: account.isTrialing ? explain("Trial talk time") : explain("Talk time"),
+                    subtitle: trialPoolSubtitle,
                     value: talkValue)
                 // Invite minutes are time ON TOP of the pool, so they are
                 // their own row and never part of the figure above — added in,
@@ -47,8 +52,17 @@ struct PlanPageView: View {
                 // plan cannot run out, so nothing is waiting to be topped up.
                 if !isUncappedTalk, account.hasBonusMinutes {
                     row(icon: "gift.fill",
-                        title: explain("Invite minutes"),
+                        title: explain("Extra minutes"),
+                        subtitle: explain("Invite minutes and packs you bought, spent before the month's pool"),
                         value: explain("+\(account.bonusMinutes) min"))
+                }
+                // A hundred minutes at a time, for a month that ran short —
+                // what replaced "unlimited" (2026-09-26). Subscribers only:
+                // a free account is offered the plans, not a pack. Not in a
+                // trial either, whose pool is the trial's and converts on
+                // its own date.
+                if account.isEntitled, !isUncappedTalk, !account.isTrialing {
+                    TalkTopUpButton(prominent: false)
                 }
                 // Scenes are capped on EVERY tier — a scene plays itself, so a
                 // count is the only limit there is. A real limit is never
@@ -71,6 +85,13 @@ struct PlanPageView: View {
                 }
             } header: {
                 Text(account.isEntitled ? explain("This month") : explain("Left to spend"))
+            }
+
+            // Directly under the pool it answers, because that is where the
+            // question is asked: the same card three sections down is the
+            // invite row again, only taller.
+            if let offer = inviteCard {
+                Section { InviteMinutesCard(offer: offer) }
             }
 
             // The subscription itself, as the store bills it (2026-09-12):
@@ -149,12 +170,20 @@ struct PlanPageView: View {
                         title: explain("What uses talk time?"),
                         subtitle: explain("And what's always free"))
                 }
-                NavigationLink {
-                    InviteView()
-                } label: {
-                    row(icon: "gift",
-                        title: explain("Invite & earn talk time"),
-                        subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
+                // The invite is one row all month and the whole card once
+                // the pool is empty (the section above) — the same offer,
+                // said at the size of the question being asked. Never both:
+                // two invitations on one page is the page arguing with
+                // itself, and the card carries everything the row promised
+                // plus the action.
+                if inviteCard == nil {
+                    NavigationLink {
+                        InviteView()
+                    } label: {
+                        row(icon: "gift",
+                            title: explain("Invite & earn talk time"),
+                            subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
+                    }
                 }
             } footer: {
                 // Only where minutes actually run down. On an uncapped plan
@@ -170,6 +199,8 @@ struct PlanPageView: View {
         .navigationTitle("Usage")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            if let previewInvite { invite = previewInvite }
+            else if poolIsSpent { invite = await InviteOffer.load(for: account) }
             // Only an uncapped plan needs the ledger: every other tier's
             // number is the pool the server already reported.
             guard isUncappedTalk else { return }
@@ -178,15 +209,26 @@ struct PlanPageView: View {
         }
     }
 
-    /// Uncapped talk is decided by the TIER, never by the cap the server
-    /// reports. The deployed `talk_allowance` has no unlimited branch — it
-    /// hands every plan its `monthly_seconds` — so a Plus account was told it
-    /// had 1,795 of 1,800 minutes left, which is a pool that tier does not
-    /// have and a number nothing enforces. Same lesson as the paywall's
-    /// `isUncappedTalk`: read the plan id, and the client never waits on a
-    /// server deploy to be right about what it sold.
-    private var isUncappedTalk: Bool {
-        account.isPlusPlan || (account.isEntitled && account.monthlyCapSeconds == nil)
+    /// Uncapped talk is the SUBSCRIPTION's stamp as `talk_allowance` reports
+    /// it (nil cap on an entitled account), never the tier: since 2026-09-26
+    /// a Plus bought today is a 300-minute pool and only the rows sold before
+    /// keep no ceiling. (Until then this read the plan id, because the
+    /// deployed `talk_allowance` once lacked the unlimited branch and told a
+    /// Plus account it had 1,795 of 1,800 minutes left; the server has had
+    /// that branch since `20260904130000`.)
+    private var isUncappedTalk: Bool { account.isUncappedTalk }
+
+    /// Nothing left to talk with: this period's pool is gone and no invite
+    /// or bought minutes are standing in front of it. Under a minute counts
+    /// as spent — the page prints whole minutes, so 40 seconds left reads as
+    /// zero either way, and the wall is one sentence away.
+    /// The card, or nil — read by both the section that draws it and the
+    /// row it stands in for, so the page can never show two invitations.
+    private var inviteCard: InviteOffer? { poolIsSpent ? invite : nil }
+
+    private var poolIsSpent: Bool {
+        account.isEntitled && !isUncappedTalk
+            && account.minutesRemaining == 0 && account.bonusSeconds <= 0
     }
 
     /// The one number this tier is owed.
@@ -223,6 +265,14 @@ struct PlanPageView: View {
     /// ends on its date, and telling that learner it "becomes paid" is the
     /// opposite promise — the cancel they just made reads as not having
     /// worked.
+    /// Under the trial's fraction: what the plan itself gives once the trial
+    /// converts, so 35 minutes is never read as the plan's size.
+    private var trialPoolSubtitle: String? {
+        guard account.isTrialing, !account.cancelAtPeriodEnd,
+              let seconds = account.planMonthlySeconds else { return nil }
+        return explain("\(seconds / 60) min a month once your plan starts")
+    }
+
     private var refillTitle: String {
         if account.cancelAtPeriodEnd {
             return account.isTrialing

@@ -95,11 +95,22 @@ enum VoicemailEngine {
         return clipped
     }
 
-    /// ~25 s of speech at a natural pace. Nobody listens to a longer
-    /// voicemail, and the learner is meant to answer a question, not sit
-    /// through a monologue. Enforced twice: here in characters, and again on
-    /// the PCM in `synthesizeVoicemail`.
-    static let maxScriptCharacters = 260
+    /// ~25 s of speech at a natural pace, at speed 1.0. Nobody listens to a
+    /// longer voicemail, and the learner is meant to answer a question, not
+    /// sit through a monologue. Enforced twice: here in characters, and again
+    /// on the PCM in `synthesizeVoicemail`.
+    static let baseScriptCharacters = 260
+
+    /// The budget the script is written to and trimmed to. The learner's
+    /// speech speed (Me → Voice, `SpeechSpeed`) stretches the audio — Normal
+    /// 0.9 is +13%, Slower 0.8 is +27% — while the OS's 30 s ceiling and the
+    /// hard cut below do not move, so 260 characters at Slower would be cut
+    /// mid-sentence and lose the question at the END, which is the whole
+    /// pull. Fewer characters, same seconds. Read at generation time; the
+    /// prompt and the trim see the same number within one call.
+    static var maxScriptCharacters: Int {
+        Int(Double(baseScriptCharacters) * SpeechSpeed.current.multiplier)
+    }
 
     /// Hard cut for the spoken audio, in case a model overruns the character
     /// budget anyway.
@@ -131,9 +142,7 @@ enum VoicemailEngine {
         case .answered:
             grounding.append("Last time you called, they picked up and you talked.")
         case .declined:
-            grounding.append(c.lastCallbacks >= DailyCallScheduler.maxCallbacks
-                ? "Last time you called, they kept saying they couldn't talk, and you gave up for the day."
-                : "Last time you called, they said they couldn't talk right then.")
+            grounding.append("Last time you called, they said they couldn't talk right then.")
         case .missed:
             grounding.append("Last time you called, they never picked up.")
         case nil:
@@ -210,17 +219,23 @@ enum VoicemailEngine {
     /// no gain. Returns nil on any failure; the caller then rings on the
     /// default sound rather than not ringing at all.
     ///
-    /// Model: `fidelityModelId`. This is the surface where "that's my voice"
-    /// either lands or doesn't, and it fires at most once per day per learner
-    /// on ~260 characters — the 2x character cost is a rounding error against
-    /// a single conversation turn.
+    /// Model: turbo, like every other repeating surface (2026-09-26). It ran
+    /// `fidelityModelId` on the argument that a voicemail is where "that's my
+    /// voice" lands, and that it fires at most once a day — but the founder
+    /// compared the two models on their own clone that day and turbo held up
+    /// (`scripts/tts-model-probe.sh`), so there is nothing left to buy. The
+    /// "once a day" was also not true: the script is re-synthesized at every
+    /// SESSION end (`refreshDailyCall(force: true)`), so three talks in a day
+    /// meant three voicemails and one ring. Measured over the launch window
+    /// this path was 8.6% of all ElevenLabs credits excluding the founder's
+    /// own account, and half of that was the 2x.
     @MainActor
     static func synthesizeVoicemail(script: String, voiceId: String) async -> Data? {
         do {
             let audio = try await ElevenLabsClient.shared.synthesizeStreaming(
                 voiceId: voiceId,
                 text: script,
-                modelId: ElevenLabsClient.fidelityModelId,
+                modelId: ElevenLabsClient.cloneModelId,
                 purpose: "daily-call",
                 onPCMChunk: { _, _ in }   // nothing to play — we only want the bytes
             )

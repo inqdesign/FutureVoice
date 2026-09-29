@@ -97,13 +97,6 @@ struct RootTabView: View {
                                  onClose: { callInbox.pendingAnswer = nil })
                     .environmentObject(appState)
             }
-            // Declined from the ALARM, which has no room to ask when to try
-            // again — so the app opens straight onto the question. (The
-            // notification fallback asks inline and never lands here.)
-            .sheet(item: $callInbox.pendingCallbackChoice) { plan in
-                DailyCallCallbackSheet(plan: plan,
-                                       onDone: { callInbox.pendingCallbackChoice = nil })
-            }
 
             // Opaque cover that snaps in ahead of the call's fade so the home
             // (and tab bar) don't bleed through the half-transparent call
@@ -163,9 +156,14 @@ struct RootTabView: View {
                 showingAgeCheck = true
             } else {
                 Task {
+                    // Asked before the check, which marks the install shown:
+                    // a repeat is time ADDED to the pool, and the two read
+                    // nothing alike in the funnel.
+                    let repeatWelcome = FreeTalkWelcome.hasBeenShown()
                     if let minutes = await FreeTalkWelcome.minutesToAnnounce() {
-                        FreeTalkWelcome.markShown()
-                        Analytics.capture("free_talk_welcome_shown", ["minutes": minutes])
+                        Analytics.capture("free_talk_welcome_shown",
+                                          ["minutes": minutes,
+                                           "kind": repeatWelcome ? "topup" : "first"])
                         welcomeMinutes = minutes
                         showingWelcome = true
                     }
@@ -200,7 +198,7 @@ struct RootTabView: View {
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
             // Nothing about this learner reaches the pool until they have
             // seen the paragraph a stranger's phone would speak as "them".
-            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona) {
+            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona, language: appState.targetLanguage) {
                 showingIntroPreview = true
             }
         }
@@ -220,6 +218,7 @@ struct RootTabView: View {
         .onAppear { consumeReviewTap() }
         .onChange(of: callInbox.pendingReview) { _, _ in consumeReviewTap() }
         .onChange(of: callInbox.pendingReviewItem) { _, _ in consumeReviewTap() }
+        .onChange(of: callInbox.pendingWeeklyTest) { _, _ in consumeReviewTap() }
         // In-app jumps to Practice (Home's Practice row) stage a route instead
         // of opening a URL — see ConversationHome.practiceProgressRow. Bring
         // the tab along; PracticeTab consumes the route once it's up.
@@ -253,6 +252,9 @@ struct RootTabView: View {
                 // things you set aside are back").
                 selection = .practice
                 appState.pendingPracticeRoute = .review
+            case "weeklytest":
+                selection = .practice
+                appState.pendingPracticeRoute = .weeklyTest
             case "book":
                 // Continue widget: open a specific book's detail page.
                 let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -373,6 +375,12 @@ struct RootTabView: View {
     }
 
     private func consumeReviewTap() {
+        if callInbox.pendingWeeklyTest {
+            callInbox.pendingWeeklyTest = false
+            selection = .practice
+            appState.pendingPracticeRoute = .weeklyTest
+            return
+        }
         if let item = callInbox.pendingReviewItem {
             callInbox.pendingReviewItem = nil
             selection = .practice
@@ -399,6 +407,7 @@ struct RootTabView: View {
         // round trip, and a second tap inside that window would otherwise
         // mount two calls.
         guard freeTalkCallId == nil, !freeTalkClosing, !pillDocked else { return }
+        RealtimeTalkClient.step("ui: ring tapped — morph starts")
         // Stage 0 — the proxy mounts ON the ring's pose (the home ring hides
         // itself the same tick), and the backdrop starts covering the home.
         appState.talkRingProxyActive = true
@@ -418,6 +427,7 @@ struct RootTabView: View {
             // cost can't stutter an animation that has already finished.
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard pillDocked, !freeTalkClosing else { return }   // closed mid-open
+            RealtimeTalkClient.step("ui: call view mounting")
             withAnimation(.easeOut(duration: 0.2)) { freeTalkCallId = UUID() }
             // Stage 3 — proxy hands off to the call's own identical mic pill.
             try? await Task.sleep(nanoseconds: 250_000_000)

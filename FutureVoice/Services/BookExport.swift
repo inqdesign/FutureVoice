@@ -27,9 +27,14 @@ struct BookDocument: Sendable {
         /// The learner's own side — indented differently so a printed
         /// dialogue is still scannable without colour or bubbles.
         var isUser: Bool
-        /// The coached rewrite of what they said, when there is one.
+        /// The coached rewrite of what they said, when there is one — since
+        /// 2026-09-27 the WHOLE turn re-said.
         var correction: String? = nil
         var correctionNote: String = ""
+        /// The grammar slips inside that turn ("was → now"), printed under
+        /// the rewrite. The book has to carry everything the replay shows
+        /// (user decision, same day), and paper is where a learner annotates.
+        var fixes: [String] = []
     }
 
     /// One study item: the thing to learn, plus whatever the app knows about
@@ -219,14 +224,30 @@ extension BookDocument {
                 (CarryoverDetector.normalized($0.fluentAlternative), $0.userSaid)
             },
             uniquingKeysWith: { first, _ in first })
+        // The card's own pair (`DrillStore.cardPair`), keyed by the text the
+        // curriculum item carries — the paper copy and the Drill chapter
+        // must quote the same sentence.
+        let saidByFix = Dictionary(
+            session.turns.flatMap { turn in
+                (turn.suggestion?.fixes ?? []).map { fix in
+                    let pair = DrillStore.cardPair(for: fix, in: turn.transcript)
+                    return (CarryoverDetector.normalized(pair.target), pair.source)
+                }
+            },
+            uniquingKeysWith: { first, _ in first })
         let corrections: [Entry] = curriculum.corrections.map { line in
             var bytes = line.id.uuid
             bytes.0 ^= 0xFF
             // Quote the SENTENCE the correction rewrites, not the whole turn —
             // same trim the Drill chapter applies (a minute-long turn struck
             // through in full reads as "everything you said was wrong").
+            let key = CarryoverDetector.normalized(line.text)
+            if let was = saidByFix[key] {
+                return Entry(text: line.text, note: line.note, original: was,
+                             mastered: line.masteredAt != nil)
+            }
             let said = session.turns.first { $0.id == UUID(uuid: bytes) }?.transcript
-                ?? saidByPhrase[CarryoverDetector.normalized(line.text)]
+                ?? saidByPhrase[key]
             return Entry(text: line.text, note: line.note,
                          original: said.map {
                              DrillStore.relevantFragment(of: $0, matching: line.text)
@@ -248,7 +269,11 @@ extension BookDocument {
                          text: turn.transcript,
                          isUser: turn.role == .user,
                          correction: turn.suggestion?.alternative,
-                         correctionNote: turn.suggestion?.reason ?? "")
+                         correctionNote: turn.suggestion?.reason ?? "",
+                         fixes: (turn.suggestion?.fixes ?? []).map { fix in
+                             fix.why.isEmpty ? "\(fix.was) → \(fix.now)"
+                                             : "\(fix.was) → \(fix.now) · \(fix.why)"
+                         })
                 }
             ))
         }
@@ -309,6 +334,7 @@ extension BookDocument {
                     out.append("> → \(c)")
                     if !line.correctionNote.isEmpty { out.append("> \(line.correctionNote)") }
                 }
+                for fix in line.fixes { out.append(">   ✗ \(fix)") }
             }
         }
         return out.joined(separator: "\n") + "\n"
@@ -368,6 +394,9 @@ extension BookDocument {
                     if !line.correctionNote.isEmpty {
                         body += "<p class=\"note\">\(esc(line.correctionNote))</p>"
                     }
+                }
+                for fix in line.fixes {
+                    body += "<p class=\"note\">✗ \(esc(fix))</p>"
                 }
                 body += "</div>"
             }

@@ -63,6 +63,18 @@ targets:
           - CloudKit
         com.apple.developer.icloud-container-identifiers:
           - $(ICLOUD_CONTAINER)
+        # Silent CloudKit pushes: the other device's talk lands on this one's
+        # shelf without waiting for it to be opened (`SyncPush`). Nothing is
+        # ever shown — `shouldSendContentAvailable` only — so this never asks
+        # the learner for notification permission.
+        #
+        # The value is per config, but the SIGNING PROFILE has the last word:
+        # measured 2026-09-25, a Release build signed with the team's
+        # development profile came out `development` whatever this says, and
+        # an App Store archive gets `production` from the distribution
+        # profile the same way. So this documents intent and keeps an archive
+        # from having to be rewritten — it is not the switch.
+        aps-environment: $(APS_ENVIRONMENT)
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -83,10 +95,12 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.dev
           APP_DISPLAY_NAME: nawana dev
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice.dev
+          APS_ENVIRONMENT: development
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
           APP_DISPLAY_NAME: nawana
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice
+          APS_ENVIRONMENT: production
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig

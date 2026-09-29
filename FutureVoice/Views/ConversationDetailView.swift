@@ -42,6 +42,11 @@ struct ConversationDetailView: View {
     @State private var drillCount = 0
     @State private var showingContinue = false
     @State private var showingTranscript = false
+    @State private var showingSayItAgain = false
+    /// The talk as lines to read back — empty when nothing in it can be
+    /// spoken (every user turn misheard, or a talk with no user turns),
+    /// which is the only case where the third button has nothing to open.
+    @State private var sayItAgainScript: [SayItAgainScript.Step] = []
     @State private var wordSheet: WordRef?
     /// An expression from this talk, opened as its card. Words in this book
     /// have always been tappable; expressions were static text with a
@@ -115,6 +120,12 @@ struct ConversationDetailView: View {
         }
         .navigationDestination(isPresented: $showingTranscript) {
             TalkTranscriptView(session: session)
+                .environmentObject(appState)
+        }
+        // A cover, not a push: it owns the mic for the length of a run, and a
+        // swipe-back mid-take would leave the recognizer live.
+        .fullScreenCover(isPresented: $showingSayItAgain, onDismiss: refresh) {
+            SayItAgainView(source: .talk(session))
                 .environmentObject(appState)
         }
         .fullScreenCover(isPresented: $showingContinue, onDismiss: refresh) {
@@ -197,7 +208,11 @@ struct ConversationDetailView: View {
 
     private var coverBlock: some View {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 14) {
+                // The cover's avatar sits at the TOP of the title block, not
+                // centred against it: a two-line situation with a "with …"
+                // line under it is three lines tall, and a centred 56pt
+                // circle drifted to the middle of them.
+                HStack(alignment: .top, spacing: 14) {
                     ZStack {
                         Circle().fill(Color.accentColor.opacity(0.15))
                             .frame(width: 56, height: 56)
@@ -250,6 +265,21 @@ struct ConversationDetailView: View {
                     .buttonStyle(.bordered)
                 }
                 .controlSize(.large)
+                // The third door, on its own row: a run-through is a longer
+                // act than either button above it, and three large labels in
+                // one row don't fit a narrow phone in any language. No gate —
+                // nothing here is synthesized or metered (see
+                // `SayItAgainView`).
+                if sayItAgainScript.contains(where: \.isSpoken) {
+                    Button {
+                        showingSayItAgain = true
+                    } label: {
+                        Label("Say it again", systemImage: "text.viewfinder")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
             }
             .padding(20)
     }
@@ -672,6 +702,19 @@ struct ConversationDetailView: View {
                 (CarryoverDetector.normalized($0.fluentAlternative), $0.userSaid)
             },
             uniquingKeysWith: { first, _ in first })
+        // A fix quotes the learner itself, so it needs no trimming — the
+        // pair shown is the card's own (`DrillStore.cardPair`), keyed by the
+        // same text the curriculum item carries. The turn rides along
+        // because a fix item's id can't be flipped back to it: index > 0
+        // ids differ from the turn in a second byte.
+        let fixCards: [String: (said: String, turnId: UUID)] = Dictionary(
+            session.turns.flatMap { turn in
+                (turn.suggestion?.fixes ?? []).map { fix in
+                    let pair = DrillStore.cardPair(for: fix, in: turn.transcript)
+                    return (CarryoverDetector.normalized(pair.target), (pair.source, turn.id))
+                }
+            },
+            uniquingKeysWith: { first, _ in first })
         return curriculum.corrections.map { line in
             var bytes = line.id.uuid
             bytes.0 ^= 0xFF
@@ -683,8 +726,13 @@ struct ConversationDetailView: View {
             // — the same reason `ingest` and the drill deck both trim this
             // side.
             let turn = session.turns.first { $0.id == turnId }
-            let said = turn?.transcript
-                ?? saidByPhrase[CarryoverDetector.normalized(line.text)]
+            let key = CarryoverDetector.normalized(line.text)
+            if let fix = fixCards[key] {
+                return CorrectionItem(id: line.id, original: fix.said, fluent: line.text,
+                                      reason: line.note, sourceTurnId: fix.turnId,
+                                      masteredAt: line.masteredAt)
+            }
+            let said = turn?.transcript ?? saidByPhrase[key]
             return CorrectionItem(
                 id: line.id,
                 original: said.map { DrillStore.relevantFragment(of: $0, matching: line.text) },
@@ -700,12 +748,18 @@ struct ConversationDetailView: View {
     /// cards the ingest filtered (and it stays a card from then on).
     private func openCard(for item: CorrectionItem) {
         let cards = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }
+        let needle = CarryoverDetector.normalized(item.fluent)
+        // Text first: a turn with several fixes minted several cards under
+        // ONE turn id, so the turn alone would open whichever came first.
+        if let hit = cards.first(where: { CarryoverDetector.normalized($0.targetPhrase) == needle }) {
+            enrichmentCard = hit
+            return
+        }
         if let turnId = item.sourceTurnId,
            let hit = cards.first(where: { $0.sourceTurnId == turnId }) {
             enrichmentCard = hit
             return
         }
-        let needle = CarryoverDetector.normalized(item.fluent)
         if let hit = cards.first(where: {
             let target = CarryoverDetector.normalized($0.targetPhrase)
             return target == needle || needle.contains(target)
@@ -980,6 +1034,10 @@ struct ConversationDetailView: View {
         archivedAt = SessionStore.shared.load().first { $0.id == session.id }?.archivedAt
             ?? session.archivedAt
         drillCount = cards.filter { $0.sourceSessionId == session.id }.count
+        // Held rather than computed in the body: the cover redraws on every
+        // mastery change, and the script walks every turn against every
+        // summary phrase fix.
+        sayItAgainScript = SayItAgainScript.build(session: session)
     }
 
     /// Run the analysis this talk never got. Same engine, same idempotency
@@ -1002,6 +1060,7 @@ struct ConversationDetailView: View {
             regenerateError = error.localizedDescription
             Telemetry.log("talk_summary_error", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "detail": error.decodeDetail ?? "",
                 "turns": String(session.turns.count),
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
                 "retry": "1",
@@ -1461,6 +1520,15 @@ private struct TranscriptRow: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text(s.reason).font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if let fixes = s.fixes, !fixes.isEmpty {
+                Divider().padding(.vertical, 2)
+                // The same word and glyph the scorecard's grammar page uses,
+                // so "this was wrong" reads as one thing wherever it is met.
+                Label("Grammar", systemImage: "checkmark.seal")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                TurnFixRows(fixes: fixes)
+            }
             Button { showingSuggestionShadow = true } label: {
                 Label("Shadow", systemImage: "waveform.badge.mic")
             }
@@ -1548,6 +1616,53 @@ private struct TranscriptRow: View {
             reasonNative = t
             reasonLoading = false
             if t == nil { reasonShowing = false }
+        }
+    }
+}
+
+/// The grammatical slips inside one turn, listed under the rewrite.
+///
+/// The rewrite above answers "how would a fluent speaker say all this?"; this
+/// answers "what did I actually get wrong?", and a learner needs both — the
+/// first is the line they should be able to say, the second is the thing they
+/// can fix. It borrows `GrammarReviewView`'s ✗/✓ grammar deliberately, so
+/// "this was wrong" looks the same wherever it is met.
+struct TurnFixRows: View {
+    let fixes: [TurnFix]
+
+    var body: some View {
+        if !fixes.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(fixes) { fix in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: "xmark")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.red)
+                            Text(fix.was)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .strikethrough()
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: "checkmark")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                            Text(fix.now)
+                                .font(.caption)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if !fix.why.isEmpty {
+                            Text(fix.why)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .padding(.leading, 18)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
         }
     }
 }

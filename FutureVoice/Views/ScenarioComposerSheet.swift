@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// The ONE scenario creator — used everywhere (Talk's "+", Watch's flows).
 ///
@@ -21,8 +22,17 @@ struct ScenarioComposerSheet: View {
     /// default partner is a character.
     enum Host { case talk, watch }
 
+    /// Which door the sheet opens on. `.browse` is the Form with the
+    /// category grid (the original composer); `.custom` is the one-line BOX
+    /// — text, the material attached as chips above it, and one tool row
+    /// (attach · the other person · the CTA) — with no category grid at all.
+    /// Watch's "Your own situation" opens `.custom`; "Common situations" and
+    /// every other caller open `.browse`. Editing always uses the Form.
+    enum Mode { case browse, custom }
+
     var person: Counterpart?
     var host: Host = .talk
+    var mode: Mode = .browse
     /// Pre-select a category on open (Watch's "Likely situations" cards jump
     /// straight into it, so its AI ideas load immediately).
     var initialCategory: Category? = nil
@@ -98,6 +108,25 @@ struct ScenarioComposerSheet: View {
     @State private var summary = ""
     @State private var confirmingDelete = false
 
+    /// The material attached to this situation — links and files picked
+    /// from the Files app (`ScenarioBrief.Source`). Bytes go to
+    /// `BriefAttachmentCache` at the pick; nothing is copied. Read ONCE,
+    /// before the first scene, in `SceneWatchView`.
+    @State private var sources: [ScenarioBrief.Source] = []
+    @State private var attachError: String?
+    @State private var importingFile = false
+    @State private var pickingPhoto = false
+    @State private var photoPick: PhotosPickerItem?
+    @State private var showingCamera = false
+    @State private var addingLink = false
+    @State private var linkText = ""
+    /// Relationship-grounded ideas for the attached person, for the reel.
+    /// Held here as well as on the counterpart because a Find-people
+    /// stranger is not in `CounterpartStore` until a scenario is actually
+    /// built with them — caching onto them would promote them early.
+    @State private var personIdeas: [SuggestedTopic] = []
+    @State private var loadingPersonIdeas = false
+
     struct Category: Identifiable, Hashable {
         var id: String { title.lowercased() }
         let title: String
@@ -131,16 +160,50 @@ struct ScenarioComposerSheet: View {
     private var effectiveCustomIcon: String { customEmoji.isEmpty ? customIcon : customEmoji }
     private var canDrillDeeper: Bool { !path.isEmpty && path.count < Self.maxDepth }
 
+    /// The box replaces the Form only for a NEW situation opened through
+    /// the custom door; editing keeps the Form, where the delete row and the
+    /// category breadcrumb live.
+    private var usesBox: Bool { mode == .custom && editing == nil }
+
+    /// The assembled-scenario window, shown only once there is something in
+    /// it. The BROWSE door's whole job is "pick a category", and until
+    /// 2026-09-26 it opened on an EMPTY field headed "Your scenario" above
+    /// the grid — asking the learner to write the thing they had just chosen
+    /// not to write, with the categories pushed below it. Writing has its own
+    /// door now (`Mode.custom`), so this one leads with the grid and the
+    /// window appears when a pick fills it. A leaf stays editable either way,
+    /// and editing a saved scenario always has content, so it always shows.
+    private var showsOverview: Bool { editing != nil }
+
     var body: some View {
         NavigationStack {
-            Form {
-                if let p = person { personHeader(p) }
-                overviewSection
-                choiceSection
-                if person == nil { attachSection }
-                if onDelete != nil { deleteSection }
+            Group {
+                if usesBox {
+                    customBox
+                } else {
+                    Form {
+                        if let p = person { personHeader(p) }
+                        if showsOverview { overviewSection }
+                        // Browsing is tap-tap-tap: category, area, scenario.
+                        // The path needs somewhere to live so a step can be
+                        // undone, but nothing here asks the learner to write
+                        // — the writing door is the other one, and a saved
+                        // scenario opens with a full editable field.
+                        if !showsOverview && !path.isEmpty { breadcrumbSection }
+                        choiceSection
+                        if person == nil { attachSection }
+                        // Attaching belongs to the "your own situation" door.
+                        // The browse door is for PICKING one, and an attach
+                        // row there offered a posting for a scenario the
+                        // learner had not written. Editing keeps the section
+                        // when there is material on the scenario to manage.
+                        if host == .watch && !sources.isEmpty { materialSection }
+                        if onDelete != nil { deleteSection }
+                    }
+                }
             }
-            .navigationTitle(editing == nil ? Text("New scenario") : Text("Edit scenario"))
+            .navigationTitle(usesBox ? Text("Your situation")
+                             : (editing == nil ? Text("New scenario") : Text("Edit scenario")))
             .navigationBarTitleDisplayMode(.inline)
             // The plans, when the CTA can't be paid for. Presented from this
             // sheet, never from the host behind it: a sheet raised underneath
@@ -154,6 +217,7 @@ struct ScenarioComposerSheet: View {
             // A vertical TextField in a Form has no built-in way to dismiss the
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
+            .task(id: person?.id) { await ensurePersonIdeas() }
             .onAppear {
                 // TLS handshake + auth-token refresh off the critical path, so
                 // the first real ideas call isn't also paying for a cold radio.
@@ -165,6 +229,7 @@ struct ScenarioComposerSheet: View {
                     programmaticSituation = true
                     situation = e.environment
                     summary = e.summary ?? ""
+                    sources = e.brief?.sources ?? []
                     customMode = true
                     if let cat = e.category {
                         path = [Crumb(label: cat, scenario: "",
@@ -207,6 +272,11 @@ struct ScenarioComposerSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
+                // The CTA lives in the HEADER on both doors. It sat inside
+                // the box on the custom one until 2026-09-26, where its play
+                // glyph never sat right beside a mic circle and its label
+                // was one more thing making the row's width depend on the
+                // language. One primary button, one place, both doors.
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { commit() } label: {
                         Label(ctaTitle, systemImage: ctaIcon).labelStyle(.titleAndIcon)
@@ -219,7 +289,401 @@ struct ScenarioComposerSheet: View {
                     Button("Done") { situationFocused = false }
                 }
             }
+            // Attachments. The Files picker hands over a security-scoped
+            // URL; `ScenarioAttachmentReader` reads it there and then, so
+            // the file is never copied into the app.
+            .fileImporter(isPresented: $importingFile,
+                          allowedContentTypes: ScenarioAttachmentReader.allowedTypes,
+                          allowsMultipleSelection: true) { result in
+                switch result {
+                case .success(let urls):
+                    for url in urls { attach(fileURL: url) }
+                case .failure(let error):
+                    attachError = error.localizedDescription
+                }
+            }
+            .photosPicker(isPresented: $pickingPhoto, selection: $photoPick, matching: .images)
+            .onChange(of: photoPick) { _, item in
+                guard let item else { return }
+                photoPick = nil
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        attach(image: img)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingCamera) {
+                CameraPicker { attach(image: $0) }
+                    .ignoresSafeArea()
+            }
+            .alert("Paste a link", isPresented: $addingLink) {
+                TextField("https://…", text: $linkText)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                Button("Add") { attach(link: linkText); linkText = "" }
+                Button("Cancel", role: .cancel) { linkText = "" }
+            } message: {
+                Text(explain("A job posting, a listing, an event page — anything about the situation."))
+            }
+            .alert("Couldn't attach that",
+                   isPresented: Binding(get: { attachError != nil },
+                                        set: { if !$0 { attachError = nil } })) {
+                Button("OK") { attachError = nil }
+            } message: {
+                Text(attachError ?? "")
+            }
         }
+    }
+
+    // MARK: - The box (custom door)
+
+    /// One box at the bottom of an otherwise empty screen: the material as
+    /// chips, the line itself, then one tool row. The mockup this follows
+    /// puts everything about the situation in one place, so writing it and
+    /// attaching to it are one gesture rather than two sections.
+    private var customBox: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 6) {
+                Text("Go through it before it happens")
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                Text(explain("The more you write, the closer the scene lands. Tap ＋ to bring the posting, the listing, your CV."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 32)
+            .padding(.top, 20)
+            // Examples roll through the empty middle — the answer to "what
+            // do I even put here", and a demonstration of how much detail is
+            // worth writing. They go away the moment there IS something to
+            // write, so they never compete with the learner's own line.
+            if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !situationFocused && !reelLines.isEmpty {
+                SituationReel(lines: reelLines) { line in
+                    programmaticSituation = true
+                    situation = line
+                    customMode = true
+                }
+                .frame(maxHeight: .infinity)
+                .transition(.opacity)
+            } else {
+                Spacer(minLength: 0)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                if !sources.isEmpty {
+                    attachmentChips
+                        .padding(.horizontal, 14)
+                    if sources.contains(where: { $0.kind != .link }) {
+                        Text(explain("Your files stay on your phone. Only what was read is kept here."))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
+                    }
+                }
+                // ONE control strip: the field hosts the attach button and
+                // the person on its left and the CTA on its right, rather
+                // than the box stacking a second toolbar under the field's
+                // own (which is what it did on its first build).
+                SpeakOrTypeField(text: $situation,
+                                 locale: $dictationLocale,
+                                 placeholder: explain("What situation should we build? The more detail, the better."),
+                                 showsLocalePicker: true,
+                                 lineRange: 1...5,
+                                 externalFocus: $situationFocused,
+                                 cardBackground: Color.clear,
+                                 micStyle: .plain,
+                                 leadingControls: AnyView(
+                                    HStack(spacing: 8) {
+                                        attachMenu
+                                        // Free choice when the box was opened
+                                        // from the tab; a fixed label when it
+                                        // was opened from a person, where the
+                                        // whole point is that it IS them —
+                                        // the box has no other place to say
+                                        // who this situation is with.
+                                        if let p = person {
+                                            fixedPersonChip(p)
+                                        } else {
+                                            partnerChip
+                                        }
+                                    }
+                                 ))
+            }
+            // WITHOUT this the box is only as wide as its content wants to
+            // be, and every control in the row has an intrinsic width that
+            // moves: the person's name, the dictation language's endonym.
+            // So picking a different person or language visibly resized the
+            // whole card (reported 2026-09-26).
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground)))
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .animation(.easeInOut(duration: 0.2), value: situationFocused)
+        .animation(.easeInOut(duration: 0.25), value: reelLines.count)
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    /// What rolls past the box. With a person attached it is THEIR ideas —
+    /// grounded in the relationship, generated once per person per language
+    /// and kept on the counterpart (`TopicEngine.suggestForCounterpart`,
+    /// the same pool the person's own card fills).
+    ///
+    /// The generic examples are deliberately NOT the fallback there. A
+    /// landlord and a doctor mean nothing on a box opened from a friend's
+    /// card, and that mismatch is what made the reel read as filler
+    /// (reported 2026-09-26). Until theirs arrive the middle simply stays
+    /// empty, which says less but says nothing wrong.
+    private var reelLines: [String] {
+        guard let p = person else { return Self.exampleSituations }
+        let stored = (appState.counterparts.first { $0.id == p.id } ?? p)
+            .savedScenarios(in: appState.targetLanguage)
+        return (stored.isEmpty ? personIdeas : stored).map {
+            let blurb = $0.blurb.trimmingCharacters(in: .whitespacesAndNewlines)
+            return blurb.isEmpty ? $0.title : blurb
+        }
+    }
+
+    /// One call per person per language, ever. Silent on failure: the box
+    /// works without a reel, and an error banner over an empty middle would
+    /// be louder than the thing it failed to show.
+    private func ensurePersonIdeas() async {
+        guard usesBox, let p = person, !loadingPersonIdeas else { return }
+        let live = appState.counterparts.first { $0.id == p.id } ?? p
+        guard live.savedScenarios(in: appState.targetLanguage).isEmpty,
+              personIdeas.isEmpty else { return }
+        loadingPersonIdeas = true
+        defer { loadingPersonIdeas = false }
+        guard let fresh = try? await TopicEngine.suggestForCounterpart(
+            persona: appState.persona,
+            counterpart: live,
+            targetLanguage: appState.targetLanguage), !fresh.isEmpty else { return }
+        personIdeas = fresh
+        // Persist only for someone already on file. A stranger becomes a
+        // real row when a scenario is built with them, not when the sheet
+        // that might build one happens to open.
+        if var owned = appState.counterparts.first(where: { $0.id == p.id }) {
+            owned.setSavedScenarios(fresh, in: appState.targetLanguage)
+            appState.saveCounterpart(owned)
+        }
+    }
+
+    /// What rolls past the empty box. Written to MODEL the detail the field
+    /// asks for — who, where, what is at stake — rather than to name a
+    /// category, which is the other door's job.
+    static let exampleSituations: [String] = [
+        explain("A final-round interview next Thursday, in English, with the hiring manager who wrote the job ad."),
+        explain("Telling my landlord the heating has been broken for three weeks, and getting a date out of them."),
+        explain("Meeting my partner's parents for the first time over dinner at their place."),
+        explain("Explaining a symptom I've had for a week to a doctor, and asking what the options are."),
+        explain("Asking my manager for a raise in our next one-on-one, with the numbers ready."),
+        explain("Returning something expensive without the receipt, to a clerk who doesn't want to take it."),
+    ]
+
+    /// "+" — the three ways to attach. `PhotosPicker` cannot sit inside a
+    /// `Menu`, so the photo item flips a flag the `.photosPicker` modifier
+    /// above the tree watches.
+    private var attachMenu: some View {
+        Menu {
+            Button { addingLink = true } label: { Label("Paste a link", systemImage: "link") }
+            Button { importingFile = true } label: { Label("Pick a file", systemImage: "doc") }
+            Button { pickingPhoto = true } label: { Label("Photo library", systemImage: "photo.on.rectangle") }
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button { showingCamera = true } label: { Label("Take a photo", systemImage: "camera") }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.title3.weight(.medium))
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Color(.tertiarySystemFill)))
+                .foregroundStyle(.primary)
+        }
+        .accessibilityLabel("Attach material")
+        .fixedSize()
+    }
+
+    /// Who plays the other side, as one chip. Same picker the Form's section
+    /// opens; here it has to fit on one row.
+    private var partnerChip: some View {
+        Button { showingPartnerPicker = true } label: {
+            HStack(spacing: 6) {
+                // 28, and the avatar is BUILT at 28. Framing the 40pt one
+                // down to 22 didn't shrink the circle, it just cropped the
+                // slot — so the disc drew straight through the pill's edge.
+                partnerAvatar(size: 28)
+                Text(partner?.name ?? chrome("Future self"))
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.leading, 6)
+            .padding(.trailing, 12)
+            .frame(height: 40)
+            .background(Capsule().fill(Color(.tertiarySystemFill)))
+            .foregroundStyle(.primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("The other person"))
+    }
+
+    /// The person this box was opened for. Not a button: the entry point
+    /// chose them, and offering to change it here would undo the choice the
+    /// learner just made by tapping their card.
+    private func fixedPersonChip(_ p: Counterpart) -> some View {
+        HStack(spacing: 6) {
+            PersonBubble(name: p.name, photoId: p.id, size: 28)
+            Text(p.name)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .padding(.leading, 6)
+        .padding(.trailing, 12)
+        .frame(height: 40)
+        .background(Capsule().fill(Color(.tertiarySystemFill)))
+        .foregroundStyle(.primary)
+        .accessibilityLabel(Text("With \(p.name)"))
+    }
+
+    private var attachmentChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(sources) { src in
+                    HStack(spacing: 6) {
+                        Image(systemName: Self.icon(for: src))
+                            .font(.caption)
+                            .foregroundStyle(.tint)
+                        Text(Self.chipLabel(for: src))
+                            .font(.caption.weight(.medium))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: 180)
+                        Button { remove(src) } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove")
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(.tertiarySystemFill)))
+                }
+            }
+        }
+    }
+
+    // MARK: - Material (Form mode)
+
+    /// The same attachments as a Form section — for the browse door and for
+    /// editing a saved scenario, so material can be added to a situation
+    /// that started life without any.
+    private var materialSection: some View {
+        Section {
+            ForEach(sources) { src in materialRow(src) }
+            Menu {
+                Button { addingLink = true } label: { Label("Paste a link", systemImage: "link") }
+                Button { importingFile = true } label: { Label("Pick a file", systemImage: "doc") }
+                Button { pickingPhoto = true } label: { Label("Photo library", systemImage: "photo.on.rectangle") }
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button { showingCamera = true } label: { Label("Take a photo", systemImage: "camera") }
+                }
+            } label: {
+                Label("Attach a link or a file", systemImage: "plus")
+            }
+        } header: {
+            Text("Material")
+        } footer: {
+            Text(explain("A posting, a listing, your CV. It's read once before the first scene; the file stays where it is on your phone."))
+        }
+    }
+
+    private func materialRow(_ src: ScenarioBrief.Source) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: Self.icon(for: src))
+                .foregroundStyle(.tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(Self.chipLabel(for: src))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let d = src.detail, !d.isEmpty {
+                    Text(d).font(.caption).foregroundStyle(src.readOK ? Color.secondary : Color.red)
+                }
+            }
+            Spacer()
+            Button { remove(src) } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove")
+        }
+    }
+
+    private static func icon(for src: ScenarioBrief.Source) -> String {
+        switch src.kind {
+        case .link: return "link"
+        case .file: return "doc.text"
+        case .image: return "photo"
+        }
+    }
+
+    /// A link shows its host and path, never the scheme; a file its name.
+    private static func chipLabel(for src: ScenarioBrief.Source) -> String {
+        guard src.kind == .link, let url = URL(string: src.label) else { return src.label }
+        let host = url.host ?? src.label
+        let path = url.path == "/" ? "" : url.path
+        return host + path
+    }
+
+    // MARK: - Attaching
+
+    private func attach(fileURL url: URL) {
+        do {
+            let read = try ScenarioAttachmentReader.read(pickedURL: url)
+            BriefAttachmentCache.shared.put(read.data, mime: read.mime, for: read.source.id)
+            withAnimation { sources.append(read.source) }
+        } catch {
+            attachError = error.localizedDescription
+        }
+    }
+
+    private func attach(image: UIImage) {
+        let n = sources.filter { $0.kind == .image }.count + 1
+        guard let read = ScenarioAttachmentReader.read(image: image, label: explain("Photo \(n)")) else {
+            attachError = explain("Couldn't read that photo.")
+            return
+        }
+        BriefAttachmentCache.shared.put(read.data, mime: read.mime, for: read.source.id)
+        withAnimation { sources.append(read.source) }
+    }
+
+    private func attach(link raw: String) {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        if !text.lowercased().hasPrefix("http://") && !text.lowercased().hasPrefix("https://") {
+            text = "https://" + text
+        }
+        guard let url = URL(string: text), let host = url.host, host.contains(".") else {
+            attachError = explain("That doesn't look like a link.")
+            return
+        }
+        guard !sources.contains(where: { $0.kind == .link && $0.label == url.absoluteString }) else { return }
+        withAnimation { sources.append(.init(kind: .link, label: url.absoluteString)) }
+    }
+
+    private func remove(_ src: ScenarioBrief.Source) {
+        BriefAttachmentCache.shared.drop(src.id)
+        withAnimation { sources.removeAll { $0.id == src.id } }
     }
 
     // MARK: - Overview (breadcrumb + the assembled scenario)
@@ -281,7 +745,20 @@ struct ScenarioComposerSheet: View {
         } header: {
             Text("Your scenario")
         } footer: {
-            Text(explain("Build it from a category below, type it, or say it with the mic — then \(ctaTitle) it."))
+            Text(explain("Edit it freely, or tap a breadcrumb to go back — then \(ctaTitle) it."))
+        }
+    }
+
+    /// The path, floating — no card behind it. A breadcrumb is where you
+    /// ARE, not content, and a grouped-list row gave it a full white cell
+    /// with a section's worth of air above it, which put a big empty box
+    /// between the title bar and the chips.
+    private var breadcrumbSection: some View {
+        Section {
+            breadcrumb
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
     }
 
@@ -393,16 +870,29 @@ struct ScenarioComposerSheet: View {
             }
         } footer: {
             Text(path.count == 1
-                 ? "Pick an area to go one step deeper — or type your own above."
-                 : "Tap one to fill your scenario above, then edit it freely.")
+                 ? "Pick an area to go one step deeper."
+                 : "Tap the one closest to what you're going in to do.")
         }
     }
 
+    /// The end of the drill-down. It prints the assembled situation, but
+    /// READ-ONLY: knowing what is about to be generated is not the same as
+    /// being asked to write it, and this door exists for the learner who
+    /// would rather choose. Changing the words is still possible — the saved
+    /// card reopens this sheet in edit mode, where the field is live.
     private var leafHint: some View {
         Section {
-            Label("Specific enough — \(ctaTitle) it, or tap a breadcrumb to explore more.",
-                  systemImage: "checkmark.circle")
-                .font(.subheadline).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 10) {
+                if !situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(situation)
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Label("Specific enough — \(ctaTitle) it, or tap a breadcrumb to explore more.",
+                      systemImage: "checkmark.circle")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
         }
     }
 
@@ -519,10 +1009,7 @@ struct ScenarioComposerSheet: View {
     private func personHeader(_ p: Counterpart) -> some View {
         Section {
             HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
-                    Text(Books.initials(p.name)).font(.caption.weight(.semibold)).foregroundStyle(.tint)
-                }
+                PersonBubble(name: p.name, photoId: p.id, size: 40)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(p.name).font(.body.weight(.medium))
                     if !p.relationship.isEmpty {
@@ -539,7 +1026,7 @@ struct ScenarioComposerSheet: View {
         Section {
             Button { showingPartnerPicker = true } label: {
                 HStack(spacing: 12) {
-                    partnerAvatar
+                    partnerAvatar()
                     VStack(alignment: .leading, spacing: 1) {
                         Text(partner?.name ?? chrome("Future self"))
                             .font(.body.weight(.medium))
@@ -562,15 +1049,22 @@ struct ScenarioComposerSheet: View {
         }
     }
 
-    @ViewBuilder private var partnerAvatar: some View {
+    @ViewBuilder private func partnerAvatar(size: CGFloat = 40) -> some View {
         ZStack {
-            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
-            if let p = partner {
-                Text(Books.initials(p.name)).font(.caption.weight(.semibold)).foregroundStyle(.tint)
+            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: size, height: size)
+            if let p = partner, CounterpartPhotoStore.shared.hasPhoto(p.id) {
+                PersonBubble(name: p.name, photoId: p.id, size: size)
+            } else if let p = partner {
+                Text(Books.initials(p.name))
+                    .font(.system(size: size * 0.34, weight: .semibold))
+                    .foregroundStyle(.tint)
             } else {
-                Image(systemName: "waveform").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
+                Image(systemName: "waveform")
+                    .font(.system(size: size * 0.4, weight: .semibold))
+                    .foregroundStyle(.tint)
             }
         }
+        .frame(width: size, height: size)
     }
 
     private var partnerCaption: String {
@@ -737,6 +1231,17 @@ struct ScenarioComposerSheet: View {
                 )
             }
             s.counterpartId = who?.id
+            // Material: the sources ride on the scenario and are read ONCE,
+            // before the first scene. An unchanged set on an edited scenario
+            // keeps its reading; any change to the set asks for a new one.
+            if sources.isEmpty {
+                s.brief = nil
+            } else if var b = editing?.brief, b.sources.map(\.id) == sources.map(\.id) {
+                b.sources = sources
+                s.brief = b
+            } else {
+                s.brief = ScenarioBrief(sources: sources)
+            }
             // Future self keeps a legacy scenario's stored scene voice (that
             // field was only ever the Watch voice); an attached person IS the
             // voice now, so the field clears.

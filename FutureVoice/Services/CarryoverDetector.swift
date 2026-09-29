@@ -151,19 +151,39 @@ enum CarryoverDetector {
         // ── Suggestions from earlier in THIS call, applied later in it.
         // `Turn.suggestion` hangs off the user turn it rewrites, so adoption
         // can only be claimed from a turn AFTER that one.
+        //
+        // What counts as "the suggestion" depends on when it was written.
+        // Since 2026-09-27 `alternative` is the WHOLE turn re-said — nobody
+        // says a whole turn again word for word, so matching it would credit
+        // nothing ever again. What a learner can adopt is a FIX, and it is
+        // matched as the card it became (`DrillStore.cardPair`), rejecting a
+        // span that still carries the mistake — the same test the deck's
+        // cards get, since `SessionSummarizer` confirms the card by this
+        // item's text. A turn from before `fixes` keeps the old rule: its
+        // `alternative` was the one-sentence correction.
         for (index, turn) in userTurns.enumerated() {
             guard let suggestion = turn.suggestion else { continue }
             let later = Array(userTurns.dropFirst(index + 1))
             guard !later.isEmpty else { continue }
-            let key = normalized(suggestion.alternative)
-            guard available(key) else { continue }
-            // If the turn that EARNED the suggestion already matches it, the
-            // learner was saying this before the suggestion existed — repeating
-            // themselves isn't adopting anything.
-            guard firstMatch(of: suggestion.alternative, in: [turn]) == nil else { continue }
-            guard let hit = firstMatch(of: suggestion.alternative, in: later),
-                  free(hit) else { continue }
-            claim(key, hit, source: .suggestion, item: suggestion.alternative, sourceId: turn.id)
+            let adoptable: [(source: String?, target: String)] = suggestion.fixes.map { fixes in
+                fixes.map { fix in
+                    let pair = DrillStore.cardPair(for: fix, in: turn.transcript)
+                    return (Optional(pair.source), pair.target)
+                }
+            } ?? [(nil, suggestion.alternative)]
+            for item in adoptable {
+                let key = normalized(item.target)
+                guard available(key) else { continue }
+                // If the turn that EARNED the suggestion already matches it,
+                // the learner was saying this before the suggestion existed —
+                // repeating themselves isn't adopting anything.
+                guard firstMatch(of: item.target, in: [turn],
+                                 rejectingMistake: item.source) == nil else { continue }
+                guard let hit = firstMatch(of: item.target, in: later,
+                                           rejectingMistake: item.source),
+                      free(hit) else { continue }
+                claim(key, hit, source: .suggestion, item: item.target, sourceId: turn.id)
+            }
         }
 
         // ── Notebook words. Single words can't go through the phrase matcher
@@ -357,13 +377,28 @@ enum CarryoverDetector {
     /// normalization `DrillStore` matches quotes with, so a card and a
     /// transcript compare on equal terms despite STT casing/punctuation drift.
     static func normalized(_ text: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(.whitespaces)
-        return String(text.unicodeScalars.filter { allowed.contains($0) })
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        // One pass, no intermediate arrays. This runs twice per sentence of
+        // every talk-book build (`TalkCurriculum.shadowPicks`), and the
+        // filter → lowercased → components → joined chain was most of a
+        // warm build's time (2026-09-23). Same output as that chain: letters
+        // and digits kept, runs of spaces/tabs collapsed to one, newlines
+        // and everything else dropped outright, then lowercased.
+        var out = String.UnicodeScalarView()
+        var pendingSpace = false
+        for scalar in text.unicodeScalars {
+            if Self.normalizedKept.contains(scalar) {
+                if pendingSpace, !out.isEmpty { out.append(" ") }
+                pendingSpace = false
+                out.append(scalar)
+            } else if Self.normalizedSpace.contains(scalar) {
+                pendingSpace = true
+            }
+        }
+        return String(out).lowercased()
     }
+
+    private static let normalizedKept = CharacterSet.alphanumerics
+    private static let normalizedSpace = CharacterSet.whitespaces
 
     /// Words, normalized. An unspaced language is segmented FIRST and each
     /// segment normalized after — `normalized` keeps letters and spaces, and

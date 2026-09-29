@@ -80,13 +80,20 @@ Deno.serve(async (req) => {
           `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
           { method: "DELETE", headers: { "xi-api-key": elevenKey } },
         )
-        // 404 = already gone (a re-record during onboarding replaces one).
-        if (res.ok || res.status === 404) {
+        // Already gone (a re-record during onboarding replaces one). ElevenLabs
+        // answers a DELETE on a missing voice with 400 `voice_does_not_exist`,
+        // NOT 404 — observed 2026-09-23, when two abandoned sessions from 09-15
+        // and 09-17 had been re-scanned every 15 min for a week because their
+        // replaced voices came back 400 and read as "delete failed".
+        const body = res.ok ? "" : await res.text()
+        const alreadyGone = res.status === 404 ||
+          (res.status === 400 && body.includes("voice_does_not_exist"))
+        if (res.ok || alreadyGone) {
           deletedVoices++
         } else {
           upstreamOK = false
           console.error("cleanup-anonymous-voices: voice delete failed",
-            clone.elevenlabs_voice_id, res.status, (await res.text()).slice(0, 300))
+            clone.elevenlabs_voice_id, res.status, body.slice(0, 300))
         }
       }
     }

@@ -69,6 +69,7 @@ enum LanguageScope {
             TopicStore.shared,
             NewsTopicStore.shared,
             WeeklyReportStore.shared,
+            WeeklyTestStore.shared,
         ]
         for store in stores { store.languageScopeDidChange() }
         // Main-actor-isolated store — same contract, called directly rather
@@ -87,7 +88,7 @@ enum LanguageScope {
     private static let scopedFilenames = [
         "sessions.json", "drills.json", "scenarios.json",
         "watch-dialogues.json", "shadow-attempts.json", "saved_lines.json",
-        "topics.json", "news_topics.json", "weekly-reports.json",
+        "topics.json", "news_topics.json", "weekly-reports.json", "weekly-tests.json",
         "vocab_pool.json", "vocab_ingested.json", "vocab_studying.json",
         "vocab_expressions.json", "vocab_expressions_ingested.json",
         "vocab_studying_expressions.json",

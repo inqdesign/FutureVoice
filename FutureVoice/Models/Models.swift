@@ -221,9 +221,45 @@ struct WordTiming: Codable, Hashable {
     }
 }
 
+/// One spoken turn, answered in the two ways a learner needs.
+///
+/// **They are different questions and both matter** (2026-09-27, user
+/// decision, after a replay showed a 40-word utterance answered by a
+/// 12-word fragment): "how would a fluent speaker say this whole thing?"
+/// and "what did I actually get wrong?". The first is the line; the second
+/// is the list under it.
 struct TurnSuggestion: Codable, Hashable {
+    /// The learner's WHOLE turn, said the way a fluent speaker would say it
+    /// in this conversation — every idea they raised, in their own register,
+    /// with the hesitation taken out.
+    ///
+    /// **Never a fragment.** It used to be one sentence of at most 15 words,
+    /// because a drill card cannot be a paragraph — and that constraint had
+    /// leaked into the one place the line has to be complete: the
+    /// say-it-again reads it aloud IN the conversation, so a fragment left
+    /// the re-run answering a question nobody asked. Cards now come from
+    /// `fixes`, which are short by nature, so the line is free to be whole.
     var alternative: String
+    /// Why the rewrite reads better, in the learner's native language.
     var reason: String
+    /// The outright ERRORS inside that turn, quoted and fixed one by one.
+    /// Empty is an ordinary answer — a turn can be grammatical and still not
+    /// be what a fluent speaker would say. Optional so every turn saved
+    /// before this decodes (Swift synthesizes `decodeIfPresent` for an
+    /// Optional; a defaulted non-optional would throw).
+    var fixes: [TurnFix]? = nil
+}
+
+/// One grammatical slip inside a turn: what they said, what it should be,
+/// and why — the pair a drill card is made of.
+struct TurnFix: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    /// Quoted from the learner's own line, verbatim.
+    var was: String
+    /// The same words, corrected — nothing else restyled.
+    var now: String
+    /// The grammar point, in the learner's native language.
+    var why: String
 }
 
 struct Session: Codable, Identifiable {
@@ -449,9 +485,23 @@ struct SessionScorecard: Codable, Hashable {
     var pronunciation: AxisScore?     // nil until shadow drills exist
     var topLine: String               // 1-sentence holistic note
     var cefrLevel: String?            // AI's holistic CEFR read of the whole talk (a1…c2)
+    /// The CEFR band of the grammatical STRUCTURES the learner actually
+    /// produced in this talk (a1…c2) — range, as distinct from accuracy.
+    /// `grammar.score` and the verified slips measure how accurately they
+    /// spoke; this says how much grammar they reached for. A learner who
+    /// stays in short present-tense clauses makes no slips and used to read
+    /// C2 on Progress (2026-09-24) — a level is the meeting of both, so the
+    /// ≈Grammar band is the LOWER of the two. Optional: talks summarized
+    /// before the field decode without it.
+    var grammarRange: String? = nil
 }
 
 extension SessionScorecard {
+    /// `grammarRange` as a level, nil when absent or unrecognized.
+    var grammarRangeLevel: CEFRLevel? {
+        grammarRange.flatMap { CEFRLevel(rawValue: $0.lowercased()) }
+    }
+
     /// Mean of the axis scores (+ pronunciation when present) — the single
     /// headline number for a talk, shared by the detail header and the Talk
     /// book card.
@@ -698,10 +748,9 @@ struct PersonaNote: Codable, Identifiable, Hashable {
     /// How long a `now` line is believed after it was learned.
     static let nowHorizon: TimeInterval = 30 * 86_400
 
-    /// `isPrivate` is read for notes written before `share` existed and is
-    /// never written: a build from before 2026-09-16 reading a `.gist` line
-    /// with `isPrivate: false` on it would put the WHOLE line in the intro.
-    /// With no key it reads the line as private, which is the safe reading.
+    /// `isPrivate` is never written: a build from before 2026-09-16 reading
+    /// a `.gist` line with `isPrivate: false` on it would put the WHOLE line
+    /// in the intro. It is no longer read either — see `init(from:)`.
     private enum CodingKeys: String, CodingKey {
         case id, text, sessionId, learnedAt, isPrivate, kind, share, heard, gist, why
     }
@@ -750,13 +799,15 @@ struct PersonaNote: Codable, Identifiable, Hashable {
         sessionId = try? c.decodeIfPresent(UUID.self, forKey: .sessionId)
         learnedAt = (try? c.decodeIfPresent(Date.self, forKey: .learnedAt)) ?? Date()
         kind = (try? c.decodeIfPresent(Kind.self, forKey: .kind)) ?? .fact
-        if let s = try? c.decodeIfPresent(Share.self, forKey: .share) {
-            share = s
-        } else if let legacy = try? c.decodeIfPresent(Bool.self, forKey: .isPrivate) {
-            share = legacy ? .nothing : .all
-        } else {
-            share = .nothing
-        }
+        // A note with no `share` is from before the rungs — either the
+        // two-way lock of 2026-09-15 or nothing at all — and lands on
+        // `nothing` EITHER WAY (2026-09-25). "Unlocked" used to map onto
+        // `all`, and those lines were the ones the one-day-old prompt had
+        // written as episodes ("Gained a new app user from Hong Kong"), with
+        // no gist and no reason on them; they went out in full in every
+        // intro. The learner opens a line in Me → Profile, where they can
+        // read it first.
+        share = (try? c.decodeIfPresent(Share.self, forKey: .share)) ?? .nothing
         heard = try? c.decodeIfPresent(String.self, forKey: .heard)
         gist = try? c.decodeIfPresent(String.self, forKey: .gist)
         why = try? c.decodeIfPresent(String.self, forKey: .why)
@@ -854,6 +905,15 @@ extension UserPersona {
     /// prompt) may read: the text of an `.all` line, the gist of a `.gist`
     /// line, nothing of a `.nothing` one. Never the notes themselves.
     var strangerLines: [String] { currentNotes().compactMap(\.strangerLine) }
+
+    /// The stranger set narrowed to STANDING truths — what the public intro
+    /// is written from (2026-09-25). A `now` line is news, not who you are:
+    /// "on the way to the kids' Korean school" was going out as the second
+    /// sentence of an introduction. The live counterpart block keeps
+    /// `strangerLines`, where an unlocked piece of news is fair small talk.
+    var strangerFacts: [String] {
+        currentNotes().filter { $0.kind == .fact }.compactMap(\.strangerLine)
+    }
 
     /// A line the summary call says has CHANGED: the trip that was planned
     /// has happened, the job that was hunted was found. `replacing` is the
@@ -1003,6 +1063,19 @@ struct Counterpart: Codable, Identifiable, Hashable {
         scenariosByLanguage[language] = list
     }
 
+    /// True for a public figure (a singer, an athlete, an author) added under
+    /// the "Public figure" relationship: their profile is filled from PUBLIC
+    /// coverage rather than the learner's own notes, and every stranger-facing
+    /// rule for a preset voice applies — never a clone. Optional so rows saved
+    /// before this decode unchanged.
+    var isPublicFigure: Bool? = nil
+    /// The identity the grounded parse settled on ("BTS Jimin · singer"),
+    /// shown for the learner to confirm. nil for anyone else.
+    var publicIdentity: String? = nil
+    /// When public facts were last looked up. "Refresh public info" re-runs
+    /// the grounded parse and moves this.
+    var factsRefreshedAt: Date? = nil
+
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
@@ -1025,6 +1098,7 @@ extension Counterpart {
         case id, name, relationship, location, howWeMet, background
         case conversationStyle, commonTopics, voicePresetId, freeNotes
         case remoteId, intro, personaKind
+        case isPublicFigure, publicIdentity, factsRefreshedAt
         case scenariosByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
@@ -1050,6 +1124,9 @@ extension Counterpart {
         remoteId = try c.decodeIfPresent(String.self, forKey: .remoteId)
         intro = try c.decodeIfPresent(String.self, forKey: .intro) ?? ""
         personaKind = try c.decodeIfPresent(String.self, forKey: .personaKind)
+        isPublicFigure = try c.decodeIfPresent(Bool.self, forKey: .isPublicFigure)
+        publicIdentity = try c.decodeIfPresent(String.self, forKey: .publicIdentity)
+        factsRefreshedAt = try c.decodeIfPresent(Date.self, forKey: .factsRefreshedAt)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -1283,6 +1360,12 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// where reviewing what came out of it belongs. Optional so old rows
     /// decode unchanged.
     var isMeeting: Bool? = nil
+    /// Material the learner attached to this situation (a job posting's
+    /// link, their CV from the Files app) and what ONE reading of it
+    /// produced. The reading happens once, before the first scene; the
+    /// files themselves are never copied — see `ScenarioBrief`. Optional so
+    /// scenarios saved before this decode unchanged.
+    var brief: ScenarioBrief? = nil
 
     /// Rows minted before the flag existed carry only the category, so read
     /// both — otherwise the meetings already on disk stay in the list this
@@ -1324,6 +1407,67 @@ struct Scenario: Codable, Identifiable, Hashable {
             parts.append("notes=\(notes)")
         }
         return parts.joined(separator: " | ")
+    }
+}
+
+// MARK: - Scenario Brief (what the learner attached, read once)
+
+/// The learner's own material for a situation — a posting's link, a CV or
+/// portfolio picked from the Files app, a photo of a letter — and the facts
+/// one reading of it produced. Two rules:
+///
+///   - **The file is never copied.** A picked file is read where it lives
+///     (security-scoped access, bytes straight into the analysis request)
+///     and only its NAME and an iOS bookmark stay here, so "Read again" can
+///     open the same file and a moved one asks to be picked again. Nothing
+///     lands in the sandbox, the sync payload, or the usage ledger.
+///   - **Two sides, kept apart.** `counterpartFacts` and `likelyQuestions`
+///     are the OTHER side (the company, the position, what they will ask)
+///     and ride into the counterpart block of every prompt; `learnerFacts`
+///     are the learner's own (the 2023 gap, the +18% project) and ride into
+///     the persona block. Mixing them is how a scene hands the learner's CV
+///     to the interviewer to recite.
+struct ScenarioBrief: Codable, Hashable {
+    struct Source: Codable, Hashable, Identifiable {
+        enum Kind: String, Codable { case link, file, image }
+        var id: UUID = UUID()
+        var kind: Kind
+        /// A link's URL, or a file's display name.
+        var label: String
+        /// Security-scoped bookmark for a picked file. nil for links and for
+        /// a file whose bookmark could not be made.
+        var bookmark: Data? = nil
+        /// False once a reading reported it could not open this source.
+        var readOK: Bool = true
+        /// One short line the reading wrote about it ("job posting · Berlin",
+        /// "3 pages").
+        var detail: String? = nil
+    }
+
+    var sources: [Source] = []
+    /// One line naming what the material is about ("Zalando · Senior Product
+    /// Designer · Berlin"). Empty until read.
+    var summary: String = ""
+    /// The other side: who they are, what they want, how they talk.
+    var counterpartFacts: [String] = []
+    /// What the other side is likely to ask or say. Scenes vary which ones
+    /// they use, so a template keeps producing fresh takes.
+    var likelyQuestions: [String] = []
+    /// The learner's side: what to prepare, what to bring up, what to have
+    /// an answer for.
+    var learnerFacts: [String] = []
+    /// Reusable phrases the situation calls for — the scene plants them, the
+    /// call's chip row asks for them.
+    var keyExpressions: [String] = []
+    /// When the sources were last read. nil = attached but not read yet
+    /// (the reading runs before the first scene).
+    var readAt: Date? = nil
+
+    var hasSources: Bool { !sources.isEmpty }
+    var needsReading: Bool { hasSources && readAt == nil }
+    var hasContent: Bool {
+        !counterpartFacts.isEmpty || !likelyQuestions.isEmpty
+            || !learnerFacts.isEmpty || !keyExpressions.isEmpty
     }
 }
 
@@ -1539,4 +1683,90 @@ struct DrillCardEnrichment: Codable, Hashable {
     var variants: [Variant]
     var memoryHook: String      // 1-line trigger to help recall when to reach for it
     var generatedAt: Date
+}
+
+// MARK: - Weekly test
+
+/// One week's test, built from THAT learner's own week — the words the talks
+/// taught, the phrases the fluent self used, the sentences that were
+/// corrected, the lines worth hearing again. Nothing here comes from a
+/// generic bank; an item with no source in the learner's material is not an
+/// item. Frozen once built (`items`), so a test read later still asks what
+/// it asked; the answers accumulate as the learner plays.
+struct WeeklyTest: Codable, Identifiable, Equatable {
+    /// A weekly paper from the week's material, or the monthly paper made of
+    /// every item the month's weekly tests got wrong.
+    enum Kind: String, Codable { case weekly, monthly }
+
+    let id: UUID
+    let targetLanguage: String
+    /// nil decodes as `.weekly` (tests written before the monthly existed).
+    var kind: Kind? = nil
+    var isMonthly: Bool { kind == .monthly }
+    /// The window the material was drawn from.
+    let periodStart: Date
+    let periodEnd: Date
+    let createdAt: Date
+    var startedAt: Date?
+    var finishedAt: Date?
+    var items: [WeeklyTestItem]
+    var answers: [WeeklyTestAnswer] = []
+    /// Longest run of correct answers in a row while playing.
+    var bestStreak: Int = 0
+    /// When the result was written into the review loop (`WeeklyTestEngine.apply`);
+    /// nil until then, so a finished test is applied exactly once.
+    var appliedAt: Date? = nil
+
+    var isFinished: Bool { finishedAt != nil }
+    var score: Int { answers.filter(\.correct).count }
+    var total: Int { items.count }
+    /// The next item to play, nil once every one is answered.
+    var nextItem: WeeklyTestItem? {
+        let done = Set(answers.map(\.itemId))
+        return items.first { !done.contains($0.id) }
+    }
+}
+
+struct WeeklyTestItem: Codable, Identifiable, Hashable {
+    enum Kind: String, Codable, CaseIterable {
+        /// A word the talks taught: its meaning is shown, pick the word.
+        case meaning
+        /// A line the fluent self said with its phrase blanked out: pick the phrase.
+        case gap
+        /// A sentence the learner said and was corrected: rebuild the fluent
+        /// version from shuffled word tiles.
+        case build
+        /// A fluent-self line played from its saved audio: pick what was said.
+        case listen
+        /// A fluent-self line to say out loud, scored like a shadow take.
+        case speak
+    }
+    let id: UUID
+    let kind: Kind
+    /// meaning: the sense in the learner's language · gap: the line with the
+    /// blank · build: what the learner originally said · listen: empty.
+    let prompt: String
+    /// The correct answer, as the material spells it.
+    let answer: String
+    /// meaning/gap/listen: the choices, answer included, in display order ·
+    /// build: the word tiles, in display order.
+    let options: [String]
+    /// Where the item came from, so the result can write back to the review
+    /// loop and the screen can name the talk.
+    var sessionId: UUID? = nil
+    var turnId: UUID? = nil
+    var cardId: UUID? = nil
+    /// build: the correction's one-line reason (coaching, native language).
+    var note: String? = nil
+    /// True when the item came back from an earlier test's wrong answers.
+    var isRetake: Bool? = nil
+}
+
+struct WeeklyTestAnswer: Codable, Hashable {
+    let itemId: UUID
+    let given: String
+    let correct: Bool
+    let at: Date
+    /// speak: the shadow match score the verdict was made from.
+    var score: Int? = nil
 }

@@ -1,89 +1,5 @@
 import SwiftUI
 
-/// "When should I call back?" — shown after declining from the ALARM.
-///
-/// It exists because of a platform limit, not a design preference:
-/// `AlarmPresentation.Alert` gives an app exactly one button it can label, and
-/// that one is spent on Answer. So the choice the notification shows inline
-/// has to happen here instead, a beat later, in the app.
-///
-/// Everything about it is built to be over in one tap. Declining is supposed
-/// to cost nothing, and this already costs a context switch — it must not also
-/// cost a decision the learner has to think about.
-struct DailyCallCallbackSheet: View {
-    let plan: DailyCallPlan
-    /// Called once the choice is made (or the sheet is dismissed) so the
-    /// presenter can clear its binding.
-    var onDone: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(DailyCallScheduler.callbackOptions, id: \.self) { minutes in
-                        Button {
-                            choose(minutes)
-                        } label: {
-                            Label(DailyCallScheduler.callbackLabel(minutes),
-                                  systemImage: "phone.arrow.up.right")
-                        }
-                    }
-                } header: {
-                    Text("Call back")
-                } footer: {
-                    Text(explain("Nothing is lost by putting this off — no streak breaks and today still counts."))
-                }
-
-                Section {
-                    Button(role: .destructive) {
-                        Task {
-                            await DailyCallScheduler.declineForToday()
-                            finish()
-                        }
-                    } label: {
-                        Label("Not today", systemImage: "phone.down")
-                    }
-                } footer: {
-                    Text(explain("The message stays on your Talk tab either way — you can listen whenever."))
-                }
-            }
-            .navigationTitle("When should I call?")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismissWithDefault() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private func choose(_ minutes: Int) {
-        Task {
-            await DailyCallScheduler.decline(after: minutes)
-            finish()
-        }
-    }
-
-    /// Closed without picking. They DID decline the call, so the caller still
-    /// rings back — just on the interval from Me rather than one chosen here.
-    /// Cancelling the day on a swipe-down would be the app deciding something
-    /// the learner didn't.
-    private func dismissWithDefault() {
-        Task {
-            await DailyCallScheduler.decline()
-            finish()
-        }
-    }
-
-    private func finish() {
-        onDone()
-        dismiss()
-    }
-}
-
 /// The last step of onboarding: introducing the daily call and letting them
 /// pick its hour.
 ///
@@ -142,6 +58,14 @@ struct DailyCallOnboardingView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                     Text(explain("It rings even on silent, and I remember how the last call went."))
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                    // Said on this screen because this is where the prompt
+                    // comes from, on EITHER exit — and because a permission
+                    // asked for one feature, granted, and then used for
+                    // another is a thing learners are right to resent.
+                    Text(explain("Even if you'd rather I didn't call, notifications are how I reach you — news, and anything about your plan."))
                         .font(.footnote)
                         .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
@@ -212,9 +136,23 @@ struct DailyCallOnboardingView: View {
         }
     }
 
+    /// Declining the CALL is not declining to be reached.
+    ///
+    /// This screen is the only place in onboarding that asks about
+    /// notifications, and until 2026-09-26 the skip path asked nothing — so
+    /// everyone who tapped Not now (and anyone who never enabled a review
+    /// reminder either) could never be sent anything at all: not a word about
+    /// their plan, not an announcement, nothing. An app that has never asked
+    /// doesn't even appear in Settings → Notifications, so that silence was
+    /// permanent and invisible from both ends. The prompt is asked here on
+    /// BOTH exits, which is also why the copy above says what notifications
+    /// are for beyond the call.
     private func skip() {
         Analytics.capture("daily_call_onboarding", ["enabled": false])
         DailyCallStore.shared.isEnabled = false
-        onboarded = true
+        Task {
+            await PushTokens.ensurePermission()
+            onboarded = true
+        }
     }
 }

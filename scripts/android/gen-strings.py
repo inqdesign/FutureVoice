@@ -106,7 +106,19 @@ def xml_value(value: str) -> str:
     return f'"{v}"'
 
 
+def android_string_refs() -> set:
+    """Every `R.string.<name>` the Android sources use."""
+    src = Path(__file__).resolve().parents[2] / "android" / "app" / "src"
+    refs = set()
+    for f in src.rglob("*.kt"):
+        refs.update(re.findall(r"R\.string\.(\w+)", f.read_text(encoding="utf-8")))
+    return refs
+
+
 def load_entries():
+    ledger_early_path = os.path.join(os.path.dirname(__file__), "string-names.json")
+    ledger_early = json.load(open(ledger_early_path)) if os.path.exists(ledger_early_path) else {}
+    android_refs = android_string_refs()
     catalog = json.loads(CATALOG.read_text())
     source = catalog["sourceLanguage"]
     entries = {}
@@ -118,7 +130,13 @@ def load_entries():
         if meta.get("shouldTranslate") is False:
             skipped["no_translate"] += 1
             continue
-        if meta.get("extractionState") == "stale":
+        # Stale on iOS = no longer in the iOS code. Android ports a screen
+        # later than iOS changes it, so a key iOS just retired can still be
+        # on an Android screen — it is kept (with its translations, which the
+        # catalog still holds) for exactly as long as Android references its
+        # name. Without this an iOS merge broke the Android build over
+        # strings Android had every right to use.
+        if meta.get("extractionState") == "stale" and ledger_early.get(key) not in android_refs:
             skipped["stale"] += 1
             continue
         values = {}

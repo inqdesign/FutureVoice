@@ -314,12 +314,21 @@ struct WatchView: View {
     /// scene counts (or a free account) still meters scene audio in seconds
     /// off the talk pool, and that lands here as the talk cap.
     @State private var capKind: DailyAllowanceSheet.Kind = .scenes
+    /// Only ever drawn on a TALK wall, which Watch can also reach when a
+    /// scene's own pool is fine but the month's minutes are gone.
+    @State private var inviteOffer: InviteOffer?
 
     /// This account is on Light, so the spent-pool sheet has somewhere to
     /// send them. Resolved when the cap actually lands — Watch views are made
     /// often and most never hit it. False on Plus: nothing left to sell
     /// there, and the answer really is next month.
     @State private var canUpgradePlan = false
+    /// A minute pack is on offer at a talk wall: counted subscription, not a
+    /// trial (2026-09-26). Watch's own wall is scenes, which a pack doesn't
+    /// buy — the sheet only draws it for `kind == .talk`.
+    @State private var canTopUpTalk = false
+    @State private var accountIsTrialing = false
+    @State private var planMinutesAfterTrial: Int?
 
     /// The pool size for whichever cap landed — scenes or minutes — read
     /// from the account snapshot, never hardcoded.
@@ -336,7 +345,7 @@ struct WatchView: View {
     /// Which tier the paywall should open on, when a caller named one.
     @State private var paywallTier: String?
 
-    private enum CapChoice { case upgrade, review }
+    private enum CapChoice { case upgrade, review, topUp }
 
     /// Everything needed to synthesize one line, resolved on the main actor
     /// before any concurrency so a prefetch can't race `turns` growing under
@@ -379,8 +388,13 @@ struct WatchView: View {
             allowance: capAllowance,
             renewsOn: renewalLabel,
             endsInstead: planEndsAtPeriodEnd,
+            isTrial: accountIsTrialing,
+            planMinutesAfterTrial: planMinutesAfterTrial,
+            canTopUp: canTopUpTalk,
+            invite: inviteOffer,
             onReview: { capChoice = .review },
-            onUpgrade: { capChoice = .upgrade })
+            onUpgrade: { capChoice = .upgrade },
+            onTopUp: { capChoice = .topUp })
     }
 
     var body: some View {
@@ -438,6 +452,8 @@ struct WatchView: View {
             // Switching tabs is enough: RootTabView follows the staged route,
             // and this scene stays pushed for whenever they come back to it.
             case .review:  appState.pendingPracticeRoute = .studying
+            // Minutes landed; the next Talk tap spends them.
+            case .topUp:   break
             case nil:      break
             }
             capChoice = nil
@@ -563,6 +579,7 @@ struct WatchView: View {
         // self — label it that way, since the user is watching, not speaking.
         DialogueLine(speaker: isUser ? .user : .other,
                      name: isUser ? "Future self" : counterpart.name,
+                     avatar: isUser ? nil : CounterpartPhotoStore.shared.image(for: counterpart.id),
                      isCurrent: isCurrent) {
             Text(turn.text)
         } accessory: {
@@ -830,11 +847,15 @@ struct WatchView: View {
                 let account = await AccountStatus.fetch()
                 capKind = capped.isDailyCapReached ? .talk : .scenes
                 canUpgradePlan = account.isLightPlan
+                canTopUpTalk = account.isEntitled && !account.isUncappedTalk && !account.isTrialing
+                accountIsTrialing = account.isTrialing
+                planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }
                 capAllowance = capKind == .talk
                     ? account.monthlyCapSeconds.map { $0 / 60 }
                     : account.monthlyScenesCap
                 renewalLabel = account.renewalLabel
                 planEndsAtPeriodEnd = account.cancelAtPeriodEnd
+                if capKind == .talk { inviteOffer = await InviteOffer.load(for: account) }
                 sceneCapReached = true
                 isPlaying = false
                 return
@@ -879,16 +900,27 @@ struct WatchView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             return cached
         }
-        // The fluent self gets the fidelity model — this is the screen where
-        // the user listens hardest for "is that me?", and PhraseAudioStore
-        // caches by (voiceId, text), so the pricier synthesis happens once per
-        // line, ever. Counterpart preset voices stay on turbo: they're not the
-        // user's voice, so similarity buys nothing there, and paying 2x for
-        // every other line of every scene is not worth it.
-        let isOwnVoice = voiceId == appState.voiceCloneId
+        // Turbo, both voices (2026-09-26). The fluent self used to get the
+        // fidelity model here, on the argument that a scene is the screen
+        // where the learner listens hardest for "is that me?" — but TALK is
+        // that screen, it has always run turbo, and nobody has ever said the
+        // call doesn't sound like them. A scene cannot need a better model
+        // than the live conversation in the same voice. The founder's call,
+        // and it is the biggest single cost lever in the app: measured over
+        // the launch window the clone's half of the scene lines was 26,514
+        // credits against the counterpart's 11,354 — the same line count at
+        // twice the rate, i.e. 70% of a scene's bill — so a scene drops from
+        // $0.112 to about $0.073.
+        //
+        // The caching argument for the 2x had also stopped being true:
+        // `freshTake` writes new text every run, so nothing is reused and
+        // the premium was paid on every play, which `fidelityModelId`'s own
+        // rule forbids. Lines already cached keep playing as they were made
+        // (the key is (voiceId, speed, text), not the model) — nothing is
+        // orphaned and nothing is re-billed.
         let audio = try await ElevenLabsClient.shared.synthesize(
             voiceId: voiceId, text: text,
-            modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
+            modelId: ElevenLabsClient.cloneModelId,
             purpose: "scene",
             previousText: request.previousText,
             nextText: request.nextText,
@@ -899,10 +931,13 @@ struct WatchView: View {
 
     /// Speak `request` by STREAMING it: audio starts on the first PCM chunk
     /// instead of after the whole file lands. This is the fix for the wait in
-    /// front of the fluent self's lines — its fidelity model takes seconds to
-    /// synthesize a line, and buffered playback spent every one of them
-    /// silent. Prefetched lines keep the buffered path: they arrived while
-    /// the previous line was still speaking, so there is nothing to hide.
+    /// front of the fluent self's lines — a line takes seconds to synthesize
+    /// and buffered playback spent every one of them silent. (It was written
+    /// when those lines ran the fidelity model, which was slower still;
+    /// scenes are turbo on both voices since 2026-09-26, so the wait is
+    /// shorter and this is still what hides it.) Prefetched lines keep the
+    /// buffered path: they arrived while the previous line was still
+    /// speaking, so there is nothing to hide.
     ///
     /// Returns false when streaming isn't available (an edge deploy that
     /// ignored `stream`, or an audio engine that refused) so the caller can
@@ -911,11 +946,10 @@ struct WatchView: View {
         guard !request.voiceId.isEmpty else { return false }
         let latch = PlaybackLatch()
         var started = false
-        let isOwnVoice = request.voiceId == appState.voiceCloneId
         let result = try await ElevenLabsClient.shared.synthesizeStreaming(
             voiceId: request.voiceId,
             text: request.text,
-            modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
+            modelId: ElevenLabsClient.cloneModelId,
             purpose: "scene",
             sceneKey: sceneRunKey
         ) { chunk, sampleRate in

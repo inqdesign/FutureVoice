@@ -154,8 +154,6 @@
     <string name="reminders_cant_reach_you">Los repasos y la llamada diaria no pueden llegarte. Actívalos en los ajustes.</string>
     <string name="axis_vocab">Vocabulario</string>
     <string name="axis_express">Expresión</string>
-    <string name="keep">Seguir estudiando</string>
-    <string name="i_know">Ya lo sé</string>
     <string name="common_phrases">Frases frecuentes</string>
     <string name="another_way_to_say_it">Otra forma de decirlo</string>
     <string name="as_a_name">Como nombre</string>
@@ -251,4 +249,6 @@
     <string name="back_in_when">"De vuelta en %s"</string>
     <string name="talk_time_used_up_call_saved">"Se te acabó el tiempo de conversación. Esta llamada quedó guardada — puedes retomarla cuando quieras."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"No se pudo calificar esa vez — tu toma sigue aquí."</string>
+    <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
+    <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Se lee de los fallos de gramática confirmados por cada 100 palabras habladas — cuantos menos, más alto.</string>
 </resources>

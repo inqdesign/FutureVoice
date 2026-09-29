@@ -152,7 +152,7 @@ struct PublicIntroView: View {
                 location = [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", ")
                 occupation = p.occupation
                 interests = p.interests.joined(separator: ", ")
-                intro = PublicPersonaService.composedIntro(p)
+                intro = await PublicPersonaService.composeIntro(p, language: appState.targetLanguage)
             }
         }
     }

@@ -78,15 +78,23 @@ final class AudioPlayer: NSObject, ObservableObject {
     ///   route + mode (e.g. `.measurement` from a sync-record run) bleeding
     ///   into the next `.playback` call, which manifests as quiet preview
     ///   audio. Force-reset clears that.
+    /// Playback sources whose own surface already reports itself once —
+    /// see the note in `play`.
+    static let unreportedPlaybackSources: Set<String> = ["conversation", "say_again"]
+
     func play(_ data: Data,
               source: String = "replay",
               configureSession: Bool = true,
               forceSessionReset: Bool = false,
               completion: (() -> Void)? = nil) throws {
-        // Product analytics — deliberate playbacks only. The conversation's
-        // per-turn auto-play passes source "conversation" and is skipped
-        // (conversation_started/ended already covers that).
-        if source != "conversation" {
+        // Product analytics — deliberate playbacks only. A source that plays
+        // a line PER TURN of something that already reports itself once is
+        // skipped: the live call's auto-play ("conversation",
+        // conversation_started/ended) and a say-it-again run
+        // ("say_again", one `say_again_run` row at the end). Counting
+        // those would make a twenty-line run twenty events, which is the
+        // mistake `sync_push` was cut back for on 2026-09-26.
+        if !Self.unreportedPlaybackSources.contains(source) {
             Analytics.capture("audio_played", ["source": source])
         }
         if configureSession {

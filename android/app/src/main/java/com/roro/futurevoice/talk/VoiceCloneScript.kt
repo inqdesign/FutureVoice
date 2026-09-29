@@ -108,15 +108,15 @@ object VoiceCloneScript {
     )
 
     private val greetings: Map<String, String> = mapOf(
-        "en" to "Hey — it's you. Just more fluent. Pick a color that feels like us.",
-        "de" to "Hey — das bist du. Nur fließender. Such dir eine Farbe aus, die zu uns passt.",
-        "ko" to "안녕, 한국어를 유창하게 잘하는 너야. 우리한테 어울리는 색을 골라볼래?",
-        "ja" to "やあ — 君だよ。ただ、もっと流暢な。僕たちらしい色を選んでみて。",
-        "es" to "Oye — eres tú. Solo que más fluido. Elige un color que nos represente.",
-        "fr" to "Salut — c'est toi. En plus fluide. Choisis une couleur qui nous ressemble.",
-        "it" to "Ehi — sei tu. Solo più fluente. Scegli un colore che ci somigli.",
-        "pt" to "Ei — é você. Só que mais fluente. Escolha uma cor com a nossa cara.",
-        "zh" to "嘿 — 是你。只是更流利了。挑一个像我们的颜色吧。",
-        "zh-Hant" to "嘿 — 是你。只是更流利了。挑一個像我們的顏色吧。",
+        "en" to "Hey! It's you, already fluent. <break time=\"0.5s\" /> Pick a color you like, and trust me, we'll do this together.",
+        "de" to "Hey! Ich bin's, das fließende Du. <break time=\"0.5s\" /> Such dir eine Farbe aus, und vertrau mir, wir schaffen das.",
+        "ko" to "안녕! 이미 유창해진 너야. <break time=\"0.5s\" /> 마음에 드는 색 하나 골라보고, 이젠 나만 믿고 같이 해보자.",
+        "ja" to "やあ！もうぺらぺらになったきみだよ。<break time=\"0.5s\" /> 好きな色を選んでみて、これからは僕を信じて一緒にやっていこう。",
+        "es" to "¡Hola! Soy yo, tú ya con fluidez. <break time=\"0.5s\" /> Elige el color que te guste, y confía en mí, lo hacemos juntos.",
+        "fr" to "Salut ! C’est moi, toi qui parles déjà bien. <break time=\"0.5s\" /> Choisis ta couleur, et fais-moi confiance, on y va.",
+        "it" to "Ehi! Sono io, te che ormai parli bene. <break time=\"0.5s\" /> Scegli il tuo colore, e fidati di me, ce la facciamo.",
+        "pt" to "Oi! Sou eu, você já fluente. <break time=\"0.5s\" /> Escolhe a cor que gosta, e confia em mim, a gente faz isso junto.",
+        "zh" to "嘿！是我，已经说得很流利的你。<break time=\"0.5s\" /> 挑一个你喜欢的颜色吧，以后你就信我，我们一起来。",
+        "zh-Hant" to "嘿！是我，已經說得很流利的你。<break time=\"0.5s\" /> 挑一個你喜歡的顏色吧，以後你就信我，我們一起來。",
     )
 }

@@ -27,6 +27,12 @@ final class StoreKitService: ObservableObject {
         // What is actually enforced: the pool per billing period.
         let monthly_seconds: Int?
         let monthly_scenes: Int?
+        // Whether talking is counted at all. False on every plan sold since
+        // 2026-09-26 (`20260926110000_bounded_plans_and_topups`); the column
+        // has existed since 2026-08-21, so selecting it can no longer empty
+        // the catalog on a build that shipped ahead of a migration. Optional
+        // so a row that somehow lacks it reads as capped, the safe reading.
+        let talk_unlimited: Bool?
         let apple_product_id: String
     }
 
@@ -96,6 +102,18 @@ final class StoreKitService: ObservableObject {
 
     /// Longest free trial across loaded products — drives the timeline copy.
     /// Zero when no product carries one.
+    /// Talk minutes a TRIAL gets in total, whatever plan it trials — the
+    /// server's rule (`consume_metered_seconds`: Light's `monthly_seconds`
+    /// × 7 / 30 = 35 min), computed from the same catalog row so the paywall
+    /// can say the number BEFORE the purchase. Nil until the catalog has a
+    /// Light row. Keep the formula in step with the migration; a trialer who
+    /// learns the size only when it is spent leaves (2026-09-25).
+    var trialTalkMinutes: Int? {
+        let light = options.filter { $0.plan.tier == "light" }.compactMap(\.plan.monthly_seconds)
+        guard let seconds = light.min() else { return nil }
+        return seconds * 7 / 30 / 60
+    }
+
     var trialDays: Int {
         options.compactMap(\.trialDays).max() ?? 0
     }
@@ -123,6 +141,14 @@ final class StoreKitService: ObservableObject {
         updatesTask = Task.detached(priority: .background) {
             for await update in Transaction.updates {
                 guard case .verified(let transaction) = update else { continue }
+                // A talk-minute pack finishes itself, and only once the
+                // server has landed it — an unfinished consumable is the
+                // retry, so finishing it here on a failed redeem would
+                // lose a purchase Apple has already charged for.
+                if transaction.productType == .consumable {
+                    await TalkTopUpService.redeem(update)
+                    continue
+                }
                 await claim(update)
                 await transaction.finish()
             }
@@ -214,8 +240,31 @@ final class StoreKitService: ObservableObject {
         await claimCurrentEntitlements()
     }
 
+    /// The catalog fetch in flight, if any. Every `load()` call awaits the
+    /// SAME one: the paywall's `.task` is what calls this, and a sheet
+    /// presented while another is still dismissing is torn down and
+    /// presented again — two `.task`s, one `@StateObject`. The first copy's
+    /// task is CANCELLED mid-fetch; the second used to hit `!loading` and
+    /// return at once to an empty `options`, so the screen logged
+    /// `products: 0`, skipped the trial pitch, and drew cards with no prices
+    /// until (if ever) the first fetch landed. Prod 2026-09-24: four of the
+    /// five accounts that met the free pool's end saw that screen.
+    ///
+    /// An unstructured `Task { }` does not inherit its creator's
+    /// cancellation, so the fetch outlives the torn-down view, and awaiting
+    /// `.value` from a cancelled caller still waits for it.
+    private var inflightLoad: Task<Void, Never>?
+
     func load() async {
-        guard options.isEmpty, !loading else { return }
+        guard options.isEmpty else { return }
+        if let inflightLoad { await inflightLoad.value; return }
+        let task = Task { await fetchCatalog() }
+        inflightLoad = task
+        await task.value
+        inflightLoad = nil
+    }
+
+    private func fetchCatalog() async {
         loading = true
         defer { loading = false }
 
@@ -223,7 +272,7 @@ final class StoreKitService: ObservableObject {
         do {
             plans = try await SupabaseProvider.shared
                 .from("subscription_plans")
-                .select("id,tier,period,daily_seconds,daily_scenes,monthly_seconds,monthly_scenes,apple_product_id")
+                .select("id,tier,period,daily_seconds,daily_scenes,monthly_seconds,monthly_scenes,talk_unlimited,apple_product_id")
                 .eq("is_active", value: true)
                 .execute()
                 .value
@@ -234,11 +283,13 @@ final class StoreKitService: ObservableObject {
             return
         }
 
-        let products: [Product]
-        do {
-            products = try await Product.products(for: plans.map(\.apple_product_id))
-        } catch {
-            products = []
+        // One retry covers StoreKit answering empty on a cold first call.
+        let ids = plans.map(\.apple_product_id)
+        var products: [Product] = []
+        for attempt in 0..<2 {
+            products = (try? await Product.products(for: ids)) ?? []
+            if !products.isEmpty || attempt == 1 { break }
+            try? await Task.sleep(nanoseconds: 500_000_000)
         }
         // A silent empty answer is the one failure this screen can't explain
         // to itself — every price line simply goes blank. Name the ids Apple

@@ -37,6 +37,9 @@ struct CounterpartVoiceIntakeView: View {
     @State private var error: String?
     @State private var prefilled: Counterpart?
     @State private var showManualForm = false
+    /// The photo picked on the first card. The person does not exist yet,
+    /// so it rides along to the form and is saved with them.
+    @State private var photo: UIImage?
 
     private static let stylePresets = [
         "Direct", "Playful", "Sarcastic", "Formal", "Warm",
@@ -88,11 +91,11 @@ struct CounterpartVoiceIntakeView: View {
             // to lose, only Cancel closes this — never a stray swipe.
             .interactiveDismissDisabled(!name.trimmingCharacters(in: .whitespaces).isEmpty)
             .sheet(item: $prefilled, onDismiss: { dismiss() }) { draft in
-                CounterpartFormView(initial: draft)
+                CounterpartFormView(initial: draft, photo: photo)
                     .environmentObject(appState)
             }
             .sheet(isPresented: $showManualForm, onDismiss: { dismiss() }) {
-                CounterpartFormView(initial: nil)
+                CounterpartFormView(initial: nil, photo: photo)
                     .environmentObject(appState)
             }
             .onAppear {
@@ -132,6 +135,19 @@ struct CounterpartVoiceIntakeView: View {
             IntakeStepHeader(
                 question: "Who are we adding?",
                 detail: "Someone you actually talk to — dialogues get simulated with them, in their manner.")
+            // Their face, optional. Photo library, camera, or a file; saved
+            // small and square with the person, never sent anywhere.
+            VStack(spacing: 8) {
+                PersonPhotoButton(onImage: { photo = $0 },
+                                  onRemove: photo == nil ? nil : { photo = nil }) {
+                    PersonPhotoCircle(image: photo, name: name)
+                }
+                .buttonStyle(.plain)
+                Text(explain("A photo is optional. Without one, their initials stand in."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
             TextField("Their name — as you call them", text: $name)
                 .textInputAutocapitalization(.words)
                 .font(.title3)
@@ -169,6 +185,11 @@ struct CounterpartVoiceIntakeView: View {
             .padding(14)
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            if kind == .publicFigure {
+                Text(explain("A public figure's profile is filled from public coverage — where they're from, what they're known for, how they talk in interviews. Their voice is a preset, never their real one."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -266,7 +287,11 @@ struct CounterpartVoiceIntakeView: View {
         }
         if !styleLine.isEmpty { sections.append("How they talk: \(styleLine)") }
 
-        if narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty })
+        // A public figure is looked up whatever the learner said — the
+        // profile comes from coverage, not from the cards — so the
+        // skip-the-model shortcut below never applies to one.
+        if kind != .publicFigure,
+           narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty })
             && narrativeChips.allSatisfy(\.isEmpty) {
             // Nothing to extract — skip the LLM and go straight to the form.
             var draft = Counterpart.empty
@@ -282,7 +307,8 @@ struct CounterpartVoiceIntakeView: View {
             var draft = try await CounterpartParser.parse(
                 spokenDescription: sections.joined(separator: "\n\n"),
                 languageHint: locale,
-                nativeLanguage: appState.nativeLanguage)
+                nativeLanguage: appState.nativeLanguage,
+                publicFigure: kind == .publicFigure)
             // What the user typed outright wins over the parse.
             draft.name = name
             // The relationship card is REQUIRED, so the user always gave one —
@@ -314,6 +340,11 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
     case fellowParent = "Fellow parent"
     case neighbor = "Neighbor"
     case teacher = "Teacher"
+    /// A singer, an actor, an athlete — someone not in the learner's life.
+    /// Its own kind, not "Other": the cards ask why this person and where
+    /// the learner imagines meeting them, and the parse runs grounded so the
+    /// profile is the public record rather than the learner's guess.
+    case publicFigure = "Public figure"
     case other = "Other"
 
     var id: String { rawValue }
@@ -451,6 +482,22 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
                   chips: ["Strict but fair", "Encouraging", "Patient",
                           "Talks fast", "Recent school events",
                           "I want to ask more questions"])
+        ]
+        case .publicFigure: return [
+            .init(question: "Why this person?",
+                  detail: Self.tapOrTalk,
+                  chips: ["Fan for years", "Their music", "Their films or shows",
+                          "Their sport", "Their interviews",
+                          "They're why I'm learning this language"]),
+            .init(question: "Where would you meet them?",
+                  detail: "The scene is built around this moment.",
+                  chips: ["Fan meeting", "An interview", "Backstage",
+                          "At the airport", "By chance, in a cafe", "A signing event"]),
+            .init(question: "What would you want to say to them?",
+                  detail: "Say it in your own language — the fluent self says it in theirs.",
+                  chips: ["Thank them", "Tell them what their work meant to me",
+                          "Ask about their work", "Ask for advice",
+                          "Just say hello properly", "A question I've always had"])
         ]
         case .other: return [
             .init(question: "How do you know each other?",

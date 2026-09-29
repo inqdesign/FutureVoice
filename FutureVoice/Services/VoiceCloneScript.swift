@@ -159,16 +159,141 @@ enum VoiceCloneScript {
         ],
     ]
 
+    /// One flowing sentence per language, never a stack of fragments.
+    ///
+    /// This line was three clipped sentences joined by an em-dash ("Hey — it's
+    /// you. Just more fluent. Pick a color…") and it read as an announcement,
+    /// not as someone talking: the synthesizer pauses at punctuation and
+    /// nowhere else, so three full stops in twelve words is three hard stops,
+    /// and an em-dash buys no breath at all. Same finding as
+    /// `CoachingLanguage.breathPunctuation` — clauses that are one thought
+    /// join with a connective and a comma. It is the clone's FIRST words, and
+    /// since 2026-09-27 it is heard EXACTLY ONCE: the meet act plays it on
+    /// arrival and nothing replays it, because a colour tap is a visual
+    /// decision that audio never helped with.
+    ///
+    /// **It asks for the colour and nothing else** (user, 2026-09-27). The
+    /// line lost that sentence for half a day, on the argument that it was
+    /// asking for something it could no longer answer with — the theme taps
+    /// went silent the same day — and that a decoration is a small thing to
+    /// say with the first words anyone hears themselves be fluent in. The
+    /// user put it back, and the argument was half wrong anyway: the picker
+    /// DOES answer, visually, the moment a colour is tapped. What stays from
+    /// it is the ordering — the instruction sits in the middle and the line
+    /// still LANDS on the encouragement, because that is what these words
+    /// are for. The SPEED is deliberately not named here: its own question
+    /// is `paceSample`'s, spoken by the pills, and a greeting that recited
+    /// both controls would be a menu.
+    ///
+    /// **Adding it cost a full stop, and that was audible** (reported the
+    /// same day: "말이 뚝뚝 끊어진다"). Written as four sentences the Korean
+    /// line came back with FOUR pauses and 0.90 s of silence in 6.0 s; the
+    /// colour clause joined to the closing with a connective ending
+    /// ("골라보고,") is two pauses and 0.42 s in 5.5 s — the same words, half
+    /// the dead air. Measured, not guessed: synthesize the candidates and
+    /// read `silencedetect` (noise=-35dB:d=0.12). This is
+    /// `CoachingLanguage.breathPunctuation`'s rule arriving from the other
+    /// side — there it stops the model writing three clipped sentences, here
+    /// it stops us.
+    ///
+    /// **The beat before the colour clause is an explicit `<break>`**, and it
+    /// is the only markup in any line this app synthesizes. Punctuation could
+    /// not buy it: a full stop gives 0.20–0.36 s and varies take to take, a
+    /// paragraph break gives 0.00–0.14 s (i.e. nothing), while
+    /// `<break time="0.5s" />` measured 0.69 and 0.73 s across two takes —
+    /// the pause is requested rather than hoped for. Two things to hold. It
+    /// is measured on **eleven_turbo_v2_5**, the model these lines actually
+    /// use: a model that did NOT support the tag would SPEAK it, and these
+    /// are the first words anyone hears in their own fluent voice, so
+    /// re-measure the day the TTS model moves. And the tag counts toward the
+    /// 120-character free gate, which is why several lines above are shorter
+    /// than they would otherwise be — the budget is 98 characters of speech
+    /// plus 22 of tag.
+    ///
+    /// Each line is WRITTEN in its language, never translated from the
+    /// English one (user, 2026-09-27): a translated greeting is the one
+    /// sentence in the app where a foreign cadence would be heard rather than
+    /// read, in the learner's own voice.
+    ///
+    /// **It closes on encouragement, not on a plan** (user, 2026-09-27, whose
+    /// own words the Korean line is). A first draft ended "let's talk a lot
+    /// from here on", which is a description of the product; what the learner
+    /// needs at this moment is the thing only this speaker can say — trust
+    /// me, we'll do this together. A second draft kept a clause about the
+    /// language getting easy ("한국어는 이만큼 편해지니까") and it was the
+    /// wrong kind of true: "이만큼" points at an amount nobody can point at
+    /// yet, and the sentence states in words what the AUDIO is already
+    /// proving. The recording is the evidence, so the line only has to say
+    /// who is speaking — "이미 유창해진 너", the already-fluent YOU, which is
+    /// the same framing every other language carries ("the you who's already
+    /// fluent", "das schon fließende Du"). Never "나": the speaker is not a
+    /// separate person who got good, it is them. It is deliberately not the first call's opener, which
+    /// makes the same promise in more words ("don't give up, and let's get
+    /// you here, together"): that one is spoken minutes later, so this must
+    /// not be its rehearsal.
+    ///
+    /// Two hard constraints on any rewrite: **120 characters** (the edge
+    /// function's `isFreeGreeting` gate — over it, the clone's first words are
+    /// billed, and on a zero balance they simply never speak), and the
+    /// learner's TARGET language, at a level a beginner in it can follow.
     private static let greetings: [String: String] = [
-        "en": "Hey — it's you. Just more fluent. Pick a color that feels like us.",
-        "de": "Hey — das bist du. Nur fließender. Such dir eine Farbe aus, die zu uns passt.",
-        "ko": "안녕, 한국어를 유창하게 잘하는 너야. 우리한테 어울리는 색을 골라볼래?",
-        "ja": "やあ — 君だよ。ただ、もっと流暢な。僕たちらしい色を選んでみて。",
-        "es": "Oye — eres tú. Solo que más fluido. Elige un color que nos represente.",
-        "fr": "Salut — c'est toi. En plus fluide. Choisis une couleur qui nous ressemble.",
-        "it": "Ehi — sei tu. Solo più fluente. Scegli un colore che ci somigli.",
-        "pt": "Ei — é você. Só que mais fluente. Escolha uma cor com a nossa cara.",
-        "zh": "嘿 — 是你。只是更流利了。挑一个像我们的颜色吧。",
-        "zh-Hant": "嘿 — 是你。只是更流利了。挑一個像我們的顏色吧。",
+        "en": "Hey! It's you, already fluent. <break time=\"0.5s\" /> Pick a color you like, and trust me, we'll do this together.",
+        "de": "Hey! Ich bin's, das fließende Du. <break time=\"0.5s\" /> Such dir eine Farbe aus, und vertrau mir, wir schaffen das.",
+        "ko": "안녕! 이미 유창해진 너야. <break time=\"0.5s\" /> 마음에 드는 색 하나 골라보고, 이젠 나만 믿고 같이 해보자.",
+        "ja": "やあ！もうぺらぺらになったきみだよ。<break time=\"0.5s\" /> 好きな色を選んでみて、これからは僕を信じて一緒にやっていこう。",
+        "es": "¡Hola! Soy yo, tú ya con fluidez. <break time=\"0.5s\" /> Elige el color que te guste, y confía en mí, lo hacemos juntos.",
+        "fr": "Salut ! C’est moi, toi qui parles déjà bien. <break time=\"0.5s\" /> Choisis ta couleur, et fais-moi confiance, on y va.",
+        "it": "Ehi! Sono io, te che ormai parli bene. <break time=\"0.5s\" /> Scegli il tuo colore, e fidati di me, ce la facciamo.",
+        "pt": "Oi! Sou eu, você já fluente. <break time=\"0.5s\" /> Escolhe a cor que gosta, e confia em mim, a gente faz isso junto.",
+        "zh": "嘿！是我，已经说得很流利的你。<break time=\"0.5s\" /> 挑一个你喜欢的颜色吧，以后你就信我，我们一起来。",
+        "zh-Hant": "嘿！是我，已經說得很流利的你。<break time=\"0.5s\" /> 挑一個你喜歡的顏色吧，以後你就信我，我們一起來。",
+    ]
+
+    /// What the meet act's speed pills speak: the SAME sentence at all three
+    /// rungs, because a rung audition where the words also change compares
+    /// words, not pace.
+    ///
+    /// Deliberately not the greeting. That line ends on "pick a color", which
+    /// is the question the learner has just answered, and at 94 characters in
+    /// English it runs ~6 s — auditioning three rungs would be twenty seconds
+    /// of one sentence, and it would break the rule that the greeting is heard
+    /// once. Deliberately not the first call's opener either
+    /// (`FreeTalkOpeners.introOpener`): 190 characters in English, over the
+    /// edge function's free-greeting gate and ~12 s per take.
+    ///
+    /// So: two clauses and it ASKS the question the pills answer — the same
+    /// shape the greeting has, where the line asks and the control replies.
+    /// Informal (it is the learner's own future self), MATERIAL so target
+    /// language, and under 120 characters in every language because these
+    /// takes ride the same free `purpose: "greeting"` gate.
+    ///
+    /// **It must run about 4.5 seconds, and that is a measurement, not a
+    /// feeling** (2026-09-27). The first version was half this length — 24
+    /// characters in Korean, ~2.4 s of speech — and on it the rungs could not
+    /// be told apart: three takes each of 1.0 / 0.9 / 0.8 came back
+    /// 2.42–2.50 / 2.38–2.92 / 2.67–3.45 s of speech, so a 0.9 take was
+    /// measurably FASTER than every 1.0 take and the founder heard Relaxed as
+    /// quicker than Normal. The synthesizer's take-to-take variance is a fixed
+    /// fraction of a second; a 10% difference only clears it once the line is
+    /// long enough. At this length the same nine takes are strictly ordered —
+    /// 4.36–4.63 / 4.74–5.05 / 5.27–5.80 — with no overlap between rungs.
+    /// Shorten any of these lines and the control starts lying.
+    static func paceSample(for language: String) -> String {
+        if let exact = paceSamples[language] { return exact }
+        let code = LanguageCatalog.language(language)?.code ?? "en"
+        return paceSamples[code] ?? paceSamples["en"]!
+    }
+
+    private static let paceSamples: [String: String] = [
+        "en": "From now on I'll talk at this pace. Listen for a moment, and tell me if it's easy enough to follow.",
+        "de": "Ab jetzt rede ich in diesem Tempo. Hör kurz rein und sag mir, ob du gut mitkommst.",
+        "ko": "앞으로 이 속도로 말할게. 조금 들어보고, 이 정도면 편하게 들리는지 알려줘.",
+        "ja": "これからはこの速さで話すね。少し聞いてみて、これなら聞き取りやすいか教えて。",
+        "es": "A partir de ahora hablaré a este ritmo. Escucha un momento y dime si se me entiende bien.",
+        "fr": "À partir de maintenant je parlerai à ce rythme. Écoute un instant et dis-moi si tu me suis bien.",
+        "it": "D’ora in poi parlerò a questo ritmo. Ascolta un momento e dimmi se mi segui bene.",
+        "pt": "De agora em diante vou falar neste ritmo. Escuta um pouco e me diz se dá para acompanhar.",
+        "zh": "以后我就用这个速度说话。你听一下，告诉我这样好不好跟上。",
+        "zh-Hant": "以後我就用這個速度說話。你聽一下，告訴我這樣好不好跟上。",
     ]
 }

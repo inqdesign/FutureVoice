@@ -160,19 +160,26 @@ enum TalkCurriculum {
     /// model-written speech, not prose with abbreviations and decimals, and a
     /// bad split produces a fragment the 4-word floor above throws away.
     nonisolated static func sentences(in text: String) -> [String] {
+        // Slices, not a character-by-character rebuild: this runs over every
+        // turn of every talk on each book build (measured 2026-09-23).
         var out: [String] = []
-        var current = ""
-        for character in text {
-            current.append(character)
-            guard ".!?。！？".contains(character) else { continue }
-            let piece = current.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !piece.isEmpty { out.append(piece) }
-            current = ""
+        var start = text.startIndex
+        var i = start
+        while i < text.endIndex {
+            let next = text.index(after: i)
+            if sentenceTerminators.contains(text[i]) {
+                let piece = text[start..<next].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !piece.isEmpty { out.append(piece) }
+                start = next
+            }
+            i = next
         }
-        let tail = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tail = text[start...].trimmingCharacters(in: .whitespacesAndNewlines)
         if !tail.isEmpty { out.append(tail) }
         return out
     }
+
+    nonisolated private static let sentenceTerminators: Set<Character> = [".", "!", "?", "。", "！", "？"]
 
     /// Stable id for one sentence of a turn, so a shadow attempt made today is
     /// still recognised tomorrow. Derived from the source turn like
@@ -188,9 +195,14 @@ enum TalkCurriculum {
     /// attempts made from either surface land on the same line and old
     /// attempts count retroactively. (It was called `shadowLineId` while the
     /// corrections WERE the curriculum's shadow lines.)
-    static func correctionId(for turnId: UUID) -> UUID {
+    static func correctionId(for turnId: UUID, index: Int = 0) -> UUID {
         var bytes = turnId.uuid
         bytes.0 ^= 0xFF
+        // Index 0 is byte-for-byte the id this has always produced, so every
+        // shadow attempt and say-it-again read already on disk still lands on
+        // its item. A turn can now carry several fixes, and each needs its
+        // own; byte 14 is untouched by `sentenceLineId`, which uses 15.
+        if index > 0 { bytes.14 ^= 0xC0 &+ UInt8(index & 0x0F) }
         return UUID(uuid: bytes)
     }
 
@@ -290,9 +302,23 @@ enum TalkCurriculum {
         /// ("Got it", or produced live in a talk) — the Drill chapter studies
         /// corrections as CARDS, never as shadowing — or by a shadow take on
         /// the line, which the transcript still offers.
-        func masteryDate(for text: String, turnId: UUID?, itemId: UUID) -> Date? {
+        ///
+        /// `oneCardPerTurn`: a turn saved before `fixes` minted ONE card, so
+        /// its turn id identifies it. A turn with fixes mints one card PER
+        /// fix, all sharing that turn id — matched by turn there, the first
+        /// card of the turn to graduate would master every fix in it. Those
+        /// are found by their own text instead.
+        ///
+        /// `lineId`: a passing take on the whole corrected turn (the
+        /// Say it again, or the transcript's Shadow button — both file it
+        /// under `correctionId(for:)`) masters every fix in that turn. The
+        /// line contains all of them; reading it right is saying all of them
+        /// right, exactly as reading the old one-sentence correction was.
+        func masteryDate(for text: String, turnId: UUID?, itemId: UUID,
+                         lineId: UUID? = nil, oneCardPerTurn: Bool = true) -> Date? {
+            let shadowIds = Set([itemId, lineId].compactMap { $0 })
             if let attempt = shadowAttempts
-                .filter({ $0.turnId == itemId && !$0.isPartial
+                .filter({ shadowIds.contains($0.turnId) && !$0.isPartial
                           && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore })
                 .map(\.createdAt).max() {
                 return attempt
@@ -303,15 +329,38 @@ enum TalkCurriculum {
             // chapter's openCard uses).
             guard let card = sessionCards.first(where: {
                 $0.box == DrillStore.maxBox
-                    && ((turnId != nil && $0.sourceTurnId == turnId)
+                    && ((oneCardPerTurn && turnId != nil && $0.sourceTurnId == turnId)
                         || CarryoverDetector.normalized($0.targetPhrase) == needle)
             }) else { return nil }
             return card.lastReviewedAt ?? card.createdAt
         }
 
         for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
-            guard let s = turn.suggestion,
-                  seenCorrections.insert(CarryoverDetector.normalized(s.alternative)).inserted
+            guard let s = turn.suggestion else { continue }
+            // The Drill chapter studies SLIPS as cards, so it lists the
+            // turn's fixes — one clause each. `alternative` is the whole turn
+            // re-said (2026-09-27) and belongs to Shadow and the
+            // Say it again, never to a card. A turn with an empty `fixes`
+            // was grammatically clean and contributes nothing here.
+            if let fixes = s.fixes {
+                for (index, fix) in fixes.enumerated() {
+                    // The card's own text — `DrillStore.cardPair`, the rule
+                    // ingest minted it by — or its mastery is never found.
+                    let target = DrillStore.cardPair(for: fix, in: turn.transcript).target
+                    guard seenCorrections.insert(CarryoverDetector.normalized(target)).inserted
+                    else { continue }
+                    let id = correctionId(for: turn.id, index: index)
+                    var item = ScenarioCurriculum.Item(id: id, text: target, note: fix.why)
+                    item.masteredAt = masteryDate(for: target, turnId: turn.id, itemId: id,
+                                                  lineId: correctionId(for: turn.id),
+                                                  oneCardPerTurn: false)
+                    snap.corrections.append(item)
+                }
+                continue
+            }
+            // Pre-`fixes` turns: `alternative` is the one-sentence correction
+            // it was written as, and its id is the one its attempts carry.
+            guard seenCorrections.insert(CarryoverDetector.normalized(s.alternative)).inserted
             else { continue }
             let id = correctionId(for: turn.id)
             var item = ScenarioCurriculum.Item(id: id, text: s.alternative, note: s.reason)

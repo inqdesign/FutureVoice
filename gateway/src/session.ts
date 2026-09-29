@@ -29,6 +29,15 @@ const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
 const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
 const CONVERSATION_MODEL = "eleven_turbo_v2_5"
 
+/** The app's speech-speed setting, made safe. Anything outside ElevenLabs'
+ *  0.7–1.2 window is refused by upstream for the WHOLE line, which would be a
+ *  silent call — so a nonsense value becomes "no preference", never an error. */
+function clampSpeed(v: unknown): number | undefined {
+  if (typeof v !== "number" || !Number.isFinite(v)) return undefined
+  if (v < 0.7 || v > 1.2) return undefined
+  return v
+}
+
 export class CallSession implements DurableObject {
   private client: WebSocket | null = null
   private transcriber: GeminiTranscriber | null = null
@@ -105,6 +114,12 @@ export class CallSession implements DurableObject {
   /** Has the learner said anything yet in this call? The meter waits for
    *  it — see the billing predicate. */
   private learnerSpoke = false
+  /** When the transcriber first made words of the learner's FIRST answer.
+   *  The meter's gate lifts only at the first commit, so the answer itself
+   *  was never billed — while the phone's clock (2026-09-27) counts it from
+   *  its first words. At that commit the span is billed once, so the clock
+   *  and the bill agree. 0 = not started. */
+  private firstInterimAt = 0
   private language = "en"
   private lastClientFrameAt = Date.now()
   /** Nothing from the phone for this long → the socket is dead; hang up. */
@@ -535,6 +550,12 @@ export class CallSession implements DurableObject {
       this.applySay({ text, alreadySpoken: msg.alreadySpoken === true })
       return
     }
+    if (msg.type === "set") {
+      // Mid-call settings. Nothing here may end a call: a setting the gateway
+      // cannot honour is dropped, never raised.
+      if (msg.speed !== undefined) this.eleven?.setSpeed(clampSpeed(msg.speed))
+      return
+    }
     if (msg.type !== "start" || this.started) return
 
     // --- Session-start gate: the ONE place auth and ownership are paid. ---
@@ -617,6 +638,7 @@ export class CallSession implements DurableObject {
         voiceId: msg.voiceId,
         modelId: CONVERSATION_MODEL,
         outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
+        speed: clampSpeed(msg.speed),
       },
       {
         onAudio: (contextId, pcm) => {
@@ -664,6 +686,9 @@ export class CallSession implements DurableObject {
       {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
+          if (!this.learnerSpoke && this.firstInterimAt === 0 && text.trim().length > 0) {
+            this.firstInterimAt = Date.now()
+          }
           this.armIdleHangUp()
           if (this.pendingUtterance !== null) {
             // First interim after the final: the pause this learner actually
@@ -952,6 +977,14 @@ export class CallSession implements DurableObject {
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string): void {
     console.log(`commit: "${text.slice(0, 80)}"`)
+    if (!this.learnerSpoke && this.firstInterimAt > 0) {
+      // Capped at the longest a listening turn is held open on the phone
+      // (`maxListenSecondsHard`), so a stray interim long before the answer
+      // can't bill the wait in front of it.
+      const firstAnswer = Math.min((Date.now() - this.firstInterimAt) / 1000, 120)
+      this.billing?.credit(firstAnswer)
+      console.log(`billing: first answer ${firstAnswer.toFixed(1)}s`)
+    }
     this.learnerSpoke = true
     this.lastCommitAt = Date.now()
     this.emit({ type: "user_turn", text })

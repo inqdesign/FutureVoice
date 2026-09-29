@@ -121,7 +121,16 @@ enum WeeklyReportEngine {
         }
         for session in windowSessions {
             for turn in session.turns where !turn.excludedFromScoring {
-                if let s = turn.suggestion { addPair(said: turn.transcript, alt: s.alternative) }
+                guard let s = turn.suggestion else { continue }
+                // A MISTAKE is what recurs, so feed the fixes. Since
+                // 2026-09-27 `alternative` is the whole turn re-said, which
+                // mixes style with grammar; a turn from before `fixes` keeps
+                // the old pair, whose alternative WAS the correction.
+                if let fixes = s.fixes {
+                    for fix in fixes { addPair(said: fix.was, alt: fix.now) }
+                } else {
+                    addPair(said: turn.transcript, alt: s.alternative)
+                }
             }
             for phrase in session.summary?.phrasesUsed ?? [] {
                 addPair(said: phrase.userSaid, alt: phrase.fluentAlternative)
@@ -140,6 +149,10 @@ enum WeeklyReportEngine {
         let slipsPer10 = metrics.userTurnCount > 0
             ? Double(slipCount) / Double(metrics.userTurnCount) * 10 : 0
         let talkReads = windowSessions.compactMap { $0.summary?.scorecard?.cefrLevel?.uppercased() }
+        // Structural range per talk (a1…c2, written by the summary since
+        // 2026-09-24). Without it the slip density was the only grammar
+        // evidence, and a beginner in short accurate sentences read C1+.
+        let rangeReads = windowSessions.compactMap { $0.summary?.scorecard?.grammarRangeLevel?.rawValue.uppercased() }
         let deliveryEvidence = """
         - articulation_rate_wpm: \(Int(metrics.articulationRate.rounded())) \
         (words per minute of VOICED speech, pauses removed; 0 = no timing data. \
@@ -149,7 +162,10 @@ enum WeeklyReportEngine {
         (transcript-verified real grammar errors only — STT artifacts and style nudges excluded)
         - verified_grammar_slips_per_100_words: \(String(format: "%.1f", metrics.userWordCount > 0 ? Double(slipCount) / Double(metrics.userWordCount) * 100 : 0)) \
         (same slips normalized by words spoken — fairer to long turns. \
-        Rough control bands: <1 C1+, 1-2 B2, 2-4 B1, 4-7 A2, 7+ A1)
+        Rough ACCURACY bands: <1 C1+, 1-2 B2, 2-4 B1, 4-7 A2, 7+ A1)
+        - per_talk_grammar_range: \(rangeReads.isEmpty ? "(none)" : rangeReads.joined(separator: ", ")) \
+        (the band of grammatical STRUCTURES actually produced in each talk — \
+        grammatical control is this range, held down by the accuracy bands above, never the accuracy alone)
         - per_talk_ai_reads: \(talkReads.isEmpty ? "(none)" : talkReads.joined(separator: ", "))
         """
 
@@ -261,9 +277,15 @@ enum WeeklyReportEngine {
           * Fluency is INVISIBLE in a transcript — take it from
             articulation_rate_wpm and its band table, never from text alone.
           * The transcripts are speech-to-text output: recognition noise is
-            NOT the learner's error. Judge grammatical control from
+            NOT the learner's error. Judge grammatical ACCURACY from
             verified_grammar_slips_per_10_turns (transcript-verified real
             errors), not from how clean the raw text looks.
+          * Grammatical control is RANGE first, accuracy second: read the
+            structures the learner actually produced (per_talk_grammar_range,
+            and the transcripts themselves), then let the slip density hold
+            that band down. Short accurate sentences are low range, not high
+            control — a learner who never leaves single present-tense
+            clauses is a1-a2 in grammar however clean the transcript.
           * The suggestion pairs include STYLISTIC "more natural" rephrasings,
             not only errors — never read the pair count as error density.
           * per_talk_ai_reads are independent holistic reads of each single

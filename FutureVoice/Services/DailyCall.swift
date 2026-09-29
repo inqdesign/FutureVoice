@@ -42,8 +42,8 @@ struct DailyCallPlan: Codable, Equatable, Identifiable {
     /// one thing this call sells.
     var voiceId: String?
     var scheduledFor: Date
-    /// How many times the caller has tried again today. Capped — see
-    /// `DailyCallScheduler.maxCallbacks`.
+    /// How many times the learner declined this call today (the name is from
+    /// when a decline meant a callback; kept so plans on disk still decode).
     var callbackCount: Int
     var createdAt: Date
     /// nil while the call is still live (pending, or ringing back).

@@ -154,8 +154,6 @@
     <string name="reminders_cant_reach_you">Reviews and the daily call can\'t reach you. Turn them on in settings.</string>
     <string name="axis_vocab">Vocab</string>
     <string name="axis_express">Express</string>
-    <string name="keep">Keep</string>
-    <string name="i_know">I know</string>
     <string name="common_phrases">Common phrases</string>
     <string name="another_way_to_say_it">Another way to say it</string>
     <string name="as_a_name">As a name</string>
@@ -251,4 +249,6 @@
     <string name="back_in_when">"Back %s"</string>
     <string name="talk_time_used_up_call_saved">"Your talk time is used up. This call is saved — you can pick it up again any time."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"Couldn't score that one — your take is still here."</string>
+    <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
+    <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Read from verified grammar slips per 100 spoken words — fewer reads higher.</string>
 </resources>

@@ -50,6 +50,8 @@ enum SyncKindRegistry {
                                  sortForFile: { $0.sorted { $0.createdAt > $1.createdAt } }),
         ArrayKind<WeeklyReport>(kind: .weekly, filename: "weekly-reports.json", mergeRule: SyncMerge.lww,
                                 sortForFile: { $0.sorted { $0.generatedAt > $1.generatedAt } }),
+        ArrayKind<WeeklyTest>(kind: .weeklyTest, filename: "weekly-tests.json", mergeRule: SyncMerge.lww,
+                              sortForFile: { $0.sorted { $0.createdAt > $1.createdAt } }),
         scenarioKind,
         DictKind<PracticeLog.Day>(kind: .practiceDay, filename: "practice-log.json",
                                   encoder: SyncFiles.bareEncoder, decoder: SyncFiles.bareDecoder,

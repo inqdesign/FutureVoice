@@ -718,33 +718,41 @@ final class VocabStore: ObservableObject {
             NLTag.adjective.rawValue, NLTag.adverb.rawValue
         ]
         var out: [String: Int] = [:]
-        let tagger = NLTagger(tagSchemes: [.lemma, .lexicalClass, .nameType])
+        var tagger: NLTagger?
         for text in texts {
-            var seenHere = Set<String>()
-            tagger.string = text
-            tagger.setLanguage(language, range: text.startIndex..<text.endIndex)
-            tagger.enumerateTags(in: text.startIndex..<text.endIndex,
-                                 unit: .word, scheme: .lemma,
-                                 options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
-                let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
-                guard lemma.count >= 3,
-                      lemma.unicodeScalars.allSatisfy({ CharacterSet.letters.contains($0) }),
-                      !CoreVocabulary.set.contains(lemma),
-                      !CoreVocabulary.isUngraded(lemma) else { return true }
-                guard let lexical = tagger.tag(at: range.lowerBound, unit: .word,
-                                               scheme: .lexicalClass).0?.rawValue,
-                      content.contains(lexical) else { return true }
-                let name = tagger.tag(at: range.lowerBound, unit: .word,
-                                      scheme: .nameType).0?.rawValue
-                guard name == nil || name == NLTag.otherWord.rawValue else { return true }
-                // The tagger passes "Nawana" and "English" as ordinary words
-                // (measured 2026-09-16). The model's own spelling is the
-                // better witness: a capital letter anywhere but the start of
-                // a sentence is a name, a language, a brand — not vocabulary.
-                guard !Self.isCapitalizedMidSentence(text, range) else { return true }
-                if seenHere.insert(lemma).inserted { out[lemma, default: 0] += 1 }
-                return true
+            // Memoized per TEXT, like `lemmas(in:)` — three tagger schemes
+            // over a turn is the single most expensive thing a book build does.
+            let seenHere = offListMemo.value(for: text, language: language) {
+                let t = tagger ?? NLTagger(tagSchemes: [.lemma, .lexicalClass, .nameType])
+                tagger = t
+                var found = Set<String>()
+                t.string = text
+                t.setLanguage(language, range: text.startIndex..<text.endIndex)
+                t.enumerateTags(in: text.startIndex..<text.endIndex,
+                                unit: .word, scheme: .lemma,
+                                options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
+                    let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
+                    guard lemma.count >= 3,
+                          lemma.unicodeScalars.allSatisfy({ CharacterSet.letters.contains($0) }),
+                          !CoreVocabulary.set.contains(lemma),
+                          !CoreVocabulary.isUngraded(lemma) else { return true }
+                    guard let lexical = t.tag(at: range.lowerBound, unit: .word,
+                                              scheme: .lexicalClass).0?.rawValue,
+                          content.contains(lexical) else { return true }
+                    let name = t.tag(at: range.lowerBound, unit: .word,
+                                     scheme: .nameType).0?.rawValue
+                    guard name == nil || name == NLTag.otherWord.rawValue else { return true }
+                    // The tagger passes "Nawana" and "English" as ordinary words
+                    // (measured 2026-09-16). The model's own spelling is the
+                    // better witness: a capital letter anywhere but the start of
+                    // a sentence is a name, a language, a brand — not vocabulary.
+                    guard !Self.isCapitalizedMidSentence(text, range) else { return true }
+                    found.insert(lemma)
+                    return true
+                }
+                return found
             }
+            for lemma in seenHere { out[lemma, default: 0] += 1 }
         }
         return out
     }
@@ -780,21 +788,25 @@ final class VocabStore: ObservableObject {
             return JapaneseMorph.headwords(in: w, lexicon: CoreVocabulary.set,
                                            forms: JapaneseMorph.bundledForms).first?.headword ?? w
         }
-        let tagger = NLTagger(tagSchemes: [.lemma])
-        tagger.string = w
-        tagger.setLanguage(Self.taggerLanguage, range: w.startIndex..<w.endIndex)
-        let lemma = tagger.tag(at: w.startIndex, unit: .word, scheme: .lemma).0?.rawValue.lowercased()
-        if let lemma, !lemma.isEmpty {
-            if CoreVocabulary.set.contains(lemma) { return lemma }
-            // Ungraded words are tracked by lemma too now, so "chores" has to
-            // resolve to "chore" or a transcript's own tokens would never line
-            // up with the pickup list built from them — the word would be
-            // collected and still not highlighted where it was said. Only when
-            // the surface form is itself ungraded: a graded one is already the
-            // key it should keep.
-            if !CoreVocabulary.set.contains(w) { return lemma }
+        // Memoized per word: a fresh NLTagger per call, and every book build
+        // asks this of each of its pickup words, every list row of its word.
+        return lookupKeyMemo.value(for: w, language: Self.taggerLanguage) {
+            let tagger = NLTagger(tagSchemes: [.lemma])
+            tagger.string = w
+            tagger.setLanguage(Self.taggerLanguage, range: w.startIndex..<w.endIndex)
+            let lemma = tagger.tag(at: w.startIndex, unit: .word, scheme: .lemma).0?.rawValue.lowercased()
+            if let lemma, !lemma.isEmpty {
+                if CoreVocabulary.set.contains(lemma) { return lemma }
+                // Ungraded words are tracked by lemma too now, so "chores" has to
+                // resolve to "chore" or a transcript's own tokens would never line
+                // up with the pickup list built from them — the word would be
+                // collected and still not highlighted where it was said. Only when
+                // the surface form is itself ungraded: a graded one is already the
+                // key it should keep.
+                if !CoreVocabulary.set.contains(w) { return lemma }
+            }
+            return w
         }
-        return w
     }
 
     // MARK: - Lemmatization
@@ -833,20 +845,28 @@ final class VocabStore: ObservableObject {
         if Self.matchesJapanese { return japaneseLemmas(in: texts) }
         let language = Self.taggerLanguage
         var out = Set<String>()
-        let tagger = NLTagger(tagSchemes: [.lemma])
+        var tagger: NLTagger?
         for text in texts {
-            // Original casing IN, lowercase OUT: German lemmatization reads
-            // noun capitalization as a signal, while pool keys stay lowercase
-            // (CoreVocabulary matches case-insensitively).
-            tagger.string = text
-            tagger.setLanguage(language, range: text.startIndex..<text.endIndex)
-            tagger.enumerateTags(in: text.startIndex..<text.endIndex,
-                                 unit: .word, scheme: .lemma,
-                                 options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
-                let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
-                if lemma.count > 1 { out.insert(lemma) }
-                return true
-            }
+            // Memoized per TEXT (see `TextMemo`): a turn's lemmas never
+            // change, and every talk-book build re-asks for the same turns.
+            out.formUnion(lemmaMemo.value(for: text, language: language) {
+                let t = tagger ?? NLTagger(tagSchemes: [.lemma])
+                tagger = t
+                var found = Set<String>()
+                // Original casing IN, lowercase OUT: German lemmatization reads
+                // noun capitalization as a signal, while pool keys stay lowercase
+                // (CoreVocabulary matches case-insensitively).
+                t.string = text
+                t.setLanguage(language, range: text.startIndex..<text.endIndex)
+                t.enumerateTags(in: text.startIndex..<text.endIndex,
+                                unit: .word, scheme: .lemma,
+                                options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
+                    let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
+                    if lemma.count > 1 { found.insert(lemma) }
+                    return true
+                }
+                return found
+            })
         }
         return out
     }
@@ -1026,3 +1046,48 @@ final class VocabStore: ObservableObject {
         SyncEngine.noteChanged(.vocabExpressionIngested)
     }
 }
+
+/// Per-text memo for the NLTagger passes in `VocabStore.lemmas(in:)`,
+/// `offListContentWords(in:)` and `lookupKey(for:)`.
+///
+/// Why: every talk-book build (`TalkCurriculum.build`) lemmatizes the whole
+/// session again — the learner's turns, the fluent self's turns, and each
+/// fluent turn once more per shadow candidate — and the home-screen widget
+/// refresh rebuilds EVERY book on the main thread after every notebook
+/// write. Measured 2026-09-23: 30 books ≈ 515 ms in the simulator, and that
+/// ran between a tap on "I know" and the button repainting. A turn's text
+/// never changes, so its lemmas are computed once per launch and read back.
+///
+/// Keyed on the tagger language too — a language switch must not hand
+/// German lemmas to an English lookup. Bounded: past `cap` entries the table
+/// is dropped whole (a few MB at most; the next build simply warms it again).
+/// Lock-guarded because the callers are `nonisolated` and run from detached
+/// tasks as well as the main actor.
+final class TextMemo<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var table: [String: Value] = [:]
+    private let cap: Int
+
+    init(cap: Int = 8000) { self.cap = cap }
+
+    func value(for text: String, language: NLLanguage,
+               compute: () -> Value) -> Value {
+        let key = language.rawValue + "\u{1}" + text
+        lock.lock()
+        if let hit = table[key] { lock.unlock(); return hit }
+        lock.unlock()
+        let value = compute()
+        lock.lock()
+        if table.count >= cap { table.removeAll(keepingCapacity: true) }
+        table[key] = value
+        lock.unlock()
+        return value
+    }
+
+    /// Tests only.
+    func removeAll() { lock.lock(); table.removeAll(); lock.unlock() }
+}
+
+private let lemmaMemo = TextMemo<Set<String>>()
+private let offListMemo = TextMemo<Set<String>>()
+private let lookupKeyMemo = TextMemo<String>()

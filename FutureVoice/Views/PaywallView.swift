@@ -204,6 +204,13 @@ struct PaywallView: View {
             // The billing cycle still comes from the plan they hold (or the
             // monthly default) — only the TIER is what the caller asked for.
             if let preselectTier { selectedTier = preselectTier }
+            // …but never onto a period that is no longer sold. With the picker
+            // hidden (one period) its `onChange` clamp never fires, so a
+            // subscriber holding last month's annual plan would render cards
+            // with no prices and no pool rows on them.
+            if !availablePeriods.contains(period), let first = availablePeriods.first {
+                period = first
+            }
             // Pitch the trial only to someone who could actually take it:
             // not a current subscriber, not during the beta, and only while
             // Apple still offers this account an intro offer.
@@ -246,7 +253,11 @@ struct PaywallView: View {
         .alert(Text(explain("You're in")), isPresented: purchasedBinding) {
             Button(explain("Done")) { close() }
         } message: {
-            Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
+            if showsTrial, let trialMinutes = store.trialTalkMinutes {
+                Text(explain("Your trial is on: \(trialMinutes) minutes of talk over the next \(store.trialDays) days. Your plan's own monthly talk time starts when the trial converts."))
+            } else {
+                Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
+            }
         }
         .alert(Text(explain("Purchase failed")), isPresented: failedBinding) {
             Button(explain("OK")) { store.purchaseState = .idle }
@@ -345,7 +356,9 @@ struct PaywallView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             } else if step != .resolving {
-                Text(explain("\(store.trialDays) days free. Cancel anytime."))
+                Text(store.trialTalkMinutes.map {
+                    explain("\(store.trialDays) days free with \($0) min of talk. Cancel anytime.")
+                } ?? explain("\(store.trialDays) days free. Cancel anytime."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -441,6 +454,14 @@ struct PaywallView: View {
 
     // MARK: - Step 2 · Trial timeline
 
+    /// The day the "it converts soon" notice fires, counting the purchase as
+    /// day 1 — nil when it collides with a row the timeline already draws.
+    private var reminderDay: Int? {
+        let days = store.trialDays
+        let day = days - TrialReminder.leadDays(forTrialDays: days)
+        return (2..<days).contains(day) ? day : nil
+    }
+
     private var timelineContent: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 8) {
@@ -453,17 +474,30 @@ struct PaywallView: View {
             .padding(.top, 12)
 
             VStack(alignment: .leading, spacing: 0) {
+                // The trial's SIZE goes here, before anyone taps: it is
+                // 35 minutes for the whole trial, not the plan's pool, and a
+                // learner who first meets that number when it runs out reads
+                // the stop as a paywall (2026-09-25).
                 timelineRow(icon: "lock.open.fill",
                             title: explain("Today"),
-                            caption: explain("Your trial starts — a week's worth of talk, and all the review it produces."),
+                            caption: store.trialTalkMinutes.map {
+                                explain("Your trial starts: \($0) minutes of talk to use across the \(store.trialDays) days, and all the review it produces.")
+                            } ?? explain("Your trial starts — talk time on us, and all the review it produces."),
                             showsLine: true)
-                timelineRow(icon: "bell.fill",
-                            title: explain("Day \(max(1, store.trialDays - 2))"),
-                            caption: explain("A reminder that your trial is about to convert — we ask to send notifications when the trial starts."),
-                            showsLine: true)
+                // The reminder's own day, from the one place that decides it.
+                // Dropped when it has nowhere of its own to sit: on a short
+                // trial the notice can land on the day the trial starts or
+                // the day it ends, and a row repeating "Today" or the last
+                // row reads as a mistake rather than a schedule.
+                if let day = reminderDay {
+                    timelineRow(icon: "bell.fill",
+                                title: explain("Day \(day)"),
+                                caption: explain("A reminder that your trial is about to convert — we ask to send notifications when the trial starts."),
+                                showsLine: true)
+                }
                 timelineRow(icon: "crown.fill",
                             title: explain("Day \(store.trialDays)"),
-                            caption: explain("Your subscription starts. Cancel any time before then in the App Store."),
+                            caption: explain("Your subscription starts, and its own monthly talk time with it. Cancel any time before then in the App Store."),
                             showsLine: false)
             }
         }
@@ -522,14 +556,20 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Picker(explain("Billing period"), selection: $period) {
-                ForEach(availablePeriods) { Text($0.label).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: availablePeriods) { _, periods in
-                // A period whose SKU vanished must not stay selected, or the
-                // cards below render a plan nobody can buy.
-                if !periods.contains(period), let first = periods.first { period = first }
+            // Only when there is a choice to make. The annual plans went off
+            // sale on 2026-09-26 (`20260926160000`), and a segmented control
+            // holding one segment is a control that does nothing — it reads
+            // as a disabled feature rather than as "monthly is the plan".
+            if availablePeriods.count > 1 {
+                Picker(explain("Billing period"), selection: $period) {
+                    ForEach(availablePeriods) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: availablePeriods) { _, periods in
+                    // A period whose SKU vanished must not stay selected, or
+                    // the cards below render a plan nobody can buy.
+                    if !periods.contains(period), let first = periods.first { period = first }
+                }
             }
 
             VStack(spacing: 14) {
@@ -556,8 +596,11 @@ struct PaywallView: View {
                 // ones — the situations line up with the amounts. The label
                 // must still never grade the buyer: no "heavy user", no
                 // "serious learners".
+                // "As much as you want" went with the uncapped pool on
+                // 2026-09-26; a situation that really does mean several
+                // calls a day, without grading anyone.
                 planCard(tier: "plus",
-                         audience: explain("As much as you want, whenever you want"),
+                         audience: explain("For the weeks you're all in"),
                          name: AccountStatus.tierName("plus"))
                 planCard(tier: "light",
                          audience: explain("Keep it up as a habit"),
@@ -694,19 +737,17 @@ struct PaywallView: View {
         return f.string(from: NSNumber(value: n)) ?? "\(n)"
     }
 
-    /// True for the tier whose TALKING is not capped at all. One place,
-    /// because the card and every screen that reports usage have to agree
-    /// about whether this account is counting minutes.
-    ///
-    /// Read from the TIER rather than from `subscription_plans.talk_unlimited`,
-    /// which is the server's enforcement switch. Selecting that column would
-    /// couple the catalog fetch to a migration having landed — and a
-    /// `.select()` naming a column the database doesn't have yet fails the
-    /// WHOLE query, which empties the plan list and renders a paywall with no
-    /// plans on it. The client must not be one deploy-ordering mistake away
-    /// from having nothing to sell.
+    /// True for a plan whose TALKING is not capped at all — none on sale
+    /// since 2026-09-26, when Plus became a 300-minute pool and the tail
+    /// moved to minute packs. Read from the catalog's own switch
+    /// (`subscription_plans.talk_unlimited`, in the DB since 2026-08-21, so
+    /// selecting it no longer risks emptying the catalog) rather than the
+    /// tier: the tier no longer says anything about counting, and a card
+    /// printing "No limit" over a pool the meter enforces is the ambush the
+    /// rows exist to prevent. Kept as a branch so the catalog can sell an
+    /// uncapped plan again with no app change.
     private func isUncappedTalk(_ opt: StoreKitService.PlanOption?) -> Bool {
-        opt?.plan.tier == "plus"
+        opt?.plan.talk_unlimited ?? false
     }
 
     /// "about 5 min a day" — what the month's pool works out to per day, from
@@ -735,6 +776,36 @@ struct PaywallView: View {
 
     private func option(tier: String) -> StoreKitService.PlanOption? {
         store.options.first { $0.plan.tier == tier && $0.plan.period == period.rawValue }
+    }
+
+    /// The annual saving, said the way the offer is actually built: **"2
+    /// months free"** when a year costs a whole number of months less than
+    /// paying monthly, and a percentage otherwise (2026-09-26). Months are
+    /// what a buyer can check in their head; 17% is the same fact in a form
+    /// nobody converts back. Both come from LIVE App Store prices, so the
+    /// badge can never advertise a discount that isn't being charged.
+    private func annualSavingLabel(tier: String) -> String? {
+        guard let monthly = monthlyPrice(tier: tier), let annual = annualPrice(tier: tier),
+              monthly > 0 else { return nil }
+        let free = (monthly * 12 - annual) / monthly
+        // Within a fifth of a month of a whole number — the rounding that
+        // puts $199.99 beside $19.99 — is "2 months free"; anything else is
+        // a shape the sentence would misdescribe, so it stays a percentage.
+        let whole = (free).rounded()
+        if whole >= 1, abs(free - whole) < 0.2 {
+            return explain("\(Int(whole)) months free")
+        }
+        return annualSavingsPercent(tier: tier).map { explain("Save \($0)% vs monthly") }
+    }
+
+    private func monthlyPrice(tier: String) -> Double? {
+        store.options.first { $0.plan.tier == tier && $0.plan.period == "monthly" }?.priceValue
+            .map { NSDecimalNumber(decimal: $0).doubleValue }
+    }
+
+    private func annualPrice(tier: String) -> Double? {
+        store.options.first { $0.plan.tier == tier && $0.plan.period == "annual" }?.priceValue
+            .map { NSDecimalNumber(decimal: $0).doubleValue }
     }
 
     /// Percentage the annual plan saves versus paying monthly for a year, for
@@ -809,11 +880,9 @@ struct PaywallView: View {
                 // consolation prize rather than part of what they are buying.
                 VStack(spacing: 6) {
                     if isUncappedTalk(opt) {
-                        // Plus does not cap TALKING at all (server-side since
-                        // `20260821120000_plus_talk_unlimited`): talking costs
-                        // the learner effort, and effort is a better limiter
-                        // than any ceiling — nobody speaks for six hours. So
-                        // there is no figure to print and none is printed.
+                        // An uncapped plan (none since 2026-09-26 — a Plus
+                        // bought before it is a 300-minute pool now) prints
+                        // no talk figure, because there is none.
                         //
                         // WATCH still counts, because a scene plays itself: it
                         // can be consumed by tapping, costs us ~2x per
@@ -830,6 +899,12 @@ struct PaywallView: View {
                                 note: perDayLabel(opt))
                         specRow(explain("Watch scenes"), explain("\(pool.scenes)/mo"))
                     }
+                    // A trial is not a free sample of the row above: it is
+                    // its own, smaller pool. On the card, next to the figure
+                    // it will be mistaken for otherwise.
+                    if showsTrial, opt?.trialDays != nil, let trialMinutes = store.trialTalkMinutes {
+                        specRow(explain("During the trial"), explain("\(trialMinutes) min of talk"))
+                    }
                     specRow(explain("Your own review book"), explain("Unlimited"))
                     specRow(explain("Shadowing · words · replays · drills"),
                             explain("Unlimited"))
@@ -844,8 +919,8 @@ struct PaywallView: View {
                         Text("\(price) / \(period.cycleNoun)")
                             .font(.subheadline.weight(.semibold))
                         Spacer(minLength: 8)
-                        if period == .annual, let saved = annualSavingsPercent(tier: tier) {
-                            Text(explain("Save \(saved)% vs monthly"))
+                        if period == .annual, let saved = annualSavingLabel(tier: tier) {
+                            Text(saved)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.green)
                         }
@@ -870,9 +945,26 @@ struct PaywallView: View {
     // MARK: - Actions
 
     private func purchaseSelected() async {
-        guard let opt = selectedOption else { return }
+        // Nothing to sell, and the button said "Subscribe" anyway. StoreKit
+        // answering with no products leaves `selectedOption` nil while the
+        // cards still draw (they come from the server catalog) — so the tap
+        // returns here and, until 2026-09-24, logged NOTHING: the one moment
+        // of highest intent in the app was the one moment invisible to us.
+        // Four of the first thirteen accounts to see a paywall saw it with
+        // `products: 0`, so this is not hypothetical.
+        guard let opt = selectedOption else {
+            track("paywall_purchase_unavailable",
+                  ["tier": selectedTier, "period": period.rawValue,
+                   "options": String(store.options.count)])
+            OwnerPing.paywall(phase: "result", outcome: "unavailable",
+                              plan: "\(selectedTier)_\(period.rawValue)",
+                              trial: showsTrial, source: source, step: step.name)
+            return
+        }
         let plan = ["plan": opt.id, "trial": showsTrial ? "1" : "0"]
         track("paywall_purchase_tapped", plan)
+        OwnerPing.paywall(phase: "tapped", option: opt, trial: showsTrial,
+                          source: source, step: step.name)
         await store.purchase(opt)
         // `.idle` after a purchase is Apple's sheet cancelled (or an
         // unknown result StoreKit may add later) — the one outcome with no
@@ -884,6 +976,8 @@ struct PaywallView: View {
         case .idle, .purchasing: outcome = "cancelled"
         }
         track("paywall_purchase_result", plan.merging(["outcome": outcome]) { $1 })
+        OwnerPing.paywall(phase: "result", outcome: outcome, option: opt,
+                          trial: showsTrial, source: source, step: step.name)
     }
 
     /// One event, both sinks: PostHog for the funnel, `client_events` so a

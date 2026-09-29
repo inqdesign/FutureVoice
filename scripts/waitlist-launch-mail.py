@@ -483,6 +483,15 @@ def main() -> None:
     if args.dry_run or not plan:
         return
 
+    # The codes are DEAD since 2026-09-26: both App Store one-time-code batches
+    # (Light 585415, Plus 585392) were deactivated, so every unredeemed code is
+    # refused at redemption — the launch offer is closed and the three people who
+    # redeemed keep their year at half price (docs/launch-billing.md §7). Mailing
+    # a code that cannot work is worse than not writing at all. --dry-run still
+    # plans, so the list is still readable; delete this exit if a new batch is
+    # ever generated, and change the codes in the CSVs with it.
+    sys.exit("the Beta50 codes are deactivated in App Store Connect — nothing to send")
+
     key = resend_key()
     ok = failed = reserved = 0
     handover = []

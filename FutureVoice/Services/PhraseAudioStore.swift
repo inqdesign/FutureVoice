@@ -132,6 +132,22 @@ final class PhraseAudioStore {
         }
     }
 
+    /// Drop ONE cached line — its audio and the word timings that describe it,
+    /// which must never outlive the take they were measured on.
+    ///
+    /// The store's rule is that produced audio is kept (see the header), and
+    /// this does not weaken it: the caller is `FreeTalkOpeners`, re-making the
+    /// handful of lines that OPEN a call after the speaking speed moved. Those
+    /// are the one place a stale take is audible against the live voice right
+    /// after it. Anything that wants to clear more than a named line belongs in
+    /// `clearCachedAudio`, behind the learner's own button.
+    func removeAudio(text: String, voiceId: String) {
+        let k = key(text: text, voiceId: voiceId)
+        for name in ["\(k).mp3", "\(k).timings.json"] {
+            try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
+        }
+    }
+
     // MARK: - Word timings
 
     func timings(text: String, voiceId: String, allowLineage: Bool = true) -> [WordTiming]? {
@@ -149,8 +165,19 @@ final class PhraseAudioStore {
         try? data.write(to: url, options: [.atomic])
     }
 
+    /// The speech SPEED is part of the key (2026-09-23): a line at 0.8 is a
+    /// different recording from the same line at Normal, and its word timings
+    /// are different too — one key for both would play one speed's take under
+    /// the other's karaoke. **Normal's tag is empty**, so every line cached
+    /// before the setting existed — synthesized with no speed at all — is still
+    /// found and still plays. That is this store's rule (see the header): audio
+    /// already made is never orphaned and never re-billed. A learner who never
+    /// touches the setting hears the old cache as it was and new lines at 0.9;
+    /// a cache clear to "fix" that was built and reverted the same day
+    /// (user decision: what is already produced stays).
     private func key(text: String, voiceId: String) -> String {
-        let normalized = "\(voiceId)\n\(text.trimmingCharacters(in: .whitespacesAndNewlines))"
+        let speedTag = SpeechSpeed.current.cacheTag
+        let normalized = "\(voiceId)\n\(speedTag)\(text.trimmingCharacters(in: .whitespacesAndNewlines))"
         let digest = SHA256.hash(data: Data(normalized.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
     }

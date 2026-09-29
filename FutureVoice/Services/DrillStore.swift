@@ -225,6 +225,20 @@ final class DrillStore: LanguageScopedStore {
     }
 
     /// Demote and reschedule for soon.
+    /// One rung up — the step a sentence takes when the weekly test's build
+    /// item is laid out right. Not the learner's verdict, so unlike "Got it"
+    /// it never retires the card: it earns the next interval and nothing
+    /// more (an answer is a claim; see CLAUDE.md "USED outranks KNOWN").
+    func markCorrect(_ card: DrillCard, at now: Date = Date()) {
+        var c = card
+        c.timesSeen += 1
+        c.timesCorrect += 1
+        c.lastReviewedAt = now
+        c.box = min(c.box + 1, Self.maxBox - 1)
+        c.nextReviewAt = Self.nextReview(after: c.box, from: now)
+        save(c)
+        Analytics.capture("drill_reviewed", ["correct": true, "box": c.box])
+    }
     func markIncorrect(_ card: DrillCard, at now: Date = Date()) {
         var c = card
         c.timesSeen += 1
@@ -317,6 +331,14 @@ final class DrillStore: LanguageScopedStore {
             let target = Self.coreSentence(of: target, pairedWith: source)
             let key = Self.normalizedForMatch(target)
             guard !key.isEmpty, !seenTargets.contains(key) else { return }
+            // A learner who slipped into their own language for a turn gets
+            // no card for it: the model still "corrects" a Korean line into
+            // English, and that card asks nonsense everywhere it is dealt
+            // (device, 2026-09-23). Both sides must be in the target script.
+            let language = LanguageScope.active
+            guard TextScript.isInTargetScript(target, language: language),
+                  source.trimmingCharacters(in: .whitespaces).isEmpty
+                    || TextScript.isInTargetScript(source, language: language) else { return }
             // Safety net: even with the tightened summary prompt, Gemini
             // occasionally produces meta-rule "phrases" like "using articles
             // correctly". Those tank the drill UX — TTS on a rule is gibberish.
@@ -335,12 +357,25 @@ final class DrillStore: LanguageScopedStore {
         }
 
         for turn in turns where turn.role == .user {
-            if let s = turn.suggestion {
-                // Quote only the sentence the suggestion rewrites, never the
-                // whole (possibly minute-long) turn transcript.
-                add(source: Self.relevantFragment(of: turn.transcript, matching: s.alternative),
-                    target: s.alternative, reason: s.reason, turnId: turn.id)
+            guard let s = turn.suggestion else { continue }
+            // A card is a SLIP, drilled: short, with a right answer. Since
+            // 2026-09-27 `alternative` is the whole turn re-said, which is
+            // shadow and Say-it-again material and makes a terrible card — so
+            // the cards come from `fixes`, which are one clause each.
+            if let fixes = s.fixes {
+                for fix in fixes {
+                    let pair = Self.cardPair(for: fix, in: turn.transcript)
+                    add(source: pair.source, target: pair.target, reason: fix.why, turnId: turn.id)
+                }
+                // No fixes means the turn was grammatically clean. There is
+                // nothing to drill, and minting a card off a pure naturalness
+                // rewrite pairs a whole turn against one sentence of it.
+                continue
             }
+            // Turns saved before `fixes` existed: their `alternative` IS one
+            // sentence, so the old pairing is still the right one.
+            add(source: Self.relevantFragment(of: turn.transcript, matching: s.alternative),
+                target: s.alternative, reason: s.reason, turnId: turn.id)
         }
         for p in summary.phrasesUsed {
             add(source: p.userSaid, target: p.fluentAlternative, reason: p.reason,
@@ -433,6 +468,42 @@ final class DrillStore: LanguageScopedStore {
         return trimmed.prefix(maxChars) + "…"
     }
 
+    /// The card a grammar fix becomes — the ONE rule for it, shared by
+    /// `ingest`, the talk book's Drill chapter (`TalkCurriculum`), its page
+    /// (`ConversationDetailView`), the export and adoption
+    /// (`CarryoverDetector`), so all of them are talking about the same
+    /// sentence. A card's mastery is found by its text; two surfaces
+    /// computing the pair two ways is a chapter that can never finish.
+    ///
+    /// Usually the fix itself: the prompt asks for the whole clause. But a
+    /// card is credited in a talk by `CarryoverDetector.firstMatch`, which
+    /// never matches under three tokens in a spaced language — and a
+    /// complete Korean clause is often two eojeol (`학교에 갔어`, `빵을
+    /// 먹었어`), measured on the probe 2026-09-27. A card that can never be
+    /// marked used breaks "used outranks known" for exactly that card, so
+    /// such a fix is widened to the SENTENCE it sits in, with the fix
+    /// applied: the learner's own words, one correction, nothing invented.
+    /// When the quote can't be found (or widening still can't be credited)
+    /// the fix stands as it is — reviewable in the deck, which is where it
+    /// would have been anyway.
+    static func cardPair(for fix: TurnFix, in transcript: String) -> (source: String, target: String) {
+        guard !CarryoverDetector.isCreditable(fix.now) else { return (fix.was, fix.now) }
+        let sentences = transcript
+            .split(whereSeparator: { ".!?。！？\n".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        for sentence in sentences {
+            guard let range = sentence.range(of: fix.was,
+                                             options: [.caseInsensitive, .diacriticInsensitive])
+            else { continue }
+            var widened = sentence
+            widened.replaceSubrange(range, with: fix.now)
+            guard CarryoverDetector.isCreditable(widened) else { break }
+            return (sentence, widened)
+        }
+        return (fix.was, fix.now)
+    }
+
     /// Target-side twin of `relevantFragment`. Gemini sometimes rewrites a
     /// user's WHOLE multi-sentence turn as the "fluent alternative" — a
     /// paragraph is un-drillable (unreadable card, minute-long TTS, hopeless
@@ -522,13 +593,18 @@ final class DrillStore: LanguageScopedStore {
     /// telling it not to. Conservative — false-positives just mean a few
     /// missed drill cards, which is fine. False-negatives are what hurt
     /// (TTS reading "using articles correctly" out loud).
-    private static func looksLikeMetaRule(_ phrase: String) -> Bool {
+    static func looksLikeMetaRule(_ phrase: String) -> Bool {
         let lower = phrase.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if lower.isEmpty { return true }
 
         // Sentence-fragments that point at grammar concepts rather than
         // anything you'd actually say in a conversation.
         let bannedSubstrings = [
+            // Korean / Japanese / German names for the same categories — the
+            // list below is English, and a meta-rule written in the coaching
+            // language slipped past it.
+            "문법", "조사를", "시제", "관사", "올바르게", "정확하게",
+            "文法", "助詞", "時制", "正しく", "grammatik",
             "correctly",            // "using X correctly"
             "properly",
             "appropriately",

@@ -154,8 +154,6 @@
     <string name="reminders_cant_reach_you">Les révisions et l’appel quotidien ne peuvent pas te joindre. Active-les dans les réglages.</string>
     <string name="axis_vocab">Vocabulaire</string>
     <string name="axis_express">Expression</string>
-    <string name="keep">Garder</string>
-    <string name="i_know">Je sais</string>
     <string name="common_phrases">Expressions courantes</string>
     <string name="another_way_to_say_it">Une autre façon de le dire</string>
     <string name="as_a_name">Comme un nom</string>
@@ -238,4 +236,6 @@
     <string name="back_in_when">"De retour dans %s"</string>
     <string name="talk_time_used_up_call_saved">"Ton temps de parole est épuisé. Cet appel est enregistré — tu peux le reprendre à tout moment."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"Impossible de noter celui-là — ton essai est toujours là."</string>
+    <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
+    <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Calculé sur les fautes de grammaire confirmées pour 100 mots dits — moins il y en a, plus c’est haut.</string>
 </resources>

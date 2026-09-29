@@ -1,3 +1,5 @@
+import { TIER_LIST, type Truth } from "./truth";
+
 // Turn admin_raw()'s raw aggregates into the shape the page draws.
 //
 // This is gather_admin.py + derive_cost.py, in JS. The split is deliberate:
@@ -18,21 +20,172 @@ const TEST_IDS = new Set([
   // stranger to walk the onboarding and the free first call.
   "c5a85f25-a631-47c5-b32b-fb5bc89c551e",
   "5692cfc2-13ec-4f7e-a3bc-31daee02e28f",
+  // The owner's second device (2026-09-23) — the private-relay Apple account
+  // re-created on 2026-09-16 that carries the admin flag. Its 09-15
+  // predecessor (c7565d27-…) was already flagged; this id replaced it.
+  "b28ca7b1-dbd8-46de-bfd2-5857e05665bc",
 ]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
 // here and nowhere else in this pipeline.
+// The US list price, which is what the margin table is computed in. Keep it
+// equal to App Store Connect — nothing reads ASC from here, so a stale figure
+// silently mis-states every margin on the page. Plus went to $24.99 on
+// 2026-09-26; the annuals are off sale (`20260926160000`) and stay listed
+// only so a historical month still prices.
 const MONTHLY_PRICE: Record<string, number> = {
   light_monthly: 9.99,
   light_annual: 79.99 / 12,
-  plus_monthly: 19.99,
+  plus_monthly: 24.99,
   plus_annual: 143.99 / 12,
 };
 // Credits per character come from the model, not the plan: multilingual_v2
-// (the fidelity model, used by Watch scenes and the onboarding greeting) bills
-// 1.0 credit/char, turbo and flash bill 0.5.
+// bills 1.0 credit/char, turbo and flash 0.5. Since 2026-09-26 every
+// clone-voice surface is turbo (`ElevenLabsClient.cloneModelId`), so the
+// fidelity rate applies to history only.
 const CREDITS_PER_CHAR = { fidelity: 1.0, conversation: 0.5 };
+
+// The same catalog per storefront (docs/launch-billing.md §1 — ASC values,
+// KRW set by hand). What lands in the bank differs by store: the US price
+// carries no VAT (net = price × 85%), Korea's includes 10% VAT and Apple
+// takes its cut after it (77.3%), Germany's includes 19%. The 돈 tab's unit
+// economics quote the average of the three, in EUR.
+const STORE_PRICES: Record<string, { USD: number; KRW: number; EUR: number; months: number }> = {
+  light_monthly: { USD: 9.99,   KRW: 15_000,  EUR: 9.99,   months: 1 },
+  light_annual:  { USD: 79.99,  KRW: 110_000, EUR: 89.99,  months: 12 },
+  plus_monthly:  { USD: 19.99,  KRW: 29_000,  EUR: 22.99,  months: 1 },
+  plus_annual:   { USD: 143.99, KRW: 209_000, EUR: 149.99, months: 12 },
+};
+const VAT = { KR: 0.10, DE: 0.19 };
+
+// Infrastructure that bills whether or not anyone talks, USD per month. The
+// ElevenLabs plan fee is NOT here — the calculator picks the tier from the
+// credits a scenario needs. People, tax and marketing are nobody's line item
+// here either: "순이익" on the tab is gross margin minus these.
+const FIXED_USD = { supabase: 25, cloudflare: 5, apple: 99 / 12 };
+
+
+// Purposes whose TTS is review material (free behind daily caps), all turbo.
+const REVIEW_PURPOSES = new Set(["shadow", "drill", "library", "voice_preview"]);
+const isTurbo = (m: string) => m !== "eleven_multilingual_v2" && m !== "eleven_v3";
+
+/** The 돈 tab's 실제 원가 + 단위 경제 block, built from ElevenLabs' own
+ *  numbers with the ledger beside them. Every "recorded" figure is what
+ *  `usage_ledger` knows; every total is what ElevenLabs billed. */
+function buildEcon(t: Truth, w: { talkMin: number; scenes: number; gmUsd: number; days: number;
+                                  signups: number; commission: number; rateDb: number }) {
+  const bp = t.ledger?.byPurpose ?? {};
+  const sum = (pred: (purpose: string, model: string) => boolean) =>
+    Object.entries(bp).reduce((a, [k, v]) => a + (pred(k.split("|")[0], v.model) ? v.credits : 0), 0);
+  const rowsOf = (purpose: string) =>
+    Object.entries(bp).reduce((a, [k, v]) => a + (k.split("|")[0] === purpose ? v.rows : 0), 0);
+
+  const ledTurn = sum((p, m) => p === "turn" && isTurbo(m));
+  const ledTurboNonTurn = sum((p, m) => p !== "turn" && isTurbo(m));
+  const ledSceneTurbo = sum((p, m) => p === "scene" && isTurbo(m));
+  const ledSceneFid = sum((p, m) => p === "scene" && !isTurbo(m));
+  const ledVm = sum((p) => p === "daily-call");
+  const ledReview = sum((p) => REVIEW_PURPOSES.has(p));
+  const ledMulti = sum((_p, m) => m === "eleven_multilingual_v2");
+  const ledOtherTurbo = Math.max(0, ledTurboNonTurn - ledSceneTurbo - ledVm - ledReview);
+  const ledOtherMulti = Math.max(0, ledMulti - ledSceneFid);
+  const ledTotal = t.ledger?.total ?? 0;
+
+  const M = t.models;
+  const el = (k: string) => M[k] ?? 0;
+  const elTurbo = el("eleven_turbo_v2_5") + el("eleven_flash_v2_5");
+  const elMulti = el("eleven_multilingual_v2");
+  const elTtv = Object.entries(M).filter(([k]) => k.startsWith("eleven_ttv")).reduce((a, [, v]) => a + v, 0);
+  const elV3 = el("eleven_v3");
+  const elTotal = Object.values(M).reduce((a, v) => a + v, 0);
+  const elOther = elTotal - elTurbo - elMulti - elTtv - elV3;
+
+  // Talk TTS = every turbo credit ElevenLabs saw minus the turbo credits the
+  // ledger attributes to something that is not a turn. What's left over the
+  // ledger's own turn rows is the gateway's unrecorded share.
+  const talk = Math.max(0, elTurbo - ledTurboNonTurn);
+  const gatewayGap = Math.max(0, talk - ledTurn);
+  const multiGap = Math.max(0, elMulti - ledMulti);
+
+  const cats = [
+    { key: "talk", label: "통화 TTS", credits: talk, recorded: "partial",
+      note: `원장 ${Math.round(ledTurn).toLocaleString("en-US")} · 게이트웨이 ${Math.round(gatewayGap).toLocaleString("en-US")} 미기록` },
+    { key: "scene", label: "Watch 장면", credits: ledSceneTurbo + ledSceneFid, recorded: "yes",
+      note: `${w.scenes}장면 · 클론 절반은 v2, 상대역은 turbo` },
+    { key: "vm", label: "일일 통화 보이스메일", credits: ledVm, recorded: "yes",
+      note: `${rowsOf("daily-call")}회 합성` },
+    { key: "accent", label: "악센트 미리듣기 (text-to-voice)", credits: elTtv, recorded: "no",
+      note: "횟수만 기록, 크레딧 없음" },
+    { key: "review", label: "복습 (섀도잉·드릴·라이브러리·미리듣기)", credits: ledReview, recorded: "yes", note: "" },
+    { key: "onb", label: "온보딩 인사 등 (v2, 미기록분)", credits: multiGap, recorded: "no", note: "" },
+    { key: "misc_rec", label: "기타 (기록됨)", credits: ledOtherTurbo + ledOtherMulti, recorded: "yes", note: "" },
+    { key: "v3", label: "eleven_v3 (경로 미확인)", credits: elV3, recorded: "no", note: "" },
+    { key: "other", label: "그 외 모델 (STT 등)", credits: elOther, recorded: "no", note: "" },
+  ].filter((c) => c.credits > 0.5)
+   .map((c) => ({ ...c, credits: Math.round(c.credits), share: elTotal ? c.credits / elTotal : 0 }));
+
+  const usdToEur = 1 / t.fx.USD;
+  const eurPerCredit = t.rate * usdToEur;
+  const talkCreditsPerMin = w.talkMin > 0 ? talk / w.talkMin : 0;
+  const gmEurPerMin = w.talkMin > 0 ? (w.gmUsd / w.talkMin) * usdToEur : 0;
+  const sceneCredits = w.scenes > 0 ? (ledSceneTurbo + ledSceneFid) / w.scenes : 0;
+  const vmPerSynth = rowsOf("daily-call") ? ledVm / rowsOf("daily-call") : 0;
+  const onboardingCredits = w.signups > 0 ? (elTtv + multiGap + ledOtherMulti) / w.signups : 0;
+  const freeMinutes = 10;
+
+  const byDay = t.days.map((d) => ({
+    d: d.d,
+    actual: Math.round(Object.values(d.models).reduce((a, v) => a + v, 0)),
+    recorded: Math.round(t.ledger?.byDay[d.d] ?? 0),
+  }));
+
+  // What a subscriber leaves in the bank, per store, EUR per month.
+  const net = (planId: string) => {
+    const p = STORE_PRICES[planId];
+    const us = p.USD * (1 - w.commission) * usdToEur;
+    const kr = (p.KRW / (1 + VAT.KR)) * (1 - w.commission) / t.fx.KRW;
+    const de = (p.EUR / (1 + VAT.DE)) * (1 - w.commission);
+    const avg = (us + kr + de) / 3;
+    const per = (v: number) => round(v / p.months, 2);
+    return { US: per(us), KR: per(kr), DE: per(de), avg: per(avg) };
+  };
+  const plans = Object.keys(STORE_PRICES).map((id) => ({ id, net: net(id), months: STORE_PRICES[id].months }));
+
+  const fixedUsd = FIXED_USD.supabase + FIXED_USD.cloudflare + FIXED_USD.apple;
+  const cycleDays = t.cycle.startedAt ? Math.max(1, (Date.now() - Date.parse(t.cycle.startedAt)) / 86_400_000) : w.days;
+
+  return {
+    fetchedAt: t.fetchedAt,
+    tier: t.tier, tierPrice: t.tierPrice, tierCredits: t.tierCredits,
+    rate: t.rate, rateDb: w.rateDb, eurPerCredit: round(eurPerCredit, 8),
+    fx: t.fx,
+    cycle: { used: t.cycle.used, limit: t.cycle.limit, resetAt: t.cycle.resetAt,
+             perDay: round(t.cycle.used / cycleDays), per30: round(t.cycle.used / cycleDays * 30) },
+    window: { start: t.windowStart, days: w.days, credits: Math.round(elTotal),
+              recorded: Math.round(ledTotal), recordedShare: elTotal ? round(ledTotal / elTotal, 3) : null,
+              elEur: round(elTotal * eurPerCredit, 2), gmEur: round(w.gmUsd * usdToEur, 2),
+              talkMin: round(w.talkMin, 1), scenes: w.scenes, signups: w.signups,
+              perDayEur: round((elTotal * eurPerCredit + w.gmUsd * usdToEur) / Math.max(1, w.days), 2) },
+    cats, byDay,
+    unit: {
+      talkCreditsPerMin: round(talkCreditsPerMin, 1),
+      talkEurPerMin: round(talkCreditsPerMin * eurPerCredit + gmEurPerMin, 4),
+      gmEurPerMin: round(gmEurPerMin, 4),
+      sceneCredits: round(sceneCredits), sceneEur: round(sceneCredits * eurPerCredit, 3),
+      vmPerSynth: round(vmPerSynth), vmCreditsPerSubMonth: round(vmPerSynth * 30),
+      vmEurPerSubMonth: round(vmPerSynth * 30 * eurPerCredit, 2),
+      onboardingCredits: round(onboardingCredits),
+      signupCredits: round(onboardingCredits + freeMinutes * talkCreditsPerMin),
+      signupEur: round((onboardingCredits + freeMinutes * talkCreditsPerMin) * eurPerCredit + freeMinutes * gmEurPerMin, 2),
+      freeMinutes,
+    },
+    plans,
+    tiers: TIER_LIST,
+    fixed: { usd: round(fixedUsd, 2), eur: round(fixedUsd * usdToEur, 2), items: FIXED_USD },
+    ledgerOk: !!t.ledger,
+  };
+}
 
 const round = (v: number, d = 0) => {
   const m = Math.pow(10, d);
@@ -63,7 +216,7 @@ function subStateOf(u: any): string {
 const deviceOf = (ua: string | null) =>
   !ua ? null : ua.includes("iPhone") ? "iPhone" : ua.includes("iPad") ? "iPad" : null;
 
-export function assemble(raw: any) {
+export function assemble(raw: any, truth: Truth | null = null) {
   const days = daysBetween(raw.windowStart, raw.today);
   const dayIdx = new Map<string, number>(days.map((d, i) => [d, i]));
   const uidx = new Map<string, number>(raw.users.map((u: any, i: number) => [u.id, i]));
@@ -123,6 +276,9 @@ export function assemble(raw: any) {
       email: u.email,
       dev: TEST_IDS.has(u.id),
       owner: u.id === OWNER_ID,
+      // Not a signup: an onboarding session that never reached Apple sign-in
+      // (field absent until 20260923110000 is applied → false).
+      anonymous: !!u.anonymous,
       signedUp: u.signed_up,
       origin: preWindow ? raw.windowStart : u.signed_up,
       preWindow,
@@ -195,6 +351,13 @@ export function assemble(raw: any) {
   const dayHours = (raw.day_hours ?? [])
     .filter((r: any) => uidx.has(r.id))
     .map((r: any) => [uidx.get(r.id), r.d, r.h, r.secs, r.events, r.spoke ?? null]);
+  // Reply turns at the same grain: [user idx, "YYYY-MM-DD", hour, turns].
+  // null (not []) when admin_turn_hours() isn't there, so the heatmap can
+  // tell "no turns" from "not measured" and leave the count out of its tip.
+  const turnHours = Array.isArray(raw.turn_hours)
+    ? raw.turn_hours.filter((r: any) => uidx.has(r.id))
+        .map((r: any) => [uidx.get(r.id), r.d, r.h, r.n])
+    : null;
   // The last 8 days, one row per ledger row: [user idx, epoch ms, talk
   // seconds or -1 for a non-talk row]. Same seconds rule as
   // `talk_row_seconds`: metadata.seconds when present, else a negative delta.
@@ -209,13 +372,37 @@ export function assemble(raw: any) {
     ]);
   const rtReasons = raw.rt_reasons ?? [];
 
+  // ---------------------------------------------------------------- truth
+  // ElevenLabs' own numbers for the window, with the ledger beside them.
+  // Everything metered in the window counts here, owner and test accounts
+  // included: cost is cost.
+  const talkMinWindow = cells.reduce((a: number, c: any) => a + c[4], 0) / 60;
+  const scenesWindow = sceneCells.reduce((a: number, c: any) => a + c[2], 0);
+  const gmUsdWindow = (raw.cost_daily ?? [])
+    .filter((r: any) => dayIdx.has(r.d))
+    .reduce((a: number, r: any) => a + (r.gm || 0), 0);
+  const signupsWindow = raw.users.filter((u: any) => u.signed_up >= raw.windowStart && !u.anonymous).length;
+  const econ = truth ? buildEcon(truth, {
+    talkMin: talkMinWindow, scenes: scenesWindow, gmUsd: gmUsdWindow, days: days.length,
+    signups: signupsWindow, commission: raw.commission, rateDb: raw.rate,
+  }) : null;
+
   // ---------------------------------------------------------------- cost
   const m = raw.mech;
   const cpm = m.turn_chars / m.talk_min;
   const cps = m.scene_chars / m.plays;
-  const talkC = cpm * CREDITS_PER_CHAR.conversation;
-  const sceneC = cps * CREDITS_PER_CHAR.fidelity;
-  const rate = raw.rate;
+  // With ElevenLabs' numbers in hand the talk figure is the REAL one (the
+  // ledger's turn rows alone miss the gateway); the ledger's own mechanics
+  // are the fallback.
+  const talkC = econ && econ.unit.talkCreditsPerMin > 0
+    ? econ.unit.talkCreditsPerMin : cpm * CREDITS_PER_CHAR.conversation;
+  const sceneC = econ && econ.unit.sceneCredits > 0
+    ? econ.unit.sceneCredits : cps * CREDITS_PER_CHAR.fidelity;
+  // $/credit: the tier's list price when known, else what the database seeded.
+  // The ledger's USD figures were priced at the database rate, so they are
+  // rescaled below rather than re-summed.
+  const rate = truth?.rate ?? raw.rate;
+  const elScale = raw.rate ? rate / raw.rate : 1;
   const commission = raw.commission;
 
   const tiers = [];
@@ -248,15 +435,45 @@ export function assemble(raw: any) {
     });
   }
 
+  // A user's ElevenLabs cost is TWO things (2026-09-26): what the ledger
+  // priced (scenes, voicemail, shadowing, previews — and the app-side `turn`
+  // rows), and the CALLS, which the gateway synthesizes without writing a
+  // character anywhere. Until this the table was the ledger alone and summed
+  // to 47% of ElevenLabs' meter over the launch window; a Plus subscriber
+  // with 108 minutes of calls read $0.095. So talk is estimated from the
+  // seconds the meter DID record, at the credits-per-minute measured from
+  // ElevenLabs' usage API (`talkC`), and the ledger's turn rows are
+  // subtracted first so a call on the old path isn't counted twice.
+  // `raw.talk_cost` is optional (an un-applied migration) — without it the
+  // table is the old ledger figure, and `talk_estimated` says so.
+  const talkUsdPerMin = talkC * rate;
+  const tcUser = new Map<string, any>();
+  const tcMonth = new Map<string, any>();
+  for (const r of raw.talk_cost?.user ?? []) tcUser.set(r.id, r);
+  for (const r of raw.talk_cost?.month ?? []) tcMonth.set(`${r.month}|${r.id}`, r);
+  const withTalk = (r: any, tc: any) => {
+    if (!tc) return { el: round(r.el * elScale, 4), talk_el: null, talk_estimated: false };
+    const ledgerEl = Math.max(0, r.el - (tc.turn_usd ?? 0)) * elScale;
+    const talkEl = ((tc.talk_secs ?? 0) / 60) * talkUsdPerMin;
+    return { el: round(ledgerEl + talkEl, 4), talk_el: round(talkEl, 4), talk_estimated: true };
+  };
+
   const byUser: Record<string, any> = {};
-  for (const r of raw.cost_user) if (uidx.has(r.id)) byUser[String(uidx.get(r.id))] = r;
+  for (const r of raw.cost_user) if (uidx.has(r.id)) {
+    const t = withTalk(r, tcUser.get(r.id));
+    byUser[String(uidx.get(r.id))] = {
+      ...r, ...t, usd: round(t.el + r.gm, 4),
+      talk_secs: tcUser.get(r.id)?.talk_secs ?? null,
+    };
+  }
 
   const byUserMonth: Record<string, Record<string, any>> = {};
   for (const r of raw.cost_month) {
     if (!uidx.has(r.id)) continue;
+    const t = withTalk(r, tcMonth.get(`${r.month}|${r.id}`));
     (byUserMonth[r.month] ??= {})[String(uidx.get(r.id))] = {
-      usd: r.usd, el: r.el, gm: r.gm, chars: r.chars,
-      talk_secs: r.talk_secs, scenes: r.scenes,
+      usd: round(t.el + r.gm, 4), el: t.el, talk_el: t.talk_el, talk_estimated: t.talk_estimated,
+      gm: r.gm, chars: r.chars, talk_secs: r.talk_secs, scenes: r.scenes,
     };
   }
 
@@ -264,19 +481,26 @@ export function assemble(raw: any) {
     talk_credits_per_min: round(talkC, 1),
     scene_credits: round(sceneC),
     ratio: round(sceneC / talkC, 1),
-    chars_per_min: cpm,
+    chars_per_min: econ ? talkC / CREDITS_PER_CHAR.conversation : cpm,
     chars_per_scene: cps,
     usd_per_talk_min: round(talkC * rate, 4),
     usd_per_scene: round(sceneC * rate, 4),
     rate, commission,
-    sample: { talk_min: round(m.talk_min, 1), plays: Math.round(m.plays),
-              since: raw.cost_window },
+    rateDb: raw.rate,
+    // Where the unit figures come from: ElevenLabs' own usage over the launch
+    // window, or the ledger's turn rows since the cost window.
+    sample: econ
+      ? { talk_min: round(talkMinWindow, 1), plays: Math.round(scenesWindow),
+          since: raw.windowStart, source: "elevenlabs" }
+      : { talk_min: round(m.talk_min, 1), plays: Math.round(m.plays),
+          since: raw.cost_window, source: "ledger" },
     tiers,
     daily: raw.cost_daily
       .filter((r: any) => dayIdx.has(r.d))
-      .map((r: any) => [dayIdx.get(r.d), r.el, r.gm]),
+      .map((r: any) => [dayIdx.get(r.d), round(r.el * elScale, 4), r.gm]),
     byUser,
     byUserMonth,
+    talk_estimated: !!raw.talk_cost,
     months: Object.keys(byUserMonth).sort().reverse(),
     rates: raw.rates,
     unpriced: raw.unpriced,
@@ -334,10 +558,12 @@ export function assemble(raw: any) {
       channels: raw.channels,
     },
     cost,
+    econ,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
     rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours, recentActivity,
-    dayHours,
+    dayHours, turnHours,
     prices: MONTHLY_PRICE,
+    storePrices: STORE_PRICES,
   };
 }

@@ -154,8 +154,6 @@
     <string name="reminders_cant_reach_you">复习和每日来电无法送达。请到设置打开。</string>
     <string name="axis_vocab">词汇</string>
     <string name="axis_express">表达</string>
-    <string name="keep">继续学</string>
-    <string name="i_know">我会了</string>
     <string name="common_phrases">常用说法</string>
     <string name="another_way_to_say_it">也可以这样说</string>
     <string name="as_a_name">当作名字时</string>
@@ -235,4 +233,6 @@
     <string name="back_in_when">"%s后再出现"</string>
     <string name="talk_time_used_up_call_saved">"通话时间用完了。这通电话已保存，随时可以再接着聊。"</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"这次没能评分，不过你刚才说的还在，可以听听看。"</string>
+    <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
+    <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">以每说100个字中确认到的语法错误来计算，越少分数越高。</string>
 </resources>

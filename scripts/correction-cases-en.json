@@ -1,0 +1,22 @@
+[
+ {"expect":"err","heard":"I had a free minute, so I thought I would check in today.",
+  "line":"Hey, um yeah, we can definitely do so, but I had a bad experience uh right uh before and checking if that is consistent uh issue or temporal issue."},
+ {"expect":"err","heard":"So how was the move?",
+  "line":"It was uh it was really tiring, we started at like six in the morning and the truck it came late, so we finish only at midnight and I have to unpack everything tomorrow."},
+ {"expect":"err","heard":"What do you do for work?",
+  "line":"I am working in a startup since three years, I do mostly the backend, um, and recently I take also some product decisions because we are very small team."},
+ {"expect":"err","heard":"Did you talk to your manager about it?",
+  "line":"Not yet, I am planning to, but every time I want to bring it up he is busy, so I think I will just send a message and explain him the situation."},
+ {"expect":"err","heard":"How's the new apartment?",
+  "line":"Honestly the apartment is great but the, the boiler is broken since we moved in and the landlord don't answer my calls, I am little bit frustrated."},
+ {"expect":"ok","heard":"How was your weekend?",
+  "line":"Pretty quiet, actually. I mostly stayed home and caught up on sleep, and then on Sunday I went for a long walk by the river."},
+ {"expect":"ok","heard":"Are you coming to the thing on Friday?",
+  "line":"Yeah, I should be able to make it. I might be a bit late though, because I've got something right before."},
+ {"expect":"ok","heard":"What did you think of the film?",
+  "line":"Honestly? I liked the first half a lot, but it kind of lost me toward the end. The acting was great though."},
+ {"expect":"err","heard":"Have you been to Berlin before?",
+  "line":"Yes I go there two times, first time for a conference and second time just for holiday with my wife, we enjoyed very much the food."},
+ {"expect":"ok","heard":"Is the connection any better now?",
+  "line":"It seems fine right now, but that's kind of the problem — it only drops every once in a while, so it's hard to catch."}
+]

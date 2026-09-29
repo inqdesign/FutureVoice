@@ -154,10 +154,76 @@ final class PersonaMemoryTests: XCTestCase {
         XCTAssertEqual(p.strangerLines, ["주말마다 이자르 강변에서 달린다", "어린 아이를 키우는 부모"])
     }
 
-    /// The two-way lock every note on a phone carried until 2026-09-16 maps
-    /// onto the rungs: locked → nothing, unlocked → everything. And a build
-    /// from before the rungs must never read a gist line as unlocked, so
-    /// `isPrivate` is not written back.
+    /// The intro is written from standing facts only: an unlocked `now` line
+    /// is small talk for a live call, not part of who someone is.
+    func testStrangerFactsLeaveOutNews() {
+        var p = UserPersona.empty
+        p.absorb(notes: [
+            PersonaNote(text: "혼자 앱을 만든다", learnedAt: Date(), share: .all, kind: .fact),
+            PersonaNote(text: "아이 등교시키러 가는 길이었다", learnedAt: Date(), share: .all, kind: .now),
+            PersonaNote(text: "유치원생 딸이 하나 있다", learnedAt: Date(), share: .gist, kind: .fact,
+                        gist: "어린 아이를 키우는 부모"),
+        ])
+        XCTAssertEqual(p.strangerLines.count, 3)
+        XCTAssertEqual(p.strangerFacts, ["혼자 앱을 만든다", "어린 아이를 키우는 부모"])
+    }
+
+    /// What the composer is given is exactly the stranger set — a `nothing`
+    /// line is absent from the prompt, a `gist` line is there as its gist —
+    /// and the cache key moves with the inputs and nothing else.
+    @MainActor
+    func testComposerReadsOnlyTheStrangerSet() {
+        var p = UserPersona.empty
+        p.displayName = "Eunggyu"
+        p.occupation = "Solo founder"
+        p.city = "Munich"
+        p.absorb(notes: [
+            PersonaNote(text: "회사 자금이 빠듯하다", learnedAt: Date(), share: .nothing, gist: "사업을 한다"),
+            PersonaNote(text: "유치원생 딸이 하나 있다", learnedAt: Date(), share: .gist, gist: "어린 아이를 키우는 부모"),
+            PersonaNote(text: "주말마다 달린다", learnedAt: Date(), share: .all),
+        ])
+        let s = PublicIntroComposer.sources(p, language: "en")
+        XCTAssertEqual(s.facts, ["어린 아이를 키우는 부모", "주말마다 달린다"])
+        let prompt = PublicIntroComposer.prompt(s)
+        XCTAssertFalse(prompt.contains("자금"))
+        XCTAssertFalse(prompt.contains("유치원생"))
+        XCTAssertTrue(prompt.contains("어린 아이를 키우는 부모"))
+        XCTAssertTrue(prompt.contains("Solo founder"))
+
+        let again = PublicIntroComposer.sources(p, language: "en")
+        XCTAssertEqual(s.key, again.key)
+        XCTAssertNotEqual(s.key, PublicIntroComposer.sources(p, language: "de").key)
+        p.learnedNotes[2].share = .nothing
+        XCTAssertNotEqual(s.key, PublicIntroComposer.sources(p, language: "en").key)
+
+        // The fallback is the old composition minus nothing the rungs hide.
+        let fb = PublicIntroComposer.fallback(s)
+        XCTAssertTrue(fb.hasPrefix("Solo founder"))
+        XCTAssertFalse(fb.contains("자금"))
+    }
+
+    /// One write per set of inputs: a paragraph on file for these exact
+    /// inputs is what `current` returns, and a changed input drops it.
+    @MainActor
+    func testComposerCacheFollowsTheInputs() {
+        PublicIntroComposer.clear()
+        defer { PublicIntroComposer.clear() }
+        var p = UserPersona.empty
+        p.occupation = "Solo founder"
+        let s = PublicIntroComposer.sources(p, language: "en")
+        XCTAssertEqual(PublicIntroComposer.current(p, language: "en"), PublicIntroComposer.fallback(s))
+        PublicIntroComposer.save("I build apps on my own.", for: s)
+        XCTAssertEqual(PublicIntroComposer.current(p, language: "en"), "I build apps on my own.")
+        XCTAssertEqual(PublicIntroComposer.current(p, language: "ko"), PublicIntroComposer.fallback(PublicIntroComposer.sources(p, language: "ko")))
+        p.occupation = "Founder"
+        XCTAssertNil(PublicIntroComposer.cached(for: PublicIntroComposer.sources(p, language: "en")))
+    }
+
+    /// A note from before the rungs — the two-way lock of 2026-09-15, locked
+    /// OR unlocked — lands on `nothing` (2026-09-25): the unlocked ones were
+    /// written as episodes by that day's prompt and carried no gist, and
+    /// they went out in full. And a build from before the rungs must never
+    /// read a gist line as unlocked, so `isPrivate` is not written back.
     func testLegacyLockMapsOntoShare() throws {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
@@ -166,7 +232,7 @@ final class PersonaMemoryTests: XCTestCase {
          {"text":"b","learnedAt":"2026-08-20T10:00:00Z","isPrivate":false},
          {"text":"c","learnedAt":"2026-08-20T10:00:00Z","share":"gist","gist":"g","isPrivate":false}]
         """#.utf8))
-        XCTAssertEqual(notes.map(\.share), [.nothing, .all, .gist])
+        XCTAssertEqual(notes.map(\.share), [.nothing, .nothing, .gist])
         let enc = JSONEncoder()
         let out = String(data: try enc.encode(notes[2]), encoding: .utf8)!
         XCTAssertFalse(out.contains("isPrivate"))
@@ -232,7 +298,9 @@ final class PersonaMemoryTests: XCTestCase {
     /// lines — and nothing the learner wrote for their own fluent self.
     /// Until 2026-09-15 this paragraph carried `household` and `freeNotes`,
     /// and it was published on first launch without the author ever seeing it.
+    @MainActor
     func testComposedIntroLeavesPrivateFieldsAndLockedNotesBehind() {
+        PublicIntroComposer.clear()
         var p = UserPersona.empty
         p.displayName = "Eunggyu"
         p.city = "Munich"
@@ -248,7 +316,7 @@ final class PersonaMemoryTests: XCTestCase {
                         gist: "어린 아이를 키우는 부모"),
             PersonaNote(text: "자금 압박이 있다", learnedAt: Date(), share: .nothing),
         ])
-        let intro = PublicPersonaService.composedIntro(p)
+        let intro = PublicPersonaService.composedIntro(p, language: "en")
         XCTAssertTrue(intro.contains("Solo founder"))
         XCTAssertTrue(intro.contains("Munich"))
         XCTAssertTrue(intro.contains("Kita / school"))

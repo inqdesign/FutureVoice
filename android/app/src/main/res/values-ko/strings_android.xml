@@ -154,8 +154,6 @@
     <string name="reminders_cant_reach_you">복습과 매일 전화가 닿지 못해요. 설정에서 켜 주세요.</string>
     <string name="axis_vocab">어휘</string>
     <string name="axis_express">표현</string>
-    <string name="keep">계속 학습</string>
-    <string name="i_know">알아요</string>
     <string name="common_phrases">자주 쓰는 표현</string>
     <string name="another_way_to_say_it">이렇게도 말해요</string>
     <string name="as_a_name">이름으로 쓸 때</string>
@@ -235,4 +233,6 @@
     <string name="back_in_when">"%s 뒤에 다시"</string>
     <string name="talk_time_used_up_call_saved">"통화 시간을 다 썼어요. 이 통화는 저장해 뒀으니 언제든 다시 이어갈 수 있어요."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"이번 건 점수를 못 냈어요. 방금 한 말은 그대로 들어볼 수 있어요."</string>
+    <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
+    <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">말한 100단어당 확인된 문법 실수로 읽어요 — 적을수록 높아요.</string>
 </resources>

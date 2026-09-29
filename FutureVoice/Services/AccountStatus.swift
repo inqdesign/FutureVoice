@@ -77,9 +77,18 @@ struct AccountStatus {
     /// that didn't start on our paywall — an offer code, the App Store's own
     /// page, a reinstall — still gets it.
     var trialEndsAt: Date?
-    /// Invite minutes, in seconds. Spent BEFORE the monthly pool since
+    /// The plan's OWN talk pool per month (`subscription_plans.monthly_seconds`),
+    /// which during a trial is NOT `monthlyCapSeconds` — the trial is metered
+    /// at 35 min whatever plan it trials. Read so the trial screens can say
+    /// what starts when the trial converts ("150 minutes a month from Sep 28")
+    /// instead of leaving the learner to discover it. Nil on Plus (no
+    /// ceiling) and when the catalog row could not be read.
+    var planMonthlySeconds: Int?
+    /// Invite minutes and bought top-ups, in seconds — `user_credits.balance`
+    /// as `talk_allowance()` reports it. Spent BEFORE the monthly pool since
     /// `20260821100000`, so for a subscriber this is time on top of the plan
     /// rather than the "kept for after you cancel" balance it used to be.
+    /// (Never decoded until 2026-09-26: the row that shows it was dead.)
     var bonusSeconds: Int = 0
     /// When the current billing period began. The usage receipt reads its
     /// ledger window from this: the pool is monthly, so a fixed 7-day window
@@ -175,16 +184,29 @@ struct AccountStatus {
         isEntitled && (planId?.hasPrefix("light") ?? false)
     }
 
-    /// Entitled to the Plus tier (plan ids `plus_*`). Used to suppress the
-    /// avatar's talk-time ring on Home: an hour a day is a pool this account
-    /// will almost never approach, so the arc would sit near empty all month,
-    /// and a gauge that never moves is decoration on the one tier that paid
-    /// its way out of counting.
+    /// Entitled to the Plus tier (plan ids `plus_*`). Since 2026-09-26 this
+    /// says only which SIZE was bought — Plus is a bounded pool like Light
+    /// (300 min + 60 scenes), so nothing about counting hangs off it any
+    /// more; ask `isUncappedTalk` for that.
     ///
     /// Deliberately does NOT include the admin `unlimited` flag — that account
     /// exists to watch real burn, so it keeps the ring like everyone else.
     var isPlusPlan: Bool {
         isEntitled && (planId?.hasPrefix("plus") ?? false)
+    }
+
+    /// Talking on this account is not counted at all. Only the Plus rows sold
+    /// BEFORE the bounded plans (`20260926110000`) are — the subscription's
+    /// own stamp, never the tier, so a Plus bought today counts its 300
+    /// minutes while one bought in September keeps what it was sold. Read
+    /// from `talk_allowance()`, the one function the meter itself uses: nil
+    /// cap on an entitled account means "no ceiling", not "no plan".
+    ///
+    /// Everything that used to hang off `isPlusPlan` — no ring on Home, the
+    /// "N min talked" (never "of M") label, no invite-minutes row — hangs off
+    /// this now, because those were all rules about an UNCOUNTED pool.
+    var isUncappedTalk: Bool {
+        isEntitled && monthlyCapSeconds == nil
     }
 
     /// Scenes left in this period's pool.
@@ -207,10 +229,12 @@ struct AccountStatus {
         secondsRemaining / 60
     }
 
-    /// The free tier's full tank — the signup grant (600 s = 10 min, set by
-    /// `handle_new_user_credits`; was the beta's 3960 s, which drew a new
-    /// account's ring 85% spent on day one).
-    static let freeGrantSeconds = 600
+    /// The free tier's full tank — the signup grant (1200 s = 20 min since
+    /// `20260926100000`; 600 s from 2026-09-21, and before that the beta's
+    /// 3960 s, which drew a new account's ring 85% spent on day one). The
+    /// server's constant lives in `handle_new_user_credits`; keep the two
+    /// the same, or a fresh account's ring reads full for its first minutes.
+    static let freeGrantSeconds = 1200
     /// The admin account's tank: the server auto-resets it to 6600 s
     /// (110 min) when it would overdraw, so that's what "full" means there.
     static let adminResetSeconds = 6600
@@ -357,12 +381,14 @@ struct AccountStatus {
     /// denominator: Plus is no longer sold as unlimited, so hiding its size
     /// would be the same concealment the rename was made to end.
     var talkTimeLabel: String {
-        // Plus does not count DOWN. Its pool is a fair-use line the account
-        // will almost never approach, so "1,745 of 1,800 min left" is a
-        // monthly receipt for time NOT used — it reads as money wasted and
-        // is the one number most likely to end the subscription. The same
-        // seconds, told forward, read as something done. (This is the other
-        // half of dropping the avatar ring on Plus.)
+        // An UNCAPPED row (the Plus subscriptions sold before 2026-09-26)
+        // does not count DOWN. Its pool is a fair-use line the account will
+        // almost never approach, so "1,745 of 1,800 min left" is a monthly
+        // receipt for time NOT used — it reads as money wasted and is the
+        // one number most likely to end the subscription. The same seconds,
+        // told forward, read as something done. (This is the other half of
+        // dropping the avatar ring on those accounts.) A Plus bought since
+        // is a 300-minute pool and reads like Light below.
         //
         // Plan branches outrank the admin `unlimited` flag (2026-08-26). With
         // the flag first, an admin account on Plus printed `minutesRemaining`
@@ -372,19 +398,24 @@ struct AccountStatus {
         // Said through `PracticeStats.talkSpan`, so a month whose talking is
         // still under a minute says the seconds instead of "0 min" — the one
         // size minutes cannot tell apart from nothing at all.
-        if isPlusPlan {
+        if isUncappedTalk {
             return explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) talked this month")
         }
         // Light reads the same direction as Plus — minutes TALKED, over the
         // pool — so the two tiers' rows say the same kind of thing and a
         // learner switching between them isn't handed a reversed number.
         if isEntitled, monthlyCapSeconds != nil {
-            let plan = explain(
-                "\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min talked this month")
-            // Invite minutes are spent first, so they are not part of the
-            // month's fraction and must not be folded into it — they are
-            // named separately or the two numbers stop adding up.
-            return hasBonusMinutes ? plan + explain(" + \(bonusMinutes) invite min") : plan
+            // A trial's pool is the trial's, not a month's: 35 min for the
+            // whole trial, and the plan's own pool only starts when it
+            // converts. "This month" here told a trialer the month was over.
+            let plan = isTrialing
+                ? explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min trial talk used")
+                : explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min talked this month")
+            // Invite minutes and bought top-ups are spent first, so they are
+            // not part of the month's fraction and must not be folded into
+            // it — they are named separately or the two numbers stop adding
+            // up.
+            return hasBonusMinutes ? plan + explain(" + \(bonusMinutes) extra min") : plan
         }
         if unlimited { return explain("\(minutesRemaining) min left") }
         if hasLegacyPool {
@@ -463,6 +494,24 @@ struct AccountStatus {
             out.trialEndsAt = row.trial_ends_at.flatMap(Self.timestamp(from:))
         }
 
+        // The plan's own pool, in a query of its OWN: a failure here costs one
+        // sentence on the trial screens, never the entitlement above.
+        struct PlanRow: Decodable {
+            let monthly_seconds: Int?
+            let talk_unlimited: Bool?
+        }
+        if let planId = out.planId,
+           let rows: [PlanRow] = try? await SupabaseProvider.shared
+            .from("subscription_plans")
+            .select("monthly_seconds,talk_unlimited")
+            .eq("id", value: planId)
+            .limit(1)
+            .execute()
+            .value,
+           let plan = rows.first, plan.talk_unlimited != true {
+            out.planMonthlySeconds = plan.monthly_seconds
+        }
+
         // The receipt, as the store wrote it: the latest charge, and whether
         // an offer code is pricing the current period. Own rows only (RLS).
         // Both reads degrade to nil — the page simply has less to say.
@@ -537,6 +586,7 @@ struct AccountStatus {
         struct AllowanceRow: Decodable {
             let used: Int
             let cap: Int?
+            let bonus: Int?
             let period_start: String?
             let period_end: String?
         }
@@ -545,6 +595,7 @@ struct AccountStatus {
             .execute()
             .value {
             out.secondsUsedPeriod = talk.used
+            out.bonusSeconds = talk.bonus ?? out.secondsBalance
             // Nil cap on an entitled plan is "uncapped", not "no plan" — the
             // RPC says which via `metered_by`, and `used` is real either way.
             out.monthlyCapSeconds = talk.cap

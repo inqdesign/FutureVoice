@@ -8,9 +8,10 @@ import UserNotifications
 ///
 ///   • **Answer** — opens the app and starts the talk.
 ///   • **Can't talk now** — declines. NOT a failure. 전화영어's forfeited
-///     lesson is what makes people cancel; here the caller simply rings back
-///     in an hour, the way a person would, up to `maxCallbacks`. Then they
-///     leave it for the day — never a scold, never a broken counter.
+///     lesson is what makes people cancel; here a declined call is simply a
+///     call that wasn't taken — no callback, no follow-up question, no app
+///     opening, never a scold, never a broken counter. The learner's own
+///     later times today still ring, because those are their schedule.
 ///
 /// Every call settles into a `DailyCallOutcome` and goes into the store's
 /// history, which is what the NEXT script is written from. That loop is where
@@ -25,32 +26,13 @@ enum DailyCallScheduler {
 
     static let categoryId = "FUTUREVOICE_DAILY_CALL"
     static let answerActionId = "FUTUREVOICE_CALL_ANSWER"
-    /// Suffixed with the delay in minutes — see `callbackOptions`.
-    static let declineActionPrefix = "FUTUREVOICE_CALL_DECLINE_"
+    /// Matched by PREFIX: builds before 2026-09-21 suffixed it with a
+    /// callback delay (`…_DECLINE_60`), and a notification already delivered
+    /// by one of them still has to decline when tapped after the update.
+    static let declineActionId = "FUTUREVOICE_CALL_DECLINE"
 
     private static let requestId = "futurevoice.daily-call"
 
-    /// "Call me back in…", in minutes.
-    ///
-    /// The NOTIFICATION can offer all of these, because a
-    /// `UNNotificationCategory` takes an array of actions. The ALARM cannot:
-    /// `AlarmPresentation.Alert` has room for exactly one button we control
-    /// (the other is system-drawn), so on that surface the single Decline
-    /// button uses `defaultCallbackMinutes` — which is why that setting exists
-    /// in Me rather than being a constant.
-    static let callbackOptions = [30, 60, 180]
-
-    /// What the learner chose in Me, or an hour if they never looked.
-    static var defaultCallbackMinutes: Int {
-        get {
-            let stored = UserDefaults.standard.integer(forKey: "futurevoice.dailyCall.callbackMinutes")
-            return stored > 0 ? stored : 60
-        }
-        set { UserDefaults.standard.set(newValue, forKey: "futurevoice.dailyCall.callbackMinutes") }
-    }
-    /// After three tries the caller gives up for the day. A fourth ring is
-    /// nagging, and nagging is what people turn notifications off over.
-    static let maxCallbacks = 3
     /// How long after a pickup the passive re-arm keeps its hands off, so the
     /// session that pickup started gets to be the context for tomorrow's call
     /// instead of being written around. See `refresh`.
@@ -70,30 +52,17 @@ enum DailyCallScheduler {
             identifier: answerActionId,
             title: explain("Answer"),
             options: [.foreground])
-        // One action per callback delay. The notification is the one surface
-        // that can show a choice — take it.
-        let declines = callbackOptions.map { minutes in
-            UNNotificationAction(
-                identifier: "\(declineActionPrefix)\(minutes)",
-                title: callbackLabel(minutes),
-                options: [])
-        }
+        // Background action: declining never opens the app.
+        let decline = UNNotificationAction(
+            identifier: declineActionId,
+            title: explain("Can't talk now"),
+            options: [])
         let category = UNNotificationCategory(
             identifier: categoryId,
-            actions: [answer] + declines,
+            actions: [answer, decline],
             intentIdentifiers: [],
             options: [])
         UNUserNotificationCenter.current().setNotificationCategories([category])
-    }
-
-    /// "Call back in 30 min" / "in 1 hour" / "in 3 hours". Phrased as the
-    /// CALLER's next move, not as a snooze the learner is setting — the whole
-    /// framing is that somebody tries again, not that a timer slips.
-    static func callbackLabel(_ minutes: Int) -> String {
-        if minutes < 60 { return explain("Call back in \(minutes) min") }
-        let hours = minutes / 60
-        return hours == 1 ? explain("Call back in 1 hour")
-                          : explain("Call back in \(hours) hours")
     }
 
     // MARK: - Permission
@@ -220,37 +189,25 @@ enum DailyCallScheduler {
         ])
     }
 
-    /// They sent it away. The caller tries again later, the way a person would
-    /// — same script, same audio, no new spend — until the cap.
+    /// They sent it away. That's the whole of it: nobody rings back, nothing
+    /// asks when to try again, the app doesn't open (2026-09-21, user
+    /// decision — a callback prompt after "can't talk" was the app nagging).
     ///
-    /// This is not a snooze button on an alarm. Declining is a decision, and
-    /// the point is that it costs nothing: no streak breaks, no scold, and the
-    /// only consequence is that somebody rings back.
-    ///
-    /// - Parameter minutes: which "call me back in…" they picked. nil means
-    ///   the surface couldn't offer a choice (the alarm's single button), so
-    ///   their setting decides.
-    static func decline(after minutes: Int? = nil) async {
+    /// The learner's OWN later times today are left armed; they chose those.
+    /// So the plan settles as `.declined` only once no slot is left today —
+    /// until then `callbackCount` counts the declines, and a plan that rings
+    /// out after one still settles as declined (see `settleIfRangOut`).
+    static func decline() async {
         let store = DailyCallStore.shared
         guard var plan = store.load(), !plan.isSettled else { return }
-        let delay = minutes ?? defaultCallbackMinutes
-        Analytics.capture("daily_call_declined", [
-            "callback": plan.callbackCount + 1,
-            "minutes": delay,
-            "chosen": minutes != nil
-        ])
+        Analytics.capture("daily_call_declined", ["declines": plan.callbackCount + 1])
         plan.callbackCount += 1
-
-        guard plan.callbackCount <= maxCallbacks else {
-            // Out of callbacks. The caller gives up for today — quietly, and
-            // the unheard message stays behind for whenever they look.
+        if hasSlotRemainingToday(after: Date()) {
+            store.save(plan)
+        } else {
             settle(plan, as: .declined)
             await cancelPendingRequest()
-            return
         }
-        plan.scheduledFor = Date().addingTimeInterval(TimeInterval(delay) * 60)
-        store.save(plan)
-        await schedule(plan, callerName: nil)
     }
 
     /// They picked up. Spend the plan so it can't ring twice, and mark the
@@ -263,15 +220,6 @@ enum DailyCallScheduler {
         // to the same person right now, so "you missed me" is no longer true.
         DailyCallStore.shared.clearUnheard()
         Task { await cancelPendingRequest() }
-    }
-
-    /// "Not today." The caller stops trying and leaves the message behind —
-    /// the same end state as running out of callbacks, reached deliberately.
-    static func declineForToday() async {
-        guard let plan = DailyCallStore.shared.load(), !plan.isSettled else { return }
-        Analytics.capture("daily_call_declined_for_today", ["callbacks": plan.callbackCount])
-        settle(plan, as: .declined)
-        await cancelPendingRequest()
     }
 
     /// The learner played the message back from the missed-call row. It stops
@@ -318,8 +266,13 @@ enum DailyCallScheduler {
               // Answer and Decline no-ops when they ring, because both intents
               // guard on `!plan.isSettled`.
               !hasSlotRemainingToday(after: now) else { return }
-        Analytics.capture("daily_call_missed", ["callbacks": plan.callbackCount])
-        settle(plan, as: .missed)
+        // Declined earlier today and never answered later: the last thing
+        // the learner actually did was say no, not ignore it.
+        let outcome: DailyCallOutcome = plan.callbackCount > 0 ? .declined : .missed
+        if outcome == .missed {
+            Analytics.capture("daily_call_missed", [:])
+        }
+        settle(plan, as: outcome)
     }
 
     /// Whether any call is still due to ring TODAY.
@@ -434,8 +387,8 @@ enum DailyCallScheduler {
         let now = Date()
         var dates = fireDates(after: now)
         if plan.scheduledFor > now, !dates.contains(plan.scheduledFor) {
-            // A callback ("call me back in 30 min") lands between slots — it
-            // still has to ring at the time the learner picked.
+            // A plan written for a time the learner has since removed, or an
+            // older build's callback: it still rings when it said it would.
             dates.append(plan.scheduledFor)
         }
         dates = Array(Set(dates)).sorted().prefix(DailyCallStore.maxTimes).map { $0 }
@@ -481,7 +434,7 @@ enum DailyCallScheduler {
         }
     }
 
-    /// Remembered so a snooze — which happens with the app closed and no
+    /// Remembered so a re-arm — which can happen with the app closed and no
     /// `AppState` in reach — can re-post the notification under the same
     /// caller name instead of falling back to a generic one.
     private static var cachedCallerName: String? {
@@ -501,11 +454,6 @@ final class DailyCallInbox: ObservableObject {
     static let shared = DailyCallInbox()
     /// Set when the learner answers; cleared by the view that starts the call.
     @Published var pendingAnswer: DailyCallPlan?
-    /// Set when they decline FROM THE ALARM, which has no room to ask when to
-    /// try again — the app opens on `DailyCallCallbackSheet` instead. The
-    /// notification fallback asks inline (its category takes an array of
-    /// actions) and never sets this.
-    @Published var pendingCallbackChoice: DailyCallPlan?
     /// Set when a review reminder is tapped — `RootTabView` opens the due
     /// deck from here. Same handoff shape as the call: the notification
     /// delegate has no AppState to write to, and on a cold launch the tab
@@ -514,6 +462,8 @@ final class DailyCallInbox: ObservableObject {
     /// Set when a per-item callback is tapped — the app opens that exact
     /// word / phrase / line.
     @Published var pendingReviewItem: ItemReminder.Target?
+    /// Set when the weekly test's reminder is tapped — the app opens the test.
+    @Published var pendingWeeklyTest = false
 }
 
 /// Routes notification taps. Installed as the app's `UNUserNotificationCenter`
@@ -561,6 +511,16 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
             return
         }
 
+        // The weekly test opened: land on it, not on the tab it sits in.
+        if category == WeeklyTestReminder.categoryId {
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                DailyCallInbox.shared.pendingWeeklyTest = true
+            }
+            return
+        }
+
         // A per-item callback: it named a specific word / phrase / line, so
         // the tap opens THAT card, not a queue it might be buried in.
         if category == ItemReminder.categoryId {
@@ -591,12 +551,8 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
             defer { completionHandler() }
 
             switch action {
-            case let id where id.hasPrefix(DailyCallScheduler.declineActionPrefix):
-                // The chosen delay rides in the action id's suffix — one
-                // action per option, so the notification can show the choice
-                // the alarm has no room for.
-                let minutes = Int(id.dropFirst(DailyCallScheduler.declineActionPrefix.count))
-                await DailyCallScheduler.decline(after: minutes)
+            case let id where id.hasPrefix(DailyCallScheduler.declineActionId):
+                await DailyCallScheduler.decline()
 
             case UNNotificationDismissActionIdentifier:
                 // Swiped away. Deliberately nothing: no reschedule, no record,

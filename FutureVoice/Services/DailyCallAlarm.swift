@@ -86,8 +86,7 @@ enum DailyCallAlarm {
                 textColor: .green,
                 systemImageName: "phone.fill"),
             // `.custom`, NOT `.countdown`: countdown would oblige the app to
-            // ship a Live Activity widget for that state, and the callback is
-            // already handled by re-scheduling the same plan.
+            // ship a Live Activity widget for that state.
             secondaryButtonBehavior: .custom)
 
         let attributes = AlarmAttributes<CallMetadata>(
@@ -100,8 +99,7 @@ enum DailyCallAlarm {
             schedule: .fixed(date),
             attributes: attributes,
             // Mirrors the button mapping above: system button = decline,
-            // our labelled one = answer. The decline delay is whatever they
-            // set in Me — this surface has no room to ask.
+            // our labelled one = answer.
             stopIntent: DeclineDailyCallIntent(),
             secondaryIntent: AnswerDailyCallIntent(),
             // A phone ringing, from the app bundle — see the note at the top
@@ -215,28 +213,16 @@ struct AnswerDailyCallIntent: LiveActivityIntent {
 }
 
 /// Sending the call away. Runs on the SYSTEM button — see the mapping note in
-/// `schedule`.
-///
-/// This one DOES open the app, and only because the alarm gives us nowhere
-/// else to ask. `AlarmPresentation.Alert` has exactly one button we control
-/// and it's spent on Answer, so "in 30 min / in 3 hours" has no home on that
-/// screen; the app comes up on `DailyCallCallbackSheet` instead. The trade is
-/// real and deliberate — declining is supposed to cost nothing, and this costs
-/// a context switch. The notification fallback, whose category takes an array
-/// of actions, still asks inline and never opens anything.
-///
-/// The call is NOT settled here. Until they pick, it stays live: closing the
-/// sheet without choosing falls back to their Me setting rather than silently
-/// cancelling the day.
+/// `schedule`. It does NOT open the app: declining is just not taking the
+/// call, and it used to open a "when should I call back?" sheet, which turned
+/// saying no into a chore (removed 2026-09-21).
 struct DeclineDailyCallIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Can't talk now"
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        if let plan = DailyCallStore.shared.load(), !plan.isSettled {
-            DailyCallInbox.shared.pendingCallbackChoice = plan
-        }
+        await DailyCallScheduler.decline()
         return .result()
     }
 }

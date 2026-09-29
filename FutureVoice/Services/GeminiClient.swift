@@ -62,12 +62,25 @@ final class GeminiClient {
         /// was actually said instead of trusting on-device STT). The audio
         /// part is sent FIRST, the text rides along as the ASR hint.
         var inlineAudio: InlineAudio? = nil
+        /// Documents attached alongside the text — a PDF or an image read
+        /// off the Files app for a scenario brief. Sent before the text,
+        /// like audio; Gemini reads them as first-class parts. Never more
+        /// than `maxInlineBytes` in total per request.
+        var inlineFiles: [InlineFile] = []
 
         struct InlineAudio {
             let mimeType: String     // e.g. "audio/wav"
             let base64Data: String
         }
+        struct InlineFile {
+            let mimeType: String     // "application/pdf", "image/jpeg", "text/plain"
+            let base64Data: String
+        }
     }
+
+    /// Inline request ceiling the API accepts is 20 MB; 10 MB of file bytes
+    /// leaves room for base64 growth and the prompt.
+    static let maxInlineBytes = 10 * 1024 * 1024
 
     // MARK: - Public
 
@@ -95,6 +108,7 @@ final class GeminiClient {
         maxTokens: Int = 512,
         temperature: Double = 0.7,
         searchGrounding: Bool = false,
+        urlContext: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         jsonResponse: Bool = false,
@@ -102,7 +116,7 @@ final class GeminiClient {
     ) async throws -> String {
         try await sendRaw(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
-            temperature: temperature, searchGrounding: searchGrounding,
+            temperature: temperature, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: jsonResponse, requestTimeout: requestTimeout
         ).text
@@ -121,6 +135,7 @@ final class GeminiClient {
         maxTokens: Int = 512,
         temperature: Double = 0.7,
         searchGrounding: Bool = false,
+        urlContext: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         jsonResponse: Bool = false,
@@ -129,7 +144,7 @@ final class GeminiClient {
     ) async throws -> (text: String, finishReason: String?) {
         let request = try await makeRequest(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
-            temperature: temperature, searchGrounding: searchGrounding,
+            temperature: temperature, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: jsonResponse, requestTimeout: requestTimeout, stream: false,
             fastThinking: fastThinking
@@ -166,6 +181,7 @@ final class GeminiClient {
         maxTokens: Int,
         temperature: Double,
         searchGrounding: Bool,
+        urlContext: Bool = false,
         purpose: String?,
         idempotencyKey: String?,
         jsonResponse: Bool,
@@ -195,7 +211,19 @@ final class GeminiClient {
             let responseMimeType: String?   // nil = omitted
         }
         struct EmptyObject: Encodable {}
-        struct Tool: Encodable { let google_search: EmptyObject }
+        // Optionals encode via encodeIfPresent, so each tool object carries
+        // only the key it was asked for. `url_context` lets the model read
+        // the pages a message names (a job posting, a listing) — the
+        // scenario brief's link path; `google_search` grounds on the open
+        // web. Either one disables the JSON response mode below.
+        struct Tool: Encodable {
+            var google_search: EmptyObject? = nil
+            var url_context: EmptyObject? = nil
+        }
+        let usesTools = searchGrounding || urlContext
+        var tools: [Tool] = []
+        if searchGrounding { tools.append(Tool(google_search: EmptyObject())) }
+        if urlContext { tools.append(Tool(url_context: EmptyObject())) }
         struct Body: Encodable {
             let model: String
             let system_instruction: SystemInstruction
@@ -213,6 +241,10 @@ final class GeminiClient {
                 if let audio = msg.inlineAudio {
                     parts.append(Part(inlineData: .init(mimeType: audio.mimeType,
                                                         data: audio.base64Data)))
+                }
+                for file in msg.inlineFiles {
+                    parts.append(Part(inlineData: .init(mimeType: file.mimeType,
+                                                        data: file.base64Data)))
                 }
                 parts.append(Part(text: msg.content))
                 return Content(role: msg.role.rawValue, parts: parts)
@@ -236,9 +268,9 @@ final class GeminiClient {
                 // imitates its own (plain-text) turns in the history.
                 // Incompatible with the google_search tool, so grounded calls
                 // keep relying on the prompt + extractJSON.
-                responseMimeType: (jsonResponse && !searchGrounding) ? "application/json" : nil
+                responseMimeType: (jsonResponse && !usesTools) ? "application/json" : nil
             ),
-            tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil,
+            tools: tools.isEmpty ? nil : tools,
             purpose: purpose,
             stream: stream ? true : nil
         )
@@ -283,6 +315,7 @@ final class GeminiClient {
         maxTokens: Int = 1024,
         temperature: Double = 0.4,
         searchGrounding: Bool = false,
+        urlContext: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil,
@@ -298,6 +331,7 @@ final class GeminiClient {
             maxTokens: maxTokens,
             temperature: temperature,
             searchGrounding: searchGrounding,
+            urlContext: urlContext,
             purpose: purpose,
             idempotencyKey: idempotencyKey,
             jsonResponse: true,
@@ -481,11 +515,13 @@ final class GeminiClient {
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil,
+        searchGrounding: Bool = false,
+        urlContext: Bool = false,
         onPartial: @MainActor @escaping (String) -> Void
     ) async throws -> T {
         let request = try await makeRequest(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
-            temperature: 0.4, searchGrounding: false,
+            temperature: 0.4, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: true, requestTimeout: requestTimeout, stream: true
         )
@@ -524,13 +560,19 @@ final class GeminiClient {
 
         var raw = ""
         var finishReason: String?
+        // A `data:` line that did not decode as a chunk. Zero on every
+        // healthy stream; anything else means the text has a HOLE in it, and
+        // the decode failure that follows is the transport's, not the model's.
+        var droppedChunks = 0
         for try await line in bytes.lines {
             guard line.hasPrefix("data:") else { continue }
             let event = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
-            guard !event.isEmpty, event != "[DONE]",
-                  let data = event.data(using: .utf8),
-                  let chunk = try? JSONDecoder().decode(APIResponse.self, from: data)
+            guard !event.isEmpty, event != "[DONE]", let data = event.data(using: .utf8)
             else { continue }
+            guard let chunk = try? JSONDecoder().decode(APIResponse.self, from: data) else {
+                droppedChunks += 1
+                continue
+            }
             let candidate = chunk.candidates?.first
             if let reason = candidate?.finishReason { finishReason = reason }
             let delta = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
@@ -549,7 +591,15 @@ final class GeminiClient {
             return try JSONDecoder().decode(T.self, from: jsonData)
         } catch {
             if truncated { throw GeminiError.truncated }
-            throw error
+            // Every one of these used to reach telemetry as `dataCorrupted@`
+            // and nothing else — 8 summary retries and 2 failures in the
+            // week of 2026-09-16, none of them truncations (max 2083 of 8192
+            // tokens), and not one said WHAT the model wrote. Carry the
+            // decoder's own location and the text around it, so the next
+            // one can be read off the console instead of reproduced.
+            throw GeminiError.malformedJSON(
+                detail: Self.decodeFailureDetail(error, droppedChunks: droppedChunks),
+                excerpt: Self.excerpt(of: trimmed, around: error))
         }
     }
 
@@ -749,6 +799,44 @@ final class GeminiClient {
         }
     }
 
+    /// `dataCorrupted@ (Unexpected character 'x' around line 12, column 5) dropped_chunks=0`
+    /// — the coding path, Foundation's own description of the fault, and how
+    /// many stream chunks were lost on the way (a hole, not a typo).
+    private static func decodeFailureDetail(_ error: Error, droppedChunks: Int) -> String {
+        var detail = error.decodeDetail ?? "decodingError"
+        if case let DecodingError.dataCorrupted(context) = error,
+           let underlying = context.underlyingError as NSError?,
+           let debug = underlying.userInfo[NSDebugDescriptionErrorKey] as? String {
+            detail += " (\(debug.prefix(120)))"
+        }
+        return detail + " dropped_chunks=\(droppedChunks)"
+    }
+
+    /// Up to 160 characters of the model's text centred on the fault, when
+    /// Foundation named a line and column; else the tail, which is where a
+    /// stream that stopped short leaves its mark.
+    private static func excerpt(of text: String, around error: Error) -> String {
+        var line = 0, column = 0
+        if case let DecodingError.dataCorrupted(context) = error,
+           let underlying = context.underlyingError as NSError?,
+           let debug = underlying.userInfo[NSDebugDescriptionErrorKey] as? String,
+           let match = debug.firstMatch(of: /line (\d+), column (\d+)/),
+           let l = Int(match.1), let c = Int(match.2) {
+            line = l; column = c
+        }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        let window = 80
+        guard line >= 1, line <= lines.count else {
+            return String(text.suffix(window * 2))
+        }
+        let target = String(lines[line - 1])
+        let centre = min(max(column, 0), target.count)
+        let lo = max(0, centre - window), hi = min(target.count, centre + window)
+        let start = target.index(target.startIndex, offsetBy: lo)
+        let end = target.index(target.startIndex, offsetBy: hi)
+        return String(target[start..<end])
+    }
+
     private static func extractJSON(from text: String) -> Data? {
         guard let start = text.firstIndex(of: "{"),
               let end = text.lastIndex(of: "}"),
@@ -777,6 +865,9 @@ enum GeminiError: Error, LocalizedError {
     // INDEX. Reordering these silently rewrites history (insufficientCredits
     // must stay 3).
     case truncated
+    /// The model answered in JSON mode and still wrote something the decoder
+    /// could not read. `detail` is where and why, `excerpt` the text around it.
+    case malformedJSON(detail: String, excerpt: String)
 
     var errorDescription: String? {
         switch self {
@@ -785,6 +876,7 @@ enum GeminiError: Error, LocalizedError {
         case .jsonNotFound(let raw):         return "Gemini: no JSON found in reply: \(raw.prefix(200))"
         case .insufficientCredits:           return "You're out of credits. Check your plan under Me → Account."
         case .truncated:                     return "Gemini: reply hit the token ceiling before it finished"
+        case .malformedJSON(let detail, _):  return "Gemini: reply could not be read (\(detail))"
         }
     }
 }
@@ -798,6 +890,7 @@ extension Error {
     var isMalformedModelOutput: Bool {
         if self is DecodingError { return true }
         if let g = self as? GeminiError, case .jsonNotFound = g { return true }
+        if let g = self as? GeminiError, case .malformedJSON = g { return true }
         return false
     }
 
@@ -806,6 +899,9 @@ extension Error {
     /// logs as NSCocoaErrorDomain:4864 and says nothing about which field the
     /// model got wrong.
     var decodeDetail: String? {
+        if let g = self as? GeminiError, case let .malformedJSON(detail, excerpt) = g {
+            return "\(detail) «\(excerpt)»"
+        }
         guard let error = self as? DecodingError else { return nil }
         func path(_ context: DecodingError.Context) -> String {
             context.codingPath.map(\.stringValue).joined(separator: ".")

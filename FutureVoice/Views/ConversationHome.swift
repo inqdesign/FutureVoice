@@ -104,8 +104,22 @@ struct ConversationHome: View {
                 }
                 // ONE header control: credits + avatar as a single unit —
                 // account things live together up here, out of the Today card.
-                ToolbarItem(placement: .topBarTrailing) {
-                    headerControl
+                // iOS 26 wraps every toolbar item in its own glass capsule
+                // with ~7 pt of inset around the label, and the ring used to
+                // sit INSIDE that inset: a 30 pt ring in a 44 pt capsule, with
+                // a 20 pt avatar in the middle of it, reading as a dot in a
+                // saucer. The capsule's background is switched off here and
+                // drawn by `headerControl` itself, so the ring can hug the
+                // glass edge and the avatar gets the room back.
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        headerControl
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        headerControl
+                    }
                 }
                 // Streak chip, centered — the one Today stat that lives in the
                 // header. Tapping opens the activity calendar (the old Today
@@ -429,9 +443,13 @@ struct ConversationHome: View {
         // around the avatar instead: full pool = empty ring, filling as
         // minutes go. The exact figures live one tap away in Me.
         Button { showingProfile = true } label: {
-            // Ring INSIDE the 30 pt slot (avatar shrinks to make room) — the
-            // header buttons sit in glass capsules, and a ring drawn outside
-            // the frame gets clipped into broken arcs by the capsule edge.
+            // The control draws its OWN glass circle (the toolbar's is hidden
+            // above) so the ring can sit right inside the glass rim instead
+            // of floating in the capsule's inset. 44 pt matches the height
+            // of the toolbar's other glass buttons; inside it the ring keeps
+            // a 3 pt margin off the rim — flush, the arc merged with the
+            // glass highlight — and the avatar keeps a 2 pt margin off the
+            // ring, so the arc reads as drawn AROUND the picture, not on it.
             ZStack {
                 // Ring for an account with a pool it could plausibly reach the
                 // end of. Since the allowances went monthly that includes
@@ -439,51 +457,62 @@ struct ConversationHome: View {
                 // pool is exactly the thing worth a quiet gauge, and this is
                 // the quiet form: an arc, no digits, figures one tap away.
                 //
-                // NOT on Plus. 1,800 minutes is an hour every single day, so
-                // the arc sits near empty all month for almost everyone on it
-                // — a gauge that never moves is decoration, and putting one on
-                // the home screen of the tier that bought its way out of
-                // counting is the taximeter this design exists to avoid. They
-                // still have the exact figures in Me, where someone who wants
-                // them goes looking.
-                if let account, !account.isPlusPlan,
+                // NOT on an uncapped row — the Plus subscriptions sold before
+                // 2026-09-26, whose talking isn't counted: the arc would sit
+                // near empty all month, and a gauge that never moves is
+                // decoration on the one tier that bought its way out of
+                // counting. A Plus bought since is a 300-minute pool and
+                // gets the ring like Light. They still have the exact
+                // figures in Me, where someone who wants them goes looking.
+                if let account, !account.isUncappedTalk,
                    account.monthlyCapSeconds != nil || !account.isEntitled {
-                    // strokeBorder / inset keep the 3 pt stroke INSIDE the
-                    // 30 pt frame — a centered stroke overhangs it by half a
-                    // linewidth and the container clips the arc's caps flat.
-                    // Tertiary, not systemFill: the track is a groove for the
-                    // arc to sit in, and at full systemFill it read as a second
-                    // ring competing with the accent one.
-                    Circle()
-                        .strokeBorder(Color(.tertiarySystemFill), lineWidth: 3)
-                    // Usage gauge: the arc grows clockwise from 12 o'clock
-                    // as minutes are SPENT — fresh tank = empty ring.
-                    Circle()
-                        .inset(by: 1.5)
-                        .trim(from: 0, to: account.talkTimeUsedFraction)
-                        .stroke(account.isLowBalance ? Color.orange : Color.accentColor,
-                                style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    // 20 pt inside a 24 pt hole: the ring's inner edge would
-                    // otherwise sit flush on the avatar, which reads as the
-                    // arc being drawn ON the picture rather than around it.
-                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 20)
+                    ZStack {
+                        // strokeBorder / inset keep the 3 pt stroke INSIDE the
+                        // ring's frame — a centered stroke overhangs it by half
+                        // a linewidth and the clip flattens the arc's caps.
+                        // Tertiary, not systemFill: the track is a groove for
+                        // the arc to sit in, and at full systemFill it read as
+                        // a second ring competing with the accent one.
+                        Circle()
+                            .strokeBorder(Color(.tertiarySystemFill), lineWidth: 3)
+                        // Usage gauge: the arc grows clockwise from 12 o'clock
+                        // as minutes are SPENT — fresh tank = empty ring.
+                        Circle()
+                            .inset(by: 1.5)
+                            .trim(from: 0, to: account.talkTimeUsedFraction)
+                            .stroke(account.isLowBalance ? Color.orange : Color.accentColor,
+                                    style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                        ProfileAvatar(initials: appState.persona?.displayName ?? "",
+                                      size: Self.ringDiameter - 2 * 3 - 2 * 2)
+                    }
+                    .frame(width: Self.ringDiameter, height: Self.ringDiameter)
                 } else {
-                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 30)
+                    // No ring: the avatar takes the ring's whole footprint.
+                    ProfileAvatar(initials: appState.persona?.displayName ?? "",
+                                  size: Self.ringDiameter)
                 }
             }
-            .frame(width: 30, height: 30)
-            .padding(1)
+            .frame(width: Self.controlDiameter, height: Self.controlDiameter)
+            .modifier(HeaderGlassCircle())
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         // The label announces the gauge only when the gauge is drawn. On Plus
         // there is no ring, so reading out a balance would describe something
         // that isn't on screen.
         .accessibilityLabel(account.flatMap { a -> String? in
-            a.isPlusPlan ? nil
+            a.isUncappedTalk ? nil
                          : "Profile & settings, \(a.balanceLabel) of \(a.tankMinutes) minutes of talk left"
         } ?? "Profile & settings")
     }
+
+    /// The glass circle's diameter — the height iOS 26 gives every other
+    /// toolbar button, so the control lines up with the language chip.
+    private static let controlDiameter: CGFloat = 44
+    /// The ring's outer diameter: the control minus a 3 pt margin off the
+    /// glass rim on each side.
+    private static let ringDiameter: CGFloat = controlDiameter - 2 * 3
 
     private func refreshAccount() {
         #if DEBUG
@@ -497,12 +526,14 @@ struct ConversationHome: View {
                 ? AccountStatus(email: nil, secondsBalance: 0,
                                 planId: "light_monthly", subscriptionStatus: "active",
                                 secondsUsedPeriod: 3300, monthlyCapSeconds: 9000,
-                                scenesUsedPeriod: 12, monthlyScenesCap: 60,
+                                scenesUsedPeriod: 4, monthlyScenesCap: 10,
                                 fullTankSeconds: 9000)
+                // `home-plus` is a Plus sold BEFORE 2026-09-26 — no cap, so
+                // no ring; a Plus bought since draws one like `home-light`.
                 : capture.hasPrefix("home-plus")
                 ? AccountStatus(email: nil, secondsBalance: 0,
                                 planId: "plus_monthly", subscriptionStatus: "active",
-                                secondsUsedPeriod: 3300, monthlyCapSeconds: 108_000,
+                                secondsUsedPeriod: 3300, monthlyCapSeconds: nil,
                                 scenesUsedPeriod: 12, monthlyScenesCap: 120,
                                 fullTankSeconds: 108_000)
                 : AccountStatus(email: nil, secondsBalance: 2000,
@@ -1050,4 +1081,15 @@ struct TalkScenariosListView: View {
     }
 }
 
-
+/// The header control's own glass disc (iOS 26), standing in for the toolbar
+/// capsule it hides. Earlier systems draw toolbar buttons bare, so nothing is
+/// drawn there — the ring alone is the control, as it always was.
+private struct HeaderGlassCircle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.glassEffect(.regular.interactive(), in: Circle())
+        } else {
+            content
+        }
+    }
+}
