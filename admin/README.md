@@ -102,6 +102,13 @@ renders that part empty rather than failing.
 
 ## It is read on a phone
 
+**The page must start with its own `<meta name="viewport">`** — until
+2026-09-29 it didn't (only the login form had one), so a phone laid it out at
+980 px and shrank it, and none of the rules below ever ran. On a phone the
+누가 어느 날 말했나 heatmap shows only the most recent days that fit at a
+readable size, and puts 남은 통화 (the pool left plus packs/invites, or a free
+account's balance) under each name; on a wide screen that is its own column.
+
 Charts measure the card they sit in (`innerW`) and are redrawn by
 `redrawCharts()` on a tab switch — a hidden section measures 0, so that is the
 first moment its real width is knowable — and on resize. Wide tables fold

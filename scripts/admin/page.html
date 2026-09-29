@@ -1,3 +1,12 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- Without this a phone lays the page out at 980 px and shrinks it to fit,
+     so every @media block below never fires (2026-09-29: the console had
+     shipped this way since the rewrite — the login form had it, this didn't). -->
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
 <title>nawana 어드민</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -263,6 +272,9 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
   color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums}
 .hm .hd .d{text-align:center}
 .hm .hd .d.today{color:var(--s1); font-weight:700}
+.hm .who .s.left{color:var(--muted)}
+.hm .who .s.left span{font-weight:600; color:var(--ink)}
+.hm .who .s.left .warn{color:var(--warn)} .hm .who .s.left .bad{color:var(--crit)}
 .hm .who{min-width:0; padding-right:12px; line-height:1.3}
 .hm .who .n{font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   display:flex; align-items:center; gap:6px}
@@ -392,7 +404,22 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   th, td{padding:8px 7px}
   table{font-size:13px}
   .dl{grid-template-columns:1fr}
-  .grid3, .tiles{grid-template-columns:minmax(0,1fr)}
+  .grid3{grid-template-columns:minmax(0,1fr)}
+  /* Two tiles a row: one a row turned the 오늘 tab's six numbers into a
+     whole screen of scrolling before anything else. */
+  .tiles{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .tile .d{overflow-wrap:anywhere}
+  .hm .hd{font-size:9.5px}
+  .hm .hd .d{letter-spacing:-.03em; white-space:nowrap; overflow:visible}
+  .hm .r{padding:3px 2px}
+  .hm .who{padding-right:6px}
+  /* Tables: a narrow column used to break "2시간 17분" and "만료" one
+     character per line. Keep numbers and Korean words whole and let a
+     table that is still too wide scroll inside its own card instead. */
+  .card:has(table){overflow-x:auto}
+  td, th{word-break:keep-all}
+  td.num, th.num{white-space:nowrap}
+  td .chip{white-space:nowrap}
   .fe{grid-template-columns:60px 8px 1fr; gap:8px}
   .hm .who .n{font-size:12px}
   .hm-name{width:88px}
@@ -417,6 +444,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   code{overflow-wrap:anywhere}
 }
 </style>
+</head>
+<body>
 
 <div class="wrap">
 <header>
@@ -537,7 +566,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <h3 style="margin:22px 0 4px;font-size:15px">한 사람씩</h3>
   <p class="sub">한 줄이 한 사람, 한 칸이 한 시간이에요. 색은 <b>그 사람 안에서</b> 가장 많이 쓴 시간을 기준으로
   진해져요 — 많이 쓴 사람과 적게 쓴 사람의 패턴을 같은 눈으로 보려고요. 칸에 올리면 그 시간에 쓴 양과
-  <b>며칠</b> 그 시간에 왔는지가 나와요. 오른쪽은 전체 양과 주로 쓰는 시간대예요.</p>
+  <b>며칠</b> 그 시간에 왔는지가 나와요. 오른쪽은 전체 양과 주로 쓰는 시간대예요.
+  <b>최근에 가입한 사람이 맨 위</b>예요.</p>
   <div class="card scroll" id="hoursByUser"></div>
 </section>
 
@@ -717,7 +747,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <h2>요금제별 사용량과 갱신일</h2>
   <p class="sub">서버가 벽을 세울 때 쓰는 그 숫자예요 — 각자의 <b>결제 주기</b>(달력 달이 아니라
   구독이 시작된 날 기준) 안에서 쓴 통화 초와 장면 수를, 그 요금제의 한도에 대고 셉니다.
-  체험은 한도가 7/30로 깎여요(Light 기준). Plus는 통화 상한이 없어요.</p>
+  한도는 각 구독이 <b>팔린 그대로</b>(행에 찍힌 스탬프 먼저, 없으면 지금 요금제) — 이전 구독자는
+  예전 크기를 유지해요. 체험은 한도가 7/30로 깎여요. <b>+N분</b>은 팩·초대로 받은 추가 분이고
+  요금제 풀보다 먼저 써요.</p>
   <div class="card scroll"><table id="planUsage"></table></div>
   <p class="sub" style="margin-top:10px" id="planUsageNote"></p>
 </section>
@@ -792,8 +824,9 @@ const fmtD = s => { const [,m,d]=String(s).split('-'); return `${+m}/${+d}`; };
 const spokeText = (spoke, of, short=false) => spoke == null ? ''
   : `말함 ${fmtMin(spoke)}${!short && of ? ` · ${Math.round(spoke/of*100)}%` : ''}`;
 const fmtDate = s => { const [,m,d]=String(s).split('-'); return `${+m}월 ${+d}일`; };
-const fmtMin = secs => secs>=3600 ? `${Math.floor(secs/3600)}시간 ${Math.round(secs%3600/60)}분`
-  : secs>=60 ? `${Math.round(secs/60)}분` : `${secs||0}초`;
+// Round to minutes FIRST: rounding the remainder alone printed "1시간 60분".
+const fmtMin = secs => { const m = Math.round((secs||0)/60);
+  return m>=60 ? `${Math.floor(m/60)}시간 ${m%60}분` : secs>=60 ? `${m}분` : `${Math.round(secs||0)}초`; };
 /* ---------------------------------------------------------------- the clock
  * Every time on this page is read in ONE zone, and the reader picks it in the
  * header. Default Europe/Berlin: that is where the person reading this sits,
@@ -1436,6 +1469,33 @@ function renderCohort(users){
  *  WHO, which is the question with seventeen users. The signup day carries a
  *  ring, so a row that is empty to the right of it is someone who never
  *  returned — the shape you cannot see in an aggregate. */
+/** What this account can still TALK, in seconds — the question asked of a
+ *  row before writing to someone ("are they about to hit the wall?").
+ *  A plan row: what the period's pool has left plus the balance (packs,
+ *  invites), which the meter spends first. No plan: the one-time balance,
+ *  which is the whole of a free account's talk. Uncapped legacy Plus: null. */
+function talkLeft(u){
+  const pu = (DATA.planUsage||[]).find(r => r.u === u.idx);
+  if(pu){
+    if(pu.unlimited) return {secs:null, tip:`상한 없음 · 이번 주기 ${fmtMin(pu.talk_used)} 통화`};
+    const pool = Math.max(0, (pu.talk_cap||0) - (pu.talk_used||0));
+    return {secs: pool + (pu.bonus||0),
+      tip: `${pu.trial?'체험':'이번 주기'} ${fmtMin(pu.talk_used)} / ${fmtMin(pu.talk_cap)} 사용`
+        + (pu.bonus>0 ? ` · 추가 ${fmtMin(pu.bonus)}` : '')};
+  }
+  if(u.balance == null) return null;
+  return {secs: Math.max(0, u.balance), tip: '플랜 없음 · 무료 잔액'};
+}
+function talkLeftHtml(u){
+  const t = talkLeft(u);
+  if(!t) return '<span class="muted">—</span>';
+  if(t.secs == null) return `<span class="muted" title="${t.tip}">무제한</span>`;
+  const cls = t.secs <= 0 ? 'bad' : t.secs < 600 ? 'warn' : '';
+  // Whole hours past ten: "14시간 2분" doesn't fit the phone's name column.
+  const txt = t.secs <= 0 ? '0분' : t.secs >= 36000 ? `${Math.floor(t.secs/3600)}시간` : fmtMin(t.secs);
+  return `<span class="${cls}" title="${t.tip}">${txt}</span>`;
+}
+
 function renderHeatmap(users){
   const el = document.getElementById('heatmap');
   if(!el) return;
@@ -1459,10 +1519,17 @@ function renderHeatmap(users){
   if(!rows.length){ el.innerHTML='<div class="empty">아직 아무도 없어요.</div>'; return; }
 
   const narrow = innerWNarrow();
-  const nameW = narrow ? 110 : 210;
-  const tail = narrow ? 0 : 80 + 44 + 118 + 190;       // talk · days · plan · ids
-  const cs = Math.max(12, Math.min(30, Math.floor((innerW(el, 300) - nameW - tail - 24) / n) - 3));
-  const cols = `${nameW}px repeat(${n}, ${cs}px)` + (narrow ? '' : ' 80px 44px 118px minmax(150px,1fr)');
+  const nameW = narrow ? 104 : 210;
+  const tail = narrow ? 0 : 80 + 72 + 44 + 118 + 190;  // talk · left · days · plan · ids
+  // On a phone every day at 12 px was unreadable and still scrolled
+  // sideways; show the most RECENT days that fit at 16 px instead — the
+  // question on a phone is "who was here this week", not the whole launch.
+  const avail = innerW(el, 300) - nameW - 24;
+  const first = narrow ? Math.max(0, n - Math.floor(avail / 19)) : 0;
+  const shown = n - first;
+  const cs = narrow ? Math.max(14, Math.min(22, Math.floor(avail / shown) - 3))
+    : Math.max(12, Math.min(30, Math.floor((avail - tail) / n) - 3));
+  const cols = `${nameW}px repeat(${shown}, ${cs}px)` + (narrow ? '' : ' 80px 72px 44px 118px minmax(150px,1fr)');
   const today = grid.todayIdx;
   const signupIdx = u => grid.days.indexOf(u.signedUpAt ? localDay(u.signedUpAt) : u.signedUp);
 
@@ -1507,8 +1574,11 @@ function renderHeatmap(users){
   ];
 
   let html = `<div class="hm" style="--cs:${cs}px"><div class="r hd" style="grid-template-columns:${cols}"><span></span>`
-    + grid.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
-    + (narrow ? '' : `<span class="num">통화</span><span class="num">일</span><span class="pl">구독</span><span class="ids">ID</span>`)
+    + grid.days.slice(first).map((d,j)=>{ const i = j + first;
+        // A phone cell is 16 px: the day of the month, and the month only where it turns.
+        const lab = (j===0 || d.slice(8)==='01' || cs >= 30) ? fmtD(d) : String(+d.slice(8));
+        return `<span class="d${i===today?' today':''}">${lab}</span>`; }).join('')
+    + (narrow ? '' : `<span class="num">통화</span><span class="num">남은 통화</span><span class="num">일</span><span class="pl">구독</span><span class="ids">ID</span>`)
     + `</div>`;
   for(const g of groups){
    if(!g.rows.length) continue;
@@ -1523,8 +1593,9 @@ function renderHeatmap(users){
       +   `<div class="n"><span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`
       +     `<span style="overflow:hidden;text-overflow:ellipsis">${esc(nameOf(u))}</span>${badge(u)}</div>`
       +   `<div class="s">${langPair(u.idx)}${u.voiceName ? esc(u.voiceName) : '<span class="muted">클론 없음</span>'}</div>`
+      +   (narrow ? `<div class="s left">남은 통화 ${talkLeftHtml(u)}</div>` : '')
       + `</div>`;
-    for(let i=0;i<n;i++){
+    for(let i=first;i<n;i++){
       const c = m[i];
       const rowsN = c ? c[0] : 0, turnsN = c ? c[1] : 0, secs = c ? c[2] : 0;
       const spokeDay = c ? c[3] : null;
@@ -1544,6 +1615,7 @@ function renderHeatmap(users){
     if(!narrow){
       html += `<span class="num">${u.talkSecs ? `<b>${fmtMin(u.talkSecs)}</b>` : '—'}`
         + `${u.talkSecs && u.spokeSecs!=null?`<span class="spk" title="${spokeText(u.spokeSecs, u.spokeOfSecs)}">${spokeText(u.spokeSecs, 0, true)}</span>`:''}</span>`
+        + `<span class="num">${talkLeftHtml(u)}</span>`
         + `<span class="num">${u.activeDays}일</span>`
         + `<span class="pl">${st ? `<span class="sd" style="background:${st.color}"></span>`
             + (lapsing(u)
@@ -1557,7 +1629,8 @@ function renderHeatmap(users){
     html += `</div>`;
    }
   }
-  html += `</div><div class="legend">`
+  html += `</div>` + (first ? `<div class="legend">최근 ${shown}일만 보여요 — 넓은 화면에서 ${n}일 전부.</div>` : '')
+       +  `<div class="legend">`
        +  `조용 <span class="cell" style="background:var(--chip)"></span>`
        +  `<span class="cell" style="background:var(--seq1);position:relative">`
        +  `<span style="position:absolute;left:3.5px;top:3.5px;width:4px;height:4px;`
@@ -1812,8 +1885,14 @@ function renderHoursByUser(users){
     row.v[h] += v; row.days[h] = Math.max(row.days[h], r.days||0); row.total += v;
     byUser.set(r.u, row);
   }
+  // Newest signup first (2026-09-28): the question here is what a person's
+  // day looks like, and the people whose rhythm is still unknown are the ones
+  // who just arrived — a lifetime-total sort buries every one of them under
+  // the regulars. Volume is still on the right of each row.
+  const signupDay = u => u.signedUpAt ? localDay(u.signedUpAt) : (u.signedUp || '');
   const rows = users.filter(u => byUser.has(u.idx))
-    .sort((a,b) => byUser.get(b.idx).total - byUser.get(a.idx).total);
+    .sort((a,b) => signupDay(b).localeCompare(signupDay(a))
+      || byUser.get(b.idx).total - byUser.get(a.idx).total);
   if(!rows.length){ el.innerHTML='<div class="empty">아직 기록이 없어요.</div>'; return; }
 
   const nameW = innerWNarrow() ? 88 : 186, gap = 2;
@@ -2394,6 +2473,7 @@ function personDetail(u){
           + `${left!=null?` <span class="muted">(${left<=0?'오늘':left+'일 남음'})</span>`:''}`
           + ` · 이번 주기 통화 ${fmtMin(pu.talk_used)}`
           + `${pu.unlimited?'':` / ${fmtMin(pu.talk_cap)}`}`
+          + `${pu.bonus>0?` <span class="muted">(+${fmtMin(pu.bonus)} 추가)</span>`:''}`
           + ` · 장면 ${pu.scenes_used}/${pu.scenes_cap}</li>`; })(),
       (()=>{ const uh = usualHour(u.idx);
         return uh ? `<li>주로 <b>${uh}</b>에 써요 <span class="muted">`
@@ -2664,6 +2744,7 @@ function renderPlanUsage(){
           ? '<span class="muted">' + fmtMin(r.talk_used) + '</span>'
           : `${fmtMin(r.talk_used)} <span class="muted">/ ${fmtMin(r.talk_cap)}</span>`
             + (talkPct!=null?`<div class="usub">${talkPct}%</div>`:'')}
+        ${r.bonus>0?`<div class="usub">+${fmtMin(r.bonus)} 추가</div>`:''}
         ${bar(r.talk_used, r.unlimited?null:r.talk_cap, 'var(--s1)')}</td>
       <td class="num">${r.scenes_used} <span class="muted">/ ${r.scenes_cap}</span>
         ${scenePct!=null?`<div class="usub">${scenePct}%</div>`:''}
@@ -3717,3 +3798,6 @@ try{ const t = localStorage.getItem('nawana.admin.tab3');
      if(t && document.querySelector(`.tabs button[data-go="${t}"]`)) startTab = t; }catch(e){}
 showTab(startTab);
 </script>
+
+</body>
+</html>
