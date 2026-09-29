@@ -7,7 +7,7 @@
   "name": "나와나 한눈에",
   "note": "",
   "order": 0,
-  "rendered": [],
+  "short": "나와나 한눈에",
   "slides": [
    {
     "body": "몇 년 뒤, 유창해진 내가 내 목소리로 말해요.",
@@ -18,7 +18,7 @@
    {
     "body": "할 말은 동그라미 하나에서 시작해요.",
     "kind": "top",
-    "shot": "home",
+    "shot": "device-home",
     "title": "탭 한 번이면\n전화가 걸려요"
    },
    {
@@ -41,7 +41,6 @@
    }
   ],
   "status": "draft",
-  "short": "나와나 한눈에",
   "tagline": "내 목소리로 말하는 유창한 나와 통화해요"
  },
  {
@@ -52,13 +51,19 @@
   "name": "Talk 기본: 전화 한 통",
   "note": "",
   "order": 1,
-  "rendered": [],
+  "short": "전화 한 통",
   "slides": [
    {
     "body": "탭하면 바로 유창한 나에게 전화가 가요.",
     "kind": "top",
-    "shot": "home-ring",
+    "shot": "device-home",
     "title": "오늘 말한 만큼\n링이 채워져요"
+   },
+   {
+    "shot": "device-home-news",
+    "title": "오늘 [뉴스]로\n말을 걸어요",
+    "body": "관심사에 맞춘 소식을 누르면\n그 이야기로 통화가 시작돼요.",
+    "kind": "top"
    },
    {
     "body": "내가 멈추면 대답이 와요. 버튼은 없어요.",
@@ -86,30 +91,35 @@
    }
   ],
   "status": "draft",
-  "short": "전화 한 통",
   "tagline": "탭 한 번, 전화처럼 번갈아 말해요"
  },
  {
   "cat": "talk",
   "goal": "내 속도, 내 레벨에 맞춰 말해준다",
   "id": "e03",
-  "issues": "코치 모드 힌트(💡 Try using) 버블 캡처가 없음 — 새 캡처 모드 필요",
+  "issues": "",
   "name": "통화 설정: 속도·코치 모드",
   "note": "",
   "order": 2,
-  "rendered": [],
+  "short": "통화 설정",
   "slides": [
    {
+    "shot": "device-speed-menu",
+    "title": "말하는 [속도]를\n고를 수 있어요",
     "body": "보통 · 여유있게 · 천천히",
-    "kind": "bottom",
-    "shot": "call-settings",
-    "title": "말하는 속도를\n고를 수 있어요"
+    "kind": "bottom"
    },
    {
-    "body": "배운 단어가 답에 들어갈 질문을 해줘요.",
-    "kind": "bottom",
-    "shot": "call-settings",
-    "title": "코치 모드를 켜면\n쓸 단어를 알려줘요"
+    "shot": "device-call-settings",
+    "title": "[코치 모드]를\n켜 보세요",
+    "body": "공부 중인 단어로 답할 수 있는 질문을\n미래의 내가 가끔 던져줘요.",
+    "kind": "bottom"
+   },
+   {
+    "shot": "device-call-coach",
+    "title": "답을 고민하는 동안\n[쓸 단어]를 알려줘요",
+    "body": "말하면 위쪽 칩에 바로 체크돼요.",
+    "kind": "bottom"
    },
    {
     "body": "레벨은 대화로 재고, 직접 바꿀 수도 있어요.",
@@ -119,7 +129,6 @@
    }
   ],
   "status": "draft",
-  "short": "통화 설정",
   "tagline": "내 속도, 내 레벨에 맞춰 말해줘요"
  },
  {
@@ -130,20 +139,19 @@
   "name": "교정: 유창한 내가 고쳐 말해줘요",
   "note": "",
   "order": 3,
-  "rendered": [
-   "done/correction-01.jpg",
-   "done/correction-02.jpg",
-   "done/correction-03.jpg",
-   "done/correction-04.jpg",
-   "done/correction-05.jpg",
-   "done/correction-06.jpg"
-  ],
+  "short": "교정",
   "slides": [
    {
     "body": "통화가 끝나면, 내가 한 말 바로 아래에.",
     "kind": "zoom",
     "shot": "transcript",
     "title": "틀려도 괜찮아요\n[유창한 내가] 고쳐 말해줘요"
+   },
+   {
+    "shot": "device-call-coach",
+    "title": "통화 중에도\n[바로] 고쳐줘요",
+    "body": "틀린 말엔 줄을 긋고, 고친 말을 바로 보여줘요.",
+    "kind": "top"
    },
    {
     "body": "바뀐 단어만 파랗게, 이유는 내 언어로.",
@@ -171,7 +179,6 @@
    }
   ],
   "status": "done",
-  "short": "교정",
   "tagline": "틀려도 괜찮아요. 유창한 내가 고쳐 말해줘요"
  },
  {
@@ -182,7 +189,7 @@
   "name": "통화 한 번이 교재 한 권",
   "note": "",
   "order": 4,
-  "rendered": [],
+  "short": "통화가 교재로",
   "slides": [
    {
     "body": "대화마다 책이 한 권씩 쌓여요.",
@@ -210,7 +217,6 @@
    }
   ],
   "status": "draft",
-  "short": "통화가 교재로",
   "tagline": "통화 한 번이 교재 한 권이 돼요"
  },
  {
@@ -221,7 +227,7 @@
   "name": "매일 걸려오는 전화",
   "note": "전화 설정하는 ㅅ 것도 필요해. ",
   "order": 5,
-  "rendered": [],
+  "short": "매일 오는 전화",
   "slides": [
    {
     "body": "무음 모드에서도 울려요.",
@@ -243,7 +249,6 @@
    }
   ],
   "status": "needs-capture",
-  "short": "매일 오는 전화",
   "tagline": "정한 시간에 유창한 내가 먼저 전화해요"
  },
  {
@@ -254,12 +259,12 @@
   "name": "Watch: 미리 보기",
   "note": "",
   "order": 6,
-  "rendered": [],
+  "short": "미리 보기",
   "slides": [
    {
     "body": "면접, 병원, 카페. 유창한 내가 먼저 해봐요.",
     "kind": "top",
-    "shot": "watchtab",
+    "shot": "device-watchtab",
     "title": "곧 있을 상황,\n미리 봐요"
    },
    {
@@ -276,7 +281,6 @@
    }
   ],
   "status": "draft",
-  "short": "미리 보기",
   "tagline": "곧 있을 상황을 유창한 내가 먼저 해봐요"
  },
  {
@@ -287,12 +291,12 @@
   "name": "나만의 상황 만들기",
   "note": "",
   "order": 7,
-  "rendered": [],
+  "short": "나만의 상황",
   "slides": [
    {
     "body": "직접 쓰거나, 자주 있는 상황에서 골라요.",
-    "kind": "top",
-    "shot": "watchtab-empty",
+    "kind": "bottom",
+    "shot": "device-watchtab",
     "title": "두 가지 방법으로\n시작해요"
    },
    {
@@ -309,7 +313,6 @@
    }
   ],
   "status": "needs-capture",
-  "short": "나만의 상황",
   "tagline": "실제로 있을 일을 그대로 연습해요"
  },
  {
@@ -320,7 +323,7 @@
   "name": "사람과 연습하기",
   "note": "",
   "order": 8,
-  "rendered": [],
+  "short": "사람과 연습",
   "slides": [
    {
     "body": "친구, 동료, 가족. 사진도 넣을 수 있어요.",
@@ -342,7 +345,6 @@
    }
   ],
   "status": "needs-capture",
-  "short": "사람과 연습",
   "tagline": "친구, 동료와 그 말투 그대로 말해봐요"
  },
  {
@@ -353,7 +355,7 @@
   "name": "오늘의 복습",
   "note": "",
   "order": 9,
-  "rendered": [],
+  "short": "오늘의 복습",
   "slides": [
    {
     "body": "문장·단어·표현·섀도잉.",
@@ -375,7 +377,6 @@
    }
   ],
   "status": "draft",
-  "short": "오늘의 복습",
   "tagline": "오늘 할 복습이 한곳에 모여요"
  },
  {
@@ -386,7 +387,7 @@
   "name": "다시 말하기",
   "note": "",
   "order": 10,
-  "rendered": [],
+  "short": "다시 말하기",
   "slides": [
    {
     "body": "내 차례엔 고친 문장이 떠요.",
@@ -414,7 +415,6 @@
    }
   ],
   "status": "draft",
-  "short": "다시 말하기",
   "tagline": "같은 대화를, 이번엔 제대로"
  },
  {
@@ -425,7 +425,7 @@
   "name": "섀도잉",
   "note": "",
   "order": 11,
-  "rendered": [],
+  "short": "섀도잉",
   "slides": [
    {
     "body": "유창한 내가 읽는 문장을 그대로.",
@@ -441,7 +441,6 @@
    }
   ],
   "status": "needs-capture",
-  "short": "섀도잉",
   "tagline": "유창한 내 목소리를 따라 말해요"
  },
  {
@@ -452,7 +451,7 @@
   "name": "단어장",
   "note": "",
   "order": 12,
-  "rendered": [],
+  "short": "단어장",
   "slides": [
    {
     "body": "B1 · 15 / 2113",
@@ -480,7 +479,6 @@
    }
   ],
   "status": "draft",
-  "short": "단어장",
   "tagline": "통화에서 나온 단어가 알아서 모여요"
  },
  {
@@ -491,7 +489,7 @@
   "name": "표현",
   "note": "",
   "order": 13,
-  "rendered": [],
+  "short": "표현",
   "slides": [
    {
     "body": "",
@@ -513,7 +511,6 @@
    }
   ],
   "status": "draft",
-  "short": "표현",
   "tagline": "미래의 내가 쓴 표현을 내 것으로"
  },
  {
@@ -524,7 +521,7 @@
   "name": "문장 카드",
   "note": "",
   "order": 14,
-  "rendered": [],
+  "short": "문장 카드",
   "slides": [
    {
     "body": "고친 문장을 떠올려 말해요.",
@@ -552,7 +549,6 @@
    }
   ],
   "status": "draft",
-  "short": "문장 카드",
   "tagline": "내가 틀린 문장이 카드가 돼요"
  },
  {
@@ -563,7 +559,7 @@
   "name": "주간 시험",
   "note": "",
   "order": 15,
-  "rendered": [],
+  "short": "주간 시험",
   "slides": [
    {
     "body": "내가 이번 주에 배운 것만으로.",
@@ -615,7 +611,6 @@
    }
   ],
   "status": "draft",
-  "short": "주간 시험",
   "tagline": "일주일 동안 배운 것만으로 만든 시험지"
  },
  {
@@ -626,7 +621,7 @@
   "name": "진행 상황",
   "note": "",
   "order": 16,
-  "rendered": [],
+  "short": "진행 상황",
   "slides": [
    {
     "body": "어휘·문법·표현·유창성.",
@@ -642,7 +637,6 @@
    }
   ],
   "status": "draft",
-  "short": "진행 상황",
   "tagline": "대화만으로 내 레벨이 보여요"
  },
  {
@@ -653,7 +647,7 @@
   "name": "활동과 오늘의 카드",
   "note": "",
   "order": 17,
-  "rendered": [],
+  "short": "활동 · 오늘의 카드",
   "slides": [
    {
     "body": "",
@@ -669,7 +663,6 @@
    }
   ],
   "status": "draft",
-  "short": "활동 · 오늘의 카드",
   "tagline": "공부한 날이 쌓이고, 하루를 카드로 남겨요"
  },
  {
@@ -680,7 +673,7 @@
   "name": "홈 화면 위젯",
   "note": "",
   "order": 18,
-  "rendered": [],
+  "short": "홈 화면 위젯",
   "slides": [
    {
     "body": "30분마다 바뀌어요.",
@@ -690,7 +683,6 @@
    }
   ],
   "status": "draft",
-  "short": "홈 화면 위젯",
   "tagline": "앱을 열지 않아도 오늘의 단어가 보여요"
  }
 ]

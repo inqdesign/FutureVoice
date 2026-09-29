@@ -247,7 +247,11 @@ def render_slide(slide, ep, idx, total, raw_dir, F):
             F["body"].draw(d, s(W / 2) - F["body"].width(slide["foot"]) / 2, s(H - 110), slide["foot"], FAINT)
         return canvas
 
-    shot = os.path.join(raw_dir, slide["shot"] + ".png")
+    # A screenshot in shots/<lang>/ (committed, e.g. from a real phone) wins over the
+    # simulator capture of the same name in out/<lang>/raw/ (regenerated, not in git).
+    lang_dir = os.path.basename(os.path.dirname(raw_dir.rstrip("/")))
+    manual = os.path.join(HERE, "shots", lang_dir, slide["shot"] + ".png")
+    shot = manual if os.path.exists(manual) else os.path.join(raw_dir, slide["shot"] + ".png")
 
     if kind == "zoom":
         d = ImageDraw.Draw(canvas)
