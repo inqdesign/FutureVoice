@@ -272,9 +272,9 @@ class DrillStore private constructor(context: Context) {
     }
 
     /**
-     * Producing a card's phrase live outranks any flashcard tap: jump two
-     * boxes, land no lower than box 3; cards already past that keep their
-     * schedule.
+     * Producing a card's phrase live outranks any flashcard tap: the card is
+     * CONFIRMED — top rung, retired, `usedInTalkAt` stamped (USED outranks
+     * KNOWN).
      */
     suspend fun markUsedInConversation(ids: List<String>, language: String = LanguageScope.active(appContext),
                                        now: Long = System.currentTimeMillis()) {
