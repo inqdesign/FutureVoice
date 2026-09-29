@@ -36,6 +36,8 @@ class FreeTalkOpeners(private val context: Context) {
     private data class Payload(val openers: List<String> = emptyList())
 
     companion object {
+        private const val BAKED_SPEED_KEY = "futurevoice.freeTalkOpeners.bakedSpeed"
+        private const val BAKED_LINES_KEY = "futurevoice.freeTalkOpeners.bakedLines"
         private fun key(language: String, personaName: String?) =
             language.take(2) + "|" + personaName.orEmpty().trim()
 
@@ -69,13 +71,39 @@ class FreeTalkOpeners(private val context: Context) {
             load()?.takeIf { it.key == key(language, personaName) }?.let { addAll(it.lines) }
         }
         for (line in lines.distinct()) {
-            if (store.data(line, voiceId) != null) continue
+            // The ONE exception to "produced audio is kept": the lines that
+            // open a call are re-made whenever the speed moves, or the
+            // greeting plays at the old speed and every answer after it at
+            // the new one — on every call (iOS `needsBake`, 2026-09-25).
+            if (store.data(line, voiceId) != null && !needsBake(line)) continue
             val audio = runCatching {
                 com.roro.futurevoice.net.ElevenLabsClient(com.roro.futurevoice.data.AuthRepository())
                     .synthesize(voiceId = voiceId, text = line, purpose = "turn")
             }.getOrElse { return }   // no network, or a wall — try again later
             store.save(audio, line, voiceId)
+            markBaked(line)
         }
+    }
+
+    private val bakePrefs get() = context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
+
+    private fun needsBake(line: String): Boolean {
+        val current = com.roro.futurevoice.data.SpeechSpeed.currentMultiplier()?.toFloat() ?: return false
+        val p = bakePrefs
+        if (p.getFloat(BAKED_SPEED_KEY, Float.NaN) != current) {
+            // The speed moved (or this build is the first to ask): every
+            // line on file was made at some other speed.
+            p.edit().putFloat(BAKED_SPEED_KEY, current).remove(BAKED_LINES_KEY).apply()
+            return true
+        }
+        return line !in (p.getString(BAKED_LINES_KEY, null)?.split('\n').orEmpty())
+    }
+
+    private fun markBaked(line: String) {
+        val lines = bakePrefs.getString(BAKED_LINES_KEY, null)?.split('\n').orEmpty().toMutableList()
+        if (line in lines) return
+        lines.add(line)
+        bakePrefs.edit().putString(BAKED_LINES_KEY, lines.takeLast(60).joinToString("\n")).apply()
     }
 
     /** The next line in rotation, advancing the cursor; null without a pool. */

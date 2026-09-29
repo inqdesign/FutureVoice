@@ -66,6 +66,8 @@ object AppUpdateService {
     @Serializable
     private data class ReleaseRow(
         @SerialName("latest_build") val latestBuild: Int = 0,
+        /** The DEFAULT speed rung, tunable without a build (NULL = the app's own). */
+        @SerialName("default_speech_speed") val defaultSpeechSpeed: Double? = null,
         /** Play's own beta channels, and a sideloaded APK. Null until an
          *  Android build has ever been uploaded. */
         @SerialName("latest_beta_build") val latestBetaBuild: Int? = null,
@@ -98,6 +100,9 @@ object AppUpdateService {
                 .decodeSingleOrNull<ReleaseRow>()
         }.getOrNull() ?: return@withContext
 
+        // Before any of this build's own guards: they stop for reasons about
+        // THIS build, none of which is a reason to ignore a retuned speed.
+        com.roro.futurevoice.data.SpeechSpeed.storeRemoteDefault(context, row.defaultSpeechSpeed)
         val fromPlay = installedFromPlay(context)
         // The build this install can actually GO AND GET.
         val latest = if (fromPlay) row.latestBuild

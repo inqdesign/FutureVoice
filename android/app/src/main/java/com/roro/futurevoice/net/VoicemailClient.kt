@@ -62,7 +62,14 @@ class VoicemailClient(private val auth: AuthRepository) {
     }
 
     companion object {
-        const val MAX_SCRIPT_CHARACTERS = 260
+        private const val BASE_SCRIPT_CHARACTERS = 260
+
+        /** The 29 s ceiling in characters, at the learner's speed — a slower
+         *  voice says fewer of them before the cut, and the cut would take the
+         *  closing question off (iOS `VoicemailEngine.maxScriptCharacters`). */
+        val MAX_SCRIPT_CHARACTERS: Int
+            get() = (BASE_SCRIPT_CHARACTERS *
+                (com.roro.futurevoice.data.SpeechSpeed.currentMultiplier() ?: 1.0)).toInt()
 
         /** `VoicemailEngine.sanitize`: strip stage directions, whole-sentence trim. */
         fun sanitize(raw: String): String {

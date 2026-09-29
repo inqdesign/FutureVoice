@@ -17,6 +17,7 @@ class FutureVoiceApplication : Application() {
         com.roro.futurevoice.core.Telemetry.start(this)
         InstallSalt.init(this)
         CoreVocabulary.init(this)
+        com.roro.futurevoice.data.SpeechSpeed.init(this)
         BillingService.shared(this).refresh()
         com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(this)
         // Shadow scoring digit spell-out: the built-in English speller (the

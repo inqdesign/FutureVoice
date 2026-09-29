@@ -197,6 +197,8 @@ class RealtimeTalkClient(private val context: Context) {
             put("voiceId", voiceId)
             put("language", language)
             put("system", system)
+            // The fluent self's speed (0.7–1.2). An older gateway ignores it.
+            com.roro.futurevoice.data.SpeechSpeed.currentMultiplier()?.let { put("speed", it) }
             opener?.takeIf { it.isNotBlank() }?.let { put("opener", it) }
             if (history.isNotEmpty()) {
                 put("history", buildJsonArray {
@@ -250,6 +252,12 @@ class RealtimeTalkClient(private val context: Context) {
     }
 
     /** Polite hang-up: the gateway closes upstream sessions, then the socket. */
+    /** Change the speed mid-call: the gateway applies it from the next line
+     *  (`set` message; costs nothing — a line carries its own settings). */
+    fun setSpeed(multiplier: Double) {
+        runCatching { socket?.send("""{"type":"set","speed":$multiplier}""") }
+    }
+
     fun hangUp() {
         if (tornDown) return
         tornDown = true

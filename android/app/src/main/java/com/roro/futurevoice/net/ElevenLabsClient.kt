@@ -62,6 +62,8 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         val purpose: String? = null,
         /** One key per SCENE — the server claims the scene count once on it. */
         val scene_key: String? = null,
+        /** `voice_settings.speed` (0.7–1.2) — the learner's rung, see `SpeechSpeed`. */
+        val speed: Double? = null,
     )
 
     /** Buffered synthesis → MP3 bytes. */
@@ -177,6 +179,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             stream = if (stream) true else null,
             purpose = purpose,
             scene_key = sceneKey,
+            speed = com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
         )
         val builder = Request.Builder()
             .url(Config.functionUrl("elevenlabs-tts"))

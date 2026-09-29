@@ -62,7 +62,10 @@ class PhraseAudioStore private constructor(context: Context) {
 
     private fun file(voiceId: String, text: String): File {
         val key = MessageDigest.getInstance("SHA-256")
-            .digest("$voiceId\n${text.trim()}".toByteArray())
+            // The speed rung is part of the line: the same words at another
+            // speed are another take. The default's tag is empty, so every
+            // line cached before speeds existed is still found.
+            .digest("$voiceId\n${SpeechSpeed.currentCacheTag()}${text.trim()}".toByteArray())
             .joinToString("") { "%02x".format(it) }
         return File(dir, "$key.mp3")
     }

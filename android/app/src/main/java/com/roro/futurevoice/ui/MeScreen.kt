@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.SegmentedButton
 import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Lock
@@ -569,6 +571,39 @@ fun MeScreen(
                             .options(targetLanguage).firstOrNull { it.id == voiceAccentId }?.label
                             ?: stringResource(R.string.as_recorded),
                         onClick = { pickingAccent = true })
+                }
+                GroupedRowDivider()
+                // Under Accent because it is the same kind of question: the
+                // voice stays theirs, only how it speaks changes. SYNTHESIS,
+                // not playback — the pitch is untouched. Takes effect on the
+                // next line made; a call already running keeps its speed.
+                run {
+                    var speed by remember { mutableStateOf(com.roro.futurevoice.data.SpeechSpeed.current(context)) }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Filled.Speed, contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.speaking_speed), Modifier.weight(1f))
+                        }
+                        androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            val all = com.roro.futurevoice.data.SpeechSpeed.entries
+                            all.forEachIndexed { i, s ->
+                                SegmentedButton(
+                                    selected = speed == s,
+                                    onClick = {
+                                        speed = s
+                                        com.roro.futurevoice.data.SpeechSpeed.set(context, s)
+                                        com.roro.futurevoice.core.Analytics.capture("speech_speed_changed",
+                                            mapOf("speed" to s.raw, "where" to "me"))
+                                    },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, all.size),
+                                ) { Text(stringResource(s.label), maxLines = 1) }
+                            }
+                        }
+                    }
                 }
                 GroupedRowDivider()
                 // How loud the fluent self speaks. On Bluetooth a call plays
