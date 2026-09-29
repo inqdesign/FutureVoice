@@ -205,6 +205,7 @@ footer a{color:var(--faint)}
   .chat-head .x{display:block}
   .fab{display:flex;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;border:0;background:var(--accent-ink);color:#fff;font-weight:700;box-shadow:0 10px 30px rgba(53,88,240,.35)}
   .fab svg{width:18px;height:18px}
+  .fab .unread{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#E0445A;color:#fff;font-size:12px;font-weight:700;line-height:18px;text-align:center;border:2px solid var(--bg);font-variant-numeric:tabular-nums}
 }
 @media (max-width:560px){
   .top{padding-inline:16px;gap:12px}
@@ -277,7 +278,7 @@ footer a{color:var(--faint)}
   </footer>
 </div>
 
-<button class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span data-i="chat">채팅</span></button>
+<button class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span data-i="chat">채팅</span><span class="unread" id="unread" hidden></span></button>
 
 <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
   <div class="v-top"><span class="v-cat" id="vCat"></span><b id="vTitle"></b><span id="vCount"></span><button id="vClose" aria-label="닫기">✕</button></div>
@@ -304,7 +305,7 @@ const T = {
     staff:"운영자", today:"오늘", yesterday:"어제", now:"방금", min:"분 전", hour:"시간 전",
     e_slow:"잠깐만요, 3초 뒤에 다시 보내주세요.", e_many:"10분에 20개까지 보낼 수 있어요. 조금 뒤에 다시 보내주세요.",
     e_name:"이 닉네임은 쓸 수 없어요. 다른 이름으로 바꿔주세요.", e_parent:"원래 메시지가 사라져서 답글을 달 수 없어요.",
-    like:"좋아요", reply:"답글", del:"삭제", delAsk:"삭제할까요?", cancel:"취소", e_del:"삭제하지 못했어요.", online:(s, a) => `로그인 ${s}명 · 전체 ${a}명이 보고 있어요`, replies:n => `답글 ${n}개`, hideReplies:"답글 접기", replyingTo:"에게 답글", likeSignin:"로그인하면 좋아요와 답글을 남길 수 있어요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
+    like:"좋아요", reply:"답글", del:"삭제", delAsk:"삭제할까요?", cancel:"취소", e_del:"삭제하지 못했어요.", online:(s, a) => `로그인 ${s}명 · 전체 ${a}명이 보고 있어요`, unreadLabel:n => `새 메시지 ${n}개`, replies:n => `답글 ${n}개`, hideReplies:"답글 접기", replyingTo:"에게 답글", likeSignin:"로그인하면 좋아요와 답글을 남길 수 있어요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
     tryIt:"직접 해보고 싶다면", privacy:"개인정보 처리방침", terms:"이용약관", support:"지원", close:"닫기", prev:"이전", next:"다음",
     cats:{start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
   },
@@ -321,7 +322,7 @@ const T = {
     staff:"Team", today:"Today", yesterday:"Yesterday", now:"now", min:"m ago", hour:"h ago",
     e_slow:"One moment. Try again in 3 seconds.", e_many:"You can send 20 messages every 10 minutes. Try again in a bit.",
     e_name:"That name is reserved. Please pick another.", e_parent:"The original message is gone, so it can't take a reply.",
-    like:"Like", reply:"Reply", del:"Delete", delAsk:"Delete this?", cancel:"Cancel", e_del:"Couldn't delete.", online:(s, a) => `${s} signed in · ${a} viewing now`, replies:n => n === 1 ? "1 reply" : `${n} replies`, hideReplies:"Hide replies", replyingTo:"Replying to", likeSignin:"Sign in to like and reply.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
+    like:"Like", reply:"Reply", del:"Delete", delAsk:"Delete this?", cancel:"Cancel", e_del:"Couldn't delete.", online:(s, a) => `${s} signed in · ${a} viewing now`, unreadLabel:n => n === 1 ? "1 new message" : `${n} new messages`, replies:n => n === 1 ? "1 reply" : `${n} replies`, hideReplies:"Hide replies", replyingTo:"Replying to", likeSignin:"Sign in to like and reply.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
     tryIt:"Want to try it yourself?", privacy:"Privacy", terms:"Terms", support:"Support", close:"Close", prev:"Previous", next:"Next",
     cats:{start:"Getting started", talk:"Talk", watch:"Watch", practice:"Review", progress:"Progress"},
   },
@@ -600,7 +601,29 @@ function renderMessages(){
   }
   host.innerHTML = html;
   if (nearBottom || !host.dataset.scrolled) { host.scrollTop = host.scrollHeight; host.dataset.scrolled = "1"; }
+  updateUnread();
 }
+// New since the chat was last looked at. Only the phone needs it: on a wide
+// screen the chat is always on screen, so everything is seen as it arrives.
+const SEEN_KEY = "nawana-community-seen";
+let lastSeen = +(store.get(SEEN_KEY) || 0) || null;
+const narrow = matchMedia("(max-width: 980px)");
+function chatVisible(){ return !narrow.matches || document.body.classList.contains("chat-open"); }
+function markSeen(){
+  const max = Math.max(0, ...messages.keys());
+  if (max && max !== lastSeen) { lastSeen = max; store.set(SEEN_KEY, String(max)); }
+}
+function updateUnread(){
+  if (!messages.size) return;
+  if (lastSeen === null || chatVisible()) markSeen();   // first visit: start counting from now
+  const me = session?.user?.id;
+  const n = [...messages.values()].filter(m => m.id > lastSeen && m.user_id !== me).length;
+  const el = $("#unread");
+  el.hidden = n === 0;
+  el.textContent = n > 99 ? "99+" : String(n);
+  $("#fab").setAttribute("aria-label", n ? `${t("chat")}, ${t("unreadLabel")(n)}` : t("chat"));
+}
+narrow.addEventListener?.("change", updateUnread);
 $("#msgs").addEventListener("click", async e => {
   const dl = e.target.closest("[data-del]");
   if (dl) { pendingDelete = +dl.dataset.del; renderMessages(); return; }
@@ -761,8 +784,8 @@ async function loadLikes(){
 }
 
 /* mobile chat sheet */
-$("#fab").addEventListener("click", () => { document.body.classList.add("chat-open"); $("#msgs").scrollTop = $("#msgs").scrollHeight; });
-$("#chatClose").addEventListener("click", () => document.body.classList.remove("chat-open"));
+$("#fab").addEventListener("click", () => { document.body.classList.add("chat-open"); $("#msgs").scrollTop = $("#msgs").scrollHeight; updateUnread(); });
+$("#chatClose").addEventListener("click", () => { document.body.classList.remove("chat-open"); updateUnread(); });
 
 /* ---------- boot ---------- */
 applyLang();
