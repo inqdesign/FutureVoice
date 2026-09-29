@@ -537,6 +537,15 @@ class TalkViewModel(context: Context) : ViewModel() {
             _state.update { it.copy(turns = it.turns + turn, partial = "") }
             requestRealtimeSuggestion(turn.id, said, cfg)
         }
+        realtime.onReplyAudio = { ctx, pcm, rate ->
+            realtimeReplyTurns[ctx]?.let { id ->
+                writeWav(pcm, rate, id)?.let { wav ->
+                    _state.update { st ->
+                        st.copy(turns = st.turns.map { if (it.id == id) it.copy(audioURL = wav) else it })
+                    }
+                }
+            }
+        }
         realtime.onReplyBegan = { ctx ->
             val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
             realtimeReplyTurns[ctx] = turn.id

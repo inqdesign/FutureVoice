@@ -94,6 +94,9 @@ class RealtimeTalkClient(private val context: Context) {
      *  (or null if nothing was captured), and its length in ms. */
     @Volatile var onUserTurn: ((text: String, wav: File?, ms: Int) -> Unit)? = null
     /** A reply began: [context] identifies it across deltas and audio. */
+    /** A reply finished playing: its whole audio, for the talk's Replay and
+     *  Say-it-again (iOS keeps every line's audio in `TurnAudioStore`). */
+    @Volatile var onReplyAudio: ((context: String, pcm: ByteArray, sampleRate: Int) -> Unit)? = null
     @Volatile var onReplyBegan: ((context: String) -> Unit)? = null
     /** Reply text as it is written. A delta prefixed with NUL is the
      *  authoritative full text, sent when the reply closes. */
@@ -364,6 +367,15 @@ class RealtimeTalkClient(private val context: Context) {
                 msg["text"]?.jsonPrimitive?.content?.let { onReplyDelta?.invoke(ctx, " $it") }
             }
             "audio_end" -> {
+                // The line is complete: hand its audio over NOW. The next
+                // audio_start resets the buffer, which is how every reply but
+                // the one in flight at hang-up used to be lost.
+                val ctx = replyContext
+                val bytes = replyPCM.toByteArray()
+                if (ctx != null && bytes.isNotEmpty()) {
+                    replyPCM.reset()
+                    onReplyAudio?.invoke(ctx, bytes, replyRate)
+                }
                 // Let the track drain what it holds, then hand the mic back.
                 scope.launch(audioThread) {
                     runCatching { player?.drain() }
