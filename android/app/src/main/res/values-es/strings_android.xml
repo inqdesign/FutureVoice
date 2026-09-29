@@ -251,4 +251,7 @@
     <string name="couldn_t_score_that_one_your_take_is_still_here">"No se pudo calificar esa vez — tu toma sigue aquí."</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Se lee de los fallos de gramática confirmados por cada 100 palabras habladas — cuantos menos, más alto.</string>
+    <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
+    <string name="sign_in_subtitle">Inicia sesión con Google o Apple. Si ya usas nawana en iPhone, entra con la misma cuenta y tu voz viene contigo.</string>
+    <string name="opening_ellipsis">Abriendo…</string>
 </resources>

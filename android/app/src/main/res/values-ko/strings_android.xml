@@ -235,4 +235,7 @@
     <string name="couldn_t_score_that_one_your_take_is_still_here">"이번 건 점수를 못 냈어요. 방금 한 말은 그대로 들어볼 수 있어요."</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">말한 100단어당 확인된 문법 실수로 읽어요 — 적을수록 높아요.</string>
+    <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
+    <string name="sign_in_subtitle">Google이나 Apple로 로그인하세요. 아이폰에서 nawana를 쓰고 있다면 같은 계정으로 들어오세요. 내 목소리가 그대로 따라와요.</string>
+    <string name="opening_ellipsis">여는 중…</string>
 </resources>

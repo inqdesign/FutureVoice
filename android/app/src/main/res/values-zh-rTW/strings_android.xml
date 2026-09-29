@@ -235,4 +235,7 @@
     <string name="couldn_t_score_that_one_your_take_is_still_here">"這次沒能評分，不過你剛才說的還在，可以聽聽看。"</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">以每說100個字中確認到的文法錯誤來計算，越少分數越高。</string>
+    <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
+    <string name="sign_in_subtitle">用 Google 或 Apple 登入。如果你在 iPhone 上用 nawana，請用同一個帳號，你的聲音會一起帶過來。</string>
+    <string name="opening_ellipsis">開啟中…</string>
 </resources>

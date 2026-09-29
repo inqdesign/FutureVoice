@@ -235,4 +235,7 @@
     <string name="couldn_t_score_that_one_your_take_is_still_here">"今回は採点できませんでした。録った声はそのまま聞けます。"</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">話した100語あたりの確認済み文法ミスから読みます。少ないほど高くなります。</string>
+    <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
+    <string name="sign_in_subtitle">GoogleかAppleでログインしてください。iPhoneでnawanaを使っているなら、同じアカウントで。自分の声がそのまま引き継がれます。</string>
+    <string name="opening_ellipsis">開いています…</string>
 </resources>

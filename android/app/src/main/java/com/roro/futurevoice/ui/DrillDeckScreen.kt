@@ -541,7 +541,9 @@ private fun DrillCardFace(
     ) {
         if (card.sourcePhrase.isNotBlank()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.you_said), style = MaterialTheme.typography.bodyMedium,
+                // The LABEL "You said" — `you_said` is the quoting sentence
+                // with a %s, which printed its placeholder here.
+                Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
                     color = onCardSecondary)
                 // Cards minted before the fragment trim carry the WHOLE turn,
                 // so trim at render too — a minute-long transcript struck

@@ -785,10 +785,9 @@ internal fun SignInScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("Future Voice", style = MaterialTheme.typography.headlineMedium)
+            Text("nawana", style = MaterialTheme.typography.headlineMedium)
             Text(
-                "Sign in with the same Apple ID you use on iPhone — your cloned " +
-                    "voice comes with you.",
+                stringResource(R.string.sign_in_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
             )
             // Google first — the PRIMARY provider on Android; Apple stays for
@@ -796,11 +795,11 @@ internal fun SignInScreen(
             if (googleAvailable) {
                 Button(onClick = { onGoogleSignIn(activityContext) }, enabled = !state.busy,
                     modifier = Modifier.fillMaxWidth()) {
-                    Text(if (state.busy) "Opening…" else "Continue with Google")
+                    Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_google))
                 }
             }
             Button(onClick = onSignIn, enabled = !state.busy) {
-                Text(if (state.busy) "Opening…" else "Continue with Apple")
+                Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_apple))
             }
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
@@ -1142,11 +1141,10 @@ internal fun HomeScreen(
 
                 // Watch: simulate the situation BEFORE it happens. Scenarios
                 // are reusable templates — a tap writes a fresh take.
-                HomeTab.WATCH -> WatchBody(
+                HomeTab.WATCH -> WatchTabBody(
                     language = state.targetLanguage,
                     enabled = state.voiceId != null,
                     onWatch = onWatch,
-                    onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                 )
 
                 HomeTab.PRACTICE -> PracticeBody(

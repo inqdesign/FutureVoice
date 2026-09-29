@@ -238,4 +238,7 @@
     <string name="couldn_t_score_that_one_your_take_is_still_here">"Impossible de noter celui-là — ton essai est toujours là."</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Calculé sur les fautes de grammaire confirmées pour 100 mots dits — moins il y en a, plus c’est haut.</string>
+    <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
+    <string name="sign_in_subtitle">Connecte-toi avec Google ou Apple. Tu utilises déjà nawana sur iPhone ? Prends le même compte et ta voix te suit.</string>
+    <string name="opening_ellipsis">Ouverture…</string>
 </resources>

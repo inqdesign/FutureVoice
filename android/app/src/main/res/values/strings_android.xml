@@ -251,4 +251,7 @@
     <string name="couldn_t_score_that_one_your_take_is_still_here">"Couldn't score that one — your take is still here."</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Read from verified grammar slips per 100 spoken words — fewer reads higher.</string>
+    <!-- Sign-in: Android offers Google AND Apple; the iPhone line is an option, not the premise. -->
+    <string name="sign_in_subtitle">Sign in with Google or Apple. Already using nawana on iPhone? Use the same account and your voice comes with you.</string>
+    <string name="opening_ellipsis">Opening…</string>
 </resources>
