@@ -76,7 +76,12 @@ fun PublicIntroPreviewSheet(
     onDismiss: () -> Unit,
 ) {
     val p = persona ?: UserPersona()
-    val intro = remember(p) { PublicPersonaClient.composedIntro(p) }
+    // The portrait, written once and cached (`PublicIntroComposer`); the
+    // wait is shown rather than the notes it replaces.
+    val composed by androidx.compose.runtime.produceState<String?>(null, p, targetLanguage) {
+        value = com.roro.futurevoice.net.PublicIntroComposer.compose(p, targetLanguage)
+    }
+    val intro = composed ?: stringResource(R.string.writing_your_introduction)
     val languageName = LanguageCatalog.ownName(targetLanguage, nativeLanguage)
     val scope = rememberCoroutineScope()
     var publishing by remember { mutableStateOf(false) }

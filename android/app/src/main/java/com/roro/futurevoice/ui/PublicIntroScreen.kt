@@ -118,7 +118,7 @@ fun PublicIntroScreen(
                 location = listOf(p.city, p.country).filter { it.isNotBlank() }.joinToString(", ")
                 occupation = p.occupation
                 interests = p.interests.joinToString(", ")
-                intro = PublicPersonaClient.composedIntro(p)
+                intro = com.roro.futurevoice.net.PublicIntroComposer.compose(p, targetLanguage)
             }
         }
         loading = false

@@ -95,7 +95,14 @@ fun RememberedLinesSection(
     }
     GroupedSectionHeader(stringResource(R.string.what_strangers_can_see))
     GroupedCard {
-        val intro = PublicPersonaClient.composedIntro(persona)
+        // The portrait a stranger's phone will speak — recomposed when a
+        // moved rung changes its inputs, so the effect of a move is visible
+        // on the same screen.
+        val language = com.roro.futurevoice.data.CoreVocabulary.activeLanguage() ?: "en"
+        val composed by androidx.compose.runtime.produceState<String?>(null, persona, language) {
+            value = com.roro.futurevoice.net.PublicIntroComposer.compose(persona, language)
+        }
+        val intro = composed ?: stringResource(R.string.writing_your_introduction)
         Text(
             intro.ifEmpty { stringResource(R.string.nothing_yet) },
             style = MaterialTheme.typography.bodyMedium,

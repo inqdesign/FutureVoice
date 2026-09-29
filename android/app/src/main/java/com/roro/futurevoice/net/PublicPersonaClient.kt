@@ -97,14 +97,12 @@ class PublicPersonaClient(private val auth: AuthRepository) {
          * 4yo daughter at Kita" went out to every learner in the pool without
          * the author ever seeing the paragraph it was in.
          */
-        fun composedIntro(p: com.roro.futurevoice.talk.UserPersona): String {
-            val parts = ArrayList<String>()
-            if (p.occupation.isNotEmpty()) parts.add(p.occupation)
-            if (p.lengthOfStay.isNotEmpty() && p.city.isNotEmpty()) parts.add("${p.city} · ${p.lengthOfStay}")
-            if (p.situations.isNotEmpty()) parts.add(p.situations.joinToString(", "))
-            parts.addAll(p.strangerLines)
-            return parts.joinToString("\n")
-        }
+        fun composedIntro(p: com.roro.futurevoice.talk.UserPersona,
+                          language: String = com.roro.futurevoice.data.CoreVocabulary.activeLanguage() ?: "en"): String =
+            // The portrait if it has been written, the notes otherwise — sync,
+            // never asks the model (it is the density gate's); screens that
+            // show the paragraph await [PublicIntroComposer.compose].
+            PublicIntroComposer.current(p, language)
     }
 
     /**
@@ -141,7 +139,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
      * True when the row is up.
      */
     suspend fun publishMirror(p: com.roro.futurevoice.talk.UserPersona, language: String): Boolean {
-        val intro = composedIntro(p)
+        val intro = PublicIntroComposer.compose(p, language)
         // 80 because the DATABASE says 80: a lower client bar doesn't publish
         // thinner rows, it just fails the write on every launch.
         if (intro.length < MIN_INTRO) return false
@@ -169,7 +167,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
      */
     private suspend fun trimUnapprovedRow(p: com.roro.futurevoice.talk.UserPersona, language: String) {
         val existing = runCatching { fetchMine(language) }.getOrNull() ?: return
-        val intro = composedIntro(p)
+        val intro = PublicIntroComposer.compose(p, language)
         if (intro == existing.intro) return
         if (intro.length >= MIN_INTRO) {
             runCatching { patchIntro(existing.id, intro) }
