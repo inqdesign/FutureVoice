@@ -138,13 +138,15 @@ internal fun PersonEditor(
     person: Counterpart,
     onSave: (Counterpart) -> Unit,
     onDismiss: () -> Unit,
+    /** A photo picked before the person existed (the intake's first card). */
+    initialPhoto: android.graphics.Bitmap? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var draft by remember(person.id) { mutableStateOf(person) }
     /** The photo to save with this person on Save; `removePhoto` = delete
      *  the one on file. Saved only on Save, so Cancel leaves the face alone. */
-    var pendingPhoto by remember(person.id) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var pendingPhoto by remember(person.id) { mutableStateOf(initialPhoto) }
     var removePhoto by remember(person.id) { mutableStateOf(false) }
     val onFile = rememberPersonPhoto(person.id)
     val shownPhoto = pendingPhoto?.asImageBitmap() ?: if (removePhoto) null else onFile

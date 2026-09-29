@@ -108,6 +108,10 @@ fun FindPeopleScreen(
     // set, which is exactly what keeps them OUT of Watch's stories row.
     var met by remember { mutableStateOf<List<Counterpart>>(emptyList()) }
     var editing by remember { mutableStateOf<Counterpart?>(null) }
+    /** "New person" opens the guided intake first (iOS
+     *  `CounterpartVoiceIntakeView`); its draft lands in the form. */
+    var intake by remember { mutableStateOf(false) }
+    var intakePhoto by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     suspend fun reloadOwn() {
         val all = ownStore.load()
         own = all.filter { it.remoteId == null }
@@ -163,6 +167,20 @@ fun FindPeopleScreen(
 
     // Back closes the card first — it is a page, not a sheet over this one.
     androidx.activity.compose.BackHandler { if (card != null) card = null else onBack() }
+
+    if (intake) {
+        CounterpartIntakeScreen(
+            nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
+            targetLanguage = language,
+            onDraft = { draft, photo ->
+                intake = false
+                intakePhoto = photo
+                editing = draft ?: Counterpart()
+            },
+            onCancel = { intake = false },
+        )
+        return
+    }
 
     if (editingIntro) {
         PublicIntroScreen(
@@ -253,7 +271,7 @@ fun FindPeopleScreen(
                         GroupedCard {
                             Row(
                                 Modifier.fillMaxWidth()
-                                    .clickable { editing = Counterpart() }
+                                    .clickable { intake = true }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -410,9 +428,10 @@ fun FindPeopleScreen(
             person = draft,
             onSave = {
                 scope.launch { ownStore.save(it); reloadOwn(); StoreEvents.bump() }
-                editing = null
+                editing = null; intakePhoto = null
             },
-            onDismiss = { editing = null },
+            onDismiss = { editing = null; intakePhoto = null },
+            initialPhoto = intakePhoto,
         )
     }
 }
