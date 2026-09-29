@@ -65,6 +65,10 @@ fun ScenarioBookScreen(
     scenarioId: String,
     language: String,
     onWatch: (String) -> Unit,
+    /** Talk this scenario through — a metered call, gated by the host, and it
+     *  carries the scenario id so the call opens from its opener pool and its
+     *  chips come from this book (iOS `cb4252b`). */
+    onTalk: ((com.roro.futurevoice.talk.Scenario) -> Unit)? = null,
     onShadow: (String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -117,6 +121,9 @@ fun ScenarioBookScreen(
                     }
                 },
                 actions = {
+                    onTalk?.let { talk ->
+                        TextButton(onClick = { talk(sc) }) { Text(stringResource(R.string.talk)) }
+                    }
                     TextButton(onClick = { onWatch(sc.id) }) { Text(stringResource(R.string.watch)) }
                     BookExportMenu(
                         document = { BookDocument.make(context, sc, counterpartName = null) },

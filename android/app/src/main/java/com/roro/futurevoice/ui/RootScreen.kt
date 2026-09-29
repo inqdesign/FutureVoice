@@ -475,6 +475,11 @@ fun RootScreen() {
             // A fresh take costs a scene count, so the wall is asked at the
             // tap here exactly as it is on the Watch tab.
             onWatch = { id -> gate { watchScenarioId = id } },
+            onTalk = { sc -> gate {
+                bookScenarioId = null
+                callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
+                inCall = true
+            } },
             onShadow = { shadowLine = it },
             onBack = { bookScenarioId = null },
         )
