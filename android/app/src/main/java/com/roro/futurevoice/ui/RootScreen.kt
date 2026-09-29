@@ -171,15 +171,21 @@ fun RootScreen() {
         initializer { AppViewModel(context.applicationContext) }
     })
     val state by app.state.collectAsStateWithLifecycle()
-    var inCall by remember { mutableStateOf(false) }
-    var callTopic by remember { mutableStateOf("") }
-    var callFacts by remember { mutableStateOf<List<String>>(emptyList()) }
-    var callScenarioId by remember { mutableStateOf<String?>(null) }
-    var callOpener by remember { mutableStateOf("") }
-    var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
-    var callCastVoice by remember { mutableStateOf<String?>(null) }
+    // The call being on screen outlives the activity: a rotation, a dark-mode
+    // switch or an app-language change recreates it, and with `remember`
+    // these fell back to "not in a call", the call screen left composition
+    // and its dispose hung up — the learner's talk restarted from a fresh
+    // opener mid-sentence and the half left behind was saved as a book.
+    val call: CallRoute = viewModel()
+    var inCall by call.inCall
+    var callTopic by call.topic
+    var callFacts by call.facts
+    var callScenarioId by call.scenarioId
+    var callOpener by call.opener
+    var callCast by call.cast
+    var callCastVoice by call.castVoice
     /** Who the call is with, so the saved talk lands on their card. */
-    var callCounterpartId by remember { mutableStateOf<String?>(null) }
+    var callCounterpartId by call.counterpartId
     var showPrivacy by remember { mutableStateOf(false) }
     val referralJoin by com.roro.futurevoice.data.ReferralJoins.pending.collectAsStateWithLifecycle()
     referralJoin?.let { ReferralJoinSheet(join = it, onDismiss = com.roro.futurevoice.data.ReferralJoins::dismiss) }
@@ -2237,4 +2243,16 @@ private fun ScenarioCard(
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+}
+
+/** Which call is on screen — retained across activity recreation (see [RootScreen]). */
+class CallRoute : androidx.lifecycle.ViewModel() {
+    val inCall = mutableStateOf(false)
+    val topic = mutableStateOf("")
+    val facts = mutableStateOf<List<String>>(emptyList())
+    val scenarioId = mutableStateOf<String?>(null)
+    val opener = mutableStateOf("")
+    val cast = mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null)
+    val castVoice = mutableStateOf<String?>(null)
+    val counterpartId = mutableStateOf<String?>(null)
 }

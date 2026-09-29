@@ -48,5 +48,52 @@ fun FutureVoiceTheme(
         primaryContainer = accent.copy(alpha = 0.16f).compositeOver(base.surface),
         onPrimaryContainer = accent,
     )
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(colorScheme = colors, typography = IosTypeScale, content = content)
+}
+
+/**
+ * The iOS text styles, in Material's slots. Material's defaults were in use
+ * untouched — 16sp MEDIUM for `titleMedium`, 0.15–0.5sp tracking everywhere —
+ * so a call bubble read as a bold heading and every label was spaced out
+ * next to the SF-set iPhone app. Each role now carries the size, weight and
+ * leading of the iOS style it stands in for, with no added tracking:
+ *
+ *   headlineLarge  34 bold      Large Title     displays keep Material's
+ *   headlineMedium 28           Title 1         (nothing in the app uses
+ *   headlineSmall  22           Title 2          them at those sizes)
+ *   titleLarge     20           Title 3   ← a call bubble (`.title3` on iOS)
+ *   titleMedium    17 semibold  Headline
+ *   titleSmall     15 semibold  Subheadline, emphasised
+ *   bodyLarge      17           Body      ← a standard bubble, list rows
+ *   bodyMedium     15           Subheadline
+ *   bodySmall      13           Footnote
+ *   labelLarge     17 semibold  button text
+ *   labelMedium    13 medium    Footnote, emphasised
+ *   labelSmall     12           Caption   ← a speaker's name over a bubble
+ */
+private fun ios(size: Int, leading: Int, weight: androidx.compose.ui.text.font.FontWeight =
+    androidx.compose.ui.text.font.FontWeight.Normal) = androidx.compose.ui.text.TextStyle(
+    fontSize = androidx.compose.ui.unit.TextUnit(size.toFloat(), androidx.compose.ui.unit.TextUnitType.Sp),
+    lineHeight = androidx.compose.ui.unit.TextUnit(leading.toFloat(), androidx.compose.ui.unit.TextUnitType.Sp),
+    fontWeight = weight,
+    letterSpacing = androidx.compose.ui.unit.TextUnit(0f, androidx.compose.ui.unit.TextUnitType.Sp),
+)
+
+private val Semibold = androidx.compose.ui.text.font.FontWeight.SemiBold
+
+val IosTypeScale = androidx.compose.material3.Typography().let { m ->
+    m.copy(
+        headlineLarge = ios(34, 41, androidx.compose.ui.text.font.FontWeight.Bold),
+        headlineMedium = ios(28, 34),
+        headlineSmall = ios(22, 28),
+        titleLarge = ios(20, 25),
+        titleMedium = ios(17, 22, Semibold),
+        titleSmall = ios(15, 20, Semibold),
+        bodyLarge = ios(17, 22),
+        bodyMedium = ios(15, 20),
+        bodySmall = ios(13, 18),
+        labelLarge = ios(17, 22, Semibold),
+        labelMedium = ios(13, 18, androidx.compose.ui.text.font.FontWeight.Medium),
+        labelSmall = ios(12, 16),
+    )
 }

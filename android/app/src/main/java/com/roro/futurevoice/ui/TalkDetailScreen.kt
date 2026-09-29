@@ -45,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -117,8 +118,11 @@ fun TalkDetailScreen(
     onShadow: (String) -> Unit = {},
     /** Pick the talk back up — a metered call, so the host gates it. */
     onContinue: ((String) -> Unit)? = null,
+    /** Opened by the call that just ended (iOS `postTalk`): the page IS the
+     *  wrap-up, so it closes with Done rather than going back. */
+    onDone: (() -> Unit)? = null,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    androidx.activity.compose.BackHandler(onBack = onDone ?: onBack)
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -219,11 +223,14 @@ fun TalkDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            // "Review book", centred — as on iOS. The talk's own title is the
+            // cover's headline right below; repeating it up here said it twice.
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(s.displayTitle ?: stringResource(R.string.conversation)) },
+                title = { Text(stringResource(R.string.review_book),
+                    style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    if (onDone == null) IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 },
@@ -232,6 +239,9 @@ fun TalkDetailScreen(
                         document = { BookDocument.make(context, s) },
                         nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
                         targetLanguage = language)
+                    if (onDone != null) TextButton(onClick = onDone) {
+                        Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
+                    }
                 },
             )
         }
@@ -484,16 +494,20 @@ private fun CoverBlock(
         // for; Replay is the quieter half of the pair, as on iOS.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (onContinue != null) {
-                Button(onClick = onContinue, modifier = Modifier.weight(1f)) {
+                Button(onClick = onContinue, modifier = Modifier.weight(1f),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 10.dp)) {
                     Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null,
                         modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.continue_))
+                    Text(stringResource(R.string.continue_), maxLines = 1, softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyLarge)
                 }
             }
             FilledTonalButton(
                 onClick = onReplay,
                 modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                 // The accent wash iOS's `.bordered` button carries — derived
                 // from the theme's primary, never a colour of its own.
                 colors = ButtonDefaults.filledTonalButtonColors(
@@ -503,7 +517,9 @@ private fun CoverBlock(
                 Icon(Icons.Filled.PlayArrow, contentDescription = null,
                     modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.replay))
+                Text(stringResource(R.string.replay), maxLines = 1, softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyLarge)
             }
         }
     }

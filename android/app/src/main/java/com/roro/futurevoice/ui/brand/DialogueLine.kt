@@ -92,7 +92,7 @@ fun DialogueLine(
                     androidx.compose.material3.ProvideTextStyle(
                         // Long lines stay left-ragged even in a trailing
                         // bubble — centre/right-ragged body text is hard to read.
-                        (if (scale == DialogueScale.CALL) MaterialTheme.typography.titleMedium
+                        (if (scale == DialogueScale.CALL) MaterialTheme.typography.titleLarge
                         else MaterialTheme.typography.bodyLarge).copy(textAlign = TextAlign.Start),
                     ) { content() }
                 }

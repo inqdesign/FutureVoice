@@ -49,6 +49,8 @@ import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Box
@@ -253,7 +255,15 @@ fun TalkScreen(
             )
         )
     }
-    DisposableEffect(Unit) { onDispose { vm.end() } }
+    // Leaving the screen hangs up — but a recreation (rotation, dark mode,
+    // app language) disposes it too, and the call must carry on through that.
+    DisposableEffect(Unit) {
+        onDispose {
+            var c: android.content.Context? = context
+            while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+            if ((c as? android.app.Activity)?.isChangingConfigurations != true) vm.end()
+        }
+    }
 
     // Today's notebook, dealt once when the call opens. It never re-deals
     // mid-call: a row that changed under the learner would be asking for a
@@ -276,8 +286,25 @@ fun TalkScreen(
         if (next != goalsUsed) goalsUsed = next
     }
 
-    LaunchedEffect(state.turns.size) {
-        if (state.turns.isNotEmpty()) listState.animateScrollToItem(state.turns.lastIndex)
+    // The newest line is always in view, as on iOS (bottom-anchored) — and
+    // not only when a line is ADDED: a correction lands under the learner's
+    // bubble and the reply grows as it streams, and scrolling to the new
+    // item's top left the fluent self's answer below the fold. Following
+    // stops while the learner has scrolled up to read, and resumes once
+    // they are back at the bottom.
+    var followBottom by remember { mutableStateOf(true) }
+    LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
+            .collect { scrolling -> if (!scrolling) followBottom = !listState.canScrollForward }
+    }
+    val contentSize = Triple(state.turns.size, state.partial.length + state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
+        it.transcript.length + (it.suggestion?.alternative?.length ?: 0) + (it.suggestion?.reason?.length ?: 0)
+    }
+    LaunchedEffect(contentSize) {
+        if (state.turns.isNotEmpty() && followBottom) {
+            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+            listState.animateScrollToItem(last, Int.MAX_VALUE)
+        }
     }
 
     var confirmingDiscard by remember { mutableStateOf(false) }
@@ -323,17 +350,43 @@ fun TalkScreen(
     val onCall = state.phase == TalkPhase.LISTENING ||
         state.phase == TalkPhase.THINKING || state.phase == TalkPhase.SPEAKING
 
+    // The board runs, then the page it built opens by itself (iOS: the
+    // summary sheet IS `ConversationDetailView` in post-talk mode). Done on
+    // that page is the call's exit — the plans pitch and the way home. The
+    // board is held a beat after its last row so it can be read.
+    val summaryProgress by SessionSummarizer.progressBySession.collectAsStateWithLifecycle()
+    val endedId = state.endedSessionId
+    val summaryDone = endedId != null && summaryProgress[endedId]?.finished == true
+    var showBook by remember { mutableStateOf(false) }
+    LaunchedEffect(state.phase, summaryDone) {
+        if (state.phase == TalkPhase.ENDED && summaryDone && preview == null) {
+            kotlinx.coroutines.delay(1_500)
+            showBook = true
+        }
+    }
+    if (showBook && endedId != null) {
+        TalkDetailScreen(
+            sessionId = endedId,
+            language = targetLanguage,
+            level = level,
+            onBack = {},
+            onDone = { pitchThenLeave() },
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
                     // WHAT the call is, not what it is doing. The phase reads
                     // under the control at the bottom, where the hand is, and
                     // a giant "Listening…" as the page title made the screen
                     // look like a status readout instead of a call.
-                    Column {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(topic.ifBlank { stringResource(R.string.lets_talk) },
+                            style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         // The level being spoken at, and the call's own clock
                         // — a phone call shows how long you have been on it.
@@ -364,7 +417,8 @@ fun TalkScreen(
                         if (state.turns.any { it.role == TurnRole.USER } && state.phase != TalkPhase.ENDED) {
                             confirmingDiscard = true
                         } else onExit()
-                    }) {
+                    }, modifier = Modifier.padding(start = 8.dp).size(44.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
                     }
                 },
@@ -372,16 +426,25 @@ fun TalkScreen(
                     // End the call and STAY: the wrap-up is the most valuable
                     // minute the app spends, and leaving here skipped it
                     // entirely. Done is what leaves.
+                    // iOS draws End as red text on a round glass chip — a
+                    // hang-up, not a primary action. Done keeps the accent.
+                    val chip = Modifier.padding(end = 8.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)
                     if (state.phase == TalkPhase.ENDED) {
-                        Button(onClick = { pitchThenLeave() }) { Text(stringResource(R.string.done)) }
+                        TextButton(onClick = { pitchThenLeave() }, modifier = chip) {
+                            Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
+                        }
                     } else {
-                        Button(onClick = {
+                        TextButton(onClick = {
                             vm.end()
                             // A call nobody spoke in has nothing to wrap up —
                             // `end` skips the save, so there is no board to
                             // hold anyone here. (Set synchronously.)
                             if (vm.state.value.endedSessionId == null) onExit()
-                        }) { Text(stringResource(R.string.end)) }
+                        }, modifier = chip) {
+                            Text(stringResource(R.string.end), style = MaterialTheme.typography.titleMedium,
+                                color = androidx.compose.ui.graphics.Color(0xFFFF3B30))
+                        }
                     }
                 },
             )
@@ -391,7 +454,8 @@ fun TalkScreen(
             // Pinned ABOVE the transcript, which scrolls away constantly —
             // the whole point is that it is in front of the learner at the
             // moment they could spend the word.
-            if (goals.isNotEmpty()) {
+            val ended = state.phase == TalkPhase.ENDED && state.endedSessionId != null
+            if (goals.isNotEmpty() && !ended) {
                 TalkGoalChipsRow(goals, goalsUsed, onTap = { openGoal = it })
             }
             // Nothing pauses underneath: WordLore is free and globally
@@ -405,7 +469,10 @@ fun TalkScreen(
                     onDismiss = { openGoal = null },
                 )
             }
-            LazyColumn(
+            // The call is over: the board takes the screen, as on iOS — the
+            // transcript is already in the book it is building.
+            if (ended) Spacer(Modifier.weight(1f))
+            if (!ended) LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
@@ -418,6 +485,39 @@ fun TalkScreen(
             ) {
                 items(state.turns, key = { it.id }) { turn ->
                     DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name)
+                }
+                // The learner's turn, drawn where it will land (iOS
+                // `PartialTurnView`): the You bubble appears EMPTY the moment
+                // it is their turn — that empty bubble is the "your turn"
+                // signal — and fills with the words as they are heard. Not
+                // before the first line exists: the call opens with the
+                // fluent self, and an empty bubble would flash and vanish.
+                if (state.phase == TalkPhase.LISTENING &&
+                    (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
+                    item(key = "partial-listening") {
+                        com.roro.futurevoice.ui.brand.DialogueLine(
+                            speaker = com.roro.futurevoice.ui.brand.DialogueSpeaker.USER,
+                            name = stringResource(R.string.you),
+                            scale = DialogueScale.CALL,
+                        ) {
+                            Text(
+                                state.partial.ifBlank { stringResource(R.string.listening) },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                            )
+                        }
+                    }
+                }
+                if (state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) {
+                    item(key = "partial-thinking") {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Text(stringResource(R.string.future_self_is_thinking),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
 
@@ -434,31 +534,6 @@ fun TalkScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-            // Whose turn it is, said out loud. A silent screen during a
-            // listening turn reads as a call that has stopped working.
-            if (state.phase == TalkPhase.LISTENING && state.partial.isBlank()) {
-                Text(stringResource(R.string.listening),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
-            if (state.phase == TalkPhase.THINKING) {
-                Text(stringResource(R.string.future_self_is_thinking),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
-            if (state.partial.isNotBlank()) {
-                Text(
-                    state.partial,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
             }
 
             // A spent allowance is not an error — it gets its own line, in
@@ -525,6 +600,7 @@ fun TalkScreen(
                         userTurns = state.turns.count { it.role == TurnRole.USER },
                         spentPool = state.wall == TalkWall.OUT_OF_MINUTES)
                 }
+                Spacer(Modifier.weight(1.3f))
             }
 
             // The bottom bar. The Futureself pill IS the control — it is
