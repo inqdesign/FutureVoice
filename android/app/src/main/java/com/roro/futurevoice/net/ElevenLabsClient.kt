@@ -74,11 +74,14 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         idempotencyKey: String? = null,
         purpose: String? = null,
         sceneKey: String? = null,
+        /** An explicit rung — the onboarding pills audition one before it is
+         *  the setting. Null = the learner's current speed. */
+        speed: Double? = null,
     ): ByteArray = withContext(Dispatchers.IO) {
         val request = buildRequest(
             voiceId, text, modelId, withTimestamps = false, stream = false,
             purpose = purpose, idempotencyKey = idempotencyKey, accept = "audio/mpeg",
-            sceneKey = sceneKey,
+            sceneKey = sceneKey, speed = speed,
         )
         Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -170,7 +173,8 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         purpose: String?,
         idempotencyKey: String?,
         accept: String?,
-        sceneKey: String? = null,): Request {
+        sceneKey: String? = null,
+        speed: Double? = null,): Request {
         val body = TtsBody(
             voice_id = voiceId,
             text = text,
@@ -179,7 +183,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             stream = if (stream) true else null,
             purpose = purpose,
             scene_key = sceneKey,
-            speed = com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
+            speed = speed ?: com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
         )
         val builder = Request.Builder()
             .url(Config.functionUrl("elevenlabs-tts"))

@@ -24,6 +24,11 @@ object VoiceCloneScript {
     fun greeting(language: String): String =
         greetings[language] ?: greetings[language.take(2)] ?: greetings.getValue("en")
 
+    /** What the onboarding speed pills say — long enough (~4.5 s) that
+     *  the three rungs are told apart by ear. */
+    fun paceSample(language: String): String =
+        paceSamples[language] ?: paceSamples[language.take(2)] ?: paceSamples.getValue("en")
+
     private val byLanguage: Map<String, List<String>> = mapOf(
         "en" to listOf(
             "Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm patient. I want to sound like me — just a more confident version.",
@@ -118,5 +123,18 @@ object VoiceCloneScript {
         "pt" to "Oi! Sou eu, você já fluente. <break time=\"0.5s\" /> Escolhe a cor que gosta, e confia em mim, a gente faz isso junto.",
         "zh" to "嘿！是我，已经说得很流利的你。<break time=\"0.5s\" /> 挑一个你喜欢的颜色吧，以后你就信我，我们一起来。",
         "zh-Hant" to "嘿！是我，已經說得很流利的你。<break time=\"0.5s\" /> 挑一個你喜歡的顏色吧，以後你就信我，我們一起來。",
+    )
+
+    private val paceSamples: Map<String, String> = mapOf(
+        "en" to "From now on I'll talk at this pace. Listen for a moment, and tell me if it's easy enough to follow.",
+        "de" to "Ab jetzt rede ich in diesem Tempo. Hör kurz rein und sag mir, ob du gut mitkommst.",
+        "ko" to "앞으로 이 속도로 말할게. 조금 들어보고, 이 정도면 편하게 들리는지 알려줘.",
+        "ja" to "これからはこの速さで話すね。少し聞いてみて、これなら聞き取りやすいか教えて。",
+        "es" to "A partir de ahora hablaré a este ritmo. Escucha un momento y dime si se me entiende bien.",
+        "fr" to "À partir de maintenant je parlerai à ce rythme. Écoute un instant et dis-moi si tu me suis bien.",
+        "it" to "D’ora in poi parlerò a questo ritmo. Ascolta un momento e dimmi se mi segui bene.",
+        "pt" to "De agora em diante vou falar neste ritmo. Escuta um pouco e me diz se dá para acompanhar.",
+        "zh" to "以后我就用这个速度说话。你听一下，告诉我这样好不好跟上。",
+        "zh-Hant" to "以後我就用這個速度說話。你聽一下，告訴我這樣好不好跟上。",
     )
 }

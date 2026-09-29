@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.audio.Mp3Player
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.material3.CircularProgressIndicator
 import com.roro.futurevoice.audio.SampleQuality
 import com.roro.futurevoice.audio.RoomCheck
 import com.roro.futurevoice.audio.RoomGates
@@ -218,12 +220,16 @@ fun CloneFlowScreen(
                 // purpose — fires once per user, and it's the moment they
                 // decide whether the clone sounds like them. Best-effort:
                 // a failed synthesis opens the act silent, never blocks.
+                // The same model every later line speaks on (iOS `a344422`):
+                // a greeting better than the call that follows is a demo, and
+                // the gap it hides is the disappointment it sets up. Said once,
+                // at the default rung — the pills below are how speed is heard.
                 greeting = runCatching {
                     ElevenLabsClient(auth).synthesize(
                         voiceId = voiceId,
                         text = VoiceCloneScript.greeting(targetLanguage),
-                        modelId = ElevenLabsClient.FIDELITY_MODEL_ID,
                         purpose = "greeting",
+                        speed = com.roro.futurevoice.data.SpeechSpeed.DEFAULT.multiplier(context),
                     )
                 }.getOrNull()
                 act = CloneAct.MEET
@@ -591,6 +597,17 @@ fun CloneFlowScreen(
                         }
                     }
 
+                    // The speed, chosen BY EAR (iOS `fee8b14`): a pill selects
+                    // the rung and speaks it, so re-tapping the selected one
+                    // replays. It speaks `paceSample`, sized so the three rungs
+                    // are told apart. Takes are lazy — nothing is made until a
+                    // pill is tapped, and the first tap fetches the other two.
+                    SpeedAudition(
+                        voiceId = clonedVoiceId,
+                        line = VoiceCloneScript.paceSample(targetLanguage),
+                        player = mp3,
+                    )
+
                     // Two exits, one button. With an account behind the
                     // session this is onboarding's last tap; on an anonymous
                     // one it hands over to the sign-up — which now asks about
@@ -722,5 +739,56 @@ private fun ConsentPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, 
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(text, style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun SpeedAudition(voiceId: String?, line: String, player: com.roro.futurevoice.audio.Mp3Player) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var selected by remember { mutableStateOf(com.roro.futurevoice.data.SpeechSpeed.current(context)) }
+    val takes = remember { mutableStateMapOf<com.roro.futurevoice.data.SpeechSpeed, ByteArray>() }
+    var loading by remember { mutableStateOf<com.roro.futurevoice.data.SpeechSpeed?>(null) }
+    suspend fun take(s: com.roro.futurevoice.data.SpeechSpeed): ByteArray? {
+        takes[s]?.let { return it }
+        val id = voiceId ?: return null
+        return runCatching {
+            ElevenLabsClient(com.roro.futurevoice.data.AuthRepository()).synthesize(
+                voiceId = id, text = line, purpose = "greeting", speed = s.multiplier(context))
+        }.getOrNull()?.also { takes[s] = it }
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.roro.futurevoice.data.SpeechSpeed.entries.forEach { s ->
+                val onClick: () -> Unit = {
+                    selected = s
+                    com.roro.futurevoice.data.SpeechSpeed.set(context, s)
+                    scope.launch {
+                        loading = s
+                        val audio = take(s)
+                        loading = null
+                        audio?.let { player.play(it) }
+                        // Warm the other two so the next tap answers at once.
+                        com.roro.futurevoice.data.SpeechSpeed.entries.filter { it != s && takes[it] == null }
+                            .forEach { launch { take(it) } }
+                    }
+                }
+                val label: @Composable () -> Unit = {
+                    if (loading == s) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                    else Text(stringResource(s.label), maxLines = 1)
+                }
+                if (selected == s) Button(onClick = onClick, modifier = Modifier.weight(1f)) { label() }
+                else OutlinedButton(onClick = onClick, modifier = Modifier.weight(1f)) { label() }
+            }
+        }
+        Text(line, style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(stringResource(R.string.you_can_change_both_later_in_settings),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }

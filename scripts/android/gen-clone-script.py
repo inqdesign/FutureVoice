@@ -17,6 +17,11 @@ for m in re.finditer(r'"([a-zA-Z-]{2,7})": \[(.*?)\n        \]', seg('byLanguage
 greet = {m.group(1): m.group(2).replace('\\"', '"')
          for m in re.finditer(r'"([a-zA-Z-]{2,7})": "((?:\\.|[^"\\])*)"', seg('greetings'))}
 assert set(paras) == set(greet) and all(len(v) == 6 for v in paras.values())
+# The line the onboarding speed pills speak (sized so the three rungs never
+# overlap by ear — a short line made 0.9 measurably faster than 1.0).
+pace = {m.group(1): m.group(2).replace('\\"', '"')
+        for m in re.finditer(r'"([a-zA-Z-]{2,7})": "((?:\\.|[^"\\])*)"', seg('paceSamples'))}
+assert "en" in pace
 def k(s): return '"' + s.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + '"'
 out = ['package com.roro.futurevoice.talk', '', '/**',
        ' * The read-aloud script for voice cloning, per TARGET language —',
@@ -37,6 +42,9 @@ out = ['package com.roro.futurevoice.talk', '', '/**',
        "    /** The clone's first words, spoken the moment it exists. */",
        '    fun greeting(language: String): String =',
        '        greetings[language] ?: greetings[language.take(2)] ?: greetings.getValue("en")', '',
+       '    /** What the onboarding speed pills say — long enough (~4.5 s) that', '     *  the three rungs are told apart by ear. */',
+       '    fun paceSample(language: String): String =',
+       '        paceSamples[language] ?: paceSamples[language.take(2)] ?: paceSamples.getValue("en")', '',
        '    private val byLanguage: Map<String, List<String>> = mapOf(']
 for code in paras:
     out.append(f'        "{code}" to listOf(')
@@ -44,6 +52,8 @@ for code in paras:
     out.append('        ),')
 out += ['    )', '', '    private val greetings: Map<String, String> = mapOf(']
 out += [f'        "{code}" to {k(greet[code])},' for code in paras]
+out += ['    )', '', '    private val paceSamples: Map<String, String> = mapOf(']
+out += [f'        "{code}" to {k(v)},' for code, v in pace.items()]
 out += ['    )', '}']
 (ROOT/'android/app/src/main/java/com/roro/futurevoice/talk/VoiceCloneScript.kt').write_text('\n'.join(out) + '\n')
 print('VoiceCloneScript.kt regenerated', file=sys.stderr)
