@@ -129,6 +129,12 @@ fun TalkDetailScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var session by remember { mutableStateOf<Session?>(null) }
+    // The word card opened from the Words chapter: (term, the list it walks).
+    var wordCard by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+    wordCard?.let { (term, list) ->
+        WordCardSheet(terms = list, initialTerm = term, kind = LibraryKind.WORDS,
+            language = language, onShadow = onShadow, onDismiss = { wordCard = null })
+    }
     var chapter by remember { mutableStateOf(
         TalkChapter.entries.firstOrNull { it.name == com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailChapter }
             ?: TalkChapter.INTRO) }
@@ -347,15 +353,48 @@ fun TalkDetailScreen(
 
                     TalkChapter.WORDS -> {
                         PageTitle(stringResource(R.string.words_d26d55))
-                        Column(Modifier.padding(horizontal = 20.dp)) {
-                            curriculum.words.forEach { item ->
-                                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    // Mastery is READ, never stored here: the
-                                    // vocab store is the one source of truth.
-                                    MasteryMark(item.masteredAt != null)
-                                    Text(item.text, style = MaterialTheme.typography.bodyLarge)
+                        val keys = curriculum.words.map { it.text }
+                        // Tap a word, its card opens — walking the chapter's
+                        // own list (iOS `wordsPage`).
+                        curriculum.words.forEach { item ->
+                            Row(Modifier.fillMaxWidth()
+                                .clickable { wordCard = item.text to keys }
+                                .padding(horizontal = 20.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                // Mastery is READ, never stored here: the
+                                // vocab store is the one source of truth.
+                                MasteryMark(item.masteredAt != null)
+                                Column(Modifier.weight(1f)) {
+                                    Text(item.text, style = MaterialTheme.typography.bodyLarge,
+                                        color = if (item.masteredAt != null) MaterialTheme.colorScheme.onSurfaceVariant
+                                        else MaterialTheme.colorScheme.onSurface)
+                                    if (item.note.isNotBlank()) Text(item.note, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                            }
+                        }
+                        // The win: words they used for the first time in this
+                        // talk, minus what the carryover section already tells.
+                        val credited = sm?.carryovers.orEmpty()
+                            .map { com.roro.futurevoice.talk.CarryoverDetector.normalized(it.item) }.toSet()
+                        val mine = sm?.newWordsUsed.orEmpty()
+                            .filter { com.roro.futurevoice.talk.CarryoverDetector.normalized(it) !in credited }
+                        if (mine.isNotEmpty()) {
+                            Text(stringResource(R.string.words_you_used_first),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 20.dp, top = 14.dp))
+                            androidx.compose.foundation.layout.FlowRow(
+                                Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                mine.forEach { w ->
+                                    androidx.compose.material3.AssistChip(
+                                        onClick = { wordCard = w to mine }, label = { Text(w) })
                                 }
                             }
                         }
