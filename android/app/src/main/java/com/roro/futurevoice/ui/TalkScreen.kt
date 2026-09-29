@@ -690,11 +690,14 @@ fun TalkScreen(
                         // month-long balance must never read as a running
                         // meter, so it joins the surface rather than taking a
                         // line of its own.
-                        state.minutesRemaining?.let { minutes ->
+                        // Only while it matters (iOS: ≤10 min), and orange
+                        // in the last three — the one moment a figure helps.
+                        state.minutesRemaining?.takeIf { it <= 10 }?.let { minutes ->
                             Text(
                                 stringResource(R.string.lld_min_left, minutes),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = if (minutes <= 3) androidx.compose.ui.graphics.Color(0xFFFF9500)
+                                else MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
