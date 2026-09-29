@@ -89,8 +89,15 @@ section{margin-top:56px}
 .ep-h p{color:var(--dim);font-size:14.5px;margin-top:3px}
 .all{flex:0 0 auto;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--dim);white-space:nowrap}
 .all:hover{color:var(--tx)}
-/* Big enough to read without tapping: two across in the main column, one on a phone. */
-.slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+/* One row per episode, scrolled sideways; big enough to read without tapping, and the next card peeks. */
+.slides{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:0;padding:4px 2px 14px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;overscroll-behavior-x:contain}
+.slides::-webkit-scrollbar{height:6px}
+.slides::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
+.sl{flex:0 0 clamp(280px,27vw,400px);scroll-snap-align:start}
+.ep-nav{display:flex;gap:6px;align-items:center}
+.ep-nav .arr{width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);background:var(--panel);color:var(--dim);display:grid;place-items:center;font-size:15px}
+.ep-nav .arr:hover:not(:disabled){color:var(--tx);border-color:var(--faint)}
+.ep-nav .arr:disabled{opacity:.35;cursor:default}
 .sl{display:block;border:0;padding:0;background:#FAF9F6;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 6px 18px rgba(27,26,24,.08);cursor:zoom-in;transition:transform .2s ease, box-shadow .2s ease}
 .sl:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--line-2),0 12px 28px rgba(27,26,24,.12)}
 .sl img{display:block;width:100%;height:auto;aspect-ratio:4/5}
@@ -198,7 +205,8 @@ footer a{color:var(--faint)}
   .intro h1{font-size:34px}
   .store span{display:none}
   .store{padding:0 11px}
-  .slides{grid-template-columns:minmax(0,1fr);gap:14px}
+  .sl{flex-basis:82vw}
+  .ep-nav .arr{display:none}
   .ep-h{flex-direction:column;align-items:flex-start;gap:8px}
   .post{padding:18px}
 }
@@ -386,9 +394,13 @@ function renderFeatures(){
         return `<article class="ep" id="ep-${esc(e.id)}">
           <header class="ep-h">
             <div><h4>${esc(e[lang].title)}</h4><p>${esc(e[lang].tagline)}</p></div>
-            <button class="all" data-ep="${esc(e.id)}" data-at="0">${esc(t("viewAll"))} · ${e.slides.length}</button>
+            <div class="ep-nav">
+              <button class="arr" data-row="${esc(e.id)}" data-dir="-1" aria-label="${esc(t("prev"))}" disabled>←</button>
+              <button class="arr" data-row="${esc(e.id)}" data-dir="1" aria-label="${esc(t("next"))}">→</button>
+              <button class="all" data-ep="${esc(e.id)}" data-at="0">${esc(t("viewAll"))} · ${e.slides.length}</button>
+            </div>
           </header>
-          <div class="slides">${body.map((src, k) => `
+          <div class="slides" data-slides="${esc(e.id)}">${body.map((src, k) => `
             <button class="sl" data-ep="${esc(e.id)}" data-at="${k + off}" aria-label="${esc(e[lang].title)} ${k + off + 1}/${e.slides.length}">
               <img src="${esc(src)}" alt="" loading="lazy" width="720" height="900">
             </button>`).join("")}
@@ -397,6 +409,7 @@ function renderFeatures(){
       }).join("")}
     </div>`).join("");
   spyCat = null; requestAnimationFrame(spy);
+  requestAnimationFrame(() => document.querySelectorAll(".slides").forEach(syncArrows));
 }
 // Scroll-spy: the chip of the section under the sticky bar is lit.
 let spyCat = null, spyTick = false;
@@ -472,7 +485,25 @@ function setIdx(i){
   [i - 1, i + 1, i + 2].forEach(k => { const im = $("#track").children[k]; if (im) im.loading = "eager"; });
 }
 function go(i){ if (i < 0 || i >= flat.length) return; const tr = $("#track"); tr.scrollTo({ left: i * tr.clientWidth, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
-$("#grid").addEventListener("click", e => { const b = e.target.closest("[data-ep]"); if (b) openViewer(b.dataset.ep, +b.dataset.at || 0); });
+$("#grid").addEventListener("click", e => {
+  const a = e.target.closest("[data-row]");
+  if (a) {
+    const row = document.querySelector(`[data-slides="${a.dataset.row}"]`);
+    const card = row.querySelector(".sl"); const step = card ? card.offsetWidth + 16 : row.clientWidth * .8;
+    row.scrollBy({ left: +a.dataset.dir * step, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    return;
+  }
+  const b = e.target.closest("[data-ep]"); if (b) openViewer(b.dataset.ep, +b.dataset.at || 0);
+});
+function syncArrows(row){
+  const id = row.dataset.slides;
+  const [l, r] = document.querySelectorAll(`[data-row="${id}"]`);
+  if (!l) return;
+  l.disabled = row.scrollLeft < 4;
+  r.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4;
+}
+$("#grid").addEventListener("scroll", e => { if (e.target.matches?.(".slides")) syncArrows(e.target); }, { passive: true, capture: true });
+addEventListener("resize", () => document.querySelectorAll(".slides").forEach(syncArrows));
 $("#track").addEventListener("scroll", () => { if (!vOpen) return; const tr = $("#track"); setIdx(Math.round(tr.scrollLeft / tr.clientWidth)); }, { passive: true });
 $("#vPrev").addEventListener("click", () => go(vIdx - 1));
 $("#vNext").addEventListener("click", () => go(vIdx + 1));
