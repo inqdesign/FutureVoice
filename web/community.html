@@ -111,7 +111,24 @@ section{margin-top:56px}
 .msg .txt{background:var(--panel-2);border-radius:14px 14px 14px 4px;padding:8px 12px;white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.5}
 .msg.me{align-self:flex-end;align-items:flex-end}
 .msg.me .txt{background:var(--accent-ink);color:#fff;border-radius:14px 14px 4px 14px}
-.msg.staff .txt{background:var(--accent-soft)}
+/* a staff message from someone else is tinted; your own keeps the solid blue whoever you are */
+.msg.staff:not(.me) .txt{background:var(--accent-soft)}
+.acts{display:flex;gap:4px;align-items:center;margin-top:1px}
+.msg.me .acts{justify-content:flex-end}
+.act{display:inline-flex;align-items:center;gap:4px;background:none;border:0;border-radius:999px;padding:2px 8px;font-size:12px;color:var(--faint)}
+.act:hover{background:var(--panel-2);color:var(--dim)}
+.act svg{width:14px;height:14px}
+.act.liked{color:#E0445A}
+.act.liked svg{fill:#E0445A;stroke:#E0445A}
+.thread{display:flex;flex-direction:column;gap:8px;margin:2px 0 4px 16px;padding-left:12px;border-left:2px solid var(--line)}
+.msg.me + .thread,.thread.mine{align-self:flex-end;margin:2px 16px 4px 0;padding:0 12px 0 0;border-left:0;border-right:2px solid var(--line)}
+.thread .msg{max-width:100%}
+.thread .txt{font-size:14px;padding:6px 11px}
+.more-replies{align-self:flex-start;background:none;border:0;color:var(--accent);font-size:12.5px;padding:0 0 0 2px}
+.thread.mine .more-replies{align-self:flex-end}
+.replying{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);background:var(--accent-soft);border-radius:10px;padding:6px 10px;margin-bottom:8px}
+.replying b{color:var(--tx);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.replying button{margin-left:auto;background:none;border:0;color:var(--dim);font-size:15px;line-height:1;padding:0 2px}
 .msgs .day{align-self:center;font-family:var(--mono);font-size:11px;color:var(--faint);padding:6px 0}
 .msgs .hello{margin:auto;text-align:center;color:var(--faint);font-size:13.5px;max-width:30ch;padding:20px 0}
 .compose{border-top:1px solid var(--line);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px))}
@@ -260,7 +277,8 @@ const T = {
     nick:"닉네임", signout:"로그아웃", placeholder:"메시지를 입력하세요", send:"보내기", enterHint:"Enter로 보내기 · Shift+Enter 줄바꿈",
     staff:"운영자", today:"오늘", yesterday:"어제", now:"방금", min:"분 전", hour:"시간 전",
     e_slow:"잠깐만요, 3초 뒤에 다시 보내주세요.", e_many:"10분에 20개까지 보낼 수 있어요. 조금 뒤에 다시 보내주세요.",
-    e_name:"이 닉네임은 쓸 수 없어요. 다른 이름으로 바꿔주세요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
+    e_name:"이 닉네임은 쓸 수 없어요. 다른 이름으로 바꿔주세요.", e_parent:"원래 메시지가 사라져서 답글을 달 수 없어요.",
+    like:"좋아요", reply:"답글", replies:n => `답글 ${n}개`, hideReplies:"답글 접기", replyingTo:"에게 답글", likeSignin:"로그인하면 좋아요와 답글을 남길 수 있어요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
     tryIt:"직접 해보고 싶다면", privacy:"개인정보 처리방침", terms:"이용약관", support:"지원", close:"닫기", prev:"이전", next:"다음",
     cats:{start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
   },
@@ -276,7 +294,8 @@ const T = {
     nick:"Name", signout:"Sign out", placeholder:"Write a message", send:"Send", enterHint:"Enter to send · Shift+Enter for a new line",
     staff:"Team", today:"Today", yesterday:"Yesterday", now:"now", min:"m ago", hour:"h ago",
     e_slow:"One moment. Try again in 3 seconds.", e_many:"You can send 20 messages every 10 minutes. Try again in a bit.",
-    e_name:"That name is reserved. Please pick another.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
+    e_name:"That name is reserved. Please pick another.", e_parent:"The original message is gone, so it can't take a reply.",
+    like:"Like", reply:"Reply", replies:n => n === 1 ? "1 reply" : `${n} replies`, hideReplies:"Hide replies", replyingTo:"Replying to", likeSignin:"Sign in to like and reply.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
     tryIt:"Want to try it yourself?", privacy:"Privacy", terms:"Terms", support:"Support", close:"Close", prev:"Previous", next:"Next",
     cats:{start:"Getting started", talk:"Talk", watch:"Watch", practice:"Review", progress:"Progress"},
   },
@@ -292,7 +311,10 @@ const t = k => T[lang][k] ?? T.ko[k] ?? k;
 /* ---------- state ---------- */
 let sb = null, session = null;
 let news = [], series = [];
-const messages = new Map();   // id -> row
+const messages = new Map();   // id -> row (top-level messages and replies alike)
+const likes = new Map();      // message id -> Set of user ids
+const openThreads = new Set(); // message ids whose replies are expanded
+let replyTo = null;           // message id the composer is answering
 let sendError = "";
 
 /* ---------- i18n ---------- */
@@ -420,24 +442,77 @@ function dayLabel(d){
   if (d.toDateString() === y.toDateString()) return t("yesterday");
   return d.toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", { month:"long", day:"numeric", weekday:"short" });
 }
+const HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>';
+const REPLY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg>';
+function msgHTML(m, me, isReply){
+  const d = new Date(m.created_at);
+  const mine = m.user_id === me;
+  const who = likes.get(m.id);
+  const n = who ? who.size : 0;
+  const liked = !!(me && who && who.has(me));
+  return `<div class="msg ${mine ? "me" : ""} ${m.is_staff ? "staff" : ""}" data-mid="${m.id}">
+    <span class="who"><span>${esc(m.display_name)}</span>${m.is_staff ? `<span class="badge">${esc(t("staff"))}</span>` : ""}<span title="${esc(d.toLocaleString())}">${esc(relTime(m.created_at))}</span></span>
+    <div class="txt">${esc(m.body)}</div>
+    <div class="acts">
+      <button class="act ${liked ? "liked" : ""}" data-like="${m.id}" aria-pressed="${liked}" aria-label="${esc(t("like"))}">${HEART}${n ? `<span>${n}</span>` : ""}</button>
+      <button class="act" data-reply="${isReply ? m.parent_id : m.id}" data-to="${esc(m.display_name)}" aria-label="${esc(t("reply"))}">${REPLY}<span>${esc(t("reply"))}</span></button>
+    </div>
+  </div>`;
+}
 function renderMessages(){
   const host = $("#msgs");
   const nearBottom = host.scrollHeight - host.scrollTop - host.clientHeight < 80;
-  const rows = [...messages.values()].sort((a, b) => a.id - b.id);
-  if (!rows.length) { host.innerHTML = `<p class="hello">${esc(t("hello"))}</p>`; return; }
+  const all = [...messages.values()].sort((a, b) => a.id - b.id);
+  const tops = all.filter(m => !m.parent_id || !messages.has(m.parent_id));
+  if (!tops.length) { host.innerHTML = `<p class="hello">${esc(t("hello"))}</p>`; return; }
+  const kids = new Map();
+  for (const m of all) if (m.parent_id && messages.has(m.parent_id)) {
+    if (!kids.has(m.parent_id)) kids.set(m.parent_id, []);
+    kids.get(m.parent_id).push(m);
+  }
   const me = session?.user?.id;
   let html = "", lastDay = "";
-  for (const m of rows) {
+  for (const m of tops) {
     const d = new Date(m.created_at), day = d.toDateString();
     if (day !== lastDay) { html += `<span class="day">${esc(dayLabel(d))}</span>`; lastDay = day; }
-    const mine = m.user_id === me;
-    html += `<div class="msg ${mine ? "me" : ""} ${m.is_staff ? "staff" : ""}">
-      <span class="who">${mine ? "" : `<span>${esc(m.display_name)}</span>`}${m.is_staff ? `<span class="badge">${esc(t("staff"))}</span>` : ""}<span title="${esc(d.toLocaleString())}">${esc(relTime(m.created_at))}</span></span>
-      <div class="txt">${esc(m.body)}</div></div>`;
+    html += msgHTML(m, me, false);
+    const rs = kids.get(m.id) || [];
+    if (rs.length) {
+      const open = openThreads.has(m.id);
+      // Closed, a thread shows its latest reply so a conversation is visible without a tap.
+      const shown = open ? rs : rs.slice(-1);
+      html += `<div class="thread ${m.user_id === me ? "mine" : ""}">
+        ${rs.length > 1 ? `<button class="more-replies" data-thread="${m.id}">${esc(open ? t("hideReplies") : t("replies")(rs.length))}</button>` : ""}
+        ${shown.map(r => msgHTML(r, me, true)).join("")}
+      </div>`;
+    }
   }
   host.innerHTML = html;
   if (nearBottom || !host.dataset.scrolled) { host.scrollTop = host.scrollHeight; host.dataset.scrolled = "1"; }
 }
+$("#msgs").addEventListener("click", async e => {
+  const th = e.target.closest("[data-thread]");
+  if (th) { const id = +th.dataset.thread; openThreads.has(id) ? openThreads.delete(id) : openThreads.add(id); renderMessages(); return; }
+  const signedIn = session && !session.user?.is_anonymous;
+  const rp = e.target.closest("[data-reply]");
+  if (rp) {
+    if (!signedIn) { sendError = t("likeSignin"); renderCompose(); return; }
+    replyTo = +rp.dataset.reply; renderCompose(); $("#msgInput")?.focus(); return;
+  }
+  const lk = e.target.closest("[data-like]");
+  if (lk) {
+    if (!signedIn) { sendError = t("likeSignin"); renderCompose(); return; }
+    const id = +lk.dataset.like, me = session.user.id;
+    const set = likes.get(id) || new Set(); likes.set(id, set);
+    const had = set.has(me);
+    had ? set.delete(me) : set.add(me); renderMessages();          // optimistic
+    const q = had
+      ? sb.from("community_reactions").delete().eq("message_id", id).eq("user_id", me)
+      : sb.from("community_reactions").insert({ message_id: id, user_id: me });
+    const { error } = await q;
+    if (error && !(error.code === "23505")) { had ? set.add(me) : set.delete(me); renderMessages(); }
+  }
+});
 $("#msgs").addEventListener("scroll", () => { $("#msgs").dataset.scrolled = "1"; }, { passive: true });
 
 function defaultName(user){
@@ -461,7 +536,9 @@ function renderCompose(){
     return;
   }
   const draft = $("#msgInput")?.value || "";
+  const target = replyTo && messages.get(replyTo);
   host.innerHTML = `
+    ${target ? `<div class="replying">↳ <span>${lang === "ko" ? `<b>${esc(target.display_name)}</b>${esc(t("replyingTo"))}` : `${esc(t("replyingTo"))} <b>${esc(target.display_name)}</b>`}</span><button id="cancelReply" aria-label="✕">✕</button></div>` : ""}
     <div class="me-row"><label for="nick">${esc(t("nick"))}</label><input id="nick" maxlength="24" value="${esc(myName())}"><button class="out" id="signout">${esc(t("signout"))}</button></div>
     <form class="box" id="form">
       <textarea id="msgInput" rows="1" maxlength="500" placeholder="${esc(t("placeholder"))}" aria-label="${esc(t("placeholder"))}">${esc(draft)}</textarea>
@@ -477,6 +554,7 @@ $("#compose").addEventListener("click", async e => {
     return;
   }
   if (e.target.id === "signout") { await sb.auth.signOut(); }
+  if (e.target.id === "cancelReply") { replyTo = null; renderCompose(); $("#msgInput")?.focus(); }
 });
 $("#compose").addEventListener("input", e => {
   if (e.target.id === "msgInput") {
@@ -496,22 +574,40 @@ $("#compose").addEventListener("submit", async e => {
   const nick = ($("#nick").value.trim() || myName()).slice(0, 24);
   $("#sendBtn").disabled = true;
   const { data, error } = await sb.from("community_messages")
-    .insert({ user_id: session.user.id, display_name: nick, body }).select().single();
+    .insert({ user_id: session.user.id, display_name: nick, body, parent_id: replyTo }).select().single();
   if (error) {
     const m = error.message || "";
-    sendError = m.includes("slow_down") ? t("e_slow") : m.includes("too_many") ? t("e_many") : m.includes("display_name_reserved") ? t("e_name") : t("e_generic");
+    sendError = m.includes("slow_down") ? t("e_slow") : m.includes("too_many") ? t("e_many") : m.includes("display_name_reserved") ? t("e_name") : m.includes("parent_missing") ? t("e_parent") : t("e_generic");
     renderCompose(); $("#msgInput").value = body; $("#sendBtn").disabled = false; return;
   }
   sendError = ""; store.set("nawana-community-name", nick);
   messages.set(data.id, data); ta.value = "";
+  if (data.parent_id) openThreads.add(data.parent_id);
+  replyTo = null;
   renderCompose(); $("#msgs").dataset.scrolled = ""; renderMessages(); $("#msgInput")?.focus();
 });
 
+const COLS = "id,user_id,display_name,body,is_staff,created_at,parent_id";
 async function loadMessages(){
-  const { data, error } = await sb.from("community_messages")
-    .select("id,user_id,display_name,body,is_staff,created_at").order("created_at", { ascending: false }).limit(150);
+  const { data, error } = await sb.from("community_messages").select(COLS).order("created_at", { ascending: false }).limit(300);
   if (error) return;
-  messages.clear(); data.forEach(m => messages.set(m.id, m)); renderMessages();
+  messages.clear(); data.forEach(m => messages.set(m.id, m));
+  // A recent reply can answer an older message outside the window: fetch those parents.
+  const missing = [...new Set(data.filter(m => m.parent_id && !messages.has(m.parent_id)).map(m => m.parent_id))];
+  if (missing.length) {
+    const { data: ps } = await sb.from("community_messages").select(COLS).in("id", missing);
+    (ps || []).forEach(m => messages.set(m.id, m));
+  }
+  await loadLikes();
+  renderMessages();
+}
+async function loadLikes(){
+  const ids = [...messages.keys()];
+  likes.clear();
+  for (let k = 0; k < ids.length; k += 150) {
+    const { data } = await sb.from("community_reactions").select("message_id,user_id").in("message_id", ids.slice(k, k + 150));
+    (data || []).forEach(r => { if (!likes.has(r.message_id)) likes.set(r.message_id, new Set()); likes.get(r.message_id).add(r.user_id); });
+  }
 }
 
 /* mobile chat sheet */
@@ -532,6 +628,10 @@ try {
   await loadMessages();
   sb.channel("community-chat")
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_messages" }, p => { messages.set(p.new.id, p.new); renderMessages(); })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_reactions" }, p => {
+      const r = p.new; if (!likes.has(r.message_id)) likes.set(r.message_id, new Set()); likes.get(r.message_id).add(r.user_id); renderMessages(); })
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: "community_reactions" }, p => {
+      const r = p.old; likes.get(r.message_id)?.delete(r.user_id); renderMessages(); })
     .subscribe(status => setLive(status === "SUBSCRIBED" ? "live" : status === "CLOSED" || status === "CHANNEL_ERROR" ? "offline" : "connecting"));
   setInterval(loadMessages, 60000);      // picks up moderation (a hidden message can't be announced live)
   setInterval(renderMessages, 60000);    // keeps "5분 전" honest
