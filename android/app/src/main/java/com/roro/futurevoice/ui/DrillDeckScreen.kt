@@ -107,6 +107,9 @@ fun DrillDeckScreen(
     voiceId: String = "",
     /** Shadowing runs its own screen; the deck hands it one line. */
     onShadow: (String) -> Unit = {},
+    /** A per-item reminder's card: dealt on its own, whether or not it is due
+     *  yet (the learner tapped the notification that named it). */
+    focusCardId: String? = null,
     onBack: () -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
@@ -167,7 +170,8 @@ fun DrillDeckScreen(
     }
 
     suspend fun dealHand() {
-        val due = store.due(language)
+        val focused = focusCardId?.let { id -> store.load(language).firstOrNull { it.id == id } }
+        val due = if (focused != null) listOf(focused) else store.due(language)
         deck = due.take(SESSION_CAP)
         remainingDue = (due.size - deck.size).coerceAtLeast(0)
         dealt = true
@@ -193,8 +197,15 @@ fun DrillDeckScreen(
     fun apply(card: DrillCard, bin: DrillBin) {
         scope.launch {
             val manual = bin.manual
-            if (manual != null) store.fileInBin(card, manual.first, manual.second, language)
-            else store.markKnown(card, language)
+            if (manual != null) {
+                store.fileInBin(card, manual.first, manual.second, language)
+                // Filed by hand = a promise about THIS line: it gets its own callback.
+                com.roro.futurevoice.data.ReviewQueue.armSentence(context, card,
+                    System.currentTimeMillis() + manual.second)
+            } else {
+                store.markKnown(card, language)
+                com.roro.futurevoice.data.ReviewQueue.cancelSentence(context, card.id)
+            }
             refreshFolders()
             StoreEvents.bump()
         }
@@ -484,8 +495,14 @@ fun DrillDeckScreen(
             onRefile = { card, target ->
                 scope.launch {
                     val manual = target.manual
-                    if (manual == null) store.markKnown(card, language)
-                    else store.fileInBin(card, manual.first, manual.second, language)
+                    if (manual == null) {
+                        store.markKnown(card, language)
+                        com.roro.futurevoice.data.ReviewQueue.cancelSentence(context, card.id)
+                    } else {
+                        store.fileInBin(card, manual.first, manual.second, language)
+                        com.roro.futurevoice.data.ReviewQueue.armSentence(context, card,
+                            System.currentTimeMillis() + manual.second)
+                    }
                     refreshFolders()
                     StoreEvents.bump()
                 }

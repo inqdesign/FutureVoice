@@ -237,6 +237,9 @@ fun RootScreen() {
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
+    /** A per-item reminder's target (iOS `.reviewItem`): the card or word it named. */
+    var focusCardId by remember { mutableStateOf<String?>(null) }
+    var focusStudyItem by remember { mutableStateOf<StudyDeckItem?>(null) }
     var showActivity by remember { mutableStateOf(false) }
     var showAssessment by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
@@ -261,6 +264,16 @@ fun RootScreen() {
             DeepLinkInbox.Destination.VOCABULARY -> library = LibraryKind.WORDS
             DeepLinkInbox.Destination.EXPRESSIONS -> library = LibraryKind.EXPRESSIONS
             DeepLinkInbox.Destination.REVIEW -> showDeck = true
+            DeepLinkInbox.Destination.REVIEW_ITEM -> {
+                val (kind, value) = DeepLinkInbox.reviewItem.value ?: (null to null)
+                DeepLinkInbox.reviewItem.value = null
+                when (kind) {
+                    com.roro.futurevoice.data.ReviewQueue.SENTENCE -> { focusCardId = value; showDeck = true }
+                    "word" -> { focusStudyItem = value?.let(StudyDeckItem::word); showDueReview = true }
+                    "expression" -> { focusStudyItem = value?.let(StudyDeckItem::expression); showDueReview = true }
+                    else -> showDueReview = true
+                }
+            }
             DeepLinkInbox.Destination.PRACTICE -> tab = HomeTab.PRACTICE
             null -> Unit
         }
@@ -511,8 +524,9 @@ fun RootScreen() {
             persona = state.persona,
             nativeLanguage = state.nativeLanguage,
             voiceId = state.voiceId ?: "",
-            onShadow = { showDeck = false; shadowLine = it },
-            onBack = { showDeck = false },
+            onShadow = { showDeck = false; focusCardId = null; shadowLine = it },
+            focusCardId = focusCardId,
+            onBack = { showDeck = false; focusCardId = null },
         )
 
         // Everything snoozed whose time has come, both kinds together — the
@@ -522,7 +536,8 @@ fun RootScreen() {
             language = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
             level = state.level,
-            onBack = { showDueReview = false },
+            focus = focusStudyItem,
+            onBack = { showDueReview = false; focusStudyItem = null },
         )
 
         studyDeckKind != null -> StudyDeckHost(

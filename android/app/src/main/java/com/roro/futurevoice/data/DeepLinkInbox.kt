@@ -13,11 +13,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 object DeepLinkInbox {
 
-    enum class Destination { VOCABULARY, EXPRESSIONS, PRACTICE, REVIEW }
+    enum class Destination { VOCABULARY, EXPRESSIONS, PRACTICE, REVIEW, REVIEW_ITEM }
 
     val pending = MutableStateFlow<Destination?>(null)
 
+    /** The one item a per-item reminder named: (kind, value). Read by the
+     *  root when it handles [Destination.REVIEW_ITEM]. */
+    val reviewItem = MutableStateFlow<Pair<String, String>?>(null)
+
     fun deliver(intent: Intent?) {
+        val itemKind = intent?.getStringExtra(ReviewQueue.ITEM_KIND_EXTRA)
+        val itemValue = intent?.getStringExtra(ReviewQueue.ITEM_VALUE_EXTRA)
+        if (itemKind != null && itemValue != null) {
+            reviewItem.value = itemKind to itemValue
+            pending.value = Destination.REVIEW_ITEM
+            return
+        }
         if (intent?.getBooleanExtra(ReviewQueue.OPEN_REVIEW_EXTRA, false) == true) {
             pending.value = Destination.REVIEW
             return

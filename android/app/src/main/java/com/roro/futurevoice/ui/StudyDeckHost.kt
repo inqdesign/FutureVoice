@@ -56,15 +56,18 @@ fun StudyDeckHost(
     language: String,
     nativeLanguage: String,
     level: CefrLevel,
+    /** The one item a per-item reminder named — dealt on its own (iOS
+     *  `DueReviewView(focus:)`). */
+    focus: StudyDeckItem? = null,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val vocab = remember { VocabStore.shared(context) }
     var items by remember { mutableStateOf<List<StudyDeckItem>?>(null) }
 
-    LaunchedEffect(kind, language) {
+    LaunchedEffect(kind, language, focus) {
         val goal = 10
-        items = when (kind) {
+        items = if (focus != null) listOf(focus) else when (kind) {
             null -> StudyScheduleStore.shared(context).snapshot(language).dueItems()
                 .map { StudyDeckItem(it.kind, it.text) }
             StudyScheduleStore.Kind.WORD ->

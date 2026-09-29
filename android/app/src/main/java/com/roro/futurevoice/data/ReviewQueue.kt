@@ -30,6 +30,12 @@ object ReviewQueue {
 
     const val CHANNEL_ID = "review_due"
     const val OPEN_REVIEW_EXTRA = "openReview"
+    /** What a per-item reminder points at (iOS `ItemReminder.Target`):
+     *  "word" / "expression" + the text, or "sentence" + the card id. They
+     *  ride the tap back so it opens THAT item, not the pile. */
+    const val ITEM_KIND_EXTRA = "reviewItemKind"
+    const val ITEM_VALUE_EXTRA = "reviewItemValue"
+    const val SENTENCE = "sentence"
 
     /**
      * Write a return time AND arm the reminder for it. The alarm is named
@@ -48,8 +54,20 @@ object ReviewQueue {
     suspend fun retire(context: Context, kind: StudyScheduleStore.Kind, text: String,
                        language: String) {
         StudyScheduleStore.shared(context).clear(kind, text, language)
+        cancel(context, kind.raw, text)
+    }
+
+    /** A sentence card put in a folder by hand gets its own callback, named
+     *  after the line (iOS `DrillSheet` → `ItemReminder.schedule(.sentence)`). */
+    fun armSentence(context: Context, card: com.roro.futurevoice.talk.DrillCard, at: Long) =
+        arm(context, SENTENCE, card.id, card.targetPhrase, at)
+
+    /** The card is settled — a callback for it would teach them to ignore these. */
+    fun cancelSentence(context: Context, cardId: String) = cancel(context, SENTENCE, cardId)
+
+    private fun cancel(context: Context, kind: String, value: String) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        am.cancel(firePendingIntent(context, requestCode(kind, text), kind, text))
+        am.cancel(firePendingIntent(context, requestCode(kind, value), kind, value, ""))
     }
 
     // MARK: - The reminder
@@ -62,22 +80,31 @@ object ReviewQueue {
      * exact-alarm permission to be a few minutes punctual about a word would
      * spend the one permission prompt that the daily CALL actually needs.
      */
-    private fun arm(context: Context, kind: StudyScheduleStore.Kind, text: String, at: Long) {
+    private fun arm(context: Context, kind: StudyScheduleStore.Kind, text: String, at: Long) =
+        arm(context, kind.raw, text, text, at)
+
+    private fun arm(context: Context, kind: String, value: String, text: String, at: Long) {
         ensureChannel(context)
+        val now = System.currentTimeMillis()
+        // Clamped into waking hours like the aggregate reminder — a "later"
+        // drop made at 2am shouldn't ring at 2am.
+        val fireAt = DrillReminder.fireDate(now, at, hasDueNow = false) ?: return
+        if (fireAt <= now) return
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at,
-            firePendingIntent(context, requestCode(kind, text), kind, text))
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt,
+            firePendingIntent(context, requestCode(kind, value), kind, value, text))
     }
 
     /** Stable per-item, and never collides with the daily call's 4801. */
-    private fun requestCode(kind: StudyScheduleStore.Kind, text: String): Int =
-        0x52_000000 or ((kind.raw + "|" + text.trim().lowercase()).hashCode() and 0x00FFFFFF)
+    private fun requestCode(kind: String, value: String): Int =
+        0x52_000000 or ((kind + "|" + value.trim().lowercase()).hashCode() and 0x00FFFFFF)
 
     private fun firePendingIntent(context: Context, code: Int,
-                                  kind: StudyScheduleStore.Kind, text: String): PendingIntent =
+                                  kind: String, value: String, text: String): PendingIntent =
         PendingIntent.getBroadcast(context, code,
             Intent(context, ReviewDueReceiver::class.java)
-                .putExtra("kind", kind.raw).putExtra("text", text).putExtra("code", code),
+                .putExtra("kind", kind).putExtra("value", value)
+                .putExtra("text", text).putExtra("code", code),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
     fun ensureChannel(context: Context) {
@@ -91,16 +118,18 @@ object ReviewQueue {
             NotificationManager.IMPORTANCE_DEFAULT))
     }
 
-    fun notifyDue(context: Context, text: String, code: Int) {
+    fun notifyDue(context: Context, kind: String, value: String, text: String, code: Int) {
         ensureChannel(context)
+        // Tapping opens THIS item — the promise was about it, not the pile.
         val open = PendingIntent.getActivity(context, code,
-            Intent(context, MainActivity::class.java).putExtra(OPEN_REVIEW_EXTRA, true)
+            Intent(context, MainActivity::class.java)
+                .putExtra(ITEM_KIND_EXTRA, kind).putExtra(ITEM_VALUE_EXTRA, value)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n: Notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_recent_history)
             .setContentTitle(context.getString(R.string.back_for_review))
-            .setContentText(text)
+            .setContentText(trimmed(text))
             .setAutoCancel(true)
             .setContentIntent(open)
             .build()
@@ -109,9 +138,21 @@ object ReviewQueue {
     }
 }
 
+/** Lock-screen bodies get truncated anyway; keep whole words (iOS `trimmed`). */
+private fun trimmed(text: String, max: Int = 90): String {
+    val clean = text.trim()
+    if (clean.length <= max) return clean
+    val cut = clean.take(max)
+    val lastSpace = cut.lastIndexOf(' ').takeIf { it > 0 } ?: cut.length
+    return clean.take(lastSpace) + "…"
+}
+
 class ReviewDueReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val text = intent.getStringExtra("text") ?: return
-        ReviewQueue.notifyDue(context, text, intent.getIntExtra("code", 0))
+        // An alarm armed by an older build carries no value: the text is it.
+        val kind = intent.getStringExtra("kind") ?: StudyScheduleStore.Kind.WORD.raw
+        val value = intent.getStringExtra("value") ?: text
+        ReviewQueue.notifyDue(context, kind, value, text, intent.getIntExtra("code", 0))
     }
 }
