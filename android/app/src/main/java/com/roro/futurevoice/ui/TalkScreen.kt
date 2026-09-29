@@ -417,7 +417,11 @@ fun TalkScreen(
                     // under the control at the bottom, where the hand is, and
                     // a giant "Listening…" as the page title made the screen
                     // look like a status readout instead of a call.
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    var showingLevel by remember { mutableStateOf(false) }
+                    if (showingLevel) LevelInfoSheet(level) { showingLevel = false }
+                    // Tapping the title explains the level (iOS `LevelHeaderTitle`).
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { showingLevel = true }) {
                         Text(topic.ifBlank { stringResource(R.string.lets_talk) },
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -432,7 +436,8 @@ fun TalkScreen(
                         }
                         Text(
                             listOfNotNull(
-                                level.code.uppercase(),
+                                // The chevron says the level opens something.
+                                level.code.uppercase() + " ›",
                                 elapsed.takeIf { it > 0 }?.let {
                                     com.roro.futurevoice.data.TalkTime.clock(it.toInt())
                                 },
