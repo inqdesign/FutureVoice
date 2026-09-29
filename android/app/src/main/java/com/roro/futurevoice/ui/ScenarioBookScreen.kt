@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -90,6 +91,39 @@ fun ScenarioBookScreen(
             .filter { vocab.isKnownWord(it.text, language) }.map { it.id }.toSet()
         exprMastered = cur?.expressions.orEmpty()
             .filter { vocab.hasUsedExpression(it.text, language) }.map { it.id }.toSet()
+    }
+    // "Read again" on the brief — the same board the scene shows while it
+    // reads, drawn in place of the section until the new reading lands.
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var rereading by remember { mutableStateOf(false) }
+    var briefProgress by remember { mutableStateOf(com.roro.futurevoice.net.ScenarioBriefEngine.Progress()) }
+    var briefError by remember { mutableStateOf<String?>(null) }
+    fun rereadBrief() {
+        val current = scenario ?: return
+        val b = current.brief?.takeIf { it.hasSources } ?: return
+        if (rereading) return
+        rereading = true; briefError = null
+        briefProgress = com.roro.futurevoice.net.ScenarioBriefEngine.Progress(sourcesRead = b.sources.map { false })
+        scope.launch {
+            try {
+                val persona = com.roro.futurevoice.data.PersonaStore.shared(context).load()
+                val native = context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
+                    .getString("futurevoice.nativeLanguage", null)
+                    ?: com.roro.futurevoice.data.LanguageCatalog.defaultNative()
+                val read = com.roro.futurevoice.net.ScenarioBriefEngine.read(
+                    context, current, persona, language, native, onProgress = { briefProgress = it })
+                val saved = current.copy(brief = read)
+                ScenarioStore.shared(context).save(saved, language)
+                scenario = saved
+                StoreEvents.bump()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                briefError = e.message
+            } finally {
+                rereading = false
+            }
+        }
     }
     val sc = scenario ?: return
     val cur = sc.curriculum
@@ -167,6 +201,12 @@ fun ScenarioBookScreen(
                         // needs the scene AND a line of the learner's in it.
                         if (cur.dialogue.orEmpty().any { it.speaker == "user" } && sayItAgain != null) {
                             SayItAgainButton(onClick = { sayingAgain = true })
+                        }
+                        // The attached material and what reading it gave —
+                        // the file itself is still wherever the learner keeps it.
+                        sc.brief?.takeIf { it.hasSources }?.let { b ->
+                            BriefSection(b, rereading, briefProgress, briefError, onReadAgain = ::rereadBrief)
+                            androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 6.dp))
                         }
                         cur.dialogueTitle?.let { SectionTitle(it) }
                         cur.dialogue.orEmpty().forEach { turn ->

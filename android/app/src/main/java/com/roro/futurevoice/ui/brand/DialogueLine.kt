@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +48,9 @@ fun DialogueLine(
     scale: DialogueScale = DialogueScale.STANDARD,
     /** Playback cursor (Watch) — an accent ring on the line being spoken. */
     isCurrent: Boolean = false,
+    /** The speaker's photo beside their name (iOS `avatar:`, `59c6481`) —
+     *  the same face the stories row and the composer show. */
+    avatar: androidx.compose.ui.graphics.ImageBitmap? = null,
     accessory: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -77,8 +82,16 @@ fun DialogueLine(
             horizontalAlignment = if (speaker.isUser) Alignment.End else Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(name, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                if (avatar != null) {
+                    androidx.compose.foundation.Image(avatar, contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape))
+                }
+                Text(name, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Column(
                 Modifier
                     .background(fill, RoundedCornerShape(14.dp))

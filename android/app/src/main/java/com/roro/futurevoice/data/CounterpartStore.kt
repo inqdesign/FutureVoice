@@ -60,6 +60,21 @@ data class Counterpart(
     /** "user" (a real learner) or "character" (an invented seed). */
     val personaKind: String? = null,
 
+    /**
+     * A public figure — a singer, an athlete, an author — added as someone
+     * NOT in the learner's life (iOS `isPublicFigure`, `59c6481`). Their
+     * profile is filled from PUBLIC coverage rather than the learner's own
+     * notes, and the voice is a preset like any stranger's — never a clone.
+     * Optional so rows saved before this decode unchanged.
+     */
+    val isPublicFigure: Boolean? = null,
+    /** Who the grounded lookup settled on ("BTS Jimin · singer"), shown for
+     *  the learner to confirm. null for anyone else. */
+    val publicIdentity: String? = null,
+    /** When public facts were last looked up. */
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val factsRefreshedAt: Long? = null,
+
     /** Situation ideas per target language — title + blurb, the blurb is the scene's seed. */
     val scenariosByLanguage: Map<String, List<com.roro.futurevoice.talk.SuggestedTopic>> = emptyMap(),
 
@@ -119,6 +134,8 @@ class CounterpartStore private constructor(context: Context) {
         val all = read()
         if (all.none { it.id == id }) return
         write(all.filterNot { it.id == id })
+        // Their photo goes with them — it is nobody's once they are gone.
+        CounterpartPhotoStore.delete(appContext, id)
     }
 
     private fun write(list: List<Counterpart>) {

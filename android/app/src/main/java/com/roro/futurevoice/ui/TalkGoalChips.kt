@@ -206,7 +206,17 @@ object TalkGoalPicker {
                 .filter { vocab.state(it, language) == null }
                 .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = true) }
 
-        val out = merge(emptyList(), bookWords + pickups, (bookPhrases + offered).take(MAX_EXPRESSIONS), limit)
+        // The brief's key expressions lead the phrases (iOS `59c6481`): the
+        // learner attached the posting for exactly this, and the phrases the
+        // reading pulled out of it are what the call is there to try. Anything
+        // already used in a talk has done its job and isn't asked for again.
+        val briefPhrases = rotated(runs, scenario.brief?.keyExpressions.orEmpty()
+            .filter { !vocab.hasUsedExpression(it, language) && CarryoverDetector.isCreditable(it) }
+            .map { TalkGoalItem(CarryoverDetector.normalized(it), it,
+                isWord = com.roro.futurevoice.data.WordSplitter.count(it, language) <= 1) })
+
+        val out = merge(emptyList(), bookWords + pickups,
+            (briefPhrases + bookPhrases + offered).take(MAX_EXPRESSIONS), limit)
         if (out.size < limit) {
             val seen = out.map { it.key }.toHashSet()
             for (item in pick(context, language, limit)) {

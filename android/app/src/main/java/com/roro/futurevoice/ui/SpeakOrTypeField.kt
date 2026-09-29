@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
@@ -54,6 +59,20 @@ fun SpeakOrTypeField(
     placeholder: String,
     /** BCP-47 for the recognizer — the language being answered IN. */
     locale: String,
+    /**
+     * Controls the HOST puts inside this field's own control row (iOS
+     * `leadingControls` / `trailingControls`, `9fe8cc7`). Given either, the
+     * field lays out as a BOX — the text on top, one strip of controls under
+     * it with the mic at its end — so a host with its own buttons never
+     * stacks a second toolbar under the field's.
+     */
+    leadingControls: (@Composable () -> Unit)? = null,
+    trailingControls: (@Composable () -> Unit)? = null,
+    /** A quiet mic, for a host whose own primary button shares the screen —
+     *  two filled accent shapes side by side read as two primaries. */
+    plainMic: Boolean = false,
+    /** Hidden while the box shows its reel; the host watches focus. */
+    fieldModifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val transcriber = remember { LiveTranscriber(context) }
@@ -86,6 +105,79 @@ fun SpeakOrTypeField(
     val micPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) begin() }
+
+    val micButton: @Composable () -> Unit = {
+        FilledTonalIconButton(
+            onClick = {
+                if (listening) end()
+                else if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED) begin()
+                else micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            },
+            colors = when {
+                listening -> IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer)
+                plainMic -> IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface)
+                else -> IconButtonDefaults.filledTonalIconButtonColors()
+            },
+        ) {
+            Icon(
+                if (listening) Icons.Filled.Stop else Icons.Filled.Mic,
+                contentDescription = stringResource(
+                    if (listening) R.string.stop_dictation else R.string.dictate),
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+
+    if (leadingControls != null || trailingControls != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            TextField(
+                value = text,
+                onValueChange = {
+                    onText(it)
+                    if (!listening && usedVoice) onUsedVoice(false)
+                },
+                placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyLarge) },
+                maxLines = 5,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                modifier = fieldModifier.fillMaxWidth(),
+            )
+            // ONE control strip: the host's buttons on the left, the
+            // language and the mic on the right — contents swap, geometry
+            // doesn't, so the box never resizes itself as they change.
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                leadingControls?.invoke()
+                if (listening) {
+                    Text(stringResource(R.string.listening_tap_to_finish),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                }
+                Spacer(Modifier.weight(1f))
+                if (!listening) trailingControls?.invoke()
+                micButton()
+            }
+            if (unavailable) {
+                Text(stringResource(R.string.speech_recognition_isnt_available_type_instead),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp))
+            }
+        }
+        return
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(

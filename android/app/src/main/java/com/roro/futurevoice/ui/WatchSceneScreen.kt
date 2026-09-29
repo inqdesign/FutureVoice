@@ -103,13 +103,61 @@ fun WatchSceneScreen(
     var error by remember { mutableStateOf<String?>(null) }
     /** A spent pool: a sheet, never an error line and never a bare paywall. */
     var spent by remember { mutableStateOf<SpentPool?>(null) }
+    /** True while the scenario's attached material is read — the board owns
+     *  the screen, and the scene is written only once the brief is on the
+     *  scenario. Once per change to the material, never per take. */
+    var readingBrief by remember { mutableStateOf(false) }
+    var briefProgress by remember { mutableStateOf(com.roro.futurevoice.net.ScenarioBriefEngine.Progress()) }
+    /** The counterpart's photo, for their speaker label. */
+    var otherId by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(scenarioId, replayKey) {
         val store = ScenarioStore.shared(context)
-        val scenario = store.load(targetLanguage).firstOrNull { it.id == scenarioId }
-            ?.also { scene = it }
+        error = null
+        var scenario = store.load(targetLanguage).firstOrNull { it.id == scenarioId }
+            ?.also { scene = it; otherId = it.counterpartId }
             ?: run { onBack(); return@LaunchedEffect }
+        // Material first (iOS `59c6481`). A brief with sources but no reading
+        // yet is read here, once, with the board on screen; the scene below
+        // is then written FROM it. A failed reading is the error state (Try
+        // again reruns both), never a scene quietly written without the
+        // material the learner attached.
+        val pending = scenario.brief
+        if (pending != null && pending.needsReading &&
+            !com.roro.futurevoice.capture.flags.WatchCaptureFlags.previewSceneFinished) {
+            readingBrief = true
+            generating = false
+            briefProgress = com.roro.futurevoice.net.ScenarioBriefEngine.Progress(
+                sourcesRead = pending.sources.map { false })
+            try {
+                val read = com.roro.futurevoice.net.ScenarioBriefEngine.read(
+                    context, scenario, persona, targetLanguage,
+                    context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
+                        .getString("futurevoice.nativeLanguage", null)
+                        ?: com.roro.futurevoice.data.LanguageCatalog.defaultNative(),
+                    onProgress = { briefProgress = it })
+                scenario = scenario.copy(brief = read)
+                store.save(scenario, targetLanguage)
+                scene = scenario
+                StoreEvents.bump()
+                com.roro.futurevoice.core.Analytics.capture("scenario_brief_read", mapOf(
+                    "sources" to read.sources.size,
+                    "links" to read.sources.count { it.kind == com.roro.futurevoice.talk.ScenarioBrief.Kind.LINK },
+                    "unread" to read.sources.count { !it.readOK },
+                    "questions" to read.likelyQuestions.size,
+                    "expressions" to read.keyExpressions.size,
+                ))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                readingBrief = false
+                error = e.message ?: context.getString(R.string.nothing_to_read_attach_a_link_or_a_file_first)
+                return@LaunchedEffect
+            }
+            readingBrief = false
+            generating = true
+        }
         // Capture only: the scene as it stands once it has played out, from
         // the saved take — no model call, no TTS.
         if (com.roro.futurevoice.capture.flags.WatchCaptureFlags.previewSceneFinished) {
@@ -218,6 +266,7 @@ fun WatchSceneScreen(
         }
     }
 
+    val otherPhoto = rememberPersonPhoto(otherId)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -238,6 +287,14 @@ fun WatchSceneScreen(
             )
         }
     ) { padding ->
+        if (readingBrief) {
+            val sources = scene?.brief?.sources.orEmpty()
+            androidx.compose.foundation.layout.Box(
+                Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground),
+                contentAlignment = Alignment.Center,
+            ) { BriefProgressBoard(sources, briefProgress) }
+            return@Scaffold
+        }
         Column(Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp)) {
             if (generating) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -249,6 +306,12 @@ fun WatchSceneScreen(
             error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
+                // Reruns the whole thing — the reading, then the scene.
+                if (shown.isEmpty()) {
+                    OutlinedButton(onClick = { replayKey += 1 }, modifier = Modifier.padding(top = 8.dp)) {
+                        Text(stringResource(R.string.try_again))
+                    }
+                }
             }
             LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
@@ -274,11 +337,17 @@ fun WatchSceneScreen(
                 }
                 items(shown.size, key = { shown[it].id }) { i ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        DialogueLine(
-                            shown[i], isCurrent = i == playingIndex,
-                            otherName = scene?.role?.takeIf { it.isNotBlank() }
-                                ?.substringBefore(" —")?.trim(),
-                            selfName = stringResource(R.string.future_self_1384d5))
+                        val isUser = shown[i].role == TurnRole.USER
+                        com.roro.futurevoice.ui.brand.DialogueLine(
+                            speaker = if (isUser) com.roro.futurevoice.ui.brand.DialogueSpeaker.USER
+                            else com.roro.futurevoice.ui.brand.DialogueSpeaker.OTHER,
+                            name = if (isUser) stringResource(R.string.future_self_1384d5)
+                            else scene?.role?.takeIf { it.isNotBlank() }?.substringBefore(" —")?.trim()
+                                ?: stringResource(R.string.future_self_1384d5),
+                            isCurrent = i == playingIndex,
+                            // The same face the stories row shows.
+                            avatar = if (isUser) null else otherPhoto,
+                        ) { Text(shown[i].transcript) }
                         // Every line is material: say it after them, or keep
                         // it. Offered per LINE, as on iOS — a bar at the
                         // bottom would ask which line it meant.

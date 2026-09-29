@@ -157,6 +157,55 @@ object CaptureWatch {
                 )
             }
         },
+        // Android-only (plan 2.46): the WRITING door — the situation box,
+        // empty, with the example reel rolling over its middle.
+        "composer-box" to @Composable { c: Context ->
+            Seeded({}) {
+                ScenarioComposer(
+                    targetLanguage = lang(c), existingCategories = emptyList(),
+                    host = ComposerHost.WATCH, mode = com.roro.futurevoice.ui.ComposerMode.CUSTOM,
+                    onCommitted = {}, onDismiss = {},
+                )
+            }
+        },
+        // Android-only (plan 2.46): the BROWSE door from Watch — the category
+        // grid with no text field anywhere.
+        "composer-browse" to @Composable { c: Context ->
+            Seeded({}) {
+                ScenarioComposer(
+                    targetLanguage = lang(c), existingCategories = emptyList(),
+                    host = ComposerHost.WATCH, mode = com.roro.futurevoice.ui.ComposerMode.BROWSE,
+                    onCommitted = {}, onDismiss = {},
+                )
+            }
+        },
+        // Android-only (plan 2.46): the board while attached material is
+        // read — one source done, the summary in, the questions being written.
+        "brief-board" to @Composable { _: Context ->
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()) {
+                com.roro.futurevoice.ui.BriefProgressBoard(
+                    sources = sampleBrief.sources,
+                    progress = com.roro.futurevoice.net.ScenarioBriefEngine.Progress(
+                        sourcesRead = listOf(true, false), summary = true, counterpartFacts = 5),
+                )
+            }
+        },
+        // Android-only (plan 2.46): a book whose situation carries a read
+        // brief — the two halves, the sources, "Read again".
+        "book-brief" to @Composable { c: Context ->
+            var id by remember { mutableStateOf<String?>(null) }
+            Seeded({
+                val sid = CaptureSeed.seedSceneEndScenario(c)
+                val store = com.roro.futurevoice.data.ScenarioStore.shared(c)
+                store.load(lang(c)).firstOrNull { it.id == sid }?.let {
+                    store.save(it.copy(brief = sampleBrief), lang(c))
+                }
+                id = sid
+            }) {
+                com.roro.futurevoice.ui.ScenarioBookScreen(
+                    scenarioId = id!!, language = lang(c), onWatch = {}, onShadow = {}, onBack = {})
+            }
+        },
         // iOS `watchtab-empty`: a learner with no scenarios yet.
         "watchtab-empty" to { c ->
             CaptureTalk.TabShot(c, com.roro.futurevoice.ui.HomeTab.WATCH) {
@@ -194,6 +243,26 @@ object CaptureWatch {
 }
 
 private fun lang(c: Context) = LanguageScope.active(c)
+
+/** A brief as one reading of a posting and a CV would leave it. */
+private val sampleBrief = com.roro.futurevoice.talk.ScenarioBrief(
+    sources = listOf(
+        com.roro.futurevoice.talk.ScenarioBrief.Source(
+            id = "capture-brief-link", kind = com.roro.futurevoice.talk.ScenarioBrief.Kind.LINK,
+            label = "https://jobs.example.com/barista-lead", detail = "job posting · Berlin"),
+        com.roro.futurevoice.talk.ScenarioBrief.Source(
+            id = "capture-brief-cv", kind = com.roro.futurevoice.talk.ScenarioBrief.Kind.FILE,
+            label = "CV_2026.pdf", detail = "CV, 2 pages"),
+    ),
+    summary = "Café Kleist · Shift lead · Berlin Mitte",
+    counterpartFacts = listOf("Specialty café, two locations", "Needs someone to open at 6:30",
+        "Cares about latte art and calm under pressure"),
+    likelyQuestions = listOf("What drew you to specialty coffee?",
+        "How would you handle a queue out the door?", "Can you do early shifts?"),
+    learnerFacts = listOf("Three years at a roastery café", "Trained two new hires last year"),
+    keyExpressions = listOf("open up the shop", "keep the line moving", "dial in the grinder"),
+    readAt = System.currentTimeMillis(),
+)
 
 private fun level(c: Context): CefrLevel = CefrLevel.from(
     c.getSharedPreferences("futurevoice", 0).getString("futurevoice.level.${lang(c)}", null))

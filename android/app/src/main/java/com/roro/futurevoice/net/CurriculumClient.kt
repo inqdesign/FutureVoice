@@ -56,6 +56,19 @@ class CurriculumClient(private val auth: AuthRepository) {
                 put("notes", scenario.notes)
                 scenario.isTopic?.let { put("is_topic", it) }
             })
+            // The learner's attached material, read once (`ScenarioBrief`).
+            // Sent sorted by side — the server keeps the other side's facts on
+            // the counterpart and the learner's on the user's lines. An older
+            // deploy ignores the key and writes the scene without it.
+            scenario.brief?.takeIf { it.hasContent }?.let { b ->
+                put("brief", buildJsonObject {
+                    put("summary", b.summary)
+                    putJsonArray("counterpart_facts") { b.counterpartFacts.forEach { add(it) } }
+                    putJsonArray("likely_questions") { b.likelyQuestions.forEach { add(it) } }
+                    putJsonArray("learner_facts") { b.learnerFacts.forEach { add(it) } }
+                    putJsonArray("key_expressions") { b.keyExpressions.forEach { add(it) } }
+                })
+            }
             put("cast_identity", castIdentity)
             persona?.takeIf { it.isMinimallyComplete }?.let { p ->
                 put("persona", buildJsonObject {

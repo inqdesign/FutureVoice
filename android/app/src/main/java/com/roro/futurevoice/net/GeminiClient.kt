@@ -34,12 +34,31 @@ class GeminiClient(private val auth: AuthRepository) {
 
     data class InlineAudio(val mimeType: String, val base64Data: String)
 
+    /** A document read for a scenario brief — PDF, JPEG or plain text. */
+    data class InlineFile(val mimeType: String, val base64Data: String)
+
     data class Message(
         val role: Role,
         val content: String,
         val inlineAudio: InlineAudio? = null,
+        /** Sent before the text, like audio; Gemini reads them as first-class
+         *  parts. Never more than [MAX_INLINE_BYTES] in total per request. */
+        val inlineFiles: List<InlineFile> = emptyList(),
     ) {
         enum class Role(val wire: String) { USER("user"), MODEL("model") }
+    }
+
+    companion object {
+        /** Inline request ceiling: the API takes 20 MB; 10 MB of file bytes
+         *  leaves room for base64 growth and the prompt. */
+        const val MAX_INLINE_BYTES = 10 * 1024 * 1024
+
+        private val longReads by lazy {
+            Edge.client.newBuilder()
+                .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+        }
     }
 
     // MARK: - Wire types
@@ -73,8 +92,17 @@ class GeminiClient(private val auth: AuthRepository) {
     @Serializable
     private class EmptyObject
 
+    /**
+     * Each tool object carries only the key it was asked for (nulls are
+     * omitted). `url_context` lets the model read the pages a message names —
+     * the scenario brief's link path; `google_search` grounds on the open web.
+     * Either one disables the JSON response mode.
+     */
     @Serializable
-    private data class ToolDto(val google_search: EmptyObject)
+    private data class ToolDto(
+        val google_search: EmptyObject? = null,
+        val url_context: EmptyObject? = null,
+    )
 
     @Serializable
     private data class BodyDto(
@@ -131,10 +159,12 @@ class GeminiClient(private val auth: AuthRepository) {
         searchGrounding: Boolean = false,
         purpose: String? = null,
         idempotencyKey: String? = null,
+        urlContext: Boolean = false,
     ): T = withContext(Dispatchers.IO) {
         val request = buildRequest(
             system, messages, model, maxTokens, temperature, searchGrounding,
             purpose, idempotencyKey, jsonResponse = true, stream = false,
+            urlContext = urlContext,
         )
         val (raw, finishReason) = Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -270,6 +300,79 @@ class GeminiClient(private val auth: AuthRepository) {
         }
     }
 
+    /**
+     * Streaming structured call whose only use of the stream is to SHOW
+     * progress — `onPartial` gets the accumulated text after every delta, and
+     * the decoded payload is identical to a buffered call's (iOS
+     * `sendJSONStreamAccumulating`). A deploy that ignores `stream` sends one
+     * body and `onPartial` simply never fires.
+     */
+    suspend fun <T> sendJsonStreamAccumulating(
+        system: String,
+        messages: List<Message>,
+        serializer: DeserializationStrategy<T>,
+        model: Model = Model.FLASH_36,
+        maxTokens: Int = 1024,
+        purpose: String? = null,
+        idempotencyKey: String? = null,
+        searchGrounding: Boolean = false,
+        urlContext: Boolean = false,
+        onPartial: suspend (String) -> Unit,
+    ): T = withContext(Dispatchers.IO) {
+        val request = buildRequest(
+            system, messages, model, maxTokens, temperature = 0.4,
+            searchGrounding = searchGrounding, purpose = purpose,
+            idempotencyKey = idempotencyKey, jsonResponse = true, stream = true,
+            urlContext = urlContext,
+        )
+        // A link read through url_context can sit silent past the shared
+        // client's 40 s per-read guard before its first event (iOS gives the
+        // brief 90 s), so this call gets its own read timeout.
+        longReads.newCall(request).execute().use { resp ->
+            if (resp.code !in 200..299) {
+                val snippet = runCatching { resp.body.source().readByteString(512L) }
+                    .getOrNull()?.utf8().orEmpty()
+                if (resp.code == 402) throw EdgeError.wall(snippet)
+                throw EdgeError.Http(resp.code, snippet)
+            }
+            val raw = StringBuilder()
+            var finishReason: String? = null
+            if (resp.header("X-Gemini-Stream") != "sse") {
+                val decoded = Edge.json.decodeFromString(ApiResponse.serializer(), resp.body.string())
+                val candidate = decoded.candidates?.firstOrNull()
+                raw.append(candidate?.content?.parts?.mapNotNull { it.text }?.joinToString("").orEmpty())
+                finishReason = candidate?.finishReason
+            } else {
+                val source = resp.body.source()
+                while (true) {
+                    val line = source.readUtf8Line() ?: break
+                    if (!line.startsWith("data:")) continue
+                    val event = line.removePrefix("data:").trim()
+                    if (event.isEmpty() || event == "[DONE]") continue
+                    val chunk = runCatching {
+                        Edge.json.decodeFromString(ApiResponse.serializer(), event)
+                    }.getOrNull() ?: continue
+                    val candidate = chunk.candidates?.firstOrNull()
+                    candidate?.finishReason?.let { finishReason = it }
+                    val delta =
+                        candidate?.content?.parts?.mapNotNull { it.text }?.joinToString("").orEmpty()
+                    if (delta.isEmpty()) continue
+                    raw.append(delta)
+                    onPartial(raw.toString())
+                }
+            }
+            val truncated = finishReason == "MAX_TOKENS"
+            val text = raw.toString().trim()
+            val body = Edge.extractJson(text)
+                ?: throw if (truncated) EdgeError.Truncated else EdgeError.JsonNotFound(text)
+            try {
+                Edge.json.decodeFromString(serializer, body)
+            } catch (e: Exception) {
+                if (truncated) throw EdgeError.Truncated else throw e
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     private suspend fun buildRequest(
@@ -283,7 +386,9 @@ class GeminiClient(private val auth: AuthRepository) {
         idempotencyKey: String?,
         jsonResponse: Boolean,
         stream: Boolean,
+        urlContext: Boolean = false,
     ): Request {
+        val usesTools = searchGrounding || urlContext
         val body = BodyDto(
             model = model.id,
             system_instruction = SystemInstructionDto(listOf(PartDto(text = system))),
@@ -291,6 +396,9 @@ class GeminiClient(private val auth: AuthRepository) {
                 val parts = buildList {
                     // Audio FIRST, text rides along as the ASR hint.
                     msg.inlineAudio?.let {
+                        add(PartDto(inlineData = InlineDataDto(it.mimeType, it.base64Data)))
+                    }
+                    msg.inlineFiles.forEach {
                         add(PartDto(inlineData = InlineDataDto(it.mimeType, it.base64Data)))
                     }
                     add(PartDto(text = msg.content))
@@ -310,9 +418,12 @@ class GeminiClient(private val auth: AuthRepository) {
                 // Force JSON at the API level — prompt-only JSON drifts back to
                 // prose in long conversations because the model imitates its own
                 // (plain-text) turns in the history. Incompatible with grounding.
-                responseMimeType = if (jsonResponse && !searchGrounding) "application/json" else null,
+                responseMimeType = if (jsonResponse && !usesTools) "application/json" else null,
             ),
-            tools = if (searchGrounding) listOf(ToolDto(EmptyObject())) else null,
+            tools = buildList {
+                if (searchGrounding) add(ToolDto(google_search = EmptyObject()))
+                if (urlContext) add(ToolDto(url_context = EmptyObject()))
+            }.takeIf { it.isNotEmpty() },
             purpose = purpose,
             stream = if (stream) true else null,
         )

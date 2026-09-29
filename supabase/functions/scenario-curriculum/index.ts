@@ -5,7 +5,8 @@
 //
 // Body: { scenario: { environment, role?, notes?, is_topic? },
 //         cast_identity?, persona?, proficiency?, target_language?,
-//         weak_vocab_areas?, recurring_mistakes?, avoid_titles?, stream? }
+//         weak_vocab_areas?, recurring_mistakes?, avoid_titles?,
+//         common_ground?, brief?, stream? }
 // Returns Gemini's own body (SSE with the X-Gemini-Stream handshake when
 // `stream`) — `turns` FIRST in the schema so playback can start while the
 // study tail is still being written. Purpose "scenario-curriculum".
@@ -26,28 +27,60 @@ const ENGLISH_NAMES: Record<string, string> = {
   pt: "Portuguese", ja: "Japanese", ko: "Korean", zh: "Chinese",
 }
 
-/** `ScenarioCurriculumEngine.sceneScale` — size follows the learner's level. */
-function sceneScale(prof: string): { turnRange: string; turnStyle: string; maxTokens: number } {
+/**
+ * A scene is the SAME SIZE at every level (iOS `59c6481` + `b1a1953`,
+ * 2026-09-26): the band changes only which WORDS and sentence shapes fill it —
+ * the rule the live call settled on 2026-08-20. Scaling length with the band
+ * read wrong both ways (an A2 scene too thin to hold the situation, a C1 scene
+ * too long to sit through), and length is where a scene's cost lives: one
+ * more line measured 4.4x the ElevenLabs bill. 9–11 → 8–10 turns the same day
+ * for the same reason; eight turns (four exchanges) is the floor the
+ * SUBSTANCE rule still fits in — do not take another.
+ */
+const SCENE_TURN_RANGE = "8 to 10"
+const SCENE_TURN_STYLE = `Each turn is 1–2 sentences — as long as the moment naturally calls
+  for, never padded to reach the count and never clipped mid-thought.
+  This is two people talking, not paragraphs read aloud.`
+/** One ceiling: the payload is the same size for every learner now. */
+const SCENE_MAX_TOKENS = 3000
+
+/** `ConversationEngine.speechScale` — the ONE definition of what a band
+ *  means, read by the call and the scene alike. Copied verbatim from iOS. */
+function speechScale(prof: string): { vocabulary: string; structure: string } {
   if (prof === "A1" || prof === "A2") return {
-    turnRange: "8 to 10",
-    turnStyle: "Each turn is ONE short, simple sentence (roughly 5–10 words) —\nclear everyday phrasing the learner can fully own.",
-    maxTokens: 2200,
+    vocabulary: `Use the most ORDINARY everyday words — the ones this learner
+  already hears every day. No academic, technical, literary or
+  business register. At most ONE idiom or phrasal verb per turn,
+  and only when the situation makes its meaning obvious. When a
+  precise word would be hard, say the easy thing instead of the
+  clever thing ("it got worse", not "it deteriorated").`,
+    structure: `Simple shapes — one clause, or two joined by "and" / "but" /
+  "so". Keep subordinate clauses rare and never stack two. Say
+  things in the order they happened. Several short sentences
+  are EASIER to follow than one long one, so break a thought up
+  rather than packing it in.`,
   }
   if (prof === "C1" || prof === "C2") return {
-    turnRange: "10 to 14",
-    turnStyle: "Each turn is 1–3 full sentences at natural native pacing —\nsubordinate clauses, nuance, and follow-up questions welcome.\nGo deeper into the substance of the situation; an advanced\nlearner should hear a conversation with real depth.",
-    maxTokens: 3600,
+    vocabulary: `Speak with your full natural range — idiom, precise nuance
+  words, register shifts, the odd bit of wordplay. Don't
+  simplify; this learner is here for the parts they can't
+  produce yet.`,
+    structure: `Subordinate clauses, asides and self-corrections the way a real
+  speaker talks.`,
   }
   return {
-    turnRange: "8 to 12",
-    turnStyle: "Each turn is 1–2 sentences, as long as the moment naturally\ncalls for — never padded, never artificially clipped.",
-    maxTokens: 2800,
+    vocabulary: `Everyday vocabulary plus the common idioms and phrasal verbs a
+  fluent speaker actually reaches for. Specialist or abstract
+  words are fine when the sentence around them makes the meaning
+  clear; drop one genuinely new word in now and then, not every
+  turn.`,
+    structure: `Subordinate clauses and natural hedging are welcome.`,
   }
 }
 
 function systemPrompt(targetLanguage: string, prof: string): string {
   const languageName = ENGLISH_NAMES[targetLanguage] ?? targetLanguage.toUpperCase()
-  const scale = sceneScale(prof)
+  const band = speechScale(prof)
   return `You are a ${languageName} curriculum designer. Given ONE real-life
 scenario a learner (CEFR ${prof}) wants to master, write the SCENE
 for it: a naturalistic dialogue between the learner ("user") and the
@@ -66,7 +99,7 @@ the two: in "thanking the beta testers" the user thanks and the
 counterpart is thanked, not the reverse.
 
 Content rules:
-- turns: ${scale.turnRange}, alternating naturally. WHOEVER'S MOVE THE
+- turns: ${SCENE_TURN_RANGE}, alternating naturally. WHOEVER'S MOVE THE
   SCENARIO NAMES OPENS IT — when the learner is the one going in to do
   something, the FIRST turn is "user". The counterpart opens only when
   the situation is something that happens TO the learner (called in by
@@ -75,7 +108,7 @@ Content rules:
   either may open.
   Real spoken ${languageName} — contractions, hedges, natural register.
   ${BREATH_PUNCTUATION}
-  ${scale.turnStyle}
+  ${SCENE_TURN_STYLE}
   The USER speaks as a confident, fluent version of the learner
   (slightly above ${prof}, never textbook-stiff). Every user turn must
   be a complete, speakable line — it will be shadowed ALOUD. No stage
@@ -92,6 +125,21 @@ Content rules:
 - Everything specific to THIS scenario and persona — never generic
   textbook content. All content in ${languageName}; notes in simple ${languageName}.
 
+SUBSTANCE — the same at EVERY level. Something has to actually HAPPEN:
+the specific thing the learner is going in to do, the complication it
+runs into, the question that is hard to answer, and how it lands. A
+beginner's scene is not a thinner scene — it is the same situation in
+easier words. Never fill the turns with greetings and pleasantries and
+stop before the difficult part; that part is the reason they are
+watching.
+
+WHAT ${prof} CHANGES — the words and the sentence shapes, and
+nothing else. The scene is the same length and carries the same amount
+of substance for every learner; the band only decides how hard it is
+to say.
+- Vocabulary: ${band.vocabulary}
+- Sentence shapes: ${band.structure}
+
 Return STRICT JSON only — no prose, no code fences:
 {
   "turns": [ { "speaker": "user" | "counterpart", "text": "..." } ],
@@ -105,6 +153,14 @@ starts on the first turn the moment it closes, while you are still
 writing the rest. Every character emitted before it — a title, a
 preamble, anything — is silence the learner sits through. Write the
 scene first and name it afterwards.`
+}
+
+type Brief = {
+  summary: string
+  counterpart_facts: string[]
+  likely_questions: string[]
+  learner_facts: string[]
+  key_expressions: string[]
 }
 
 type Persona = {
@@ -124,6 +180,10 @@ function userMessage(opts: {
    *  sides). Absent for a scene with no counterpart, and for iOS, which
    *  sends its whole message already assembled. */
   commonGround?: string
+  /** The learner's attached material, read once on the client
+   *  (`ScenarioBrief`), already sorted by side. Optional: absent for every
+   *  scene without material and for older clients. */
+  brief?: Brief
 }): string {
   const { scenario } = opts
   const lines: string[] = []
@@ -142,6 +202,34 @@ function userMessage(opts: {
       ? "- talking to: infer the natural counterpart — the person on the OTHER side of what the learner is doing, never the one doing it"
       : `- talking to: ${role} — the other side of what the learner is doing, never the one doing it`)
     if (scenario.notes?.trim()) lines.push(`- context: ${scenario.notes}`)
+  }
+  // The learner's attached material (iOS `ScenarioCurriculumEngine.userMessage`,
+  // `59c6481`). Two sides, and they must stay on their sides: the other
+  // side's facts and questions belong to the counterpart, the learner's facts
+  // to the USER's lines. Handing the CV to the interviewer is the failure
+  // this ordering exists to prevent.
+  const b = opts.brief
+  if (b && (b.counterpart_facts.length || b.likely_questions.length ||
+            b.learner_facts.length || b.key_expressions.length)) {
+    lines.push("")
+    lines.push("material the learner attached for THIS situation (read once — facts only, never invent beyond them):")
+    if (b.summary) lines.push(`- about: ${b.summary}`)
+    if (b.counterpart_facts.length) {
+      lines.push("- the OTHER side (this is who the counterpart is and what they want):")
+      b.counterpart_facts.forEach((f) => lines.push(`    · ${f}`))
+    }
+    if (b.likely_questions.length) {
+      lines.push("- what the other side is likely to say or ask — use SOME of these, not all, and not in this order; a fresh take picks different ones:")
+      b.likely_questions.forEach((q) => lines.push(`    · ${q}`))
+    }
+    if (b.learner_facts.length) {
+      lines.push("- the LEARNER's own side (the user's lines draw on these; the counterpart may only know what such a person would plausibly have been sent):")
+      b.learner_facts.forEach((f) => lines.push(`    · ${f}`))
+    }
+    if (b.key_expressions.length) {
+      lines.push(`- expressions this situation calls for — work several into the dialogue naturally where they fit, and prefer them for the study lists: ${b.key_expressions.join(" · ")}`)
+    }
+    lines.push("  (the notes above may be in the learner's native language — context only, never let it change the language you write in)")
   }
   if (opts.castIdentity) {
     lines.push(`- who PLAYS that counterpart: ${opts.castIdentity}. `
@@ -237,13 +325,24 @@ Deno.serve(async (req) => {
       : [],
     avoidTitles: strs(body.avoid_titles),
     commonGround: typeof body.common_ground === "string" ? body.common_ground : undefined,
+    brief: (() => {
+      const raw = body.brief as Record<string, unknown> | undefined
+      if (!raw || typeof raw !== "object") return undefined
+      return {
+        summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
+        counterpart_facts: strs(raw.counterpart_facts).slice(0, 8),
+        likely_questions: strs(raw.likely_questions).slice(0, 10),
+        learner_facts: strs(raw.learner_facts).slice(0, 8),
+        key_expressions: strs(raw.key_expressions).slice(0, 14),
+      }
+    })(),
   })
 
   const geminiBody = {
     system_instruction: { parts: [{ text: systemPrompt(targetLanguage, prof) }] },
     contents: [{ role: "user", parts: [{ text: message }] }],
     generationConfig: {
-      maxOutputTokens: sceneScale(prof).maxTokens,
+      maxOutputTokens: SCENE_MAX_TOKENS,
       thinkingConfig: { thinkingLevel: "low" },
       responseMimeType: "application/json",
     },
