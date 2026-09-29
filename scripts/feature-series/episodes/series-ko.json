@@ -223,17 +223,17 @@
   "cat": "talk",
   "goal": "정한 시간에 유창한 내가 먼저 전화를 건다",
   "id": "e06",
-  "issues": "알람(수신) 화면은 실기기 스크린샷 필요. Me → 전화 설정 화면 캡처 필요",
+  "issues": "전화 설정(시간 여러 개 고르는) 화면 캡처 필요 — 2번 장",
   "name": "매일 걸려오는 전화",
   "note": "전화 설정하는 ㅅ 것도 필요해. ",
   "order": 5,
   "short": "매일 오는 전화",
   "slides": [
    {
-    "body": "무음 모드에서도 울려요.",
-    "kind": "top",
-    "shot": "me",
-    "title": "원하는 시간에\n전화가 와요"
+    "shot": "device-daily-call",
+    "title": "정한 시간에\n[전화]가 와요",
+    "body": "무음 모드에서도 울려요.\n받기를 누르면 바로 통화가 시작돼요.",
+    "kind": "full"
    },
    {
     "body": "하루에 여러번 설정가능",
@@ -287,7 +287,7 @@
   "cat": "watch",
   "goal": "실제로 곧 있을 일을 적고, 자료까지 붙이면 그 상황이 만들어진다",
   "id": "e08",
-  "issues": "'내 상황 만들기' 박스(직접 쓰기)와 자료 첨부(채용공고·이력서) 화면 캡처 필요",
+  "issues": "",
   "name": "나만의 상황 만들기",
   "note": "",
   "order": 7,
@@ -298,6 +298,24 @@
     "kind": "bottom",
     "shot": "device-watchtab",
     "title": "두 가지 방법으로\n시작해요"
+   },
+   {
+    "shot": "device-composer",
+    "title": "일어날 일을\n[그대로] 적어요",
+    "body": "예시가 흘러가서\n뭘 써야 할지 막막하지 않아요.",
+    "kind": "full"
+   },
+   {
+    "shot": "device-composer-attach-menu",
+    "title": "공고나 이력서도\n[같이] 넣어요",
+    "body": "사진, 파일, 링크 무엇이든.",
+    "kind": "bottom"
+   },
+   {
+    "shot": "device-composer-attached",
+    "title": "파일은 폰에\n[그대로] 있어요",
+    "body": "앱에는 읽은 내용만 남아요.",
+    "kind": "bottom"
    },
    {
     "body": "카페 → 주문 → 주문이 잘못 나왔어요.",
@@ -312,14 +330,14 @@
     "title": "만든 상황은\n다시 쓸 수 있어요"
    }
   ],
-  "status": "needs-capture",
+  "status": "draft",
   "tagline": "실제로 있을 일을 그대로 연습해요"
  },
  {
   "cat": "watch",
   "goal": "친구, 동료, 유명인까지. 관계와 말투에 맞춰 대화한다",
   "id": "e09",
-  "issues": "유명인 확인 화면(identity 확인) 캡처 필요, 사람 카드 상세 캡처 필요",
+  "issues": "사람 카드 상세 화면은 아직 없음",
   "name": "사람과 연습하기",
   "note": "",
   "order": 8,
@@ -332,10 +350,16 @@
     "title": "내 사람들과\n연습해요"
    },
    {
-    "body": "반말로 할지, 존댓말로 할지.",
-    "kind": "top",
-    "shot": "intake-people",
-    "title": "관계와 말투를\n정해요"
+    "shot": "device-person-intake",
+    "title": "어떤 [사이]인지\n골라요",
+    "body": "친구, 동료, 가족, 그리고 유명인까지.",
+    "kind": "top"
+   },
+   {
+    "shot": "device-person-public",
+    "title": "유명인은 [누구인지]만\n확인하면 돼요",
+    "body": "공개된 정보로 그 사람답게 말해요.\n목소리는 기본 목소리 중 하나예요.",
+    "kind": "full"
    },
    {
     "body": "다른 학습자들의 자기소개로 대화해요.",
@@ -344,7 +368,7 @@
     "title": "처음 만나는 사람과도\n말해봐요"
    }
   ],
-  "status": "needs-capture",
+  "status": "draft",
   "tagline": "친구, 동료와 그 말투 그대로 말해봐요"
  },
  {
@@ -421,7 +445,7 @@
   "cat": "practice",
   "goal": "유창한 내 목소리를 따라 말하고 박자까지 채점받는다",
   "id": "e12",
-  "issues": "결과 화면(점수·박자 점·다른 단어) 캡처 필요",
+  "issues": "",
   "name": "섀도잉",
   "note": "",
   "order": 11,
@@ -434,13 +458,25 @@
     "title": "내 목소리로\n따라 말해요"
    },
    {
-    "body": "늦었는지, 빨랐는지 점으로 보여줘요.",
-    "kind": "full",
-    "shot": "shadow",
-    "title": "단어마다\n박자를 봐요"
+    "shot": "device-shadow-countdown",
+    "title": "숫자가 끝나면\n[따라] 말해요",
+    "body": "원본 문장을 보면서 그대로.",
+    "kind": "full"
+   },
+   {
+    "shot": "device-shadow-result",
+    "title": "단어마다\n[박자]를 봐요",
+    "body": "점이 가운데면 딱 맞고,\n오른쪽이면 늦었어요.",
+    "kind": "top"
+   },
+   {
+    "shot": "device-shadow-loop",
+    "title": "어려운 구간만\n[반복]해요",
+    "body": "단어를 탭해 고르면 그 부분만 다시 들려줘요.",
+    "kind": "bottom"
    }
   ],
-  "status": "needs-capture",
+  "status": "draft",
   "tagline": "유창한 내 목소리를 따라 말해요"
  },
  {

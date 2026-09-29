@@ -125,6 +125,48 @@
    }
   },
   {
+   "id": "e08",
+   "cat": "watch",
+   "slides": [
+    "/community/series/e08-01.jpg",
+    "/community/series/e08-02.jpg",
+    "/community/series/e08-03.jpg",
+    "/community/series/e08-04.jpg",
+    "/community/series/e08-05.jpg",
+    "/community/series/e08-06.jpg",
+    "/community/series/e08-07.jpg",
+    "/community/series/e08-08.jpg"
+   ],
+   "ko": {
+    "title": "나만의 상황",
+    "tagline": "실제로 있을 일을 그대로 연습해요"
+   },
+   "en": {
+    "title": "Your own situation",
+    "tagline": "Rehearse what's actually coming up"
+   }
+  },
+  {
+   "id": "e09",
+   "cat": "watch",
+   "slides": [
+    "/community/series/e09-01.jpg",
+    "/community/series/e09-02.jpg",
+    "/community/series/e09-03.jpg",
+    "/community/series/e09-04.jpg",
+    "/community/series/e09-05.jpg",
+    "/community/series/e09-06.jpg"
+   ],
+   "ko": {
+    "title": "사람과 연습",
+    "tagline": "친구, 동료와 그 말투 그대로 말해봐요"
+   },
+   "en": {
+    "title": "Practice with people",
+    "tagline": "Talk with friends and coworkers, in their own tone"
+   }
+  },
+  {
    "id": "e10",
    "cat": "practice",
    "slides": [
@@ -161,6 +203,26 @@
    "en": {
     "title": "Say it again",
     "tagline": "The same conversation, done right this time"
+   }
+  },
+  {
+   "id": "e12",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e12-01.jpg",
+    "/community/series/e12-02.jpg",
+    "/community/series/e12-03.jpg",
+    "/community/series/e12-04.jpg",
+    "/community/series/e12-05.jpg",
+    "/community/series/e12-06.jpg"
+   ],
+   "ko": {
+    "title": "섀도잉",
+    "tagline": "유창한 내 목소리를 따라 말해요"
+   },
+   "en": {
+    "title": "Shadowing",
+    "tagline": "Repeat after your own fluent voice"
    }
   },
   {
