@@ -333,7 +333,11 @@
     "/community/series/e18-01.jpg",
     "/community/series/e18-02.jpg",
     "/community/series/e18-03.jpg",
-    "/community/series/e18-04.jpg"
+    "/community/series/e18-04.jpg",
+    "/community/series/e18-05.jpg",
+    "/community/series/e18-06.jpg",
+    "/community/series/e18-07.jpg",
+    "/community/series/e18-08.jpg"
    ],
    "ko": {
     "title": "활동 · 오늘의 카드",
@@ -350,7 +354,8 @@
    "slides": [
     "/community/series/e19-01.jpg",
     "/community/series/e19-02.jpg",
-    "/community/series/e19-03.jpg"
+    "/community/series/e19-03.jpg",
+    "/community/series/e19-04.jpg"
    ],
    "ko": {
     "title": "홈 화면 위젯",

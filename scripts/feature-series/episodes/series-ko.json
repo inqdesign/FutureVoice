@@ -696,6 +696,30 @@
     "kind": "top",
     "shot": "daycard",
     "title": "오늘을\n카드 한 장으로"
+   },
+   {
+    "shot": "device-share-sheet",
+    "title": "어디든 [바로]\n공유해요",
+    "body": "메시지, 스레드, 인스타그램까지.",
+    "kind": "top"
+   },
+   {
+    "shot": "device-share-instagram",
+    "title": "인스타그램이면\n[릴스·스토리]로",
+    "body": "게시물, 메시지로도 보낼 수 있어요.",
+    "kind": "bottom"
+   },
+   {
+    "shot": "device-share-story",
+    "title": "사진 위에\n[오늘의 기록]이 얹혀요",
+    "body": "대화 시간, 공부 시간, 연속 기록.",
+    "kind": "full"
+   },
+   {
+    "shot": "device-share-threads",
+    "title": "스레드에도\n[한 번에]",
+    "body": "카드를 붙여서 바로 글을 써요.",
+    "kind": "top"
    }
   ],
   "status": "draft",
@@ -705,17 +729,23 @@
   "cat": "progress",
   "goal": "앱을 안 열어도 오늘의 단어와 표현이 보인다",
   "id": "e19",
-  "issues": "위젯 캡처는 갤러리 형태 — 실제 홈 화면 배치 스크린샷이 더 좋음",
+  "issues": "",
   "name": "홈 화면 위젯",
   "note": "",
   "order": 18,
   "short": "홈 화면 위젯",
   "slides": [
    {
-    "body": "30분마다 바뀌어요.",
+    "shot": "device-widgets",
+    "title": "홈 화면에서\n[바로] 보여요",
+    "body": "연속 기록, 오늘 목표, 공부 중인 교재,\n오늘의 단어, 대화하기 버튼.",
+    "kind": "full"
+   },
+   {
+    "body": "단어, 표현, 연속 기록, 대화하기 — 30분마다 바뀌어요.",
     "kind": "full",
     "shot": "widget",
-    "title": "홈 화면에서\n단어를 봐요"
+    "title": "원하는 위젯을\n[골라] 놓으세요"
    }
   ],
   "status": "draft",
