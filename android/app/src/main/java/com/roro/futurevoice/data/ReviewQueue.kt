@@ -40,6 +40,7 @@ object ReviewQueue {
                        language: String, delayMillis: Long) {
         val at = System.currentTimeMillis() + delayMillis
         StudyScheduleStore.shared(context).snooze(kind, text, language, at)
+        if (kind == StudyScheduleStore.Kind.WORD) VocabStore.shared(context).markPracticed(text, language)
         arm(context, kind, text, at)
     }
 

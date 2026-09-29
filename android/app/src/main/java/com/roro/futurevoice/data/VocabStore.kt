@@ -68,7 +68,7 @@ class VocabStore private constructor(context: Context) {
                 val seenHere = HashSet<String>()
                 for (m in WORD.findAll(text)) {
                     val surface = m.value
-                    val word = surface.lowercase()
+                    val word = VocabLemmas.lemma(surface, language)
                     if (word.length < 3 || word in pool || CoreVocabulary.isUngraded(word, language)) continue
                     if (isCapitalizedMidSentence(text, m.range.first, surface)) continue
                     if (seenHere.add(word)) out[word] = (out[word] ?: 0) + 1
@@ -123,6 +123,113 @@ class VocabStore private constructor(context: Context) {
 
     suspend fun studying(language: String): List<String> = mutex.withLock {
         readList(file(language, "vocab_studying.json"))
+    }
+
+    /**
+     * The notebook words the learner actually PRACTICED — every studying word
+     * except those a talk kept by itself and nobody has touched since
+     * ([autoKept], iOS `practicedStudyingWords`). This is what the call's chip
+     * row and the wrap-up's "you used what you practiced" read: a word the app
+     * filed on its own is not something they studied, and offering it as
+     * their goal reads as the app inventing homework.
+     */
+    suspend fun practicedStudying(language: String): List<String> = mutex.withLock {
+        repairSurfaceKeysLocked(language)
+        val studying = readList(file(language, "vocab_studying.json"))
+        val auto = autoKeptLocked(language, studying)
+        studying.filterNot { it in auto }
+    }
+
+    /**
+     * PROVENANCE: studying words a talk kept by itself ([keepFromTalk]) that
+     * the learner has not touched since. A hand bookmark, a deck snooze, a
+     * removal or graduation clears the mark.
+     *
+     * First run (no file yet) treats every notebook word WITHOUT a schedule
+     * entry as auto-kept — the conservative reading, since the only thing it
+     * costs is a chip that must never lie — and repairs the words the
+     * surface-form era filed: an inflected form becomes its headword, and a
+     * closed-class word or interjection ("that", "wow") leaves the notebook.
+     */
+    private suspend fun autoKeptLocked(language: String, studying: List<String>): Set<String> {
+        val f = file(language, "vocab_auto_kept.json")
+        if (f.exists()) return readList(f).toSet()
+        val schedule = StudyScheduleStore.shared(appContext).snapshot(language)
+        val untouched = studying.filter { schedule.nextReview(StudyScheduleStore.Kind.WORD, it) == null }
+        val sf = file(language, "vocab_studying.json")
+        val repaired = LinkedHashSet<String>()
+        val auto = LinkedHashSet<String>()
+        for (w in studying) {
+            if (w !in untouched) { repaired.add(w); continue }
+            val head = VocabLemmas.lemma(w, language)
+            if (CoreVocabulary.isUngraded(head, language)) continue
+            if (repaired.add(head)) auto.add(head)
+        }
+        if (repaired.toList() != studying) writeList(sf, repaired.toList())
+        writeList(f, auto.toList())
+        return auto
+    }
+
+    /**
+     * Once per language: word records and notebook entries written before the
+     * forms table keyed a word by its SURFACE ("gets", "hours"). Each moves to
+     * its headword; two spellings of one word merge, keeping the stronger
+     * state (used over known), the larger count and both ends of its dates.
+     * The learner's own name leaves an auto-kept notebook slot.
+     */
+    private suspend fun repairSurfaceKeysLocked(language: String) {
+        if (language != "en") return
+        val flag = file(language, "vocab_lemmatized.v2.flag")
+        if (flag.exists()) return
+        val poolFile = file(language, "vocab_pool.json")
+        val merged = LinkedHashMap<String, Record>()
+        for ((key, r) in readRecords(poolFile)) {
+            val head = VocabLemmas.lemma(key, language)
+            val prev = merged[head]
+            merged[head] = if (prev == null) r else Record(
+                state = if (prev.state == "used" || r.state == "used") "used" else prev.state,
+                firstAt = minOf(prev.firstAt, r.firstAt), lastAt = maxOf(prev.lastAt, r.lastAt),
+                count = maxOf(prev.count, r.count),
+                fromStudying = if (prev.fromStudying == true || r.fromStudying == true) true else prev.fromStudying,
+            )
+        }
+        writeRecords(poolFile, merged)
+        val sf = file(language, "vocab_studying.json")
+        val studying = readList(sf)
+        val auto = autoKeptLocked(language, studying)
+        val names = learnerNameTokens()
+        val learnerLevel = CefrLevel.from(LanguageScope.level(appContext, language, "B1"))
+        val fixed = LinkedHashSet<String>()
+        for (w in readList(sf)) {
+            val head = VocabLemmas.lemma(w, language)
+            if (CoreVocabulary.isUngraded(head, language)) continue
+            val isAuto = w in auto || head in auto
+            if (isAuto && head in names) continue
+            // An auto-kept graded word below the learner's level is one the
+            // graded path never admits ("get", "day") — it got in as a
+            // surface form through the off-list door. A hand-kept one stays.
+            val level = CoreVocabulary.level(head, language)
+            if (isAuto && level != null &&
+                CoreVocabulary.levelRank(level) < CoreVocabulary.levelRank(learnerLevel)) continue
+            fixed.add(head)
+        }
+        writeList(sf, fixed.toList())
+        writeList(file(language, "vocab_auto_kept.json"),
+            auto.map { VocabLemmas.lemma(it, language) }.filter { it in fixed })
+        flag.writeText("1")
+    }
+
+    private suspend fun setAutoKept(language: String, add: Collection<String> = emptyList(),
+                                    remove: Collection<String> = emptyList()) {
+        val studying = readList(file(language, "vocab_studying.json"))
+        val current = autoKeptLocked(language, studying)
+        val next = (current + add.map { it.lowercase() }) - remove.map { it.trim().lowercase() }.toSet()
+        if (next != current) writeList(file(language, "vocab_auto_kept.json"), next.toList())
+    }
+
+    /** A deck snooze is the learner working the word — it stops being auto-kept. */
+    suspend fun markPracticed(word: String, language: String) = mutex.withLock {
+        setAutoKept(language, remove = listOf(word))
     }
 
     suspend fun studyingExpressions(language: String): List<String> = mutex.withLock {
@@ -183,7 +290,10 @@ class VocabStore private constructor(context: Context) {
             else { records[lemma] = Record("used", now, now, 1); newWords.add(lemma) }
             if (studying.remove(lemma)) leftNotebook = true
         }
-        if (leftNotebook) writeList(studyingFile, studying)
+        if (leftNotebook) {
+            writeList(studyingFile, studying)
+            setAutoKept(language, remove = newWords + records.keys.filter { it !in studying })
+        }
         writeRecords(poolFile, records)
         writeJson(metaFile, StoreJson.json.encodeToString(
             MapSerializer(String.serializer(), Int.serializer()), counts))
@@ -251,8 +361,10 @@ class VocabStore private constructor(context: Context) {
         if (removed.contains(key)) writeList(rf, removed.filterNot { it == key })
         val f = file(language, "vocab_studying.json")
         val list = readList(f)
-        if (list.contains(word)) return
+        // A hand bookmark is the learner choosing the word — whoever filed it.
+        if (list.contains(word)) { setAutoKept(language, remove = listOf(word)); return }
         writeList(f, listOf(word) + list)   // newest first
+        setAutoKept(language, remove = listOf(word))
         PracticeLog.record(appContext, PracticeLog.Kind.WORD)
     }
 
@@ -267,6 +379,7 @@ class VocabStore private constructor(context: Context) {
         val f = file(language, "vocab_studying.json")
         val list = readList(f)
         if (list.contains(word)) writeList(f, list.filterNot { it == word })
+        setAutoKept(language, remove = listOf(word))
         val key = word.trim().lowercase()
         if (byHand && key.isNotEmpty()) {
             val rf = file(language, "vocab_removed_by_hand.json")
@@ -317,6 +430,7 @@ class VocabStore private constructor(context: Context) {
         }
         if (added.isEmpty()) return emptyList()
         writeList(f, list)
+        setAutoKept(language, add = added)
         com.roro.futurevoice.core.Analytics.capture("words_kept_from_talk",
             mapOf("count" to added.size))
         added
@@ -443,6 +557,7 @@ class VocabStore private constructor(context: Context) {
      * were studying count: a word ticked in a level list was never studied.
      */
     suspend fun unconfirmedKnownWords(language: String): List<String> = mutex.withLock {
+        repairSurfaceKeysLocked(language)
         readRecords(file(language, "vocab_pool.json"))
             .filter { it.value.state == "known" && it.value.fromStudying == true }
             .keys.toList()
@@ -490,7 +605,11 @@ class VocabStore private constructor(context: Context) {
                          language: String,
                          excludingLemmas: Set<String> = emptySet()): List<String> {
         val minRank = atOrAbove?.let { CoreVocabulary.levelRank(it) }
-        val graded = VocabLemmas.lemmas(fluentTexts)
+        // The learner's own name is not vocabulary. The fluent self greets
+        // them by it, often at the head of a sentence where the capital-letter
+        // name rule can't see it — "toi" was kept as a word to study.
+        val excludingLemmas = excludingLemmas + learnerNameTokens()
+        val graded = VocabLemmas.lemmas(fluentTexts, language)
             .mapNotNull { w ->
                 if (w in excludingLemmas) return@mapNotNull null
                 val rank = CoreVocabulary.levelRank(CoreVocabulary.level(w, language) ?: return@mapNotNull null)
@@ -520,6 +639,21 @@ class VocabStore private constructor(context: Context) {
         return recurring + graded + saidOnce
     }
 
+
+    @Volatile private var nameCache: Pair<Long, Set<String>> = -1L to emptySet()
+
+    /** The persona's display name, as lowercase word tokens (cached per file write). */
+    private fun learnerNameTokens(): Set<String> {
+        val f = File(appContext.filesDir, "persona.json")
+        val stamp = if (f.exists()) f.lastModified() else 0L
+        nameCache.takeIf { it.first == stamp }?.let { return it.second }
+        val tokens = runCatching {
+            StoreJson.json.decodeFromString(com.roro.futurevoice.talk.UserPersona.serializer(), f.readText())
+                .displayName.lowercase().split(Regex("[^\\p{L}]+")).filter { it.length > 1 }.toSet()
+        }.getOrElse { emptySet() }
+        nameCache = stamp to tokens
+        return tokens
+    }
 
     // ── File plumbing ──
 

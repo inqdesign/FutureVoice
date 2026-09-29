@@ -221,7 +221,9 @@ object SessionSummarizer {
         // The three states, read BEFORE ingest graduates anything: the
         // wrap-up still has to be able to say it was a notebook word they
         // used, or a claim this call confirmed.
-        val studyingWordsBefore = vocab.studying(language)
+        // What they PRACTICED, not everything filed: a word a talk kept by
+        // itself can't be "what you studied" in the wrap-up.
+        val studyingWordsBefore = vocab.practicedStudying(language)
         val studyingExpressionsBefore = vocab.studyingExpressions(language)
         val claimedWords = vocab.unconfirmedKnownWords(language)
         val claimedExpressions = vocab.unconfirmedKnownExpressions(language)

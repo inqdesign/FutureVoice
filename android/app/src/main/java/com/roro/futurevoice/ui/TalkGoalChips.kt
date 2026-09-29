@@ -109,7 +109,7 @@ object TalkGoalPicker {
             .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false) }
 
         val words = ordered(
-            vocab.studying(language), StudyScheduleStore.Kind.WORD, schedule, now,
+            vocab.practicedStudying(language), StudyScheduleStore.Kind.WORD, schedule, now,
         )
             .map {
                 // A multi-word entry can land in the notebook (a learner taps

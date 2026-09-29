@@ -35,6 +35,9 @@ object CoreVocabulary {
 
     fun init(context: Context) { appContext = context.applicationContext }
 
+    /** The learner's active target language, for callers that don't pass one. */
+    fun activeLanguage(): String? = appContext?.let { LanguageScope.active(it) }
+
     private fun pool(language: String): Pool = synchronized(pools) {
         pools.getOrPut(language) {
             val resource = wordlistResource[language] ?: return@getOrPut Pool(emptyMap())
@@ -79,11 +82,16 @@ object CoreVocabulary {
      */
     fun forms(language: String): Map<String, String> = synchronized(formsCache) {
         formsCache.getOrPut(language) {
-            if (language.substringBefore('-') != "ja") return@getOrPut emptyMap()
+            // ja: spellings → headword (`ja_forms.tsv`). en: inflected
+            // form → headword (`en_forms.tsv`, `scripts/android/gen-forms.swift`
+            // — decided by NLTagger, the lemmatizer iOS runs on device).
+            val file = when (language.substringBefore('-')) {
+                "ja" -> "ja_forms.tsv"; "en" -> "en_forms.tsv"; else -> return@getOrPut emptyMap()
+            }
             val ctx = appContext ?: return@getOrPut emptyMap()
             val out = HashMap<String, String>()
             runCatching {
-                ctx.assets.open("wordlists/ja_forms.tsv").bufferedReader().forEachLine { line ->
+                ctx.assets.open("wordlists/$file").bufferedReader().forEachLine { line ->
                     val parts = line.split('\t')
                     if (parts.size == 2) out.putIfAbsent(parts[0], parts[1])
                 }
@@ -158,6 +166,11 @@ object CoreVocabulary {
             "gonna", "wanna", "gotta", "kinda", "sorta", "dunno",
             "lemme", "gimme", "yeah", "yep", "yup", "nope", "nah",
             "hmm", "mmm", "uh", "um", "umm", "ah", "oh", "ooh", "huh",
+            // Interjections — iOS's tagger drops them as a class; without one
+            // "wow" and "ugh" were kept as words to study.
+            "wow", "ugh", "yay", "oops", "whoa", "aw", "aww", "ahh", "eh", "meh",
+            "phew", "yikes", "gosh", "geez", "jeez", "haha", "lol", "hooray",
+            "hi", "hello", "bye", "thanks", "please", "sorry",
             "hey", "ok", "okay", "alright", "well", "just", "really", "very",
             "too", "also", "even", "still", "only", "again", "always",
             "never", "sometimes", "maybe", "please", "thanks", "thank",
@@ -213,14 +226,33 @@ object CoreVocabulary {
  * is a one-file change.
  */
 object VocabLemmas {
-    fun lemmas(texts: List<String>): Set<String> {
+    /**
+     * Content-word headwords in [texts]. English surfaces resolve through the
+     * forms table ("gets" → get, "went" → go) — before it, every path that
+     * matched a word against the notebook or the graded pool compared SURFACE
+     * forms, so a talk kept "gets" and "hours" as new words and saying "gets"
+     * never credited "get". Closed-class words (the ungraded set) are dropped,
+     * as iOS's content-word filter drops them.
+     */
+    fun lemmas(texts: List<String>, language: String? = null): Set<String> {
+        val lang = language ?: CoreVocabulary.activeLanguage()
+        val forms = if (lang == "en") CoreVocabulary.forms("en") else emptyMap()
         val out = HashSet<String>()
         for (text in texts) {
             for (token in text.split(Regex("[^\\p{L}\\p{N}]+"))) {
                 val t = token.lowercase()
-                if (t.length > 1) out.add(t)
+                if (t.length <= 1) continue
+                val head = forms[t] ?: t
+                if (lang != null && CoreVocabulary.isUngraded(head, lang)) continue
+                out.add(head)
             }
         }
         return out
+    }
+
+    /** One surface token's headword (English forms table; others as written). */
+    fun lemma(token: String, language: String): String {
+        val t = token.lowercase()
+        return if (language == "en") CoreVocabulary.forms("en")[t] ?: t else t
     }
 }
