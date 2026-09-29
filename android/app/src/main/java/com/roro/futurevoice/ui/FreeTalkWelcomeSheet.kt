@@ -83,27 +83,39 @@ fun FreeTalkWelcomeSheet(minutes: Int, onStart: () -> Unit, onDismiss: () -> Uni
 }
 
 /**
- * When the welcome is due. Once per install, only for an account that has
- * free minutes and has never talked — so an existing learner with a few
- * seconds left over is never congratulated on them after an update.
+ * When the welcome is due. It remembers the LAST BALANCE SEEN rather than
+ * "was it shown" (iOS `f04015b`): a free account's balance only rises when
+ * minutes are granted, so a rise of a minute or more announces the grant —
+ * a once-per-install flag kept a later top-up silent forever. The first pass
+ * on an install only records the baseline if they have already talked or
+ * been welcomed; it never congratulates leftover seconds after an update.
  */
 object FreeTalkWelcome {
     private const val SHOWN_KEY = "futurevoice.freeTalkWelcome.shown"
+    private const val SEEN_KEY = "futurevoice.freeTalkWelcome.seenSeconds"
+    private const val RISE_SECONDS = 60
 
     /** Whole minutes to announce, or null when the sheet shouldn't show. */
     suspend fun minutesToAnnounce(context: Context): Int? {
         val prefs = context.getSharedPreferences("futurevoice", 0)
-        if (prefs.getBoolean(SHOWN_KEY, false)) return null
         val account = runCatching { AccountStatus.load(AuthRepository()) }.getOrNull() ?: return null
-        if (account.isEntitled || account.unlimited || account.secondsBalance < 60) return null
-        val talked = com.roro.futurevoice.data.LanguageScope.enrolled(context)
-            .any { SessionStore.shared(context).load(it).isNotEmpty() }
-        if (talked) {
-            // Already talked: they have met the minutes by using them.
-            markShown(context)
-            return null
+        if (account.isEntitled || account.unlimited) return null
+        val balance = account.secondsBalance
+        val seen = if (prefs.contains(SEEN_KEY)) prefs.getInt(SEEN_KEY, 0) else null
+        // Every pass records what it saw — the baseline must exist before a
+        // grant can beat it.
+        prefs.edit().putInt(SEEN_KEY, balance).apply()
+        if (balance < 60) return null
+        if (seen == null) {
+            val talked = com.roro.futurevoice.data.LanguageScope.enrolled(context)
+                .any { SessionStore.shared(context).load(it).isNotEmpty() }
+            if (prefs.getBoolean(SHOWN_KEY, false) || talked) { markShown(context); return null }
+            com.roro.futurevoice.core.Analytics.capture("free_talk_welcome_shown", mapOf("kind" to "first"))
+            return balance / 60
         }
-        return account.secondsBalance / 60
+        if (balance < seen + RISE_SECONDS) return null
+        com.roro.futurevoice.core.Analytics.capture("free_talk_welcome_shown", mapOf("kind" to "topup"))
+        return balance / 60
     }
 
     fun markShown(context: Context) {
