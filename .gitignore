@@ -43,6 +43,8 @@ Recordings/
 # real `R.raw` entry. `DailyCall.kt` references `R.raw.ringtone` by name, so
 # without this the Android app does not even COMPILE from a fresh clone.
 !android/app/src/main/res/raw/ringtone.wav
+# The weekly test's answer cues (scripts/make-ui-sounds.py), R.raw.test_*.
+!android/app/src/main/res/raw/test_*.wav
 *.m4a
 *.mp3
 !FutureVoice/Resources/**/*.mp3

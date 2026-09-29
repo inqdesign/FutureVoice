@@ -26,6 +26,9 @@ object CoreVocabulary {
         val levelByWord: Map<String, CefrLevel>,
         /** Headword → reading(s), the Japanese list's third column. */
         val readings: Map<String, String> = emptyMap(),
+        /** Lowercased key → the headword as the list spells it (German nouns
+         *  keep their capital) — for showing a pool word, never for lookup. */
+        val spelled: Map<String, String> = emptyMap(),
     ) {
         val set: Set<String> get() = levelByWord.keys
     }
@@ -44,6 +47,7 @@ object CoreVocabulary {
             val ctx = appContext ?: return@getOrPut Pool(emptyMap())
             val map = HashMap<String, CefrLevel>()
             val readings = HashMap<String, String>()
+            val spelled = HashMap<String, String>()
             runCatching {
                 ctx.assets.open("wordlists/$resource.tsv").bufferedReader().forEachLine { line ->
                     // The attribution sits on the first line and carries no
@@ -53,6 +57,7 @@ object CoreVocabulary {
                     val level = CefrLevel.entries.firstOrNull { it.code.equals(parts[1], true) }
                         ?: return@forEachLine
                     map.putIfAbsent(parts[0].lowercase(), level)
+                    spelled.putIfAbsent(parts[0].lowercase(), parts[0])
                     // A third column is the READING(S) — 辛い is からい・つらい,
                     // and the word card prints them under a kanji headword.
                     if (parts.size == 3 && parts[2].isNotBlank()) {
@@ -60,8 +65,16 @@ object CoreVocabulary {
                     }
                 }
             }
-            Pool(map, readings)
+            Pool(map, readings, spelled)
         }
+    }
+
+    /** Every headword graded [level], spelled as the list spells it, sorted
+     *  (a stable order) — the weekly test's decoy pool (iOS `CoreVocabulary.entries`). */
+    fun headwords(level: CefrLevel, language: String): List<String> {
+        val p = pool(language)
+        return p.levelByWord.entries.filter { it.value == level }
+            .map { p.spelled[it.key] ?: it.key }.sorted()
     }
 
     fun set(language: String): Set<String> = pool(language).set

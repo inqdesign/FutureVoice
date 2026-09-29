@@ -139,13 +139,13 @@ object CaptureRouter {
     /** Each area owns its own file, so areas can be wired independently. */
     private val areas = listOf(
         CaptureTalk.wired, CaptureWatch.wired, CapturePractice.wired, CaptureProgress.wired,
-        CaptureMe.wired, CaptureOnboarding.wired, CaptureWidgets.wired,
+        CaptureMe.wired, CaptureOnboarding.wired, CaptureWidgets.wired, CaptureWeeklyTest.wired,
     )
     private val wired: Map<String, @Composable (Context) -> Unit> = areas.fold(emptyMap()) { a, b -> a + b }
     private val notPorted: Map<String, String> =
         listOf(CaptureTalk.notPorted, CaptureWatch.notPorted, CapturePractice.notPorted,
             CaptureProgress.notPorted, CaptureMe.notPorted, CaptureOnboarding.notPorted,
-            CaptureWidgets.notPorted).fold(emptyMap()) { a, b -> a + b }
+            CaptureWidgets.notPorted, CaptureWeeklyTest.notPorted).fold(emptyMap()) { a, b -> a + b }
 
     /**
      * `--es lang ko` picks the app language for the shot. The language is read

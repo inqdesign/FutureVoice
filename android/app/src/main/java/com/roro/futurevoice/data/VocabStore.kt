@@ -451,6 +451,21 @@ class VocabStore private constructor(context: Context) {
         counts
     }
 
+    /** Words PRODUCED within [days], most recent first (iOS
+     *  `usedWords(withinDays:)`) — the weekly test's last meaning source. */
+    suspend fun usedWords(withinDays: Int, language: String,
+                          now: Long = System.currentTimeMillis()): List<String> = mutex.withLock {
+        val cutoff = now - withinDays * 86_400_000L
+        readRecords(file(language, "vocab_pool.json"))
+            .filter { it.value.state == "used" && it.value.lastAt >= cutoff }
+            .entries.sortedByDescending { it.value.lastAt }.map { it.key }
+    }
+
+    /** Every word with a record at all — known or used (iOS `records.keys`). */
+    suspend fun recordedWords(language: String): List<String> = mutex.withLock {
+        readRecords(file(language, "vocab_pool.json")).keys.toList()
+    }
+
     suspend fun state(lemma: String, language: String): String? = mutex.withLock {
         readRecords(file(language, "vocab_pool.json"))[lemma]?.state
     }

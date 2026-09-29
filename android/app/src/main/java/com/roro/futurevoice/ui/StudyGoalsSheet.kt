@@ -123,6 +123,9 @@ fun StudyGoalsSheet(onDismiss: () -> Unit) {
                 }
             }
             GroupedFooter(stringResource(R.string.when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513))
+
+            GroupedSectionSpacer()
+            WeeklyTestSettingsSection()
         }
     }
 }

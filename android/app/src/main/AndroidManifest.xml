@@ -91,6 +91,11 @@
             android:name=".data.DrillDueReceiver"
             android:exported="false" />
 
+        <!-- The week's test opening (Practice → goals → Remind me). -->
+        <receiver
+            android:name=".data.WeeklyTestReminderReceiver"
+            android:exported="false" />
+
         <!-- The trial notice the paywall promises. -->
         <receiver
             android:name=".data.TrialEndingReceiver"

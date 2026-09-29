@@ -119,6 +119,9 @@ fun TodayCard(
     dueBack: Int = 0,
     onDueBack: () -> Unit = {},
     onExpressionsAll: () -> Unit = {},
+    /** The week's test (and the month's paper) rows — the host owns their
+     *  state and the screen they open; the card only gives them a place. */
+    testRows: (@Composable () -> Unit)? = null,
     onEditGoals: () -> Unit,
 ) {
     Column(
@@ -171,6 +174,10 @@ fun TodayCard(
                     tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
             }
         }
+
+        // The week's one sit-down: always here, so the week has a place to be
+        // looked back on even when nothing is due (iOS `weeklyTestRow`).
+        testRows?.invoke()
 
         Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {

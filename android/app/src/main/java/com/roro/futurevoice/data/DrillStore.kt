@@ -352,6 +352,24 @@ class DrillStore private constructor(context: Context) {
         PracticeLog.record(appContext, PracticeLog.Kind.DRILL)
     }
 
+    /**
+     * One rung up — the weekly test's build item laid out right (iOS
+     * `markCorrect`). Not the learner's verdict, so unlike "Got it" it never
+     * retires the card: it earns the next interval and nothing more (an
+     * answer is a claim; see "USED outranks KNOWN").
+     */
+    suspend fun markCorrect(card: DrillCard, language: String = LanguageScope.active(appContext),
+                            now: Long = System.currentTimeMillis()) {
+        val box = minOf(card.box + 1, DrillIngest.MAX_BOX - 1)
+        com.roro.futurevoice.core.Analytics.capture("drill_reviewed",
+            mapOf("correct" to true, "box" to box))
+        upsertMany(listOf(card.copy(
+            timesSeen = card.timesSeen + 1, timesCorrect = card.timesCorrect + 1,
+            lastReviewedAt = now, box = box,
+            nextReviewAt = DrillIngest.nextReviewAt(box, now))), language)
+        PracticeLog.record(appContext, PracticeLog.Kind.DRILL)
+    }
+
     suspend fun dueCount(language: String = LanguageScope.active(appContext),
                          now: Long = System.currentTimeMillis()): Int =
         load(language).count { it.nextReviewAt <= now }

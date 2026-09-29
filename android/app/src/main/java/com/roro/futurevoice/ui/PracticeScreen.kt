@@ -266,6 +266,7 @@ fun PracticeBody(
                             if (picks.isEmpty()) shelf = Shelf.TALK else onShadowHand(picks)
                         }
                     },
+                    testRows = { WeeklyTestRows(language, level) },
                     onEditGoals = { editingGoals = true },
                 )
                 if (editingGoals) {

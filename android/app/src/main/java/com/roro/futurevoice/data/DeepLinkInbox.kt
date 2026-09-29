@@ -39,6 +39,8 @@ object DeepLinkInbox {
             "vocab" -> Destination.VOCABULARY
             "expressions" -> Destination.EXPRESSIONS
             "practice" -> Destination.PRACTICE
+            // The weekly test lives on the Practice tab; the tab opens it.
+            "weeklytest" -> { WeeklyTestInbox.pending.value = true; Destination.PRACTICE }
             else -> return          // login, and anything we don't own
         }
     }
