@@ -118,6 +118,11 @@ section{margin-top:56px}
 .act{display:inline-flex;align-items:center;gap:4px;background:none;border:0;border-radius:999px;padding:2px 8px;font-size:12px;color:var(--faint)}
 .act:hover{background:var(--panel-2);color:var(--dim)}
 .act svg{width:14px;height:14px}
+.act.del:hover{color:#C0392B}
+.confirm{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.confirm button{border:0;border-radius:999px;padding:2px 9px;font-size:12px}
+.confirm .yes{background:#C0392B;color:#fff}
+.confirm .no{background:var(--panel-2);color:var(--dim)}
 .act.liked{color:#E0445A}
 .act.liked svg{fill:#E0445A;stroke:#E0445A}
 .thread{display:flex;flex-direction:column;gap:8px;margin:2px 0 4px 16px;padding-left:12px;border-left:2px solid var(--line)}
@@ -278,7 +283,7 @@ const T = {
     staff:"운영자", today:"오늘", yesterday:"어제", now:"방금", min:"분 전", hour:"시간 전",
     e_slow:"잠깐만요, 3초 뒤에 다시 보내주세요.", e_many:"10분에 20개까지 보낼 수 있어요. 조금 뒤에 다시 보내주세요.",
     e_name:"이 닉네임은 쓸 수 없어요. 다른 이름으로 바꿔주세요.", e_parent:"원래 메시지가 사라져서 답글을 달 수 없어요.",
-    like:"좋아요", reply:"답글", replies:n => `답글 ${n}개`, hideReplies:"답글 접기", replyingTo:"에게 답글", likeSignin:"로그인하면 좋아요와 답글을 남길 수 있어요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
+    like:"좋아요", reply:"답글", del:"삭제", delAsk:"삭제할까요?", cancel:"취소", e_del:"삭제하지 못했어요.", online:(s, a) => `로그인 ${s}명 · 전체 ${a}명이 보고 있어요`, replies:n => `답글 ${n}개`, hideReplies:"답글 접기", replyingTo:"에게 답글", likeSignin:"로그인하면 좋아요와 답글을 남길 수 있어요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
     tryIt:"직접 해보고 싶다면", privacy:"개인정보 처리방침", terms:"이용약관", support:"지원", close:"닫기", prev:"이전", next:"다음",
     cats:{start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
   },
@@ -295,7 +300,7 @@ const T = {
     staff:"Team", today:"Today", yesterday:"Yesterday", now:"now", min:"m ago", hour:"h ago",
     e_slow:"One moment. Try again in 3 seconds.", e_many:"You can send 20 messages every 10 minutes. Try again in a bit.",
     e_name:"That name is reserved. Please pick another.", e_parent:"The original message is gone, so it can't take a reply.",
-    like:"Like", reply:"Reply", replies:n => n === 1 ? "1 reply" : `${n} replies`, hideReplies:"Hide replies", replyingTo:"Replying to", likeSignin:"Sign in to like and reply.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
+    like:"Like", reply:"Reply", del:"Delete", delAsk:"Delete this?", cancel:"Cancel", e_del:"Couldn't delete.", online:(s, a) => `${s} signed in · ${a} viewing now`, replies:n => n === 1 ? "1 reply" : `${n} replies`, hideReplies:"Hide replies", replyingTo:"Replying to", likeSignin:"Sign in to like and reply.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
     tryIt:"Want to try it yourself?", privacy:"Privacy", terms:"Terms", support:"Support", close:"Close", prev:"Previous", next:"Next",
     cats:{start:"Getting started", talk:"Talk", watch:"Watch", practice:"Review", progress:"Progress"},
   },
@@ -315,6 +320,11 @@ const messages = new Map();   // id -> row (top-level messages and replies alike
 const likes = new Map();      // message id -> Set of user ids
 const openThreads = new Set(); // message ids whose replies are expanded
 let replyTo = null;           // message id the composer is answering
+let amStaff = false;          // display switch only; the server checks again
+let pendingDelete = null;     // message id waiting for its inline confirm
+let chatCh = null, presenceCh = null;
+let online = { signedIn: 0, all: 0 };
+const tabKey = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
 let sendError = "";
 
 /* ---------- i18n ---------- */
@@ -428,7 +438,14 @@ document.addEventListener("keydown", e => {
 
 /* ---------- chat ---------- */
 let liveState = "connecting";
-function setLive(s){ liveState = s; const el = $("#live"); el.classList.toggle("on", s === "live"); el.querySelector("span").textContent = t(s === "live" ? "live" : s === "offline" ? "offline" : "connecting"); }
+function setLive(s){
+  liveState = s; const el = $("#live"); el.classList.toggle("on", s === "live");
+  const label = t(s === "live" ? "live" : s === "offline" ? "offline" : "connecting");
+  // Only the team sees how many people are here, and it counts SIGNED-IN viewers.
+  const showCount = amStaff && s === "live";
+  el.querySelector("span").textContent = showCount ? `${label} (${online.signedIn})` : label;
+  el.title = showCount ? t("online")(online.signedIn, online.all) : "";
+}
 function relTime(iso){
   const d = new Date(iso), s = (Date.now() - d) / 1000;
   if (s < 60) return t("now");
@@ -443,6 +460,7 @@ function dayLabel(d){
   return d.toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", { month:"long", day:"numeric", weekday:"short" });
 }
 const HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>';
+const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
 const REPLY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg>';
 function msgHTML(m, me, isReply){
   const d = new Date(m.created_at);
@@ -456,6 +474,9 @@ function msgHTML(m, me, isReply){
     <div class="acts">
       <button class="act ${liked ? "liked" : ""}" data-like="${m.id}" aria-pressed="${liked}" aria-label="${esc(t("like"))}">${HEART}${n ? `<span>${n}</span>` : ""}</button>
       <button class="act" data-reply="${isReply ? m.parent_id : m.id}" data-to="${esc(m.display_name)}" aria-label="${esc(t("reply"))}">${REPLY}<span>${esc(t("reply"))}</span></button>
+      ${(mine || amStaff) ? (pendingDelete === m.id
+        ? `<span class="confirm">${esc(t("delAsk"))}<button class="yes" data-del-yes="${m.id}">${esc(t("del"))}</button><button class="no" data-del-no="1">${esc(t("cancel"))}</button></span>`
+        : `<button class="act del" data-del="${m.id}" aria-label="${esc(t("del"))}">${TRASH}</button>`) : ""}
     </div>
   </div>`;
 }
@@ -491,6 +512,19 @@ function renderMessages(){
   if (nearBottom || !host.dataset.scrolled) { host.scrollTop = host.scrollHeight; host.dataset.scrolled = "1"; }
 }
 $("#msgs").addEventListener("click", async e => {
+  const dl = e.target.closest("[data-del]");
+  if (dl) { pendingDelete = +dl.dataset.del; renderMessages(); return; }
+  if (e.target.closest("[data-del-no]")) { pendingDelete = null; renderMessages(); return; }
+  const dy = e.target.closest("[data-del-yes]");
+  if (dy) {
+    const id = +dy.dataset.delYes; pendingDelete = null;
+    const { data: ok, error } = await sb.rpc("community_delete_message", { p_id: id });
+    if (error || !ok) { sendError = t("e_del"); renderCompose(); renderMessages(); return; }
+    removeMessage(id);
+    // Tell the other open pages; each re-reads the row before believing it.
+    chatCh?.send({ type: "broadcast", event: "deleted", payload: { id } });
+    return;
+  }
   const th = e.target.closest("[data-thread]");
   if (th) { const id = +th.dataset.thread; openThreads.has(id) ? openThreads.delete(id) : openThreads.add(id); renderMessages(); return; }
   const signedIn = session && !session.user?.is_anonymous;
@@ -588,6 +622,32 @@ $("#compose").addEventListener("submit", async e => {
 });
 
 const COLS = "id,user_id,display_name,body,is_staff,created_at,parent_id";
+function removeMessage(id){
+  messages.delete(id); likes.delete(id);
+  if (replyTo === id) { replyTo = null; renderCompose(); }
+  renderMessages();
+}
+async function verifyDeleted(id){
+  if (!messages.has(id)) return;
+  const { data } = await sb.from("community_messages").select("id").eq("id", id).maybeSingle();
+  if (!data) removeMessage(id);          // a forged "deleted" can't hide a message that's still public
+}
+async function refreshStaff(){
+  const signedIn = session && !session.user?.is_anonymous;
+  amStaff = false;
+  if (signedIn) { const { data } = await sb.rpc("community_am_i_staff"); amStaff = data === true; }
+  setLive(liveState); renderMessages();
+}
+function trackPresence(){
+  if (!presenceCh) return;
+  presenceCh.track({ s: session && !session.user?.is_anonymous ? 1 : 0 });
+}
+function countPresence(){
+  const st = presenceCh.presenceState();
+  const keys = Object.keys(st);
+  online = { all: keys.length, signedIn: keys.filter(k => (st[k] || []).some(p => p.s === 1)).length };
+  setLive(liveState);
+}
 async function loadMessages(){
   const { data, error } = await sb.from("community_messages").select(COLS).order("created_at", { ascending: false }).limit(300);
   if (error) return;
@@ -621,12 +681,17 @@ try {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
   sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
   ({ data: { session } } = await sb.auth.getSession());
-  sb.auth.onAuthStateChange((_e, s) => { session = s; sendError = ""; renderCompose(); renderMessages(); });
+  sb.auth.onAuthStateChange((_e, s) => { session = s; sendError = ""; renderCompose(); renderMessages(); refreshStaff(); trackPresence(); });
   renderCompose();
   const { data: n } = await sb.from("community_news").select("id,published_at,title_ko,title_en,body_ko,body_en,link_url").order("published_at", { ascending: false }).limit(20);
   news = n || []; renderNews();
   await loadMessages();
-  sb.channel("community-chat")
+  refreshStaff();
+  presenceCh = sb.channel("community-presence", { config: { presence: { key: tabKey } } })
+    .on("presence", { event: "sync" }, countPresence)
+    .subscribe(status => { if (status === "SUBSCRIBED") trackPresence(); });
+  chatCh = sb.channel("community-chat")
+    .on("broadcast", { event: "deleted" }, ({ payload }) => verifyDeleted(+payload?.id))
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_messages" }, p => { messages.set(p.new.id, p.new); renderMessages(); })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_reactions" }, p => {
       const r = p.new; if (!likes.has(r.message_id)) likes.set(r.message_id, new Set()); likes.get(r.message_id).add(r.user_id); renderMessages(); })
