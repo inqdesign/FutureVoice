@@ -183,6 +183,11 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     fun elapsedSeconds(): Long = meter.billedSeconds
 
+    /** Mid-call speed change: the gateway applies it from the next line. */
+    fun setSpeed(multiplier: Double) {
+        if (REALTIME) realtime.setSpeed(multiplier)
+    }
+
     /** Reconnect after a failed reply — the learner spoke and heard nothing. */
     fun retry() {
         val cfg = config ?: return

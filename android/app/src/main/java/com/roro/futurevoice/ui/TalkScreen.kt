@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.produceState
 import androidx.compose.material.icons.filled.Close
@@ -218,6 +219,28 @@ fun TalkScreen(
         if (spent != null) canUpgrade = AccountStatus.load(AuthRepository()).isLightPlan
     }
     val listState = rememberLazyListState()
+    // Call settings (iOS `CallSettingsSheet`): screen state the learner can
+    // change mid-call, plus the speed, which reaches the voice.
+    var showsTranscript by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_TRANSCRIPT)) }
+    var showsCorrections by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_CORRECTIONS)) }
+    var showsGoalChips by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS)) }
+    var showingCallSettings by remember { mutableStateOf(false) }
+    if (showingCallSettings) {
+        CallSettingsSheet(
+            showsTranscript = showsTranscript, showsCorrections = showsCorrections,
+            showsGoalChips = showsGoalChips,
+            onFlag = { key, value ->
+                CallSettings.set(context, key, value)
+                when (key) {
+                    CallSettings.SHOWS_TRANSCRIPT -> showsTranscript = value
+                    CallSettings.SHOWS_CORRECTIONS -> showsCorrections = value
+                    CallSettings.SHOWS_GOAL_CHIPS -> showsGoalChips = value
+                }
+            },
+            onSpeedChange = { vm.setSpeed(it.multiplier(context)) },
+            onDismiss = { showingCallSettings = false },
+        )
+    }
     // A long silent turn must not lock the phone: a call is on screen, and
     // the learner's hands are usually nowhere near it.
     val view = LocalView.current
@@ -455,7 +478,7 @@ fun TalkScreen(
             // the whole point is that it is in front of the learner at the
             // moment they could spend the word.
             val ended = state.phase == TalkPhase.ENDED && state.endedSessionId != null
-            if (goals.isNotEmpty() && !ended) {
+            if (goals.isNotEmpty() && !ended && showsGoalChips) {
                 TalkGoalChipsRow(goals, goalsUsed, onTap = { openGoal = it })
             }
             // Nothing pauses underneath: WordLore is free and globally
@@ -483,8 +506,18 @@ fun TalkScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(state.turns, key = { it.id }) { turn ->
-                    DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name)
+                // Subtitles off: the call is audio only, like a phone call —
+                // the pill still shows whose turn it is.
+                if (!showsTranscript && state.turns.isNotEmpty()) item(key = "subtitles-off") {
+                    Text(stringResource(R.string.subtitles_are_off),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 24.dp))
+                }
+                if (showsTranscript) items(state.turns, key = { it.id }) { turn ->
+                    DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
+                        showsCorrections = showsCorrections)
                 }
                 // The learner's turn, drawn where it will land (iOS
                 // `PartialTurnView`): the You bubble appears EMPTY the moment
@@ -492,7 +525,7 @@ fun TalkScreen(
                 // signal — and fills with the words as they are heard. Not
                 // before the first line exists: the call opens with the
                 // fluent self, and an empty bubble would flash and vanish.
-                if (state.phase == TalkPhase.LISTENING &&
+                if (showsTranscript && state.phase == TalkPhase.LISTENING &&
                     (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
                     item(key = "partial-listening") {
                         com.roro.futurevoice.ui.brand.DialogueLine(
@@ -617,6 +650,13 @@ fun TalkScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    // Quiet on purpose: the one primary action here is the pill.
+                    IconButton(onClick = { showingCallSettings = true },
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)) {
+                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.call_settings),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Box(
                         Modifier
                             .size(width = 156.dp, height = 64.dp)
@@ -647,6 +687,7 @@ fun TalkScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
+                    }
                     }
                     // The phase, quietly, where the hand is.
                     Text(
@@ -703,7 +744,8 @@ fun DialogueLine(turn: Turn) {
 fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                  scale: DialogueScale = DialogueScale.STANDARD,
                  otherName: String? = null,
-                 selfName: String? = null) {
+                 selfName: String? = null,
+                 showsCorrections: Boolean = true) {
     val isUser = turn.role == TurnRole.USER
     DialogueLine(
         speaker = if (isUser) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
@@ -714,7 +756,7 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
         scale = scale,
         isCurrent = isCurrent,
         accessory = {
-            turn.suggestion?.let { suggestion ->
+            if (showsCorrections) turn.suggestion?.let { suggestion ->
                 SuggestionChip(suggestion, original = turn.transcript)
             }
         },
