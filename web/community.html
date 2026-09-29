@@ -94,7 +94,11 @@ section{margin-top:56px}
 .slides::-webkit-scrollbar{height:6px}
 .slides::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
 .sl{flex:0 0 clamp(240px,calc((100% - 32px - 2 * var(--bleed)) / 2.4),440px);scroll-snap-align:start}
-.slides::after{content:"";flex:0 0 1px}  /* keeps the right padding when scrolled to the end */
+.slides::after{content:"";flex:0 0 1px}
+@media (hover:hover) and (pointer:fine){ .slides{cursor:grab} }
+.slides.dragging{cursor:grabbing;scroll-snap-type:none;user-select:none}
+.slides.dragging .sl{pointer-events:none}
+.sl img{-webkit-user-drag:none;user-select:none}  /* keeps the right padding when scrolled to the end */
 /* The row says there is more: a fade and a floating arrow on whichever side still has cards. */
 .rowwrap{position:relative}
 .rowwrap::before,.rowwrap::after{content:"";position:absolute;top:-14px;bottom:26px;width:72px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
@@ -514,6 +518,37 @@ function syncArrows(row){
 }
 $("#grid").addEventListener("scroll", e => { if (e.target.matches?.(".slides")) syncArrows(e.target); }, { passive: true, capture: true });
 addEventListener("resize", () => document.querySelectorAll(".slides").forEach(syncArrows));
+
+// Drag to scroll with a mouse (touch already swipes natively). Letting go snaps
+// to the nearest card, and a drag never ends as a tap that opens the viewer.
+let drag = null, suppressClick = false;
+$("#grid").addEventListener("pointerdown", e => {
+  if (e.pointerType !== "mouse" || e.button !== 0) return;
+  const row = e.target.closest(".slides"); if (!row || e.target.closest(".edge")) return;
+  drag = { row, x: e.clientX, left: row.scrollLeft, moved: false, id: e.pointerId };
+});
+addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) < 5) return;
+  if (!drag.moved) { drag.moved = true; drag.row.classList.add("dragging"); drag.row.setPointerCapture?.(e.pointerId); }
+  drag.row.scrollLeft = drag.left - dx;
+  e.preventDefault();
+});
+function endDrag(){
+  if (!drag) return;
+  const { row, moved } = drag; drag = null;
+  if (!moved) return;
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);
+  const card = row.querySelector(".sl"); const step = card ? card.offsetWidth + 16 : row.clientWidth;
+  const target = Math.round(row.scrollLeft / step) * step;
+  row.classList.remove("dragging");
+  row.scrollTo({ left: target, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+addEventListener("pointerup", endDrag);
+addEventListener("pointercancel", endDrag);
+$("#grid").addEventListener("click", e => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+$("#grid").addEventListener("dragstart", e => { if (e.target.closest(".slides")) e.preventDefault(); });
 $("#track").addEventListener("scroll", () => { if (!vOpen) return; const tr = $("#track"); setIdx(Math.round(tr.scrollLeft / tr.clientWidth)); }, { passive: true });
 $("#vPrev").addEventListener("click", () => go(vIdx - 1));
 $("#vNext").addEventListener("click", () => go(vIdx + 1));
