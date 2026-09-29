@@ -118,6 +118,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.foundation.background
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import androidx.compose.ui.draw.shadow
 import com.roro.futurevoice.ui.brand.DiscoverRow
 import com.roro.futurevoice.ui.brand.SegmentChip
 import com.roro.futurevoice.ui.brand.BookCard
@@ -1703,7 +1704,7 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
     Row(
         Modifier
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1712,13 +1713,15 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
         Icon(
             if (days > 0) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
             contentDescription = null,
-            tint = if (days > 0) MaterialTheme.colorScheme.primary
+            // iOS: `flame.fill` in .orange — a streak is fire, not the accent.
+            tint = if (days > 0) androidx.compose.ui.graphics.Color(0xFFFF9500)
             else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp))
+            modifier = Modifier.size(14.dp))
         Text(
             if (days > 0) stringResource(R.string.lld_day_streak_94de2a, days)
             else stringResource(R.string.activity),
-            style = MaterialTheme.typography.labelLarge)
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
     }
 }
 
@@ -1744,7 +1747,16 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
             account = it
         }
     }
-    IconButton(onClick = onClick) {
+    // iOS: a 44pt glass circle, the 38pt ring inside its rim, the avatar
+    // 2pt inside the ring. Drawn as a raised white disc — the glass over the
+    // grouped ground reads as exactly that.
+    Box(
+        Modifier.padding(end = 8.dp).size(44.dp)
+            .shadow(2.dp, CircleShape, clip = false)
+            .clip(CircleShape).background(AppSurfaces.card)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
         val a = account
         if (a != null && !a.isUncappedTalk && (a.monthlyCapSeconds != null || !a.isEntitled)) {
             // The full tank is this account's own pool, never a constant: the
@@ -1758,7 +1770,7 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
             // read as a second ring competing with the accent one.
             val track = MaterialTheme.colorScheme.surfaceVariant
             val arc = MaterialTheme.colorScheme.primary
-            Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(38.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
                     val w = 3.dp.toPx()
                     // Inset by half the stroke so the ring stays INSIDE the
@@ -1774,12 +1786,10 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
                             style = Stroke(width = w, cap = StrokeCap.Round))
                     }
                 }
-                // 20dp inside a 24dp hole: flush against the ring, the arc
-                // reads as drawn ON the picture rather than around it.
-                ProfileAvatar(initials = initials, size = 20.dp)
+                ProfileAvatar(initials = initials, size = 28.dp)
             }
         } else {
-            ProfileAvatar(initials = initials, size = 30.dp)
+            ProfileAvatar(initials = initials, size = 38.dp)
         }
     }
 }
@@ -1810,10 +1820,11 @@ private fun HeaderButton(
     Row(
         Modifier
             .padding(horizontal = 8.dp)
+            .shadow(2.dp, CircleShape, clip = false)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .background(AppSurfaces.card)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {

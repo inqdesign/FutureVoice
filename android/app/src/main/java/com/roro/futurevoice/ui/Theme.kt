@@ -30,13 +30,30 @@ fun FutureVoiceTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val base = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-
-        darkTheme -> darkColorScheme()
-        else -> lightColorScheme()
-    }
+    // The NEUTRALS are iOS's system greys, fixed. Material You took them
+    // from the wallpaper too, so on a grey-ish wallpaper a chip's fill
+    // (`surfaceVariant`) came out the same tone as the page and every capsule
+    // in a header vanished — the streak chip, the avatar's disc. iOS draws
+    // those on `secondarySystemFill` over `systemGroupedBackground`, which is
+    // the same grey on every phone. (`AppSurfaces`: ground = surfaceContainer
+    // in light / surface in dark; card = surface / surfaceContainerHigh.)
+    val base = if (darkTheme) darkColorScheme(
+        background = Color(0xFF000000), onBackground = Color.White,
+        surface = Color(0xFF000000), onSurface = Color.White,
+        surfaceContainerLowest = Color(0xFF000000), surfaceContainerLow = Color(0xFF0E0E0F),
+        surfaceContainer = Color(0xFF141415), surfaceContainerHigh = Color(0xFF1C1C1E),
+        surfaceContainerHighest = Color(0xFF2C2C2E), surfaceVariant = Color(0xFF2C2C2E),
+        onSurfaceVariant = Color(0xFF8D8D93), outline = Color(0xFF38383A),
+        outlineVariant = Color(0xFF2C2C2E), surfaceBright = Color(0xFF2C2C2E), surfaceDim = Color.Black,
+    ) else lightColorScheme(
+        background = Color(0xFFF2F2F7), onBackground = Color.Black,
+        surface = Color.White, onSurface = Color.Black,
+        surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF7F7FA),
+        surfaceContainer = Color(0xFFF2F2F7), surfaceContainerHigh = Color(0xFFE9E9EE),
+        surfaceContainerHighest = Color(0xFFE3E3E8), surfaceVariant = Color(0xFFE3E3E8),
+        onSurfaceVariant = Color(0xFF8A8A8E), outline = Color(0xFFC6C6C8),
+        outlineVariant = Color(0xFFD1D1D6), surfaceBright = Color.White, surfaceDim = Color(0xFFE5E5EA),
+    )
     val accent = FutureselfTheme.stored(context).tint()
     // White on the deep hues, black on the pale ones — MONO is near-black in
     // light and near-white in dark, so this cannot be a constant.
@@ -47,6 +64,14 @@ fun FutureVoiceTheme(
         // The quiet half of the accent: a chip's selected fill, a tinted row.
         primaryContainer = accent.copy(alpha = 0.16f).compositeOver(base.surface),
         onPrimaryContainer = accent,
+        // Material's secondary/tertiary default to a purple the app never
+        // chose — it showed as the selected tab's pill. One accent, as on iOS.
+        secondary = accent, onSecondary = onAccent,
+        secondaryContainer = accent.copy(alpha = 0.16f).compositeOver(base.surface),
+        onSecondaryContainer = accent,
+        tertiary = accent, onTertiary = onAccent,
+        tertiaryContainer = accent.copy(alpha = 0.16f).compositeOver(base.surface),
+        onTertiaryContainer = accent,
     )
     MaterialTheme(colorScheme = colors, typography = IosTypeScale, content = content)
 }
