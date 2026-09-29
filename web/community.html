@@ -228,6 +228,13 @@ footer a{color:var(--faint)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  // No cookie and nothing stored in the browser: every page load is a fresh
+  // anonymous visitor, so no consent banner is needed. A signed-in learner is
+  // identified by their account (same upper-case id the app uses).
+  posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24', persistence:'memory', autocapture:false, disable_session_recording:true});
+</script>
 </head>
 <body>
 <header class="top">
@@ -470,6 +477,7 @@ function openViewer(id, start = 0){
   const first = flat.findIndex(x => x.e.id === id); if (first < 0) return;
   const idx = first + Math.min(start, flat[first].e.slides.length - 1);
   lastFocus = document.activeElement; openedEp = id; vOpen = true;
+  track("community_viewer_open", { episode: id, slide: start + 1 });
   $("#track").innerHTML = flat.map((x, k) =>
     `<img src="${esc(x.src)}" alt="${esc(x.e[lang].title)} ${x.si + 1}/${x.e.slides.length}" ${Math.abs(k - idx) > 2 ? 'loading="lazy"' : ""}>`).join("");
   $("#viewer").hidden = false; document.body.style.overflow = "hidden";
@@ -688,6 +696,7 @@ $("#msgs").addEventListener("click", async e => {
     const set = likes.get(id) || new Set(); likes.set(id, set);
     const had = set.has(me);
     had ? set.delete(me) : set.add(me); renderMessages();          // optimistic
+    if (!had) track("community_like");
     const q = had
       ? sb.from("community_reactions").delete().eq("message_id", id).eq("user_id", me)
       : sb.from("community_reactions").insert({ message_id: id, user_id: me });
@@ -731,6 +740,7 @@ function renderCompose(){
 $("#compose").addEventListener("click", async e => {
   const o = e.target.closest("[data-oauth]");
   if (o) {
+    track("community_signin_start", { provider: o.dataset.oauth });
     const { error } = await sb.auth.signInWithOAuth({ provider: o.dataset.oauth, options: { redirectTo: location.origin + location.pathname } });
     if (error) { sendError = t("e_signin"); renderCompose(); }
     return;
@@ -763,6 +773,7 @@ $("#compose").addEventListener("submit", async e => {
     renderCompose(); $("#msgInput").value = body; $("#sendBtn").disabled = false; return;
   }
   sendError = ""; store.set("nawana-community-name", nick);
+  track("community_message_sent", { reply: !!data.parent_id });
   messages.set(data.id, data); ta.value = "";
   if (data.parent_id) openThreads.add(data.parent_id);
   replyTo = null;
@@ -822,6 +833,21 @@ async function loadLikes(){
 $("#fab").addEventListener("click", () => { document.body.classList.add("chat-open"); $("#msgs").scrollTop = $("#msgs").scrollHeight; updateUnread(); });
 $("#chatClose").addEventListener("click", () => { document.body.classList.remove("chat-open"); updateUnread(); });
 
+/* ---------- analytics ---------- */
+const track = (ev, props) => { try { window.posthog?.capture(ev, props); } catch {} };
+let seenUser = null;
+function onIdentity(){
+  const u = session && !session.user?.is_anonymous ? session.user : null;
+  if (u && u.id !== seenUser) {
+    seenUser = u.id;
+    try { window.posthog?.identify(u.id.toUpperCase()); } catch {}
+    sb.rpc("community_touch_visit").then(() => {}, () => {});
+  } else if (!u && seenUser) {
+    seenUser = null;
+    try { window.posthog?.reset(); } catch {}
+  }
+}
+
 /* ---------- boot ---------- */
 applyLang();
 fetch("/community/series.json").then(r => r.json()).then(j => { series = j.episodes || []; renderFeatures(); }).catch(() => {});
@@ -829,7 +855,8 @@ try {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
   sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
   ({ data: { session } } = await sb.auth.getSession());
-  sb.auth.onAuthStateChange((_e, s) => { session = s; sendError = ""; renderCompose(); renderMessages(); refreshStaff(); trackPresence(); });
+  sb.auth.onAuthStateChange((_e, s) => { session = s; sendError = ""; renderCompose(); renderMessages(); refreshStaff(); trackPresence(); onIdentity(); });
+  onIdentity();
   renderCompose();
   const { data: n } = await sb.from("community_news").select("id,published_at,title_ko,title_en,body_ko,body_en,link_url").order("published_at", { ascending: false }).limit(20);
   news = n || []; renderNews();

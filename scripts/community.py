@@ -13,6 +13,7 @@ the Management API — the same path scripts/apply-migration.sh uses.
     python3 scripts/community.py chat [--all]           # recent messages (with --all: hidden too)
     python3 scripts/community.py hide <message id>      # or unhide
     python3 scripts/community.py staff-add <user uuid or email> [--label nawana]
+    python3 scripts/community.py visitors [--limit 50]  # signed-in visitors, newest first
 
 A news post is a DRAFT until --publish / news-publish: a page reload shows a
 published post at once, no redeploy.
@@ -67,6 +68,7 @@ def main():
         sub.add_parser(c).add_argument("id")
     c = sub.add_parser("chat"); c.add_argument("--all", action="store_true"); c.add_argument("--limit", type=int, default=30)
     s = sub.add_parser("staff-add"); s.add_argument("who"); s.add_argument("--label", default="nawana")
+    v = sub.add_parser("visitors"); v.add_argument("--limit", type=int, default=50)
     x = ap.parse_args()
 
     if x.cmd == "news-list":
@@ -93,6 +95,15 @@ def main():
     elif x.cmd in ("hide", "unhide"):
         r = sql(f"update community_messages set hidden = {str(x.cmd == 'hide').lower()} where id = {int(x.id)} returning id")
         print(("hidden #" if x.cmd == "hide" else "restored #") + (str(r[0]["id"]) if r else "— no such message"))
+    elif x.cmd == "visitors":
+        rows = sql(f"""select v.user_id, u.email, v.visits, v.first_seen, v.last_seen,
+                             (select count(*) from community_messages m where m.user_id = v.user_id) msgs,
+                             (select s.plan_id from user_subscriptions s where s.user_id = v.user_id limit 1) plan
+                        from community_visits v join auth.users u on u.id = v.user_id
+                       order by v.last_seen desc limit {int(x.limit)}""")
+        print(f"{len(rows)} signed-in visitors")
+        for r in rows:
+            print(f"{r['last_seen'][:16]}  visits {r['visits']:>3}  msgs {r['msgs']:>3}  {r['plan'] or '-':<14} {r['email'] or r['user_id']}")
     elif x.cmd == "staff-add":
         who = x.who
         cond = f"id = {lit(who)}::uuid" if len(who) == 36 and who.count("-") == 4 else f"lower(email) = lower({lit(who)})"
