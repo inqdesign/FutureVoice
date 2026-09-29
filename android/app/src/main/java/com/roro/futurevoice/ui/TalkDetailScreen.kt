@@ -2,6 +2,7 @@ package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -398,41 +399,60 @@ fun TalkDetailScreen(
 
                     TalkChapter.CARDS -> {
                         PageTitle(stringResource(R.string.drill))
-                        Column(Modifier.padding(horizontal = 20.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            // `curriculum.corrections` holds both sources (turn
-                            // suggestions and the summary's own) in page
-                            // order, so this list and the ribbon's done/total
-                            // are the same set.
-                            curriculum.corrections.forEach { item ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    MasteryMark(item.masteredAt != null, Modifier.padding(top = 3.dp))
-                                    Column {
-                                        originalOf(item)?.let {
-                                            Text(it, style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                        Text(item.text,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.primary)
-                                        if (item.note.isNotBlank()) {
-                                            Text(item.note, style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
+                        // iOS drill page: "Say it better", each pair as what
+                        // you said (struck through) over its corrected form
+                        // with ONLY the changed words lit, the reason, and a
+                        // chevron. Grammar slips live behind the score's own
+                        // review link, not here.
+                        Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Filled.AutoAwesome, contentDescription = null,
+                                modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.say_it_better).uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        curriculum.corrections.forEach { item ->
+                            val original = originalOf(item).orEmpty()
+                            Row(Modifier.fillMaxWidth()
+                                .clickable { onShadow(item.text) }
+                                .padding(horizontal = 20.dp, vertical = 9.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                MasteryMark(item.masteredAt != null, Modifier.padding(top = 3.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    if (original.isNotBlank()) {
+                                        Text(original, style = MaterialTheme.typography.bodyMedium.copy(
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                }
-                            }
-                            grammar.forEach { g ->
-                                Column {
-                                    Text(g.quote, style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(g.correction, style = MaterialTheme.typography.bodyLarge)
-                                    if (g.note.isNotBlank()) {
-                                        Text(g.note, style = MaterialTheme.typography.bodySmall,
+                                    val changed = remember(item.text, original) {
+                                        com.roro.futurevoice.talk.SpokenWords.changedTokens(item.text, original)
+                                    }
+                                    val accent = MaterialTheme.colorScheme.primary
+                                    Text(androidx.compose.ui.text.buildAnnotatedString {
+                                        item.text.split(" ").filter { it.isNotEmpty() }.forEachIndexed { i, tok ->
+                                            if (i > 0) append(" ")
+                                            if (original.isNotBlank() && changed.getOrElse(i) { false }) {
+                                                pushStyle(androidx.compose.ui.text.SpanStyle(color = accent,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                                                append(tok); pop()
+                                            } else append(tok)
+                                        }
+                                    }, style = MaterialTheme.typography.bodyMedium)
+                                    if (item.note.isNotBlank()) {
+                                        Text(item.note, style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                             }
+                        }
+                        if (curriculum.corrections.isNotEmpty()) {
+                            PageFooter(stringResource(
+                                R.string.each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42))
                         }
                     }
                 }
