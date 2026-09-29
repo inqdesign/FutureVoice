@@ -31,7 +31,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -206,12 +205,8 @@ fun StudyDeckScreen(
             Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (items.isNotEmpty()) {
-                LinearProgressIndicator(
-                    progress = { resolved / items.size.toFloat() },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
+            // No progress bar: iOS draws none — the deck is a pile, not a
+            // quiz with a finish line (gallery 4.2).
 
             if (top == null) {
                 DeckDoneState(
