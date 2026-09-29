@@ -67,6 +67,11 @@ data class TalkGoalItem(
     /** They already said they know this one; the call is what checks it.
      *  Drawn as an empty CHECKED circle, and dealt first. */
     val claimedKnown: Boolean = false,
+    /** From a scenario book: the sentence its scene uses the item in, and
+     *  the usage hint beside it. The chip sheet shows THAT line first — a
+     *  word offered because of this scene is best explained by this scene. */
+    val example: String? = null,
+    val note: String? = null,
 )
 
 object TalkGoalPicker {
@@ -152,6 +157,96 @@ object TalkGoalPicker {
             out.add(item)
         }
         return out
+    }
+
+    /**
+     * The row for a talk ON A SCENARIO BOOK: the book's own material first
+     * (iOS `pick(forScenario:)`, `cb4252b`). Re-running one scene until it
+     * comes out with confidence wants the words THAT scene taught:
+     *
+     * 1. the book's unmastered words and expressions, rotated by how many
+     *    runs the scene has had so the fourth doesn't lead like the first;
+     * 2. what the fluent self OFFERED in previous runs of the scene that the
+     *    learner has never said;
+     * 3. [pick] — the notebook — fills whatever is left, so a global phrase
+     *    never takes a slot from a word this book still teaches.
+     *
+     * Book items ignore the deck's snooze on purpose: here the learner chose
+     * the scene, and the scene is the reason to ask.
+     */
+    suspend fun pickForScenario(
+        context: android.content.Context,
+        language: String,
+        scenario: com.roro.futurevoice.talk.Scenario,
+        previousTalks: List<com.roro.futurevoice.talk.Session>,
+        level: com.roro.futurevoice.data.CefrLevel,
+        limit: Int = MAX_ITEMS,
+    ): List<TalkGoalItem> {
+        val vocab = VocabStore.shared(context)
+        val runs = previousTalks.size
+        fun bookItem(item: com.roro.futurevoice.talk.ScenarioCurriculum.Item) = TalkGoalItem(
+            key = CarryoverDetector.normalized(item.text), text = item.text,
+            isWord = com.roro.futurevoice.data.WordSplitter.count(item.text, language) <= 1,
+            example = item.example, note = item.note.takeIf { it.isNotBlank() })
+        val curriculum = scenario.curriculum
+        val bookWords = rotated(runs, curriculum?.words.orEmpty().filter { it.masteredAt == null }.map(::bookItem))
+            .filter { it.isWord || CarryoverDetector.isCreditable(it.text) }
+        val bookPhrases = rotated(runs, curriculum?.expressions.orEmpty().filter { it.masteredAt == null }.map(::bookItem))
+            .filter { CarryoverDetector.isCreditable(it.text) }
+
+        val talks = previousTalks.sortedByDescending { it.startedAt }
+        val offered = talks.flatMap { it.summary?.expressionsOffered.orEmpty() }
+            .filter { !vocab.hasUsedExpression(it, language) && CarryoverDetector.isCreditable(it) }
+            .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false) }
+        val fluentTexts = talks.flatMap { s -> s.turns.filter { it.role == com.roro.futurevoice.talk.TurnRole.FLUENT_SELF }.map { it.transcript } }
+        val userLemmas = com.roro.futurevoice.data.VocabLemmas.lemmas(
+            talks.flatMap { s -> s.turns.filter { it.role == com.roro.futurevoice.talk.TurnRole.USER }.map { it.transcript } }, language)
+        val pickups = if (fluentTexts.isEmpty()) emptyList() else
+            vocab.pickupCandidates(fluentTexts, level, language, excludingLemmas = userLemmas)
+                .filter { vocab.state(it, language) == null }
+                .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = true) }
+
+        val out = merge(emptyList(), bookWords + pickups, (bookPhrases + offered).take(MAX_EXPRESSIONS), limit)
+        if (out.size < limit) {
+            val seen = out.map { it.key }.toHashSet()
+            for (item in pick(context, language, limit)) {
+                if (out.size >= limit) break
+                if (seen.add(item.key)) out.add(item)
+            }
+        }
+        return out
+    }
+
+    /** Interleave so the row opens with something short — a phrase first
+     *  fills the visible width on its own. */
+    private fun merge(claimed: List<TalkGoalItem>, words: List<TalkGoalItem>,
+                      phrases: List<TalkGoalItem>, limit: Int): MutableList<TalkGoalItem> {
+        val out = ArrayList<TalkGoalItem>(limit)
+        val seen = HashSet<String>()
+        for (item in claimed) {
+            if (out.size >= limit) break
+            if (item.key.isEmpty() || !seen.add(item.key)) continue
+            out.add(item)
+        }
+        val w = words.iterator(); val p = phrases.iterator()
+        var takeWord = true
+        while (out.size < limit) {
+            val next = if (takeWord) (if (w.hasNext()) w.next() else if (p.hasNext()) p.next() else null)
+            else (if (p.hasNext()) p.next() else if (w.hasNext()) w.next() else null)
+            val item = next ?: break
+            takeWord = !takeWord
+            if (item.key.isEmpty() || !seen.add(item.key)) continue
+            out.add(item)
+        }
+        return out
+    }
+
+    /** A book list shifted by the number of runs — each leads with a
+     *  different slice of what's left. */
+    private fun rotated(runs: Int, items: List<TalkGoalItem>): List<TalkGoalItem> {
+        if (items.size <= 1) return items
+        val offset = runs % items.size
+        return items.drop(offset) + items.take(offset)
     }
 
     /**
@@ -358,7 +453,11 @@ fun TalkGoalSheet(
                         }
                     }
                 }
-                entry?.examples?.firstOrNull()?.takeIf { it.text.isNotBlank() }?.let { ex ->
+                // The scene's own sentence (with its usage hint) when the chip
+                // came out of a scenario book; the dictionary's line otherwise.
+                val sceneLine = item.example?.takeIf { it.isNotBlank() }?.let { it to item.note }
+                val dictLine = entry?.examples?.firstOrNull()?.takeIf { it.text.isNotBlank() }?.let { it.text to it.meaning }
+                (sceneLine ?: dictLine)?.let { (exText, exMeaning) ->
                     androidx.compose.foundation.layout.Column(
                         Modifier.fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceVariant,
@@ -366,8 +465,8 @@ fun TalkGoalSheet(
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Text(ex.text, style = MaterialTheme.typography.bodyLarge)
-                        ex.meaning?.takeIf { it.isNotBlank() }?.let {
+                        Text(exText, style = MaterialTheme.typography.bodyLarge)
+                        exMeaning?.takeIf { it.isNotBlank() }?.let {
                             Text(it, style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

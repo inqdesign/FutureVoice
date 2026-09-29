@@ -296,7 +296,17 @@ fun TalkScreen(
     var openGoal by remember { mutableStateOf(preview?.openGoal) }
     LaunchedEffect(targetLanguage) {
         if (preview != null) return@LaunchedEffect
-        goals = TalkGoalPicker.pick(context, targetLanguage)
+        // A talk on a scenario book spends THAT book (iOS `cb4252b`).
+        val scenario = scenarioId?.let { id ->
+            com.roro.futurevoice.data.ScenarioStore.shared(context).load(targetLanguage).firstOrNull { it.id == id }
+        }
+        goals = if (scenario != null) {
+            // Previous runs: by id, and by title for talks saved before the
+            // book's Talk button passed the id.
+            val previous = com.roro.futurevoice.data.SessionStore.shared(context).load(targetLanguage)
+                .filter { it.originScenarioId == scenario.id || (it.originScenarioId == null && it.topic == scenario.environment) }
+            TalkGoalPicker.pickForScenario(context, targetLanguage, scenario, previous, level)
+        } else TalkGoalPicker.pick(context, targetLanguage)
     }
     // ADDITIVE: every version of a user turn's text is checked, from the
     // recognizer's first line to the audio-grounded rewrite, and a tick is
