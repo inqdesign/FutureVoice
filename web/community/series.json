@@ -1,0 +1,300 @@
+{
+ "episodes": [
+  {
+   "id": "e01",
+   "cat": "start",
+   "slides": [
+    "/community/series/e01-01.jpg",
+    "/community/series/e01-02.jpg",
+    "/community/series/e01-03.jpg",
+    "/community/series/e01-04.jpg",
+    "/community/series/e01-05.jpg",
+    "/community/series/e01-06.jpg",
+    "/community/series/e01-07.jpg"
+   ],
+   "ko": {
+    "title": "나와나 한눈에",
+    "tagline": "내 목소리로 말하는 유창한 나와 통화해요"
+   },
+   "en": {
+    "title": "nawana at a glance",
+    "tagline": "Call your fluent self, in your own voice"
+   }
+  },
+  {
+   "id": "e02",
+   "cat": "talk",
+   "slides": [
+    "/community/series/e02-01.jpg",
+    "/community/series/e02-02.jpg",
+    "/community/series/e02-03.jpg",
+    "/community/series/e02-04.jpg",
+    "/community/series/e02-05.jpg",
+    "/community/series/e02-06.jpg",
+    "/community/series/e02-07.jpg"
+   ],
+   "ko": {
+    "title": "전화 한 통",
+    "tagline": "탭 한 번, 전화처럼 번갈아 말해요"
+   },
+   "en": {
+    "title": "One call",
+    "tagline": "One tap, then take turns like a phone call"
+   }
+  },
+  {
+   "id": "e03",
+   "cat": "talk",
+   "slides": [
+    "/community/series/e03-01.jpg",
+    "/community/series/e03-02.jpg",
+    "/community/series/e03-03.jpg",
+    "/community/series/e03-04.jpg",
+    "/community/series/e03-05.jpg"
+   ],
+   "ko": {
+    "title": "통화 설정",
+    "tagline": "내 속도, 내 레벨에 맞춰 말해줘요"
+   },
+   "en": {
+    "title": "Call settings",
+    "tagline": "It talks at your pace and your level"
+   }
+  },
+  {
+   "id": "e04",
+   "cat": "talk",
+   "slides": [
+    "/community/series/e04-01.jpg",
+    "/community/series/e04-02.jpg",
+    "/community/series/e04-03.jpg",
+    "/community/series/e04-04.jpg",
+    "/community/series/e04-05.jpg",
+    "/community/series/e04-06.jpg",
+    "/community/series/e04-07.jpg"
+   ],
+   "ko": {
+    "title": "교정",
+    "tagline": "틀려도 괜찮아요. 유창한 내가 고쳐 말해줘요"
+   },
+   "en": {
+    "title": "Corrections",
+    "tagline": "Mistakes are fine. Your fluent self says it right"
+   }
+  },
+  {
+   "id": "e05",
+   "cat": "talk",
+   "slides": [
+    "/community/series/e05-01.jpg",
+    "/community/series/e05-02.jpg",
+    "/community/series/e05-03.jpg",
+    "/community/series/e05-04.jpg",
+    "/community/series/e05-05.jpg",
+    "/community/series/e05-06.jpg"
+   ],
+   "ko": {
+    "title": "통화가 교재로",
+    "tagline": "통화 한 번이 교재 한 권이 돼요"
+   },
+   "en": {
+    "title": "Every call, a book",
+    "tagline": "Each call becomes a study book"
+   }
+  },
+  {
+   "id": "e07",
+   "cat": "watch",
+   "slides": [
+    "/community/series/e07-01.jpg",
+    "/community/series/e07-02.jpg",
+    "/community/series/e07-03.jpg",
+    "/community/series/e07-04.jpg",
+    "/community/series/e07-05.jpg"
+   ],
+   "ko": {
+    "title": "미리 보기",
+    "tagline": "곧 있을 상황을 유창한 내가 먼저 해봐요"
+   },
+   "en": {
+    "title": "Watch first",
+    "tagline": "See your fluent self handle it before you do"
+   }
+  },
+  {
+   "id": "e10",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e10-01.jpg",
+    "/community/series/e10-02.jpg",
+    "/community/series/e10-03.jpg",
+    "/community/series/e10-04.jpg",
+    "/community/series/e10-05.jpg"
+   ],
+   "ko": {
+    "title": "오늘의 복습",
+    "tagline": "오늘 할 복습이 한곳에 모여요"
+   },
+   "en": {
+    "title": "Today's review",
+    "tagline": "Everything to review today, in one place"
+   }
+  },
+  {
+   "id": "e11",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e11-01.jpg",
+    "/community/series/e11-02.jpg",
+    "/community/series/e11-03.jpg",
+    "/community/series/e11-04.jpg",
+    "/community/series/e11-05.jpg",
+    "/community/series/e11-06.jpg"
+   ],
+   "ko": {
+    "title": "다시 말하기",
+    "tagline": "같은 대화를, 이번엔 제대로"
+   },
+   "en": {
+    "title": "Say it again",
+    "tagline": "The same conversation, done right this time"
+   }
+  },
+  {
+   "id": "e13",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e13-01.jpg",
+    "/community/series/e13-02.jpg",
+    "/community/series/e13-03.jpg",
+    "/community/series/e13-04.jpg",
+    "/community/series/e13-05.jpg",
+    "/community/series/e13-06.jpg"
+   ],
+   "ko": {
+    "title": "단어장",
+    "tagline": "통화에서 나온 단어가 알아서 모여요"
+   },
+   "en": {
+    "title": "Words",
+    "tagline": "Words from your calls collect themselves"
+   }
+  },
+  {
+   "id": "e14",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e14-01.jpg",
+    "/community/series/e14-02.jpg",
+    "/community/series/e14-03.jpg",
+    "/community/series/e14-04.jpg",
+    "/community/series/e14-05.jpg"
+   ],
+   "ko": {
+    "title": "표현",
+    "tagline": "미래의 내가 쓴 표현을 내 것으로"
+   },
+   "en": {
+    "title": "Expressions",
+    "tagline": "Make your future self's phrases your own"
+   }
+  },
+  {
+   "id": "e15",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e15-01.jpg",
+    "/community/series/e15-02.jpg",
+    "/community/series/e15-03.jpg",
+    "/community/series/e15-04.jpg",
+    "/community/series/e15-05.jpg",
+    "/community/series/e15-06.jpg"
+   ],
+   "ko": {
+    "title": "문장 카드",
+    "tagline": "내가 틀린 문장이 카드가 돼요"
+   },
+   "en": {
+    "title": "Sentence cards",
+    "tagline": "The sentences you got wrong become cards"
+   }
+  },
+  {
+   "id": "e16",
+   "cat": "practice",
+   "slides": [
+    "/community/series/e16-01.jpg",
+    "/community/series/e16-02.jpg",
+    "/community/series/e16-03.jpg",
+    "/community/series/e16-04.jpg",
+    "/community/series/e16-05.jpg",
+    "/community/series/e16-06.jpg",
+    "/community/series/e16-07.jpg",
+    "/community/series/e16-08.jpg",
+    "/community/series/e16-09.jpg",
+    "/community/series/e16-10.jpg"
+   ],
+   "ko": {
+    "title": "주간 시험",
+    "tagline": "일주일 동안 배운 것만으로 만든 시험지"
+   },
+   "en": {
+    "title": "Weekly test",
+    "tagline": "A test made only from what you learned this week"
+   }
+  },
+  {
+   "id": "e17",
+   "cat": "progress",
+   "slides": [
+    "/community/series/e17-01.jpg",
+    "/community/series/e17-02.jpg",
+    "/community/series/e17-03.jpg",
+    "/community/series/e17-04.jpg"
+   ],
+   "ko": {
+    "title": "진행 상황",
+    "tagline": "대화만으로 내 레벨이 보여요"
+   },
+   "en": {
+    "title": "Progress",
+    "tagline": "See your level from conversation alone"
+   }
+  },
+  {
+   "id": "e18",
+   "cat": "progress",
+   "slides": [
+    "/community/series/e18-01.jpg",
+    "/community/series/e18-02.jpg",
+    "/community/series/e18-03.jpg",
+    "/community/series/e18-04.jpg"
+   ],
+   "ko": {
+    "title": "활동 · 오늘의 카드",
+    "tagline": "공부한 날이 쌓이고, 하루를 카드로 남겨요"
+   },
+   "en": {
+    "title": "Activity & day card",
+    "tagline": "Your study days add up, and each day becomes a card"
+   }
+  },
+  {
+   "id": "e19",
+   "cat": "progress",
+   "slides": [
+    "/community/series/e19-01.jpg",
+    "/community/series/e19-02.jpg",
+    "/community/series/e19-03.jpg"
+   ],
+   "ko": {
+    "title": "홈 화면 위젯",
+    "tagline": "앱을 열지 않아도 오늘의 단어가 보여요"
+   },
+   "en": {
+    "title": "Home screen widget",
+    "tagline": "Today's words without opening the app"
+   }
+  }
+ ]
+}

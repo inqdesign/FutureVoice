@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>nawana community</title>
+<meta name="description" content="Latest news, feature guides and a chat with the people making nawana." />
+<meta property="og:title" content="nawana community" />
+<meta property="og:description" content="Latest news, feature guides and a chat with the people making nawana." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://nawana.app/community" />
+<link rel="canonical" href="https://nawana.app/community" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<style>
+@font-face{font-family:"Pixelify Sans";font-display:swap;src:url(/PixelifySans.woff2) format("woff2");}
+@font-face{font-family:"Galmuri11";font-display:swap;src:url(/Galmuri11.woff2) format("woff2");}
+@font-face{font-family:"Geist Pixel";font-display:swap;src:url(/GeistPixel.ttf) format("truetype");}
+:root{
+  color-scheme:light;
+  --bg:#F6F5F1; --panel:#FFFFFF; --panel-2:#F1F0EB; --line:#E5E3DD; --line-2:#D5D2CB;
+  --tx:#1B1A18; --dim:#5C5A54; --faint:#8C8983; --accent:#3558F0; --accent-ink:#3558F0; --accent-soft:#E7ECFF;
+  --ok:#2E9E5E; --warn:#B7791F;
+  --shadow:0 1px 2px rgba(27,26,24,.05),0 8px 24px rgba(27,26,24,.06);
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;
+  --pixel:"Geist Pixel","Galmuri11","Pixelify Sans",var(--sans);
+  --head:64px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:inherit}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{text-wrap:balance}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;height:calc(var(--head) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 24px 0;display:flex;align-items:center;gap:16px;background:rgba(246,245,241,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.mark{display:block;width:34px;color:var(--tx)}
+.mark svg{display:block;width:100%;height:auto}
+.crumb{font-family:var(--pixel);font-size:17px;letter-spacing:.02em;color:var(--dim)}
+.crumb b{color:var(--tx);font-weight:400}
+.top .sp{flex:1}
+.lang{display:flex;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.06em}
+.lang button{background:none;border:0;color:var(--faint);padding:4px 2px}
+.lang button[aria-pressed="true"]{color:var(--tx)}
+.store{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;background:var(--tx);color:var(--bg);text-decoration:none;font-weight:600;font-size:13.5px;white-space:nowrap}
+.store svg{width:15px;height:15px}
+
+/* layout */
+.wrap{padding-inline:32px 24px;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:40px;align-items:start}
+main{padding-block:44px 80px;min-width:0}
+.intro h1{font-family:var(--pixel);font-weight:400;font-size:44px;line-height:1.15;letter-spacing:.01em}
+.intro p{color:var(--dim);margin-top:12px;max-width:56ch;font-size:16.5px}
+section{margin-top:56px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.sec-head h2{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.sec-head p{color:var(--faint);font-size:13.5px}
+
+/* news */
+.news{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-items:start}
+.post{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
+.post time{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.04em}
+.post h3{font-size:18.5px;font-weight:700;margin-top:6px;line-height:1.35}
+.post .body{color:var(--dim);white-space:pre-line;margin-top:10px;font-size:14.5px;line-height:1.65}
+.post .body.clamp{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.post .row{display:flex;gap:16px;margin-top:12px;align-items:center}
+.post .more{background:none;border:0;color:var(--accent);font-size:13.5px;padding:0}
+.post .link{color:var(--accent);font-size:13.5px;text-decoration:none}
+.post .link:hover{text-decoration:underline}
+.empty{color:var(--faint);font-size:14px;padding:18px 0}
+
+/* features */
+.chips{position:sticky;top:calc(var(--head) + env(safe-area-inset-top,0px));z-index:5;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:12px 0;margin-bottom:8px;background:var(--bg)}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:6px 14px;font-size:13.5px;color:var(--dim);text-decoration:none}
+.chip:hover{color:var(--tx);border-color:var(--faint)}
+.cat{padding-top:18px}
+.cat + .cat{margin-top:28px;border-top:1px solid var(--line);padding-top:36px}
+.cat-h{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:500;margin-bottom:8px}
+.ep{margin-top:22px}
+.ep + .ep{margin-top:44px}
+.ep-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+.ep-h h4{font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+.ep-h p{color:var(--dim);font-size:14.5px;margin-top:3px}
+.all{flex:0 0 auto;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--dim);white-space:nowrap}
+.all:hover{color:var(--tx)}
+/* Big enough to read without tapping: two across in the main column, one on a phone. */
+.slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.sl{display:block;border:0;padding:0;background:#FAF9F6;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 6px 18px rgba(27,26,24,.08);cursor:zoom-in;transition:transform .2s ease, box-shadow .2s ease}
+.sl:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--line-2),0 12px 28px rgba(27,26,24,.12)}
+.sl img{display:block;width:100%;height:auto;aspect-ratio:4/5}
+.note{color:var(--faint);font-size:12.5px;margin-top:16px}
+
+/* chat */
+.chat{position:sticky;top:calc(var(--head) + env(safe-area-inset-top,0px) + 20px);height:calc(100vh - var(--head) - env(safe-area-inset-top,0px) - 40px);margin-block:20px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.chat-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.chat-head h2{font-size:16px;font-weight:700}
+.chat-head .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);font-family:var(--mono)}
+.chat-head .live i{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.chat-head .live.on i{background:var(--ok)}
+.chat-head .x{margin-left:auto;display:none;background:none;border:0;font-size:20px;color:var(--dim);padding:2px 6px}
+.chat-sub{padding:0 18px 12px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--faint);margin-top:-4px}
+.msgs{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.msg{max-width:88%;display:flex;flex-direction:column;gap:3px}
+.msg .who{font-size:12px;color:var(--faint);display:flex;gap:6px;align-items:center}
+.msg .who .badge{font-size:10.5px;color:var(--accent);border:1px solid var(--accent-soft);background:var(--accent-soft);border-radius:999px;padding:0 6px;line-height:16px}
+.msg .txt{background:var(--panel-2);border-radius:14px 14px 14px 4px;padding:8px 12px;white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.5}
+.msg.me{align-self:flex-end;align-items:flex-end}
+.msg.me .txt{background:var(--accent-ink);color:#fff;border-radius:14px 14px 4px 14px}
+.msg.staff .txt{background:var(--accent-soft)}
+.msgs .day{align-self:center;font-family:var(--mono);font-size:11px;color:var(--faint);padding:6px 0}
+.msgs .hello{margin:auto;text-align:center;color:var(--faint);font-size:13.5px;max-width:30ch;padding:20px 0}
+.compose{border-top:1px solid var(--line);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px))}
+.signin{display:flex;flex-direction:column;gap:8px}
+.signin p{font-size:13px;color:var(--dim);margin-bottom:2px}
+.sbtn{display:flex;align-items:center;justify-content:center;gap:9px;height:42px;border-radius:11px;border:1px solid var(--line-2);background:var(--panel);font-weight:600;font-size:14px}
+.sbtn.apple{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.sbtn svg{width:17px;height:17px}
+.me-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--faint);margin-bottom:8px}
+.me-row input{background:transparent;border:0;border-bottom:1px dashed var(--line-2);color:var(--tx);width:130px;padding:1px 2px;font-size:12.5px}
+.me-row input:focus{outline:none;border-bottom-color:var(--accent)}
+.me-row .out{margin-left:auto;background:none;border:0;color:var(--faint);font-size:12px;text-decoration:underline}
+.box{display:flex;gap:8px;align-items:flex-end;background:var(--panel-2);border:1px solid var(--line-2);border-radius:14px;padding:6px 6px 6px 12px}
+.box:focus-within{border-color:var(--accent)}
+.box textarea{flex:1;background:transparent;border:0;resize:none;max-height:120px;min-height:24px;padding:5px 0;line-height:1.45;font-size:14.5px}
+.box textarea:focus{outline:none}
+.send{flex:0 0 auto;width:34px;height:34px;border-radius:10px;border:0;background:var(--accent-ink);color:#fff;display:grid;place-items:center}
+.send:disabled{background:var(--line-2);color:var(--faint);cursor:default}
+.send svg{width:16px;height:16px}
+.hint{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);margin-top:6px;gap:10px}
+.hint .err{color:var(--warn)}
+
+/* feature viewer */
+.viewer{position:fixed;inset:0;z-index:50;background:rgba(10,9,8,.94);color:#EDECE8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.viewer[hidden]{display:none!important}
+.v-top{width:min(560px,100%);display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.v-top b{font-size:16px}
+.v-top span{font-family:var(--mono);font-size:12px;color:#8C8983}
+.v-top button{margin-left:auto;background:none;border:0;color:#BDBAB3;font-size:24px;line-height:1;padding:4px 8px}
+.track{width:min(560px,100%);display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:14px}
+.track::-webkit-scrollbar{display:none}
+.track img{flex:0 0 100%;width:100%;aspect-ratio:4/5;object-fit:contain;scroll-snap-align:center;max-height:calc(100vh - 190px);background:#FAF9F6}
+.v-nav{display:flex;align-items:center;gap:16px;margin-top:14px}
+.v-nav button{width:42px;height:42px;border-radius:50%;border:1px solid #3A3834;background:#1F1E1B;font-size:18px;color:#EDECE8}
+.v-nav button:disabled{opacity:.35;cursor:default}
+.dots{display:flex;gap:6px}
+.dots i{width:6px;height:6px;border-radius:50%;background:#3A3834}
+.dots i.on{background:#EDECE8}
+.v-cta{margin-top:14px;font-size:13px;color:#A3A19A}
+.v-cta a{color:#7C95FF}
+
+footer{grid-column:1/-1;border-top:1px solid var(--line);padding:24px 0 40px;display:flex;gap:18px;flex-wrap:wrap;color:var(--faint);font-size:12.5px}
+footer a{color:var(--faint)}
+
+/* phone: one column, chat behind a button */
+.fab{display:none}
+@media (max-width:980px){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:0}
+  .chat{position:fixed;inset:0;top:0;height:auto;margin:0;border-radius:0;border:0;z-index:40;display:none;padding-top:env(safe-area-inset-top,0px)}
+  body.chat-open .chat{display:flex}
+  body.chat-open{overflow:hidden}
+  .chat-head .x{display:block}
+  .fab{display:flex;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;border:0;background:var(--accent-ink);color:#fff;font-weight:700;box-shadow:0 10px 30px rgba(53,88,240,.35)}
+  .fab svg{width:18px;height:18px}
+}
+@media (max-width:560px){
+  .top{padding-inline:16px;gap:12px}
+  .wrap{padding-inline:16px}
+  .news{grid-template-columns:minmax(0,1fr)}
+  .intro h1{font-size:34px}
+  .store span{display:none}
+  .store{padding:0 11px}
+  .slides{grid-template-columns:minmax(0,1fr);gap:14px}
+  .ep-h{flex-direction:column;align-items:flex-start;gap:8px}
+  .post{padding:18px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="mark" href="/" aria-label="nawana"><svg viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><rect x="291" y="238" width="410" height="100"/><rect x="701" y="338" width="104" height="347"/><rect x="187" y="338" width="104" height="347"/><rect x="291" y="685" width="410" height="100"/><rect x="805" y="685" width="98" height="100"/></svg></a>
+  <div class="crumb">nawana / <b data-i="crumb">커뮤니티</b></div>
+  <div class="sp"></div>
+  <div class="lang" role="group" aria-label="Language">
+    <button data-lang="ko" aria-pressed="true">KO</button><button data-lang="en" aria-pressed="false">EN</button>
+  </div>
+  <a class="store" href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.89 1.15 9.14.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.24-.02 2.02-1.12 2.77-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>
+    <span data-i="store">App Store에서 받기</span>
+  </a>
+</header>
+
+<div class="wrap">
+  <main>
+    <div class="intro">
+      <h1 data-i="title">커뮤니티</h1>
+      <p data-i="lede">새 소식과 기능 소개를 보고, 만드는 사람과 바로 이야기하세요. 쓰기 불편한 점, 있었으면 하는 기능, 뭐든 좋아요.</p>
+    </div>
+
+    <section aria-labelledby="h-news">
+      <div class="sec-head"><h2 id="h-news" data-i="news">새 소식</h2></div>
+      <div class="news" id="news"><p class="empty" data-i="loading">불러오는 중…</p></div>
+    </section>
+
+    <section aria-labelledby="h-feat">
+      <div class="sec-head"><h2 id="h-feat" data-i="features">기능 소개</h2><p data-i="featSub">기능마다 실제 앱 화면으로 보여드려요. 카드를 누르면 크게 볼 수 있어요.</p></div>
+      <div class="chips" id="chips"></div>
+      <div class="grid" id="grid"></div>
+      <p class="note" id="featNote" hidden data-i="koOnly">기능 소개 이미지는 지금은 한국어판만 있어요.</p>
+    </section>
+  </main>
+
+  <aside class="chat" id="chat" aria-labelledby="h-chat">
+    <div class="chat-head">
+      <h2 id="h-chat" data-i="chat">채팅</h2>
+      <span class="live" id="live"><i></i><span data-i="connecting">연결 중</span></span>
+      <button class="x" id="chatClose" aria-label="닫기">✕</button>
+    </div>
+    <p class="chat-sub" data-i="chatSub" style="padding-top:10px">누구나 읽을 수 있고, 로그인하면 쓸 수 있어요. 공개 채팅이니 개인정보는 적지 마세요.</p>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="compose" id="compose"></div>
+  </aside>
+
+  <footer>
+    <span>© nawana</span>
+    <a href="/privacy-ko.html" data-ko="/privacy-ko.html" data-en="/privacy.html" data-i="privacy">개인정보 처리방침</a>
+    <a href="/terms-ko.html" data-ko="/terms-ko.html" data-en="/terms.html" data-i="terms">이용약관</a>
+    <a href="/support-ko.html" data-ko="/support-ko.html" data-en="/support.html" data-i="support">지원</a>
+  </footer>
+</div>
+
+<button class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span data-i="chat">채팅</span></button>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div class="v-top"><b id="vTitle"></b><span id="vCount"></span><button id="vClose" aria-label="닫기">✕</button></div>
+  <div class="track" id="track"></div>
+  <div class="v-nav"><button id="vPrev" aria-label="이전">←</button><div class="dots" id="dots"></div><button id="vNext" aria-label="다음">→</button></div>
+  <p class="v-cta"><span data-i="tryIt">직접 해보고 싶다면</span> · <a href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" data-i="store">App Store에서 받기</a></p>
+</div>
+
+<script type="module">
+const SUPABASE_URL = "https://chhzjtigzdotacutwcyo.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU";
+
+const T = {
+  ko: {
+    crumb:"커뮤니티", store:"App Store에서 받기", title:"커뮤니티",
+    lede:"새 소식과 기능 소개를 보고, 만드는 사람과 바로 이야기하세요. 쓰기 불편한 점, 있었으면 하는 기능, 뭐든 좋아요.",
+    news:"새 소식", loading:"불러오는 중…", noNews:"아직 소식이 없어요.", more:"더 보기", less:"접기", openLink:"자세히 보기",
+    features:"기능 소개", featSub:"기능마다 실제 앱 화면으로 보여드려요. 카드를 누르면 크게 볼 수 있어요.", all:"전체", viewAll:"크게 보기", koOnly:"기능 소개 이미지는 지금은 한국어판만 있어요.",
+    chat:"채팅", connecting:"연결 중", live:"실시간", offline:"연결 끊김",
+    chatSub:"누구나 읽을 수 있고, 로그인하면 쓸 수 있어요. 공개 채팅이니 개인정보는 적지 마세요.",
+    hello:"첫 메시지를 남겨주세요. 만드는 사람이 직접 읽어요.",
+    signinLead:"로그인하고 이야기에 참여하세요. 앱과 같은 계정이에요.", apple:"Apple로 계속하기", google:"Google로 계속하기",
+    nick:"닉네임", signout:"로그아웃", placeholder:"메시지를 입력하세요", send:"보내기", enterHint:"Enter로 보내기 · Shift+Enter 줄바꿈",
+    staff:"운영자", today:"오늘", yesterday:"어제", now:"방금", min:"분 전", hour:"시간 전",
+    e_slow:"잠깐만요, 3초 뒤에 다시 보내주세요.", e_many:"10분에 20개까지 보낼 수 있어요. 조금 뒤에 다시 보내주세요.",
+    e_name:"이 닉네임은 쓸 수 없어요. 다른 이름으로 바꿔주세요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
+    tryIt:"직접 해보고 싶다면", privacy:"개인정보 처리방침", terms:"이용약관", support:"지원", close:"닫기", prev:"이전", next:"다음",
+    cats:{start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
+  },
+  en: {
+    crumb:"Community", store:"Get it on the App Store", title:"Community",
+    lede:"Read the latest news, flip through feature guides, and talk to the people making nawana. Something awkward, a feature you wish existed, anything.",
+    news:"Latest news", loading:"Loading…", noNews:"No news yet.", more:"Read more", less:"Show less", openLink:"Learn more",
+    features:"Feature guides", featSub:"Each feature, shown on real app screens. Tap a card to see it large.", all:"All", viewAll:"View large", koOnly:"The feature guide images are in Korean for now.",
+    chat:"Chat", connecting:"Connecting", live:"Live", offline:"Offline",
+    chatSub:"Anyone can read. Sign in to write. This chat is public, so keep personal details out of it.",
+    hello:"Leave the first message. The team reads every one.",
+    signinLead:"Sign in to join the conversation. It's the same account as the app.", apple:"Continue with Apple", google:"Continue with Google",
+    nick:"Name", signout:"Sign out", placeholder:"Write a message", send:"Send", enterHint:"Enter to send · Shift+Enter for a new line",
+    staff:"Team", today:"Today", yesterday:"Yesterday", now:"now", min:"m ago", hour:"h ago",
+    e_slow:"One moment. Try again in 3 seconds.", e_many:"You can send 20 messages every 10 minutes. Try again in a bit.",
+    e_name:"That name is reserved. Please pick another.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
+    tryIt:"Want to try it yourself?", privacy:"Privacy", terms:"Terms", support:"Support", close:"Close", prev:"Previous", next:"Next",
+    cats:{start:"Getting started", talk:"Talk", watch:"Watch", practice:"Review", progress:"Progress"},
+  },
+};
+const CAT_ORDER = ["start","talk","watch","practice","progress"];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+
+let lang = store.get("nawana-lang") || ((navigator.language || "").toLowerCase().startsWith("ko") ? "ko" : "en");
+const t = k => T[lang][k] ?? T.ko[k] ?? k;
+
+/* ---------- state ---------- */
+let sb = null, session = null;
+let news = [], series = [];
+const messages = new Map();   // id -> row
+let sendError = "";
+
+/* ---------- i18n ---------- */
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i]").forEach(el => { const v = t(el.dataset.i); if (typeof v === "string") el.textContent = v; });
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  document.querySelectorAll("[data-ko][data-en]").forEach(a => a.setAttribute("href", a.dataset[lang]));
+  $("#featNote").hidden = lang !== "en";
+  ["vClose","chatClose"].forEach(id => $("#"+id).setAttribute("aria-label", t("close")));
+  $("#vPrev").setAttribute("aria-label", t("prev")); $("#vNext").setAttribute("aria-label", t("next"));
+  renderNews(); renderFeatures(); renderMessages(); renderCompose(); setLive(liveState);
+}
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => { lang = b.dataset.lang; store.set("nawana-lang", lang); applyLang(); }));
+
+/* ---------- news ---------- */
+const fmtDate = iso => new Date(iso).toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", { year:"numeric", month:"long", day:"numeric" });
+const openPosts = new Set();
+function renderNews(){
+  const host = $("#news");
+  if (!news.length) { host.innerHTML = `<p class="empty">${esc(sb ? t("noNews") : t("loading"))}</p>`; return; }
+  host.innerHTML = news.map(n => {
+    const title = lang === "en" ? n.title_en : n.title_ko;
+    const body = (lang === "en" ? n.body_en : n.body_ko) || "";
+    const long = body.split("\n").length > 6 || body.length > 360;
+    const open = openPosts.has(n.id);
+    return `<article class="post">
+      <time datetime="${esc(n.published_at)}">${esc(fmtDate(n.published_at))}</time>
+      <h3>${esc(title)}</h3>
+      ${body ? `<div class="body ${long && !open ? "clamp" : ""}">${esc(body)}</div>` : ""}
+      <div class="row">
+        ${long ? `<button class="more" data-post="${esc(n.id)}">${esc(open ? t("less") : t("more"))}</button>` : ""}
+        ${n.link_url ? `<a class="link" href="${esc(n.link_url)}" target="_blank" rel="noopener">${esc(t("openLink"))} →</a>` : ""}
+      </div>
+    </article>`;
+  }).join("");
+}
+$("#news").addEventListener("click", e => {
+  const b = e.target.closest("[data-post]"); if (!b) return;
+  const id = b.dataset.post; openPosts.has(id) ? openPosts.delete(id) : openPosts.add(id); renderNews();
+});
+
+/* ---------- features ---------- */
+function renderFeatures(){
+  const cats = CAT_ORDER.filter(c => series.some(e => e.cat === c));
+  // Chips jump to a section; nothing is hidden, the whole series is one scroll.
+  $("#chips").innerHTML = cats.map(c =>
+    `<a class="chip" href="#cat-${c}" data-jump="${c}">${esc(t("cats")[c])}</a>`).join("");
+  $("#grid").innerHTML = cats.map(c => `
+    <div class="cat" id="cat-${c}">
+      <h3 class="cat-h">${esc(t("cats")[c])}</h3>
+      ${series.filter(e => e.cat === c).map(e => {
+        // The cover repeats the heading and the last slide is the same nawana card
+        // in every set, so the page shows the middle; the viewer still has all of it.
+        const body = e.slides.length > 2 ? e.slides.slice(1, -1) : e.slides;
+        const off = e.slides.length > 2 ? 1 : 0;
+        return `<article class="ep" id="ep-${esc(e.id)}">
+          <header class="ep-h">
+            <div><h4>${esc(e[lang].title)}</h4><p>${esc(e[lang].tagline)}</p></div>
+            <button class="all" data-ep="${esc(e.id)}" data-at="0">${esc(t("viewAll"))} · ${e.slides.length}</button>
+          </header>
+          <div class="slides">${body.map((src, k) => `
+            <button class="sl" data-ep="${esc(e.id)}" data-at="${k + off}" aria-label="${esc(e[lang].title)} ${k + off + 1}/${e.slides.length}">
+              <img src="${esc(src)}" alt="" loading="lazy" width="720" height="900">
+            </button>`).join("")}
+          </div>
+        </article>`;
+      }).join("")}
+    </div>`).join("");
+}
+$("#chips").addEventListener("click", e => {
+  const a = e.target.closest("[data-jump]"); if (!a) return;
+  e.preventDefault();
+  const el = document.getElementById("cat-" + a.dataset.jump);
+  const y = el.getBoundingClientRect().top + scrollY - (document.querySelector(".top").offsetHeight + document.querySelector("#chips").offsetHeight + 12);
+  scrollTo({ top: y, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+
+/* ---------- viewer ---------- */
+let vEp = null, vIdx = 0, lastFocus = null;
+function openViewer(id, start = 0){
+  vEp = series.find(e => e.id === id); if (!vEp) return;
+  lastFocus = document.activeElement;
+  $("#vTitle").textContent = vEp[lang].title;
+  $("#track").innerHTML = vEp.slides.map((src, i) => `<img src="${esc(src)}" alt="${esc(vEp[lang].title)} ${i+1}/${vEp.slides.length}" ${i > 1 ? 'loading="lazy"' : ""}>`).join("");
+  $("#dots").innerHTML = vEp.slides.map(() => "<i></i>").join("");
+  $("#viewer").hidden = false; document.body.style.overflow = "hidden";
+  const tr = $("#track"); requestAnimationFrame(() => { tr.scrollLeft = start * tr.clientWidth; setIdx(start); });
+  setIdx(start); $("#vNext").focus();
+}
+function closeViewer(){ $("#viewer").hidden = true; document.body.style.overflow = ""; vEp = null; lastFocus?.focus(); }
+function setIdx(i){
+  vIdx = i;
+  $("#vCount").textContent = `${i+1} / ${vEp.slides.length}`;
+  [...$("#dots").children].forEach((d, j) => d.classList.toggle("on", j === i));
+  $("#vPrev").disabled = i === 0; $("#vNext").disabled = i === vEp.slides.length - 1;
+}
+function go(i){ const tr = $("#track"); tr.scrollTo({ left: i * tr.clientWidth, behavior: "smooth" }); }
+$("#grid").addEventListener("click", e => { const b = e.target.closest("[data-ep]"); if (b) openViewer(b.dataset.ep, +b.dataset.at || 0); });
+$("#track").addEventListener("scroll", () => { if (!vEp) return; const tr = $("#track"); const i = Math.round(tr.scrollLeft / tr.clientWidth); if (i !== vIdx) setIdx(i); }, { passive: true });
+$("#vPrev").addEventListener("click", () => go(vIdx - 1));
+$("#vNext").addEventListener("click", () => go(vIdx + 1));
+$("#vClose").addEventListener("click", closeViewer);
+$("#viewer").addEventListener("click", e => { if (e.target.id === "viewer") closeViewer(); });
+document.addEventListener("keydown", e => {
+  if (!vEp) return;
+  if (e.key === "Escape") closeViewer();
+  if (e.key === "ArrowRight" && vIdx < vEp.slides.length - 1) go(vIdx + 1);
+  if (e.key === "ArrowLeft" && vIdx > 0) go(vIdx - 1);
+});
+
+/* ---------- chat ---------- */
+let liveState = "connecting";
+function setLive(s){ liveState = s; const el = $("#live"); el.classList.toggle("on", s === "live"); el.querySelector("span").textContent = t(s === "live" ? "live" : s === "offline" ? "offline" : "connecting"); }
+function relTime(iso){
+  const d = new Date(iso), s = (Date.now() - d) / 1000;
+  if (s < 60) return t("now");
+  if (s < 3600) return lang === "ko" ? `${Math.floor(s/60)}${t("min")}` : `${Math.floor(s/60)}${t("min")}`;
+  if (s < 86400 && new Date().toDateString() === d.toDateString()) return d.toLocaleTimeString(lang === "ko" ? "ko-KR" : "en-US", { hour:"numeric", minute:"2-digit" });
+  return d.toLocaleString(lang === "ko" ? "ko-KR" : "en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
+}
+function dayLabel(d){
+  const today = new Date(); const y = new Date(Date.now() - 86400000);
+  if (d.toDateString() === today.toDateString()) return t("today");
+  if (d.toDateString() === y.toDateString()) return t("yesterday");
+  return d.toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", { month:"long", day:"numeric", weekday:"short" });
+}
+function renderMessages(){
+  const host = $("#msgs");
+  const nearBottom = host.scrollHeight - host.scrollTop - host.clientHeight < 80;
+  const rows = [...messages.values()].sort((a, b) => a.id - b.id);
+  if (!rows.length) { host.innerHTML = `<p class="hello">${esc(t("hello"))}</p>`; return; }
+  const me = session?.user?.id;
+  let html = "", lastDay = "";
+  for (const m of rows) {
+    const d = new Date(m.created_at), day = d.toDateString();
+    if (day !== lastDay) { html += `<span class="day">${esc(dayLabel(d))}</span>`; lastDay = day; }
+    const mine = m.user_id === me;
+    html += `<div class="msg ${mine ? "me" : ""} ${m.is_staff ? "staff" : ""}">
+      <span class="who">${mine ? "" : `<span>${esc(m.display_name)}</span>`}${m.is_staff ? `<span class="badge">${esc(t("staff"))}</span>` : ""}<span title="${esc(d.toLocaleString())}">${esc(relTime(m.created_at))}</span></span>
+      <div class="txt">${esc(m.body)}</div></div>`;
+  }
+  host.innerHTML = html;
+  if (nearBottom || !host.dataset.scrolled) { host.scrollTop = host.scrollHeight; host.dataset.scrolled = "1"; }
+}
+$("#msgs").addEventListener("scroll", () => { $("#msgs").dataset.scrolled = "1"; }, { passive: true });
+
+function defaultName(user){
+  const md = user?.user_metadata || {};
+  const n = (md.full_name || md.name || "").trim().split(/\s+/)[0];
+  if (n) return n.slice(0, 24);
+  return (lang === "ko" ? "학습자" : "learner") + "-" + (user?.id || "").slice(0, 4);
+}
+function myName(){ return store.get("nawana-community-name") || defaultName(session?.user); }
+
+function renderCompose(){
+  const host = $("#compose");
+  if (!sb) { host.innerHTML = ""; return; }
+  if (!session || session.user?.is_anonymous) {
+    host.innerHTML = `<div class="signin">
+      <p>${esc(t("signinLead"))}</p>
+      <button class="sbtn apple" data-oauth="apple"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.89 1.15 9.14.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.24-.02 2.02-1.12 2.77-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>${esc(t("apple"))}</button>
+      <button class="sbtn" data-oauth="google"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2.1-1.9 3.3-4.7 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.4-1 7.2-2.7l-3.5-2.7c-1 .7-2.2 1-3.7 1-2.9 0-5.3-1.9-6.2-4.5H2.2v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.2a11 11 0 0 0 0 9.8l3.6-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.1-3.1A11 11 0 0 0 2.2 7.1l3.6 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>${esc(t("google"))}</button>
+      ${sendError ? `<div class="hint"><span class="err">${esc(sendError)}</span></div>` : ""}
+    </div>`;
+    return;
+  }
+  const draft = $("#msgInput")?.value || "";
+  host.innerHTML = `
+    <div class="me-row"><label for="nick">${esc(t("nick"))}</label><input id="nick" maxlength="24" value="${esc(myName())}"><button class="out" id="signout">${esc(t("signout"))}</button></div>
+    <form class="box" id="form">
+      <textarea id="msgInput" rows="1" maxlength="500" placeholder="${esc(t("placeholder"))}" aria-label="${esc(t("placeholder"))}">${esc(draft)}</textarea>
+      <button class="send" id="sendBtn" type="submit" aria-label="${esc(t("send"))}" ${draft.trim() ? "" : "disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+    </form>
+    <div class="hint"><span class="${sendError ? "err" : ""}">${esc(sendError || t("enterHint"))}</span><span id="cnt">${draft.length}/500</span></div>`;
+}
+$("#compose").addEventListener("click", async e => {
+  const o = e.target.closest("[data-oauth]");
+  if (o) {
+    const { error } = await sb.auth.signInWithOAuth({ provider: o.dataset.oauth, options: { redirectTo: location.origin + location.pathname } });
+    if (error) { sendError = t("e_signin"); renderCompose(); }
+    return;
+  }
+  if (e.target.id === "signout") { await sb.auth.signOut(); }
+});
+$("#compose").addEventListener("input", e => {
+  if (e.target.id === "msgInput") {
+    const ta = e.target; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+    $("#sendBtn").disabled = !ta.value.trim(); $("#cnt").textContent = `${ta.value.length}/500`;
+  }
+});
+$("#compose").addEventListener("change", e => {
+  if (e.target.id === "nick") { const v = e.target.value.trim().slice(0, 24); if (v) store.set("nawana-community-name", v); else e.target.value = myName(); }
+});
+$("#compose").addEventListener("keydown", e => {
+  if (e.target.id === "msgInput" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#form").requestSubmit(); }
+});
+$("#compose").addEventListener("submit", async e => {
+  e.preventDefault();
+  const ta = $("#msgInput"); const body = ta.value.trim(); if (!body) return;
+  const nick = ($("#nick").value.trim() || myName()).slice(0, 24);
+  $("#sendBtn").disabled = true;
+  const { data, error } = await sb.from("community_messages")
+    .insert({ user_id: session.user.id, display_name: nick, body }).select().single();
+  if (error) {
+    const m = error.message || "";
+    sendError = m.includes("slow_down") ? t("e_slow") : m.includes("too_many") ? t("e_many") : m.includes("display_name_reserved") ? t("e_name") : t("e_generic");
+    renderCompose(); $("#msgInput").value = body; $("#sendBtn").disabled = false; return;
+  }
+  sendError = ""; store.set("nawana-community-name", nick);
+  messages.set(data.id, data); ta.value = "";
+  renderCompose(); $("#msgs").dataset.scrolled = ""; renderMessages(); $("#msgInput")?.focus();
+});
+
+async function loadMessages(){
+  const { data, error } = await sb.from("community_messages")
+    .select("id,user_id,display_name,body,is_staff,created_at").order("created_at", { ascending: false }).limit(150);
+  if (error) return;
+  messages.clear(); data.forEach(m => messages.set(m.id, m)); renderMessages();
+}
+
+/* mobile chat sheet */
+$("#fab").addEventListener("click", () => { document.body.classList.add("chat-open"); $("#msgs").scrollTop = $("#msgs").scrollHeight; });
+$("#chatClose").addEventListener("click", () => document.body.classList.remove("chat-open"));
+
+/* ---------- boot ---------- */
+applyLang();
+fetch("/community/series.json").then(r => r.json()).then(j => { series = j.episodes || []; renderFeatures(); }).catch(() => {});
+try {
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+  sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
+  ({ data: { session } } = await sb.auth.getSession());
+  sb.auth.onAuthStateChange((_e, s) => { session = s; sendError = ""; renderCompose(); renderMessages(); });
+  renderCompose();
+  const { data: n } = await sb.from("community_news").select("id,published_at,title_ko,title_en,body_ko,body_en,link_url").order("published_at", { ascending: false }).limit(20);
+  news = n || []; renderNews();
+  await loadMessages();
+  sb.channel("community-chat")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_messages" }, p => { messages.set(p.new.id, p.new); renderMessages(); })
+    .subscribe(status => setLive(status === "SUBSCRIBED" ? "live" : status === "CLOSED" || status === "CHANNEL_ERROR" ? "offline" : "connecting"));
+  setInterval(loadMessages, 60000);      // picks up moderation (a hidden message can't be announced live)
+  setInterval(renderMessages, 60000);    // keeps "5분 전" honest
+} catch (err) {
+  setLive("offline"); news = []; $("#news").innerHTML = `<p class="empty">${esc(t("noNews"))}</p>`;
+}
+</script>
+</body>
+</html>

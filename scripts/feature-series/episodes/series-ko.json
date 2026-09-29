@@ -1,0 +1,696 @@
+[
+ {
+  "cat": "start",
+  "goal": "내 목소리로 말하는 유창한 나와 통화하고, 그 통화가 복습이 된다",
+  "id": "e01",
+  "issues": "",
+  "name": "나와나 한눈에",
+  "note": "",
+  "order": 0,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "몇 년 뒤, 유창해진 내가 내 목소리로 말해요.",
+    "kind": "full",
+    "shot": "welcome",
+    "title": "유창한 나에게\n언어를 배워요"
+   },
+   {
+    "body": "할 말은 동그라미 하나에서 시작해요.",
+    "kind": "top",
+    "shot": "home",
+    "title": "탭 한 번이면\n전화가 걸려요"
+   },
+   {
+    "body": "내가 한 말 바로 아래에 더 자연스러운 말.",
+    "kind": "top",
+    "shot": "transcript",
+    "title": "통화가 끝나면\n고칠 곳이 보여요"
+   },
+   {
+    "body": "단어·표현·문장이 오늘 할 일로 모여요.",
+    "kind": "top",
+    "shot": "practice-due",
+    "title": "배운 건\n복습으로 남아요"
+   },
+   {
+    "body": "대화로 재는 내 레벨.",
+    "kind": "top",
+    "shot": "progress",
+    "title": "말할수록\n레벨이 보여요"
+   }
+  ],
+  "status": "draft",
+  "short": "나와나 한눈에",
+  "tagline": "내 목소리로 말하는 유창한 나와 통화해요"
+ },
+ {
+  "cat": "talk",
+  "goal": "버튼 없이 전화처럼 번갈아 말하고, 끊으면 교재가 생긴다",
+  "id": "e02",
+  "issues": "첫 통화 화면(first-call)은 오류 창이 떠서 제외. 실제 통화 소리는 캐러셀로 못 보여줌",
+  "name": "Talk 기본: 전화 한 통",
+  "note": "",
+  "order": 1,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "탭하면 바로 유창한 나에게 전화가 가요.",
+    "kind": "top",
+    "shot": "home-ring",
+    "title": "오늘 말한 만큼\n링이 채워져요"
+   },
+   {
+    "body": "내가 멈추면 대답이 와요. 버튼은 없어요.",
+    "kind": "top",
+    "shot": "call-meter",
+    "title": "전화처럼\n번갈아 말해요"
+   },
+   {
+    "body": "통화 중에 말하면 바로 체크돼요.",
+    "kind": "top",
+    "shot": "call-goals",
+    "title": "외운 단어가\n통화에 따라와요"
+   },
+   {
+    "body": "단어·표현·교정 문장을 정리하는 과정이 보여요.",
+    "kind": "top",
+    "shot": "summary-progress",
+    "title": "끊으면 바로\n교재가 만들어져요"
+   },
+   {
+    "body": "통화에서 쓴 단어는 복습 덱에서 빠져요.",
+    "kind": "top",
+    "shot": "carryover",
+    "title": "배운 걸 쓰면\n알려줘요"
+   }
+  ],
+  "status": "draft",
+  "short": "전화 한 통",
+  "tagline": "탭 한 번, 전화처럼 번갈아 말해요"
+ },
+ {
+  "cat": "talk",
+  "goal": "내 속도, 내 레벨에 맞춰 말해준다",
+  "id": "e03",
+  "issues": "코치 모드 힌트(💡 Try using) 버블 캡처가 없음 — 새 캡처 모드 필요",
+  "name": "통화 설정: 속도·코치 모드",
+  "note": "",
+  "order": 2,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "보통 · 여유있게 · 천천히",
+    "kind": "bottom",
+    "shot": "call-settings",
+    "title": "말하는 속도를\n고를 수 있어요"
+   },
+   {
+    "body": "배운 단어가 답에 들어갈 질문을 해줘요.",
+    "kind": "bottom",
+    "shot": "call-settings",
+    "title": "코치 모드를 켜면\n쓸 단어를 알려줘요"
+   },
+   {
+    "body": "레벨은 대화로 재고, 직접 바꿀 수도 있어요.",
+    "kind": "top",
+    "shot": "level-sheet",
+    "title": "내 레벨에 맞춰\n말해줘요"
+   }
+  ],
+  "status": "draft",
+  "short": "통화 설정",
+  "tagline": "내 속도, 내 레벨에 맞춰 말해줘요"
+ },
+ {
+  "cat": "talk",
+  "goal": "틀려도 괜찮다, 고친 문장은 복습과 다시 말하기로 이어진다",
+  "id": "e04",
+  "issues": "",
+  "name": "교정: 유창한 내가 고쳐 말해줘요",
+  "note": "",
+  "order": 3,
+  "rendered": [
+   "done/correction-01.jpg",
+   "done/correction-02.jpg",
+   "done/correction-03.jpg",
+   "done/correction-04.jpg",
+   "done/correction-05.jpg",
+   "done/correction-06.jpg"
+  ],
+  "slides": [
+   {
+    "body": "통화가 끝나면, 내가 한 말 바로 아래에.",
+    "kind": "zoom",
+    "shot": "transcript",
+    "title": "틀려도 괜찮아요\n[유창한 내가] 고쳐 말해줘요"
+   },
+   {
+    "body": "바뀐 단어만 파랗게, 이유는 내 언어로.",
+    "kind": "top",
+    "shot": "transcript",
+    "title": "고칠 곳이\n[한눈에] 보여요"
+   },
+   {
+    "body": "틀린 말엔 줄을 긋고, 고친 문장을 외워요.",
+    "kind": "top",
+    "shot": "talkdetail-cards",
+    "title": "고친 문장은\n[복습 카드]가 돼요"
+   },
+   {
+    "body": "고친 문장을 소리 내 읽으면\n미래의 내가 그때처럼 답해요.",
+    "kind": "bottom",
+    "shot": "say-again-reading",
+    "title": "같은 대화를 다시\n이번엔 [제대로]"
+   },
+   {
+    "body": "아쉬운 문장은 바로 다시 읽어요.",
+    "kind": "bottom",
+    "shot": "say-again-done",
+    "title": "읽은 문장마다\n[점수]가 나와요"
+   }
+  ],
+  "status": "done",
+  "short": "교정",
+  "tagline": "틀려도 괜찮아요. 유창한 내가 고쳐 말해줘요"
+ },
+ {
+  "cat": "talk",
+  "goal": "대화마다 책이 한 권씩 쌓이고, 챕터를 끝내면 완료",
+  "id": "e05",
+  "issues": "",
+  "name": "통화 한 번이 교재 한 권",
+  "note": "",
+  "order": 4,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "대화마다 책이 한 권씩 쌓여요.",
+    "kind": "top",
+    "shot": "talkdetail",
+    "title": "통화 한 번이\n교재 한 권"
+   },
+   {
+    "body": "미래의 내가 쓴 단어를 모아줘요.",
+    "kind": "top",
+    "shot": "talkdetail-words",
+    "title": "대화에 나온\n새 단어"
+   },
+   {
+    "body": "미래의 내가 쓴 표현, 내가 쓴 표현.",
+    "kind": "top",
+    "shot": "talkdetail-expressions",
+    "title": "바로 써먹을\n표현"
+   },
+   {
+    "body": "유창한 내 목소리를 그대로 따라 해요.",
+    "kind": "top",
+    "shot": "talkdetail-lines",
+    "title": "따라 말할\n문장"
+   }
+  ],
+  "status": "draft",
+  "short": "통화가 교재로",
+  "tagline": "통화 한 번이 교재 한 권이 돼요"
+ },
+ {
+  "cat": "talk",
+  "goal": "정한 시간에 유창한 내가 먼저 전화를 건다",
+  "id": "e06",
+  "issues": "알람(수신) 화면은 실기기 스크린샷 필요. Me → 전화 설정 화면 캡처 필요",
+  "name": "매일 걸려오는 전화",
+  "note": "전화 설정하는 ㅅ 것도 필요해. ",
+  "order": 5,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "무음 모드에서도 울려요.",
+    "kind": "top",
+    "shot": "me",
+    "title": "원하는 시간에\n전화가 와요"
+   },
+   {
+    "body": "하루에 여러번 설정가능",
+    "kind": "top",
+    "shot": "home",
+    "title": "전화 스케줄은 내 마음대로"
+   },
+   {
+    "body": "어제 이야기를 기억하고 먼저 물어봐요.",
+    "kind": "top",
+    "shot": "home",
+    "title": "받으면 바로\n대화가 시작돼요"
+   }
+  ],
+  "status": "needs-capture",
+  "short": "매일 오는 전화",
+  "tagline": "정한 시간에 유창한 내가 먼저 전화해요"
+ },
+ {
+  "cat": "watch",
+  "goal": "일어나기 전에, 유창한 내가 그 상황을 어떻게 넘기는지 본다",
+  "id": "e07",
+  "issues": "scene-end 캡처에 'Auth session missing' 오류 창 — 재캡처 필요",
+  "name": "Watch: 미리 보기",
+  "note": "",
+  "order": 6,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "면접, 병원, 카페. 유창한 내가 먼저 해봐요.",
+    "kind": "top",
+    "shot": "watchtab",
+    "title": "곧 있을 상황,\n미리 봐요"
+   },
+   {
+    "body": "마음에 드는 문장은 바로 저장해요.",
+    "kind": "full",
+    "shot": "scene-end",
+    "title": "유창한 내가\n어떻게 말하는지"
+   },
+   {
+    "body": "상대 대사 사이에 내 차례가 와요.",
+    "kind": "bottom",
+    "shot": "say-again-scene-reading",
+    "title": "이번엔 내가\n그 대사를 말해요"
+   }
+  ],
+  "status": "draft",
+  "short": "미리 보기",
+  "tagline": "곧 있을 상황을 유창한 내가 먼저 해봐요"
+ },
+ {
+  "cat": "watch",
+  "goal": "실제로 곧 있을 일을 적고, 자료까지 붙이면 그 상황이 만들어진다",
+  "id": "e08",
+  "issues": "'내 상황 만들기' 박스(직접 쓰기)와 자료 첨부(채용공고·이력서) 화면 캡처 필요",
+  "name": "나만의 상황 만들기",
+  "note": "",
+  "order": 7,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "직접 쓰거나, 자주 있는 상황에서 골라요.",
+    "kind": "top",
+    "shot": "watchtab-empty",
+    "title": "두 가지 방법으로\n시작해요"
+   },
+   {
+    "body": "카페 → 주문 → 주문이 잘못 나왔어요.",
+    "kind": "top",
+    "shot": "composer",
+    "title": "자주 있는 상황은\n골라서"
+   },
+   {
+    "body": "탭할 때마다 새 장면이 나와요.",
+    "kind": "top",
+    "shot": "watchtab",
+    "title": "만든 상황은\n다시 쓸 수 있어요"
+   }
+  ],
+  "status": "needs-capture",
+  "short": "나만의 상황",
+  "tagline": "실제로 있을 일을 그대로 연습해요"
+ },
+ {
+  "cat": "watch",
+  "goal": "친구, 동료, 유명인까지. 관계와 말투에 맞춰 대화한다",
+  "id": "e09",
+  "issues": "유명인 확인 화면(identity 확인) 캡처 필요, 사람 카드 상세 캡처 필요",
+  "name": "사람과 연습하기",
+  "note": "",
+  "order": 8,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "친구, 동료, 가족. 사진도 넣을 수 있어요.",
+    "kind": "top",
+    "shot": "people",
+    "title": "내 사람들과\n연습해요"
+   },
+   {
+    "body": "반말로 할지, 존댓말로 할지.",
+    "kind": "top",
+    "shot": "intake-people",
+    "title": "관계와 말투를\n정해요"
+   },
+   {
+    "body": "다른 학습자들의 자기소개로 대화해요.",
+    "kind": "top",
+    "shot": "people",
+    "title": "처음 만나는 사람과도\n말해봐요"
+   }
+  ],
+  "status": "needs-capture",
+  "short": "사람과 연습",
+  "tagline": "친구, 동료와 그 말투 그대로 말해봐요"
+ },
+ {
+  "cat": "practice",
+  "goal": "통화와 장면에서 나온 것들이 오늘 할 일로 모인다",
+  "id": "e10",
+  "issues": "",
+  "name": "오늘의 복습",
+  "note": "",
+  "order": 9,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "문장·단어·표현·섀도잉.",
+    "kind": "top",
+    "shot": "practice-due",
+    "title": "오늘 할 복습이\n한곳에"
+   },
+   {
+    "body": "",
+    "kind": "top",
+    "shot": "practice-studying",
+    "title": "배우는 중인 것만\n모아 봐요"
+   },
+   {
+    "body": "다 끝낸 책은 완료로.",
+    "kind": "top",
+    "shot": "practice-talk",
+    "title": "대화마다\n책장에 꽂혀요"
+   }
+  ],
+  "status": "draft",
+  "short": "오늘의 복습",
+  "tagline": "오늘 할 복습이 한곳에 모여요"
+ },
+ {
+  "cat": "practice",
+  "goal": "대화 전체를 이번엔 제대로 다시 해본다(실전 쉐도잉)",
+  "id": "e11",
+  "issues": "교정 편(E04) 4·5장과 겹침 — 교정 편에서 빼거나, 이 편을 심화로",
+  "name": "다시 말하기",
+  "note": "",
+  "order": 10,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "내 차례엔 고친 문장이 떠요.",
+    "kind": "bottom",
+    "shot": "say-again",
+    "title": "방금 그 대화를\n다시 해봐요"
+   },
+   {
+    "body": "그때 그 목소리 그대로.",
+    "kind": "bottom",
+    "shot": "say-again-reading",
+    "title": "읽으면\n미래의 내가 답해요"
+   },
+   {
+    "body": "",
+    "kind": "bottom",
+    "shot": "say-again-done",
+    "title": "문장마다 점수,\n아쉬우면 다시"
+   },
+   {
+    "body": "Watch 장면의 내 대사를 말해요.",
+    "kind": "bottom",
+    "shot": "say-again-scene-reading",
+    "title": "장면으로도\n할 수 있어요"
+   }
+  ],
+  "status": "draft",
+  "short": "다시 말하기",
+  "tagline": "같은 대화를, 이번엔 제대로"
+ },
+ {
+  "cat": "practice",
+  "goal": "유창한 내 목소리를 따라 말하고 박자까지 채점받는다",
+  "id": "e12",
+  "issues": "결과 화면(점수·박자 점·다른 단어) 캡처 필요",
+  "name": "섀도잉",
+  "note": "",
+  "order": 11,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "유창한 내가 읽는 문장을 그대로.",
+    "kind": "full",
+    "shot": "shadow",
+    "title": "내 목소리로\n따라 말해요"
+   },
+   {
+    "body": "늦었는지, 빨랐는지 점으로 보여줘요.",
+    "kind": "full",
+    "shot": "shadow",
+    "title": "단어마다\n박자를 봐요"
+   }
+  ],
+  "status": "needs-capture",
+  "short": "섀도잉",
+  "tagline": "유창한 내 목소리를 따라 말해요"
+ },
+ {
+  "cat": "practice",
+  "goal": "통화에서 나온 단어가 알아서 모이고, 카드로 익힌다",
+  "id": "e13",
+  "issues": "",
+  "name": "단어장",
+  "note": "",
+  "order": 12,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "B1 · 15 / 2113",
+    "kind": "full",
+    "shot": "vocab",
+    "title": "레벨별 단어가\n모여요"
+   },
+   {
+    "body": "아는 단어는 '알아요'로 넘겨요.",
+    "kind": "full",
+    "shot": "vocab-card",
+    "title": "뜻, 예문,\n발음까지"
+   },
+   {
+    "body": "눌러서 뜻을 확인해요.",
+    "kind": "full",
+    "shot": "daily-words",
+    "title": "오늘의 단어\n카드"
+   },
+   {
+    "body": "10분 · 내일 · 3일 뒤",
+    "kind": "full",
+    "shot": "daily-words-tray",
+    "title": "밀어서\n나중에 다시"
+   }
+  ],
+  "status": "draft",
+  "short": "단어장",
+  "tagline": "통화에서 나온 단어가 알아서 모여요"
+ },
+ {
+  "cat": "practice",
+  "goal": "미래의 내가 쓴 표현을 모아 내 것으로 만든다",
+  "id": "e14",
+  "issues": "표현 목록에 테스트 데이터(Zz-flag…, Zz-deal…) — 샘플 정리 후 재캡처",
+  "name": "표현",
+  "note": "",
+  "order": 13,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "",
+    "kind": "top",
+    "shot": "expr",
+    "title": "통화에서 들은\n표현이 모여요"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "expr-card",
+    "title": "뜻과 예문,\n다른 말투까지"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "daily-expressions",
+    "title": "오늘의 표현\n카드"
+   }
+  ],
+  "status": "draft",
+  "short": "표현",
+  "tagline": "미래의 내가 쓴 표현을 내 것으로"
+ },
+ {
+  "cat": "practice",
+  "goal": "내가 틀린 문장이 카드가 되고, 통화에서 쓰면 졸업",
+  "id": "e15",
+  "issues": "drills 샘플이 아주 긴 옛 카드(Nirvana…) — 샘플 교체 후 재캡처",
+  "name": "문장 카드",
+  "note": "",
+  "order": 14,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "고친 문장을 떠올려 말해요.",
+    "kind": "full",
+    "shot": "drills",
+    "title": "내가 한 말이\n카드가 돼요"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "review-item-sentence",
+    "title": "눌러서\n정답 확인"
+   },
+   {
+    "body": "10분 · 내일 · 3일 · 외웠어요",
+    "kind": "full",
+    "shot": "drills-tray",
+    "title": "밀어서 분류"
+   },
+   {
+    "body": "",
+    "kind": "bottom",
+    "shot": "drills-folder",
+    "title": "폴더에서\n다시 꺼내요"
+   }
+  ],
+  "status": "draft",
+  "short": "문장 카드",
+  "tagline": "내가 틀린 문장이 카드가 돼요"
+ },
+ {
+  "cat": "practice",
+  "goal": "일주일 동안 내가 배운 것만으로 시험지가 만들어진다",
+  "id": "e16",
+  "issues": "",
+  "name": "주간 시험",
+  "note": "",
+  "order": 15,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "내가 이번 주에 배운 것만으로.",
+    "kind": "top",
+    "shot": "practice-weekly",
+    "title": "매주 한 번,\n내 시험지"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "weekly-test-word",
+    "title": "뜻 보고\n단어 고르기"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "weekly-test-gap",
+    "title": "빈칸에\n표현 넣기"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "weekly-test-build",
+    "title": "고친 문장\n조립하기"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "weekly-test-listen",
+    "title": "듣고\n받아쓰기"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "weekly-test-speak",
+    "title": "소리 내\n말하기"
+   },
+   {
+    "body": "",
+    "kind": "full",
+    "shot": "weekly-test-result",
+    "title": "틀린 건\n다음 주에 다시"
+   },
+   {
+    "body": "",
+    "kind": "top",
+    "shot": "monthly-test",
+    "title": "한 달 치 오답은\n월간 시험으로"
+   }
+  ],
+  "status": "draft",
+  "short": "주간 시험",
+  "tagline": "일주일 동안 배운 것만으로 만든 시험지"
+ },
+ {
+  "cat": "progress",
+  "goal": "대화만으로 레벨이 측정되고, 영역별로 무엇을 할지 알려준다",
+  "id": "e17",
+  "issues": "",
+  "name": "진행 상황",
+  "note": "",
+  "order": 16,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "어휘·문법·표현·유창성.",
+    "kind": "top",
+    "shot": "progress",
+    "title": "대화로 재는\n내 레벨"
+   },
+   {
+    "body": "",
+    "kind": "top",
+    "shot": "level-sheet",
+    "title": "다음 레벨까지\n무엇이 필요한지"
+   }
+  ],
+  "status": "draft",
+  "short": "진행 상황",
+  "tagline": "대화만으로 내 레벨이 보여요"
+ },
+ {
+  "cat": "progress",
+  "goal": "공부한 날이 사진 달력으로 쌓이고, 하루를 카드로 공유한다",
+  "id": "e18",
+  "issues": "",
+  "name": "활동과 오늘의 카드",
+  "note": "",
+  "order": 17,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "",
+    "kind": "top",
+    "shot": "activity",
+    "title": "공부한 날이\n달력에 쌓여요"
+   },
+   {
+    "body": "사진을 넣어 공유해요.",
+    "kind": "top",
+    "shot": "daycard",
+    "title": "오늘을\n카드 한 장으로"
+   }
+  ],
+  "status": "draft",
+  "short": "활동 · 오늘의 카드",
+  "tagline": "공부한 날이 쌓이고, 하루를 카드로 남겨요"
+ },
+ {
+  "cat": "progress",
+  "goal": "앱을 안 열어도 오늘의 단어와 표현이 보인다",
+  "id": "e19",
+  "issues": "위젯 캡처는 갤러리 형태 — 실제 홈 화면 배치 스크린샷이 더 좋음",
+  "name": "홈 화면 위젯",
+  "note": "",
+  "order": 18,
+  "rendered": [],
+  "slides": [
+   {
+    "body": "30분마다 바뀌어요.",
+    "kind": "full",
+    "shot": "widget",
+    "title": "홈 화면에서\n단어를 봐요"
+   }
+  ],
+  "status": "draft",
+  "short": "홈 화면 위젯",
+  "tagline": "앱을 열지 않아도 오늘의 단어가 보여요"
+ }
+]

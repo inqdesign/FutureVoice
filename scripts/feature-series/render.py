@@ -30,6 +30,24 @@ SS = 2                                    # supersample: draw at 2x, downsample 
 BG = (18, 17, 16)
 TX, DIM, FAINT = (237, 236, 232), (156, 154, 148), (96, 94, 90)
 ACCENT = (64, 100, 245)
+GLOW = (64, 100, 245, 0.28)      # colour + strength of the halo behind the phone
+CARD_SHADOW = (64, 100, 245, 70) # the zoom card's shadow
+HILITE = (33, 44, 92)            # the lit category tab on a cover
+
+THEMES = {
+    # The brand's ink ground — the feed carousels as first designed.
+    "dark": dict(BG=(18, 17, 16), TX=(237, 236, 232), DIM=(156, 154, 148), FAINT=(96, 94, 90),
+                 ACCENT=(64, 100, 245), GLOW=(64, 100, 245, 0.28), CARD_SHADOW=(64, 100, 245, 70),
+                 HILITE=(33, 44, 92)),
+    # Paper ground for the website, where dark cards on a light page read poorly.
+    "light": dict(BG=(250, 249, 246), TX=(27, 26, 24), DIM=(92, 90, 84), FAINT=(146, 143, 136),
+                  ACCENT=(53, 88, 240), GLOW=(27, 26, 24, 0.20), CARD_SHADOW=(27, 26, 24, 45),
+                  HILITE=(226, 233, 255)),
+}
+
+
+def apply_theme(name):
+    globals().update(THEMES[name])
 MARGIN = 84
 
 SDG = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
@@ -90,6 +108,13 @@ def fonts():
         wordmark=Cascade([Face(GEIST, 132)]),
         tag=Cascade([Face(SDG, 40, 4)]),
         url=Cascade([Face(MENLO, 30)], tracking=1.5),
+        # cover: 112 = 8× Galmuri14's grid
+        cover=Cascade([Face(GALMURI, 112), Face(SDG, 104, 6)]),
+        toc=Cascade([Face(SDG, 29, 2)]),
+        toc_on=Cascade([Face(SDG, 29, 6)]),
+        toc_head=Cascade([Face(SDG, 21, 4)], tracking=2),
+        toc_num=Cascade([Face(MENLO, 21)]),
+        tagline=Cascade([Face(SDG, 40, 2)]),
     )
 
 
@@ -144,10 +169,10 @@ def place_phone(canvas, shot_path, width, x_center, top):
     # soft shadow + faint accent glow so the phone lifts off the ink
     # (padded, or the blur is clipped to the phone's box and reads as a rectangle)
     pad = s(160)
-    glow = Image.new("RGBA", (ph.width + 2 * pad, ph.height + 2 * pad), ACCENT + (0,))
+    glow = Image.new("RGBA", (ph.width + 2 * pad, ph.height + 2 * pad), GLOW[:3] + (0,))
     glow.putalpha(Image.new("L", glow.size, 0))
     a = Image.new("L", glow.size, 0)
-    a.paste(ph.split()[3].point(lambda v: int(v * 0.28)), (pad, pad))
+    a.paste(ph.split()[3].point(lambda v: int(v * GLOW[3])), (pad, pad))
     glow.putalpha(a.filter(ImageFilter.GaussianBlur(s(60))))
     _paste_clipped(canvas, glow, x - pad, y + s(30) - pad)
     _paste_clipped(canvas, ph, x, y)
@@ -241,9 +266,12 @@ def render_slide(slide, ep, idx, total, raw_dir, F):
         sh = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
         ImageDraw.Draw(sh).rounded_rectangle(
             [s(56), s(ty) + s(24), s(56) + crop.width, s(ty) + crop.height + s(24)],
-            radius=s(44), fill=ACCENT + (70,))
+            radius=s(44), fill=CARD_SHADOW)
         canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(s(50))))
         canvas.alpha_composite(card, (s(56), s(ty)))
+        if BG[0] > 128:
+            ImageDraw.Draw(canvas).rounded_rectangle([s(56), s(ty), s(56) + crop.width - 1, s(ty) + crop.height - 1],
+                                                     radius=s(44), outline=(222, 219, 212), width=s(2))
         return canvas
 
     pw = slide.get("phone_width", 660)
@@ -263,50 +291,198 @@ def render_slide(slide, ep, idx, total, raw_dir, F):
         text_block(d, F, slide, series, idx, total, text_top + 16)
         return canvas
 
+    if kind == "full":
+        # The whole phone, uncropped: for screens whose top AND bottom both
+        # carry the feature (a question above, its answer buttons below).
+        d = ImageDraw.Draw(canvas)
+        end = text_block(d, F, slide, series, idx, total, 110)
+        top = end + 40
+        full_w = 1206 + 2 * (BEZEL + RIM) + 14
+        full_h = 2622 + 2 * (BEZEL + RIM)
+        pw = min(660, (H - 56 - top) * full_w / full_h)
+        place_phone(canvas, shot, pw, W / 2, top)
+        return canvas
+
     raise SystemExit(f"unknown slide kind: {kind}")
+
+
+CATS = [("start", "시작하기"), ("talk", "Talk"), ("watch", "Watch"),
+        ("practice", "복습"), ("progress", "진행")]
+
+
+def wrap_lines(casc, text, max_w):
+    """Greedy word wrap in 1080 space (Korean breaks at spaces, like the app)."""
+    out = []
+    for para in text.split("\n"):
+        cur = ""
+        for w in para.split(" "):
+            cand = (cur + " " + w).strip()
+            if cur and casc.width(cand) / SS > max_w:
+                out.append(cur); cur = w
+            else:
+                cur = cand
+        out.append(cur)
+    return out
+
+
+def render_cover_category(ep, series_list, total, F, with_list):
+    """A cover that stays true after the series grows: it names the CATEGORY
+    (the app's own tabs, which don't change) and this episode — no episode
+    numbers, no full index, so adding or reordering episodes never makes an
+    already-posted cover wrong. `with_list` adds this category's episodes."""
+    canvas = Image.new("RGBA", (s(W), s(H)), BG + (255,))
+    d = ImageDraw.Draw(canvas)
+    y = 110
+    d.ellipse([s(MARGIN), s(y - 15), s(MARGIN + 12), s(y - 3)], fill=ACCENT)
+    F["eyebrow"].draw(d, s(MARGIN + 24), s(y), "나와나 기능 소개", DIM)
+    cat_name = dict(CATS)[ep["cat"]]
+    # the five categories as a row of tabs, this one lit
+    y = 250
+    x = MARGIN
+    for cid, name in CATS:
+        on = cid == ep["cat"]
+        wdt = F["toc_on"].width(name) / SS
+        if on:
+            d.rounded_rectangle([s(x - 18), s(y - 36), s(x + wdt + 18), s(y + 14)], radius=s(25), fill=HILITE)
+        (F["toc_on"] if on else F["toc"]).draw(d, s(x), s(y), name, TX if on else FAINT)
+        x += wdt + 52
+    # title, then the one line that says what the feature is
+    lines = ep.get("coverTitle", ep["short"]).split("\n")
+    y = 660 - 65 * (len(lines) - 1)
+    for line in lines:
+        F["cover"].draw(d, s(MARGIN), s(y), line, TX)
+        y += 130
+    if ep.get("tagline"):
+        y += 10
+        for line in wrap_lines(F["tagline"], ep["tagline"], W - 2 * MARGIN):
+            F["tagline"].draw(d, s(MARGIN), s(y), line, DIM)
+            y += 58
+    if with_list:
+        mates = [e for e in series_list if e["cat"] == ep["cat"]]
+        yy = max(y + 110, 860)
+        F["toc_head"].draw(d, s(MARGIN), s(yy), f"{cat_name} 시리즈".upper(), FAINT)
+        yy += 56
+        for e in mates:
+            on = e is ep
+            if on:
+                d.ellipse([s(MARGIN), s(yy - 20), s(MARGIN + 12), s(yy - 8)], fill=ACCENT)
+            (F["toc_on"] if on else F["toc"]).draw(d, s(MARGIN + 32), s(yy), e["short"], TX if on else DIM)
+            yy += 48
+    F["body"].draw(d, s(MARGIN), s(H - 70), "옆으로 넘겨보세요  →", FAINT)
+    url = "nawana.app"
+    F["url"].draw(d, s(W - MARGIN) - F["url"].width(url), s(H - 70), url, ACCENT)
+    return canvas
+
+
+def render_cover(ep, series_list, total, F):
+    """Slide 1 of every episode: its title over the whole series' contents,
+    this episode lit. No screenshot — a clean ground, so the feed shows a
+    series at a glance and each post says where it sits in it."""
+    canvas = Image.new("RGBA", (s(W), s(H)), BG + (255,))
+    d = ImageDraw.Draw(canvas)
+    num = series_list.index(ep) + 1
+    # eyebrow row
+    y = 110
+    d.ellipse([s(MARGIN), s(y - 15), s(MARGIN + 12), s(y - 3)], fill=ACCENT)
+    F["eyebrow"].draw(d, s(MARGIN + 24), s(y), "나와나 기능 소개", DIM)
+    cnt = f"1 / {total}"
+    F["count"].draw(d, s(W - MARGIN) - F["count"].width(cnt), s(y), cnt, FAINT)
+    # episode number + title
+    y = 250
+    no = f"{num:02d}"
+    F["toc_num"].draw(d, s(MARGIN), s(y), f"EP. {no} / {len(series_list):02d}", ACCENT)
+    y += 138
+    for line in ep.get("coverTitle", ep["short"]).split("\n"):
+        F["cover"].draw(d, s(MARGIN), s(y), line, TX)
+        y += 130
+    # contents, two columns
+    top = max(y + 30, 600)
+    col_x = [MARGIN, W / 2 + 20]
+    cols = [["start", "talk", "watch"], ["practice", "progress"]]
+    d.line([s(MARGIN), s(top - 40), s(W - MARGIN), s(top - 40)], fill=(44, 43, 41), width=s(1))
+    for ci, cats in enumerate(cols):
+        yy = top
+        x = col_x[ci]
+        for cat_id in cats:
+            name = dict(CATS)[cat_id]
+            F["toc_head"].draw(d, s(x), s(yy), name.upper(), FAINT)
+            yy += 50
+            for e in [e for e in series_list if e["cat"] == cat_id]:
+                n = series_list.index(e) + 1
+                on = e is ep
+                if on:
+                    d.rounded_rectangle([s(x - 14), s(yy - 33), s(x + W / 2 - MARGIN - 34), s(yy + 12)],
+                                        radius=s(10), fill=HILITE)
+                F["toc_num"].draw(d, s(x), s(yy - 2), f"{n:02d}", ACCENT if on else FAINT)
+                (F["toc_on"] if on else F["toc"]).draw(d, s(x + 48), s(yy), e["short"], TX if on else DIM)
+                yy += 46
+            yy += 24
+    F["body"].draw(d, s(MARGIN), s(H - 70), "옆으로 넘겨보세요  →", FAINT)
+    url = "nawana.app"
+    F["url"].draw(d, s(W - MARGIN) - F["url"].width(url), s(H - 70), url, ACCENT)
+    return canvas
+
+
+ZOOM_CROPS = {"transcript": [20, 935, 1186, 1675]}   # the learner's line + its correction card
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("episode")
+    ap.add_argument("episode", help="episode id (e04) or 'all'")
     ap.add_argument("--lang", default="ko")
     ap.add_argument("--raw", default=None, help="screenshot dir (default: out/<lang>/raw)")
     ap.add_argument("--out", default=None)
     ap.add_argument("--video", action="store_true", help="also write a slideshow MP4")
+    ap.add_argument("--theme", choices=list(THEMES), default="dark",
+                    help="dark = the feed carousels; light = the website (out/<lang>-light/)")
     a = ap.parse_args()
+    apply_theme(a.theme)
 
-    ep_all = json.load(open(os.path.join(HERE, "episodes", a.episode + ".json"), encoding="utf-8"))
-    ep = ep_all[a.lang]
-    out = a.out or os.path.join(HERE, "out", a.lang, a.episode)
+    # The series as the board holds it (episodes/series-<lang>.json, exported from the board's db).
+    series = json.load(open(os.path.join(HERE, "episodes", f"series-{a.lang}.json"), encoding="utf-8"))
+    series.sort(key=lambda e: e.get("order", 0))
+    targets = series if a.episode == "all" else [e for e in series if e["id"] == a.episode]
+    if not targets:
+        raise SystemExit(f"no episode {a.episode}")
     raw = a.raw or os.path.join(HERE, "out", a.lang, "raw")
-    os.makedirs(out, exist_ok=True)
     F = fonts()
-    slides = ep["slides"]
-    paths = []
-    for i, sl in enumerate(slides, 1):
-        img = render_slide(sl, ep, i, len(slides), raw, F)
-        img = img.convert("RGB").resize((W, H), Image.LANCZOS)
-        p = os.path.join(out, f"{i:02d}.png")
-        img.save(p, optimize=True)
-        paths.append(p)
-        print(p)
+    for ep in targets:
+        out = a.out or os.path.join(HERE, "out", a.lang + ("-light" if a.theme == "light" else ""), ep["id"])
+        os.makedirs(out, exist_ok=True)
+        ep = dict(ep, series=f"나와나 기능 소개 · {ep['short']}")
+        slides = [dict(sl) for sl in ep["slides"]]
+        for sl in slides:
+            if sl.get("kind") == "zoom" and "crop" not in sl:
+                sl["crop"] = ZOOM_CROPS.get(sl["shot"], [0, 700, 1206, 1500])
+        slides.append({"kind": "outro", "tag": ["유창한 나에게", "언어를 배우세요."],
+                       "foot": f"기능 소개 · {ep['short']} 편"})
+        total = len(slides) + 1
+        paths = []
+        imgs = [render_cover_category(next(e for e in series if e["id"] == ep["id"]), series, total, F, False)]
+        imgs += [render_slide(sl, ep, i, total, raw, F) for i, sl in enumerate(slides, 2)]
+        for i, img in enumerate(imgs, 1):
+            img = img.convert("RGB").resize((W, H), Image.LANCZOS)
+            p = os.path.join(out, f"{i:02d}.png")
+            img.save(p, optimize=True)
+            paths.append(p)
+        print(ep["id"], len(paths), "slides →", out)
 
-    if a.video:
-        # 3.2 s a slide with a short crossfade; 1080×1350 fits a Reels/Threads feed post.
-        dur, fade = 3.2, 0.4
-        inputs, filt = [], []
-        for i, p in enumerate(paths):
-            inputs += ["-loop", "1", "-t", str(dur), "-i", p]
-        chain, off = "[0:v]", 0.0
-        for i in range(1, len(paths)):
-            off += dur - fade
-            filt.append(f"{chain}[{i}:v]xfade=transition=fade:duration={fade}:offset={off:.2f}[v{i}]")
-            chain = f"[v{i}]"
-        mp4 = os.path.join(out, f"{a.episode}-{a.lang}.mp4")
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs,
-                        "-filter_complex", ";".join(filt), "-map", chain,
-                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", mp4], check=True)
-        print(mp4)
+        if a.video:
+            # 3.2 s a slide with a short crossfade; 1080×1350 fits a Reels/Threads feed post.
+            dur, fade = 3.2, 0.4
+            inputs, filt = [], []
+            for i, p in enumerate(paths):
+                inputs += ["-loop", "1", "-t", str(dur), "-i", p]
+            chain, off = "[0:v]", 0.0
+            for i in range(1, len(paths)):
+                off += dur - fade
+                filt.append(f"{chain}[{i}:v]xfade=transition=fade:duration={fade}:offset={off:.2f}[v{i}]")
+                chain = f"[v{i}]"
+            mp4 = os.path.join(out, f"{ep['id']}-{a.lang}.mp4")
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs,
+                            "-filter_complex", ";".join(filt), "-map", chain,
+                            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", mp4], check=True)
+            print(mp4)
 
 
 if __name__ == "__main__":
