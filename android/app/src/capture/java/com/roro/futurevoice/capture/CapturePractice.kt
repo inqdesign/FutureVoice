@@ -76,6 +76,12 @@ import kotlinx.coroutines.runBlocking
  *   talkdetail-lines
  *   talkdetail-cards
  *   talkdetail-ja
+ *   say-again
+ *   say-again-reading
+ *   say-again-done
+ *   say-again-scene
+ *   say-again-scene-reading
+ *   say-again-scene-done
  *   finished
  *   finished-empty
  *   shadow
@@ -197,6 +203,26 @@ object CapturePractice {
             level = level(c), onBack = {})
     }
 
+    private fun sayAgain(stage: String) = mode(
+        seed = {
+            PracticeCaptureFlags.talkDetailSession = CaptureSeed.talkDetailSession
+            PracticeCaptureFlags.sayItAgainStage = stage
+        },
+    ) { c ->
+        TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = lang(c),
+            level = level(c), onBack = {})
+    }
+
+    private fun sayAgainScene(stage: String) = mode(
+        seed = {
+            PracticeCaptureFlags.bookScenario = CaptureSeed.bookScenario
+            PracticeCaptureFlags.sayItAgainStage = stage
+        },
+    ) { c ->
+        ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
+            onWatch = {}, onShadow = {}, onBack = {})
+    }
+
     private fun book(chapter: String?) = mode(
         seed = {
             PracticeCaptureFlags.bookScenario = CaptureSeed.bookScenario
@@ -300,6 +326,16 @@ object CapturePractice {
         "talkdetail-expressions" to talkDetail("EXPRESSIONS"),
         "talkdetail-lines" to talkDetail("LINES"),
         "talkdetail-cards" to talkDetail("CARDS"),
+
+        // Say it again: the talk book (and the scenario book) opened straight
+        // into the runner. The two running states are SEEDED — a capture run
+        // has no mic (iOS `DebugCapture.sayItAgainStage`).
+        "say-again" to sayAgain("intro"),
+        "say-again-reading" to sayAgain("reading"),
+        "say-again-done" to sayAgain("done"),
+        "say-again-scene" to sayAgainScene("intro"),
+        "say-again-scene-reading" to sayAgainScene("reading"),
+        "say-again-scene-done" to sayAgainScene("done"),
 
         "finished" to mode { _ ->
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {

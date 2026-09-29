@@ -89,6 +89,22 @@ fun ScenarioBookScreen(
     }
     val sc = scenario ?: return
     val cur = sc.curriculum
+    // Say it again — the scene run again with the learner reading their own
+    // side (the Shadow chapter, in order, between the counterpart's lines).
+    // No gate: the counterpart's lines play from the cache the scene's first
+    // watch filled, and nothing is synthesized.
+    val sayItAgain = remember(sc, language) { SayItAgainSource.scene(context, sc, language) }
+    var sayingAgain by remember(scenarioId) {
+        mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.sayItAgainStage != null)
+    }
+    if (sayingAgain && sayItAgain != null) {
+        // In place of the page — it owns the mic for a whole run.
+        SayItAgainScreen(
+            source = sayItAgain,
+            onClose = { sayingAgain = false; StoreEvents.bump() },
+            captureStage = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.sayItAgainStage)
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -140,6 +156,11 @@ fun ScenarioBookScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (chapter) {
                     Chapter.SCENE -> {
+                        // The book's third door, over the scene it runs: it
+                        // needs the scene AND a line of the learner's in it.
+                        if (cur.dialogue.orEmpty().any { it.speaker == "user" } && sayItAgain != null) {
+                            SayItAgainButton(onClick = { sayingAgain = true })
+                        }
                         cur.dialogueTitle?.let { SectionTitle(it) }
                         cur.dialogue.orEmpty().forEach { turn ->
                             DialogueLine(

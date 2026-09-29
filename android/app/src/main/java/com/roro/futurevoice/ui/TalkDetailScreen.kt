@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.TrackChanges
@@ -214,6 +215,27 @@ fun TalkDetailScreen(
         }
     }
 
+    // Say it again (다시 말하기) — the talk run again with the learner in it.
+    // Held rather than rebuilt per frame: the script walks every turn against
+    // every summary phrase fix. Empty of spoken lines (every turn misheard)
+    // means the door has nothing to open, so it isn't drawn.
+    val futureSelfName = stringResource(R.string.future_self_1384d5)
+    val sayItAgain = remember(s, futureSelfName) {
+        SayItAgainSource.talk(context, s, futureSelfName)
+    }
+    var sayingAgain by remember(sessionId) {
+        mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.sayItAgainStage != null)
+    }
+    if (sayingAgain) {
+        // In place of the page, not a push — it owns the mic for a whole run,
+        // like the full-screen cover iOS opens.
+        SayItAgainScreen(
+            source = sayItAgain,
+            onClose = { sayingAgain = false; StoreEvents.bump() },
+            captureStage = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.sayItAgainStage)
+        return
+    }
+
     if (showingGrammarReview) {
         GrammarReviewSheet(
             axis = sm?.scorecard?.grammar,
@@ -268,7 +290,11 @@ fun TalkDetailScreen(
                             onReplay = { showingTranscript = !showingTranscript },
                             onContinue = onContinue?.let { go ->
                                 { go(s.topic ?: s.displayTitle.orEmpty()) }
-                            })
+                            },
+                            // No gate: nothing in a run is synthesized or
+                            // metered (see `SayItAgainScreen`).
+                            onSayItAgain = if (sayItAgain.steps.any { it.isSpoken })
+                                { { sayingAgain = true } } else null)
                         if (curriculum.isMastered && s.archivedAt == null) {
                             MasteredBanner(onArchive = {
                                 scope.launch {
@@ -449,6 +475,9 @@ private fun CoverBlock(
      *  call from, in which case Replay stands alone rather than beside a
      *  dead button. */
     onContinue: (() -> Unit)?,
+    /** Run the talk again with the learner reading their side. Null when
+     *  nothing in it can be spoken. */
+    onSayItAgain: (() -> Unit)? = null,
 ) {
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically,
@@ -522,6 +551,31 @@ private fun CoverBlock(
                         style = MaterialTheme.typography.bodyLarge)
             }
         }
+        // The third door, on its own row as on iOS: a different kind of act
+        // from either button above, and three labels don't fit one row on a
+        // narrow phone in any language.
+        if (onSayItAgain != null) SayItAgainButton(onSayItAgain)
+    }
+}
+
+/** The book's "Say it again" door — the same button on the talk book and
+ *  the scenario book (iOS `.bordered`, full width, under the cover's pair). */
+@Composable
+internal fun SayItAgainButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            contentColor = MaterialTheme.colorScheme.primary),
+    ) {
+        Icon(Icons.Filled.RecordVoiceOver, contentDescription = null,
+            modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.say_it_again), maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyLarge)
     }
 }
 

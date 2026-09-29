@@ -55,6 +55,12 @@ object PracticeCaptureFlags {
     /** The scenario book opens on this chapter (`Chapter` name). */
     @JvmField var bookChapter: String? = null
 
+    /** The talk / scenario book opens straight into Say it again, parked on
+     *  this stage: "intro", "reading" or "done" (iOS
+     *  `DebugCapture.sayItAgainStage`). A capture run has no mic, so the two
+     *  running states are SEEDED rather than driven. */
+    @JvmField var sayItAgainStage: String? = null
+
     /** Every dictionary lookup on a Practice screen goes through here. */
     suspend fun lookup(real: suspend () -> WordLore.Entry?): WordLore.Entry? {
         if (slowLookupMs > 0) delay(slowLookupMs)

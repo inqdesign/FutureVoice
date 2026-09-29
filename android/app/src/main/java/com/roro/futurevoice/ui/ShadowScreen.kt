@@ -126,19 +126,19 @@ private enum class ShadowPhase {
 }
 
 /** iOS `ShadowDrillView.stillSpeakingSeconds` — a breath is 0.5–1.5 s. */
-private const val STILL_SPEAKING_MS = 1_500L
+internal const val STILL_SPEAKING_MS = 1_500L
 
 /** Mic level (the recorder's own 0…1 curve) that counts as someone talking.
  *  Only ever asked AFTER the line's own length has passed, so a quiet room
  *  ends the take and a voice still going holds it open. */
-private const val VOICED_LEVEL = 0.35f
+internal const val VOICED_LEVEL = 0.35f
 
 /** Rough spoken length of a line, for when the real audio duration isn't
  *  known yet — it only ever sizes the take's own floor and ceiling. */
 private fun durationFromText(wordCount: Int): Int = maxOf(1_000, wordCount * 400)
 
 /** iOS `attemptCutoffMs` — learners run long by a FACTOR, not a constant. */
-private fun attemptCutoffMs(targetMs: Int): Int =
+internal fun attemptCutoffMs(targetMs: Int): Int =
     maxOf(3_000, (targetMs * 1.5).toInt() + 2_500)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
