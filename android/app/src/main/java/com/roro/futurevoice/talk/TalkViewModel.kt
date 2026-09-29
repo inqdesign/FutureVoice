@@ -263,6 +263,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     persona = config.persona,
                     newsFacts = config.newsFacts,
                     cast = config.cast,
+                    brief = scenarioBrief(config),
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
@@ -375,6 +376,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     firstMeeting = freeTalk && config.persona?.metAt == null,
                     newsFacts = config.newsFacts,
                     cast = config.cast,
+                    brief = scenarioBrief(config),
                 ) + REALTIME_STYLE_RULES
                 // The first line, spoken by the fluent self before the learner
                 // says anything — spoken BY THE GATEWAY, not the app: two
@@ -1203,6 +1205,17 @@ class TalkViewModel(context: Context) : ViewModel() {
     private fun humanMessage(e: Exception): String = when (e) {
         is EdgeError.Http -> "Server error ${e.status}"
         else -> e.message ?: e::class.java.simpleName
+    }
+
+    /** A scenario talk's attached material — the posting, the CV — read once
+     *  by Watch and carried on the scenario (iOS `briefBlock`). Null for
+     *  every other kind of call, and for a scenario nothing was attached to. */
+    private suspend fun scenarioBrief(cfg: TalkConfig): ScenarioBrief? {
+        val id = cfg.scenarioId ?: return null
+        return runCatching {
+            com.roro.futurevoice.data.ScenarioStore.shared(appContext)
+                .load(cfg.targetLanguage).firstOrNull { it.id == id }?.brief
+        }.getOrNull()
     }
 
     companion object {
