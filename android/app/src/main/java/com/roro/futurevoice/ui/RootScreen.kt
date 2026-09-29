@@ -239,6 +239,8 @@ fun RootScreen() {
     var showDeck by remember { mutableStateOf(false) }
     /** A per-item reminder's target (iOS `.reviewItem`): the card or word it named. */
     var focusCardId by remember { mutableStateOf<String?>(null) }
+    /** A talk book's "Review this talk": the deck on that talk's cards. */
+    var deckSessionId by remember { mutableStateOf<String?>(null) }
     var focusStudyItem by remember { mutableStateOf<StudyDeckItem?>(null) }
     var showActivity by remember { mutableStateOf(false) }
     var showAssessment by remember { mutableStateOf(false) }
@@ -465,12 +467,26 @@ fun RootScreen() {
             onBack = { watchScenarioId = null },
         )
 
+        // Above the book: "Review this talk" opens the deck from a book page,
+        // and back from the deck returns to that page.
+        showDeck -> DrillDeckScreen(
+            language = state.targetLanguage,
+            persona = state.persona,
+            nativeLanguage = state.nativeLanguage,
+            voiceId = state.voiceId ?: "",
+            onShadow = { showDeck = false; focusCardId = null; deckSessionId = null; shadowLine = it },
+            focusCardId = focusCardId,
+            sessionId = deckSessionId,
+            onBack = { showDeck = false; focusCardId = null; deckSessionId = null },
+        )
+
         detailSessionId != null -> TalkDetailScreen(
             sessionId = detailSessionId!!,
             language = state.targetLanguage,
             level = state.level,
             onBack = { detailSessionId = null },
             onShadow = { shadowLine = it },
+            onReviewTalk = { id -> deckSessionId = id; showDeck = true },
             // Picking a talk back up is a metered call, so it goes through
             // the same gate every other launcher does.
             onContinue = { topic ->
@@ -517,16 +533,6 @@ fun RootScreen() {
             language = state.targetLanguage,
             onOpenTalk = { showActivity = false; detailSessionId = it },
             onBack = { showActivity = false },
-        )
-
-        showDeck -> DrillDeckScreen(
-            language = state.targetLanguage,
-            persona = state.persona,
-            nativeLanguage = state.nativeLanguage,
-            voiceId = state.voiceId ?: "",
-            onShadow = { showDeck = false; focusCardId = null; shadowLine = it },
-            focusCardId = focusCardId,
-            onBack = { showDeck = false; focusCardId = null },
         )
 
         // Everything snoozed whose time has come, both kinds together — the

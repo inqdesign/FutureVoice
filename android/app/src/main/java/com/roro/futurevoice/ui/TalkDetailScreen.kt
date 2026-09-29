@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -123,6 +124,8 @@ fun TalkDetailScreen(
     /** Opened by the call that just ended (iOS `postTalk`): the page IS the
      *  wrap-up, so it closes with Done rather than going back. */
     onDone: (() -> Unit)? = null,
+    /** This talk's cards as a deck (iOS `DrillView(source: .session)`). */
+    onReviewTalk: ((String) -> Unit)? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onDone ?: onBack)
     val context = LocalContext.current
@@ -179,6 +182,41 @@ fun TalkDetailScreen(
         return said?.let { com.roro.futurevoice.data.DrillIngest.relevantFragment(it, item.text) }
     }
     val grammar = sm?.grammarIssues.orEmpty()
+    /** The correction's card, opened as STUDY material — examples, variants,
+     *  a memory hook (iOS `enrichmentCard`). A fix is learned by understanding
+     *  and recalling it, not by mimicking its sound, so it never shadows. */
+    var enrichmentCard by remember { mutableStateOf<com.roro.futurevoice.talk.DrillCard?>(null) }
+    var sessionCardCount by remember(sessionId, revision) { mutableStateOf(0) }
+    LaunchedEffect(sessionId, revision) {
+        sessionCardCount = com.roro.futurevoice.data.DrillStore.shared(context).load(language)
+            .count { it.sourceSessionId == sessionId }
+    }
+    /** Every correction was ingested as a card at session end, so this is a
+     *  lookup — text first (one turn's several fixes share a turn id), then the
+     *  turn, then containment — with a save as the safety net (iOS `openCard`). */
+    fun openCard(item: com.roro.futurevoice.talk.ScenarioCurriculum.Item) {
+        scope.launch {
+            val store = com.roro.futurevoice.data.DrillStore.shared(context)
+            val cards = store.load(language).filter { it.sourceSessionId == sessionId }
+            val needle = com.roro.futurevoice.talk.CarryoverDetector.normalized(item.text)
+            val turnId = com.roro.futurevoice.data.TalkCurriculum.turnIdOfCorrection(item.id)
+            fun norm(c: com.roro.futurevoice.talk.DrillCard) =
+                com.roro.futurevoice.talk.CarryoverDetector.normalized(c.targetPhrase)
+            val hit = cards.firstOrNull { norm(it) == needle }
+                ?: turnId?.let { id -> cards.firstOrNull { it.sourceTurnId == id } }
+                ?: cards.firstOrNull { norm(it).isNotEmpty() && needle.contains(norm(it)) }
+            if (hit != null) { enrichmentCard = hit; return@launch }
+            // Minted the way ingest would: the same one-sentence trim.
+            val original = originalOf(item).orEmpty()
+            val now = System.currentTimeMillis()
+            val card = com.roro.futurevoice.talk.DrillCard(
+                sourcePhrase = original,
+                targetPhrase = com.roro.futurevoice.data.DrillIngest.coreSentence(item.text, original),
+                reason = item.note, createdAt = now, nextReviewAt = now, box = 0,
+                sourceSessionId = sessionId, sourceTurnId = turnId)
+            enrichmentCard = store.saveIfNew(card, language) ?: card
+        }
+    }
     // The transcript is the book's "scene": one tap away behind Replay, never
     // the first thing the cover shows. Android has no separate transcript
     // destination, so the page opens it in place.
@@ -455,7 +493,7 @@ fun TalkDetailScreen(
                         curriculum.corrections.forEach { item ->
                             val original = originalOf(item).orEmpty()
                             Row(Modifier.fillMaxWidth()
-                                .clickable { onShadow(item.text) }
+                                .clickable { openCard(item) }
                                 .padding(horizontal = 20.dp, vertical = 9.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 MasteryMark(item.masteredAt != null, Modifier.padding(top = 3.dp))
@@ -493,10 +531,33 @@ fun TalkDetailScreen(
                             PageFooter(stringResource(
                                 R.string.each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42))
                         }
+                        if (sessionCardCount > 0 && onReviewTalk != null) {
+                            HorizontalDivider(Modifier.padding(start = 20.dp, top = 12.dp))
+                            Button(onClick = { onReviewTalk(sessionId) },
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(start = 20.dp, end = 20.dp, top = 16.dp).height(50.dp)) {
+                                Icon(Icons.Filled.Style, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.review_this_talk), maxLines = 1)
+                            }
+                            PageFooter(stringResource(
+                                R.string.a_quick_run_through_this_talk_s_key_phrases_anything_left_jo_fde2ca))
+                        }
                     }
                 }
             }
         }
+    }
+    enrichmentCard?.let { card ->
+        var persona by remember { mutableStateOf<com.roro.futurevoice.talk.UserPersona?>(null) }
+        LaunchedEffect(Unit) { persona = com.roro.futurevoice.data.PersonaStore.shared(context).load() }
+        DrillEnrichmentSheet(
+            card = card,
+            persona = persona,
+            targetLanguage = language,
+            nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
+            onDismiss = { enrichmentCard = null },
+        )
     }
 }
 

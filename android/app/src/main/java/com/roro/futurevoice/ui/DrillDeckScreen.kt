@@ -110,6 +110,9 @@ fun DrillDeckScreen(
     /** A per-item reminder's card: dealt on its own, whether or not it is due
      *  yet (the learner tapped the notification that named it). */
     focusCardId: String? = null,
+    /** One talk's cards, due or not — the book's "Review this talk" (iOS
+     *  `DrillView(source: .session)`). Anything left joins the normal queue. */
+    sessionId: String? = null,
     onBack: () -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
@@ -171,7 +174,13 @@ fun DrillDeckScreen(
 
     suspend fun dealHand() {
         val focused = focusCardId?.let { id -> store.load(language).firstOrNull { it.id == id } }
-        val due = if (focused != null) listOf(focused) else store.due(language)
+        val due = when {
+            focused != null -> listOf(focused)
+            sessionId != null -> store.load(language).filter {
+                it.sourceSessionId == sessionId && !com.roro.futurevoice.data.DrillIngest.isRetired(it)
+            }
+            else -> store.due(language)
+        }
         deck = due.take(SESSION_CAP)
         remainingDue = (due.size - deck.size).coerceAtLeast(0)
         dealt = true

@@ -246,6 +246,23 @@ class DrillStore private constructor(context: Context) {
             if (kept.size != all.size) write(language, kept)
         }
 
+    /**
+     * The one door for a card minted OUTSIDE ingest (iOS `saveIfNew`, 2026-09-13):
+     * the same sentence match ingest dedupes on, plus the read filter, so a
+     * card no lookup could find is never minted — that is what made every
+     * visit mint another. Returns what is on file (so a caller can still open
+     * it), the saved card, or null when the store would never read it back.
+     */
+    suspend fun saveIfNew(card: DrillCard, language: String = LanguageScope.active(appContext)): DrillCard? {
+        if (!DrillIngest.isDrillable(card.targetPhrase)) return null
+        val key = DrillIngest.normalizedForMatch(card.targetPhrase)
+        return mutex.withLock {
+            val all = loadLocked(language)
+            all.firstOrNull { DrillIngest.normalizedForMatch(it.targetPhrase) == key }
+                ?: card.also { write(language, all + it) }
+        }
+    }
+
     suspend fun upsertMany(cards: List<DrillCard>, language: String = LanguageScope.active(appContext)) {
         if (cards.isEmpty()) return
         mutex.withLock {
