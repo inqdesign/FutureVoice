@@ -33,6 +33,9 @@ class VoicemailClient(private val auth: AuthRepository) {
         targetLanguage: String, nativeLanguage: String, proficiency: String,
         personaName: String?, lastTopic: String?, lastPhrases: List<String>,
         daysSinceLastTalk: Int?, dueCount: Int,
+        /** How the last call went — the caller has a memory ("couldn't talk
+         *  yesterday?"), never a scold. */
+        lastOutcome: String? = null, consecutiveUnanswered: Int = 0,
     ): String = withContext(Dispatchers.IO) {
         val body: JsonObject = buildJsonObject {
             put("target_language", targetLanguage)
@@ -43,6 +46,8 @@ class VoicemailClient(private val auth: AuthRepository) {
             putJsonArray("last_phrases") { lastPhrases.take(4).forEach { add(it) } }
             daysSinceLastTalk?.let { put("days_since_last_talk", it) }
             put("due_count", dueCount)
+            lastOutcome?.let { put("last_outcome", it) }
+            if (consecutiveUnanswered > 0) put("consecutive_unanswered", consecutiveUnanswered)
         }
         val request = Request.Builder()
             .url(Config.functionUrl("voicemail-script"))

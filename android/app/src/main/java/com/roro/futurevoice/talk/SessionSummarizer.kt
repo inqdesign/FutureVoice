@@ -343,6 +343,8 @@ object SessionSummarizer {
                     lastPhrases = (computed.expressionsOffered + computed.expressionsUsed).take(4),
                     daysSinceLastTalk = 0,
                     dueCount = drills.dueCount(language),
+                    lastOutcome = DailyCallStore.lastOutcome(context)?.raw,
+                    consecutiveUnanswered = DailyCallStore.consecutiveUnanswered(context),
                 )
                 if (script.isNotBlank()) DailyCallStore.setScript(context, script)
             }

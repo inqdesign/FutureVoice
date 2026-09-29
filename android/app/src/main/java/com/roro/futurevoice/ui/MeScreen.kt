@@ -177,8 +177,9 @@ fun MeScreen(
     var callEnabled by remember {
         mutableStateOf(com.roro.futurevoice.data.DailyCallStore.isEnabled(context))
     }
-    var callHour by remember {
-        mutableStateOf(com.roro.futurevoice.data.DailyCallStore.hour(context))
+    // Several calls a day (iOS): the chosen times, minutes after midnight.
+    var callTimes by remember {
+        mutableStateOf(com.roro.futurevoice.data.DailyCallStore.times(context))
     }
     val notifPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
@@ -475,7 +476,7 @@ fun MeScreen(
                     Text(stringResource(R.string.daily_call), Modifier.weight(1f))
                     androidx.compose.material3.Switch(checked = callEnabled, onCheckedChange = { on ->
                         callEnabled = on
-                        com.roro.futurevoice.data.DailyCallStore.set(context, on, callHour, 0)
+                        com.roro.futurevoice.data.DailyCallStore.setTimes(context, on, callTimes)
                         if (on) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                     })
                 }
@@ -517,10 +518,16 @@ fun MeScreen(
                         Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        // Toggle a time on or off: up to four, never none.
                         listOf(7, 8, 9, 12, 19, 21).forEach { h ->
-                            FilterChip(selected = callHour == h, onClick = {
-                                callHour = h
-                                com.roro.futurevoice.data.DailyCallStore.set(context, true, h, 0)
+                            val m = h * 60
+                            val on = m in callTimes
+                            FilterChip(selected = on, onClick = {
+                                val next = if (on) callTimes - m
+                                    else (callTimes + m).takeIf { it.size <= com.roro.futurevoice.data.DailyCallStore.MAX_TIMES } ?: callTimes
+                                if (next.isEmpty() || next == callTimes) return@FilterChip
+                                callTimes = next.sorted()
+                                com.roro.futurevoice.data.DailyCallStore.setTimes(context, true, callTimes)
                             }, label = { Text("%02d:00".format(h)) })
                         }
                     }

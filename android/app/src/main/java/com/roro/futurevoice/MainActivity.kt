@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         // OAuth callback (futurevoice://login) lands here — singleTask means the
         // first delivery can arrive on the original intent.
         Supa.client.handleDeeplinks(intent)
-        DailyCallInbox.deliver(intent)
+        DailyCallInbox.deliver(intent, this)
         DeepLinkInbox.deliver(intent)
         // Screenshot harness: only the `capture` build type answers; every
         // other build gets null and starts normally.
@@ -55,6 +55,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // An untouched ring can't be noticed when it happens — nothing runs.
+        com.roro.futurevoice.data.DailyCallStore.settleIfRangOut(this)
         // Friends who joined with my code since last time — polled here
         // because there is no push infrastructure.
         lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }
@@ -80,7 +82,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         Supa.client.handleDeeplinks(intent)
-        DailyCallInbox.deliver(intent)
+        DailyCallInbox.deliver(intent, this)
         DeepLinkInbox.deliver(intent)
     }
 }

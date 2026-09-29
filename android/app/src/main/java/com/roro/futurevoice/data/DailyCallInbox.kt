@@ -9,10 +9,14 @@ object DailyCallInbox {
     private val _answered = MutableStateFlow(0)
     val answered: StateFlow<Int> = _answered
 
-    fun deliver(intent: Intent?) {
+    fun deliver(intent: Intent?, context: android.content.Context? = null) {
         if (intent?.getBooleanExtra(DailyCallScheduler.ANSWER_EXTRA, false) == true) {
             intent.removeExtra(DailyCallScheduler.ANSWER_EXTRA)
             com.roro.futurevoice.core.Analytics.capture("daily_call_answered", mapOf("callbacks" to 0))
+            context?.let {
+                DailyCallScheduler.dismissRing(it)
+                DailyCallStore.onAnswered(it)
+            }
             _answered.value += 1
         }
     }

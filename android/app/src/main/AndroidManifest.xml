@@ -76,6 +76,11 @@
             android:name=".data.DailyCallReceiver"
             android:exported="false" />
 
+        <!-- "Can't talk now" on the ring — settles the call without opening the app. -->
+        <receiver
+            android:name=".data.DailyCallDeclineReceiver"
+            android:exported="false" />
+
         <!-- A word coming back. Separate from the daily call's receiver on
              purpose: the call is the habit anchor and rings; this only ever
              posts a quiet notification. -->
