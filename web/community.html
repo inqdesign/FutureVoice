@@ -29,6 +29,8 @@
   --head:64px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* `hidden` must win over any display rule below (the staff-only bar is display:flex) */
+[hidden]{display:none!important}
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
 a{color:inherit}
