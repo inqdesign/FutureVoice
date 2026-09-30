@@ -264,13 +264,37 @@ export class GeminiTranscriber {
  *  where a per-utterance guess has the least to go on. */
 export function languagePin(code: string): string {
   const name = languageName(code)
-  return [
+  const lines = [
     `You transcribe a language LEARNER speaking ${name}. Write down exactly what you hear, word for word.`,
     `The language is settled before you hear anything: the speaker is speaking ${name}, and every line you write is ${name}. That holds for the first words of an utterance, when you have heard almost nothing yet, and for short replies that sound the same in several languages — write those in ${name} too.`,
     `The speaker has a foreign accent, hesitates, and makes grammar mistakes. That is what a learner sounds like. It is never evidence that they switched to another language, and never a reason to write their words in another language, another spelling or another script.`,
     `Hesitation sounds — uh, um, a drawn-out vowel before the first word — belong to the ${name} utterance too. Write them the way ${name} writes a filler, or leave them out; they are never a word of another language and never another script.`,
     `Never translate and never correct — their mistakes are the material. If part of an utterance is unintelligible, write the ${name} words you are sure of and leave the rest out; do not fill the gap with another language.`,
-  ].join("\n")
+  ]
+  const register = speechLevelGuard(code)
+  if (register) lines.push(register)
+  return lines.join("\n")
+}
+
+/** Korean and Japanese mark the speech level in the ending, and the level
+ *  the learner used is part of what they said (2026-09-30, reported by the
+ *  founder: "응 알겠어" showed as the interim and the FINAL came back
+ *  "음, 알겠어요" — the bubble rewrote a 반말 answer into 존댓말 and the
+ *  answer word 응 into a filler). The coach prompts carry the same rule for
+ *  corrections (`registerGuard` in the app); the transcriber had nothing,
+ *  and a polite ending is the likeliest completion for a model to prefer.
+ *  Appended only for these two, so every other language's pin is unchanged.
+ *  Not reproduced on clean synthesized audio (12/12 kept 반말 with and
+ *  without it), so it guards a real recording's ambiguity, not a clean one. */
+export function speechLevelGuard(code: string): string | null {
+  switch (code.toLowerCase().split("-")[0]) {
+    case "ko":
+      return "Korean marks the speech level in its endings, and the level they used is part of what they said: write 알겠어 as 알겠어 and 알겠어요 as 알겠어요. Never add or drop 요, never turn 반말 into 존댓말 or the other way. 응, 어 and 네 are answers (yes), not hesitation — write them as heard, never as 음."
+    case "ja":
+      return "Japanese marks the speech level in its endings, and the level they used is part of what they said: write わかった as わかった and わかりました as わかりました. Never add or drop です or ます, never turn plain speech into polite speech or the other way. うん and ええ are answers (yes), not hesitation — write them as heard."
+    default:
+      return null
+  }
 }
 
 /** English name for the few languages the app teaches; the code itself for
