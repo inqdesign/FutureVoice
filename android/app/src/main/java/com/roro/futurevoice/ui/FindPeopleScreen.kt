@@ -413,6 +413,10 @@ fun FindPeopleScreen(
                     stringResource(R.string.done), onClick = onBack) })
         }
 
+        // The list dissolves under the capsule, the same feather the tab bar
+        // sits on (iOS's scroll edge effect behind a bottom bar).
+        ScrollEdgeFeather(color = AppSurfaces.ground, modifier = Modifier.align(Alignment.BottomCenter),
+            ramp = 56.dp, solid = 36.dp)
         // `.searchable` on iOS 26: a floating white capsule at the bottom.
         SearchCapsule(
             query = query, onQuery = { query = it },

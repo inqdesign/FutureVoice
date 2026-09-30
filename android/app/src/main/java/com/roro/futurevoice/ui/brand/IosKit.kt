@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -64,11 +65,15 @@ fun iosFill(): Color = if (isDark()) Color(0xFF767680).copy(alpha = 0.24f)
  * as a small raised grey number beside the label.
  */
 @Composable
-fun IosChip(label: String, selected: Boolean, count: Int? = null, onClick: () -> Unit) {
+fun IosChip(label: String, selected: Boolean, count: Int? = null,
+            /** The selected fill when the chip belongs to something with a
+             *  colour of its own (Practice: Talk blue, Watch indigo). Null = ink. */
+            selectedFill: Color? = null,
+            onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    val fill = if (selected) scheme.onSurface else AppSurfaces.card
-    val ink = if (selected) scheme.surface else scheme.onSurface
-    val countInk = if (selected) scheme.surface.copy(alpha = 0.6f) else scheme.onSurfaceVariant
+    val fill = if (selected) selectedFill ?: scheme.onSurface else AppSurfaces.card
+    val ink = if (selected) (if (selectedFill != null) Color.White else scheme.surface) else scheme.onSurface
+    val countInk = if (selected) ink.copy(alpha = 0.6f) else scheme.onSurfaceVariant
     Text(
         buildAnnotatedString {
             append(label)
@@ -172,9 +177,12 @@ fun IosGlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, circle: B
         modifier
             .height(44.dp)
             .then(if (circle) Modifier.width(44.dp) else Modifier)
-            .shadow(if (dark) 0.dp else 8.dp, CircleShape,
-                ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.10f))
+            // Stronger than a card's: on a white page (sheets, People) the
+            // capsule has to lift off it the way iOS's glass does.
+            .shadow(if (dark) 0.dp else 12.dp, CircleShape,
+                ambientColor = Color.Black.copy(alpha = 0.16f), spotColor = Color.Black.copy(alpha = 0.16f))
             .background(if (dark) Color(0xFF2C2C2E) else Color.White, CircleShape)
+            .border(0.5.dp, Color.Black.copy(alpha = if (dark) 0f else 0.06f), CircleShape)
             .clip(CircleShape)
             .clickable(onClick = onClick)
             .padding(horizontal = if (circle) 0.dp else 16.dp),

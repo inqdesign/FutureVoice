@@ -69,10 +69,20 @@ enum class Shelf(val labelRes: Int) {
 fun ShelfChips(selected: Shelf, counts: (Shelf) -> Int?, onSelect: (Shelf) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Shelf.entries.forEach { s ->
-            PillChip(
+            // iOS `Books.talkChipColor` / `watchChipColor`: a shelf chip
+            // wears its books' colour when picked; Studying stays ink.
+            val dark = androidx.compose.foundation.isSystemInDarkTheme()
+            com.roro.futurevoice.ui.brand.IosChip(
                 label = stringResource(s.labelRes),
                 count = counts(s),
                 selected = s == selected,
+                selectedFill = when (s) {
+                    Shelf.TALK -> if (dark) androidx.compose.ui.graphics.Color(0xFF0A84FF)
+                        else androidx.compose.ui.graphics.Color(0xFF007AFF)
+                    Shelf.WATCH -> if (dark) androidx.compose.ui.graphics.Color(0xFF5E5CE6)
+                        else androidx.compose.ui.graphics.Color(0xFF5856D6)
+                    else -> null
+                },
                 onClick = { onSelect(s) })
         }
     }
@@ -471,4 +481,4 @@ private fun stringResource(id: Int) = androidx.compose.ui.res.stringResource(id)
  */
 @Composable
 fun PillChip(label: String, selected: Boolean, count: Int? = null, onClick: () -> Unit) =
-    com.roro.futurevoice.ui.brand.IosChip(label, selected, count, onClick)
+    com.roro.futurevoice.ui.brand.IosChip(label, selected, count, onClick = onClick)
