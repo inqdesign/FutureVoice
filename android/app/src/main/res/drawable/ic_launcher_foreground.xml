@@ -1,13 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The iOS app icon's pixel mark (AppIcon icon_1024.png), rect for rect: the
+     whole 1024px icon maps onto the adaptive icon's 72dp visible area. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Mic capsule + stand: the product is a phone call, not a chat app. -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,30c-4.4,0 -8,3.6 -8,8v14c0,4.4 3.6,8 8,8s8,-3.6 8,-8V38C62,33.6 58.4,30 54,30z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M68,50v2c0,7.7 -6.3,14 -14,14s-14,-6.3 -14,-14v-2h-5v2c0,9.8 7.4,17.9 17,18.9V78h-8v5h20v-5h-8v-7.1c9.6,-1 17,-9.1 17,-18.9v-2H68z" />
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#000000"
+        android:pathData="M38.461,34.734H67.289V41.766H38.461ZM31.148,41.766H38.461V66.164H31.148ZM67.289,41.766H74.602V66.164H67.289ZM38.461,66.164H67.289V73.195H38.461ZM74.602,66.164H81.492V73.195H74.602Z" />
 </vector>

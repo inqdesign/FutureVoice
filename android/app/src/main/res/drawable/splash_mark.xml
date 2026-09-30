@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The iOS launch screen's mark (LaunchLogo), 100dp wide like its 100pt,
+     centred in Android 12's 288dp splash-icon canvas. Colour follows the
+     launch background: black on white, white on black. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp" android:height="288dp"
+    android:viewportWidth="288" android:viewportHeight="288">
+    <path android:fillColor="@color/splash_mark"
+        android:pathData="M108.525,105.802H165.788V119.768H108.525ZM94.0,119.768H108.525V168.232H94.0ZM165.788,119.768H180.313V168.232H165.788ZM108.525,168.232H165.788V182.198H108.525ZM180.313,168.232H194.0V182.198H180.313Z" />
+</vector>

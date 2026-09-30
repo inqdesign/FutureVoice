@@ -1117,26 +1117,8 @@ internal fun HomeScreen(
             }
         },
         bottomBar = {
-            NavigationBar {
-                HomeTab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { onTabChange(t) },
-                        icon = {
-                            Icon(
-                                when (t) {
-                                    HomeTab.TALK -> Icons.Filled.Phone
-                                    HomeTab.WATCH -> Icons.Filled.PlayArrow
-                                    HomeTab.PRACTICE -> Icons.Filled.School
-                                    HomeTab.PROGRESS -> Icons.Filled.BarChart
-                                },
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text(stringResource(t.label)) },
-                    )
-                }
-            }
+            // The iOS floating capsule, not Material's full-width bar.
+            IosTabBar(selected = tab, onSelect = onTabChange)
         },
     ) { padding ->
         Column(
