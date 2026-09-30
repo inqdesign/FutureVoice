@@ -1,11 +1,12 @@
 Neu
-• Die App gibt es jetzt komplett auf Deutsch.
-• Coach-Modus: Ab und zu fragt dein fließendes Ich etwas, das du mit einem Wort beantworten kannst, das du gerade lernst, und zeigt es dir als Hinweis, während du nachdenkst. Einschalten kannst du ihn in den Anruf-Einstellungen.
-• Jede Person spricht auf ihre Art. Freunde reden wie Freunde, bekannte Personen wie sie selbst. Wenn du jemanden hinzufügst, legst du fest, ob ihr euch duzt oder siezt.
-• Wenn du Koreanisch oder Japanisch übst, sprechen deine Gesprächspartner mit Stimmen und Namen aus dieser Sprache.
+• Wochenrückblick: Am Ende der Woche blätterst du durch deine Gespräche und die Wörter und Wendungen, die du gelernt hast – die letzte Karte führt direkt zum Test der Woche.
+• Grammatik-Fokus: Such dir einen Fehler aus, den du oft machst, und behalte ihn das ganze Gespräch über im Blick. Kommt er wieder vor, siehst du es sofort. Bei A1 und A2 standardmäßig an.
+• Wenn du deine Stimme zum ersten Mal hörst, kannst du dir vier Akzente direkt anhören und einen auswählen.
+• Du kannst jetzt auch die Sprache lernen, in der du die App nutzt.
 
 Behoben
-• Die erste Begrüßung eines Anrufs lief manchmal ohne Ton.
-• Dein fließendes Ich hat manchmal Datum und Uhrzeit verwechselt, zum Beispiel „Lange nicht gesehen“ beim zweiten Anruf am selben Tag.
-• Der Bildschirm „Klingt nicht nach dir?“ hat sich direkt nach dem Öffnen wieder geschlossen.
-• Der erste Bildschirm stockt beim Öffnen der App nicht mehr kurz.
+• Dein fließendes Ich atmet zwischen den Sätzen und klingt natürlicher.
+• Du kannst die Sprechgeschwindigkeit auch während eines Gesprächs ändern.
+• Ein geplanter Anruf konnte während eines laufenden Gesprächs klingeln und es abbrechen.
+• Lernmaterial in einem Buch konnte nach „Nochmal sagen“ verschwinden.
+• Dein fließendes Ich blieb manchmal ohne Antwort hängen. Das passiert jetzt viel seltener.

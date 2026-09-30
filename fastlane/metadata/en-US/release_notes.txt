@@ -1,11 +1,14 @@
 New
-• Coach mode: now and then your future self asks something you can answer with a word you're studying, and shows that word as a hint while you think. Turn it on in Call settings.
-• People sound like themselves. A friend talks like a friend, a public figure like themselves. When you add someone, you can choose how casually the two of you talk.
-• When you're learning Korean or Japanese, your conversation partners speak with voices and names from that language.
-• The app is now available in German.
+• Week in review: when a week ends, flip through last week's calls and the words and expressions you picked up, with this week's test on the last card.
+• Grammar focus: pick one mistake you keep making and keep it in mind for the whole call. You'll see it right away if it comes up again. On by default at A1 and A2.
+• When you first meet your voice, you can hear and choose from four accents right there.
+• You can now learn the language you use the app in.
 
 Fixed
-• The first greeting of a call sometimes played without sound.
-• Your future self sometimes lost track of the date and time, like saying "long time no see" on your second call of the day.
-• The "Doesn't sound like you?" screen closed as soon as it opened.
-• The first screen no longer stutters for a moment when you open the app.
+• Your future self now breathes between sentences and sounds more natural.
+• You can change the speaking speed during a call.
+• A scheduled call could ring during a call you were already on and cut it off.
+• Review material in a book could disappear after Say it again.
+• Casual Korean could be transcribed as polite speech.
+• Your future self sometimes stalled without answering. This happens far less now.
+• The third tab is now correctly called Review.

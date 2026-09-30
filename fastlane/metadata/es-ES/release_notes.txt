@@ -1,11 +1,12 @@
 Novedades
-• Modo coach: de vez en cuando, tu yo del futuro te pregunta algo que puedes responder con una palabra que estás estudiando, y te la muestra como pista mientras piensas. Actívalo en Ajustes de la llamada.
-• Cada persona habla a su manera. Un amigo habla como un amigo y una persona famosa, como ella misma. Al añadir a alguien, puedes elegir qué tan formal se hablan.
-• Cuando practicas coreano o japonés, tus interlocutores hablan con voces y nombres de ese idioma.
-• La app ya está disponible en alemán.
+• Resumen de la semana: al terminar la semana, repasa en tarjetas tus llamadas y las palabras y expresiones que aprendiste. La última tarjeta te lleva a la prueba de esta semana.
+• Enfoque gramatical: elige un error que repites y tenlo presente durante toda la llamada. Si vuelve a salir, lo verás al momento. Activado por defecto en A1 y A2.
+• Al conocer tu voz por primera vez, puedes escuchar y elegir entre cuatro acentos ahí mismo.
+• Ahora puedes aprender el mismo idioma en el que usas la app.
 
 Correcciones
-• El primer saludo de una llamada a veces sonaba sin audio.
-• Tu yo del futuro a veces se confundía con la fecha y la hora, como decir «¡cuánto tiempo!» en tu segunda llamada del día.
-• La pantalla «¿No suena como tú?» se cerraba nada más abrirse.
-• La primera pantalla ya no se queda trabada un momento al abrir la app.
+• Tu yo fluido respira entre frases y suena más natural.
+• Puedes cambiar la velocidad de voz durante una llamada.
+• Una llamada programada podía sonar en plena llamada y cortarla.
+• El material de repaso de un cuaderno podía desaparecer después de «Volver a decirlo».
+• Tu yo fluido a veces se quedaba sin responder. Ahora pasa mucho menos.

@@ -1,11 +1,12 @@
 Nouveautés
-• Mode coach : de temps en temps, ton futur moi te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et te le montre comme indice pendant que tu réfléchis. Active-le dans Réglages de l’appel.
-• Chaque personne parle à sa façon. Un ami parle comme un ami, une personnalité connue comme elle-même. Quand tu ajoutes quelqu’un, tu peux choisir si vous vous tutoyez ou vous vouvoyez.
-• Quand tu pratiques le coréen ou le japonais, tes interlocuteurs parlent avec des voix et des prénoms de cette langue.
-• L’app est maintenant disponible en allemand.
+• Ta semaine en revue : à la fin de la semaine, parcours en cartes tes appels et les mots et expressions appris. La dernière carte t’emmène au test de la semaine.
+• Focus grammaire : choisis une erreur que tu refais souvent et garde-la en tête pendant tout l’appel. Si elle revient, tu le vois tout de suite. Activé par défaut en A1 et A2.
+• Quand tu découvres ta voix, tu peux écouter et choisir parmi quatre accents sur place.
+• Tu peux maintenant apprendre la langue dans laquelle tu utilises l’app.
 
 Corrections
-• Le premier bonjour d’un appel passait parfois sans le son.
-• Ton futur moi se trompait parfois de date ou d’heure, par exemple en disant « ça fait longtemps ! » lors de ton deuxième appel de la journée.
-• L’écran « On ne dirait pas ta voix ? » se refermait dès son ouverture.
-• Le premier écran ne se fige plus un instant à l’ouverture de l’app.
+• Ton moi fluide respire entre les phrases et parle plus naturellement.
+• Tu peux changer la vitesse de la voix pendant un appel.
+• Un appel programmé pouvait sonner pendant un appel en cours et le couper.
+• Le matériel de révision d’un carnet pouvait disparaître après « Redire ».
+• Ton moi fluide restait parfois bloqué sans répondre. C’est beaucoup plus rare maintenant.
