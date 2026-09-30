@@ -54,6 +54,8 @@ struct WatchTab: View {
         /// prefilled as a settings sheet (edit, delete, or Watch a fresh take)
         /// instead of generating immediately.
         var editing: Scenario?
+        /// A situation idea tapped on a person's page — the box opens with it.
+        var situation: String? = nil
     }
 
     var body: some View {
@@ -96,6 +98,7 @@ struct WatchTab: View {
                                       mode: cfg.mode,
                                       initialCategory: cfg.category,
                                       editing: cfg.editing,
+                                      initialSituation: cfg.situation,
                                       ctaTitle: "Watch", ctaIcon: "play.fill",
                                       onDelete: cfg.editing.map { s in
                                           { appState.deleteScenario(id: s.id); composer = nil }
@@ -162,6 +165,11 @@ struct WatchTab: View {
                     onCompose: { person in
                         showingFind = false
                         composer = ComposerConfig(person: person, mode: .custom)
+                    },
+                    onComposeIdea: { person, idea in
+                        showingFind = false
+                        composer = ComposerConfig(person: person, mode: .custom,
+                                                  situation: idea)
                     })
                     .environmentObject(appState)
             }

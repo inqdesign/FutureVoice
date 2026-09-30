@@ -1,28 +1,34 @@
 import SwiftUI
 
 /// MANAGEMENT page for one counterpart — profile, cached situation ideas,
-/// and the past-dialogue archive. Watching is deliberately NOT launched from
-/// here: the one watch flow lives on the Watch tab (tap the persona bubble →
-/// situation composer). Keeping the two apart means every scene goes through
-/// the same composer and mints the same Practice book.
+/// and the past-dialogue archive. Watching is never launched from here
+/// directly: a tapped situation idea hands off to the host (`onPickIdea`),
+/// which opens the ONE composer with that line written, so every scene still
+/// goes through the same composer and mints the same Practice book. The
+/// ideas were plain text until 2026-09-30 — a list with nothing to do.
 ///
 /// Tracks the counterpart by ID and reads live from `appState.counterparts`
 /// so updates (Edit / Ideas refresh) reflect immediately without a re-push.
 struct CounterpartDetailView: View {
     let counterpartId: UUID
+    /// Open the composer with this person and one of their ideas written in.
+    /// nil = the ideas are read-only (no host to hand off to).
+    var onPickIdea: ((Counterpart, String) -> Void)? = nil
     @EnvironmentObject private var appState: AppState
     @State private var showingEdit = false
     @State private var loadingScenarios = false
     @State private var scenarioError: String?
 
-    init(counterpartId: UUID) {
+    init(counterpartId: UUID, onPickIdea: ((Counterpart, String) -> Void)? = nil) {
         self.counterpartId = counterpartId
+        self.onPickIdea = onPickIdea
     }
 
     /// Backwards-compat init used by NavigationLink call sites that already
     /// passed a Counterpart by value.
-    init(counterpart: Counterpart) {
+    init(counterpart: Counterpart, onPickIdea: ((Counterpart, String) -> Void)? = nil) {
         self.counterpartId = counterpart.id
+        self.onPickIdea = onPickIdea
     }
 
     private var counterpart: Counterpart? {
@@ -127,16 +133,22 @@ struct CounterpartDetailView: View {
                 }
             } else {
                 ForEach(c.savedScenarios(in: appState.targetLanguage)) { scenario in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(scenario.title)
-                            .foregroundStyle(.primary)
-                        if !scenario.blurb.isEmpty {
-                            Text(scenario.blurb)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    if let onPickIdea {
+                        Button {
+                            onPickIdea(c, ideaLine(scenario))
+                        } label: {
+                            HStack {
+                                ideaText(scenario)
+                                Spacer(minLength: 8)
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
+                        .buttonStyle(.plain)
+                    } else {
+                        ideaText(scenario)
                     }
-                    .padding(.vertical, 2)
                 }
             }
             if let err = scenarioError {
@@ -161,8 +173,28 @@ struct CounterpartDetailView: View {
                 }
             }
         } footer: {
-            Text(explain("Grounded in your relationship with \(c.name) — these appear as ideas when you tap them on the Watch tab."))
+            Text(explain("Tap one to make it a situation with \(c.name)."))
         }
+    }
+
+    private func ideaText(_ scenario: SuggestedTopic) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(scenario.title)
+                .foregroundStyle(.primary)
+            if !scenario.blurb.isEmpty {
+                Text(scenario.blurb)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+    }
+
+    /// The line the composer's box opens with — the same pick the reel makes.
+    private func ideaLine(_ scenario: SuggestedTopic) -> String {
+        let blurb = scenario.blurb.trimmingCharacters(in: .whitespacesAndNewlines)
+        return blurb.isEmpty ? scenario.title : blurb
     }
 
     private func regenerateScenarios(for c: Counterpart) async {

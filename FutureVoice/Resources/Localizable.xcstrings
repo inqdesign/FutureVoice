@@ -34136,48 +34136,48 @@
         }
       }
     },
-    "Grounded in your relationship with %@ — these appear as ideas when you tap them on the Watch tab." : {
+    "Tap one to make it a situation with %@." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Basiert auf deiner Beziehung zu %@ — diese erscheinen als Ideen, wenn du im Watch-Tab darauf tippst."
+            "value" : "Tippe auf eine, um daraus eine Situation mit %@ zu machen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Basadas en tu relación con %@ — aparecen como ideas cuando tocas a esta persona en la pestaña Escenas."
+            "value" : "Toca una para convertirla en una situación con %@."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Basé sur ta relation avec %@. Ces idées apparaissent quand tu touches cette personne dans l’onglet Scènes."
+            "value" : "Touche-en une pour en faire une situation avec %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@との関係をもとに作りました。シーン練習タブでこの人をタップすると、アイデアとして出てきます。"
+            "value" : "タップすると、%@とのシーンを作れます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@와의 관계를 바탕으로 만들었어요. 상황연습 탭에서 이 사람을 누르면 아이디어로 나와요."
+            "value" : "하나를 누르면 그 상황으로 바로 만들 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "依你和%@的关系创建。在情境练习页点这个人，就会以想法的形式出现。"
+            "value" : "点一下，就能做成和%@的情境。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "依你和%@的關係建立。在情境練習分頁點這個人，就會以想法的形式出現。"
+            "value" : "點一下，就能做成和%@的情境。"
           }
         }
       }

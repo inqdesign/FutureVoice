@@ -22,6 +22,9 @@ struct FindPeopleSheet: View {
     let onWatch: (Counterpart) -> Void
     /// Build a specific situation with them (the composer).
     var onCompose: ((Counterpart) -> Void)? = nil
+    /// Build a situation with them starting from one of their situation
+    /// ideas (tapped on their page) — the composer opens with it written.
+    var onComposeIdea: ((Counterpart, String) -> Void)? = nil
 
     @State private var pool: [PublicPersonaService.PublicPersona] = []
     @State private var isLoading = true
@@ -181,7 +184,8 @@ struct FindPeopleSheet: View {
             }
             ForEach(ownPeople) { c in
                 NavigationLink {
-                    CounterpartDetailView(counterpart: c).environmentObject(appState)
+                    CounterpartDetailView(counterpart: c, onPickIdea: onComposeIdea)
+                        .environmentObject(appState)
                 } label: {
                     HStack(spacing: 12) {
                         PersonBubble(name: c.name, photoId: c.id, size: 40)

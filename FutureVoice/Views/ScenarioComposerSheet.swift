@@ -42,6 +42,9 @@ struct ScenarioComposerSheet: View {
     /// one: every field prefills from it, commit keeps its identity (id, book,
     /// mastery, history), and a delete row appears at the bottom.
     var editing: Scenario? = nil
+    /// Opens the box with this line already written — a situation idea
+    /// tapped on a person's page. Same effect as picking it from the reel.
+    var initialSituation: String? = nil
     let ctaTitle: String
     let ctaIcon: String
     /// Edit mode only — remove the scenario (and with it, its Practice book).
@@ -237,6 +240,13 @@ struct ScenarioComposerSheet: View {
                         path = [Crumb(label: cat, scenario: "",
                                       icon: e.categoryIcon ?? "sparkles")]
                     }
+                }
+                if editing == nil, situation.isEmpty,
+                   let s = initialSituation?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !s.isEmpty {
+                    programmaticSituation = true
+                    situation = s
+                    customMode = true
                 }
                 if !partnerSeeded {
                     partnerSeeded = true
