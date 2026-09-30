@@ -98,6 +98,9 @@ struct ConversationView: View {
     @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
     @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
     @AppStorage(CoachMode.key) private var coachMode = false
+    /// Watched only to tell a live call when the rung moves (the sheet
+    /// writes it) — see the `CallSettingsSheet` presentation.
+    @AppStorage(SpeechSpeed.key) private var speechSpeedRaw = SpeechSpeed.default.rawValue
     /// The call screen is waiting on that pitch to close before it exits.
     @State private var closeAfterPaywall = false
     /// Which of this screen's doors opened the paywall — `PaywallView`'s
@@ -887,15 +890,21 @@ struct ConversationView: View {
             // bottom bar it never presented (the bar lives inside
             // `fadingBottomBar`'s overlay).
             .sheet(isPresented: $showingCallSettings) {
-                CallSettingsSheet { speed in
-                    // The rung is already stored (the sheet writes the same
-                    // defaults key Me → Voice does), so every later synthesis
-                    // reads it for free. Only a call ALREADY UP has to be
-                    // told, and only on the realtime path — the classic path
-                    // asks `SpeechSpeed.current` at each synthesis.
-                    guard RealtimeMode.isEnabled, phoneCallActive else { return }
-                    realtime.setSpeed(speed)
-                }
+                // No parameters on purpose: this body re-runs on every mic
+                // level tick while a call is live, and a sheet handed a fresh
+                // closure each time re-rendered with it — often enough that
+                // the speed menu couldn't open or take a tap until the call
+                // was paused. With nothing to compare, SwiftUI leaves it alone.
+                CallSettingsSheet()
+            }
+            .onChange(of: speechSpeedRaw) { _, new in
+                // The rung is already stored (the sheet writes the same
+                // defaults key Me → Voice does), so every later synthesis
+                // reads it for free. Only a call ALREADY UP has to be told,
+                // and only on the realtime path — the classic path asks
+                // `SpeechSpeed.current` at each synthesis.
+                guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                realtime.setSpeed(SpeechSpeed(rawValue: new) ?? .default)
             }
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))

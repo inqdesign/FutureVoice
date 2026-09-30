@@ -38,11 +38,13 @@ enum CallSettings {
 /// a settings screen that silences the call would be answering "it's too
 /// fast" by stopping the thing that is too fast.
 struct CallSettingsSheet: View {
-    /// Fired when the rung moves. The caller pushes it to the gateway; the
-    /// line PLAYING now keeps the speed it was synthesized at, because
-    /// ElevenLabs takes `voice_settings` once per context and a context is
-    /// one spoken line.
-    var onSpeedChange: (SpeechSpeed) -> Void
+    // No stored inputs, and none may be added: the presenting call screen
+    // re-renders on every mic level tick, and a sheet with a closure (or any
+    // non-equatable) property re-renders with it — the speed menu then
+    // couldn't open mid-call. The rung is pushed to a live call by
+    // `ConversationView`'s own `onChange` on the same defaults key; the line
+    // PLAYING keeps the speed it was synthesized at, because ElevenLabs takes
+    // `voice_settings` once per context and a context is one spoken line.
 
     @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.default.rawValue
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
@@ -55,10 +57,12 @@ struct CallSettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    // The same control as Me → Voice, deliberately: one
-                    // setting, two doors. Menu style (not segmented) so the
-                    // rung names are never truncated — they are words, and
-                    // they are longer in every language but English.
+                    // The same setting as Me → Voice, but drawn INLINE, one
+                    // row per rung, never as a menu: the call screen under
+                    // this sheet re-renders on every mic level tick while
+                    // listening, and each re-render closed the menu before it
+                    // could take a tap — the control only worked with the
+                    // call paused. A plain row is a tap, nothing to dismiss.
                     Picker(selection: $speechSpeed) {
                         ForEach(SpeechSpeed.allCases, id: \.rawValue) { speed in
                             Text(speed.label).tag(speed.rawValue)
@@ -66,8 +70,10 @@ struct CallSettingsSheet: View {
                     } label: {
                         Label("Speaking speed", systemImage: "speedometer")
                     }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
                 } header: {
-                    Text("Voice")
+                    Text("Speaking speed")
                 } footer: {
                     Text(explain("Applies from the next thing your future self says."))
                 }
@@ -124,8 +130,5 @@ struct CallSettingsSheet: View {
         // included, so this sheet can never be the reason a call can't be
         // hung up.
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-        .onChange(of: speechSpeed) { _, new in
-            onSpeedChange(SpeechSpeed(rawValue: new) ?? .default)
-        }
     }
 }
