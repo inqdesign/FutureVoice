@@ -150,9 +150,10 @@ struct VoiceCloneOnboardingView: View {
     /// and switchable right on the script step. See `CloneScriptStore`.
     @State private var readInNative = false
 
-    /// Accent picker off the meet act — only offered after a NATIVE-language
-    /// take (see the button in `meetContent`).
-    @State private var pickingAccent = false
+    /// The accent whose takes the picker sheet opens on (see `accentSection`).
+    @State private var accentToPick: VoiceAccent?
+    /// "No accent" is rebuilding the clone from the saved recording.
+    @State private var removingAccent = false
     /// The native-language script once it's on the device — nil until the
     /// generation lands (or forever, for a native language it never does,
     /// in which case the picker simply never appears).
@@ -236,8 +237,9 @@ struct VoiceCloneOnboardingView: View {
         // away a ~30 s request that had already been charged against the
         // daily cap. Out here it survives everything but this whole screen
         // going away.
-        .sheet(isPresented: $pickingAccent) {
-            VoiceAccentSheet(onApplied: { refreshGreetingForNewVoice() })
+        .sheet(item: $accentToPick) { accent in
+            VoiceAccentSheet(initialAccent: accent,
+                             onApplied: { refreshGreetingForNewVoice() })
                 .environmentObject(appState)
         }
         .sheet(isPresented: $comparingVoice) {
@@ -928,6 +930,8 @@ struct VoiceCloneOnboardingView: View {
 
             speedSection
 
+            accentSection
+
             VStack(spacing: 14) {
                 // The verdict belongs here, not one screen earlier: at review
                 // they judged their own raw take, here they judge the CLONE.
@@ -946,24 +950,6 @@ struct VoiceCloneOnboardingView: View {
                         .font(.footnote)
                 }
 
-                // Offered to EVERYONE who has accents to choose from, not just
-                // native-language takes. The old rule was that a
-                // target-language reader had already given the clone their own
-                // accent and so had nothing to pick — true, and beside the
-                // point: wanting to sound American or British is a wish about
-                // the fluent self, and this screen is the one moment the
-                // learner is actually listening to it. Hiding the choice here
-                // meant they had to know it exists in Me → Voice to ever find
-                // it. Still optional, still reversible from Me → Voice.
-                if !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
-                    Button {
-                        player.stop()
-                        pickingAccent = true
-                    } label: {
-                        Label("Choose your accent", systemImage: "globe")
-                            .font(.footnote)
-                    }
-                }
             }
 
             // The code they typed on the Welcome screen actually landed. Said
@@ -1033,6 +1019,92 @@ struct VoiceCloneOnboardingView: View {
         // The pills are full-width buttons, so the row needs the act's own
         // gutter or they run to the screen edges.
         .padding(.horizontal, 24)
+    }
+
+    /// The accent, as four pills on the screen itself — never behind a
+    /// button (2026-09-30, user decision). It used to be a footnote link,
+    /// "Choose your accent", and a clone recorded by a Korean speaker, left on
+    /// whatever accent the model guessed, came out sounding Indian: the
+    /// learner picked an accent, recorded again, and the re-record silently
+    /// dropped the pick — nothing on screen said the voice was un-accented
+    /// again. Here the selected pill IS the live voice's accent, so a
+    /// re-record visibly falls back to "No accent".
+    ///
+    /// An accent pill opens the take picker already generating that accent's
+    /// takes (listening and choosing stay the learner's); "No accent" rebuilds
+    /// the plain clone from the saved recording right here.
+    @ViewBuilder
+    private var accentSection: some View {
+        let options = VoiceAccentCatalog.options(for: appState.targetLanguage)
+        if !options.isEmpty {
+            VStack(spacing: 8) {
+                Text("Accent")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    accentPill(label: "No accent",
+                               selected: appState.voiceAccentId == nil,
+                               loading: removingAccent,
+                               action: removeAccentFromMeet)
+                        .disabled(appState.voiceAccentId != nil && !VoiceSampleStore.shared.exists)
+                    ForEach(options) { option in
+                        accentPill(label: LocalizedStringKey(option.label),
+                                   selected: appState.voiceAccentId == option.id,
+                                   loading: false) {
+                            player.stop()
+                            accentToPick = option
+                        }
+                    }
+                }
+                .disabled(removingAccent)
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+
+    @ViewBuilder
+    private func accentPill(label: LocalizedStringKey, selected: Bool, loading: Bool,
+                            action: @escaping () -> Void) -> some View {
+        let button = Button(action: action) {
+            Group {
+                if loading {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Text(label)
+                        .font(.footnote)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        if selected {
+            button.buttonStyle(.borderedProminent)
+        } else {
+            button.buttonStyle(.bordered)
+        }
+    }
+
+    /// Back to the voice the recording makes on its own — the same rebuild as
+    /// the sheet's "Remove accent", without the confirmation: here it is one
+    /// of four equal choices, and any of the others brings an accent back.
+    private func removeAccentFromMeet() {
+        guard appState.voiceAccentId != nil, !removingAccent,
+              let url = VoiceSampleStore.shared.url else { return }
+        player.stop()
+        removingAccent = true
+        Analytics.capture("voice_accent_removed", ["from": "meet"])
+        Task {
+            defer { removingAccent = false }
+            do {
+                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                HapticEngine.success()
+                refreshGreetingForNewVoice()
+            } catch {
+                self.error = error.localizedDescription
+            }
+        }
     }
 
     @ViewBuilder

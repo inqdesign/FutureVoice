@@ -15,6 +15,9 @@ struct VoiceAccentSheet: View {
 
     /// Called after a preview is adopted as the live voice (the presenter may
     /// want to re-speak its greeting in the new voice).
+    /// Opened from a pill on the meet act: start making this accent's takes
+    /// at once, so the tap that picked the accent is the one that asked.
+    var initialAccent: VoiceAccent? = nil
     var onApplied: (() -> Void)? = nil
 
     @State private var accent: VoiceAccent?
@@ -32,6 +35,7 @@ struct VoiceAccentSheet: View {
     /// leaving now leaves the learner on the un-accented clone, and the
     /// presenter has to be told the voice changed.
     @State private var rebuiltWithoutApply = false
+    @State private var startedInitial = false
 
     private var options: [VoiceAccent] {
         VoiceAccentCatalog.options(for: appState.targetLanguage)
@@ -80,7 +84,12 @@ struct VoiceAccentSheet: View {
                 // Show what's already live. `accent` doubles as "whose takes
                 // are on screen", but previews are empty here, so this only
                 // checkmarks the applied one.
-                if accent == nil { accent = appliedAccent }
+                if let initialAccent, !startedInitial {
+                    startedInitial = true
+                    choose(initialAccent)
+                } else if accent == nil {
+                    accent = appliedAccent
+                }
             }
             .navigationTitle("Accent")
             .navigationBarTitleDisplayMode(.inline)
@@ -161,7 +170,7 @@ struct VoiceAccentSheet: View {
     private func accentRow(_ option: VoiceAccent) -> some View {
         Button { choose(option) } label: {
             HStack {
-                Text(option.label)
+                Text(LocalizedStringKey(option.label))
                     .foregroundStyle(.primary)
                 Spacer()
                 if generating && accent == option {
