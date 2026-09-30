@@ -1,0 +1,40 @@
+
+
+// ——— every frame ———
+function render(time) {
+  drawOrb(time);
+  const br = Math.sin(time * .9) * .5 + .5;
+  gsap.set('#g1', { x: Math.sin(time * .5) * 60, y: -br * 50, opacity: .75 + .25 * br });
+  gsap.set('#g2', { x: Math.cos(time * .4) * 80, y: -(1 - br) * 40 });
+}
+tl.eventCallback('onUpdate', () => render(tl.time()));
+
+// ——— player ———
+const frame = $('#frame');
+function fit() { if (EXPORT) return; const s = frame.clientWidth / 1080; stage.style.transform = `scale(${s})`; }
+addEventListener('resize', () => { fit(); });
+let playing = !EXPORT, last = null, cur = 0;
+const scrub = $('#scrub'), timeEl = $('#time'), playBtn = $('#play');
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function setPlaying(p) { playing = p; playBtn.textContent = p ? 'Pause' : 'Play'; last = null; }
+function loop(now) {
+  if (playing) { if (last != null) cur += (now - last) / 1000; last = now; if (cur > D) cur = 0; tl.seek(cur, false); }
+  scrub.value = Math.round(cur / D * 1000); timeEl.textContent = `${fmt(cur)} / ${fmt(D)}`;
+  requestAnimationFrame(loop);
+}
+playBtn.onclick = () => setPlaying(!playing);
+frame.onclick = () => setPlaying(!playing);
+$('#restart').onclick = () => { cur = 0; tl.seek(0); setPlaying(true); };
+scrub.oninput = () => { cur = scrub.value / 1000 * D; tl.seek(cur, false); render(cur); setPlaying(false); };
+addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); setPlaying(!playing); } });
+
+window.seekTo = s => { tl.seek(s, false); render(s); };
+window.REEL_DURATION = () => D;
+Promise.all([document.fonts.load('96px GP'), document.fonts.load('500 96px Geist'), document.fonts.load('500 26px "Geist Mono"')]).catch(() => {}).then(() => document.fonts.ready).then(() => {
+  fit(); measure(); tl.invalidate(); tl.seek(0); render(0);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches && !EXPORT) { cur = 38.5; tl.seek(cur); render(cur); setPlaying(false); }
+  window.READY = true;
+  requestAnimationFrame(loop);
+});
+})();
+</script>
