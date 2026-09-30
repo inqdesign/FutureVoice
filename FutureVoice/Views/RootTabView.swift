@@ -196,6 +196,10 @@ struct RootTabView: View {
         }
         // Feature usage: which tab the user is on.
         .onChange(of: selection) { _, tab in
+            #if DEBUG
+            TabHitchProbe.shared.observe(appState)
+            TabHitchProbe.shared.mark(Self.screenName(tab))
+            #endif
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
             // Nothing about this learner reaches the pool until they have
             // seen the paragraph a stranger's phone would speak as "them".
@@ -206,6 +210,21 @@ struct RootTabView: View {
         .sheet(isPresented: $showingIntroPreview) {
             PublicIntroPreviewSheet().environmentObject(appState)
         }
+        #if DEBUG
+        .task {
+            // `-tabcycle 1`: walk the tabs by themselves for the hitch probe.
+            guard UserDefaults.standard.bool(forKey: "tabcycle") else { return }
+            try? await Task.sleep(for: .seconds(4))
+            let order: [Tab] = [.watch, .practice, .progress, .home]
+            for round in 0..<4 {
+                for t in order {
+                    selection = t
+                    try? await Task.sleep(for: .seconds(1.6))
+                }
+                print("[tab-hitch] round \(round) done")
+            }
+        }
+        #endif
         // Free Talk widget tap while the app is already up — and in-app jumps
         // ("Start a talk" on a Progress tip), which can be staged from any tab,
         // so bring the Talk tab along the way the widget's URL path does.

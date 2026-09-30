@@ -246,12 +246,6 @@ final class AppState: ObservableObject {
     /// fires once the tab appears).
     @Published var pendingFreeTalk = false
 
-    /// True while the Talk tab is showing its ROOT list (nothing pushed).
-    /// ConversationHome flips it from its root's onAppear/onDisappear;
-    /// RootTabView uses it to keep the floating Free-talk pill off pushed
-    /// pages (Activity, scenario lists, …).
-    @Published var talkRootVisible = true
-
     /// The Talk hero ring's live GLOBAL frame (its Futureself circle),
     /// reported by ConversationHome — RootTabView's free-talk proxy morphs
     /// from exactly this pose down into the call's mic pill.

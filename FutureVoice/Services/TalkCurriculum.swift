@@ -41,17 +41,34 @@ enum TalkCurriculum {
         /// The talk's corrections — the Drill chapter, studied as cards.
         var corrections: [ScenarioCurriculum.Item] = []
 
-        private var all: [ScenarioCurriculum.Item] {
-            words + expressions + shadowLines + corrections
+        /// The four chapters, walked in place. These counters are read many
+        /// times per Practice render (every card, every sort comparison), so
+        /// they must not build a concatenated array each time.
+        private var chapters: [[ScenarioCurriculum.Item]] {
+            [words, expressions, shadowLines, corrections]
         }
-        var totalCount: Int { all.count }
-        var masteredCount: Int { all.filter { $0.masteredAt != nil }.count }
+        var totalCount: Int {
+            words.count + expressions.count + shadowLines.count + corrections.count
+        }
+        var masteredCount: Int {
+            var n = 0
+            for chapter in chapters { for item in chapter where item.masteredAt != nil { n += 1 } }
+            return n
+        }
         var progress: Double {
             totalCount == 0 ? 0 : Double(masteredCount) / Double(totalCount)
         }
         var isMastered: Bool { totalCount > 0 && masteredCount == totalCount }
         /// Most recent mastery event — when this book was last studied.
-        var lastStudiedAt: Date? { all.compactMap(\.masteredAt).max() }
+        var lastStudiedAt: Date? {
+            var latest: Date?
+            for chapter in chapters {
+                for item in chapter {
+                    if let d = item.masteredAt, d > (latest ?? .distantPast) { latest = d }
+                }
+            }
+            return latest
+        }
     }
 
     /// How many pickup words one talk's book keeps — matches the cap the old

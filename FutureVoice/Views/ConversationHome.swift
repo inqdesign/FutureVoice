@@ -86,10 +86,6 @@ struct ConversationHome: View {
                 .padding(.top, 8)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            // Root visibility → RootTabView shows the free-talk morph proxy
-            // only while docking (the ring below is the resting CTA now).
-            .onAppear { appState.talkRootVisible = true }
-            .onDisappear { appState.talkRootVisible = false }
             .contentMargins(.bottom, 24, for: .scrollContent)
             // No navigation title: the hero's time-of-day question IS the
             // greeting (a large title above it doubled the greeting). The
@@ -160,7 +156,7 @@ struct ConversationHome: View {
             // AppState — an app-language change can't reach it the way it
             // reaches a `Text("literal")`, so re-resolve it here.
             .onChange(of: appState.nativeLanguage) { _, _ in
-                appState.talkRingHeadline = goalHeadline
+                syncRingHeadline()
             }
             // The hero line is a cached STRING, localized when it was made;
             // an app-language change re-resolves every `Text("literal")`
@@ -304,7 +300,9 @@ struct ConversationHome: View {
             headline: goalHeadline,
             accessibilityLabel: "Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.",
             hidden: appState.talkRingProxyActive,
-            onRestFrame: { appState.talkRingFrame = $0 },
+            // Only on change: see `syncRingHeadline` — an equal frame
+            // re-reported on appear still published to every tab.
+            onRestFrame: { if appState.talkRingFrame != $0 { appState.talkRingFrame = $0 } },
             onSettled: { heroSettled = true },
             onTap: { frame in
                 appState.talkRingFrame = frame
@@ -590,7 +588,18 @@ struct ConversationHome: View {
     /// depends on it (the goal is local), so this only exists to keep the
     /// morph proxy's label in step when the snapshot changes anything.
     private func applyAccountToRing() {
-        appState.talkRingHeadline = goalHeadline
+        syncRingHeadline()
+    }
+
+    /// Writes the proxy's label copy only when it actually changed.
+    /// `AppState` is observed by every tab, and `@Published` fires on ANY
+    /// assignment — an unchanged headline written on every appear
+    /// re-evaluated all four tabs in the middle of the tab switch
+    /// (measured 2026-09-30: two of the three publishes a switch to Talk
+    /// cost).
+    private func syncRingHeadline() {
+        let headline = goalHeadline
+        if appState.talkRingHeadline != headline { appState.talkRingHeadline = headline }
     }
 
     // MARK: - First run
@@ -686,7 +695,7 @@ struct ConversationHome: View {
         todaySpokenSeconds = PracticeStats.todayTalkSeconds()
         todayTalks = sessions.filter { ($0.endedAt ?? $0.startedAt) >= todayStart }.count
         // Keep the proxy's label copy in sync (see AppState.talkRingHeadline).
-        appState.talkRingHeadline = goalHeadline
+        syncRingHeadline()
         // Reads everything above, so it goes last.
         refreshHeroLine()
         backfillTalkTime()
@@ -703,7 +712,7 @@ struct ConversationHome: View {
             let synced = PracticeStats.todayTalkSeconds()
             guard synced != todaySpokenSeconds else { return }
             todaySpokenSeconds = synced
-            appState.talkRingHeadline = goalHeadline
+            syncRingHeadline()
             refreshHeroLine()
             drawRing()
         }

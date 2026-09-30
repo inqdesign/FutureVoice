@@ -506,8 +506,16 @@ struct PracticeTab: View {
         let scenarioBooks: [StudyBook] = appState.scenarios
             .filter { !$0.isArchived && !$0.isMastered && ($0.curriculum?.masteredCount ?? 0) > 0 }
             .map { .scenario($0) }
-        return (talkBooks + scenarioBooks)
-            .sorted { lastStudied($0) > lastStudied($1) }
+        return byLastStudied(talkBooks + scenarioBooks)
+    }
+
+    /// Sorted newest-studied first, each key computed ONCE. Sorting with
+    /// `lastStudied` in the comparator walked every book's items
+    /// O(n log n) times per render — the tab-switch stutter.
+    private func byLastStudied(_ books: [StudyBook]) -> [StudyBook] {
+        books.map { ($0, lastStudied($0)) }
+            .sorted { $0.1 > $1.1 }
+            .map(\.0)
     }
 
     /// Fresh material at ZERO progress — the newest books an activity just
@@ -524,9 +532,7 @@ struct PracticeTab: View {
         let scenarioBooks: [StudyBook] = appState.scenarios
             .filter { !$0.isArchived && ($0.curriculum?.masteredCount ?? 0) == 0 }
             .map { .scenario($0) }
-        return Array((talkBooks + scenarioBooks)
-            .sorted { lastStudied($0) > lastStudied($1) }
-            .prefix(4))
+        return Array(byLastStudied(talkBooks + scenarioBooks).prefix(4))
     }
 
     /// The count is the point — it's a running tally of books you finished, so
@@ -994,7 +1000,7 @@ struct PracticeTab: View {
     }
 
     /// When a book came into existence. The one ordering the whole tab now
-    /// uses — see `talkRow`.
+    /// uses — see `bookRows`.
     private func created(_ book: StudyBook) -> Date {
         switch book {
         case .talk(let s):     return s.startedAt
@@ -1011,19 +1017,22 @@ struct PracticeTab: View {
     /// started weeks ago, and the row's order changed every time you mastered
     /// a word somewhere else. Progress belongs on the cards (each one wears
     /// its own bar); the row's job is just "here's your stuff, newest first".
-    private var talkRow: [Session] {
-        (studyingBooks + unstartedBooks)
+    ///
+    /// Both rows come out of ONE pass: they used to be two computed
+    /// properties, each read four times per render (isEmpty, count, ForEach,
+    /// the empty check), and each rebuilt and re-sorted every book.
+    private var bookRows: (talks: [Session], watch: [Scenario]) {
+        let books = (studyingBooks + unstartedBooks)
             .sorted { created($0) > created($1) }
-            .compactMap {
-                if case .talk(let s) = $0 { return s } else { return nil }
+        var talks: [Session] = []
+        var watch: [Scenario] = []
+        for book in books {
+            switch book {
+            case .talk(let s):     talks.append(s)
+            case .scenario(let s): watch.append(s)
             }
-    }
-    private var watchRow: [Scenario] {
-        (studyingBooks + unstartedBooks)
-            .sorted { created($0) > created($1) }
-            .compactMap {
-                if case .scenario(let s) = $0 { return s } else { return nil }
-            }
+        }
+        return (talks, watch)
     }
 
     private var studyingPage: some View {
@@ -1033,6 +1042,9 @@ struct PracticeTab: View {
             // along am I" is that tab's question, and mixing it in here was
             // the other half of what made this page hard to read.
             todayCard
+            let rows = bookRows
+            let talkRow = rows.talks
+            let watchRow = rows.watch
             if !talkRow.isEmpty {
                 bookRow(title: explain("Talk"), shelf: .talk, count: talkRow.count) {
                     ForEach(talkRow) { session in

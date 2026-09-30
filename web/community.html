@@ -63,6 +63,16 @@ section{margin-top:56px}
 .sec-head p{color:var(--faint);font-size:13.5px}
 
 /* video */
+/* The video and the news share the first row: a lone video card left half the width empty. */
+.lead{display:grid;grid-template-columns:340px minmax(0,1fr);gap:28px;align-items:start;margin-top:56px}
+.lead > section{margin-top:0}
+.lead .vid{flex-direction:column;align-items:stretch;gap:18px}
+.lead .vid-v{width:100%}
+@media (max-width:1180px){
+  .lead{grid-template-columns:minmax(0,1fr)}
+  .lead .vid{flex-direction:row;align-items:center;gap:28px}
+  .lead .vid-v{width:min(280px,40%)}
+}
 .vid{display:flex;gap:32px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
 .vid-v{flex:0 0 auto;width:min(300px,40%);aspect-ratio:9/16;border-radius:14px;background:#121110;object-fit:cover;display:block}
 .vid-t{min-width:0;max-width:48ch}
@@ -72,7 +82,7 @@ section{margin-top:56px}
 .vid-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .vid-links a{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);text-decoration:none;font-size:13.5px;color:var(--tx)}
 .vid-links a:first-child{background:var(--tx);color:var(--bg);border-color:var(--tx);font-weight:600}
-@media (max-width:640px){ .vid{flex-direction:column;align-items:stretch;padding:14px} .vid-v{width:100%;max-width:360px;margin:0 auto} }
+@media (max-width:640px){ .lead .vid,.vid{flex-direction:column;align-items:stretch;padding:14px} .lead .vid-v,.vid-v{width:100%;max-width:360px;margin:0 auto} }
 
 /* news */
 .news{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-items:start}
@@ -286,6 +296,7 @@ footer a{color:var(--faint)}
       <p data-i="lede">새 소식과 기능 소개를 보고, 만드는 사람과 바로 이야기하세요. 쓰기 불편한 점, 있었으면 하는 기능, 뭐든 좋아요.</p>
     </div>
 
+    <div class="lead">
     <section aria-labelledby="h-video" class="vid">
       <video id="demoVideo" class="vid-v" src="/community/video/speak-again.mp4" poster="/community/video/speak-again.jpg" muted loop playsinline controls preload="none" aria-labelledby="h-video"></video>
       <div class="vid-t">
@@ -303,6 +314,7 @@ footer a{color:var(--faint)}
       <div class="sec-head"><h2 id="h-news" data-i="news">새 소식</h2></div>
       <div class="news" id="news"><p class="empty" data-i="loading">불러오는 중…</p></div>
     </section>
+    </div>
 
     <section aria-labelledby="h-feat">
       <div class="sec-head"><h2 id="h-feat" data-i="features">기능 소개</h2><p data-i="featSub">기능마다 실제 앱 화면으로 보여드려요. 카드를 누르면 크게 볼 수 있어요.</p></div>
