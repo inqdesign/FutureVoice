@@ -96,7 +96,10 @@ section{margin-top:56px}
 .slides::-webkit-scrollbar{height:6px}
 .slides::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
 .sl{flex:0 0 clamp(240px,calc((100% - 32px - 2 * var(--bleed)) / 2.4),440px);scroll-snap-align:start}
-.slides::after{content:"";flex:0 0 1px}
+.slides::after{content:"";flex:0 0 1px}  /* keeps the right padding when scrolled to the end */
+/* The last card can't bring its left edge to the start (nothing after it), so a start snap
+   would bounce the row back one card; it snaps by its right edge instead. */
+.sl:last-of-type{scroll-snap-align:end}
 @media (hover:hover) and (pointer:fine){ .slides{cursor:grab} }
 .slides.dragging{cursor:grabbing;scroll-snap-type:none;user-select:none}
 .slides.dragging .sl{pointer-events:none}
@@ -560,7 +563,9 @@ function endDrag(){
   if (!moved) return;
   suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);
   const card = row.querySelector(".sl"); const step = card ? card.offsetWidth + 16 : row.clientWidth;
-  const target = Math.round(row.scrollLeft / step) * step;
+  const max = row.scrollWidth - row.clientWidth;
+  // Past the last whole step the row belongs at its very end, or the last card stays cut off.
+  const target = row.scrollLeft > max - step / 2 ? max : Math.min(Math.round(row.scrollLeft / step) * step, max);
   row.classList.remove("dragging");
   row.scrollTo({ left: target, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
