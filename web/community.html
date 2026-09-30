@@ -62,6 +62,18 @@ section{margin-top:56px}
 .sec-head h2{font-size:21px;font-weight:700;letter-spacing:-.01em}
 .sec-head p{color:var(--faint);font-size:13.5px}
 
+/* video */
+.vid{display:flex;gap:32px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+.vid-v{flex:0 0 auto;width:min(300px,40%);aspect-ratio:9/16;border-radius:14px;background:#121110;object-fit:cover;display:block}
+.vid-t{min-width:0;max-width:48ch}
+.vid-eb{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+.vid-t h2{font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+.vid-t p{color:var(--dim);font-size:15px;margin-top:8px}
+.vid-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.vid-links a{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);text-decoration:none;font-size:13.5px;color:var(--tx)}
+.vid-links a:first-child{background:var(--tx);color:var(--bg);border-color:var(--tx);font-weight:600}
+@media (max-width:640px){ .vid{flex-direction:column;align-items:stretch;padding:14px} .vid-v{width:100%;max-width:360px;margin:0 auto} }
+
 /* news */
 .news{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-items:start}
 .post{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
@@ -274,6 +286,19 @@ footer a{color:var(--faint)}
       <p data-i="lede">새 소식과 기능 소개를 보고, 만드는 사람과 바로 이야기하세요. 쓰기 불편한 점, 있었으면 하는 기능, 뭐든 좋아요.</p>
     </div>
 
+    <section aria-labelledby="h-video" class="vid">
+      <video id="demoVideo" class="vid-v" src="/community/video/speak-again.mp4" poster="/community/video/speak-again.jpg" muted loop playsinline controls preload="none" aria-labelledby="h-video"></video>
+      <div class="vid-t">
+        <p class="vid-eb" data-i="vidEyebrow">영상</p>
+        <h2 id="h-video" data-i="vidTitle">통화 한 번, 그리고 다시 말하기</h2>
+        <p data-i="vidBody">실제로 유창한 나와 통화하고, 끝난 대화를 고친 문장으로 다시 말해보는 모습이에요. 2분이면 돼요.</p>
+        <div class="vid-links">
+          <a href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" data-i="store">App Store에서 받기</a>
+          <a href="https://www.threads.com/@adaywithboram/post/Dd6IHqbjpVo" target="_blank" rel="noopener" data-i="vidThreads">Threads에서 보기</a>
+        </div>
+      </div>
+    </section>
+
     <section aria-labelledby="h-news">
       <div class="sec-head"><h2 id="h-news" data-i="news">새 소식</h2></div>
       <div class="news" id="news"><p class="empty" data-i="loading">불러오는 중…</p></div>
@@ -322,7 +347,7 @@ const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 const T = {
   ko: {
-    crumb:"커뮤니티", store:"App Store에서 받기", title:"커뮤니티",
+    crumb:"커뮤니티", store:"App Store에서 받기", vidEyebrow:"영상", vidTitle:"통화 한 번, 그리고 다시 말하기", vidBody:"실제로 유창한 나와 통화하고, 끝난 대화를 고친 문장으로 다시 말해보는 모습이에요. 2분이면 돼요.", vidThreads:"Threads에서 보기", title:"커뮤니티",
     lede:"새 소식과 기능 소개를 보고, 만드는 사람과 바로 이야기하세요. 쓰기 불편한 점, 있었으면 하는 기능, 뭐든 좋아요.",
     news:"새 소식", loading:"불러오는 중…", noNews:"아직 소식이 없어요.", more:"더 보기", less:"접기", openLink:"자세히 보기",
     features:"기능 소개", featSub:"기능마다 실제 앱 화면으로 보여드려요. 카드를 누르면 크게 볼 수 있어요.", all:"전체", viewAll:"크게 보기", koOnly:"기능 소개 이미지는 지금은 한국어판만 있어요.",
@@ -339,7 +364,7 @@ const T = {
     cats:{start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
   },
   en: {
-    crumb:"Community", store:"Get it on the App Store", title:"Community",
+    crumb:"Community", store:"Get it on the App Store", vidEyebrow:"Video", vidTitle:"One call, then Say it again", vidBody:"A real call with your fluent self, then the same conversation said again the corrected way. Two minutes.", vidThreads:"Watch on Threads", title:"Community",
     lede:"Read the latest news, flip through feature guides, and talk to the people making nawana. Something awkward, a feature you wish existed, anything.",
     news:"Latest news", loading:"Loading…", noNews:"No news yet.", more:"Read more", less:"Show less", openLink:"Learn more",
     features:"Feature guides", featSub:"Each feature, shown on real app screens. Tap a card to see it large.", all:"All", viewAll:"View large", koOnly:"The feature guide images are in Korean for now.",
@@ -879,6 +904,20 @@ async function loadLikes(){
 /* mobile chat sheet */
 $("#fab").addEventListener("click", () => { document.body.classList.add("chat-open"); $("#msgs").scrollTop = $("#msgs").scrollHeight; updateUnread(); });
 $("#chatClose").addEventListener("click", () => { document.body.classList.remove("chat-open"); updateUnread(); });
+
+/* ---------- demo video ---------- */
+{
+  const v = $("#demoVideo");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (v && "IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { if (!reduce) v.play().catch(() => {}); }
+      else if (!v.paused) v.pause();
+    }, { threshold: 0.5 }).observe(v);
+  }
+  v?.addEventListener("play", () => track("community_video_play", { muted: v.muted }), { once: true });
+  v?.addEventListener("volumechange", () => { if (!v.muted) track("community_video_unmute"); }, { once: true });
+}
 
 /* ---------- analytics ---------- */
 const isInternal = () => { try { return localStorage.getItem("nawana-internal") === "1"; } catch { return false; } };
