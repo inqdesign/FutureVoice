@@ -1,57 +1,67 @@
 package com.roro.futurevoice.ui
 
 import android.graphics.Bitmap
-import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.Counterpart
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.talk.CounterpartParser
 import com.roro.futurevoice.talk.PublicFigureLookup
-import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.ContinuousShape
+import com.roro.futurevoice.ui.brand.DisplayFace
+import com.roro.futurevoice.ui.brand.IosGlassTextButton
+import com.roro.futurevoice.ui.brand.iosFill
 import kotlinx.coroutines.launch
 
 /**
@@ -64,12 +74,17 @@ import kotlinx.coroutines.launch
  * draft that lands in the form prefilled. "Rather just fill in a form?" stays
  * for anyone who'd rather type fields.
  *
+ * Drawn the way iOS draws it (`GuidedIntake.swift`): a plain white page, a
+ * Cancel glass capsule beside the title in the display face, a thin accent
+ * progress line, the question in bold with a grey line under it, grey FILLED
+ * fields and chip cards (never an outline), and Back / Next as full-width
+ * capsules pinned to a bar at the bottom.
+ *
  * The copy is English, exactly as iOS ships it: none of these lines is in the
  * iOS catalog either, so translating them is one job for both platforms.
  * Chip VALUES stay English on purpose — they are what the parser reads, and it
  * writes the profile in the learner's own language whatever it is handed.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CounterpartIntakeScreen(
     nativeLanguage: String,
@@ -80,12 +95,16 @@ fun CounterpartIntakeScreen(
     onCancel: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var step by remember { mutableStateOf(Step.WHO) }
+    // Screenshot harness (iOS `-intakeStep <n>`): jump to a card with
+    // iOS's stand-in data. Null in every normal build.
+    val standIn = remember { com.roro.futurevoice.capture.flags.WatchCaptureFlags.intakeStep
+        ?.let { Step.entries.getOrNull(it) } }
+    var step by remember { mutableStateOf(standIn ?: Step.WHO) }
     androidx.activity.compose.BackHandler {
         if (step == Step.WHO) onCancel() else step = Step.entries[step.ordinal - 1]
     }
-    var name by remember { mutableStateOf("") }
-    var kind by remember { mutableStateOf<RelationshipKind?>(null) }
+    var name by remember { mutableStateOf(if (standIn != null) "Boram" else "") }
+    var kind by remember { mutableStateOf(if (standIn != null) RelationshipKind.FELLOW_PARENT else null) }
     var kindDetail by remember { mutableStateOf("") }
     val answers = remember { mutableStateListOf("", "", "") }
     val chips = remember { mutableStateListOf<Set<String>>(emptySet(), emptySet(), emptySet()) }
@@ -156,79 +175,57 @@ fun CounterpartIntakeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.tell_me_about_them)) },
-                navigationIcon = { TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) } },
-            )
-        },
-        bottomBar = {
-            Row(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (step != Step.WHO) OutlinedButton(
-                    onClick = { step = Step.entries[step.ordinal - 1] },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.back)) }
-                Button(
-                    enabled = canAdvance && !parsing,
-                    onClick = {
-                        if (step == Step.STYLE) parseAndContinue()
-                        else step = Step.entries[step.ordinal + 1]
-                    },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    if (parsing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(if (step == Step.STYLE) R.string.continue_ else R.string.next))
-                }
-            }
-        },
-    ) { padding ->
+    val page = MaterialTheme.colorScheme.surface
+    Column(Modifier.fillMaxSize().background(page)) {
+        // The navigation bar: Cancel as a glass capsule, the title centred
+        // in the display face (iOS `.navigationBarTitleDisplayMode(.inline)`).
+        val title = stringResource(R.string.tell_me_about_them)
+        SheetHeader(title,
+            leading = { IosGlassTextButton(stringResource(R.string.cancel), onClick = onCancel) },
+            modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp))
+        IntakeProgress((step.ordinal + 1f) / Step.entries.size,
+            Modifier.padding(horizontal = 20.dp).padding(top = 8.dp))
         Column(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
-                .padding(horizontal = 20.dp).verticalScroll(rememberScrollState()),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            LinearProgressIndicator(progress = { (step.ordinal + 1f) / Step.entries.size },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-            when (step) {
+            // Keyed by card, so a card's unsubmitted "add your own" text is
+            // folded into THAT card as it leaves, never carried to the next.
+            androidx.compose.runtime.key(step) { when (step) {
                 Step.WHO -> {
-                    StepHeader("Who are we adding?",
+                    IntakeStepHeader("Who are we adding?",
                         "Someone you actually talk to — dialogues get simulated with them, in their manner.")
                     // Their face, optional; saved small and square with the
                     // person, never sent anywhere.
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PersonPhotoButton(onImage = { photo = it },
-                            onRemove = if (photo == null) null else ({ photo = null })) {
-                            PersonBubble(name = name, photoId = null, size = 88.dp,
-                                photo = photo?.asImageBitmap())
-                        }
+                        PersonPhotoControl(image = photo?.asImageBitmap(), name = name, size = 96.dp,
+                            onImage = { photo = it },
+                            onRemove = if (photo == null) null else ({ photo = null }))
                         Text("A photo is optional. Without one, their initials stand in.",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
-                        label = { Text(stringResource(R.string.their_name_as_you_call_them)) },
-                        modifier = Modifier.fillMaxWidth())
-                    TextButton(onClick = { onDraft(null, photo) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.rather_just_fill_in_a_form),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    FilledField(name, { name = it }, stringResource(R.string.their_name_as_you_call_them),
+                        textStyle = MaterialTheme.typography.titleLarge,
+                        capitalization = KeyboardCapitalization.Words)
+                    Text(stringResource(R.string.rather_just_fill_in_a_form),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                            .clickable(interactionSource = remember { MutableInteractionSource() },
+                                indication = null, role = Role.Button) { onDraft(null, photo) }
+                            .padding(vertical = 4.dp))
                 }
                 Step.RELATIONSHIP -> {
-                    StepHeader("Who are they to you?",
+                    IntakeStepHeader("Who are they to you?",
                         "This shapes what I ask next — a manager and a best friend live in different worlds.")
-                    Card {
-                        ChipPicker(RelationshipKind.entries.map { it.label },
-                            setOfNotNull(kind?.label), allowsCustom = false) { tag ->
+                    IntakeCard {
+                        ChipGrid(RelationshipKind.entries.map { it.label }, setOfNotNull(kind?.label)) { tag ->
                             kind = RelationshipKind.entries.first { it.label == tag }
                         }
-                        OutlinedTextField(value = kindDetail, onValueChange = { kindDetail = it },
-                            singleLine = true, placeholder = { Text("More precisely? — e.g. College roommate") },
-                            modifier = Modifier.fillMaxWidth())
+                        InlineField(kindDetail, { kindDetail = it }, "More precisely? — e.g. College roommate")
                     }
                     if (kind == RelationshipKind.PUBLIC_FIGURE) {
                         Text("A public figure's profile is filled from public coverage — where they're from, what they're known for, how they talk in interviews. Their voice is a preset, never their real one.",
@@ -239,8 +236,8 @@ fun CounterpartIntakeScreen(
                 Step.NARRATIVE1, Step.NARRATIVE2, Step.NARRATIVE3 -> {
                     val i = step.ordinal - Step.NARRATIVE1.ordinal
                     val card = (kind ?: RelationshipKind.OTHER).cards[i]
-                    StepHeader(card.question, card.detail)
-                    ChipPicker(card.chips, chips[i], allowsCustom = true) { tag ->
+                    IntakeStepHeader(card.question, card.detail)
+                    ChipPickerField(card.chips, chips[i], allowsCustom = true) { tag ->
                         chips[i] = if (tag in chips[i]) chips[i] - tag else chips[i] + tag
                     }
                     SpeakOrTypeField(
@@ -251,76 +248,264 @@ fun CounterpartIntakeScreen(
                     )
                 }
                 Step.INTERESTS -> {
-                    StepHeader(if (name.isBlank()) "What are they into?" else "What's ${name.trim()} into?",
+                    IntakeStepHeader(if (name.isBlank()) "What are they into?" else "What's ${name.trim()} into?",
                         "Tap what fits — these become what you two talk about.")
-                    ChipPicker(INTEREST_PRESETS, interests, allowsCustom = true) { tag ->
+                    ChipPickerField(INTEREST_PRESETS, interests, allowsCustom = true) { tag ->
                         interests = if (tag in interests) interests - tag else interests + tag
                     }
                 }
                 Step.STYLE -> {
-                    StepHeader(if (name.isBlank()) "How do they talk?" else "How does ${name.trim()} talk?",
+                    IntakeStepHeader(if (name.isBlank()) "How do they talk?" else "How does ${name.trim()} talk?",
                         "Tap what fits — the simulated ${name.trim().ifBlank { "person" }} should sound like the real one.")
-                    ChipPicker(STYLE_PRESETS, styleTraits, allowsCustom = false) { tag ->
+                    ChipPickerField(STYLE_PRESETS, styleTraits, allowsCustom = false) { tag ->
                         styleTraits = if (tag in styleTraits) styleTraits - tag else styleTraits + tag
                     }
-                    OutlinedTextField(value = styleNotes, onValueChange = { styleNotes = it },
-                        minLines = 2, maxLines = 4,
-                        placeholder = { Text("In your own words (optional) — e.g. switches to English when excited") },
-                        modifier = Modifier.fillMaxWidth())
+                    FilledField(styleNotes, { styleNotes = it },
+                        "In your own words (optional) — e.g. switches to English when excited",
+                        minLines = 2, maxLines = 4)
+                }
+            } }
+            error?.let {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.Warning, contentDescription = null, modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error)
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
-            error?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
-            Box(Modifier.size(8.dp))
         }
+        IntakeBottomBar(
+            backVisible = step != Step.WHO,
+            nextTitle = stringResource(if (step == Step.STYLE) R.string.continue_ else R.string.next),
+            nextEnabled = canAdvance,
+            working = parsing,
+            onBack = { step = Step.entries[step.ordinal - 1] },
+            onNext = {
+                if (step == Step.STYLE) parseAndContinue()
+                else step = Step.entries[step.ordinal + 1]
+            },
+        )
     }
 }
 
 private enum class Step { WHO, RELATIONSHIP, NARRATIVE1, NARRATIVE2, NARRATIVE3, INTERESTS, STYLE }
 
+// MARK: - The shared intake pieces (iOS `GuidedIntake.swift`)
+
+/** iOS `secondarySystemBackground`: the grey an intake card or field sits
+ *  on, over the white page. */
 @Composable
-private fun StepHeader(question: String, detail: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(question, style = MaterialTheme.typography.titleLarge)
-        if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodyMedium,
+private fun cardFill() = iosFill()
+
+/** `ProgressView(value:total:)` — a 4 pt capsule track, the accent fill. */
+@Composable
+private fun IntakeProgress(fraction: Float, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(iosFill())) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(4.dp).clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary))
+    }
+}
+
+/** iOS `IntakeStepHeader`: `.title2.bold()` and a `.callout` grey line. */
+@Composable
+private fun IntakeStepHeader(question: String, detail: String) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(question, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = MaterialTheme.typography.bodyLarge.fontSize * (16f / 17f)),
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
+/** The grey rounded card chips and an inline field sit in (padding 14, r 12). */
 @Composable
-private fun Card(content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth()
-        .background(MaterialTheme.colorScheme.surface, ContinuousShape(12.dp)).padding(14.dp),
+private fun IntakeCard(content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill()).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
 }
 
-/** Common answers as chips; with [allowsCustom], a row to add one's own
- *  (iOS `ChipPickerField`). Custom picks show as chips beside the presets. */
-@OptIn(ExperimentalLayoutApi::class)
+/** A filled text box (iOS `TextField` + `.padding(14)` on
+ *  `secondarySystemBackground`, r 12) — no outline, the prompt as placeholder. */
 @Composable
-private fun ChipPicker(presets: List<String>, selection: Set<String>, allowsCustom: Boolean,
-                       onToggle: (String) -> Unit) {
-    var custom by remember { mutableStateOf("") }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            (presets + selection.filter { it !in presets }).forEach { tag ->
-                FilterChip(selected = tag in selection, onClick = { onToggle(tag) }, label = { Text(tag) })
+private fun FilledField(
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    minLines: Int = 1,
+    maxLines: Int = 1,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
+) {
+    val style = textStyle.copy(color = MaterialTheme.colorScheme.onSurface)
+    BasicTextField(
+        value = value, onValueChange = onChange, textStyle = style,
+        singleLine = maxLines == 1, minLines = minLines, maxLines = maxOf(minLines, maxLines),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(capitalization = capitalization),
+        modifier = Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill()).padding(14.dp),
+        decorationBox = { inner ->
+            Box {
+                if (value.isEmpty()) Text(placeholder, style = style,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f))
+                inner()
             }
-        }
-        if (allowsCustom) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(value = custom, onValueChange = { custom = it }, singleLine = true,
-                    placeholder = { Text(stringResource(R.string.add)) },
-                    modifier = Modifier.weight(1f))
-                IconButton(enabled = custom.isNotBlank(), onClick = {
-                    val t = custom.trim()
-                    if (t !in selection) onToggle(t)
-                    custom = ""
-                }) { Icon(Icons.Filled.Add, contentDescription = null) }
+        },
+    )
+}
+
+/** A bare `TextField` inside a card: text and placeholder, nothing drawn around it. */
+@Composable
+private fun InlineField(value: String, onChange: (String) -> Unit, placeholder: String,
+                        onDone: (() -> Unit)? = null) {
+    val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+    BasicTextField(
+        value = value, onValueChange = onChange, textStyle = style, singleLine = true,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default),
+        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+        decorationBox = { inner ->
+            Box {
+                if (value.isEmpty()) Text(placeholder, style = style,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                inner()
+            }
+        },
+    )
+}
+
+/** iOS `IntakeChipLabel`: `.subheadline` in a capsule, 12 × 6 padding —
+ *  the accent with a white label when picked, the grey fill otherwise. */
+@Composable
+private fun IntakeChipLabel(text: String, isOn: Boolean, onClick: () -> Unit) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (isOn) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (isOn) MaterialTheme.colorScheme.primary else iosFill())
+            .clickable(role = Role.Checkbox, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
+}
+
+/**
+ * `LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
+ * alignment: .leading, spacing: 8)` — as many ≥110 pt columns as fit, each
+ * chip at the LEADING edge of its cell, so the chips line up in columns
+ * rather than flowing like words.
+ */
+@Composable
+private fun ChipGrid(items: List<String>, selection: Set<String>, onToggle: (String) -> Unit) {
+    Layout(
+        content = { items.forEach { tag -> IntakeChipLabel(tag, tag in selection) { onToggle(tag) } } },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val gap = 8.dp.roundToPx()
+        val min = 110.dp.roundToPx()
+        val width = constraints.maxWidth
+        val cols = maxOf(1, (width + gap) / (min + gap))
+        val cell = (width - gap * (cols - 1)) / cols
+        val placeables = measurables.map { it.measure(Constraints(maxWidth = cell)) }
+        val rows = placeables.chunked(cols)
+        val heights = rows.map { r -> r.maxOf { it.height } }
+        val total = heights.sum() + gap * (rows.size - 1).coerceAtLeast(0)
+        layout(width, total) {
+            var y = 0
+            rows.forEachIndexed { ri, r ->
+                r.forEachIndexed { ci, p -> p.place(ci * (cell + gap), y) }
+                y += heights[ri] + gap
             }
         }
     }
+}
+
+/**
+ * iOS `ChipPickerField`: the chip grid in a grey card, and — with
+ * [allowsCustom] — a bare "Add your own (comma-separated)" line under it.
+ * What is typed there is folded in on Done and when the card leaves (Next),
+ * split on commas; custom picks show as chips beside the presets.
+ */
+@Composable
+private fun ChipPickerField(presets: List<String>, selection: Set<String>, allowsCustom: Boolean,
+                            onToggle: (String) -> Unit) {
+    var draft by remember { mutableStateOf("") }
+    val currentSelection by rememberUpdatedState(selection)
+    val toggle by rememberUpdatedState(onToggle)
+    fun merge() {
+        draft.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            .filter { it !in currentSelection }.distinct().forEach { toggle(it) }
+        draft = ""
+    }
+    DisposableEffect(Unit) { onDispose { merge() } }
+    IntakeCard {
+        ChipGrid(presets + selection.filter { it !in presets }, selection, onToggle)
+        if (allowsCustom) {
+            InlineField(draft, { draft = it }, stringResource(R.string.add_your_own_comma_separated),
+                onDone = { merge() })
+        }
+    }
+}
+
+/**
+ * iOS `IntakeBottomBar`: Back (`.bordered`, chevron + label) and Next
+ * (`.borderedProminent`) as large full-width capsules on the bar material;
+ * Next shows a spinner and "Sorting it out…" while the parse runs.
+ */
+@Composable
+private fun IntakeBottomBar(
+    backVisible: Boolean,
+    nextTitle: String,
+    nextEnabled: Boolean,
+    working: Boolean,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    val faded = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+    Row(
+        Modifier.fillMaxWidth().background(com.roro.futurevoice.ui.brand.AppSurfaces.ground.copy(alpha = 0.55f))
+            .bottomBarInsets().padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (backVisible) {
+            CapsuleButton(enabled = !working, fill = iosFill(), onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null,
+                    tint = if (!working) accent else faded, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(2.dp))
+                Text(stringResource(R.string.back), style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium, color = if (!working) accent else faded)
+            }
+        }
+        val on = nextEnabled && !working
+        // Disabled, iOS draws the prominent capsule barely there on the bar.
+        CapsuleButton(enabled = on, fill = if (on) accent
+            else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), onClick = onNext) {
+            if (working) {
+                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = faded)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.sorting_it_out), style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium, color = faded)
+            } else {
+                Text(nextTitle, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                    color = if (on) MaterialTheme.colorScheme.surface else faded)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.CapsuleButton(enabled: Boolean, fill: androidx.compose.ui.graphics.Color,
+                                   onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier.weight(1f).height(50.dp).clip(CircleShape).background(fill)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
 }
 
 private val STYLE_PRESETS = listOf(

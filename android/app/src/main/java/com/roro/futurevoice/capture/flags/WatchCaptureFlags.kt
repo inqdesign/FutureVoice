@@ -31,4 +31,11 @@ object WatchCaptureFlags {
      * and signed out.
      */
     @JvmField var samplePool: List<PublicPersonaClient.PublicPersona>? = null
+
+    /**
+     * iOS `-intakeStep <n>`: the guided new-person intake opens on card n
+     * (0 = who … 6 = style) with iOS's stand-in answers — name "Boram", a
+     * fellow parent. Null = the intake starts blank on the first card.
+     */
+    @JvmField var intakeStep: Int? = null
 }

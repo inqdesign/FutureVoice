@@ -109,6 +109,28 @@ object CaptureWatch {
                 FindPeopleScreen(language = lang(c), onTalk = {}, onOpenPerson = {}, onBack = {})
             }
         },
+        // The guided new-person intake on its first card, blank — iOS
+        // `CounterpartVoiceIntakeView()` with no `-intakeStep`.
+        "intake-people" to @Composable { c: Context -> Intake(c, null) },
+        // Android-only: the later cards, with iOS's `-intakeStep` stand-in
+        // (Boram, a fellow parent) — 1 relationship · 2–4 narrative ·
+        // 5 interests · 6 style. iOS reaches these with `-intakeStep <n>`.
+        "intake-people-1" to @Composable { c: Context -> Intake(c, 1) },
+        "intake-people-2" to @Composable { c: Context -> Intake(c, 2) },
+        "intake-people-5" to @Composable { c: Context -> Intake(c, 5) },
+        "intake-people-6" to @Composable { c: Context -> Intake(c, 6) },
+        // Android-only: the person form (iOS `CounterpartFormView`) over a
+        // parsed intake draft, the way the intake hands off.
+        "person-form" to @Composable { c: Context ->
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground))
+            com.roro.futurevoice.ui.PersonEditor(
+                person = com.roro.futurevoice.data.Counterpart(
+                    name = "Boram", relationship = "Fellow parent — same Kita",
+                    howWeMet = "Our kids are in the same Kita group", location = "Munich",
+                    conversationStyle = "Warm, Talkative", commonTopics = "The kids, weekend plans"),
+                onSave = {}, onDismiss = {},
+            )
+        },
         // The post-first-talk persona sheet. Android's sheet has ONE height
         // (always fully expanded), so "deepen" and "deepen-full" are the same
         // state; and it opens over a blank ground, not the Talk home, because
@@ -216,10 +238,17 @@ object CaptureWatch {
     )
 
     /** mode → why Android can't show it yet (name the master-plan item). */
-    val notPorted: Map<String, String> = mapOf(
-        "intake-people" to "4.12 — Guided new-person intake (CounterpartVoiceIntakeView) not ported — " +
-            "Android has only the plain person form; no plan item yet (nearest 2.25)",
-    )
+    val notPorted: Map<String, String> = mapOf()
+
+    @Composable
+    private fun Intake(c: Context, step: Int?) {
+        WatchCaptureFlags.intakeStep = step
+        com.roro.futurevoice.ui.CounterpartIntakeScreen(
+            nativeLanguage = c.getSharedPreferences("futurevoice", 0)
+                .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
+            targetLanguage = lang(c), onDraft = { _, _ -> }, onCancel = {},
+        )
+    }
 
     @Composable
     private fun Deepen(c: Context) {

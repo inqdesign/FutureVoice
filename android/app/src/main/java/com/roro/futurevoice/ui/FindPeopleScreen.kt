@@ -24,6 +24,14 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -112,6 +120,8 @@ fun FindPeopleScreen(
      *  `CounterpartVoiceIntakeView`); its draft lands in the form. */
     var intake by remember { mutableStateOf(false) }
     var intakePhoto by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    /** iOS titles the form "New persona" only for the plain-form escape. */
+    var editingIsNew by remember { mutableStateOf(false) }
     suspend fun reloadOwn() {
         val all = ownStore.load()
         own = all.filter { it.remoteId == null }
@@ -175,6 +185,7 @@ fun FindPeopleScreen(
             onDraft = { draft, photo ->
                 intake = false
                 intakePhoto = photo
+                editingIsNew = draft == null
                 editing = draft ?: Counterpart()
             },
             onCancel = { intake = false },
@@ -226,195 +237,189 @@ fun FindPeopleScreen(
         card = pool.firstOrNull { it.id == c.remoteId } ?: c.asPublicPersona(language)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.people)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
-            )
-        }
-    ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
-            .padding(horizontal = 20.dp)) {
-            OutlinedTextField(
-                value = query, onValueChange = { query = it }, singleLine = true,
-                label = { Text(stringResource(R.string.name_interests_place)) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            )
-            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-
-            LazyColumn(Modifier.fillMaxWidth()) {
-                val me = mine
-                if (!searching && me != null) {
-                    // You, as the pool has you — the same row everyone else
-                    // gets, so this can't drift from what a stranger sees.
-                    item {
-                        GroupedSectionHeader(stringResource(R.string.you))
-                        GroupedCard {
-                            PoolRow(me, badges, emptySet(), onClick = { editingIntro = true })
-                        }
-                        Text(stringResource(R.string.this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                        GroupedSectionSpacer()
+    // iOS: an inset-grouped List in a sheet — "People" centred in the
+    // display face with Done as a glass capsule, and `.searchable` as a
+    // floating capsule at the BOTTOM that the list scrolls under.
+    Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
+                bottom = 110.dp),
+        ) {
+            if (loading && pool.isNotEmpty()) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            val me = mine
+            if (!searching && me != null) {
+                // You, as the pool has you — the same row everyone else
+                // gets, so this can't drift from what a stranger sees.
+                item {
+                    FormSection(stringResource(R.string.you),
+                        footer = stringResource(R.string.this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599)) {
+                        PoolRow(me, badges, emptySet(), onClick = { editingIntro = true })
                     }
                 }
-                if (!searching) {
+            }
+            if (!searching) {
+                item {
+                    FormSection(stringResource(R.string.your_people)) {
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable { intake = true }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Icon(Icons.Filled.AddCircle, contentDescription = null,
+                                modifier = Modifier.size(26.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.new_person),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                        own.forEach { c ->
+                            FormDivider(inset = 60.dp)
+                            OwnPersonRow(c) { onOpenPerson(c.id) }
+                        }
+                    }
+                }
+            }
+
+            // Which pool: a real learner, or someone we invented.
+            item {
+                Spacer(Modifier.height(36.dp))
+                com.roro.futurevoice.ui.brand.IosSegmented(PoolGroup.entries.map { stringResource(it.label) },
+                    PoolGroup.entries.indexOf(group), { group = PoolGroup.entries[it] },
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                // The privacy sentence. It is not decoration: it says a
+                // talk never reaches the person, and that the voice is a
+                // stock preset read by an AI, never theirs.
+                Text(stringResource(group.footer), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
+            }
+
+            if (searching) {
+                item {
+                    FormSection(null) {
+                        if (results.isEmpty()) {
+                            QuietRow(stringResource(
+                                R.string.no_one_matches_yet_try_an_interest_a_job_or_a_city))
+                        } else results.forEachIndexed { i, p ->
+                            if (i > 0) RowDivider()
+                            PoolRow(p, badges, bookmarks) { card = p }
+                        }
+                    }
+                }
+            } else {
+                if (metHere.isNotEmpty()) {
                     item {
-                        GroupedSectionHeader(stringResource(R.string.your_people))
-                        GroupedCard {
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .clickable { intake = true }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                Icon(Icons.Filled.AddCircle, contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary)
-                                Text(stringResource(R.string.new_person),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.primary)
-                            }
-                            own.forEach { c ->
-                                GroupedRowDivider(inset = false)
+                        FormSection(stringResource(R.string.people_you_ve_met)) {
+                            metHere.forEachIndexed { i, c ->
+                                if (i > 0) RowDivider()
                                 PersonListRow(
                                     name = c.name,
-                                    caption = c.relationship,
-                                    onClick = { onOpenPerson(c.id) },
+                                    caption = listOf(c.commonTopics, c.location)
+                                        .filter { it.isNotBlank() }.joinToString(" · "),
+                                    seated = badges[pool.firstOrNull { it.id == c.remoteId }
+                                        ?.owner_user_id?.lowercase()]?.seated == true,
+                                    bookmarked = c.remoteId != null && bookmarks.contains(c.remoteId),
+                                    onClick = { openMet(c) },
                                 )
                             }
                         }
                     }
                 }
-
-                // Which pool: a real learner, or someone we invented.
-                item {
-                    GroupedSectionSpacer()
-                    com.roro.futurevoice.ui.brand.IosSegmented(PoolGroup.entries.map { stringResource(it.label) },
-                        PoolGroup.entries.indexOf(group), { group = PoolGroup.entries[it] },
-                        Modifier.fillMaxWidth())
-                    // The privacy sentence. It is not decoration: it says a
-                    // talk never reaches the person, and that the voice is a
-                    // stock preset read by an AI, never theirs.
-                    GroupedFooter(stringResource(group.footer))
-                }
-
-                if (searching) {
+                if (bookmarkedNewFaces.isNotEmpty()) {
                     item {
-                        GroupedSectionSpacer()
-                        GroupedCard {
-                            if (results.isEmpty()) {
-                                QuietRow(stringResource(
-                                    R.string.no_one_matches_yet_try_an_interest_a_job_or_a_city))
-                            } else results.forEachIndexed { i, p ->
-                                if (i > 0) GroupedRowDivider(inset = false)
+                        FormSection(stringResource(R.string.bookmarked)) {
+                            bookmarkedNewFaces.forEachIndexed { i, p ->
+                                if (i > 0) RowDivider()
                                 PoolRow(p, badges, bookmarks) { card = p }
                             }
                         }
                     }
-                } else {
-                    if (metHere.isNotEmpty()) {
-                        item {
-                            GroupedSectionHeader(stringResource(R.string.people_you_ve_met))
-                            GroupedCard {
-                                metHere.forEachIndexed { i, c ->
-                                    if (i > 0) GroupedRowDivider(inset = false)
-                                    PersonListRow(
-                                        name = c.name,
-                                        caption = listOf(c.commonTopics, c.location)
-                                            .filter { it.isNotBlank() }.joinToString(" · "),
-                                        seated = badges[pool.firstOrNull { it.id == c.remoteId }
-                                            ?.owner_user_id?.lowercase()]?.seated == true,
-                                        bookmarked = c.remoteId != null && bookmarks.contains(c.remoteId),
-                                        onClick = { openMet(c) },
-                                    )
+                }
+                item {
+                    // STRANGERS, by name: that they're strangers is the
+                    // point — talking to strangers is what the language
+                    // is for.
+                    FormSection(stringResource(R.string.strangers)) {
+                        when {
+                            loading && pool.isEmpty() -> Row(
+                                Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                            ) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
+
+                            loadFailed -> Column(Modifier.padding(16.dp)) {
+                                Text(stringResource(
+                                    R.string.couldn_t_load_people_check_your_connection),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                TextButton(onClick = { reloadToken++ },
+                                    modifier = Modifier.padding(top = 4.dp)) {
+                                    Text(stringResource(R.string.retry))
                                 }
                             }
-                        }
-                    }
-                    if (bookmarkedNewFaces.isNotEmpty()) {
-                        item {
-                            GroupedSectionHeader(stringResource(R.string.bookmarked))
-                            GroupedCard {
-                                bookmarkedNewFaces.forEachIndexed { i, p ->
-                                    if (i > 0) GroupedRowDivider(inset = false)
-                                    PoolRow(p, badges, bookmarks) { card = p }
-                                }
-                            }
-                        }
-                    }
-                    item {
-                        // STRANGERS, by name: that they're strangers is the
-                        // point — talking to strangers is what the language
-                        // is for.
-                        GroupedSectionHeader(stringResource(R.string.strangers))
-                        GroupedCard {
-                            when {
-                                loading && pool.isEmpty() -> Row(
-                                    Modifier.fillMaxWidth().padding(16.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                ) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
 
-                                loadFailed -> Column(Modifier.padding(16.dp)) {
-                                    Text(stringResource(
-                                        R.string.couldn_t_load_people_check_your_connection),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    TextButton(onClick = { reloadToken++ },
-                                        modifier = Modifier.padding(top = 4.dp)) {
-                                        Text(stringResource(R.string.retry))
-                                    }
-                                }
+                            // Loaded fine, but this tab's pool for the
+                            // target language has nobody yet — say so
+                            // instead of a silent blank.
+                            groupPool.isEmpty() -> QuietRow(stringResource(
+                                R.string.no_one_here_yet_for_this_language_check_back_soon))
 
-                                // Loaded fine, but this tab's pool for the
-                                // target language has nobody yet — say so
-                                // instead of a silent blank.
-                                groupPool.isEmpty() -> QuietRow(stringResource(
-                                    R.string.no_one_here_yet_for_this_language_check_back_soon))
-
-                                else -> strangers.forEachIndexed { i, p ->
-                                    if (i > 0) GroupedRowDivider(inset = false)
-                                    PoolRow(p, badges, bookmarks) { card = p }
-                                }
+                            else -> strangers.forEachIndexed { i, p ->
+                                if (i > 0) RowDivider()
+                                PoolRow(p, badges, bookmarks) { card = p }
                             }
                         }
                     }
                 }
+            }
 
-                // What the indigo seal on a row means. Drawn only when one is
-                // actually on screen: explaining something nobody in this
-                // pool has is an ad.
-                if (badges.values.any { it.seated }) {
-                    item {
-                        GroupedSectionSpacer()
-                        GroupedCard {
-                            Row(Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(Modifier.padding(top = 3.dp)) { CoreSeal() }
-                                Column {
-                                    Text(stringResource(R.string.the_core),
-                                        style = MaterialTheme.typography.bodyLarge)
-                                    Text(stringResource(
-                                        R.string.the_seal_marks_the_100_people_speaking_most_days_right_now_a_7bf2ab),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+            // What the indigo seal on a row means. Drawn only when one is
+            // actually on screen: explaining something nobody in this
+            // pool has is an ad.
+            if (badges.values.any { it.seated }) {
+                item {
+                    FormSection(null) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.padding(top = 3.dp)) { CoreSeal() }
+                            Column {
+                                Text(stringResource(R.string.the_core),
+                                    style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(
+                                    R.string.the_seal_marks_the_100_people_speaking_most_days_right_now_a_7bf2ab),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
-                item { Spacer(Modifier.height(32.dp)) }
             }
         }
+
+        // The navigation bar, over a fade of the page ground so rows slide
+        // under it the way iOS's scroll edge does.
+        Box(
+            Modifier.fillMaxWidth().align(Alignment.TopCenter)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0.75f to AppSurfaces.ground, 1f to AppSurfaces.ground.copy(alpha = 0f)))
+                .statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+        ) {
+            SheetHeader(stringResource(R.string.people), modifier = Modifier,
+                trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
+                    stringResource(R.string.done), onClick = onBack) })
+        }
+
+        // `.searchable` on iOS 26: a floating white capsule at the bottom.
+        SearchCapsule(
+            query = query, onQuery = { query = it },
+            placeholder = stringResource(R.string.name_interests_place),
+            modifier = Modifier.align(Alignment.BottomCenter).bottomBarInsets()
+                .padding(start = 28.dp, end = 28.dp, bottom = 12.dp),
+        )
     }
 
     editing?.let { draft ->
@@ -426,6 +431,7 @@ fun FindPeopleScreen(
             },
             onDismiss = { editing = null; intakePhoto = null },
             initialPhoto = intakePhoto,
+            isNew = editingIsNew,
         )
     }
 }
@@ -617,6 +623,7 @@ private fun PoolRow(
         // Characters we wrote ARE their intro; a real learner's row shows the
         // three facets a stranger has any business seeing.
         caption2 = if (p.isRealUser) p.interests else p.intro,
+        caption2Lines = if (p.isRealUser) 1 else 2,
         // The seal is a statement about TODAY, so a row the server no longer
         // describes must draw nothing.
         seated = badges[p.owner_user_id?.lowercase()]?.seated == true,
@@ -625,19 +632,21 @@ private fun PoolRow(
     )
 }
 
-/** One person, in a card: initials bubble, name, up to two quiet lines. */
+/** One person in a card, as iOS's `NavigationLink` row: a 44 pt initials
+ *  bubble, the name, up to two `.caption` lines, and the list's chevron. */
 @Composable
 private fun PersonListRow(
     name: String,
     caption: String = "",
     caption2: String = "",
+    caption2Lines: Int = 1,
     seated: Boolean = false,
     bookmarked: Boolean = false,
     onClick: () -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -656,15 +665,85 @@ private fun PersonListRow(
                 }
             }
             caption.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
+                Text(it, style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             caption2.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
+                Text(it, style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    maxLines = caption2Lines, overflow = TextOverflow.Ellipsis)
             }
+        }
+        FormChevron()
+    }
+}
+
+/** One of the learner's own people: their photo (or initials) at 40 pt,
+ *  name and relationship — iOS `ownSection`'s row. */
+@Composable
+private fun OwnPersonRow(c: Counterpart, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        PersonBubble(c.name, c.id, size = 40.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(c.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            if (c.relationship.isNotBlank()) Text(c.relationship, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        FormChevron()
+    }
+}
+
+/** iOS 26's separator between person rows: starts under the bubble's
+ *  centre-right and stops short of the trailing edge. */
+@Composable
+private fun RowDivider() {
+    androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 33.dp, end = 16.dp),
+        thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+}
+
+/** iOS 26 `.searchable` in a sheet: a white capsule floating over the list,
+ *  a magnifier, the prompt as placeholder, a soft shadow. */
+@Composable
+private fun SearchCapsule(query: String, onQuery: (String) -> Unit, placeholder: String,
+                          modifier: Modifier = Modifier) {
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+    Row(
+        modifier.fillMaxWidth().height(48.dp)
+            .shadow(if (dark) 0.dp else 14.dp, CircleShape,
+                ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.12f),
+                spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.12f))
+            .background(if (dark) androidx.compose.ui.graphics.Color(0xFF2C2C2E)
+                else androidx.compose.ui.graphics.Color.White, CircleShape)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onSurface)
+        androidx.compose.foundation.text.BasicTextField(
+            value = query, onValueChange = onQuery, singleLine = true, textStyle = style,
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier.weight(1f),
+            decorationBox = { inner ->
+                Box {
+                    if (query.isEmpty()) Text(placeholder, style = style,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), maxLines = 1)
+                    inner()
+                }
+            },
+        )
+        if (query.isNotEmpty()) {
+            Icon(Icons.Filled.Cancel, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                modifier = Modifier.size(20.dp).clip(CircleShape).clickable { onQuery("") })
         }
     }
 }
