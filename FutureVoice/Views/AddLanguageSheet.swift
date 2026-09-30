@@ -12,11 +12,15 @@ struct AddLanguageSheet: View {
     @State private var level: CEFRLevel = .a2
 
     /// Targets still open to this user: shippable (see
-    /// `LanguageCatalog.selectableTargets`), not their native language, and
-    /// not already enrolled.
+    /// `LanguageCatalog.selectableTargets`) and not already enrolled. The app
+    /// language is NOT excluded — it is the same value as the native language
+    /// (one UI language since 2026-08-17), and Me → App language already lets
+    /// the two coincide (immersion). Excluding it here meant a Japanese-UI
+    /// learner could never add Japanese, while an English learner who later
+    /// switched the app to English kept English.
     private var choices: [String] {
         LanguageCatalog.selectableTargets.map(\.code).filter {
-            !LanguageCatalog.sameLanguage($0, appState.nativeLanguage) && !appState.enrolledLanguages.contains($0)
+            !appState.enrolledLanguages.contains($0)
         }
     }
 

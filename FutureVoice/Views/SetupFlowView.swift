@@ -27,6 +27,9 @@ struct SetupFlowView: View {
     @State private var level: CEFRLevel = .b1
     @State private var nativeLanguage: String = LanguageCatalog.defaultNative
     @State private var targetLanguage: String = "en"
+    /// Set once the learner taps a target — from then on a match with the app
+    /// language is their choice, not a default to move.
+    @State private var targetPickedByHand = false
     /// Same key the Talk home ring and Me's picker read — the ring's 100%.
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     @State private var goalMinutes = 10
@@ -35,9 +38,18 @@ struct SetupFlowView: View {
     @State private var confirmingSignOut = false
 
     /// Practice targets on offer — everything the app can deliver end to end
-    /// (`LanguageCatalog.selectableTargets`) except the chosen native language.
+    /// (`LanguageCatalog.selectableTargets`). The language picked on the first
+    /// step is NOT filtered out: that pick is the APP language (and the one
+    /// explanations come in), and learning the language the app is set to is
+    /// immersion, which Me → App language has always allowed. Filtering it
+    /// made the result depend on the order things were set in.
     private var targetChoices: [String] {
-        LanguageCatalog.selectableTargets.map(\.code).filter { !LanguageCatalog.sameLanguage($0, nativeLanguage) }
+        LanguageCatalog.selectableTargets.map(\.code)
+    }
+
+    /// The first target that isn't the app language — the pre-selection only.
+    private var defaultTarget: String {
+        targetChoices.first { !LanguageCatalog.sameLanguage($0, nativeLanguage) } ?? "en"
     }
 
     /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
@@ -81,12 +93,11 @@ struct SetupFlowView: View {
             targetLanguage = appState.targetLanguage
             level = appState.proficiency
             goalMinutes = dailyGoalMinutes
-            // Native and target can't coincide; targets step re-checks after
-            // the native pick too (see advance()). The target moves, not the
-            // native — the native seed came from the device and is the better
-            // guess of the two.
+            // Only the PRE-selection avoids the app language — a default of
+            // "learn the language you just said you read" is the wrong guess
+            // for almost everyone. The learner may still pick it.
             if LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
-                targetLanguage = targetChoices.first ?? "en"
+                targetLanguage = defaultTarget
             }
             #if DEBUG
             // Screenshot harness: `-onboardingStep <n>` jumps to a card.
@@ -125,7 +136,10 @@ struct SetupFlowView: View {
                     title: Self.endonym(code),
                     subtitle: ownName(code),
                     selected: targetLanguage == code
-                ) { targetLanguage = code }
+                ) {
+                    targetLanguage = code
+                    targetPickedByHand = true
+                }
             }
         } header: {
             Text(explain("Which language do you want to speak?"))
@@ -379,9 +393,12 @@ struct SetupFlowView: View {
 
     private func advance() {
         if step < Self.totalSteps - 1 {
-            // The native pick may have collided with the pre-selected target.
-            if LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
-                targetLanguage = targetChoices.first ?? "en"
+            // Leaving the language step: move a pre-selection that now
+            // matches the app language. Leaving the target step with it is the
+            // learner's own choice and stands.
+            if step == 0, !targetPickedByHand,
+               LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
+                targetLanguage = defaultTarget
             }
             step += 1
         } else {

@@ -73,9 +73,8 @@ enum LanguageCatalog {
     /// pre-select the setup picker.
     ///
     /// Falls back to English, NOT to the launch market. A wrong guess here is
-    /// not neutral: it decides which language every explanation is written in,
-    /// and it silently removes that language from the target picker (the two
-    /// can't coincide). Defaulting an unrecognized device to Korean told a
+    /// not neutral: it decides which language every explanation is written in
+    /// (and moves the target picker's pre-selection off that language). Defaulting an unrecognized device to Korean told a
     /// Spanish speaker they were Korean and then coached them in Korean;
     /// English is the one guess that degrades to "a language I can probably
     /// read" instead of "a language I've never seen".
@@ -119,7 +118,8 @@ enum LanguageCatalog {
     /// Central Asia → Europe → Africa); order = setup picker order.
     /// English included since multi-language: the practice target is
     /// user-selectable, so an English native learning Japanese is a real user.
-    /// Pickers filter out whichever code sits on the other side.
+    /// Target and native MAY coincide (learning the language the app is set
+    /// to is immersion); `CoachingLanguage.contract` collapses to nothing then.
     ///
     /// This list was once narrowed to the three languages with a translated
     /// `Localizable.xcstrings` column, on the theory that an untranslated

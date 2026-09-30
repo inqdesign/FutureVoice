@@ -1281,6 +1281,8 @@ struct ConversationView: View {
                             // previous bubble's text from being visible inside
                             // the next one during insertion animation.
                             TurnView(turn: turn, nativeLanguage: appState.nativeLanguage,
+                                     translates: !LanguageCatalog.sameLanguage(appState.targetLanguage,
+                                                                               appState.nativeLanguage),
                                      showsCorrections: showsCorrections)
                                 .id(turn.id)
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -4254,6 +4256,9 @@ private struct FeedTailOffsetKey: PreferenceKey {
 private struct TurnView: View {
     let turn: Turn
     let nativeLanguage: String
+    /// False when the app language IS the target — "Meaning" would translate
+    /// a line into the language it is already in.
+    var translates = true
     /// The learner's own switch (`CallSettings`). The card is still BUILT and
     /// still saved — this only decides whether it is drawn mid-call, so the
     /// summary, the drill cards and the talk's book are untouched by it.
@@ -4293,6 +4298,7 @@ private struct TurnView: View {
                 EmptyView()
             } else {
             VStack(alignment: speaker.alignment, spacing: 6) {
+                if translates {
                 Button(action: toggleMeaning) {
                     HStack(spacing: 4) {
                         if loading {
@@ -4306,6 +4312,7 @@ private struct TurnView: View {
                     .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                }
 
                 if showing, let t = translation {
                     Text(t)

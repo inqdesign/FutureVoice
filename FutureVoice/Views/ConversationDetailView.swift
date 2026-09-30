@@ -1474,7 +1474,8 @@ private struct TranscriptRow: View {
                                 Label("Shadow", systemImage: "waveform.badge.mic")
                             }
                         }
-                        if turn.role == .fluentSelf {
+                        if turn.role == .fluentSelf,
+                           !LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
                             Button(action: toggleMeaning) {
                                 HStack(spacing: 4) {
                                     if loading { ProgressView().controlSize(.mini) }

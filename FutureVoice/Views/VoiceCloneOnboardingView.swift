@@ -1386,7 +1386,7 @@ struct VoiceCloneOnboardingView: View {
 
     private func prepareNativeScript() async {
         let code = appState.nativeLanguage
-        guard code != appState.targetLanguage, nativeScript == nil else { return }
+        guard !LanguageCatalog.sameLanguage(code, appState.targetLanguage), nativeScript == nil else { return }
         // Hand-authored languages resolve synchronously; the rest cost one
         // Gemini call, once per device, cached forever.
         var script = CloneScriptStore.shared.script(for: code)
