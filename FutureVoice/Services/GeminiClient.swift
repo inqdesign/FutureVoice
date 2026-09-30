@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Supabase
 
@@ -285,10 +286,24 @@ final class GeminiClient {
         // A caller-supplied key makes retries of the SAME logical request
         // (e.g. the inline turn Retry button) free — the edge function's
         // usage ledger dedupes charges on this key. Default stays one-shot.
-        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue(Self.headerSafeKey(idempotencyKey ?? UUID().uuidString),
+                         forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
         return request
+    }
+
+    /// A header value URLSession will actually SEND. A key built from a
+    /// learner's own text (the openers key carries the persona name, e.g.
+    /// "메이") is not ASCII, and URLSession drops such a header without a
+    /// word — the edge function then answers 400 "missing X-Idempotency-Key"
+    /// and the call never runs (build 62–64: no opener pool, ever, for any
+    /// learner whose name isn't Latin). A non-ASCII key goes out as its
+    /// SHA-256, so the same logical request still maps to the same key.
+    static func headerSafeKey(_ key: String) -> String {
+        if key.allSatisfy({ $0.isASCII && !$0.isNewline }) { return key }
+        let digest = SHA256.hash(data: Data(key.utf8))
+        return "h:" + digest.map { String(format: "%02x", $0) }.joined()
     }
 
     /// One-shot JSON request. Caller specifies the expected `Decodable` shape.
