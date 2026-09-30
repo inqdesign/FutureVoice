@@ -1,6 +1,15 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -48,43 +57,62 @@ import androidx.compose.ui.unit.sp
  * nearest Material shapes: waveform · play.circle.fill · book.fill ·
  * chart.bar.fill.
  */
+/** How much room the floating bar needs below a page's last item, above the
+ *  navigation inset: the capsule plus its margins. */
+internal val IosTabBarClearance = 62.dp + 6.dp + 8.dp + 12.dp
+
 @Composable
-internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit) {
+internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.background.luminance() < 0.5f
     val capsule = if (dark) scheme.surfaceContainerHigh else scheme.surfaceContainerLowest
     val pill = if (dark) scheme.surfaceContainerHighest else scheme.surfaceContainerHigh
     val shape = RoundedCornerShape(percent = 50)
+    val tabs = HomeTab.entries
+    // The highlight is ONE pill that slides to the picked tab, the way iOS's
+    // does — a spring that settles without overshooting (no bounce).
+    val index by animateFloatAsState(
+        targetValue = tabs.indexOf(selected).toFloat(),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow),
+        label = "tabPill",
+    )
     Box(
-        Modifier.fillMaxWidth()
+        modifier.fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(start = 21.dp, end = 21.dp, top = 6.dp, bottom = 8.dp),
     ) {
-        Row(
+        BoxWithConstraints(
             Modifier.fillMaxWidth().height(62.dp)
-                .shadow(18.dp, shape, ambientColor = Color.Black.copy(alpha = 0.10f),
-                    spotColor = Color.Black.copy(alpha = 0.10f))
+                .shadow(18.dp, shape, ambientColor = Color.Black.copy(alpha = 0.12f),
+                    spotColor = Color.Black.copy(alpha = 0.12f))
                 .background(capsule, shape)
                 .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            HomeTab.entries.forEach { t ->
-                val on = t == selected
-                val tint = if (on) scheme.primary else scheme.onSurface
-                Column(
-                    Modifier.weight(1f).fillMaxHeight()
-                        .background(if (on) pill else Color.Transparent, shape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null, role = Role.Tab,
-                        ) { onSelect(t) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Icon(t.symbol, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.height(2.dp))
-                    Text(stringResource(t.label), color = tint, fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold, maxLines = 1)
+            val itemWidth = maxWidth / tabs.size
+            Box(
+                Modifier.offset(x = itemWidth * index).width(itemWidth).fillMaxHeight()
+                    .background(pill, shape),
+            )
+            Row(Modifier.fillMaxSize()) {
+                tabs.forEachIndexed { i, t ->
+                    // Colour follows the pill as it passes, rather than
+                    // snapping when the tap lands.
+                    val nearness = (1f - kotlin.math.abs(index - i)).coerceIn(0f, 1f)
+                    val tint = lerp(scheme.onSurface, scheme.primary, nearness)
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null, role = Role.Tab,
+                            ) { onSelect(t) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(t.symbol, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.height(2.dp))
+                        Text(stringResource(t.label), color = tint, fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
                 }
             }
         }

@@ -34,6 +34,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,6 +62,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
@@ -1116,103 +1119,123 @@ internal fun HomeScreen(
                 )
             }
         },
-        bottomBar = {
-            // The iOS floating capsule, not Material's full-width bar.
-            IosTabBar(selected = tab, onSelect = onTabChange)
-        },
+        // No bottomBar and no bottom inset: the page runs to the bottom of the
+        // screen and the tab bar FLOATS over it, as iOS 26's does. The top bar
+        // takes the status bar itself.
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
     ) { padding ->
-        Column(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            when (tab) {
-                HomeTab.TALK -> {
-                    TalkHero(
-                        state = state,
-                        enabled = state.voiceId != null,
-                        onTap = { launch("", emptyList()) },
-                        onOpenActivity = onOpenActivity,
-                    )
-                    // Before the first talk the page explains itself; after it,
-                    // the only card above Discover is the one asking for the
-                    // learner's life. Never both — iOS's `else if`.
-                    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-                    var talkCount by remember { mutableStateOf(-1) }
-                    LaunchedEffect(state.targetLanguage, revision) {
-                        talkCount = com.roro.futurevoice.data.SessionStore.shared(context)
-                            .load(state.targetLanguage).count { it.endedAt != null }
+      Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+        // Each tab is built on its first visit and then KEPT, as iOS's
+        // TabView keeps its pages (scroll position included). Rebuilding the
+        // page on every switch stalled the main thread for 150-300 ms, and the
+        // tab bar's sliding highlight jumped straight to its end in that gap.
+        val visited = remember { mutableSetOf<HomeTab>() }
+        visited += tab
+        HomeTab.entries.filter { it in visited }.forEach { t ->
+          androidx.compose.runtime.key(t) {
+            Column(
+                Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
+                    // A hidden tab stays composed but is neither measured nor
+                    // placed: nothing drawn, no touches.
+                    .then(if (t == tab) Modifier else Modifier.layout { _, _ -> layout(0, 0) {} })
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                when (t) {
+                    HomeTab.TALK -> {
+                        TalkHero(
+                            state = state,
+                            enabled = state.voiceId != null,
+                            onTap = { launch("", emptyList()) },
+                            onOpenActivity = onOpenActivity,
+                        )
+                        // Before the first talk the page explains itself; after it,
+                        // the only card above Discover is the one asking for the
+                        // learner's life. Never both — iOS's `else if`.
+                        val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+                        var talkCount by remember { mutableStateOf(-1) }
+                        LaunchedEffect(state.targetLanguage, revision) {
+                            talkCount = com.roro.futurevoice.data.SessionStore.shared(context)
+                                .load(state.targetLanguage).count { it.endedAt != null }
+                        }
+                        if (talkCount == 0) {
+                            FirstRunCard()
+                        } else if (personaNeedsDepth(state.persona)) {
+                            DeepenRow(onClick = { showDeepen = true })
+                        }
+                        // One Discover section, two chips — what to talk about
+                        // today: the day's stories, or a situation you built.
+                        DiscoverSection(
+                            state = state,
+                            enabled = state.voiceId != null,
+                            onSavePersona = onSavePersona,
+                            onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
+                            onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
+                            onWatch = onWatch,
+                            // They all live on Watch — that IS the collection.
+                            onAllScenarios = { onTabChange(HomeTab.WATCH) },
+                        )
+                        RecentTalks(language = state.targetLanguage,
+                            nativeLanguage = state.nativeLanguage, level = state.level,
+                            onOpen = onOpenTalk)
+                        state.error?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error)
+                        }
+                        if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
+                            TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
+                            TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
+                        }
                     }
-                    if (talkCount == 0) {
-                        FirstRunCard()
-                    } else if (personaNeedsDepth(state.persona)) {
-                        DeepenRow(onClick = { showDeepen = true })
-                    }
-                    // One Discover section, two chips — what to talk about
-                    // today: the day's stories, or a situation you built.
-                    DiscoverSection(
-                        state = state,
+
+                    // Watch: simulate the situation BEFORE it happens. Scenarios
+                    // are reusable templates — a tap writes a fresh take.
+                    HomeTab.WATCH -> WatchTabBody(
+                        language = state.targetLanguage,
                         enabled = state.voiceId != null,
-                        onSavePersona = onSavePersona,
-                        onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
-                        onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                         onWatch = onWatch,
-                        // They all live on Watch — that IS the collection.
-                        onAllScenarios = { onTabChange(HomeTab.WATCH) },
                     )
-                    RecentTalks(language = state.targetLanguage,
-                        nativeLanguage = state.nativeLanguage, level = state.level,
-                        onOpen = onOpenTalk)
-                    state.error?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error)
-                    }
-                    if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
-                        TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
-                        TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
-                    }
+
+                    HomeTab.PRACTICE -> PracticeBody(
+                        level = state.level,
+                        language = state.targetLanguage,
+                        onOpenDeck = onOpenDeck,
+                        onOpenWords = onOpenWords,
+                        onOpenExpressions = onOpenExpressions,
+                        onOpenScenarioBook = onOpenBook,
+                        onOpenTalk = onOpenTalk,
+                        onShadowHand = onShadowHand,
+                        onShadowAll = onShadowAll,
+                        onOpenWordsAll = onOpenWordsAll,
+                        onOpenExpressionsAll = onOpenExpressionsAll,
+                        onOpenDueReview = onOpenDueReview,
+                    )
+
+                    HomeTab.PROGRESS -> ProgressBody(
+                        onMeasuredLevel = onMeasuredLevel,
+                        language = state.targetLanguage,
+                        nativeLanguage = state.nativeLanguage,
+                        onOpenAssessment = onOpenAssessment,
+                        onOpenActivity = onOpenActivity,
+                        goalMinutes = LocalContext.current
+                            .getSharedPreferences("futurevoice", 0)
+                            .getInt("futurevoice.dailyGoalMinutes", 10),
+                        // The advice on a measured page ends in "go talk", so the
+                        // page gets the door rather than describing one.
+                        onStartTalk = { onTabChange(HomeTab.TALK) },
+                    )
                 }
-
-                // Watch: simulate the situation BEFORE it happens. Scenarios
-                // are reusable templates — a tap writes a fresh take.
-                HomeTab.WATCH -> WatchTabBody(
-                    language = state.targetLanguage,
-                    enabled = state.voiceId != null,
-                    onWatch = onWatch,
-                )
-
-                HomeTab.PRACTICE -> PracticeBody(
-                    level = state.level,
-                    language = state.targetLanguage,
-                    onOpenDeck = onOpenDeck,
-                    onOpenWords = onOpenWords,
-                    onOpenExpressions = onOpenExpressions,
-                    onOpenScenarioBook = onOpenBook,
-                    onOpenTalk = onOpenTalk,
-                    onShadowHand = onShadowHand,
-                    onShadowAll = onShadowAll,
-                    onOpenWordsAll = onOpenWordsAll,
-                    onOpenExpressionsAll = onOpenExpressionsAll,
-                    onOpenDueReview = onOpenDueReview,
-                )
-
-                HomeTab.PROGRESS -> ProgressBody(
-                    onMeasuredLevel = onMeasuredLevel,
-                    language = state.targetLanguage,
-                    nativeLanguage = state.nativeLanguage,
-                    onOpenAssessment = onOpenAssessment,
-                    onOpenActivity = onOpenActivity,
-                    goalMinutes = LocalContext.current
-                        .getSharedPreferences("futurevoice", 0)
-                        .getInt("futurevoice.dailyGoalMinutes", 10),
-                    // The advice on a measured page ends in "go talk", so the
-                    // page gets the door rather than describing one.
-                    onStartTalk = { onTabChange(HomeTab.TALK) },
-                )
+                // Room to scroll the last item up past the floating bar.
+                Spacer(Modifier.height(IosTabBarClearance)
+                    .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars))
             }
-            Spacer(Modifier.height(16.dp))
+
+          }
         }
+        IosTabBar(selected = tab, onSelect = onTabChange,
+            modifier = Modifier.align(Alignment.BottomCenter))
+      }
     }
 }
 
