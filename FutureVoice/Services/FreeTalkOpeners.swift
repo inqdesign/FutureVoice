@@ -51,8 +51,15 @@ final class FreeTalkOpeners {
         self.decoder = dec
     }
 
+    /// Bumped when the pool's PROMPT changes in a way the lines already on
+    /// phones must not outlive: a pool is otherwise kept until the language
+    /// or name changes, i.e. forever. v2 (2026-09-30): `selfWarmth` — pools
+    /// held "너무 보고싶어". An old pool is simply not found; its audio stays
+    /// on disk (produced audio is never deleted).
+    private static let poolVersion = 2
+
     private static func key(language: String, personaName: String?) -> String {
-        "\(language)|\(personaName ?? "")"
+        "v\(poolVersion)|\(language)|\(personaName ?? "")"
     }
 
     /// The line a free talk opens on while no pool exists yet — the very
@@ -391,6 +398,7 @@ final class FreeTalkOpeners {
         Rules:
         - Warm, natural spoken \(languageName) a CEFR \(proficiency.rawValue.uppercased()) learner easily follows.
         - \(CoachingLanguage.breathPunctuation)
+        - \(CoachingLanguage.selfWarmth)
         - Each opener distinct in flavor; every one must invite a reply.
         - Address \(name) by name in AT MOST two of them.
         - In a language that separates formal from informal address (Korean

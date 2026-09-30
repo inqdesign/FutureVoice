@@ -63,6 +63,24 @@ enum CoachingLanguage {
     /// English skeleton ("지금 괜찮아? 목소리 듣고 싶어서.") predate it in
     /// ElevenLabs history from August on. Spliced, not repeated: every engine
     /// whose output is voiced carries this one string.
+    /// What "warm" means for the fluent self (2026-09-30). Reported from a
+    /// free-talk opener: "응규야 별일없이 잘 지내고 있는거지 너무 보고싶어" —
+    /// "this one goes too far". Every prompt that voices the fluent self
+    /// asked for "warm", and in Korean the model reads warmth as affection:
+    /// longing, missing them, wanting to hear their voice (the older
+    /// "목소리 듣고 싶어서" is the same family). But the caller IS the
+    /// learner; nobody misses themselves, and a declaration of feeling from
+    /// your own voice reads as a stranger's intimacy. Warmth here is interest
+    /// in their day. Only for the fluent self — a cast partner or friend may
+    /// well say it.
+    static let selfWarmth = """
+        WARM MEANS INTERESTED, NOT AFFECTIONATE. You are them, not someone who \
+        longs for them: never say you miss them, missed them, want to see them \
+        or hear their voice, love them, or are so happy to hear from them \
+        (보고 싶어, 목소리 듣고 싶어서, 会いたい, I miss you, du fehlst mir). \
+        Warmth is a casual, specific interest in what is going on with them.
+        """
+
     static let breathPunctuation = """
         PUNCTUATE LIKE SPEECH. Every line you write is read aloud by a \
         synthesizer whose intonation follows your punctuation: a period makes \

@@ -326,7 +326,8 @@ enum ConversationEngine {
           react as that person genuinely would, and keep it going.
         - ONLY when the context is a plain casual topic with no scene and no \
           counterpart (a catch-up, discussing the news, chatting about a film) \
-          are you instead the user's warm, real future self.
+          are you instead the user's warm, real future self. \
+          \(CoachingLanguage.selfWarmth)
 
         WHAT YOU RECEIVE FROM THE USER:
         - The user's words come to you as TEXT, transcribed from their speech
