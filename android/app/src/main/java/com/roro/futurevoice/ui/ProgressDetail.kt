@@ -1,6 +1,18 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.outlined.Verified
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -325,7 +337,7 @@ fun TrendChart(
     val label = MaterialTheme.colorScheme.outline
     val rule = MaterialTheme.colorScheme.onSurfaceVariant
     val measurer = rememberTextMeasurer()
-    val labelStyle = MaterialTheme.typography.labelSmall.copy(color = label)
+    val labelStyle = PT.caption2.copy(color = label)
 
     val values = points.map { it.value } + listOfNotNull(target)
     val vMin = values.minOrNull() ?: 0.0
@@ -390,7 +402,7 @@ fun LevelHistoryChart(points: List<LevelPoint>, height: Dp = 150.dp,
     val grid = MaterialTheme.colorScheme.outlineVariant
     val measurer = rememberTextMeasurer()
     val labelStyle: TextStyle =
-        MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.outline)
+        PT.caption2.copy(color = MaterialTheme.colorScheme.outline)
     val first = points.first().at
     val timeSpan = (points.last().at - first).coerceAtLeast(1L)
 
@@ -437,7 +449,8 @@ fun LevelHistoryChart(points: List<LevelPoint>, height: Dp = 150.dp,
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Where a page's advice is actually carried out. */
-class ProgressAction(val title: String, val run: () -> Unit)
+class ProgressAction(val title: String, val run: () -> Unit,
+                     val icon: androidx.compose.ui.graphics.vector.ImageVector? = null)
 
 @Composable
 fun ProgressSkillPage(
@@ -465,7 +478,8 @@ fun ProgressSkillPage(
             measures = stringResource(
                 R.string.words_per_minute_of_voiced_speech_pauses_and_think_time_don_e12672),
             improve = stringResource(R.string.talk_more_often_and_a_little_longer),
-            action = onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it) },
+            action = onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it,
+                androidx.compose.material.icons.Icons.Filled.GraphicEq) },
             trend = m.fluencyTrend,
             trendCaption = stringResource(
                 R.string.one_point_per_talk_with_cefr_pace_bands_behind_the_curve),
@@ -490,7 +504,8 @@ fun ProgressSkillPage(
             measures = stringResource(R.string.counted_from_transcript_verified_slips_only),
             improve = stringResource(R.string.run_your_review_cards_built_from_your_own_slips),
             action = onReviewSlips?.let {
-                ProgressAction(stringResource(R.string.review_your_slips), it)
+                ProgressAction(stringResource(R.string.review_your_slips), it,
+                    androidx.compose.material.icons.Icons.Outlined.Verified)
             },
             trend = m.grammarTrend,
             trendCaption = stringResource(R.string.one_point_per_talk_down_is_progress),
@@ -505,7 +520,8 @@ fun ProgressSkillPage(
             measured = stringResource(R.string.how_much_you_elaborate_longer_richer_turns_read_higher),
             measures = stringResource(R.string.how_vividly_and_naturally_you_get_your_meaning_across),
             improve = stringResource(R.string.tell_stories_react_and_add_detail),
-            action = onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it) },
+            action = onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it,
+                androidx.compose.material.icons.Icons.Filled.GraphicEq) },
             trend = m.expressionTrend,
             trendCaption = stringResource(R.string.one_point_per_talk_with_cefr_bands_behind_the_curve),
             bands = ProgressBands.expression,
@@ -555,34 +571,23 @@ private fun MeasuredPage(
     bands: List<BandSpec>,
     trendTarget: Double? = null,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ProgressPanel {
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(big, style = DisplayFace.style(big, MaterialTheme.typography.displaySmall),
-                    color = MaterialTheme.colorScheme.primary)
-                Text(unit, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f))
+            BigFigureRow(big, unit) {
                 band?.let {
-                    Text(it, style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold)
+                    Text(it, style = PT.subheadline.copy(fontWeight = FontWeight.SemiBold))
                 }
             }
-            measured?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(measures, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline)
+            measured?.let { Text(it, style = PT.callout, color = secondary) }
+            Text(measures, style = PT.footnote, color = MaterialTheme.colorScheme.outline)
         }
 
         if (trend.size >= 2) {
             ProgressPanel {
-                Text(stringResource(R.string.trend), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.trend), style = PT.headline)
                 TrendChart(trend, bands = bands, target = trendTarget)
-                Text(trendCaption, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(trendCaption, style = PT.caption, color = secondary)
             }
         }
 
@@ -590,27 +595,39 @@ private fun MeasuredPage(
         // numbers above rather than inventing one of its own.
         m.notes[dim].orEmpty().takeIf { it.isNotEmpty() }?.let { notes ->
             ProgressPanel {
-                Text(stringResource(R.string.what_i_noticed_lately),
-                    style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.what_i_noticed_lately), style = PT.headline)
                 Text(stringResource(R.string.from_your_recent_sessions),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(notes.first(), style = MaterialTheme.typography.bodyMedium)
+                    style = PT.caption, color = secondary)
+                Text(notes.first(), style = PT.callout)
                 notes.drop(1).take(2).forEach {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("•", color = MaterialTheme.colorScheme.outline)
-                        Text(it, style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("•", style = PT.body, color = MaterialTheme.colorScheme.outline)
+                        Text(it, style = PT.subheadline, color = secondary)
                     }
                 }
             }
         }
 
         ProgressPanel {
-            Text(stringResource(R.string.how_to_improve), style = MaterialTheme.typography.titleMedium)
-            Text(improve, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.how_to_improve), style = PT.headline)
+            Text(improve, style = PT.callout)
             action?.let { ProgressActionButton(it) }
         }
+    }
+}
+
+/** iOS: the big figure in the display face at 44, its unit in subheadline
+ *  on the same baseline, and an optional trailing accessory. */
+@Composable
+private fun BigFigureRow(big: String, unit: String, trailing: @Composable () -> Unit = {}) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(big, style = DisplayFace.style(big, PT.pixel(44)),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.alignByBaseline())
+        Text(unit, style = PT.subheadline, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).alignByBaseline())
+        Box(Modifier.alignByBaseline()) { trailing() }
     }
 }
 
@@ -620,31 +637,22 @@ private fun VocabularyPage(
     onSeeWords: (() -> Unit)?,
     onBrowseExpressions: (() -> Unit)?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ProgressPanel {
-            val big = m.vocabLevel?.code?.uppercase() ?: "—"
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(big, style = DisplayFace.style(big, MaterialTheme.typography.displaySmall),
-                    color = MaterialTheme.colorScheme.primary)
-                Text(stringResource(R.string.vocabulary_level_9f6896),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            BigFigureRow(m.vocabLevel?.code?.uppercase() ?: "—",
+                stringResource(R.string.vocabulary_level_9f6896))
             // The count is lifetime, not a window: `VocabStore` exposes the
             // per-band totals and not the dates behind them, so the sentence
             // claims no window it cannot back up.
             Text(stringResource(R.string.estimated_from_lld_distinct_words_graded_by_cefr, m.usedTotal),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                style = PT.callout, color = secondary)
         }
 
         ProgressPanel {
-            Text(stringResource(R.string.words_you_use_by_level),
-                style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.words_you_use_by_level), style = PT.headline)
             Text(stringResource(R.string.distinct_words_from_your_talks),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                style = PT.caption, color = secondary)
             val peak = (m.perLevel.values.maxOrNull() ?: 1).coerceAtLeast(1)
             CefrLevel.entries.forEach { lv ->
                 VocabLevelBar(lv, m.perLevel[lv] ?: 0, peak, lv == m.vocabLevel)
@@ -652,28 +660,29 @@ private fun VocabularyPage(
         }
 
         ProgressPanel {
-            Text(stringResource(R.string.how_to_level_up), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.how_to_level_up), style = PT.headline)
             Text(stringResource(R.string.discover_and_use_words_you_don_t_reach_for_yet_the_ones_at_a_d0a120),
-                style = MaterialTheme.typography.bodyMedium)
+                style = PT.callout)
             onSeeWords?.let {
                 val nextBand = m.vocabLevel?.let { lv -> ProgressBands.next(lv) ?: lv } ?: CefrLevel.A1
                 ProgressActionButton(ProgressAction(
-                    stringResource(R.string.see_words, nextBand.code.uppercase()), it))
+                    stringResource(R.string.see_words, nextBand.code.uppercase()), it,
+                    androidx.compose.material.icons.Icons.AutoMirrored.Outlined.MenuBook))
             }
         }
 
         ProgressPanel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.expressions_you_ve_used),
-                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text("${m.expressionCount}", style = MaterialTheme.typography.titleMedium,
+                    style = PT.headline, modifier = Modifier.weight(1f))
+                Text("${m.expressionCount}", style = PT.headline,
                     color = MaterialTheme.colorScheme.primary)
             }
             Text(stringResource(R.string.multi_word_phrases_you_actually_said_in_your_talks_collected_5b8524),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                style = PT.callout, color = secondary)
             if (m.expressionCount > 0) onBrowseExpressions?.let {
-                ProgressActionButton(ProgressAction(stringResource(R.string.browse_expressions), it))
+                ProgressActionLink(ProgressAction(stringResource(R.string.browse_expressions), it,
+                    androidx.compose.material.icons.Icons.Filled.FormatQuote))
             }
         }
     }
@@ -681,13 +690,15 @@ private fun VocabularyPage(
 
 @Composable
 private fun VocabLevelBar(level: CefrLevel, count: Int, peak: Int, isCurrent: Boolean) {
+    // iOS: the current band in the accent colour, every other band in
+    // `tertiarySystemFill` — a grey capsule, not Material's surface variant.
     val fill = if (isCurrent) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.surfaceVariant
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp),
+    else com.roro.futurevoice.ui.brand.iosFill()
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         val code = level.code.uppercase()
-        Text(code, style = DisplayFace.style(code, MaterialTheme.typography.labelMedium),
+        Text(code, style = DisplayFace.style(code, PT.pixel(15)),
             color = if (isCurrent) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(30.dp))
@@ -697,34 +708,73 @@ private fun VocabLevelBar(level: CefrLevel, count: Int, peak: Int, isCurrent: Bo
             if (w > 0) drawRoundRect(fill, size = Size(w, size.height),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
         }
-        Text("$count", style = MaterialTheme.typography.labelMedium,
+        Text("$count", style = PT.caption,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
             modifier = Modifier.width(38.dp))
     }
 }
 
-/** The panel every Progress section sits in — one shape for the whole tab. */
+/**
+ * The panel every Progress section sits in — iOS `panel`: 18 pt of padding,
+ * 12 pt between lines, a 20 pt continuous-corner card. One shape for the
+ * whole tab. With [onClick] the whole card is the tap target (the streak row).
+ */
 @Composable
-fun ProgressPanel(content: @Composable () -> Unit) {
-    GroupedCard {
-        Column(Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
+fun ProgressPanel(onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val shape = com.roro.futurevoice.ui.brand.ContinuousShape(20.dp)
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(shape)
+            .background(com.roro.futurevoice.ui.brand.AppSurfaces.card, shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) { content() }
+}
+
+/** iOS `.borderedProminent` at `.large`: full width, because in these panels
+ *  the way out IS the subject. A filled capsule, the label in subheadline
+ *  semibold with its glyph. */
+@Composable
+fun ProgressActionButton(action: ProgressAction) {
+    val tint = MaterialTheme.colorScheme.primary
+    Row(
+        Modifier.fillMaxWidth().padding(top = 2.dp)
+            .height(50.dp)
+            .clip(CircleShape)
+            .background(tint)
+            .clickable(onClick = action.run),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        action.icon?.let {
+            Icon(it, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(action.title, style = PT.subheadline.copy(fontWeight = FontWeight.SemiBold),
+            color = Color.White)
     }
 }
 
-/** Full width, because in these panels the way out IS the subject. */
-@Composable
-fun ProgressActionButton(action: ProgressAction) {
-    androidx.compose.material3.Button(
-        onClick = action.run,
-        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-    ) { Text(action.title) }
-}
-
-/** Compact version, under a tip whose subject is the measurement. */
+/** iOS `.bordered` at `.small`: compact, under a tip whose subject is the
+ *  measurement — a tinted-grey capsule with the accent label. */
 @Composable
 fun ProgressActionLink(action: ProgressAction) {
-    androidx.compose.material3.OutlinedButton(onClick = action.run) { Text(action.title) }
+    val tint = MaterialTheme.colorScheme.primary
+    Row(
+        Modifier.clip(CircleShape)
+            .background(com.roro.futurevoice.ui.brand.iosFill())
+            .clickable(onClick = action.run)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        action.icon?.let {
+            Icon(it, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        }
+        Text(action.title, style = PT.subheadline.copy(fontWeight = FontWeight.Medium), color = tint)
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -734,7 +784,8 @@ fun ProgressActionLink(action: ProgressAction) {
 /**
  * The recipe, with the learner's LIVE numbers: every ingredient names its
  * measurement and how that maps to a band, so the level never reads as a
- * black box (or as "just vocabulary").
+ * black box (or as "just vocabulary"). iOS draws it as an inset-grouped List
+ * under an inline title with Done — the same Form pieces here.
  *
  * `levelEvidence` is deliberately NOT drawn — it is the prompt block handed
  * to the judge, English snake_case field names written FOR a model, and the
@@ -750,86 +801,91 @@ fun HowAssessedSheet(
     m: ProgressMetrics,
     onDismiss: () -> Unit,
 ) {
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = com.roro.futurevoice.ui.brand.AppSurfaces.ground,
+    ) {
         Column(
             Modifier.fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(stringResource(R.string.how_it_s_assessed),
-                style = MaterialTheme.typography.titleLarge)
+            SheetHeader(stringResource(R.string.how_it_s_assessed),
+                trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
+                    stringResource(R.string.done), onDismiss, bold = true) })
 
-            Text(stringResource(
-                if (rationale.isNullOrBlank()) R.string.the_estimated_level else R.string.why_this_level),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            level?.let {
-                Row(Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.assessed_level),
-                        style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Text(it.code.uppercase(), style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary)
+            FormSection(header = stringResource(
+                if (rationale.isNullOrBlank()) R.string.the_estimated_level else R.string.why_this_level)) {
+                level?.let {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.assessed_level),
+                            style = PT.subheadline.copy(fontWeight = FontWeight.Medium),
+                            modifier = Modifier.weight(1f))
+                        Text(it.code.uppercase(), style = PT.headline,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    FormDivider()
                 }
+                rationale?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = PT.callout,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp))
+                    FormDivider()
+                }
+                Text(stringResource(
+                    R.string.your_level_comes_from_periodic_assessments_each_one_pools_ev_20fb6b,
+                    firstReportMinutes),
+                    style = PT.callout,
+                    color = if (rationale.isNullOrBlank()) MaterialTheme.colorScheme.onSurface
+                    else secondary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp))
             }
-            rationale?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium)
+
+            FormSection(header = stringResource(R.string.what_s_measured),
+                footer = stringResource(
+                    R.string.marks_a_deterministic_proxy_a_real_measurement_mapped_to_a_c_729797)) {
+                AssessedRow(stringResource(R.string.vocabulary),
+                    m.vocabLevel?.code?.uppercase(),
+                    stringResource(R.string.assessed_detail_vocabulary, m.usedTotal))
+                FormDivider()
+                AssessedRow(stringResource(R.string.fluency),
+                    m.fluencyLevel?.let { "≈" + it.code.uppercase() },
+                    stringResource(R.string.assessed_detail_fluency, m.effectivePace))
+                FormDivider()
+                AssessedRow(stringResource(R.string.grammar),
+                    m.grammarLevel?.let { "≈" + it.code.uppercase() },
+                    if (m.slipsPer100Words > 0)
+                        stringResource(R.string.assessed_detail_grammar_density,
+                            String.format(Locale.getDefault(), "%.1f", m.slipsPer100Words))
+                    else if (m.grammarScore > 0)
+                        stringResource(R.string.assessed_detail_grammar_score, m.grammarScore)
+                    else stringResource(
+                        R.string.read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b))
+                FormDivider()
+                AssessedRow(stringResource(R.string.expressiveness),
+                    m.expressionLevel?.let { "≈" + it.code.uppercase() },
+                    stringResource(R.string.assessed_detail_expression, m.wordsPerTurn))
             }
-            Text(stringResource(
-                R.string.your_level_comes_from_periodic_assessments_each_one_pools_ev_20fb6b,
-                firstReportMinutes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (rationale.isNullOrBlank()) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.onSurfaceVariant)
 
-            Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.what_s_measured),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            AssessedRow(stringResource(R.string.vocabulary),
-                m.vocabLevel?.code?.uppercase(),
-                stringResource(R.string.assessed_detail_vocabulary, m.usedTotal))
-            AssessedRow(stringResource(R.string.fluency),
-                m.fluencyLevel?.let { "≈" + it.code.uppercase() },
-                stringResource(R.string.assessed_detail_fluency, m.effectivePace))
-            AssessedRow(stringResource(R.string.grammar),
-                m.grammarLevel?.let { "≈" + it.code.uppercase() },
-                if (m.slipsPer100Words > 0)
-                    stringResource(R.string.assessed_detail_grammar_density,
-                        String.format(Locale.getDefault(), "%.1f", m.slipsPer100Words))
-                else if (m.grammarScore > 0)
-                    stringResource(R.string.assessed_detail_grammar_score, m.grammarScore)
-                else stringResource(
-                    R.string.read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b))
-            AssessedRow(stringResource(R.string.expressiveness),
-                m.expressionLevel?.let { "≈" + it.code.uppercase() },
-                stringResource(R.string.assessed_detail_expression, m.wordsPerTurn))
-            Text(stringResource(R.string.marks_a_deterministic_proxy_a_real_measurement_mapped_to_a_c_729797),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.what_never_moves_the_level),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.shadowing_scores_and_review_reps_measure_practice_not_level_4c91dc),
-                style = MaterialTheme.typography.bodyMedium)
+            FormSection(header = stringResource(R.string.what_never_moves_the_level)) {
+                Text(stringResource(R.string.shadowing_scores_and_review_reps_measure_practice_not_level_4c91dc),
+                    style = PT.callout,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp))
+            }
         }
     }
 }
 
 @Composable
 private fun AssessedRow(name: String, level: String?, detail: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(name, style = MaterialTheme.typography.bodyLarge)
-            Text(detail, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(name, style = PT.subheadline.copy(fontWeight = FontWeight.Medium))
+            Text(detail, style = PT.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(level ?: "—", style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary)
+        Text(level ?: "—", style = PT.headline, color = MaterialTheme.colorScheme.primary)
     }
 }
-

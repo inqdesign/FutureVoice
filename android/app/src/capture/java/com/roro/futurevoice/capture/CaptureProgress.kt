@@ -28,6 +28,7 @@ import com.roro.futurevoice.data.WeeklyReport
 import com.roro.futurevoice.data.WeeklyReportStore
 import com.roro.futurevoice.ui.ActivityScreen
 import com.roro.futurevoice.ui.DayCardSheet
+import com.roro.futurevoice.ui.Dim
 import com.roro.futurevoice.ui.ProgressBody
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.DayCardData
@@ -38,6 +39,7 @@ import java.util.UUID
  * Capture modes for the Progress area. This file owns exactly these iOS modes:
  *
  *   progress
+ *   progress-grammar
  *   activity
  *   activity-cards
  *   activity-unsaved
@@ -53,25 +55,15 @@ object CaptureProgress {
         // (not "building") renders. Body only: the tab's top and bottom bars
         // live in `HomeScreen`, private to RootScreen.kt.
         "progress" to @Composable { c: Context ->
-            Seeded({ CaptureSeed.once("progress") { seedProgress(c) } }) {
-                Column(
-                    Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
-                        .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                ) {
-                    ProgressBody(
-                        language = lang(c),
-                        nativeLanguage = c.getSharedPreferences("futurevoice", 0)
-                            .getString("futurevoice.nativeLanguage", null)
-                            ?: LanguageCatalog.defaultNative(),
-                        onOpenAssessment = {}, onOpenActivity = {},
-                        goalMinutes = c.getSharedPreferences("futurevoice", 0)
-                            .getInt("futurevoice.dailyGoalMinutes", 10),
-                        onStartTalk = {},
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
-            }
+            Seeded({ CaptureSeed.once("progress") { seedProgress(c) } }) { ProgressPage(c) }
+        },
+        // The Grammar page over the ordinary scored talks (no range on file),
+        // so the band reads with the vocabulary stand-in ceiling — iOS's
+        // `progress-grammar`.
+        "progress-grammar" to @Composable { c: Context ->
+            Seeded({ CaptureSeed.once("progress-grammar") {
+                CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c, scored = true)
+            } }) { ProgressPage(c, Dim.GRAMMAR) }
         },
         // The activity calendar with today selected — the day summary carries
         // the share-card button. iOS's "-cards" grid was folded back into this
@@ -99,6 +91,31 @@ object CaptureProgress {
     /** mode → why Android can't show it yet (name the master-plan item). */
     val notPorted: Map<String, String> = mapOf(
     )
+
+    /** The Progress tab's body inside the host's scroll column and 20 dp
+     *  gutters. Body only: the tab's top and bottom bars live in
+     *  `HomeScreen`, private to RootScreen.kt. */
+    @Composable
+    private fun ProgressPage(c: Context, dim: Dim = Dim.OVERALL) {
+        Column(
+            Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            ProgressBody(
+                language = lang(c),
+                nativeLanguage = c.getSharedPreferences("futurevoice", 0)
+                    .getString("futurevoice.nativeLanguage", null)
+                    ?: LanguageCatalog.defaultNative(),
+                onOpenAssessment = {}, onOpenActivity = {},
+                goalMinutes = c.getSharedPreferences("futurevoice", 0)
+                    .getInt("futurevoice.dailyGoalMinutes", 10),
+                onStartTalk = {},
+                initialDim = dim,
+            )
+            Spacer(Modifier.height(16.dp))
+        }
+    }
 
     @Composable
     private fun Activity(c: Context) {
