@@ -1,119 +1,108 @@
 package com.roro.futurevoice.ui
 
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material.icons.automirrored.filled.ShortText
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.PanTool
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PhoneCallback
+import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.TrackChanges
+import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import com.roro.futurevoice.data.AccountStatus
-import com.roro.futurevoice.data.BillingGate
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.Button
-import com.roro.futurevoice.data.CefrLevel
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.automirrored.filled.Send
-import com.roro.futurevoice.ui.brand.FutureselfTheme
-import com.roro.futurevoice.data.AudioPrefs
-import androidx.compose.material3.Slider
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.runtime.mutableFloatStateOf
-import com.roro.futurevoice.data.BackupService
-import com.roro.futurevoice.data.BookExport
-import androidx.compose.material.icons.filled.ImportExport
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import com.roro.futurevoice.data.AccountEraser
-import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.WorkspacePremium
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.roro.futurevoice.R
-import com.roro.futurevoice.ui.brand.AppSurfaces
-import androidx.compose.runtime.LaunchedEffect
+import com.roro.futurevoice.data.AccountEraser
+import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.BackupService
+import com.roro.futurevoice.data.BillingGate
+import com.roro.futurevoice.data.BookExport
+import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.DailyCallStore
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.TalkTime
 import com.roro.futurevoice.data.WeeklyReportStore
 import com.roro.futurevoice.net.CoreClubClient
-import com.roro.futurevoice.ui.brand.CoreSeal
 import com.roro.futurevoice.talk.UserPersona
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material.icons.filled.AddCircleOutline
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.TrackChanges
-import androidx.compose.material.icons.filled.UnfoldMore
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.CoreSeal
+import com.roro.futurevoice.ui.brand.FutureselfTheme
+import kotlinx.coroutines.launch
 
 /**
- * Settings — everything about "you the account", in iOS's order
- * (`MeTab.swift`): profile, the subscription on its own, usage + the Core,
- * Learning (the languages and their levels, the goal, the app's language),
- * the call, the voice, appearance/data/privacy, then the account itself.
+ * Settings — iOS `MeTab`, row for row.
  *
- * The profile card also carries what the future self has LEARNED, each note
- * removable — a memory that can't be corrected is a liability.
+ * The main list is a page of SUMMARIES: one row per topic, its current state
+ * in the subtitle, and the controls behind a push ([MePage]). The flat list
+ * that inlined every switch, slider and chip is what made this page look
+ * nothing like iOS; the controls themselves are unchanged, only moved.
  *
- * Rows, not grids of chips. A level belongs to a language and cannot ride on
- * a chip, and a settings list that inlines every picker becomes a wall where
- * nothing can be scanned.
+ * Order (iOS `body`): profile · Subscribe · Usage + the Core · Learning ·
+ * Daily call / Voice / Sound & mic / Find people · Appearance / Practice
+ * data / Privacy · Say hello · Sign out + Delete account · Developer.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -122,29 +111,22 @@ fun MeScreen(
     persona: UserPersona?,
     targetLanguage: String,
     nativeLanguage: String,
-    onSavePersona: (UserPersona) -> Unit,
+    @Suppress("UNUSED_PARAMETER") onSavePersona: (UserPersona) -> Unit,
     enrolledLanguages: List<String>,
     onSwitchLanguage: (String) -> Unit,
     onAddLanguage: (String, CefrLevel) -> Unit,
     /**
-     * A level changed by hand, for one language.
-     *
-     * The level belongs to the LANGUAGE, not to the app, so it is written
-     * per code — and it is written to `LanguageScope` here whether or not a
-     * host wires this up, because that is the file every store and prompt
-     * reads. What the callback buys is the ACTIVE language's in-memory copy:
-     * without it the new band reaches the next conversation only after a
-     * language switch or a relaunch.
+     * A level changed by hand, for one language. Written to `LanguageScope`
+     * here whether or not a host wires this up; the callback buys the
+     * ACTIVE language's in-memory copy.
      */
     onSetLevel: ((String, CefrLevel) -> Unit)? = null,
-    /** Whether this account has a clone — the Voice row's whole subject. */
+    /** Whether this account has a clone — the Voice page's whole subject. */
     hasVoice: Boolean,
-    /** Browsing the pool — the Talk header's own entry leads here too. */
-    onOpenPeople: () -> Unit,
-    /** Writing and publishing YOUR row. The row below says "publish your
-     *  intro", and until now it opened the browser instead. */
+    @Suppress("UNUSED_PARAMETER") onOpenPeople: () -> Unit,
+    /** Writing and publishing YOUR row (iOS pushes `PublicIntroView`). */
     onOpenPublicIntro: () -> Unit,
-    /** Me → Talk time: the month, the plan, then help. */
+    /** Me → Usage: the month, the plan, then help. */
     onOpenPlanPage: () -> Unit,
     /** The live clone, and the accent it was remixed with. */
     voiceId: String? = null,
@@ -153,8 +135,9 @@ fun MeScreen(
     onRerecordVoice: () -> Unit = {},
     onPickAppLanguage: (String) -> Unit = {},
     onEditProfile: () -> Unit,
-    /** The remembered lines' own page — the profile editor on its home step. */
-    onEditNotes: () -> Unit = onEditProfile,
+    /** The remembered lines live in the profile editor (iOS keeps them out
+     *  of this list); kept so the host's wiring still compiles. */
+    @Suppress("UNUSED_PARAMETER") onEditNotes: () -> Unit = onEditProfile,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
     /** Opens the consent read-back and withdrawal page. */
@@ -163,9 +146,14 @@ fun MeScreen(
     onRestored: () -> Unit,
     onBack: () -> Unit,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    var page by rememberSaveable { mutableStateOf<MePage?>(null) }
+    // Registered first, so the subpage's handler below wins while one is open.
+    BackHandler(onBack = onBack)
+    BackHandler(enabled = page != null) { page = null }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val mainScroll = rememberScrollState()
     var confirmingSignOut by remember { mutableStateOf(false) }
     var confirmingDelete by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
@@ -174,38 +162,33 @@ fun MeScreen(
     LaunchedEffect(targetLanguage) {
         coreProgress = CoreClubClient(AuthRepository()).progress(targetLanguage)
     }
-    var callEnabled by remember {
-        mutableStateOf(com.roro.futurevoice.data.DailyCallStore.isEnabled(context))
-    }
-    // Several calls a day (iOS): the chosen times, minutes after midnight.
-    var callTimes by remember {
-        mutableStateOf(com.roro.futurevoice.data.DailyCallStore.times(context))
-    }
-    val notifPermission = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    var callEnabled by remember { mutableStateOf(DailyCallStore.isEnabled(context)) }
+    // Several calls a day: the chosen times, minutes after midnight. Kept in
+    // edit order here; the store sorts and dedupes what it is handed.
+    var callTimes by remember { mutableStateOf(DailyCallStore.times(context)) }
+    val notifPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()) { }
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var addingLanguage by remember { mutableStateOf(false) }
-    var pickingTheme by remember { mutableStateOf(false) }
-    var managingBackup by remember { mutableStateOf(false) }
     var pickingAccent by remember { mutableStateOf(false) }
     var comparingVoice by remember { mutableStateOf(false) }
     var pickingAppLanguage by remember { mutableStateOf(false) }
-    var pickingMic by remember { mutableStateOf(false) }
     var confirmingRerecord by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
-    // look hung, so the row says where it has got to.
+    // look hung, so the page says where it has got to.
     var backupStep by remember { mutableStateOf<BackupService.Step?>(null) }
     var backupResult by remember { mutableStateOf<String?>(null) }
+    var exportedBackup by remember { mutableStateOf<java.io.File?>(null) }
     val importPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
+            backupStep = BackupService.Step.Decoding
             runCatching { BackupService.import(context, uri) { backupStep = it } }
                 .onSuccess { r ->
                     // The state flow was built from preferences the restore
-                    // has since replaced, so it has to be re-read or the
-                    // install keeps pointing at the old language.
+                    // has since replaced, so it has to be re-read.
                     onRestored()
                     backupResult = if (r.files == 0)
                         context.getString(R.string.that_file_held_no_practice_data)
@@ -215,7 +198,6 @@ fun MeScreen(
             backupStep = null
         }
     }
-    var callVolume by remember { mutableFloatStateOf(AudioPrefs.talkVoiceVolume(context)) }
     var theme by remember { mutableStateOf(FutureselfTheme.stored(context)) }
     LaunchedEffect(Unit) {
         account = AccountStatus.load(AuthRepository()).also { BillingGate.remember(it) }
@@ -225,510 +207,284 @@ fun MeScreen(
             .getInt("futurevoice.dailyGoalMinutes", 10))
     }
     var showingCore by remember { mutableStateOf(false) }
-    // Every enrolled language's level, read once. A `body` that hit the
-    // store per row per recomposition would read preferences on every
-    // keystroke elsewhere on this screen.
+    // Every enrolled language's level, read once.
     var levels by remember { mutableStateOf(mapOf<String, CefrLevel>()) }
     LaunchedEffect(enrolledLanguages) {
         levels = enrolledLanguages.associateWith { storedLevel(context, it) }
     }
-    /** Persist, show it immediately, and tell the host if it asked. */
     val setLevel: (String, CefrLevel) -> Unit = { code, level ->
         LanguageScope.setLevel(context, code, level.code)
         levels = levels + (code to level)
         onSetLevel?.invoke(code, level)
     }
-    // The AI's own read of the active language — the weekly report's pooled
-    // estimate, the same source Progress publishes. A single talk is too
-    // noisy to suggest from, so no report means no row, never a guess.
+    // The weekly report's pooled estimate — the same source Progress
+    // publishes. No report means no row, never a guess.
     var aiLevel by remember { mutableStateOf<CefrLevel?>(null) }
     LaunchedEffect(targetLanguage) {
         aiLevel = WeeklyReportStore.shared(context).latest(targetLanguage)
             ?.cefrLevel?.let { CefrLevel.from(it) }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                colors = AppSurfaces.topBarColors(),
-                // The page is Settings, and says so — "Me" named the tab it
-                // used to live in, not the page.
-                title = { Text(stringResource(R.string.settings)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
-            )
-        }
-    ) { padding ->
-        Column(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp).padding(bottom = 32.dp),
-        ) {
-            // ── Profile ──
-            GroupedCard {
-                Row(
-                    Modifier.fillMaxWidth().clickable(onClick = onEditProfile)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    ProfileAvatar(initials = persona?.displayName.orEmpty(), size = 52.dp)
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            persona?.displayName?.takeIf { it.isNotBlank() }
-                                ?: stringResource(R.string.profile),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary)
-                        // An INVITATION, not an account label. The city and
-                        // the email told the learner nothing they could act
-                        // on; what this row can do is make the fluent self
-                        // know them better, so it asks for the missing parts
-                        // until there are none (iOS `0ea96e7`).
-                        val complete = persona != null &&
-                            persona.displayName.isNotBlank() && persona.city.isNotBlank() &&
-                            persona.occupation.isNotBlank() &&
-                            persona.interests.isNotEmpty() && persona.situations.isNotEmpty()
-                        Text(
-                            stringResource(if (complete) R.string.what_your_fluent_self_knows_about_you
-                            else R.string.tap_to_complete_your_profile),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1)
-                    }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outline)
-                }
-                // What the future self has learned — the other half of the
-                // profile. Each note removable; the learner can always
-                // correct the memory. A tap opens the lines with their
-                // evidence and what strangers hear; the lock says it here.
-                persona?.learnedNotes?.takeIf { it.isNotEmpty() }?.forEach { note ->
-                    GroupedRowDivider()
-                    Row(Modifier.fillMaxWidth().clickable(onClick = onEditNotes)
-                        .padding(start = 14.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            when (note.share) {
-                                com.roro.futurevoice.talk.PersonaNote.Share.NOTHING -> Icons.Filled.Lock
-                                com.roro.futurevoice.talk.PersonaNote.Share.GIST ->
-                                    Icons.AutoMirrored.Filled.ShortText
-                                com.roro.futurevoice.talk.PersonaNote.Share.ALL -> Icons.Filled.LockOpen
-                            },
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(end = 10.dp).size(14.dp))
-                        Text(note.text, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f).padding(vertical = 10.dp))
-                        TextButton(onClick = {
-                            onSavePersona(persona.copy(
-                                learnedNotes = persona.learnedNotes.filterNot { it.id == note.id }))
-                        }) { Text("×") }
-                    }
-                }
-            }
+    val setCallEnabled: (Boolean) -> Unit = { on ->
+        callEnabled = on
+        DailyCallStore.setTimes(context, on, callTimes)
+        if (on) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
 
-            // ── Subscribe / Subscription ──
-            // On its own and first: this is the one control that decides
-            // whether the app works at all.
-            GroupedSectionSpacer()
-            GroupedCard {
-                val acct = account
-                // The plan's NAME is the row's value, the way iOS states a
-                // standing fact that goes nowhere. What the month cost is
-                // the Usage row's job, one card down — saying it twice made
-                // the two rows argue about which one you were meant to read.
-                MeRow(Icons.Filled.AutoAwesome,
-                    stringResource(
-                        if (acct?.isEntitled == true) R.string.subscription
-                        else R.string.subscribe),
-                    // Nothing is claimed about the account until it answers:
-                    // "Talking needs a plan" under a spinner is the app
-                    // telling a subscriber they have no plan.
-                    if (acct == null || acct.isEntitled) null
-                    else stringResource(R.string.talking_needs_a_plan),
-                    value = when {
-                        acct == null -> stringResource(R.string.checking)
-                        acct.isPlusPlan -> stringResource(R.string.plan_tier_plus)
-                        acct.isEntitled -> stringResource(R.string.plan_tier_light)
-                        else -> null
-                    },
-                    onClick = onOpenPaywall)
-            }
-
-            // ── Usage, and the club ──
-            // Not "Talk time": the page behind it reports Watch scenes and
-            // the subscription too, and a row that names only one of the
-            // three sends the other two questions somewhere else.
-            GroupedSectionSpacer()
-            GroupedCard {
-                // What was SPENT, never what is left: a remainder is a
-                // monthly receipt for time NOT used.
-                MeRow(Icons.Filled.Bolt, stringResource(R.string.usage),
-                    talkTimeLabel(account), onClick = onOpenPlanPage)
-                GroupedRowDivider()
-                // The bar belongs in the row, not in a footer under the
-                // card: someone who has never heard of the Core reads the
-                // subtitle as what this is, and a footer floating outside
-                // the card reads as a note about both rows above it.
-                MeRow(Icons.Filled.WorkspacePremium, stringResource(R.string.the_core),
-                    coreSubtitle(coreProgress),
-                    leading = if (coreProgress?.seated == true) ({ CoreSeal(size = 20.dp) })
-                    else null,
-                    onClick = { showingCore = true })
-            }
-
-            // ── Learning ──
-            // There are exactly two kinds of language here: the ones you are
-            // learning, and the one the app talks to you in. They are ROWS,
-            // not grids of chips — each language wears its own level, and a
-            // level cannot ride on a chip. The goal and the app language sit
-            // with them because they are the other two answers to "how do I
-            // learn here", not app chrome.
-            GroupedSectionHeader(stringResource(R.string.learning))
-            GroupedCard {
-                enrolledLanguages.forEachIndexed { index, code ->
-                    if (index > 0) GroupedRowDivider()
-                    LanguageRow(
-                        code = code,
-                        active = code == targetLanguage,
-                        level = levels[code] ?: CefrLevel.B1,
-                        // Switching is not a page: every store already takes
-                        // the language as a parameter, so a switch is only a
-                        // change of which one they are handed.
-                        onSelect = { if (code != targetLanguage) onSwitchLanguage(code) },
-                        onLevel = { setLevel(code, it) },
-                    )
+    when (page) {
+        MePage.DAILY_CALL -> DailyCallPage(
+            enabled = callEnabled,
+            times = callTimes,
+            onEnabledChange = setCallEnabled,
+            onTimesChange = { next ->
+                callTimes = next
+                DailyCallStore.setTimes(context, true, next)
+            },
+            onBack = { page = null; callTimes = DailyCallStore.times(context) },
+        )
+        MePage.VOICE -> VoicePage(
+            hasVoice = hasVoice, voiceId = voiceId, targetLanguage = targetLanguage,
+            voiceAccentId = voiceAccentId,
+            onPickAccent = { pickingAccent = true },
+            onCompare = { comparingVoice = true },
+            onRerecord = { confirmingRerecord = true },
+            onBack = { page = null },
+        )
+        MePage.SOUND -> SoundPage(onBack = { page = null })
+        MePage.APPEARANCE -> AppearancePage(onPicked = { theme = it }, onBack = { page = null })
+        MePage.DATA -> DataPage(
+            step = backupStep,
+            exported = exportedBackup,
+            onExport = {
+                exportedBackup = null
+                backupStep = BackupService.Step.Scanning
+                scope.launch {
+                    runCatching { BackupService.export(context) { backupStep = it } }
+                        .onSuccess { exportedBackup = it }
+                        .onFailure { backupResult = it.message ?: "" }
+                    backupStep = null
                 }
-                // The AI's read is a SUGGESTION, never an assignment: the
-                // level is the learner's setting and only a tap moves it.
-                // Only once the current level is actually known — comparing
-                // against a map that hasn't loaded suggests a level the
-                // learner may already be on.
-                aiLevel?.takeIf { levels[targetLanguage] != null && it != levels[targetLanguage] }
-                    ?.let { ai ->
-                    GroupedRowDivider()
-                    MeRow(Icons.Filled.AutoAwesome,
-                        stringResource(R.string.ai_read_tap_to_apply, ai.code.uppercase()),
-                        stringResource(R.string.from_your_recent_conversations,
-                            LanguageCatalog.endonym(targetLanguage)),
-                        chevron = false,
-                        onClick = { setLevel(targetLanguage, ai) })
-                }
-                GroupedRowDivider()
-                // Never gated on a plan: every server pool is keyed per
-                // ACCOUNT with no language in it, so a second language adds
-                // no cost.
-                MeRow(Icons.Filled.AddCircleOutline, stringResource(R.string.add_a_language),
-                    stringResource(R.string.same_voice_new_language),
-                    chevron = false,
-                    onClick = { addingLanguage = true })
-                GroupedRowDivider()
-                PickerRow(
-                    icon = Icons.Filled.TrackChanges,
-                    title = stringResource(R.string.daily_goal),
-                    subtitle = stringResource(R.string.minutes_of_speaking_per_day),
-                    value = stringResource(R.string.lld_min_b61908, goal),
-                    options = listOf(5, 10, 15, 20, 30, 45, 60)
-                        .map { it to stringResource(R.string.lld_min_b61908, it) },
-                    onPick = { m ->
-                        goal = m
-                        context.getSharedPreferences("futurevoice", 0).edit()
-                            .putInt("futurevoice.dailyGoalMinutes", m).apply()
+            },
+            onShare = { BookExport.share(context, it, "application/json") },
+            onImport = { importPicker.launch(arrayOf("application/json")) },
+            onBack = { page = null },
+        )
+        null -> Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    colors = AppSurfaces.topBarColors(),
+                    title = { Text(stringResource(R.string.settings),
+                        style = MaterialTheme.typography.titleMedium) },
+                    // A sheet that closes with Done, as on iOS — no back arrow.
+                    // The system back gesture still closes it.
+                    actions = {
+                        TextButton(onClick = onBack) {
+                            Text(stringResource(R.string.done),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold)
+                        }
                     },
                 )
-                GroupedRowDivider()
-                // The app's own screens, and the language corrections come
-                // back in — one choice, because a learner has one language
-                // they think in.
-                MeRow(Icons.Filled.Translate, stringResource(R.string.app_language),
-                    AppLanguageNames.of(nativeLanguage),
-                    onClick = { pickingAppLanguage = true })
             }
-            GroupedFooter(stringResource(
-                R.string.tap_a_language_to_practice_it_its_level_calibrates_every_con_1ff279))
+        ) { padding ->
+            Column(
+                Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
+                    .verticalScroll(mainScroll)
+                    .padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 32.dp),
+            ) {
+                // ── Profile ──
+                GroupedCard { ProfileHeader(persona, onEditProfile) }
 
-            // A schedule the app can't ring is the worst failure here: the
-            // learner thinks they'll be reminded and they won't. Shown only
-            // when it's actually off.
-            if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                // ── Subscribe / Subscription ── on its own and first: the one
+                // control that decides whether the app works at all.
                 GroupedSectionSpacer()
                 GroupedCard {
-                    MeRow(Icons.Filled.NotificationsOff, stringResource(R.string.notifications_are_off),
-                        stringResource(R.string.reminders_cant_reach_you), onClick = {
-                            context.startActivity(
-                                android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                        })
+                    val acct = account
+                    // Nothing is claimed until the account answers: "Talking
+                    // needs a plan" under a spinner tells a subscriber they
+                    // have no plan.
+                    val hasPlan = acct == null || acct.isEntitled || acct.unlimited
+                    MeRow(Icons.Outlined.AutoAwesome,
+                        stringResource(if (hasPlan) R.string.subscription else R.string.subscribe),
+                        if (hasPlan) null else stringResource(R.string.talking_needs_a_plan),
+                        kind = MeRowKind.ACTION,
+                        value = when {
+                            acct == null -> stringResource(R.string.checking)
+                            acct.unlimited -> "Admin"
+                            acct.isPlusPlan -> stringResource(R.string.plan_tier_plus)
+                            acct.isEntitled -> stringResource(R.string.plan_tier_light)
+                            else -> null
+                        },
+                        onClick = onOpenPaywall)
                 }
-            }
 
-            // ── Call — the habit anchor. Answering opens the talk. ──
-            GroupedSectionHeader(stringResource(R.string.call))
-            GroupedCard {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.daily_call), Modifier.weight(1f))
-                    androidx.compose.material3.Switch(checked = callEnabled, onCheckedChange = { on ->
-                        callEnabled = on
-                        com.roro.futurevoice.data.DailyCallStore.setTimes(context, on, callTimes)
-                        if (on) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                    })
+                // ── Usage, and the club ──
+                GroupedSectionSpacer()
+                GroupedCard {
+                    MeRow(Icons.Filled.Bolt, stringResource(R.string.usage),
+                        talkTimeLabel(account), onClick = onOpenPlanPage)
+                    GroupedRowDivider()
+                    // Filled seal only while seated — the seal is current
+                    // membership, never a past one.
+                    MeRow(Icons.Outlined.WorkspacePremium, stringResource(R.string.the_core),
+                        coreSubtitle(coreProgress),
+                        leading = if (coreProgress?.seated == true) ({ CoreSeal(size = 18.dp) })
+                        else null,
+                        onClick = { showingCore = true })
                 }
-                if (callEnabled) {
-                    // Without the exact-alarm grant the call still rings, just
-                    // inside a window — say so rather than letting a learner
-                    // wonder why 08:00 became 08:06. The route is a system
-                    // settings page; there is no in-app prompt for it.
-                    if (!com.roro.futurevoice.data.DailyCallScheduler
-                            .canScheduleExact(context = context)) {
-                        GroupedRowDivider(inset = false)
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clickable {
-                                    runCatching {
-                                        context.startActivity(android.content.Intent(
-                                            android.provider.Settings
-                                                .ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                                            android.net.Uri.parse("package:${context.packageName}")))
-                                    }
-                                }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(stringResource(R.string.ring_exactly_on_time))
-                                Text(stringResource(R.string.without_this_the_call_can_arrive_a_few_minutes_late),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null, modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    GroupedRowDivider(inset = false)
-                    FlowRow(
-                        Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        // Toggle a time on or off: up to four, never none.
-                        listOf(7, 8, 9, 12, 19, 21).forEach { h ->
-                            val m = h * 60
-                            val on = m in callTimes
-                            FilterChip(selected = on, onClick = {
-                                val next = if (on) callTimes - m
-                                    else (callTimes + m).takeIf { it.size <= com.roro.futurevoice.data.DailyCallStore.MAX_TIMES } ?: callTimes
-                                if (next.isEmpty() || next == callTimes) return@FilterChip
-                                callTimes = next.sorted()
-                                com.roro.futurevoice.data.DailyCallStore.setTimes(context, true, callTimes)
-                            }, label = { Text("%02d:00".format(h)) })
-                        }
-                    }
-                }
-            }
 
-            // ── The voice, and how it reaches the learner's ears ──
-            GroupedSectionSpacer()
-            GroupedCard {
-                MeRow(Icons.Filled.RecordVoiceOver, stringResource(R.string.voice),
-                    if (hasVoice) stringResource(R.string.your_cloned_voice)
-                    else stringResource(R.string.not_set_up_yet),
-                    onClick = null)
-                // "It doesn't sound like me" gets an answer, not a shrug: the
-                // recording and the clone on the same sentence.
-                if (hasVoice && voiceId != null && VoiceComparison.exists(context.filesDir)) {
-                    GroupedRowDivider()
-                    MeRow(Icons.Filled.GraphicEq, stringResource(R.string.doesn_t_sound_like_you),
-                        stringResource(R.string.hear_your_recording_and_your_clone_side_by_side), onClick = { comparingVoice = true })
-                }
-                // Which mic records the learner. Shown only where the answer
-                // changes something — with nothing but the phone's own mic
-                // there is nothing to choose.
-                if (com.roro.futurevoice.data.MicPreference.headsetConnected(context)
-                    || com.roro.futurevoice.data.MicPreference.hasChosen(context)) {
-                    GroupedRowDivider()
-                    MeRow(Icons.Filled.Headphones, stringResource(R.string.which_mic),
-                        stringResource(
-                            if (com.roro.futurevoice.data.MicPreference.current(context)
-                                == com.roro.futurevoice.data.MicPreference.PHONE) R.string.phone_mic
-                            else R.string.earphone_mic),
-                        onClick = { pickingMic = true })
-                }
-                if (hasVoice) {
-                    GroupedRowDivider()
-                    MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
-                        stringResource(R.string.replace_your_current_clone_with_a_new_one), onClick = { confirmingRerecord = true })
-                }
-                // A clone recorded in the learner's own language carries no
-                // target-language accent, so the model borrows a default.
-                // Only offered where the catalog has options — an empty
-                // picker is worse than no row.
-                if (hasVoice && com.roro.futurevoice.data.VoiceAccentCatalog
-                        .options(targetLanguage).isNotEmpty()) {
-                    GroupedRowDivider()
-                    MeRow(Icons.Filled.Translate, stringResource(R.string.accent),
-                        com.roro.futurevoice.data.VoiceAccentCatalog
-                            .options(targetLanguage).firstOrNull { it.id == voiceAccentId }?.label
-                            ?: stringResource(R.string.as_recorded),
-                        onClick = { pickingAccent = true })
-                }
-                GroupedRowDivider()
-                // Under Accent because it is the same kind of question: the
-                // voice stays theirs, only how it speaks changes. SYNTHESIS,
-                // not playback — the pitch is untouched. Takes effect on the
-                // next line made; a call already running keeps its speed.
-                run {
-                    var speed by remember { mutableStateOf(com.roro.futurevoice.data.SpeechSpeed.current(context)) }
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Icon(Icons.Filled.Speed, contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                            Text(stringResource(R.string.speaking_speed), Modifier.weight(1f))
-                        }
-                        androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                            val all = com.roro.futurevoice.data.SpeechSpeed.entries
-                            all.forEachIndexed { i, s ->
-                                SegmentedButton(
-                                    selected = speed == s,
-                                    onClick = {
-                                        speed = s
-                                        com.roro.futurevoice.data.SpeechSpeed.set(context, s)
-                                        com.roro.futurevoice.core.Analytics.capture("speech_speed_changed",
-                                            mapOf("speed" to s.raw, "where" to "me"))
-                                    },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, all.size),
-                                ) { Text(stringResource(s.label), maxLines = 1) }
-                            }
-                        }
+                // ── Learning ──
+                GroupedSectionHeader(stringResource(R.string.learning))
+                GroupedCard {
+                    enrolledLanguages.forEachIndexed { index, code ->
+                        if (index > 0) GroupedRowDivider()
+                        LanguageRow(
+                            code = code,
+                            active = code == targetLanguage,
+                            level = levels[code] ?: CefrLevel.B1,
+                            onSelect = { if (code != targetLanguage) onSwitchLanguage(code) },
+                            onLevel = { setLevel(code, it) },
+                        )
                     }
-                }
-                GroupedRowDivider()
-                // How loud the fluent self speaks. On Bluetooth a call plays
-                // through the earphone's CALL chain, which the system's
-                // headphone-safety cap does NOT limit — so with that cap on
-                // the call can tower over everything else the app plays. We
-                // cannot detect the cap and will not tell anyone to switch
-                // off a hearing-safety setting; this brings the voice DOWN
-                // to meet it.
-                Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Filled.VolumeUp, contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary)
-                        Text(stringResource(R.string.call_voice_volume), Modifier.weight(1f))
-                        Text("${(callVolume * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Slider(
-                        value = callVolume,
-                        onValueChange = { callVolume = it },
-                        onValueChangeFinished = { AudioPrefs.setTalkVoiceVolume(context, callVolume) },
-                        // Never to zero: a slider that can silence the fluent
-                        // self is a way to make the app look broken.
-                        valueRange = 0.25f..1f,
-                        steps = 14,
+                    // A SUGGESTION, never an assignment: only a tap moves it.
+                    aiLevel?.takeIf { levels[targetLanguage] != null && it != levels[targetLanguage] }
+                        ?.let { ai ->
+                            GroupedRowDivider()
+                            MeRow(Icons.Outlined.AutoAwesome,
+                                stringResource(R.string.ai_read_tap_to_apply, ai.code.uppercase()),
+                                stringResource(R.string.from_your_recent_conversations,
+                                    LanguageCatalog.endonym(targetLanguage)),
+                                kind = MeRowKind.ACTION,
+                                onClick = { setLevel(targetLanguage, ai) })
+                        }
+                    GroupedRowDivider()
+                    // Never gated on a plan: every pool is keyed per ACCOUNT.
+                    MeRow(Icons.Outlined.AddCircleOutline, stringResource(R.string.add_a_language),
+                        stringResource(R.string.same_voice_new_language),
+                        kind = MeRowKind.ACTION,
+                        onClick = { addingLanguage = true })
+                    GroupedRowDivider()
+                    MePickerRow(
+                        icon = Icons.Outlined.TrackChanges,
+                        title = stringResource(R.string.daily_goal),
+                        subtitle = stringResource(R.string.minutes_of_speaking_per_day),
+                        value = stringResource(R.string.lld_min_b61908, goal),
+                        options = listOf(5, 10, 15, 20, 30, 45, 60)
+                            .map { it to stringResource(R.string.lld_min_b61908, it) },
+                        onPick = { m ->
+                            goal = m
+                            context.getSharedPreferences("futurevoice", 0).edit()
+                                .putInt("futurevoice.dailyGoalMinutes", m).apply()
+                        },
                     )
-                }
-                GroupedRowDivider()
-                MeRow(Icons.Filled.Groups, stringResource(R.string.find_people),
-                    stringResource(R.string.publish_your_intro),
-                    onClick = onOpenPublicIntro)
-            }
-
-            GroupedSectionSpacer()
-            GroupedCard {
-                MeRow(Icons.Filled.Palette, stringResource(R.string.appearance),
-                    theme.label, onClick = { pickingTheme = true })
-                GroupedRowDivider()
-                // Moving progress between INSTALLS — the dev build and the
-                // release build are separate sandboxes. The envelope is
-                // iOS's, so a backup written on an iPhone opens here.
-                MeRow(Icons.Filled.ImportExport, stringResource(R.string.practice_data),
-                    backupStep?.let { stepLabel(it) }
-                        ?: stringResource(R.string.export_or_import_this_devices_practice),
-                    onClick = if (backupStep == null) ({ managingBackup = true }) else null)
-                GroupedRowDivider()
-                MeRow(Icons.Filled.PrivacyTip, stringResource(R.string.privacy),
-                    if (com.roro.futurevoice.data.ConsentStore.hasVoiceConsent(context))
-                        stringResource(R.string.voice_consent_policy)
-                    else stringResource(R.string.policy),
-                    onClick = onOpenPrivacy)
-            }
-
-            // Writing to the person who builds this — one tap, no compose
-            // window. It sits in the main list rather than inside Privacy,
-            // where the only contact row used to live and where it reads as a
-            // data-request address. The footer names who is on the other end:
-            // a learner will not write to a support desk about a feature they
-            // wish existed, and they will write to a person.
-            val channels = com.roro.futurevoice.data.SupportChannel.available
-            if (channels.isNotEmpty()) {
-                GroupedSectionSpacer()
-                GroupedSectionHeader(stringResource(R.string.say_hello))
-                GroupedCard {
-                    channels.forEachIndexed { i, channel ->
-                        if (i > 0) GroupedRowDivider()
-                        MeRow(
-                            if (channel == com.roro.futurevoice.data.SupportChannel.INSTAGRAM)
-                                Icons.Filled.Forum else Icons.AutoMirrored.Filled.Send,
-                            stringResource(channel.titleRes), channel.subtitle,
-                            onClick = channel.url?.let { url -> {
-                                runCatching {
-                                    context.startActivity(android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse(url)).apply {
-                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    })
-                                }
-                            } })
-                    }
+                    GroupedRowDivider()
+                    MeRow(Icons.Outlined.Language, stringResource(R.string.app_language),
+                        AppLanguageNames.of(nativeLanguage),
+                        onClick = { pickingAppLanguage = true })
                 }
                 GroupedFooter(stringResource(
-                    R.string.one_person_builds_this_app_and_reads_every_message_tell_me_w_bd3eae))
-            }
+                    R.string.tap_a_language_to_practice_it_its_level_calibrates_every_con_1ff279))
 
-            // ── Account ──
-            GroupedSectionSpacer()
-            GroupedCard {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
-                    Text(email.orEmpty(), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // ── Call, voice, sound, people ──
+                GroupedSectionSpacer()
+                GroupedCard {
+                    MeRow(Icons.Outlined.PhoneCallback, stringResource(R.string.daily_call),
+                        if (callEnabled) callTimes.sorted().joinToString(" · ") {
+                            "%02d:%02d".format(it / 60, it % 60)
+                        } else stringResource(R.string.off),
+                        onClick = { page = MePage.DAILY_CALL })
+                    GroupedRowDivider()
+                    MeRow(Icons.Outlined.RecordVoiceOver, stringResource(R.string.voice),
+                        stringResource(if (hasVoice) R.string.your_cloned_voice
+                            else R.string.not_set_up_yet),
+                        onClick = { page = MePage.VOICE })
+                    GroupedRowDivider()
+                    MeRow(Icons.Outlined.VolumeUp, stringResource(R.string.sound_mic),
+                        soundSummary(), onClick = { page = MePage.SOUND })
+                    GroupedRowDivider()
+                    MeRow(Icons.Outlined.Groups, stringResource(R.string.find_people),
+                        stringResource(R.string.publish_your_intro),
+                        onClick = onOpenPublicIntro)
                 }
+
+                // ── Appearance, data, privacy ──
+                GroupedSectionSpacer()
+                GroupedCard {
+                    MeRow(Icons.Outlined.Palette, stringResource(R.string.appearance),
+                        theme.label, onClick = { page = MePage.APPEARANCE })
+                    GroupedRowDivider()
+                    MeRow(Icons.Outlined.Storage, stringResource(R.string.practice_data),
+                        backupStep?.let { backupStepLabel(it) }
+                            ?: stringResource(R.string.export_or_import_this_devices_practice),
+                        onClick = { page = MePage.DATA })
+                    GroupedRowDivider()
+                    MeRow(Icons.Outlined.PanTool, stringResource(R.string.privacy),
+                        if (com.roro.futurevoice.data.ConsentStore.hasVoiceConsent(context))
+                            stringResource(R.string.voice_consent_policy)
+                        else stringResource(R.string.policy),
+                        onClick = onOpenPrivacy)
+                }
+
+                // ── Say hello ── one tap to the person who builds this.
+                val channels = com.roro.futurevoice.data.SupportChannel.available
+                if (channels.isNotEmpty()) {
+                    GroupedSectionHeader(stringResource(R.string.say_hello))
+                    GroupedCard {
+                        channels.forEachIndexed { i, channel ->
+                            if (i > 0) GroupedRowDivider()
+                            MeRow(
+                                if (channel == com.roro.futurevoice.data.SupportChannel.INSTAGRAM)
+                                    Icons.Filled.Forum else Icons.AutoMirrored.Filled.Send,
+                                stringResource(channel.titleRes), channel.subtitle,
+                                kind = MeRowKind.ACTION,
+                                onClick = channel.url?.let { url -> {
+                                    runCatching {
+                                        context.startActivity(android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(url)).apply {
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        })
+                                    }
+                                } })
+                        }
+                    }
+                    GroupedFooter(stringResource(
+                        R.string.one_person_builds_this_app_and_reads_every_message_tell_me_w_bd3eae))
+                }
+
+                // ── Account ──
+                GroupedSectionSpacer()
+                GroupedCard {
+                    MeRow(Icons.AutoMirrored.Filled.Logout, stringResource(R.string.sign_out_dc1649),
+                        kind = MeRowKind.DESTRUCTIVE, onClick = { confirmingSignOut = true })
+                    GroupedRowDivider()
+                    // Play requires an in-app, reachable path to deletion.
+                    MeRow(Icons.Outlined.Delete, stringResource(R.string.delete_account),
+                        kind = MeRowKind.DESTRUCTIVE, enabled = !deleting,
+                        trailing = if (deleting) ({
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        }) else null,
+                        onClick = { confirmingDelete = true })
+                }
+                // Which account this is — iOS has no row for it; on Android the
+                // email was on this card, so it rides in the footer instead.
+                GroupedFooter(listOfNotNull(
+                    stringResource(
+                        R.string.deleting_your_account_permanently_removes_your_voice_clone_t_43bafb),
+                    email?.takeIf { it.isNotBlank() },
+                ).joinToString("\n\n"))
+
                 // Never in a capture build — a dev button is gallery noise.
                 if (com.roro.futurevoice.BuildConfig.DEBUG &&
                     com.roro.futurevoice.BuildConfig.BUILD_TYPE != "capture") {
-                    GroupedRowDivider(inset = false)
-                    PlainActionRow("Ring now (debug)",
-                        MaterialTheme.colorScheme.primary) {
-                        com.roro.futurevoice.data.DailyCallScheduler.ring(context)
+                    GroupedSectionHeader(stringResource(R.string.developer))
+                    GroupedCard {
+                        MeRow(Icons.Filled.NotificationsActive, "Ring now (debug)",
+                            kind = MeRowKind.ACTION,
+                            onClick = { com.roro.futurevoice.data.DailyCallScheduler.ring(context) })
                     }
                 }
-                GroupedRowDivider(inset = false)
-                PlainActionRow(stringResource(R.string.sign_out_dc1649),
-                    MaterialTheme.colorScheme.error) { confirmingSignOut = true }
-                GroupedRowDivider(inset = false)
-                // Play requires an in-app path to account deletion for any
-                // app that creates accounts, and it has to be reachable —
-                // not behind a support email.
-                PlainActionRow(stringResource(R.string.delete_account),
-                    MaterialTheme.colorScheme.error) { if (!deleting) confirmingDelete = true }
             }
-            // What deleting actually takes with it, said before the tap and
-            // not only inside the confirmation.
-            GroupedFooter(stringResource(
-                R.string.deleting_your_account_permanently_removes_your_voice_clone_t_43bafb))
         }
     }
 
@@ -740,14 +496,17 @@ fun MeScreen(
         AlertDialog(
             onDismissRequest = { confirmingSignOut = false },
             title = { Text(stringResource(R.string.sign_out_b11555)) },
+            text = { Text(stringResource(
+                R.string.your_practice_data_stays_on_this_device_your_voice_clone_and_2c4c4e)) },
             confirmButton = {
                 TextButton(onClick = { confirmingSignOut = false; onSignOut() }) {
-                    Text(stringResource(R.string.sign_out_dc1649))
+                    Text(stringResource(R.string.sign_out_dc1649),
+                        color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmingSignOut = false }) {
-                    Text(stringResource(R.string.back))
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -763,10 +522,8 @@ fun MeScreen(
                     confirmingDelete = false
                     deleting = true
                     scope.launch {
-                        // The server goes FIRST and the device is only erased
-                        // once it succeeded — a local wipe on a failed request
-                        // leaves a learner with a billable account they can no
-                        // longer reach.
+                        // Server FIRST; the device is erased only once it
+                        // succeeded.
                         runCatching { AccountEraser.deleteAccount(context) }
                             .onSuccess { onSignOut() }
                             .onFailure { deleteError = it.message ?: "" }
@@ -807,52 +564,6 @@ fun MeScreen(
         )
     }
 
-    if (managingBackup) {
-        ModalBottomSheet(onDismissRequest = { managingBackup = false }) {
-            Column(
-                Modifier.fillMaxWidth().bottomBarInsets()
-                    .padding(horizontal = 20.dp).padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(stringResource(R.string.practice_data),
-                    style = MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.a_backup_moves_your_practice_between_installs),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(
-                    onClick = {
-                        managingBackup = false
-                        scope.launch {
-                            val file = runCatching {
-                                BackupService.export(context) { backupStep = it }
-                            }.getOrNull()
-                            backupStep = null
-                            // Build it with a visible bar, THEN share the
-                            // finished file. Packing inside a share sheet is
-                            // a minutes-long wait behind a screen that shows
-                            // nothing.
-                            file?.let { BookExport.share(context, it, "application/json") }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.export_practice_data)) }
-                OutlinedButton(
-                    onClick = {
-                        managingBackup = false
-                        importPicker.launch(arrayOf("application/json"))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.import_practice_data)) }
-            }
-        }
-    }
-
-    if (pickingMic) {
-        MicChoiceSheet(onChoose = { choice ->
-            com.roro.futurevoice.data.MicPreference.set(context, choice)
-            pickingMic = false
-        })
-    }
     if (pickingAppLanguage) {
         AppLanguageSheet(current = nativeLanguage, onPick = { code ->
             pickingAppLanguage = false
@@ -863,8 +574,7 @@ fun MeScreen(
         VoiceComparisonSheet(voiceId = voiceId, targetLanguage = targetLanguage,
             onRerecord = { confirmingRerecord = true }, onDismiss = { comparingVoice = false })
     }
-    // Outside onboarding a re-record is the full destructive path, so it
-    // goes through a confirmation.
+    // Outside onboarding a re-record is the full destructive path.
     if (confirmingRerecord) {
         AlertDialog(onDismissRequest = { confirmingRerecord = false },
             title = { Text(stringResource(R.string.re_record_voice)) },
@@ -879,17 +589,9 @@ fun MeScreen(
             appliedAccentId = voiceAccentId,
             onApplied = onAccentApplied,
             // Leaving without applying leaves the learner on the rebuilt,
-            // un-accented clone — the honest state, and the app has to know
-            // which voice it now holds.
+            // un-accented clone — the app has to know which voice it holds.
             onCloneRebuilt = { onAccentApplied(it, "") },
             onDismiss = { pickingAccent = false },
-        )
-    }
-
-    if (pickingTheme) {
-        AppearanceSheet(
-            onPicked = { theme = it },
-            onDismiss = { pickingTheme = false },
         )
     }
 
@@ -900,6 +602,43 @@ fun MeScreen(
             onAdd = { code, level -> addingLanguage = false; onAddLanguage(code, level) },
             onDismiss = { addingLanguage = false },
         )
+    }
+}
+
+/**
+ * iOS `profileHeader`: avatar, name, ONE line that invites rather than
+ * labels. It is a Button in iOS's list, so the whole label wears the tint.
+ * The remembered lines are NOT here — they live in the profile editor.
+ */
+@Composable
+private fun ProfileHeader(persona: UserPersona?, onClick: () -> Unit) {
+    val accent = MaterialTheme.colorScheme.primary
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        ProfileAvatar(initials = persona?.displayName.orEmpty(), size = 56.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                persona?.displayName?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.set_up_your_profile),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = accent)
+            val complete = persona != null &&
+                persona.displayName.isNotBlank() && persona.city.isNotBlank() &&
+                persona.occupation.isNotBlank() &&
+                persona.interests.isNotEmpty() && persona.situations.isNotEmpty()
+            Text(
+                stringResource(if (complete) R.string.what_your_fluent_self_knows_about_you
+                else R.string.tap_to_complete_your_profile),
+                style = MaterialTheme.typography.bodyMedium,
+                color = accent.copy(alpha = 0.6f),
+                maxLines = 1)
+        }
+        MeChevron(tint = accent.copy(alpha = 0.4f))
     }
 }
 
@@ -980,86 +719,9 @@ private fun AddLanguageSheet(
 }
 
 /**
- * Where a pack or a restore has got to.
- *
- * Both directions are slow enough to look hung — a full library is hundreds
- * of megabytes — so the per-file loops are counted, and the two opaque ends
- * (encoding the envelope, decoding it back) get named steps of their own
- * rather than a frozen row.
- */
-@Composable
-private fun stepLabel(step: BackupService.Step): String = when (step) {
-    BackupService.Step.Scanning -> stringResource(R.string.scanning)
-    is BackupService.Step.Packing ->
-        stringResource(R.string.packing_lld_of_lld, step.done, step.total)
-    BackupService.Step.Encoding -> stringResource(R.string.encoding)
-    BackupService.Step.Decoding -> stringResource(R.string.decoding)
-    is BackupService.Step.Writing ->
-        stringResource(R.string.restoring_lld_of_lld, step.done, step.total)
-}
-
-/**
- * One settings row inside a grouped card.
- *
- * The subtitle is the SETTING'S CURRENT VALUE, not a description of the
- * screen behind it — that is what lets the page be read without opening
- * anything.
- */
-@Composable
-private fun MeRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    onClick: (() -> Unit)?,
-    /** A standing fact stated on the right — a plan's name, a level. Never a
-     *  destination, which is what the chevron is for. */
-    value: String? = null,
-    /** Off for a row that ACTS rather than opens: a chevron there promises a
-     *  page that isn't coming. */
-    chevron: Boolean = true,
-    /** Drawn instead of [icon] where the mark is not a glyph — the Core's
-     *  seal is a drawing, and it is the one badge in the app. */
-    leading: (@Composable () -> Unit)? = null,
-) {
-    Row(
-        Modifier.fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (leading != null) {
-            Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) { leading() }
-        } else {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary)
-        }
-        Column(Modifier.weight(1f)) {
-            Text(title)
-            subtitle?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        value?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (onClick != null && chevron) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-/**
- * One enrolled language, wearing its own level.
- *
- * Two targets in one row, on purpose: the NAME switches to that language,
- * the LEVEL opens its menu. The level belongs to the language, not to the
- * app — someone at C1 in English starting German is not a C1 German speaker
- * — so it can be fixed without switching to that language first.
+ * One enrolled language, wearing its own level (iOS: a plain-style Button
+ * row plus an inline menu Picker). The NAME switches to that language; the
+ * LEVEL opens its menu, so a level is fixed without switching first.
  */
 @Composable
 private fun LanguageRow(
@@ -1071,39 +733,33 @@ private fun LanguageRow(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            Modifier.weight(1f).clickable(onClick = onSelect).padding(vertical = 12.dp),
+            Modifier.weight(1f).clickable(onClick = onSelect)
+                .padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                if (active) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = if (active) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.outline,
-            )
-            Column {
-                Text(LanguageCatalog.endonym(code))
+            Box(Modifier.width(22.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    if (active) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                    contentDescription = null, modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(LanguageCatalog.endonym(code), style = MaterialTheme.typography.bodyLarge)
                 Text(LanguageCatalog.englishName(code),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Box {
-            Row(
-                Modifier.clickable { expanded = true }
-                    .padding(horizontal = 6.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(LanguageCatalog.levelLabel(level, code),
-                    color = MaterialTheme.colorScheme.primary)
-                Icon(Icons.Filled.UnfoldMore, contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary)
+            Box(Modifier.clickable { expanded = true }
+                .padding(horizontal = 8.dp, vertical = 12.dp)) {
+                MePickerValue(LanguageCatalog.levelLabel(level, code))
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 CefrLevel.entries.forEach { l ->
@@ -1112,52 +768,6 @@ private fun LanguageRow(
                         onClick = { expanded = false; onLevel(l) },
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * A settings row whose value is chosen from a short list — iOS's menu-style
- * `Picker`. The value stands where a chevron would; the list opens on it.
- */
-@Composable
-private fun <T> PickerRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    value: String,
-    options: List<Pair<T, String>>,
-    onPick: (T) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        Row(
-            Modifier.fillMaxWidth().clickable { expanded = true }
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary)
-            Column(Modifier.weight(1f)) {
-                Text(title)
-                subtitle?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Text(value, color = MaterialTheme.colorScheme.primary)
-            Icon(Icons.Filled.UnfoldMore, contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (item, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = { expanded = false; onPick(item) },
-                )
             }
         }
     }
@@ -1198,20 +808,6 @@ private fun talkTimeLabel(a: AccountStatus?): String = when {
 private fun talkSpan(seconds: Int): String =
     if (TalkTime.spanIsSeconds(seconds)) stringResource(R.string.lld_sec, seconds)
     else stringResource(R.string.lld_min_b61908, seconds / 60)
-
-/** A destructive or plain action, drawn as a list row rather than a button —
- *  the same shape iOS gives a `Button` inside a `Form`. */
-@Composable
-private fun PlainActionRow(
-    title: String,
-    color: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-    ) { Text(title, color = color) }
-}
 
 /**
  * The row's one line.
