@@ -91,7 +91,7 @@ extension LearnerProfile {
         lastSessionAt = now
     }
 
-    private static func patternKey(_ p: LearnerPattern) -> String {
+    static func patternKey(_ p: LearnerPattern) -> String {
         let norm = { (s: String) in
             s.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         }
@@ -288,6 +288,24 @@ struct Session: Codable, Identifiable {
     /// person's card list every talk you've had with them. Optional so old
     /// rows decode unchanged.
     var counterpartId: UUID? = nil
+    /// Coach mode's grammar focus for this call and how it went
+    /// (`GrammarFocus`). Optional so old rows decode unchanged; also what the
+    /// next call reads to retire a focus the learner has stopped tripping on.
+    var grammarFocus: GrammarFocusRecord? = nil
+}
+
+/// One call's grammar focus, as it was shown and as it went (2026-09-30).
+/// `label` is coaching (native language); `mistake` / `correction` are the
+/// learner's own slip and its fix (target language) — the concrete pair is
+/// always shown beside the name, never the name alone.
+struct GrammarFocusRecord: Codable, Equatable {
+    /// `LearnerProfile` pattern key (normalized mistake→correction).
+    var patternKey: String
+    var label: String
+    var mistake: String
+    var correction: String
+    /// Times the same slip came back in this call, judged per correction.
+    var repeats: Int
 }
 
 extension Session {

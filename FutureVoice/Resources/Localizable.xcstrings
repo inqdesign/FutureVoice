@@ -850,6 +850,52 @@
         }
       }
     },
+    "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab und zu stellt dir dein fließendes Ich eine Frage, die du mit einem Wort beantworten kannst, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De vez en cuando, tu yo fluido te pregunta algo que puedes responder con una palabra que estás estudiando, y el error que más cometes se vuelve el enfoque de la llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分がときどき、勉強中の単語で答えられる質問をして、いちばんよくするミスをこの通話のポイントにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 내가 가끔 공부 중인 단어로 답할 수 있는 질문을 하고, 가장 자주 하는 실수를 통화의 초점으로 잡아 줘요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己偶尔会问你能用正在学的单词回答的问题，并把你最常犯的错误当作这次通话的重点。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。"
+          }
+        }
+      }
+    },
     "Pick how your fluent self looks and sounds." : {
       "localizations" : {
         "de" : {
@@ -17606,6 +17652,306 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "沉穩，帶點幽默"
+          }
+        }
+      }
+    },
+    "Came back %lld times" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld-mal wieder aufgetaucht"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld-mal wieder aufgetaucht"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Came back once"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Came back %lld times"
+                }
+              }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Volvió a aparecer %lld vez"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Volvió a aparecer %lld veces"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Revenu %lld fois"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Revenu %lld fois"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld回くり返しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld번 다시 나왔어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "又出现了 %lld 次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "又出現了 %lld 次"
+          }
+        }
+      }
+    },
+    "Came back %lld times — it stays your focus" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld-mal wieder aufgetaucht – bleibt dein Fokus"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld-mal wieder aufgetaucht – bleibt dein Fokus"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Came back once — it stays your focus"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Came back %lld times — it stays your focus"
+                }
+              }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Volvió a aparecer %lld vez; seguirá siendo tu enfoque"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Volvió a aparecer %lld veces; seguirá siendo tu enfoque"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Revenu %lld fois – ça reste ton objectif"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Revenu %lld fois – ça reste ton objectif"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld回くり返しました。次の通話でも続けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld번 다시 나왔어요. 다음 통화에서도 이어가요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "又出现了 %lld 次，下次通话继续练"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "又出現了 %lld 次，下次通話繼續練"
+          }
+        }
+      }
+    },
+    "Came back %lld times in this call" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "In diesem Anruf %lld-mal wieder aufgetaucht"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "In diesem Anruf %lld-mal wieder aufgetaucht"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Came back once in this call"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Came back %lld times in this call"
+                }
+              }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Volvió a aparecer %lld vez en esta llamada"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Volvió a aparecer %lld veces en esta llamada"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Revenu %lld fois pendant cet appel"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Revenu %lld fois pendant cet appel"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この通話で%lld回くり返しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 통화에서 %lld번 다시 나왔어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这次通话中又出现了 %lld 次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這次通話中又出現了 %lld 次"
           }
         }
       }
@@ -38995,6 +39341,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "午夜會全部補回來。在那之前，複習照樣免費。"
+          }
+        }
+      }
+    },
+    "It didn't come back this call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist in diesem Anruf nicht mehr vorgekommen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No volvió a aparecer en esta llamada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il n’est pas revenu pendant cet appel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今回の通話では一度も出ませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 통화에선 한 번도 안 나왔어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这次通话一次都没再出现"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這次通話一次都沒再出現"
           }
         }
       }
@@ -63787,6 +64179,52 @@
         }
       }
     },
+    "Say" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "こう言う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이렇게"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这样说"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這樣說"
+          }
+        }
+      }
+    },
     "Say “%@” in your next talk." : {
       "localizations" : {
         "de" : {
@@ -78809,6 +79247,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這個備份檔已損壞或不完整。請從另一台裝置重新匯出。"
+          }
+        }
+      }
+    },
+    "This call's focus" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus dieses Anrufs"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enfoque de esta llamada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objectif de cet appel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この通話のポイント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 통화 초점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次通话重点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次通話重點"
           }
         }
       }
@@ -95122,6 +95606,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未來的自己"
+          }
+        }
+      }
+    },
+    "Your future self may ask something that needs this. Just answer the way you normally would." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein fließendes Ich stellt dir vielleicht eine Frage, bei der du das brauchst. Antworte einfach wie sonst auch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu yo fluido puede preguntarte algo que lo necesite. Responde como lo harías normalmente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton moi fluide te posera peut-être une question qui en a besoin. Réponds comme d’habitude."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分がこれを使う質問をするかもしれません。いつも通りに答えれば大丈夫です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 내가 이걸 써야 하는 질문을 할 수도 있어요. 평소처럼 대답하면 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己可能会问需要用到这个的问题，像平常一样回答就好。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己可能會問需要用到這個的問題，像平常一樣回答就好。"
           }
         }
       }

@@ -554,6 +554,82 @@ enum DebugCapture {
                     }
                 }
             })
+        case "call-focus", "call-focus-sheet":
+            // Coach mode's grammar focus pinned above the chips, one repeat
+            // already counted, and the learner's card wearing the badge.
+            // Staged: a real focus needs a profile, a live call and a slip.
+            let goals = [
+                TalkGoalItem(key: "hectic", text: "hectic", isWord: true),
+                TalkGoalItem(key: "commute", text: "commute", isWord: true),
+                TalkGoalItem(key: "it slipped my mind", text: "it slipped my mind", isWord: false),
+            ]
+            let ko = appState.nativeLanguage.hasPrefix("ko")
+            let label = ko ? "과거 시제" : "Past tense"
+            let tip = ko ? "어제·지난주처럼 지난 일을 말할 때는 과거형을 써요."
+                         : "Use the past form when you talk about yesterday or last week."
+            let suggestion = TurnSuggestion(
+                alternative: "I went to the office early yesterday, so I left at four.",
+                reason: ko ? "어제 일이라 과거형이 자연스러워요." : "It happened yesterday, so the past form.",
+                fixes: [TurnFix(was: "I go to the office", now: "I went to the office",
+                                why: ko ? "과거 시제" : "Past tense")])
+            return AnyView(NavigationStack {
+                VStack(spacing: 0) {
+                    GrammarFocusStrip(label: label, mistake: "Yesterday I go to the office",
+                                      correction: "Yesterday I went to the office", repeats: 1)
+                    Divider().opacity(0.15)
+                    TalkGoalChipsRow(items: goals, used: ["commute"])
+                    Divider().opacity(0.15)
+                    VStack(alignment: .leading, spacing: 18) {
+                        DialogueLine(speaker: .other, name: "Future self") {
+                            Text("Busy day? What did you do this morning?")
+                        }
+                        DialogueLine(speaker: .user, name: "You") {
+                            Text("I go to the office early yesterday, so I left at four.")
+                        } accessory: {
+                            SuggestionChip(suggestion: suggestion,
+                                           original: "I go to the office early yesterday, so I left at four.",
+                                           nativeLanguage: appState.nativeLanguage,
+                                           focusRepeatLabel: label)
+                        }
+                        Spacer()
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) { Text("Free talk").font(.headline) }
+                    ToolbarItem(placement: .topBarLeading) { Image(systemName: "xmark") }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Text("End").fontWeight(.semibold).foregroundStyle(.red)
+                    }
+                }
+                .sheet(isPresented: .constant(name == "call-focus-sheet")) {
+                    GrammarFocusSheet(label: label, tip: tip,
+                                      mistake: "Yesterday I go to the office",
+                                      correction: "Yesterday I went to the office", repeats: 1)
+                }
+            })
+        case "focus-result":
+            let ko = appState.nativeLanguage.hasPrefix("ko")
+            return AnyView(NavigationStack {
+                List {
+                    Section {
+                        GrammarFocusResultRow(record: GrammarFocusRecord(
+                            patternKey: "a", label: ko ? "과거 시제" : "Past tense",
+                            mistake: "Yesterday I go to the office",
+                            correction: "Yesterday I went to the office", repeats: 1))
+                    }
+                    Section {
+                        GrammarFocusResultRow(record: GrammarFocusRecord(
+                            patternKey: "b", label: ko ? "요일 전치사" : "Prepositions with days",
+                            mistake: "I have a meeting in Monday",
+                            correction: "I have a meeting on Monday", repeats: 0))
+                    }
+                }
+                .navigationTitle(Text(verbatim: "Focus"))
+            })
         case "call-feed-fade":
             // Geometry check for the call feed's edge under the mic bar: the
             // same attachment ConversationView uses (`fadingBottomBar`), with a

@@ -97,7 +97,13 @@ struct ConversationView: View {
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
     @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
     @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
-    @AppStorage(CoachMode.key) private var coachMode = false
+    /// nil until the learner flips it in Call settings — until then the
+    /// level decides (`CoachMode.resolve`: on for A1/A2).
+    @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
+    @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
+    private var coachMode: Bool {
+        CoachMode.resolve(choice: coachModeChoice, levelRaw: proficiencyRaw)
+    }
     /// Watched only to tell a live call when the rung moves (the sheet
     /// writes it) — see the `CallSettingsSheet` presentation.
     @AppStorage(SpeechSpeed.key) private var speechSpeedRaw = SpeechSpeed.default.rawValue
@@ -608,6 +614,14 @@ struct ConversationView: View {
     /// `TalkGoalPicker.coachExtras`. Picked with the row, once per call.
     @State private var coachExtras: [TalkGoalItem] = []
     @State private var coachHint: TalkGoalItem?
+    /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
+    /// the learner's recurring mistakes on appear, named in their language,
+    /// and watched on every correction. nil = none this call.
+    @State private var grammarFocus: GrammarFocus?
+    /// Learner turns whose correction was the focus coming back — their card
+    /// wears the badge. The count on the strip is this set's size.
+    @State private var focusRepeatTurns: Set<UUID> = []
+    @State private var showingFocusSheet = false
 
     /// Live lookup, not a copy — resolves through appState so edits to the
     /// person elsewhere are picked up, and resume restores it from the saved
@@ -784,6 +798,18 @@ struct ConversationView: View {
                 // Pinned, not part of the feed: material the learner is meant
                 // to reach for has to still be there at minute six, and
                 // anything inside the transcript is gone after two turns.
+                // The grammar focus sits above the chips: it is the one thing
+                // this call is about, and the chips are the things to spend.
+                if coachMode, let focus = grammarFocus {
+                    GrammarFocusStrip(label: focus.label,
+                                      mistake: focus.pattern.mistake,
+                                      correction: focus.pattern.correction,
+                                      repeats: focusRepeatTurns.count) {
+                        showingFocusSheet = true
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    Divider().opacity(0.15)
+                }
                 if !goalItems.isEmpty, showsGoalChips {
                     TalkGoalChipsRow(items: goalItems, used: usedGoalKeys) { item in
                         goalDetail = item
@@ -909,6 +935,14 @@ struct ConversationView: View {
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingFocusSheet) {
+                if let focus = grammarFocus {
+                    GrammarFocusSheet(label: focus.label, tip: focus.tip,
+                                      mistake: focus.pattern.mistake,
+                                      correction: focus.pattern.correction,
+                                      repeats: focusRepeatTurns.count)
+                }
             }
             .sheet(item: summaryBinding, onDismiss: {
                 let how = summaryClose
@@ -1059,8 +1093,10 @@ struct ConversationView: View {
             .task {
                 goalItems = pickGoalItems()
                 coachExtras = TalkGoalPicker.coachExtras(excluding: Set(goalItems.map(\.key)))
+                await loadGrammarFocus()
             }
             .onChange(of: coachMode) { _, on in
+                if on, grammarFocus == nil { Task { await loadGrammarFocus() } }
                 syncCoachSteer()
                 if !on { coachHint = nil }
             }
@@ -1290,6 +1326,8 @@ struct ConversationView: View {
                             // previous bubble's text from being visible inside
                             // the next one during insertion animation.
                             TurnView(turn: turn, nativeLanguage: appState.nativeLanguage,
+                                     focusRepeatLabel: focusRepeatTurns.contains(turn.id)
+                                        ? grammarFocus?.label : nil,
                                      translates: !LanguageCatalog.sameLanguage(appState.targetLanguage,
                                                                                appState.nativeLanguage),
                                      showsCorrections: showsCorrections)
@@ -2469,9 +2507,11 @@ struct ConversationView: View {
                 try? FileManager.default.removeItem(at: url)
             }
             turns.append(turn)
+            let firstWords = !learnerSpokeThisCall
             learnerSpokeThisCall = true
             didSaveCurrentSession = false
             creditGoalChips(turnId: turn.id)
+            if firstWords { syncCoachSteer() }
             // A coach hint on a word outside the chip row is judged the same
             // way; its key joins `usedGoalKeys` so the line can tick.
             if let hint = coachHint, !usedGoalKeys.contains(hint.key),
@@ -2613,6 +2653,7 @@ struct ConversationView: View {
                   let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }
             turns[idx].suggestion = suggestion
             suggestionsShown += 1
+            checkFocusRepeat(suggestion, turnId: turnId)
         }
     }
 
@@ -3348,8 +3389,13 @@ struct ConversationView: View {
     /// Put the steer on the gateway — or take it off — to match the ration.
     /// Only sent when it changes; the gateway keeps it until told otherwise.
     private func syncCoachSteer() {
-        let items = coachMode && coach.mayHint ? coachCandidates() : []
-        let steer = items.isEmpty ? "" : ConversationEngine.coachSteer(for: items)
+        // Nothing before the learner has spoken: a question built for a word
+        // or a structure is an answer to THEM, and the opener is not.
+        let open = coachMode && learnerSpokeThisCall && coach.mayHint
+        let items = open ? coachCandidates() : []
+        let focus = open ? grammarFocus : nil
+        let steer = items.isEmpty && focus == nil ? ""
+            : ConversationEngine.coachSteer(for: items, focus: focus)
         guard steer != coachSteerSent else { return }
         coachSteerSent = steer
         realtime.setSteer(steer)
@@ -3360,7 +3406,9 @@ struct ConversationView: View {
     /// natural answer to THAT question uses — the hint is the question's,
     /// never the list's. Then re-set the steer for the next line.
     private func advanceCoach(afterReply text: String, turnId: UUID) {
-        guard coachMode else { return }
+        // The opener asks before the learner has said a word — no hint on it,
+        // and it doesn't spend the gap either.
+        guard coachMode, learnerSpokeThisCall else { return }
         let mayHint = coach.mayHint
         coach.replyFinished()
         let candidates = coachCandidates()
@@ -3381,6 +3429,34 @@ struct ConversationView: View {
             }
         }
         syncCoachSteer()
+    }
+
+    /// Pick this call's grammar focus and name it. Coach mode only; a free
+    /// talk with the fluent self or a cast call alike, since the slip is the
+    /// learner's wherever they make it.
+    private func loadGrammarFocus() async {
+        guard coachMode, grammarFocus == nil else { return }
+        let profile = ProfileStore.shared.load(targetLanguage: appState.targetLanguage,
+                                               proficiency: appState.proficiency)
+        guard let pattern = GrammarFocus.pick(from: profile,
+                                              sessions: SessionStore.shared.load()) else { return }
+        guard let focus = await GrammarFocus.describe(pattern, target: appState.targetLanguage,
+                                                      native: appState.nativeLanguage),
+              !isTornDown, coachMode else { return }
+        withAnimation(.easeInOut(duration: 0.3)) { grammarFocus = focus }
+        syncCoachSteer()
+    }
+
+    /// A correction landed: if it is the focus coming back, badge its card
+    /// and move the strip's count. Judged off the voice's path.
+    private func checkFocusRepeat(_ suggestion: TurnSuggestion, turnId: UUID) {
+        guard coachMode, let focus = grammarFocus,
+              let fixes = suggestion.fixes, !fixes.isEmpty else { return }
+        Task { @MainActor in
+            guard await focus.isRepeat(fixes, turnId: turnId),
+                  !isTornDown, grammarFocus == focus else { return }
+            withAnimation(.easeInOut(duration: 0.25)) { _ = focusRepeatTurns.insert(turnId) }
+        }
     }
 
     private func creditGoalChips(turnId: UUID) {
@@ -3928,10 +4004,12 @@ struct ConversationView: View {
         realtime.hangUp()
         // One row per coached call — how many hints, how many were answered
         // with the word — which is how "does it feel forced" gets measured.
-        if coach.hintsShown > 0 {
+        if coach.hintsShown > 0 || (grammarFocus != nil && learnerSpokeThisCall) {
             Telemetry.log("talk_coach", [
                 "hints": "\(coach.hintsShown)",
                 "used": "\(coach.hinted.filter { usedGoalKeys.contains($0) }.count)",
+                "focus": grammarFocus == nil ? "none" : "on",
+                "focus_repeats": "\(focusRepeatTurns.count)",
             ])
         }
         phase = .thinking
@@ -3975,7 +4053,11 @@ struct ConversationView: View {
             summary: nil,
             origin: sessionOrigin,
             originScenarioId: sessionScenarioId,
-            counterpartId: sessionCounterpartId
+            counterpartId: sessionCounterpartId,
+            // Only a call the learner spoke in says anything about the focus;
+            // an empty one must not count as a clean call and retire it.
+            grammarFocus: learnerSpokeThisCall
+                ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil
         )
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true
@@ -4267,6 +4349,9 @@ private struct TurnView: View {
     let nativeLanguage: String
     /// False when the app language IS the target — "Meaning" would translate
     /// a line into the language it is already in.
+    /// The grammar focus's name when this turn's correction is that slip
+    /// coming back (coach mode) — the card wears it as a badge.
+    var focusRepeatLabel: String? = nil
     var translates = true
     /// The learner's own switch (`CallSettings`). The card is still BUILT and
     /// still saved — this only decides whether it is drawn mid-call, so the
@@ -4338,7 +4423,8 @@ private struct TurnView: View {
                 // on every turn, whatever the transcript-swap fixes did.
                 if turn.role == .user, showsCorrections, let suggestion = turn.suggestion {
                     SuggestionChip(suggestion: suggestion, original: turn.transcript,
-                                   nativeLanguage: nativeLanguage)
+                                   nativeLanguage: nativeLanguage,
+                                   focusRepeatLabel: focusRepeatLabel)
                 }
             }
             }
@@ -4370,10 +4456,11 @@ private struct TurnView: View {
     }
 }
 
-private struct SuggestionChip: View {
+struct SuggestionChip: View {
     let suggestion: TurnSuggestion
     let original: String
     let nativeLanguage: String
+    var focusRepeatLabel: String? = nil
 
     @State private var reasonNative: String?
     @State private var showing = false
@@ -4386,6 +4473,10 @@ private struct SuggestionChip: View {
                 .font(.footnote)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
+                if let focusRepeatLabel {
+                    GrammarFocusRepeatBadge(label: focusRepeatLabel)
+                        .padding(.bottom, 2)
+                }
                 Text(highlightedCorrection(suggestion.alternative, original: original, baseFont: .subheadline))
                     .font(.subheadline)
                     .foregroundStyle(.primary)

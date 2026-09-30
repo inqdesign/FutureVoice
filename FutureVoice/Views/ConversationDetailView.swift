@@ -191,6 +191,14 @@ struct ConversationDetailView: View {
             Divider().padding(.leading, 20)
             scoreBlock(sc)
         }
+        // Coach mode's grammar focus and how this call went on it.
+        if let focus = session.grammarFocus {
+            Divider().padding(.leading, 20).padding(.top, 8)
+            groupLabel("This call's focus", icon: "scope")
+            GrammarFocusResultRow(record: focus)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+        }
         if let note = session.summary?.overallNote, !note.isEmpty {
             Divider().padding(.leading, 20).padding(.top, 8)
             groupLabel("Coach's note", icon: "text.bubble")

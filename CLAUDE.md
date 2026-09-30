@@ -1918,8 +1918,9 @@ had never heard. What the server needs is a **session**, not an account.
 ## Coach mode — the listening moment, used (2026-09-28)
 
 Talk time was high and review low, and the chip row only waits for a studied
-word to come up by chance. Coach mode (Call settings, **off by default**, a
-beginner's slower call) makes it come up on purpose: the fluent self asks a
+word to come up by chance. Coach mode (Call settings; **on by default for A1/A2**, off above —
+`CoachMode.resolve`, the learner's own flip always wins; a beginner's
+slower call) makes it come up on purpose: the fluent self asks a
 question whose natural answer uses a studied item, and while the learner
 thinks, their own "Listening…" bubble carries "💡 Try using · **profound**"
 and ticks when they do (the chips' own `CarryoverDetector`; tap = the chip
@@ -1953,10 +1954,35 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
   `CoachPlan` rations in code: never before the learner has spoken, 3 per
   call, 2 plain replies between. `talk_coach` (hints, used) is one row per
   coached call — the measure of "forced".
-- Step 1 is words from the chip row only. Next, if it holds up by ear:
-  recurring-mistake reminders (`fixes` `was → now`, a concrete pair, never a
-  rule name) and a one-time offer on the wrap-up for low levels / repeated
-  mistakes — offered, never switched on silently.
+- **Nothing before the learner has spoken** (enforced 2026-09-30 — the
+  ration above was documented but not in code: the opener's question could
+  be judged and the first reply steered). `syncCoachSteer` and
+  `advanceCoach` both wait for `learnerSpokeThisCall`.
+- **The grammar FOCUS** (2026-09-30, founder: "a real coach goes past
+  words — mind the tense"; `GrammarFocus.swift`, `GrammarFocusViews.swift`).
+  One recurring mistake per call, from `LearnerProfile.recurringMistakes`
+  (frequency ≥ 2, seen within 45 days, highest first), named once in the
+  native language by flash-lite (`describe`, cached per pattern + language:
+  "과거 시제" + one tip line) and pinned ABOVE the chip row as a strip —
+  the name beside the learner's own pair, trimmed to the span that changed
+  (`GrammarFocusPair.compact`: "…I go to… → …I went to…"; whole sentences
+  truncated to one line kept the ends and cut the one word that differed).
+  The steer gains a GRAMMAR FOCUS paragraph (a question that needs the
+  structure, never a correction in the reply). Every live correction with
+  `fixes` is judged by flash-lite `isRepeat` — the same grammar POINT, not
+  the same words (probe: 20/20 on ten same/different cases, ko/en/de) — and
+  a repeat badges that card ("다시 · 과거 시제", orange, a reminder not a
+  failure) and moves the strip's counter. The result rides on the talk as
+  `Session.grammarFocus` (the book page shows it under the score) and is
+  what RETIRES a focus: two focused calls with no repeat, and no summary
+  re-detection since (`lastSeenAt`), and the next pattern takes over; a
+  re-detection brings it straight back. A call the learner never spoke in
+  records nothing, so it can't count as clean. Captures: `-capture
+  call-focus` / `call-focus-sheet` / `focus-result`.
+- Next: expression VARIETY (the learner's overused phrase paired with one
+  the fluent self offered, hinted the moment they reach for the old one),
+  then a one-time offer of coach mode on the wrap-up for low levels or
+  repeated mistakes — offered, never switched on silently.
 
 ## Source of truth
 

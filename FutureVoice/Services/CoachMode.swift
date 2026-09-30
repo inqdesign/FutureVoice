@@ -25,13 +25,29 @@ import Foundation
 /// `repliesBetweenHints` plain lines after each; the steer is withdrawn
 /// during the gap so the conversation gets its own turns.
 ///
-/// Off by default — a beginner's slower call, chosen in Call settings.
+/// ON by default for A1/A2, off above (2026-09-30, founder's call): a
+/// beginner is who the slower, steered call is for, and a switch buried in
+/// Call settings is one they never find. The learner's own flip always wins
+/// — the key is only written by the toggle, so "never touched" is the
+/// absence of a value, and the default follows the level until then.
 /// Realtime path only: the gateway takes the steer on `set` and appends it to
 /// the reply's system prompt (`SetMessage.steer`).
 enum CoachMode {
     static let key = "futurevoice.call.coachMode"
 
-    static var isOn: Bool { UserDefaults.standard.bool(forKey: key) }
+    static func defaultOn(for level: CEFRLevel) -> Bool { level == .a1 || level == .a2 }
+
+    /// The learner's choice if they made one, else the level's default.
+    /// Views pass their `@AppStorage` values so they re-render on change.
+    static func resolve(choice: Bool?, levelRaw: String) -> Bool {
+        choice ?? defaultOn(for: CEFRLevel(rawValue: levelRaw) ?? .b1)
+    }
+
+    static var isOn: Bool {
+        let d = UserDefaults.standard
+        return resolve(choice: d.object(forKey: key) as? Bool,
+                       levelRaw: d.string(forKey: AppState.proficiencyKey) ?? "")
+    }
 
     /// How many studied items the model and the judge are shown at once.
     static let maxCandidates = 8
@@ -129,16 +145,33 @@ extension ConversationEngine {
     /// The steer coach mode hands the gateway while a hint may be drawn:
     /// the candidate list as PERMISSION, never an assignment. English like
     /// every other prompt; items quoted as the learner saved them.
-    static func coachSteer(for items: [TalkGoalItem]) -> String {
-        let list = items.map { "\"\($0.text)\"" }.joined(separator: ", ")
-        return """
-            COACH MODE. The learner is studying: \(list). If — and only if — \
-            one of them fits what you are ALREADY talking about, you may end \
-            this reply with a question whose most natural answer would use \
-            it. Do not say that word yourself, do not mention practice, words \
-            or coaching, and never steer the topic toward a word. Most \
-            replies should simply continue the conversation as they would \
-            have.
-            """
+    static func coachSteer(for items: [TalkGoalItem], focus: GrammarFocus? = nil) -> String {
+        var parts: [String] = []
+        if !items.isEmpty {
+            let list = items.map { "\"\($0.text)\"" }.joined(separator: ", ")
+            parts.append("""
+                COACH MODE. The learner is studying: \(list). If — and only if — \
+                one of them fits what you are ALREADY talking about, you may end \
+                this reply with a question whose most natural answer would use \
+                it. Do not say that word yourself, do not mention practice, words \
+                or coaching, and never steer the topic toward a word. Most \
+                replies should simply continue the conversation as they would \
+                have.
+                """)
+        }
+        // The grammar focus rides the same permission: a question whose
+        // natural answer NEEDS the structure is practice the learner gets
+        // without being told. The correction itself stays the card's job.
+        if let focus {
+            parts.append("""
+                GRAMMAR FOCUS. The learner keeps slipping on this: they say \
+                "\(focus.pattern.mistake)" where a fluent speaker says \
+                "\(focus.pattern.correction)" (\(focus.pattern.context)). If it \
+                fits the conversation, you may ask something whose natural answer \
+                needs that structure. Never correct them in your reply, never \
+                mention grammar, and don't do it every turn.
+                """)
+        }
+        return parts.joined(separator: "\n\n")
     }
 }

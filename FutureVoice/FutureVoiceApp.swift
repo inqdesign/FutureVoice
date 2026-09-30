@@ -492,7 +492,7 @@ final class AppState: ObservableObject {
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
     private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
-    private static let proficiencyKey = "futurevoice.proficiency"
+    static let proficiencyKey = "futurevoice.proficiency"
     private static let appearanceKey = "futurevoice.appearance"
     private static let setupCompleteKey = "futurevoice.setupComplete"
     private static let onboardingStartedKey = "futurevoice.onboardingStarted"

@@ -50,7 +50,13 @@ struct CallSettingsSheet: View {
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
     @AppStorage(CallSettings.showsCorrectionsKey) private var showsCorrections = true
     @AppStorage(CallSettings.showsGoalChipsKey) private var showsGoalChips = true
-    @AppStorage(CoachMode.key) private var coachMode = false
+    /// nil until the learner flips it — the level decides until then.
+    @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
+    @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
+    private var coachMode: Binding<Bool> {
+        Binding(get: { CoachMode.resolve(choice: coachModeChoice, levelRaw: proficiencyRaw) },
+                set: { coachModeChoice = $0 })
+    }
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -81,11 +87,11 @@ struct CallSettingsSheet: View {
                 // Off by default: it trades a little of the call's pace for
                 // being walked toward the words being studied (`CoachMode`).
                 Section {
-                    Toggle(isOn: $coachMode) {
+                    Toggle(isOn: coachMode) {
                         Label("Coach mode", systemImage: "lightbulb")
                     }
                 } footer: {
-                    Text(explain("Now and then your future self asks something you can answer with a word you're studying, and a hint shows while you think."))
+                    Text(explain("Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus."))
                 }
 
                 Section {
