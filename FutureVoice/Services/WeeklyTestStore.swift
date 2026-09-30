@@ -247,14 +247,21 @@ struct WeeklyTestSchedule: Equatable {
 
 // MARK: - Reminder
 
-/// One repeating local notification at the opening. The test itself needs no
-/// notification to exist — this only says the week has turned.
+/// One local notification at the next opening — the moment the week turns,
+/// "Your week" is ready and the test opens (2026-09-30).
+///
+/// NOT repeating, on purpose: the body carries this week's real numbers, and
+/// they are right at fire time because every one of them is written in the
+/// app, and every trip to the background re-writes this request. A learner
+/// who never comes back gets one, not one a week.
 @MainActor
 enum WeeklyTestReminder {
     static let requestId = "futurevoice.weekly-test"
     static let categoryId = "futurevoice.weekly-test"
+    /// userInfo flag: the tap opens the week's cards rather than the test.
+    static let recapKey = "recap"
 
-    static func reschedule() async {
+    static func reschedule(now: Date = Date()) async {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [requestId])
         let settings = WeeklyTestSettings.shared
@@ -262,16 +269,63 @@ enum WeeklyTestReminder {
         let status = await center.notificationSettings().authorizationStatus
         guard status == .authorized || status == .provisional else { return }
 
-        let content = UNMutableNotificationContent()
-        content.title = chrome("Your weekly test is ready")
-        content.body = explain("A few minutes, made from this week's talks.")
-        content.sound = .default
-        content.categoryIdentifier = categoryId
-        let trigger = UNCalendarNotificationTrigger(
-            dateMatching: DateComponents(hour: settings.hour, minute: settings.minute,
-                                         weekday: settings.weekday),
-            repeats: true)
+        let fire = settings.schedule.nextOpening(after: now)
+        let content = makeContent(now: now)
+        let calendar = Calendar.current
+        let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fire)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
         try? await center.add(UNNotificationRequest(identifier: requestId, content: content,
                                                     trigger: trigger))
     }
+
+    /// What the notice says, from the week in progress — the numbers are
+    /// every one written in the app, so at fire time they are the week's.
+    static func makeContent(now: Date = Date()) -> UNMutableNotificationContent {
+        let schedule = WeeklyTestSettings.shared.schedule
+        let opening = schedule.currentOpening(now: now)
+        let fire = schedule.nextOpening(after: now)
+        let calendar = Calendar.current
+        var talkSeconds = 0
+        var day = calendar.startOfDay(for: opening)
+        while day <= now {
+            talkSeconds += TalkTimeLog.seconds(on: day)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        let active = PracticeStats.activeDays(calendar: calendar)
+            .filter { $0 >= calendar.startOfDay(for: opening) && $0 < fire }.count
+
+        let content = UNMutableNotificationContent()
+        if active > 0 {
+            content.title = chrome("Your week is ready")
+            content.body = talkSeconds >= 60
+                ? explain("\(talkSeconds / 60) min of talk over \(active) days. See how it went, then take the test.")
+                : explain("You showed up \(active) days. See how it went, then take the test.")
+            content.userInfo = [recapKey: true]
+        } else {
+            content.title = chrome("Your weekly test is ready")
+            content.body = explain("A few minutes, made from this week's talks.")
+        }
+        content.sound = .default
+        content.categoryIdentifier = categoryId
+        return content
+    }
+
+    #if DEBUG
+    /// Developer: the same notice, ten seconds from now, so the wiring —
+    /// words, tap, landing — is seen on a phone without waiting a week.
+    static func fireTest() async {
+        let center = UNUserNotificationCenter.current()
+        if await center.notificationSettings().authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        }
+        let content = makeContent()
+        // The week-in-progress may be empty on a dev install; the test
+        // always exercises the recap path.
+        content.userInfo = [recapKey: true]
+        try? await center.add(UNNotificationRequest(
+            identifier: requestId + ".test", content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)))
+    }
+    #endif
 }

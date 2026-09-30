@@ -52,6 +52,11 @@ struct RootTabView: View {
     /// "Start talking" on the welcome — the call opens once the sheet is gone,
     /// so the ring's morph never plays underneath a sheet.
     @State private var startTalkAfterWelcome = false
+    /// "Your week" — the closed week's cards, raised once per week on the
+    /// first open after the week turns (and on the week-turn notification).
+    @State private var weekRecap: WeekRecap?
+    @State private var weekRecapAction: WeekRecapSheet.Action?
+    @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -210,6 +215,11 @@ struct RootTabView: View {
         .sheet(isPresented: $showingIntroPreview) {
             PublicIntroPreviewSheet().environmentObject(appState)
         }
+        .sheet(item: $weekRecap, onDismiss: handleWeekRecapAction) { recap in
+            WeekRecapSheet(recap: recap, action: $weekRecapAction)
+                .environmentObject(appState)
+        }
+        .onAppear { offerWeekRecap() }
         #if DEBUG
         .task {
             // `-tabcycle 1`: walk the tabs by themselves for the hitch probe.
@@ -225,6 +235,16 @@ struct RootTabView: View {
             }
         }
         #endif
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { offerWeekRecap() }
+        }
+        .onChange(of: callInbox.pendingWeekRecap) { _, _ in offerWeekRecap() }
+        .onChange(of: callInbox.debugWeekRecap) { _, recap in
+            guard let recap else { return }
+            callInbox.debugWeekRecap = nil
+            weekRecapAction = nil
+            weekRecap = recap
+        }
         // Free Talk widget tap while the app is already up — and in-app jumps
         // ("Start a talk" on a Progress tip), which can be staged from any tab,
         // so bring the Talk tab along the way the widget's URL path does.
@@ -392,6 +412,44 @@ struct RootTabView: View {
         appState.pendingFreeTalk = false
         guard freeTalkCallId == nil, !freeTalkClosing else { return }
         startFreeTalk()
+    }
+
+    // MARK: - Your week
+
+    /// Raise the closed week's cards — softly, a beat after the app is up,
+    /// and never over a call or another sheet. Unasked it appears once per
+    /// week and only for a week that had something in it; from the
+    /// notification it always appears (the learner asked).
+    private func offerWeekRecap() {
+        let asked = callInbox.pendingWeekRecap
+        callInbox.pendingWeekRecap = false
+        guard appState.setupComplete, weekRecap == nil else { return }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: asked ? 400_000_000 : 1_200_000_000)
+            let store = WeekRecapStore.shared
+            let recap = store.lastWeek()
+            guard asked || (recap.hasActivity && !store.wasShown(recap)) else { return }
+            guard weekRecap == nil, freeTalkCallId == nil, !freeTalkClosing,
+                  callInbox.pendingAnswer == nil,
+                  !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
+                  appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
+                  updates.pending == nil else { return }
+            weekRecapAction = nil
+            weekRecap = recap
+        }
+    }
+
+    private func handleWeekRecapAction() {
+        guard let action = weekRecapAction else { return }
+        weekRecapAction = nil
+        switch action {
+        case .test:
+            selection = .practice
+            appState.pendingPracticeRoute = .weeklyTest
+        case .talk:
+            selection = .home
+            startFreeTalk()
+        }
     }
 
     private func consumeReviewTap() {

@@ -736,6 +736,15 @@ enum DebugCapture {
             }
             weeklyTestAnswer = name.hasSuffix("-right") ? true : (name.hasSuffix("-wrong") ? false : nil)
             return AnyView(WeeklyTestView().environmentObject(appState))
+        case "week-recap", "week-recap-quiet":
+            // "Your week", every card dealt from a hand-written week (the
+            // real one is built from logs a capture run doesn't have).
+            // `-recappage N` opens on card N; the coach card is pre-written
+            // so the capture never waits on the network.
+            let recap = name == "week-recap-quiet" ? sampleQuietWeek : sampleWeekRecap
+            return AnyView(WeekRecapSheet(recap: recap, action: .constant(nil),
+                                          startPage: UserDefaults.standard.integer(forKey: "recappage"))
+                .environmentObject(appState))
         case "weekly-test-result":
             once("weekly-test-result") { seedFinishedWeeklyTest() }
             return AnyView(WeeklyTestView().environmentObject(appState))
@@ -1624,6 +1633,77 @@ enum DebugCapture {
 
     /// A finished test on file for this week, so the result page and the
     /// Today card's done row render.
+    static var sampleWeekRecap: WeekRecap {
+        let week = WeekRecapBuilder.lastWeek()
+        func day(_ n: Int, _ h: Int) -> Date { week.start.addingTimeInterval(Double(n) * 86_400 + Double(h) * 3600) }
+        return WeekRecap(
+            start: week.start, end: week.end,
+            activeDays: [true, true, false, true, true, false, true],
+            streak: 3,
+            talkSeconds: 42 * 60, previousTalkSeconds: 28 * 60,
+            talks: [.init(title: "Moving flats in Berlin", day: day(0, 2), minutes: 12, kind: "free"),
+                    .init(title: "Asking the landlord about the deposit", day: day(1, 9), minutes: 7, kind: "scenario"),
+                    .init(title: "Why rents keep rising", day: day(3, 10), minutes: 9, kind: "news"),
+                    .init(title: "Catching up with Jenny", day: day(4, 11), minutes: 8, kind: "person"),
+                    .init(title: "The weekend plan", day: day(6, 1), minutes: 6, kind: "free")],
+            usedCount: 4,
+            used: [.init(item: "end up", quote: "I ended up carrying most of the boxes myself."),
+                   .init(item: "push back on", quote: "I pushed back on the deadline a little."),
+                   .init(item: "chore", quote: "Cleaning the kitchen is my least favourite chore.")],
+            cardsCleared: 12, wordsKnown: 9, expressionsKnown: 4,
+            shadowTakes: 17, shadowAverage: 81, previousShadowAverage: 74,
+            scenes: 3,
+            nowYours: ["deposit", "landlord", "sublet", "boiler", "catch up on", "chore", "exhausting", "end up"],
+            sentencesGot: ["I ended up carrying most of the boxes myself.", "I've lived here for two years."],
+            newExpressionCount: 7,
+            newExpressions: [.init(item: "catch up on", quote: "You can always catch up on the unpacking later."),
+                             .init(item: "walk you through", quote: "Let me walk you through what the landlord actually needs."),
+                             .init(item: "give yourself a day off", quote: "Honestly, give yourself a day off after the move.")],
+            newCards: 6,
+            stumbles: [.init(was: "I end up carrying", now: "I ended up carrying", count: 3),
+                       .init(was: "since two years", now: "for two years", count: 2)],
+            shakyLines: [],
+            testScore: 5, testTotal: 7,
+            coach: .init(
+                headline: "You tell stories, but in the present tense",
+                insight: "When you talk about something that already happened, you slip back into the present as the story goes on. It starts in the past and ends in the present.",
+                insightQuote: "Yesterday I went to the flat and the landlord says it's fine.",
+                grammar: [
+                    .init(rule: "Past tense drops out halfway through a story",
+                          examples: [.init(was: "the landlord says it's fine", now: "the landlord said it was fine"),
+                                     .init(was: "I end up carrying", now: "I ended up carrying"),
+                                     .init(was: "then she ask me", now: "then she asked me")],
+                          tip: "Once a story starts with \u{201C}yesterday\u{201D} or \u{201C}last week\u{201D}, every verb stays in the past until it ends."),
+                    .init(rule: "\u{201C}the\u{201D} before a place you both know",
+                          examples: [.init(was: "went to kitchen", now: "went to the kitchen"),
+                                     .init(was: "called landlord", now: "called the landlord")],
+                          tip: "If you could point at it, it takes \u{201C}the\u{201D}.")],
+                upgrades: [
+                    .init(instead: "very tired", count: 5, better: "exhausted",
+                          original: "I was very tired after the move.",
+                          rewritten: "I was exhausted after the move.",
+                          note: "One word does the work of two. Use it when tired isn't strong enough."),
+                    .init(instead: "good", count: 9, better: "decent",
+                          original: "The flat is good for the price.",
+                          rewritten: "The flat is decent for the price.",
+                          note: "Good, but not great: exactly what you meant about the flat.")],
+                plan: ["Tell the story of the move again, and keep every verb in the past until the end.",
+                       "Say \u{201C}exhausted\u{201D} once in your next talk instead of \u{201C}very tired\u{201D}.",
+                       "Take this week's test. The two you missed are back."]))
+    }
+
+    static var sampleQuietWeek: WeekRecap {
+        let week = WeekRecapBuilder.lastWeek()
+        return WeekRecap(
+            start: week.start, end: week.end, activeDays: Array(repeating: false, count: 7), streak: 0,
+            talkSeconds: 0, previousTalkSeconds: 12 * 60, talks: [],
+            usedCount: 0, used: [], cardsCleared: 0, wordsKnown: 0, expressionsKnown: 0,
+            shadowTakes: 0, shadowAverage: nil, previousShadowAverage: nil, scenes: 0,
+            nowYours: [], sentencesGot: [],
+            newExpressionCount: 0, newExpressions: [], newCards: 0, stumbles: [], shakyLines: [],
+            testScore: nil, testTotal: nil, coach: nil)
+    }
+
     static func seedFinishedWeeklyTest() {
         WeeklyTestStore.shared.removeAll()
         let now = Date()

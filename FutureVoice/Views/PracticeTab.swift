@@ -39,6 +39,10 @@ struct PracticeTab: View {
     @State private var dueReviewCount = 0
     /// This week's test, as the Today card reports it.
     @State private var showingWeeklyTest = false
+    /// The closed week's cards, reopened from the Today card.
+    @State private var weekRecap: WeekRecap?
+    @State private var lastWeekRecap: WeekRecap?
+    @State private var weekRecapAction: WeekRecapSheet.Action?
     @State private var weeklyTestState: WeeklyTestSchedule.State = .ready
     @State private var showingMonthlyTest = false
     @State private var monthlyTestState: WeeklyTestSchedule.MonthlyState = .none
@@ -292,6 +296,17 @@ struct PracticeTab: View {
                 Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
             }) {
                 WeeklyTestView()
+                    .environmentObject(appState)
+            }
+            .sheet(item: $weekRecap, onDismiss: {
+                guard let action = weekRecapAction else { return }
+                weekRecapAction = nil
+                switch action {
+                case .test: showingWeeklyTest = true
+                case .talk: appState.pendingFreeTalk = true
+                }
+            }) { recap in
+                WeekRecapSheet(recap: recap, action: $weekRecapAction)
                     .environmentObject(appState)
             }
             .sheet(isPresented: $showingMonthlyTest, onDismiss: {
@@ -642,6 +657,11 @@ struct PracticeTab: View {
             if dueReviewCount > 0 {
                 dueReviewRow
             }
+            // The week behind, as cards — the same deck that slides up when
+            // the week turns, reachable until the next one does.
+            if let recap = lastWeekRecap, recap.hasActivity {
+                weekRecapRow(recap)
+            }
             // The week's one sit-down: always here, so the week has a place
             // to be looked back on even when nothing is due.
             weeklyTestRow
@@ -793,6 +813,37 @@ struct PracticeTab: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("practice.weeklyTest")
+    }
+
+    private func weekRecapRow(_ recap: WeekRecap) -> some View {
+        Button {
+            weekRecapAction = nil
+            weekRecap = WeekRecapStore.shared.recap(endingAt: recap.end) ?? recap
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "rectangle.stack")
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your week")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text("\(recap.daysActive) days · \(recap.talkMinutes) min of talk")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("practice.weekRecap")
     }
 
     private var monthlyTestRow: some View {
@@ -1317,6 +1368,7 @@ struct PracticeTab: View {
         weeklyTestState = WeeklyTestSettings.shared.schedule.state(
             tests: tests, settings: WeeklyTestSettings.shared)
         monthlyTestState = WeeklyTestSettings.shared.schedule.monthlyState(tests: tests)
+        lastWeekRecap = WeekRecapStore.shared.lastWeek()
         vocab.backfillFromSessions()
         let cards = DrillStore.shared.load()
         dueDrillCount = cards.filter { $0.nextReviewAt <= Date() }.count

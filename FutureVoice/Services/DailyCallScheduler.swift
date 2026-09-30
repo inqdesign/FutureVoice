@@ -475,6 +475,11 @@ final class DailyCallInbox: ObservableObject {
     @Published var pendingReviewItem: ItemReminder.Target?
     /// Set when the weekly test's reminder is tapped — the app opens the test.
     @Published var pendingWeeklyTest = false
+    /// Set when the week-turn notification carried the week's numbers — the
+    /// app opens "Your week", whose last card is the test.
+    @Published var pendingWeekRecap = false
+    /// Developer: a recap built on demand (any window), raised as is.
+    @Published var debugWeekRecap: WeekRecap?
 }
 
 /// Routes notification taps. Installed as the app's `UNUserNotificationCenter`
@@ -522,12 +527,18 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
             return
         }
 
-        // The weekly test opened: land on it, not on the tab it sits in.
+        // The week turned: land on the week's cards when the notice spoke
+        // about the week, otherwise straight on the test.
         if category == WeeklyTestReminder.categoryId {
+            let recap = response.notification.request.content.userInfo[WeeklyTestReminder.recapKey] as? Bool ?? false
             Task { @MainActor in
                 defer { completionHandler() }
                 guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
-                DailyCallInbox.shared.pendingWeeklyTest = true
+                if recap {
+                    DailyCallInbox.shared.pendingWeekRecap = true
+                } else {
+                    DailyCallInbox.shared.pendingWeeklyTest = true
+                }
             }
             return
         }

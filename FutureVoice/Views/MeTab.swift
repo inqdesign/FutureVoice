@@ -275,6 +275,38 @@ struct MeTab: View {
                             title: explain("Reset this week's test"),
                             subtitle: explain("Deal this week's paper again — past weeks stay"))
                     }
+                    // "Your week" rings once a week and slides up once a
+                    // week; these three reach every path of it on demand.
+                    Button {
+                        let end = Date()
+                        let recap = WeekRecapBuilder.build(start: end.addingTimeInterval(-7 * 86_400), end: end)
+                        dismiss()
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 700_000_000)
+                            DailyCallInbox.shared.debugWeekRecap = recap
+                        }
+                    } label: {
+                        row(icon: "rectangle.stack",
+                            title: explain("Open Your week"),
+                            subtitle: explain("The last 7 days as cards, with a fresh coach note"))
+                    }
+                    Button {
+                        let week = WeekRecapBuilder.lastWeek()
+                        WeekRecapStore.shared.remove(endingAt: week.end)
+                        WeekRecapStore.shared.resetShown()
+                        dismiss()
+                    } label: {
+                        row(icon: "arrow.up.square",
+                            title: explain("Slide up Your week again"),
+                            subtitle: explain("Next time the app opens, as if the week just turned"))
+                    }
+                    Button {
+                        Task { await WeeklyTestReminder.fireTest() }
+                    } label: {
+                        row(icon: "bell.badge",
+                            title: explain("Week notification in 10 s"),
+                            subtitle: explain("Lock the phone or leave the app to see it"))
+                    }
                 } header: {
                     Text("Developer")
                 } footer: {
