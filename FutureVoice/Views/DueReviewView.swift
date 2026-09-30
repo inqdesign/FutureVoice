@@ -88,7 +88,7 @@ struct DueReviewView: View {
                 .font(.largeTitle).foregroundStyle(.secondary)
             Text("Nothing due right now")
                 .font(.headline)
-            Text(explain("Everything you set aside is still waiting for its turn. Today's goals are on the Practice tab."))
+            Text(explain("Everything you set aside is still waiting for its turn. Today's goals are on the Review tab."))
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

@@ -230,4 +230,95 @@ final class SayItAgainScriptTests: XCTestCase {
         // prompter, not a stack of them.
         XCTAssertEqual(out.note, "a")
     }
+
+    // MARK: - A cut-in is not a turn (2026-09-29)
+
+    private func heard(_ text: String, id: UUID = UUID()) -> Turn {
+        var t = turn(text, role: .fluentSelf, id: id)
+        t.durationMs = 2400
+        return t
+    }
+
+    private func cutIn(_ text: String) -> Turn {
+        var t = turn(text, role: .fluentSelf)
+        t.talkedOver = true
+        t.durationMs = 800     // some audio arrived; the flag is what decides
+        return t
+    }
+
+    func testTheTwoHalvesOfACutInSentenceAreOneLine() {
+        let steps = SayItAgainScript.build(session: session([
+            heard("How was the weekend?"),
+            turn("I went to the"),
+            cutIn("Oh nice, where did you go?"),
+            turn("mountains with my sister."),
+            heard("That sounds lovely."),
+        ]), hasAudio: { _ in false })
+        XCTAssertEqual(steps.map { $0.isSpoken }, [false, true, false])
+        XCTAssertEqual(steps[1].text, "I went to the mountains with my sister.")
+        XCTAssertEqual(steps[2].text, "That sounds lovely.")
+    }
+
+    func testALineWithNoAudioAtAllCountsAsUnheard() {
+        // Talks saved before the flag: nothing played, so nothing recorded.
+        let steps = SayItAgainScript.build(session: session([
+            turn("I went to the"),
+            turn("Where?", role: .fluentSelf),
+            turn("mountains."),
+        ]), hasAudio: { _ in false })
+        XCTAssertEqual(steps.count, 1)
+        XCTAssertEqual(steps[0].text, "I went to the mountains.")
+    }
+
+    func testAHeardAnswerStillSeparatesTwoLines() {
+        let id = UUID()
+        var answer = turn("Where?", role: .fluentSelf, id: id)
+        answer.durationMs = 0   // duration lost, but its recording is on disk
+        let steps = SayItAgainScript.build(session: session([
+            turn("I went away."), answer, turn("To the mountains."),
+        ]), hasAudio: { $0 == id })
+        XCTAssertEqual(steps.count, 3)
+    }
+
+    func testAChainOfCutInsIsOneLine() {
+        let steps = SayItAgainScript.build(session: session([
+            turn("So I"), cutIn("Mm?"), turn("was thinking"), cutIn("Yes?"), turn("about moving."),
+        ]), hasAudio: { _ in false })
+        XCTAssertEqual(steps.map { $0.text }, ["So I was thinking about moving."])
+    }
+
+    func testMergedHalvesKeepTheirCorrectionsAndTheDiffCoversBoth() {
+        let a = UUID()
+        let steps = SayItAgainScript.build(session: session([
+            turn("yesterday I go to",
+                 suggestion: TurnSuggestion(alternative: "yesterday I went to",
+                                            reason: "past tense"),
+                 id: a),
+            cutIn("Where to?"),
+            turn("the museum."),
+        ]), hasAudio: { _ in false })
+        XCTAssertEqual(steps.count, 1)
+        XCTAssertEqual(steps[0].text, "yesterday I went to the museum.")
+        XCTAssertEqual(steps[0].said, "yesterday I go to the museum.")
+        XCTAssertEqual(steps[0].note, "past tense")
+        // Exactly one half was material, and the merged line contains it whole.
+        XCTAssertEqual(steps[0].attemptId, TalkCurriculum.correctionId(for: a))
+        XCTAssertEqual(steps[0].id, a)
+    }
+
+    func testAnUnspacedLanguageJoinsWithoutASpace() {
+        var s = session([turn("昨日は"), cutIn("うん"), turn("山に行った。")])
+        s = Session(id: s.id, userId: s.userId, targetLanguage: "ja", mode: s.mode,
+                    topic: s.topic, startedAt: s.startedAt, endedAt: s.endedAt,
+                    turns: s.turns, summary: nil)
+        let steps = SayItAgainScript.build(session: s, hasAudio: { _ in false })
+        XCTAssertEqual(steps.map { $0.text }, ["昨日は山に行った。"])
+    }
+
+    func testACutInAtTheEndOfTheCallIsLeftAlone() {
+        let steps = SayItAgainScript.build(session: session([
+            turn("I think"), cutIn("Go on?"),
+        ]), hasAudio: { _ in false })
+        XCTAssertEqual(steps.count, 2)
+    }
 }

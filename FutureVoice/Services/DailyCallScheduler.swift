@@ -296,6 +296,51 @@ enum DailyCallScheduler {
         return calendar.isDate(next, inSameDayAs: now)
     }
 
+    // MARK: - A call already in progress
+
+    /// Set while a conversation is live (`ConversationView`, bracketed with
+    /// `CallNowPlaying`). In memory on purpose: a killed app drops it, and the
+    /// next launch's re-arm puts the rings back.
+    private static var liveCallSince: Date?
+
+    /// A scheduled ring must not land on a call the learner is already in.
+    /// An AlarmKit alert takes the audio session — the live call's engine
+    /// stops under it and the call dies with an error — and there is nothing
+    /// to "answer": they are on the phone with that same person right now.
+    /// So every pending ring is taken down for the length of the call, and
+    /// `schedule` refuses to arm one until `releaseAfterLiveCall`.
+    static func holdForLiveCall() {
+        guard liveCallSince == nil else { return }
+        liveCallSince = Date()
+        Task { await cancelPendingRequest() }
+    }
+
+    /// The call is over: put the rings back. A slot that came due DURING the
+    /// call is settled as answered — they were talking to their future self
+    /// at that very moment, and a voicemail next morning asking "couldn't
+    /// talk yesterday?" would be false. Answering cancels the rest of the
+    /// day's slots, exactly as a real pickup does; the session's own end
+    /// (`refreshDailyCall(force: true)`) writes the next call.
+    static func releaseAfterLiveCall() {
+        guard let since = liveCallSince else { return }
+        liveCallSince = nil
+        Task {
+            let store = DailyCallStore.shared
+            guard store.isEnabled, let plan = store.load(), !plan.isSettled else { return }
+            let now = Date()
+            let cameDue = (fireDates(after: since) + [plan.scheduledFor])
+                .contains { $0 > since && $0 <= now }
+            if cameDue {
+                Analytics.capture("daily_call_during_talk", [:])
+                settle(plan, as: .answered, heard: true)
+                store.clearUnheard()
+                await cancelPendingRequest()
+                return
+            }
+            await schedule(plan, callerName: nil)
+        }
+    }
+
     /// Turned off, or no longer possible. Drops the pending ring and the plan.
     static func cancel() async {
         await cancelPendingRequest()
@@ -391,6 +436,9 @@ enum DailyCallScheduler {
     /// banner.
     private static func schedule(_ plan: DailyCallPlan, callerName: String?) async {
         await cancelPendingRequest()
+        // Never arm into a live call (see `holdForLiveCall`); the release
+        // re-arms from the stored plan.
+        guard liveCallSince == nil else { return }
 
         // Every remaining slot today, not just the plan's own time — see
         // `fireDates`. They all carry this same still-unheard message;
@@ -408,6 +456,8 @@ enum DailyCallScheduler {
         let caller = callerName ?? cachedCallerName ?? explain("Your future self")
         if await DailyCallAlarm.scheduleIfSupported(plan, at: dates, callerName: caller) {
             if let callerName { cachedCallerName = callerName }
+            // A call started while the alarm was being armed.
+            if liveCallSince != nil { await cancelPendingRequest() }
             return
         }
 
@@ -443,6 +493,7 @@ enum DailyCallScheduler {
                 UNNotificationRequest(identifier: "\(requestId).\(index)",
                                       content: content, trigger: trigger))
         }
+        if liveCallSince != nil { await cancelPendingRequest() }
     }
 
     /// Remembered so a re-arm — which can happen with the app closed and no

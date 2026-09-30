@@ -885,6 +885,7 @@ struct ConversationView: View {
                 // Put the call on the lock screen. Play/pause there are the
                 // same two things the mic button does, so a call that outlives
                 // the screen can still be hung up without unlocking.
+                DailyCallScheduler.holdForLiveCall()
                 CallNowPlaying.begin(
                     title: callDisplayTitle,
                     onResume: { Task { if !phoneCallActive, !isTornDown { await handleMicTap() } } },
@@ -2548,6 +2549,11 @@ struct ConversationView: View {
                 turns[idx].transcript += delta
             }
         }
+        realtime.onReplyCutIn = { context in
+            guard let id = realtimeReplyTurns[context],
+                  let idx = turns.firstIndex(where: { $0.id == id }) else { return }
+            turns[idx].talkedOver = true
+        }
         realtime.onReplyFinished = { context, text, url, ms in
             guard !isTornDown else { return }
             guard let id = realtimeReplyTurns.removeValue(forKey: context),
@@ -3974,6 +3980,7 @@ struct ConversationView: View {
             phoneCallActive = false
             meter.stop()
             CallNowPlaying.end()
+            DailyCallScheduler.releaseAfterLiveCall()
             closeAfterPaywall = true
             paywallSource = "talk_wall_before_speaking"
             showingPaywall = true
@@ -3991,6 +3998,7 @@ struct ConversationView: View {
         // screen must stop showing a call that has hung up.
         meter.stop()
         CallNowPlaying.end()
+        DailyCallScheduler.releaseAfterLiveCall()
         cancelSilenceTimer()
         cancelIdleWatch()
         // If a call is still live, stop the mic/playback so the overlay isn't
@@ -4097,7 +4105,7 @@ struct ConversationView: View {
             // whole conversation was lost, and the learner's only move is to
             // guess that re-tapping End retries.
             self.error = error.localizedDescription + "\n\n"
-                + explain("Your conversation is saved. Open it under Practice to generate its review material again.")
+                + explain("Your conversation is saved. Open it under Review to generate its review material again.")
             phase = .idle
         }
     }
@@ -4131,7 +4139,7 @@ struct ConversationView: View {
         }
     }
 
-    /// "Go to Practice" from the spent-day sheet. The call can't continue
+    /// "Go to Review" from the spent-day sheet. The call can't continue
     /// today, so leaving IS the answer — but a talk carrying the learner's
     /// own turns is never dropped on the way out: it wraps up first (summary,
     /// drills, book) and the Practice tab is where that flow's Done lands.
@@ -4154,6 +4162,7 @@ struct ConversationView: View {
         phoneCallActive = false
         meter.stop()
         CallNowPlaying.end()
+        DailyCallScheduler.releaseAfterLiveCall()
         cancelSilenceTimer()
         cancelIdleWatch()
         // The transcription runs on its own clock and can outlive the screen —
@@ -4192,6 +4201,7 @@ struct ConversationView: View {
             meter.start(sessionId: sessionId)   // fresh session, fresh tick keys
             // endSession took the last call off the lock screen; this is a new
             // one and has to put itself back.
+            DailyCallScheduler.holdForLiveCall()
             CallNowPlaying.begin(
                 title: callDisplayTitle,
                 onResume: { Task { if !phoneCallActive, !isTornDown { await handleMicTap() } } },

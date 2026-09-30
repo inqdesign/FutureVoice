@@ -143,6 +143,15 @@ struct Turn: Codable, Identifiable {
     /// every assessment path (scorecard metrics, weekly-read evidence,
     /// review material) — the recording stays in the transcript for context.
     var excludedFromScoring: Bool = false
+    /// A fluent-self line the learner talked over moments after it began
+    /// (realtime path, 2026-09-29) — the gateway took a pause for the end of
+    /// their turn and cut in, and they carried on with the SAME sentence. The
+    /// line was written (it is on screen) but not really heard, and the
+    /// learner's words on either side of it are one utterance. Say it again
+    /// reads them as one line (`SayItAgainScript.mergingCutIns`). Encoded
+    /// only when true, so every turn already on disk keeps its bytes and its
+    /// sync fingerprint.
+    var talkedOver: Bool = false
     /// True while `transcript` still holds only the on-device recognizer's
     /// guess and the audio-grounded rewrite is in flight.
     ///
@@ -161,7 +170,21 @@ struct Turn: Codable, Identifiable {
 extension Turn {
     enum CodingKeys: String, CodingKey {
         case id, role, audioURL, transcript, durationMs, timestamp
-        case suggestion, fluency, excludedFromScoring
+        case suggestion, fluency, excludedFromScoring, talkedOver
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(role, forKey: .role)
+        try c.encodeIfPresent(audioURL, forKey: .audioURL)
+        try c.encode(transcript, forKey: .transcript)
+        try c.encode(durationMs, forKey: .durationMs)
+        try c.encode(timestamp, forKey: .timestamp)
+        try c.encodeIfPresent(suggestion, forKey: .suggestion)
+        try c.encodeIfPresent(fluency, forKey: .fluency)
+        try c.encode(excludedFromScoring, forKey: .excludedFromScoring)
+        if talkedOver { try c.encode(true, forKey: .talkedOver) }
     }
 
     // Custom decode so turns saved before `excludedFromScoring` existed still
@@ -177,6 +200,7 @@ extension Turn {
         suggestion = try c.decodeIfPresent(TurnSuggestion.self, forKey: .suggestion)
         fluency = try c.decodeIfPresent(FluencyStats.self, forKey: .fluency)
         excludedFromScoring = try c.decodeIfPresent(Bool.self, forKey: .excludedFromScoring) ?? false
+        talkedOver = try c.decodeIfPresent(Bool.self, forKey: .talkedOver) ?? false
     }
 }
 

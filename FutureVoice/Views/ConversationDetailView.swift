@@ -824,7 +824,7 @@ struct ConversationDetailView: View {
             .controlSize(.large)
             .padding(.horizontal, 20)
             .padding(.top, 16)
-            pageFooter(explain("A quick run through this talk's key phrases — anything left joins your review queue in Practice."))
+            pageFooter(explain("A quick run through this talk's key phrases — anything left comes back in Review."))
         }
         Color.clear.frame(height: 4)
     }

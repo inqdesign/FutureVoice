@@ -507,7 +507,21 @@ final class SyncEngine: ObservableObject {
             let key = record.key
             let previous = local[key]
             let existing = index.entry(kind: handler.kind, lang: lang, key: key)
-            let localSide = previous.map { SyncSide(payload: $0, at: existing?.observedAt ?? now, deleted: false) }
+            // A file that no longer matches the index was edited HERE since
+            // the index last looked — after the last push, so it is newer
+            // than anything the server can hand back for it. Dated by the
+            // index it read as that older moment, and the device's own last
+            // push, returning in this pull (a push never moves the change
+            // token), tied it and won: a talk's summary-less draft, pushed
+            // while the summary was being written, came back and overwrote
+            // the summary (reported 2026-09-29 as "Say it again reset my
+            // review material" — the shadow take's pass was the first pull
+            // after the summary landed).
+            let editedHere = previous.map { payload in
+                existing.map { $0.isDeleted || $0.hash != SyncCanonical.hash(payload) } ?? true
+            } ?? false
+            let localAt = editedHere ? now : (existing?.observedAt ?? now)
+            let localSide = previous.map { SyncSide(payload: $0, at: localAt, deleted: false) }
                 ?? existing.flatMap { $0.isDeleted ? SyncSide(payload: nil, at: $0.deletedAt ?? .distantPast, deleted: true) : nil }
             let remoteSide = SyncSide(payload: record.payload, at: record.deletedAt ?? record.modifiedAt,
                                       deleted: record.isTombstone)

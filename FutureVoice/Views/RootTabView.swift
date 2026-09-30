@@ -84,7 +84,7 @@ struct RootTabView: View {
                     .tag(Tab.watch)
 
                 PracticeTab()
-                    .tabItem { Label("Practice", systemImage: "book.fill") }
+                    .tabItem { Label("Review", systemImage: "book.fill") }
                     .tag(Tab.practice)
 
                 ProgressTab()

@@ -130,7 +130,7 @@ struct DailyAllowanceSheet: View {
                         dismiss()
                     }
                 }
-                action(explain("Go to Practice"),
+                action(explain("Go to Review"),
                        prominent: !packLeads && !(canUpgrade && !isTrial)) {
                     onReview()
                     dismiss()

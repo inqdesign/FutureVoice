@@ -303,7 +303,7 @@ struct TalkHomeExperiment: View {
         HStack(spacing: 4) {
             tabItem("mic.fill", "Talk", selected: true)
             tabItem("play.rectangle", "Watch")
-            tabItem("book", "Practice")
+            tabItem("book", "Review")
             tabItem("chart.bar", "Progress")
         }
         .padding(6)

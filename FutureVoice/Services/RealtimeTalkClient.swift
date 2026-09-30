@@ -106,6 +106,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     var onReplyDelta: ((String, String) -> Void)?
     /// The line is over (finished or talked over): its audio and duration.
     var onReplyFinished: ((String, String, URL?, Int) -> Void)?
+    /// The learner talked over the line moments after it began — the
+    /// gateway cut in on a pause and they carried on with the same sentence.
+    /// Fired just before that line's `onReplyFinished`.
+    var onReplyCutIn: ((String) -> Void)?
 
     /// Mic PCM since the last committed turn, at the MIC'S OWN rate — the
     /// 16 kHz uplink is transport quality, and saving it was why a learner's
@@ -122,6 +126,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var replyText = ""
     /// The reply context on screen right now, shared by began/delta/finished.
     private var replyContext: String?
+    /// When that line began (`audio_start`), for telling a cut-in from a
+    /// learner deliberately talking over a line they have been hearing.
+    private var replyBeganAt: Date?
+    /// A barge-in this soon after a line began is a cut-in — the gateway's
+    /// own `cutoffWindowMs` (session.ts), measured from the same moment
+    /// give or take the model's first token.
+    static let cutInWindow: TimeInterval = 2.5
 
     // MARK: Echo gate
     //
@@ -1849,6 +1860,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // later (reported 2026-09-01).
             if let context = json["context"] as? String {
                 replyContext = context
+                replyBeganAt = Date()
                 onReplyBegan?(context)
             }
             // The FIRST line of a call on the open speaker is half-duplex.
@@ -1918,6 +1930,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // rebuild, a raise is a crash.
             Self.avGuard("interrupt.play") { self.player.play() }
             state = .hearing
+            if let context = replyContext, let began = replyBeganAt,
+               Date().timeIntervalSince(began) < Self.cutInWindow {
+                onReplyCutIn?(context)
+            }
             handOverReply()
             // A barge-in means the learner IS talking — the gate would only
             // stand in their way now.
@@ -2054,6 +2070,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         replyPCM = Data()
         replyText = ""
         replyContext = nil
+        replyBeganAt = nil
         guard !text.isEmpty else { return }
         let url = Self.saveWAV(pcm: pcm, sampleRate: replySampleRate)
         let ms = Int(Double(pcm.count / 2) / replySampleRate * 1000)

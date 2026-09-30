@@ -10441,6 +10441,52 @@
         }
       }
     },
+    "A quick run through this talk's key phrases — anything left comes back in Review." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein kurzer Durchgang durch die wichtigsten Sätze dieses Gesprächs — der Rest kommt unter Wiederholen wieder."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un repaso rápido de las frases clave de esta llamada — el resto vuelve en Repaso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un tour rapide des phrases clés de cet appel — le reste revient dans Révision."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この通話の大事な文だけをさっと復習します。残りは復習タブでまた出てきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화의 핵심 문장만 빠르게 복습해요 — 나머지는 복습 탭에서 다시 만나요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速复习这次通话的重点句子。剩下的会在复习页再出现。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速複習這次通話的重點句子。剩下的會在複習分頁再出現。"
+          }
+        }
+      }
+    },
     "A quiet week" : {
       "localizations" : {
         "de" : {
@@ -10483,52 +10529,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "休息的一週"
-          }
-        }
-      }
-    },
-    "A quick run through this talk's key phrases — anything left joins your review queue in Practice." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein kurzer Durchgang durch die wichtigsten Sätze dieses Gesprächs — der Rest landet in deiner Wiederholungsliste unter Practice."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un repaso rápido de las frases clave de esta llamada — el resto pasa a tu cola de repaso en Práctica."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un tour rapide des phrases clés de cet appel — le reste part dans ta file de révision, dans Pratique."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この通話の大事な文だけをさっと復習します。残りは「練習」の復習キューに入ります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 대화의 핵심 문장만 빠르게 복습해요 — 나머지는 Practice의 복습 큐로 들어가요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快速复习这次通话的重点句子。剩下的会进到「练习」的复习队列。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快速複習這次通話的重點句子。剩下的會進到「練習」的複習佇列。"
           }
         }
       }
@@ -28791,48 +28791,48 @@
         }
       }
     },
-    "Everything you set aside is still waiting for its turn. Today's goals are on the Practice tab." : {
+    "Everything you set aside is still waiting for its turn. Today's goals are on the Review tab." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles Zurückgestellte wartet noch auf seinen Termin. Die heutigen Ziele stehen im Übungs-Tab."
+            "value" : "Alles Zurückgestellte wartet noch auf seinen Termin. Die heutigen Ziele stehen im Tab Wiederholen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todo lo que dejaste para después sigue esperando su turno. Los objetivos de hoy están en la pestaña Práctica."
+            "value" : "Todo lo que dejaste para después sigue esperando su turno. Los objetivos de hoy están en la pestaña Repaso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout ce que tu as mis de côté attend encore son tour. Les objectifs du jour sont dans l’onglet Pratique."
+            "value" : "Tout ce que tu as mis de côté attend encore son tour. Les objectifs du jour sont dans l’onglet Révision."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あとに回した項目は、まだ順番を待っています。今日の目標は練習タブにあります。"
+            "value" : "あとに回した項目は、まだ順番を待っています。今日の目標は復習タブにあります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "미뤄둔 항목들은 아직 차례를 기다리는 중이에요. 오늘 목표는 연습 탭에 있어요."
+            "value" : "미뤄둔 항목들은 아직 차례를 기다리는 중이에요. 오늘 목표는 복습 탭에 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "先放一边的项目还在等轮到它。今天的目标在练习页。"
+            "value" : "先放一边的项目还在等轮到它。今天的目标在复习页。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "先放一邊的項目還在等輪到它。今天的目標在練習分頁。"
+            "value" : "先放一邊的項目還在等輪到它。今天的目標在複習分頁。"
           }
         }
       }
@@ -28867,7 +28867,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "지금까지 모은 것 전부 — 언제든 둘러보세요. 오늘 할 연습은 연습 탭에 있어요."
+            "value" : "지금까지 모은 것 전부 — 언제든 둘러보세요. 오늘 할 복습은 복습 탭에 있어요."
           }
         },
         "zh-Hans" : {
@@ -33559,12 +33559,12 @@
         }
       }
     },
-    "Go to Practice" : {
+    "Go to Review" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zum Üben"
+            "value" : "Zum Wiederholen"
           }
         },
         "es" : {
@@ -39945,50 +39945,50 @@
         }
       }
     },
-    "Its book in Practice goes with it — study items and mastery included." : {
+    "Its book in Review goes with it — study items and mastery included." : {
       "comment" : "Message in a confirmation dialog when deleting a scenario.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das zugehörige Buch unter Üben geht mit — samt Lernstoff und Fortschritt."
+            "value" : "Das zugehörige Buch unter Wiederholen geht mit — samt Lernstoff und Fortschritt."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El cuaderno de Práctica también se borra, con sus elementos de estudio y tu progreso."
+            "value" : "El cuaderno de Repaso también se borra, con sus elementos de estudio y tu progreso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Son carnet dans Pratique part avec elle — éléments d’étude et progression compris."
+            "value" : "Son carnet dans Révision part avec elle — éléments d’étude et progression compris."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "練習タブのブックも一緒に削除されます。学習項目と習熟度も含めて。"
+            "value" : "復習タブのブックも一緒に削除されます。学習項目と習熟度も含めて。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "연습 탭의 책도 함께 삭제돼요 — 학습 항목과 진행도까지요."
+            "value" : "복습 탭의 책도 함께 삭제돼요 — 학습 항목과 진행도까지요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "练习页里的复习本也会一起删除，包括学习项目和熟练度。"
+            "value" : "复习页里的复习本也会一起删除，包括学习项目和熟练度。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "練習分頁裡的複習本也會一起刪除，包括學習項目和熟練度。"
+            "value" : "複習分頁裡的複習本也會一起刪除，包括學習項目和熟練度。"
           }
         }
       }
@@ -56191,7 +56191,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "연습"
+            "value" : "복습"
           }
         },
         "zh-Hans" : {
@@ -66846,30 +66846,30 @@
         }
       }
     },
-    "Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does." : {
+    "Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nachsprech-Punkte und Wiederholungen messen Übung, nicht Niveau. Sie stehen unter Activity und im Practice-Tab — sie machen dich besser, aber das Niveau bewegt sich erst, wenn sich dein Sprechen bewegt."
+            "value" : "Nachsprech-Punkte und Wiederholungen messen Übung, nicht Niveau. Sie stehen unter Activity und im Tab Wiederholen — sie machen dich besser, aber das Niveau bewegt sich erst, wenn sich dein Sprechen bewegt."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las puntuaciones de shadowing y las repeticiones de repaso miden cuánto practicas, no tu nivel. Están en Actividad y en la pestaña Práctica: practicar te hace mejorar, pero el nivel solo se mueve cuando cambia cómo hablas."
+            "value" : "Las puntuaciones de shadowing y las repeticiones de repaso miden cuánto practicas, no tu nivel. Están en Actividad y en la pestaña Repaso: practicar te hace mejorar, pero el nivel solo se mueve cuando cambia cómo hablas."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les scores de shadowing et les répétitions de révision mesurent combien tu t’entraînes, pas ton niveau. Ils sont dans Activité et dans l’onglet Pratique : t’entraîner te fait progresser, mais le niveau ne bouge que quand ta façon de parler change."
+            "value" : "Les scores de shadowing et les répétitions de révision mesurent combien tu t’entraînes, pas ton niveau. Ils sont dans Activité et dans l’onglet Révision : t’entraîner te fait progresser, mais le niveau ne bouge que quand ta façon de parler change."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "シャドーイングのスコアと復習回数は、レベルではなく練習量を示します。アクティビティと練習タブにあります。練習すれば上達しますが、レベルは実際の話し方が変わってはじめて動きます。"
+            "value" : "シャドーイングのスコアと復習回数は、レベルではなく練習量を示します。アクティビティと復習タブにあります。練習すれば上達しますが、レベルは実際の話し方が変わってはじめて動きます。"
           }
         },
         "ko" : {
@@ -66881,13 +66881,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "跟读分数和复习次数看的是练习量，不是水平。它们在活动和练习页里。练习会让你进步，但水平只有在实际说出口的话改变时才会动。"
+            "value" : "跟读分数和复习次数看的是练习量，不是水平。它们在活动和复习页里。练习会让你进步，但水平只有在实际说出口的话改变时才会动。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "跟讀分數和複習次數看的是練習量，不是程度。它們在活動和練習分頁裡。練習會讓你進步，但程度只有在實際說出口的話改變時才會動。"
+            "value" : "跟讀分數和複習次數看的是練習量，不是程度。它們在活動和複習分頁裡。練習會讓你進步，但程度只有在實際說出口的話改變時才會動。"
           }
         }
       }
@@ -73484,48 +73484,48 @@
         }
       }
     },
-    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice." : {
+    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippe auf Let's talk — oder unten auf eine Situation oder einen Artikel — für dein erstes Gespräch. Alles, was dir dabei begegnet, wird in Practice zum Wiederholungsstoff."
+            "value" : "Tippe auf Let's talk — oder unten auf eine Situation oder einen Artikel — für dein erstes Gespräch. Alles, was dir dabei begegnet, landet unter Wiederholen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toca Hablemos —o una situación o noticia de abajo— para tener tu primera conversación. Todo lo que encuentres se convierte en material de repaso en Práctica."
+            "value" : "Toca Hablemos —o una situación o noticia de abajo— para tener tu primera conversación. Todo lo que encuentres queda en Repaso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Touche « On parle ? » — ou une situation ou une actu plus bas — pour ta première conversation. Tout ce que tu y croises devient de la matière à réviser dans Pratique."
+            "value" : "Touche « On parle ? » — ou une situation ou une actu plus bas — pour ta première conversation. Tout ce que tu y croises se retrouve dans Révision."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下の「話す」をタップして最初の会話を始めましょう。シチュエーションやニュースをタップしてもかまいません。ここで出会ったものはすべて、練習タブに復習の材料としてたまります。"
+            "value" : "下の「話す」をタップして最初の会話を始めましょう。シチュエーションやニュースをタップしてもかまいません。ここで出会ったものはすべて、復習タブに復習の材料としてたまります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아래 Let's talk을 눌러 첫 대화를 시작해 보세요. 상황이나 뉴스를 눌러도 돼요. 여기서 만난 건 전부 Practice에 복습거리로 쌓여요."
+            "value" : "아래 Let's talk을 눌러 첫 대화를 시작해 보세요. 상황이나 뉴스를 눌러도 돼요. 여기서 만난 건 전부 복습 탭에 복습거리로 쌓여요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点下方的「开始说」开始第一次对话，点情境或新闻也可以。在这里遇到的一切都会累积到练习页里当复习材料。"
+            "value" : "点下方的「开始说」开始第一次对话，点情境或新闻也可以。在这里遇到的一切都会累积到复习页里当复习材料。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點下方的「開始說」開始第一次對話，點情境或新聞也可以。在這裡遇到的一切都會累積到練習分頁裡當複習材料。"
+            "value" : "點下方的「開始說」開始第一次對話，點情境或新聞也可以。在這裡遇到的一切都會累積到複習分頁裡當複習材料。"
           }
         }
       }
@@ -77888,7 +77888,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "직접 만든 상황들이에요. 볼 때마다 새로 쓰이고, 지난 것들은 Practice에 남아요."
+            "value" : "직접 만든 상황들이에요. 볼 때마다 새로 쓰이고, 지난 것들은 복습 탭에 남아요."
           }
         },
         "zh-Hans" : {
@@ -94589,48 +94589,48 @@
         }
       }
     },
-    "Your conversation is saved. Open it under Practice to generate its review material again." : {
+    "Your conversation is saved. Open it under Review to generate its review material again." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein Gespräch ist gespeichert. Öffne es unter Practice, um das Lernmaterial erneut zu erzeugen."
+            "value" : "Dein Gespräch ist gespeichert. Öffne es unter Wiederholen, um das Lernmaterial erneut zu erzeugen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La conversación está guardada. Ábrela en Práctica para volver a generar su material de repaso."
+            "value" : "La conversación está guardada. Ábrela en Repaso para volver a generar su material de repaso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La conversation est enregistrée. Ouvre-la dans Pratique pour regénérer son matériel de révision."
+            "value" : "La conversation est enregistrée. Ouvre-la dans Révision pour regénérer son matériel de révision."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会話は保存しました。「練習」で開くと、復習教材をもう一度作れます。"
+            "value" : "会話は保存しました。「復習」で開くと、復習教材をもう一度作れます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "대화는 저장했어요. Practice에서 열어 복습 자료를 다시 만들 수 있어요."
+            "value" : "대화는 저장했어요. 복습 탭에서 열어 복습 자료를 다시 만들 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "对话已保存。到「练习」打开它，就能重新产生复习教材。"
+            "value" : "对话已保存。到「复习」打开它，就能重新产生复习教材。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "對話已儲存。到「練習」打開它，就能重新產生複習教材。"
+            "value" : "對話已儲存。到「複習」打開它，就能重新產生複習教材。"
           }
         }
       }

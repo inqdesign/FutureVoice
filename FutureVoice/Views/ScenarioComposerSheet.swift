@@ -1011,7 +1011,7 @@ struct ScenarioComposerSheet: View {
                     dismiss()
                 }
             } message: {
-                Text(explain("Its book in Practice goes with it — study items and mastery included."))
+                Text(explain("Its book in Review goes with it — study items and mastery included."))
             }
         }
     }

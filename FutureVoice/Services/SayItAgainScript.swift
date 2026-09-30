@@ -37,6 +37,16 @@ import Foundation
 ///    and reading it back is what keeps the run a CONVERSATION rather than a
 ///    list of fixes (user decision, 2026-09-27).
 ///
+/// **A cut-in is not a turn** (2026-09-29, reported by the founder). When
+/// the learner pauses mid-sentence, the call can take the pause for the end
+/// of their turn: a reply is written — its text is on screen — and they
+/// talk straight over it with the rest of the sentence, which the call
+/// files as a NEW turn. Replayed as it was stored, the prompter asked them
+/// to read the two halves of one sentence as two lines, with an answer
+/// nobody heard between them. So a fluent-self line that was never heard
+/// (`isUnheard`) and sits between two of the learner's turns is dropped,
+/// and the learner's two lines become one (`mergingCutIns`).
+///
 /// A turn flagged as misheard is dropped outright — its transcript is the
 /// recognizer's mistake, and putting it on a prompter would ask the learner
 /// to say something they never said. The fluent self's answer to it stays:
@@ -67,10 +77,13 @@ enum SayItAgainScript {
     /// `@MainActor` for `TalkCurriculum.correctionId` alone — the id a
     /// passing read is filed under has to be the book's own.
     @MainActor
-    static func build(session: Session) -> [Step] {
+    static func build(session: Session,
+                      hasAudio: (UUID) -> Bool = { TurnAudioStore.shared.url(for: $0) != nil }) -> [Step] {
         let fixes = session.summary?.phrasesUsed ?? []
         var out: [Step] = []
+        var unheard: Set<UUID> = []
         for turn in session.turns {
+            if isUnheard(turn, hasAudio: hasAudio) { unheard.insert(turn.id) }
             let transcript = turn.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !transcript.isEmpty else { continue }
             guard turn.role == .user else {
@@ -101,7 +114,57 @@ enum SayItAgainScript {
                             note: note,
                             attemptId: nil))
         }
+        return mergingCutIns(out, unheard: unheard,
+                             spaced: LanguageCatalog.writesSpaces(session.targetLanguage))
+    }
+
+    /// A fluent-self line the learner never heard: flagged as talked over by
+    /// the live call, or — for a talk saved before that flag — a line with
+    /// no audio at all (nothing played, so nothing was recorded; a line
+    /// synced from another device before its audio still has its duration).
+    static func isUnheard(_ turn: Turn, hasAudio: (UUID) -> Bool) -> Bool {
+        guard turn.role == .fluentSelf else { return false }
+        if turn.talkedOver { return true }
+        return turn.durationMs == 0 && turn.audioURL == nil && !hasAudio(turn.id)
+    }
+
+    /// Learner line · unheard answer · learner line → one learner line, as
+    /// many times as it repeats. A cut-in anywhere else (the last line of
+    /// the call, or between two fluent-self lines) is left as it was.
+    static func mergingCutIns(_ steps: [Step], unheard: Set<UUID>, spaced: Bool) -> [Step] {
+        var out: [Step] = []
+        var i = 0
+        while i < steps.count {
+            let step = steps[i]
+            if unheard.contains(step.id), !step.isSpoken,
+               let last = out.last, last.isSpoken,
+               i + 1 < steps.count, steps[i + 1].isSpoken {
+                out[out.count - 1] = joined(last, steps[i + 1], spaced: spaced)
+                i += 2
+                continue
+            }
+            out.append(step)
+            i += 1
+        }
         return out
+    }
+
+    /// Two halves of one utterance, read as one line. What they said is
+    /// joined the same way, so the diff still runs over the whole line; a
+    /// half nobody corrected contributes its text as said. A pass is filed
+    /// under a correction only when exactly one half carried one — the
+    /// line then contains that correction whole.
+    private static func joined(_ a: Step, _ b: Step, spaced: Bool) -> Step {
+        let sep = spaced ? " " : ""
+        let corrected = a.isCorrected || b.isCorrected
+        let said = corrected
+            ? (a.isCorrected ? a.said : a.text) + sep + (b.isCorrected ? b.said : b.text)
+            : ""
+        let notes = [a.note, b.note].filter { !$0.isEmpty }
+        let ids = [a.attemptId, b.attemptId].compactMap { $0 }
+        return Step(id: a.id, isSpoken: true, text: a.text + sep + b.text,
+                    said: said, note: notes.joined(separator: "\n"),
+                    attemptId: ids.count == 1 ? ids[0] : nil)
     }
 
     /// A Watch book's scene, run again with the learner on their own side.

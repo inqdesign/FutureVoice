@@ -394,6 +394,28 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(cloud.saves, after, "nothing changed, nothing was pushed")
     }
 
+    /// The end of a talk: the summary-less draft is pushed while the summary
+    /// is still being written, then the summary lands in the file. The next
+    /// pass pulls the draft back (its own push) — it must not win.
+    func testLocalEditSurvivesItsOwnEarlierPushComingBack() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        try await a.engine.enable()
+        let draft = sample("Draft")
+        try writeSessions([draft], a.root)
+        await sync(a)
+
+        var summarized = draft
+        summarized.topic = "Summarized"
+        try writeSessions([summarized], a.root)
+        await sync(a)
+        XCTAssertEqual(sessions(a.root).first?.topic, "Summarized", "the local edit was overwritten")
+
+        let b = device(cloud)
+        try await b.engine.enable()
+        XCTAssertEqual(sessions(b.root).first?.topic, "Summarized", "and it reached the server")
+    }
+
     func testStaleTagIsAConflictThatTheNextPassResolves() async throws {
         let cloud = InMemorySyncTransport()
         let a = device(cloud)

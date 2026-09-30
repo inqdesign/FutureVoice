@@ -195,7 +195,7 @@ struct PracticeTab: View {
             .tabBarScrollFeather()
             .background(TransparentRoundedNavBar())
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Practice")
+            .navigationTitle("Review")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar { finishedShelfButton }
             .onAppear {

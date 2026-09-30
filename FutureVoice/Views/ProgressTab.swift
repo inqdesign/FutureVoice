@@ -1334,7 +1334,7 @@ struct ProgressTab: View {
                     Text(explain("≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed."))
                 }
                 Section {
-                    Text(explain("Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does."))
+                    Text(explain("Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does."))
                         .font(.callout)
                 } header: {
                     Text("What never moves the level")
