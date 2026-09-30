@@ -1,5 +1,8 @@
 package com.roro.futurevoice.ui.brand
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.Canvas
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -52,6 +55,10 @@ fun TalkRing(
     strokeWidth: Dp = 14.dp,
     /** The call pill's height — pins the mosaic's cell size across sizes. */
     pixelHeight: Float = 64f,
+    /** 0 while the free-talk morph's proxy stands in for the surface. */
+    surfaceAlpha: Float = 1f,
+    /** Where the surface circle is, in window coordinates (the morph's start). */
+    onSurfaceBounds: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null,
     content: @Composable () -> Unit = {},
 ) {
     val p = progress.coerceIn(0f, 1f)
@@ -104,6 +111,9 @@ fun TalkRing(
         Box(
             Modifier
                 .size(diameter - strokeWidth * 2 - 4.dp)
+                .then(if (onSurfaceBounds != null) Modifier.onGloballyPositioned {
+                    onSurfaceBounds(it.boundsInWindow()) } else Modifier)
+                .graphicsLayer { alpha = surfaceAlpha }
                 .clip(CircleShape)
                 // A hairline rim, so the circle has an edge rather than
                 // dissolving into the page.

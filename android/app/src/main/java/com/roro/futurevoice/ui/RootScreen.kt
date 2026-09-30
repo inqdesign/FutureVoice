@@ -63,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
@@ -402,6 +403,8 @@ fun RootScreen() {
         }
     }
 
+    val morphScope = rememberCoroutineScope()
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     when {
         welcomePreview -> WelcomeScreen(onGetStarted = { welcomePreview = false })
 
@@ -751,6 +754,8 @@ fun RootScreen() {
             })
 
         inCall && state.voiceId != null ->
+          Box(Modifier.fillMaxSize().graphicsLayer {
+              alpha = if (TalkMorph.active) TalkMorph.callAlpha.value else 1f }) {
             TalkScreen(
                 voiceId = state.voiceId!!,
                 targetLanguage = state.targetLanguage,
@@ -764,10 +769,16 @@ fun RootScreen() {
                 cast = callCast,
                 castVoiceId = callCastVoice,
                 counterpartId = callCounterpartId,
-                onExit = { inCall = false; callTopic = ""; callFacts = emptyList()
-                    callScenarioId = null; callOpener = ""; callCast = null
-                    callCastVoice = null; callCounterpartId = null },
+                onExit = {
+                    // A call that flew in from the ring flies back to it.
+                    TalkMorph.close(morphScope) {
+                        inCall = false; callTopic = ""; callFacts = emptyList()
+                        callScenarioId = null; callOpener = ""; callCast = null
+                        callCastVoice = null; callCounterpartId = null
+                    }
+                },
             )
+          }
 
         else -> HomeScreen(
             state = state,
@@ -777,8 +788,14 @@ fun RootScreen() {
                 // deep link) meets in this one callback, so one gate covers
                 // them all. Met only as a 402, it would arrive after the call
                 // screen was already up.
-                gate { callTopic = topic; callFacts = facts
-                    callScenarioId = scenarioId; inCall = true }
+                gate {
+                    callTopic = topic; callFacts = facts; callScenarioId = scenarioId
+                    // The FREE talk is the ring's own tap: its surface morphs
+                    // into the call pill (iOS). Every other launcher opens flat.
+                    if (topic.isEmpty() && scenarioId == null && tab == HomeTab.TALK)
+                        TalkMorph.open(morphScope) { inCall = true }
+                    else inCall = true
+                }
             },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
@@ -814,6 +831,8 @@ fun RootScreen() {
             // header is not the place for a form.
             onAddLanguage = { showMe = true },
         )
+    }
+    TalkMorphOverlay(inCall = inCall)
     }
 }
 
@@ -1315,6 +1334,10 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             level = 0f,
             theme = theme,
             accent = theme.tint(),
+            // The free-talk morph lifts this surface off and flies it to the
+            // call's pill; while its proxy is up, the ring shows none.
+            surfaceAlpha = if (TalkMorph.active) 0f else 1f,
+            onSurfaceBounds = { TalkMorph.ringRect = it },
             modifier = Modifier.then(
                 if (enabled) Modifier.clickable(indication = null,
                     interactionSource = remember { MutableInteractionSource() }) { onTap() }
@@ -1331,8 +1354,12 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 val label = stringResource(R.string.let_s_talk)
                 Text(label, style = DisplayFace.style(label,
                     MaterialTheme.typography.titleLarge))
+                val sub = if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds)
+                    else stringResource(R.string.today_s_goal_lld_min, goalMinutes)
+                // The morph's proxy wears these exact two lines.
+                androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = label; TalkMorph.ringSub = sub }
                 Text(
-                    (if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds) else stringResource(R.string.today_s_goal_lld_min, goalMinutes)),
+                    sub,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

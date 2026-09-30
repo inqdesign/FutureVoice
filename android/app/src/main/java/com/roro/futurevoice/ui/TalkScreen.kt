@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.produceState
@@ -659,6 +661,9 @@ fun TalkScreen(
             // A separate outlined "Pause" button below it made the surface
             // decoration and the control an afterthought.
             if (onCall || paused) {
+                androidx.compose.runtime.DisposableEffect(Unit) {
+                    onDispose { TalkMorph.pillPresent = false }
+                }
                 HorizontalDivider(Modifier.alpha(0.15f))
                 Column(
                     Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp),
@@ -675,6 +680,9 @@ fun TalkScreen(
                     Box(
                         Modifier
                             .size(width = 156.dp, height = 64.dp)
+                            // Where the free-talk morph docks (and leaves from).
+                            .onGloballyPositioned {
+                                TalkMorph.pillRect = it.boundsInWindow(); TalkMorph.pillPresent = true }
                             .clip(CircleShape)
                             .clickable { vm.togglePause() },
                         contentAlignment = Alignment.Center,
