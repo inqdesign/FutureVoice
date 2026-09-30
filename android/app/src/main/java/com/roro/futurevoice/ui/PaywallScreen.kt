@@ -466,21 +466,11 @@ private fun PlansStep(
             modifier = Modifier.padding(top = 12.dp))
 
         if (periods.size > 1) {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                periods.forEachIndexed { index, p ->
-                    SegmentedButton(
-                        selected = period == p,
-                        onClick = { onPeriod(p) },
-                        shape = SegmentedButtonDefaults.itemShape(index, periods.size),
-                    ) {
-                        Text(stringResource(when (p) {
-                            "weekly" -> R.string.weekly
-                            "annual" -> R.string.annual
-                            else -> R.string.monthly
-                        }))
-                    }
-                }
-            }
+            com.roro.futurevoice.ui.brand.IosSegmented(periods.map { p -> stringResource(when (p) {
+                "weekly" -> R.string.weekly
+                "annual" -> R.string.annual
+                else -> R.string.monthly
+            }) }, periods.indexOf(period).coerceAtLeast(0), { onPeriod(periods[it]) }, Modifier.fillMaxWidth())
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {

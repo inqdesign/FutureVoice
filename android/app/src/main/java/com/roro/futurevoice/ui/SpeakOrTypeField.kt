@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -132,8 +134,19 @@ fun SpeakOrTypeField(
         }
     }
 
-    if (leadingControls != null || trailingControls != null) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    // ALWAYS one box (iOS `SpeakOrTypeField`): the text on top, one 44 pt
+    // control strip under it with the mic at its end. Without host controls
+    // the box draws its own filled card; a host with controls (the Watch
+    // composer) supplies the card around it.
+    val ownCard = leadingControls == null && trailingControls == null
+    run {
+        Column(
+            (if (ownCard) Modifier.fillMaxWidth()
+                .clip(com.roro.futurevoice.ui.brand.ContinuousShape(12.dp))
+                .background(com.roro.futurevoice.ui.brand.iosFill())
+            else Modifier),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             TextField(
                 value = text,
                 onValueChange = {
@@ -142,6 +155,7 @@ fun SpeakOrTypeField(
                 },
                 placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyLarge) },
                 maxLines = 5,
+                minLines = if (ownCard) 2 else 1,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -176,54 +190,6 @@ fun SpeakOrTypeField(
                     modifier = Modifier.padding(horizontal = 12.dp))
             }
         }
-        return
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.Top,
-        ) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = {
-                    onText(it)
-                    // Typing over a dictation makes it deliberate text, which
-                    // the polish pass must then leave alone.
-                    if (!listening && usedVoice) onUsedVoice(false)
-                },
-                placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyMedium) },
-                modifier = Modifier.weight(1f).heightIn(min = 96.dp),
-            )
-            FilledTonalIconButton(
-                onClick = {
-                    if (listening) end()
-                    else if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
-                        android.content.pm.PackageManager.PERMISSION_GRANTED) begin()
-                    else micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                },
-                colors = if (listening)
-                    IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer)
-                else IconButtonDefaults.filledTonalIconButtonColors(),
-            ) {
-                Icon(
-                    if (listening) Icons.Filled.Stop else Icons.Filled.Mic,
-                    contentDescription = stringResource(
-                        if (listening) R.string.stop else R.string.speak),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-        if (unavailable) {
-            Text(stringResource(R.string.speech_recognition_isnt_available_type_instead),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else if (listening) {
-            Text(stringResource(R.string.listening_tap_to_finish),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary)
-        }
-    }
 }

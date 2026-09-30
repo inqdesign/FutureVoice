@@ -138,7 +138,7 @@ fun DailyCallPage(
         GroupedCard {
             MeRow(Icons.Filled.PhoneCallback, stringResource(R.string.daily_call),
                 stringResource(R.string.your_fluent_self_phones_you), kind = MeRowKind.PLAIN,
-                trailing = { Switch(checked = enabled, onCheckedChange = onEnabledChange) },
+                trailing = { com.roro.futurevoice.ui.brand.IosSwitch(checked = enabled, onCheckedChange = onEnabledChange) },
                 onClick = { onEnabledChange(!enabled) })
             if (enabled) {
                 // One row per call; the position is its identity, so editing a

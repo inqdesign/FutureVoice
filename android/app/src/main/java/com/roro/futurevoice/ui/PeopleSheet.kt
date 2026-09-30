@@ -200,7 +200,7 @@ internal fun PersonEditor(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.public_figure), style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f))
-                Switch(checked = draft.isPublicFigure == true,
+                com.roro.futurevoice.ui.brand.IosSwitch(checked = draft.isPublicFigure == true,
                     onCheckedChange = { draft = draft.copy(isPublicFigure = if (it) true else null) })
             }
             if (draft.isPublicFigure == true) {

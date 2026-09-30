@@ -221,16 +221,9 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
             item { HeadlineStats(record.headline) }
 
             item {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    Period.entries.forEachIndexed { index, p ->
-                        SegmentedButton(
-                            selected = p == period,
-                            onClick = { period = p },
-                            shape = SegmentedButtonDefaults.itemShape(index, Period.entries.size),
-                            label = { Text(stringResource(p.labelRes)) },
-                        )
-                    }
-                }
+                com.roro.futurevoice.ui.brand.IosSegmented(Period.entries.map { stringResource(it.labelRes) },
+                    Period.entries.indexOf(period), { period = Period.entries[it] },
+                    Modifier.fillMaxWidth())
             }
 
             item {

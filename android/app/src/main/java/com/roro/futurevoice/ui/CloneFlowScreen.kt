@@ -487,18 +487,10 @@ fun CloneFlowScreen(
                     // is answered by the paragraphs below, not by a question
                     // on a screen of its own.
                     if (nativeScript != null) {
-                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                            SegmentedButton(
-                                selected = !readInNative,
-                                onClick = { readInNative = false },
-                                shape = SegmentedButtonDefaults.itemShape(0, 2),
-                            ) { Text(LanguageCatalog.endonym(targetLanguage)) }
-                            SegmentedButton(
-                                selected = readInNative,
-                                onClick = { readInNative = true },
-                                shape = SegmentedButtonDefaults.itemShape(1, 2),
-                            ) { Text(LanguageCatalog.endonym(nativeLanguage)) }
-                        }
+                        com.roro.futurevoice.ui.brand.IosSegmented(listOf(LanguageCatalog.endonym(targetLanguage),
+                            LanguageCatalog.endonym(nativeLanguage)),
+                            if (readInNative) 1 else 0, { readInNative = it == 1 },
+                            Modifier.fillMaxWidth())
                     }
                     Text(
                         stringResource(if (nativeScript == null)

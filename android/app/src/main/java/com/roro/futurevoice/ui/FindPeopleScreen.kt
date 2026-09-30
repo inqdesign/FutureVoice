@@ -299,15 +299,9 @@ fun FindPeopleScreen(
                 // Which pool: a real learner, or someone we invented.
                 item {
                     GroupedSectionSpacer()
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        PoolGroup.entries.forEachIndexed { i, g ->
-                            SegmentedButton(
-                                selected = group == g,
-                                onClick = { group = g },
-                                shape = SegmentedButtonDefaults.itemShape(i, PoolGroup.entries.size),
-                            ) { Text(stringResource(g.label)) }
-                        }
-                    }
+                    com.roro.futurevoice.ui.brand.IosSegmented(PoolGroup.entries.map { stringResource(it.label) },
+                        PoolGroup.entries.indexOf(group), { group = PoolGroup.entries[it] },
+                        Modifier.fillMaxWidth())
                     // The privacy sentence. It is not decoration: it says a
                     // talk never reaches the person, and that the voice is a
                     // stock preset read by an AI, never theirs.

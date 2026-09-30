@@ -80,21 +80,11 @@ fun CallSettingsSheet(
 
             SectionHeader(stringResource(R.string.voice))
             SettingLabel(Icons.Filled.Speed, stringResource(R.string.speaking_speed))
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                val all = SpeechSpeed.entries
-                all.forEachIndexed { i, s ->
-                    SegmentedButton(
-                        selected = speed == s,
-                        onClick = {
-                            if (speed == s) return@SegmentedButton
-                            speed = s
-                            SpeechSpeed.set(context, s)
-                            onSpeedChange(s)
-                        },
-                        shape = SegmentedButtonDefaults.itemShape(i, all.size),
-                    ) { Text(stringResource(s.label), maxLines = 1) }
-                }
-            }
+            val allSpeeds = SpeechSpeed.entries
+            com.roro.futurevoice.ui.brand.IosSegmented(allSpeeds.map { stringResource(it.label) }, allSpeeds.indexOf(speed), { i ->
+                val s = allSpeeds[i]
+                if (speed != s) { speed = s; SpeechSpeed.set(context, s); onSpeedChange(s) }
+            }, Modifier.fillMaxWidth())
             Footer(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
 
             SectionHeader(stringResource(R.string.screen))
@@ -141,7 +131,7 @@ private fun ToggleRow(icon: ImageVector, text: String, checked: Boolean, onChang
         Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary)
         Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        com.roro.futurevoice.ui.brand.IosSwitch(checked = checked, onCheckedChange = onChange)
     }
 }
 

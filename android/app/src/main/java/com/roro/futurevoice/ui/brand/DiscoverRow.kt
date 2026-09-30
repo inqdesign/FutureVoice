@@ -84,17 +84,5 @@ fun DiscoverRow(
  * card colour. Same monochrome pairing Practice's selected chip uses.
  */
 @Composable
-fun SegmentChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Text(
-        label,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.Medium,
-        color = if (selected) MaterialTheme.colorScheme.surface
-        else MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(if (selected) MaterialTheme.colorScheme.onSurface else AppSurfaces.card)
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    )
-}
+fun SegmentChip(label: String, selected: Boolean, onClick: () -> Unit) =
+    IosChip(label, selected, onClick = onClick)

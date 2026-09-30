@@ -431,25 +431,5 @@ private fun stringResource(id: Int) = androidx.compose.ui.res.stringResource(id)
  * which is a different claim.
  */
 @Composable
-fun PillChip(label: String, selected: Boolean, count: Int? = null, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .clip(ContinuousShape(999.dp))
-            .background(if (selected) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Text(label, style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) MaterialTheme.colorScheme.surface
-            else MaterialTheme.colorScheme.onSurface)
-        if (count != null) {
-            Text("$count", style = MaterialTheme.typography.labelMedium,
-                color = if (selected) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
+fun PillChip(label: String, selected: Boolean, count: Int? = null, onClick: () -> Unit) =
+    com.roro.futurevoice.ui.brand.IosChip(label, selected, count, onClick)

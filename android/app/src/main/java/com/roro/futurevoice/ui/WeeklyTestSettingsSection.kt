@@ -112,11 +112,11 @@ fun WeeklyTestSettingsSection() {
         }
         GroupedRowDivider()
         SettingRow(Icons.Filled.Notifications, stringResource(R.string.remind_me)) {
-            Switch(checked = reminderOn, onCheckedChange = ::setReminder)
+            com.roro.futurevoice.ui.brand.IosSwitch(checked = reminderOn, onCheckedChange = ::setReminder)
         }
         GroupedRowDivider()
         SettingRow(Icons.Filled.VolumeUp, stringResource(R.string.sounds)) {
-            Switch(checked = soundsOn, onCheckedChange = { WeeklyTestSettings.setSoundsOn(context, it) })
+            com.roro.futurevoice.ui.brand.IosSwitch(checked = soundsOn, onCheckedChange = { WeeklyTestSettings.setSoundsOn(context, it) })
         }
     }
     GroupedFooter(stringResource(

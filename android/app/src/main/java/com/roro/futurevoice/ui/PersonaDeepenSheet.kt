@@ -3,6 +3,9 @@ package com.roro.futurevoice.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -86,6 +89,12 @@ fun PersonaDeepenSheet(
                 .padding(horizontal = 20.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            // iOS sheet header: Later as a glass capsule, the title centred.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.later),
+                    onClick = { if (!saving) onDismiss() }, modifier = Modifier.align(Alignment.CenterStart))
+                Text(stringResource(R.string.about_you), style = MaterialTheme.typography.titleMedium)
+            }
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.make_me_sound_more_like_you),
                     style = MaterialTheme.typography.headlineSmall,
@@ -104,15 +113,9 @@ fun PersonaDeepenSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val options = listOf(nativeLanguage, targetLanguage).distinct()
-                SingleChoiceSegmentedButtonRow {
-                    options.forEachIndexed { i, code ->
-                        SegmentedButton(
-                            selected = locale == code,
-                            onClick = { locale = code },
-                            shape = SegmentedButtonDefaults.itemShape(i, options.size),
-                        ) { Text(LanguageCatalog.endonym(code)) }
-                    }
-                }
+                com.roro.futurevoice.ui.brand.IosSegmented(options.map { LanguageCatalog.endonym(it) },
+                    options.indexOf(locale).coerceAtLeast(0), { locale = options[it] },
+                    Modifier.width(220.dp))
             }
 
             Field(stringResource(R.string.what_do_you_do),
@@ -125,10 +128,8 @@ fun PersonaDeepenSheet(
                 freeNotes, { freeNotes = it }, extrasVoiced, { extrasVoiced = it },
                 stringResource(R.string.quirks_goals_pet_peeves), locale)
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                TextButton(onClick = onDismiss, enabled = !saving) {
-                    Text(stringResource(R.string.later))
-                }
+            // One full-width Save, as iOS — Later lives in the header.
+            Row(Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
                         saving = true
@@ -158,7 +159,7 @@ fun PersonaDeepenSheet(
                         }
                     },
                     enabled = hasAnything && !saving,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).height(50.dp),
                 ) {
                     if (saving) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp),

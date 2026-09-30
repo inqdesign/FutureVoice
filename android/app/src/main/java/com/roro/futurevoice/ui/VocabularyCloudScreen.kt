@@ -191,7 +191,7 @@ fun VocabularyCloudScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.hide_words_i_know)) },
                                 trailingIcon = {
-                                    Switch(checked = hideKnown, onCheckedChange = null)
+                                    com.roro.futurevoice.ui.brand.IosSwitch(checked = hideKnown, onCheckedChange = null)
                                 },
                                 onClick = {
                                     hideKnown = !hideKnown

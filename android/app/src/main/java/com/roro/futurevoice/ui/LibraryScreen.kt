@@ -312,15 +312,8 @@ fun LibraryScreen(kind: LibraryKind, language: String,
             ) {
                 val lenses = if (kind == LibraryKind.WORDS) Lens.entries
                 else listOf(Lens.TO_STUDY, Lens.KNOWN)
-                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                    lenses.forEachIndexed { i, option ->
-                        SegmentedButton(
-                            selected = lens == option,
-                            onClick = { lens = option },
-                            shape = SegmentedButtonDefaults.itemShape(i, lenses.size),
-                        ) { Text(lensLabel(option), maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                    }
-                }
+                com.roro.futurevoice.ui.brand.IosSegmented(lenses.map { lensLabel(it) }, lenses.indexOf(lens),
+                    { lens = lenses[it] }, Modifier.weight(1f))
                 if (searchable) {
                     Box {
                         IconButton(onClick = { filterOpen = true }) {
