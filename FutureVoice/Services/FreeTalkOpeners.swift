@@ -209,10 +209,21 @@ final class FreeTalkOpeners {
                                                     allowLineage: false) == nil else { return }
         let audio: Data
         do {
-            audio = try await ElevenLabsClient.shared.synthesize(
+            // A line of several sentences is made sentence by sentence so it
+            // breathes like the answers after it (see `PacedSpeech`); a
+            // one-sentence line, or an edge with no streaming, takes the
+            // ordinary single synthesis.
+            if let paced = try await PacedSpeech.synthesizePCM(
                 voiceId: voiceId, text: line,
-                modelId: ElevenLabsClient.conversationModelId,
-                purpose: "turn")
+                modelId: ElevenLabsClient.conversationModelId, purpose: "turn") {
+                audio = AudioLoudness.wavData(fromPCM16: paced.pcm,
+                                              sampleRate: Int(paced.sampleRate))
+            } else {
+                audio = try await ElevenLabsClient.shared.synthesize(
+                    voiceId: voiceId, text: line,
+                    modelId: ElevenLabsClient.conversationModelId,
+                    purpose: "turn")
+            }
         } catch {
             Self.report("opener_audio_failed", language: nil, error: error)
             throw error

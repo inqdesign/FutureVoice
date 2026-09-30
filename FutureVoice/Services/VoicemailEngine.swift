@@ -273,6 +273,16 @@ enum VoicemailEngine {
     @MainActor
     static func synthesizeVoicemail(script: String, voiceId: String) async -> Data? {
         do {
+            // Sentence by sentence, so the voicemail breathes between them
+            // (see `PacedSpeech`); a one-sentence script takes the single call.
+            if let paced = try await PacedSpeech.synthesizePCM(
+                voiceId: voiceId, text: script,
+                modelId: ElevenLabsClient.cloneModelId, purpose: "daily-call") {
+                let trimmed = trim(pcm: paced.pcm, sampleRate: paced.sampleRate,
+                                   to: maxVoicemailSeconds)
+                return AudioLoudness.wavData(fromPCM16: leveled(trimmed),
+                                             sampleRate: Int(paced.sampleRate))
+            }
             let audio = try await ElevenLabsClient.shared.synthesizeStreaming(
                 voiceId: voiceId,
                 text: script,

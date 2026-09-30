@@ -1210,7 +1210,7 @@ export class CallSession implements DurableObject {
     const pending = (this.voiceBuffer.get(context) ?? "") + delta
     const [sentences, rest] = CallSession.splitCompleteSentences(pending)
     this.voiceBuffer.set(context, rest)
-    if (sentences.length > 0) this.voice(context, sentences)
+    for (const sentence of CallSession.eachSentence(sentences)) this.voice(context, sentence)
   }
 
   /** Send one piece of text to the voice. ElevenLabs asks that every chunk
@@ -1241,7 +1241,7 @@ export class CallSession implements DurableObject {
   private finishVoice(context: string): void {
     const rest = this.voiceBuffer.get(context) ?? ""
     this.voiceBuffer.delete(context)
-    if (rest.trim().length > 0) this.voice(context, rest)
+    for (const sentence of CallSession.eachSentence(rest)) this.voice(context, sentence)
     this.eleven?.flush(context)
     this.armLineEndFallback(context)
   }
@@ -1345,22 +1345,54 @@ export class CallSession implements DurableObject {
     }, 500) as unknown as number
   }
 
-  /** Split off every complete sentence — a terminator (.!?… and CJK
-   *  equivalents, optionally followed by a closing quote/bracket) that is
-   *  FOLLOWED by whitespace, which is what tells "Mr." apart from a sentence
-   *  end mid-stream as well as a tokenizer can. Returns the complete
-   *  sentences joined (they go out as ONE chunk — the more of the reply a
-   *  generation sees, the better its prosody) and the unfinished remainder.
-   *  A terminator at the very end of the text is NOT taken: the next delta
-   *  could start with a closing quote, and the tail is drained at finish
-   *  anyway. */
+  /** Where a sentence ends: a terminator (.!?… optionally followed by a
+   *  closing quote/bracket) FOLLOWED by whitespace, which is what tells "Mr."
+   *  apart from a sentence end mid-stream as well as a tokenizer can. The CJK
+   *  full stops (。！？) take no space after them, so for those the next
+   *  character that is not a closing mark is proof enough — without that no
+   *  Japanese reply was ever cut before it finished. Two things that look
+   *  like an end and aren't, now that each piece is voiced on its own (a
+   *  wrong cut is an audible pause): a title abbreviation ("Mr. Kim",
+   *  "z.B. morgen") and a quote closed by と/って (「行く。」と言った). */
+  private static readonly sentenceEnd =
+    /(?<!\b(?:Mr|Mrs|Ms|Dr|St|Prof|Nr|vs|etc|ca|bzw|e\.g|i\.e|z\.B))[.!?…][)"'”’」』]*\s+|[。！？](?:[)"'”’」』]*\s+|(?=[^)"'”’」』\s])|[)"'”’」』]+(?=[^\sとっ)"'”’」』]))/g
+
+  /** Split off every complete sentence and return them with the unfinished
+   *  remainder. A terminator at the very end of the text is NOT taken: the
+   *  next delta could start with a closing quote, and the tail is drained at
+   *  finish anyway. */
   static splitCompleteSentences(text: string): [string, string] {
     let cut = -1
-    const re = /[.!?…。！？][)"'”’」』]*\s+/g
+    const re = new RegExp(CallSession.sentenceEnd.source, "g")
     let m: RegExpExecArray | null
     while ((m = re.exec(text)) !== null) cut = m.index + m[0].length
     if (cut < 0) return ["", text]
     return [text.slice(0, cut), text.slice(cut)]
+  }
+
+  /** The sentences of `text`, ONE PER VOICE MESSAGE (2026-09-30). Under
+   *  auto_mode every message is its own generation, and the pause between
+   *  two sentences is only as long as the generation boundary makes it:
+   *  measured on the founder's clone in ko/en/ja/de, sentences sent in one
+   *  message came out 0.08–0.29 s apart (one English take had no gap at
+   *  all) — "it talks without breathing between sentences" — while one
+   *  sentence per message gave 0.35–0.50 s, which the founder picked by ear
+   *  over the same plus 0.25 s of inserted silence. This used to join them
+   *  for "prosody"; the prosody a listener hears first is the breath.
+   *  `<break>` tags were tried and are out: two 0.35 s breaks added ~3 s,
+   *  broken up with noise. */
+  static eachSentence(text: string): string[] {
+    const out: string[] = []
+    const re = new RegExp(CallSession.sentenceEnd.source, "g")
+    let start = 0
+    let m: RegExpExecArray | null
+    while ((m = re.exec(text)) !== null) {
+      const end = m.index + m[0].length
+      out.push(text.slice(start, end))
+      start = end
+    }
+    out.push(text.slice(start))
+    return out.filter((s) => s.trim().length > 0)
   }
 
   private finishReply(context: string, full: string): void {
