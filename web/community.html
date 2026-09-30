@@ -246,7 +246,11 @@ footer a{color:var(--faint)}
   // No cookie and nothing stored in the browser: every page load is a fresh
   // anonymous visitor, so no consent banner is needed. A signed-in learner is
   // identified by their account (same upper-case id the app uses).
-  posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24', persistence:'memory', autocapture:false, disable_session_recording:true});
+  // The team's own browsers carry a local "internal" mark (set the first time a
+  // staff account signs in here) and never start PostHog at all. The pageview is
+  // sent by the page once it knows the visitor isn't staff, never on init.
+  var NAWANA_INTERNAL = false; try { NAWANA_INTERNAL = localStorage.getItem('nawana-internal') === '1'; } catch (e) {}
+  if (!NAWANA_INTERNAL) posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24', persistence:'memory', autocapture:false, capture_pageview:false, disable_session_recording:true});
 </script>
 </head>
 <body>
@@ -877,13 +881,26 @@ $("#fab").addEventListener("click", () => { document.body.classList.add("chat-op
 $("#chatClose").addEventListener("click", () => { document.body.classList.remove("chat-open"); updateUnread(); });
 
 /* ---------- analytics ---------- */
-const track = (ev, props) => { try { window.posthog?.capture(ev, props); } catch {} };
+const isInternal = () => { try { return localStorage.getItem("nawana-internal") === "1"; } catch { return false; } };
+function markInternal(){
+  try { localStorage.setItem("nawana-internal", "1"); } catch {}
+  try { window.posthog?.opt_out_capturing?.(); } catch {}
+}
+const track = (ev, props) => { if (isInternal()) return; try { window.posthog?.capture(ev, props); } catch {} };
+let pageviewSent = false;
+function sendPageview(){ if (pageviewSent || isInternal()) return; pageviewSent = true; track("$pageview"); }
+// Staff is known only after a round trip; nothing identifying goes out before it.
+async function settleStaff(){
+  await refreshStaff();
+  if (amStaff) markInternal();
+  onIdentity();
+}
 let seenUser = null;
 function onIdentity(){
   const u = session && !session.user?.is_anonymous ? session.user : null;
   if (u && u.id !== seenUser) {
     seenUser = u.id;
-    try { window.posthog?.identify(u.id.toUpperCase()); } catch {}
+    if (!isInternal()) { try { window.posthog?.identify(u.id.toUpperCase()); } catch {} }
     sb.rpc("community_touch_visit").then(() => {}, () => {});
   } else if (!u && seenUser) {
     seenUser = null;
@@ -900,16 +917,17 @@ try {
   ({ data: { session } } = await sb.auth.getSession());
   sb.auth.onAuthStateChange((e, s) => {
     const was = signedInNow(); session = s; sendError = "";
-    renderCompose(); refreshStaff(); trackPresence(); onIdentity();
+    renderCompose(); settleStaff(); trackPresence();
     if (was !== signedInNow() || e === "SIGNED_IN") loadMessages(); else renderMessages();
   });
-  onIdentity();
+  await settleStaff();
+  sendPageview();
   renderCompose();
   const { data: n } = await sb.from("community_news").select("id,published_at,title_ko,title_en,body_ko,body_en,link_url").order("published_at", { ascending: false }).limit(20);
   news = n || []; renderNews();
   await loadMessages();
-  await sb.rpc("community_count_view").then(() => {}, () => {});
-  refreshStaff();
+  if (!isInternal()) await sb.rpc("community_count_view").then(() => {}, () => {});
+  loadStaffStats();
   presenceCh = sb.channel("community-presence", { config: { presence: { key: tabKey } } })
     .on("presence", { event: "sync" }, countPresence)
     .subscribe(status => { if (status === "SUBSCRIBED") trackPresence(); });
@@ -925,6 +943,7 @@ try {
   setInterval(loadStaffStats, 60000);
   setInterval(renderMessages, 60000);    // keeps "5분 전" honest
 } catch (err) {
+  sendPageview();
   setLive("offline"); news = []; $("#news").innerHTML = `<p class="empty">${esc(t("noNews"))}</p>`;
 }
 </script>
