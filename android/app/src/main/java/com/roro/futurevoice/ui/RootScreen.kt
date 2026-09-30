@@ -1252,6 +1252,11 @@ internal fun HomeScreen(
 
           }
         }
+        // The feather under the floating bar (iOS `tabBarScrollFeather`):
+        // from the physical bottom edge, 44 dp of page colour and a 72 dp
+        // ramp to transparent above it, so pages dissolve as they slide
+        // under the bar instead of running razor-sharp off the screen.
+        ScrollEdgeFeather(color = AppSurfaces.ground, modifier = Modifier.align(Alignment.BottomCenter))
         IosTabBar(selected = tab, onSelect = onTabChange,
             modifier = Modifier.align(Alignment.BottomCenter))
       }

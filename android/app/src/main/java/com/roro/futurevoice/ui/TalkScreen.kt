@@ -1,5 +1,13 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material.icons.filled.Tune
@@ -512,134 +520,305 @@ fun TalkScreen(
             // The call is over: the board takes the screen, as on iOS — the
             // transcript is already in the book it is building.
             if (ended) Spacer(Modifier.weight(1f))
-            if (!ended) LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    // A paused call is picked back up by tapping the
-                    // conversation itself — the screen never lost it.
-                    .clickable(enabled = paused) { vm.resume() }
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Subtitles off: the call is audio only, like a phone call —
-                // the pill still shows whose turn it is.
-                if (!showsTranscript && state.turns.isNotEmpty()) item(key = "subtitles-off") {
-                    Text(stringResource(R.string.subtitles_are_off),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(top = 24.dp))
+            // During the call the bottom FLOATS (iOS `fadingBottomBar`): the
+            // transcript runs on underneath it, and the bar carries no
+            // background of its own — a wash of the page colour sits behind
+            // it and fades out over the last 36 dp above it, so lines
+            // dissolve into the bar instead of being sliced off by an edge.
+            // The top gets the same soft edge under the header.
+            if (!ended) {
+              var floatingBarHeight by remember { mutableIntStateOf(0) }
+              Box(Modifier.weight(1f).fillMaxWidth()) {
+                    LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // A paused call is picked back up by tapping the
+                        // conversation itself — the screen never lost it.
+                        .clickable(enabled = paused) { vm.resume() },
+                    // The last line clears the floating bar; everything above it
+                    // scrolls on underneath and dissolves into the wash.
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp,
+                        bottom = 16.dp + with(LocalDensity.current) { floatingBarHeight.toDp() }),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // Subtitles off: the call is audio only, like a phone call —
+                    // the pill still shows whose turn it is.
+                    if (!showsTranscript && state.turns.isNotEmpty()) item(key = "subtitles-off") {
+                        Text(stringResource(R.string.subtitles_are_off),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 24.dp))
+                    }
+                    if (showsTranscript) items(state.turns, key = { it.id }) { turn ->
+                        DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
+                            showsCorrections = showsCorrections)
+                    }
+                    // The learner's turn, drawn where it will land (iOS
+                    // `PartialTurnView`): the You bubble appears EMPTY the moment
+                    // it is their turn — that empty bubble is the "your turn"
+                    // signal — and fills with the words as they are heard. Not
+                    // before the first line exists: the call opens with the
+                    // fluent self, and an empty bubble would flash and vanish.
+                    if (showsTranscript && state.phase == TalkPhase.LISTENING &&
+                        (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
+                        item(key = "partial-listening") {
+                            com.roro.futurevoice.ui.brand.DialogueLine(
+                                speaker = com.roro.futurevoice.ui.brand.DialogueSpeaker.USER,
+                                name = stringResource(R.string.you),
+                                scale = DialogueScale.CALL,
+                            ) {
+                                Text(
+                                    state.partial.ifBlank { stringResource(R.string.listening) },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                                )
+                            }
+                        }
+                    }
+                    if (state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) {
+                        item(key = "partial-thinking") {
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Text(stringResource(R.string.future_self_is_thinking),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
-                if (showsTranscript) items(state.turns, key = { it.id }) { turn ->
-                    DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
-                        showsCorrections = showsCorrections)
-                }
-                // The learner's turn, drawn where it will land (iOS
-                // `PartialTurnView`): the You bubble appears EMPTY the moment
-                // it is their turn — that empty bubble is the "your turn"
-                // signal — and fills with the words as they are heard. Not
-                // before the first line exists: the call opens with the
-                // fluent self, and an empty bubble would flash and vanish.
-                if (showsTranscript && state.phase == TalkPhase.LISTENING &&
-                    (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
-                    item(key = "partial-listening") {
-                        com.roro.futurevoice.ui.brand.DialogueLine(
-                            speaker = com.roro.futurevoice.ui.brand.DialogueSpeaker.USER,
-                            name = stringResource(R.string.you),
-                            scale = DialogueScale.CALL,
-                        ) {
-                            Text(
-                                state.partial.ifBlank { stringResource(R.string.listening) },
+
+                val page = MaterialTheme.colorScheme.background
+                Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(24.dp)
+                    .background(Brush.verticalGradient(listOf(page, page.copy(alpha = 0f)))))
+                Column(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .onSizeChanged { floatingBarHeight = it.height }
+                        .drawBehind {
+                            // Longer than iOS's pre-26 fallback (36 pt): iOS 26's
+                            // soft edge dissolves over about a bubble's height,
+                            // and 36 read as a cut on a phone this size.
+                            val fade = 64.dp.toPx()
+                            drawRect(Brush.verticalGradient(listOf(page.copy(alpha = 0f), page),
+                                startY = -fade, endY = 0f),
+                                topLeft = Offset(0f, -fade), size = Size(size.width, fade))
+                            drawRect(page)
+                        },
+                ) {
+                    // The first seconds of a call had nothing on them: an empty list
+                    // and no bottom bar. Say what is happening instead.
+                    if (state.phase == TalkPhase.CONNECTING && state.turns.isEmpty()) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Text(stringResource(
+                                if (topic.isBlank()) R.string.starting_your_conversation
+                                else R.string.setting_the_scene),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    // A spent allowance is not an error — it gets its own line, in
+                    // the body colour, and a subscriber never reads the word "credits".
+                    state.wall?.let { wall ->
+                        // The call is over and saved either way — the line below says
+                        // so. What differs is the ANSWER, raised on top of it once.
+                        LaunchedEffect(wall) {
+                            when (wall) {
+                                // The free pool ran out: the call is wrapping
+                                // ITSELF up, and the plans come after the summary
+                                // (`pitchThenLeave`). A paywall thrown up here lands
+                                // on top of the wrap-up board and takes the book with
+                                // it — which is how a 42-turn first call ended with
+                                // nothing saved (iOS `600d406`).
+                                TalkWall.OUT_OF_MINUTES -> BillingGate.invalidate()
+                                TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
+                                TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
+                                // Nothing to sell and nothing spent: a person is
+                                // reading the admin console. The line below is the
+                                // whole answer.
+                                TalkWall.FAIR_USE -> Unit
+                            }
+                        }
+                        Text(
+                            stringResource(
+                                when (wall) {
+                                    TalkWall.OUT_OF_MINUTES ->
+                                        R.string.talk_time_used_up_call_saved
+                                    TalkWall.ALLOWANCE_SPENT ->
+                                        R.string.this_month_s_talk_time_is_used_up
+                                    TalkWall.SCENES_SPENT ->
+                                        R.string.thats_your_watch_scenes_for_this_period
+                                    TalkWall.FAIR_USE ->
+                                        R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+
+                    // A failed reply is answerable: the learner said something and
+                    // heard nothing back, and the fix is one tap.
+                    state.error?.let {
+                        Row(Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(stringResource(R.string.couldn_t_get_a_response),
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                                modifier = Modifier.weight(1f))
+                            TextButton(onClick = { vm.retry() }) { Text(stringResource(R.string.retry)) }
+                        }
+                    }
+
+                    // The bottom bar. The Futureself pill IS the control — it is
+                    // what you tap to put the call down and pick it back up, and
+                    // while the call runs the living surface is the state display:
+                    // it ignites bottom-up with the learner's voice, sweeps while
+                    // thinking, blooms centre-out while the fluent self speaks.
+                    // A separate outlined "Pause" button below it made the surface
+                    // decoration and the control an afterthought.
+                    if (onCall || paused) {
+                        androidx.compose.runtime.DisposableEffect(Unit) {
+                            onDispose { TalkMorph.pillPresent = false }
+                        }
+                        Column(
+                            Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            // Quiet on purpose: the one primary action here is the pill.
+                            IconButton(onClick = { showingCallSettings = true },
+                                modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)) {
+                                Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.call_settings),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Box(
+                                Modifier
+                                    .size(width = 156.dp, height = 64.dp)
+                                    // Where the free-talk morph docks (and leaves from).
+                                    .onGloballyPositioned {
+                                        TalkMorph.pillRect = it.boundsInWindow(); TalkMorph.pillPresent = true }
+                                    .clip(CircleShape)
+                                    .clickable { vm.togglePause() },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Futureself(
+                                    mode = when (state.phase) {
+                                        TalkPhase.LISTENING -> FutureselfMode.LISTENING
+                                        TalkPhase.THINKING, TalkPhase.CONNECTING -> FutureselfMode.THINKING
+                                        TalkPhase.SPEAKING -> FutureselfMode.SPEAKING
+                                        else -> FutureselfMode.IDLE
+                                    },
+                                    level = state.level.coerceIn(0f, 1f),
+                                    theme = remember { FutureselfTheme.stored(context) },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                // The clock lives INSIDE the pill. Whole minutes only,
+                                // and only while there is a figure to show — a
+                                // month-long balance must never read as a running
+                                // meter, so it joins the surface rather than taking a
+                                // line of its own.
+                                // Only while it matters (iOS: ≤10 min), and orange
+                                // in the last three — the one moment a figure helps.
+                                state.minutesRemaining?.takeIf { it <= 10 }?.let { minutes ->
+                                    Text(
+                                        stringResource(R.string.lld_min_left, minutes),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (minutes <= 3) androidx.compose.ui.graphics.Color(0xFFFF9500)
+                                        else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                            }
+                            // The phase, quietly, where the hand is.
+                            Text(
+                                phaseHint(state.phase, paused, state.pausedForIdle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                 }
-                if (state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) {
-                    item(key = "partial-thinking") {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                            Text(stringResource(R.string.future_self_is_thinking),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+              }
+            }
+            if (ended) {
+                // The first seconds of a call had nothing on them: an empty list
+                // and no bottom bar. Say what is happening instead.
+                if (state.phase == TalkPhase.CONNECTING && state.turns.isEmpty()) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text(stringResource(
+                            if (topic.isBlank()) R.string.starting_your_conversation
+                            else R.string.setting_the_scene),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
 
-            // The first seconds of a call had nothing on them: an empty list
-            // and no bottom bar. Say what is happening instead.
-            if (state.phase == TalkPhase.CONNECTING && state.turns.isEmpty()) {
-                Row(Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Text(stringResource(
-                        if (topic.isBlank()) R.string.starting_your_conversation
-                        else R.string.setting_the_scene),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            // A spent allowance is not an error — it gets its own line, in
-            // the body colour, and a subscriber never reads the word "credits".
-            state.wall?.let { wall ->
-                // The call is over and saved either way — the line below says
-                // so. What differs is the ANSWER, raised on top of it once.
-                LaunchedEffect(wall) {
-                    when (wall) {
-                        // The free pool ran out: the call is wrapping
-                        // ITSELF up, and the plans come after the summary
-                        // (`pitchThenLeave`). A paywall thrown up here lands
-                        // on top of the wrap-up board and takes the book with
-                        // it — which is how a 42-turn first call ended with
-                        // nothing saved (iOS `600d406`).
-                        TalkWall.OUT_OF_MINUTES -> BillingGate.invalidate()
-                        TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
-                        TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
-                        // Nothing to sell and nothing spent: a person is
-                        // reading the admin console. The line below is the
-                        // whole answer.
-                        TalkWall.FAIR_USE -> Unit
-                    }
-                }
-                Text(
-                    stringResource(
+                // A spent allowance is not an error — it gets its own line, in
+                // the body colour, and a subscriber never reads the word "credits".
+                state.wall?.let { wall ->
+                    // The call is over and saved either way — the line below says
+                    // so. What differs is the ANSWER, raised on top of it once.
+                    LaunchedEffect(wall) {
                         when (wall) {
-                            TalkWall.OUT_OF_MINUTES ->
-                                R.string.talk_time_used_up_call_saved
-                            TalkWall.ALLOWANCE_SPENT ->
-                                R.string.this_month_s_talk_time_is_used_up
-                            TalkWall.SCENES_SPENT ->
-                                R.string.thats_your_watch_scenes_for_this_period
-                            TalkWall.FAIR_USE ->
-                                R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca
+                            // The free pool ran out: the call is wrapping
+                            // ITSELF up, and the plans come after the summary
+                            // (`pitchThenLeave`). A paywall thrown up here lands
+                            // on top of the wrap-up board and takes the book with
+                            // it — which is how a 42-turn first call ended with
+                            // nothing saved (iOS `600d406`).
+                            TalkWall.OUT_OF_MINUTES -> BillingGate.invalidate()
+                            TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
+                            TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
+                            // Nothing to sell and nothing spent: a person is
+                            // reading the admin console. The line below is the
+                            // whole answer.
+                            TalkWall.FAIR_USE -> Unit
                         }
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
-
-            // A failed reply is answerable: the learner said something and
-            // heard nothing back, and the fix is one tap.
-            state.error?.let {
-                Row(Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.couldn_t_get_a_response),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f))
-                    TextButton(onClick = { vm.retry() }) { Text(stringResource(R.string.retry)) }
+                    }
+                    Text(
+                        stringResource(
+                            when (wall) {
+                                TalkWall.OUT_OF_MINUTES ->
+                                    R.string.talk_time_used_up_call_saved
+                                TalkWall.ALLOWANCE_SPENT ->
+                                    R.string.this_month_s_talk_time_is_used_up
+                                TalkWall.SCENES_SPENT ->
+                                    R.string.thats_your_watch_scenes_for_this_period
+                                TalkWall.FAIR_USE ->
+                                    R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
                 }
-            }
 
+                // A failed reply is answerable: the learner said something and
+                // heard nothing back, and the fix is one tap.
+                state.error?.let {
+                    Row(Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(stringResource(R.string.couldn_t_get_a_response),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f))
+                        TextButton(onClick = { vm.retry() }) { Text(stringResource(R.string.retry)) }
+                    }
+                }
+
+            }
             // The wait at the end shows its work (`SummaryProgressView`):
             // the board while the analysis runs, its last frame + the top
             // line once the summary is on disk.
@@ -653,76 +832,7 @@ fun TalkScreen(
                 Spacer(Modifier.weight(1.3f))
             }
 
-            // The bottom bar. The Futureself pill IS the control — it is
-            // what you tap to put the call down and pick it back up, and
-            // while the call runs the living surface is the state display:
-            // it ignites bottom-up with the learner's voice, sweeps while
-            // thinking, blooms centre-out while the fluent self speaks.
-            // A separate outlined "Pause" button below it made the surface
-            // decoration and the control an afterthought.
-            if (onCall || paused) {
-                androidx.compose.runtime.DisposableEffect(Unit) {
-                    onDispose { TalkMorph.pillPresent = false }
-                }
-                HorizontalDivider(Modifier.alpha(0.15f))
-                Column(
-                    Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    // Quiet on purpose: the one primary action here is the pill.
-                    IconButton(onClick = { showingCallSettings = true },
-                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)) {
-                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.call_settings),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Box(
-                        Modifier
-                            .size(width = 156.dp, height = 64.dp)
-                            // Where the free-talk morph docks (and leaves from).
-                            .onGloballyPositioned {
-                                TalkMorph.pillRect = it.boundsInWindow(); TalkMorph.pillPresent = true }
-                            .clip(CircleShape)
-                            .clickable { vm.togglePause() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Futureself(
-                            mode = when (state.phase) {
-                                TalkPhase.LISTENING -> FutureselfMode.LISTENING
-                                TalkPhase.THINKING, TalkPhase.CONNECTING -> FutureselfMode.THINKING
-                                TalkPhase.SPEAKING -> FutureselfMode.SPEAKING
-                                else -> FutureselfMode.IDLE
-                            },
-                            level = state.level.coerceIn(0f, 1f),
-                            theme = remember { FutureselfTheme.stored(context) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        // The clock lives INSIDE the pill. Whole minutes only,
-                        // and only while there is a figure to show — a
-                        // month-long balance must never read as a running
-                        // meter, so it joins the surface rather than taking a
-                        // line of its own.
-                        // Only while it matters (iOS: ≤10 min), and orange
-                        // in the last three — the one moment a figure helps.
-                        state.minutesRemaining?.takeIf { it <= 10 }?.let { minutes ->
-                            Text(
-                                stringResource(R.string.lld_min_left, minutes),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (minutes <= 3) androidx.compose.ui.graphics.Color(0xFFFF9500)
-                                else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
-                    }
-                    // The phase, quietly, where the hand is.
-                    Text(
-                        phaseHint(state.phase, paused, state.pausedForIdle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+
         }
     }
 

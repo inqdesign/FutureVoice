@@ -135,3 +135,23 @@ private val ChartBarFill: ImageVector by lazy {
         .addPath(pathData = addPathNodes("M3.60,9.20H6.60A1.6,1.6 0 0 1 8.20,10.80V18.90A1.6,1.6 0 0 1 6.60,20.50H3.60A1.6,1.6 0 0 1 2.00,18.90V10.80A1.6,1.6 0 0 1 3.60,9.20ZM10.50,6.60H13.50A1.6,1.6 0 0 1 15.10,8.20V18.90A1.6,1.6 0 0 1 13.50,20.50H10.50A1.6,1.6 0 0 1 8.90,18.90V8.20A1.6,1.6 0 0 1 10.50,6.60ZM17.40,4.00H20.40A1.6,1.6 0 0 1 22.00,5.60V18.90A1.6,1.6 0 0 1 20.40,20.50H17.40A1.6,1.6 0 0 1 15.80,18.90V5.60A1.6,1.6 0 0 1 17.40,4.00Z"), fill = SolidColor(Color.Black))
         .build()
 }
+
+/** The wash a scrolling page dissolves into at the bottom edge (iOS
+ *  `ScrollEdgeFeather`, `ramp` 72 / `solid` 44), drawn to the physical screen
+ *  edge — through the navigation inset — so the strip beside the floating bar
+ *  is feathered too. It takes no touches. */
+@Composable
+internal fun ScrollEdgeFeather(color: Color, modifier: Modifier = Modifier,
+                               ramp: androidx.compose.ui.unit.Dp = 72.dp,
+                               solid: androidx.compose.ui.unit.Dp = 44.dp) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val nav = with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
+    Box(
+        modifier.fillMaxWidth().height(ramp + solid + nav)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                0f to color.copy(alpha = 0f),
+                (ramp / (ramp + solid + nav)) to color,
+                1f to color,
+            )),
+    )
+}
