@@ -152,7 +152,7 @@ struct VoiceCloneOnboardingView: View {
 
     /// The accent whose takes the picker sheet opens on (see `accentSection`).
     @State private var accentToPick: VoiceAccent?
-    /// "No accent" is rebuilding the clone from the saved recording.
+    /// "Original" is rebuilding the clone from the saved recording.
     @State private var removingAccent = false
     /// The native-language script once it's on the device — nil until the
     /// generation lands (or forever, for a native language it never does,
@@ -1028,10 +1028,12 @@ struct VoiceCloneOnboardingView: View {
     /// learner picked an accent, recorded again, and the re-record silently
     /// dropped the pick — nothing on screen said the voice was un-accented
     /// again. Here the selected pill IS the live voice's accent, so a
-    /// re-record visibly falls back to "No accent".
+    /// re-record visibly falls back to "Original" (the voice as recorded —
+    /// never "No accent": from a native-language take the model picks an
+    /// English accent itself, often an Indian one, measured 2026-09-30).
     ///
     /// An accent pill opens the take picker already generating that accent's
-    /// takes (listening and choosing stay the learner's); "No accent" rebuilds
+    /// takes (listening and choosing stay the learner's); "Original" rebuilds
     /// the plain clone from the saved recording right here.
     @ViewBuilder
     private var accentSection: some View {
@@ -1042,7 +1044,7 @@ struct VoiceCloneOnboardingView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 6) {
-                    accentPill(label: "No accent",
+                    accentPill(label: "accent.original",
                                selected: appState.voiceAccentId == nil,
                                loading: removingAccent,
                                action: removeAccentFromMeet)

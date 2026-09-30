@@ -194,12 +194,64 @@
         }
       }
     },
+    "accent.original" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "そのまま"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그대로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原声"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原聲"
+          }
+        }
+      }
+    },
     "American" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Amerikanisch"
+            "value" : "USA"
           }
         },
         "es" : {
@@ -217,7 +269,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アメリカ"
+            "value" : "米国"
           }
         },
         "ko" : {
@@ -291,7 +343,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Australisch"
+            "value" : "Australien"
           }
         },
         "es" : {
@@ -309,7 +361,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オーストラリア"
+            "value" : "豪州"
           }
         },
         "ko" : {
@@ -337,7 +389,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Britisch"
+            "value" : "UK"
           }
         },
         "es" : {
@@ -349,13 +401,13 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Britannique"
+            "value" : "Anglais"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "イギリス"
+            "value" : "英国"
           }
         },
         "ko" : {
@@ -702,52 +754,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "就算你不想接電話，通知還是我聯絡你的方式 — 新消息，還有跟你方案有關的事。"
-          }
-        }
-      }
-    },
-    "No accent" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ohne"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sin acento"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucun"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "억양 없음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无口音"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無口音"
           }
         }
       }
