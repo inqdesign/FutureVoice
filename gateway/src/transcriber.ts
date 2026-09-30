@@ -262,7 +262,7 @@ export class GeminiTranscriber {
  *  ambiguous cases are named too (the first phonemes of an utterance, and
  *  one-word replies that sound identical across languages), because those are
  *  where a per-utterance guess has the least to go on. */
-function languagePin(code: string): string {
+export function languagePin(code: string): string {
   const name = languageName(code)
   return [
     `You transcribe a language LEARNER speaking ${name}. Write down exactly what you hear, word for word.`,
@@ -275,7 +275,7 @@ function languagePin(code: string): string {
 
 /** English name for the few languages the app teaches; the code itself for
  *  anything else — still a better hint than nothing. */
-function languageName(code: string): string {
+export function languageName(code: string): string {
   const names: Record<string, string> = {
     en: "English", de: "German", ko: "Korean", ja: "Japanese",
     es: "Spanish", fr: "French", zh: "Chinese",
@@ -283,7 +283,7 @@ function languageName(code: string): string {
   return names[code.toLowerCase().split("-")[0]] ?? code
 }
 
-function base64Encode(buf: ArrayBuffer): string {
+export function base64Encode(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf)
   let binary = ""
   const chunk = 0x8000

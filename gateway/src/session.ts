@@ -18,6 +18,7 @@
 // events but not yet charged — billing lands in Phase 3 (see README).
 
 import { GeminiTranscriber } from "./transcriber"
+import { rereadUtterance } from "./reread"
 import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
@@ -286,6 +287,14 @@ export class CallSession implements DurableObject {
    *  endpointing has no such judgement and committed "…yet, but" as a turn
    *  (earphone call, 2026-09-01). */
   private pendingUtterance: string | null = null
+  /** Mic audio since the transcriber's last final — what a wrong-script
+   *  final is re-read from (reread.ts). Capped at `utteranceAudioMaxBytes`,
+   *  oldest dropped. */
+  private utteranceAudio: ArrayBuffer[] = []
+  private utteranceAudioBytes = 0
+  private static readonly utteranceAudioMaxBytes = 16000 * 2 * 30
+  /** Finals are handled in order: one waiting on a re-read holds the next. */
+  private finalsChain: Promise<void> = Promise.resolve()
   private pendingTimer: number | null = null
   private static readonly pendingHoldMs = 4000
   /** EVERY final is held this long before it becomes a turn — not only
@@ -523,6 +532,11 @@ export class CallSession implements DurableObject {
         // Forwarding a frame must never end the call: a rejection here lands
         // in the listener's catch as `internal`, and that is exactly how a
         // transcriber rotation dropped a 19-turn call on 2026-09-17.
+        this.utteranceAudio.push(pcm)
+        this.utteranceAudioBytes += pcm.byteLength
+        while (this.utteranceAudioBytes > CallSession.utteranceAudioMaxBytes && this.utteranceAudio.length > 1) {
+          this.utteranceAudioBytes -= this.utteranceAudio.shift()!.byteLength
+        }
         try {
           this.transcriber.sendAudio(pcm)
         } catch (e) {
@@ -766,28 +780,12 @@ export class CallSession implements DurableObject {
                                       CallSession.specSettleMs) as unknown as number
         },
         onUtterance: (text) => {
-          // A hesitation the transcriber wrote in a foreign script is not a
-          // turn. Reported 2026-09-18 in Korean AND German: every utterance
-          // opening on 어/음 or äh/ähm came back as Devanagari ("अह", "उम")
-          // and was answered on its own, so the learner's sentence split into
-          // a filler bubble, a reply to nobody ("천천히 생각하고 말해봐") and
-          // the rest. A filler is exactly the moment a learner is composing —
-          // answering it is cutting them off. It moves the hold's clock like
-          // an interim does (they are still going) and adds nothing to it.
-          if (CallSession.isForeignScriptHesitation(text, this.language)) {
-            this.warn("script_mismatch", `hesitation dropped: ${text.slice(0, 40)}`)
-            if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
-            return
-          }
-          // A FINAL in the wrong script is not hidden — it is what the turn
-          // will be answered from, and silence would be worse than a wrong
-          // answer the learner can see. It is recorded, because until now
-          // nothing said how often the pin fails outright.
-          if (!CallSession.inTargetScript(text, this.language)) {
-            this.emit({ type: "warning", code: "script_mismatch",
-                        message: `final not in target script: ${text.slice(0, 80)}` })
-          }
-          this.handleUtterance(text)
+          const audio = this.utteranceAudio
+          this.utteranceAudio = []
+          this.utteranceAudioBytes = 0
+          this.finalsChain = this.finalsChain
+            .then(() => this.acceptFinal(text, audio))
+            .catch((e) => this.warn("script_mismatch", `final handling failed: ${String(e).slice(0, 120)}`))
         },
         // Survived: the socket is being replaced and mic audio is buffered
         // meanwhile. Recorded as a warning so the console can count how often
@@ -935,6 +933,57 @@ export class CallSession implements DurableObject {
     const norm = (s: string) =>
       s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()
     return norm(a) === norm(b)
+  }
+
+  /** A final from the transcriber, before it becomes (part of) a turn. In
+   *  the target script it goes straight through. In another script it is
+   *  re-read from its audio first (reread.ts, 2026-09-30) — the live model
+   *  writes accented English in Devanagari often enough that a learner was
+   *  being answered on Hindi they never spoke. */
+  private async acceptFinal(text: string, audio: ArrayBuffer[]): Promise<void> {
+    if (this.ended) return
+    if (CallSession.inTargetScript(text, this.language)) {
+      this.handleUtterance(text)
+      return
+    }
+    // They are still in the middle of a line if one is held: keep it open
+    // for as long as the re-read takes, like an interim would.
+    if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+    const started = Date.now()
+    const reread = await rereadUtterance(
+      this.env.GEMINI_API_KEY,
+      this.env.GEMINI_REREAD_MODEL ?? "gemini-3.1-flash-lite",
+      this.language,
+      audio,
+    )
+    if (this.ended) return
+    const ms = Date.now() - started
+    if (reread !== null && reread === "") {
+      // Only a hesitation in the audio. Dropped, as before, and the hold's
+      // clock moves (they are still going).
+      this.warn("script_mismatch", `reread empty (${ms}ms): ${text.slice(0, 40)}`)
+      if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+      return
+    }
+    if (reread !== null && CallSession.inTargetScript(reread, this.language)) {
+      this.warn("script_mismatch", `reread (${ms}ms): ${text.slice(0, 40)} → ${reread.slice(0, 80)}`)
+      this.handleUtterance(reread)
+      return
+    }
+    // The re-read failed or came back wrong too: the old behaviour.
+    // A hesitation the transcriber wrote in a foreign script is not a
+    // turn (2026-09-18: 어/음, äh/ähm came back as "अह", "उम" and were
+    // answered on their own).
+    if (CallSession.isForeignScriptHesitation(text, this.language)) {
+      this.warn("script_mismatch", `hesitation dropped: ${text.slice(0, 40)}`)
+      if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+      return
+    }
+    // A FINAL in the wrong script is not hidden — silence would be worse
+    // than a wrong answer the learner can see. Recorded.
+    this.emit({ type: "warning", code: "script_mismatch",
+                message: `final not in target script: ${text.slice(0, 80)}` })
+    this.handleUtterance(text)
   }
 
   /** The transcriber finalized an utterance. It becomes a turn now, or it

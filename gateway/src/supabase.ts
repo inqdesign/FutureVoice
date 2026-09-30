@@ -13,6 +13,9 @@ export interface Env {
   ELEVENLABS_API_KEY: string
   /** Half-cascade Live model ("models/..."); see README before changing. */
   GEMINI_LIVE_MODEL?: string
+  /** Model that re-reads an utterance the live transcriber wrote in the
+   *  wrong script (see reread.ts). Default gemini-3.1-flash-lite. */
+  GEMINI_REREAD_MODEL?: string
   /** Reply model override. Exists so a bad model release rolls back without
    *  a deploy, and so the reply-failure path can be exercised on purpose. */
   GEMINI_REPLY_MODEL?: string
