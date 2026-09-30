@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.runtime.remember
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.filled.FormatQuote
@@ -126,7 +127,7 @@ fun TodayCard(
 ) {
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(16.dp))
+            .background(AppSurfaces.card, ContinuousShape(16.dp))
             .padding(vertical = 12.dp),
     ) {
         Row(
@@ -317,7 +318,7 @@ private fun ChallengeTile(
         modifier
             // Clipped before the background so both ripples stay inside the
             // tile's corners.
-            .clip(RoundedCornerShape(12.dp))
+            .clip(ContinuousShape(12.dp))
             .background(AppSurfaces.ground),
     ) {
         Column(
@@ -433,7 +434,7 @@ private fun stringResource(id: Int) = androidx.compose.ui.res.stringResource(id)
 fun PillChip(label: String, selected: Boolean, count: Int? = null, onClick: () -> Unit) {
     Row(
         Modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(ContinuousShape(999.dp))
             .background(if (selected) MaterialTheme.colorScheme.onSurface
             else MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)

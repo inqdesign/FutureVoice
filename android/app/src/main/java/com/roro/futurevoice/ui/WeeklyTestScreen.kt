@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.Manifest
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import android.content.pm.PackageManager
 import android.os.Build
 import android.view.HapticFeedbackConstants
@@ -759,7 +760,7 @@ private fun OptionButton(option: String, item: WeeklyTestItem, chosen: String?, 
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        shape = RoundedCornerShape(14.dp),
+        shape = ContinuousShape(14.dp),
         border = BorderStroke(if (graded && (isAnswer || isChosen)) 2.dp else 1.dp, tint.copy(alpha = 0.6f)),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = tint.copy(alpha = 0.10f), contentColor = tint),
@@ -783,7 +784,7 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
         WeeklyTestEngine.tileCheck(laid.map { item.options[it] }, item.answer, language) else null
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, ContinuousShape(14.dp))
             .clickable(onClick = onTapEnd).padding(12.dp)) {
             if (laid.isEmpty()) {
                 Text(stringResource(R.string.tap_the_words_in_order), style = MaterialTheme.typography.bodyMedium,

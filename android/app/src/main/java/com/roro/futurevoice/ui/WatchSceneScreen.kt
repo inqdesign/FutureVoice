@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.MenuBook
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -415,7 +416,7 @@ private fun SceneLineAction(
     onClick: () -> Unit,
 ) {
     Row(
-        Modifier.clip(RoundedCornerShape(999.dp)).clickable(onClick = onClick)
+        Modifier.clip(ContinuousShape(999.dp)).clickable(onClick = onClick)
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),

@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.border
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,12 +58,12 @@ fun AppearanceSheet(onPicked: (FutureselfTheme) -> Unit, onDismiss: () -> Unit) 
             FutureselfTheme.entries.forEach { theme ->
                 Row(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(ContinuousShape(14.dp))
                         .border(
                             width = if (theme == picked) 2.dp else 1.dp,
                             color = if (theme == picked) theme.tint()
                             else MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(14.dp))
+                            shape = ContinuousShape(14.dp))
                         .clickable {
                             picked = theme
                             FutureselfTheme.pick(context, theme)

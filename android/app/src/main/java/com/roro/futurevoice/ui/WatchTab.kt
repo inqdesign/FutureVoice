@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -199,7 +200,7 @@ private fun DoorButton(
 ) {
     Row(
         modifier.heightIn(min = 72.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(ContinuousShape(18.dp))
             .background(if (prominent) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
             else AppSurfaces.card)
             .clickable(onClick = onClick)
@@ -275,7 +276,7 @@ private fun WatchScenarioCard(
     val blurb = env.takeIf { it.isNotEmpty() && !it.equals(sc.cardTitle.trim(), ignoreCase = true) }
     Column(
         modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(ContinuousShape(16.dp))
             .background(AppSurfaces.card)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(16.dp),

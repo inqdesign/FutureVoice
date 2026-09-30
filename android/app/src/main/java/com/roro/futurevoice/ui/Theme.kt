@@ -73,7 +73,7 @@ fun FutureVoiceTheme(
         tertiaryContainer = accent.copy(alpha = 0.16f).compositeOver(base.surface),
         onTertiaryContainer = accent,
     )
-    MaterialTheme(colorScheme = colors, typography = IosTypeScale, content = content)
+    MaterialTheme(colorScheme = colors, typography = IosTypeScale, shapes = IosShapes, content = content)
 }
 
 /**
@@ -122,3 +122,18 @@ val IosTypeScale = androidx.compose.material3.Typography().let { m ->
         labelSmall = ios(12, 16),
     )
 }
+
+/**
+ * Material's shape slots at iOS sizes — every stock component (bottom sheets,
+ * dialogs, menus, text fields, cards) reads one of these, and Material's own
+ * 4/8/12/16/28 dp are visibly tighter than iOS. These must stay
+ * CornerBasedShape (sheets take `.top()` of extraLarge), so they are circular;
+ * hand-drawn surfaces use `ContinuousShape` for iOS's smooth corner.
+ */
+internal val IosShapes = androidx.compose.material3.Shapes(
+    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(androidx.compose.ui.unit.Dp(12f)),
+    small = androidx.compose.foundation.shape.RoundedCornerShape(androidx.compose.ui.unit.Dp(14f)),
+    medium = androidx.compose.foundation.shape.RoundedCornerShape(androidx.compose.ui.unit.Dp(18f)),
+    large = androidx.compose.foundation.shape.RoundedCornerShape(androidx.compose.ui.unit.Dp(26f)),
+    extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(androidx.compose.ui.unit.Dp(32f)),
+)

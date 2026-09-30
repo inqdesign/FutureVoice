@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.Canvas
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -1393,7 +1394,7 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
 private fun FirstRunCard() {
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(20.dp))
+            .background(AppSurfaces.card, ContinuousShape(20.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -1983,7 +1984,7 @@ private fun personaNeedsDepth(p: com.roro.futurevoice.talk.UserPersona?): Boolea
 private fun DeepenRow(onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(20.dp))
+            .background(AppSurfaces.card, ContinuousShape(20.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,

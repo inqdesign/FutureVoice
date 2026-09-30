@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.widthIn
@@ -494,7 +495,7 @@ internal fun ScenarioComposer(
                     }
                     Column(
                         Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
+                            .clip(ContinuousShape(24.dp))
                             .background(AppSurfaces.card)
                             .padding(vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -835,7 +836,7 @@ private fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
 @Composable
 private fun AttachmentChip(src: ScenarioBrief.Source, onRemove: () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(10.dp))
+        Modifier.clip(ContinuousShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(start = 10.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -974,7 +975,7 @@ private fun ChoiceGrid(items: List<Pair<String, String?>>, onPick: (Int) -> Unit
                         Modifier.weight(1f)
                             .fillMaxHeight()
                             .heightIn(min = 46.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(ContinuousShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .clickable { onPick(i) }
                             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -1010,7 +1011,7 @@ private fun SkeletonGrid() {
                 pair.forEach { f ->
                     Box(
                         Modifier.weight(1f).height(46.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(ContinuousShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .padding(horizontal = 12.dp),
                         contentAlignment = Alignment.CenterStart,

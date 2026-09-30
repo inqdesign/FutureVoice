@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.content.Context
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -100,7 +101,7 @@ fun InviteMinutesCard(offer: InviteOffer, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.weight(1f).height(40.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant, ContinuousShape(10.dp))
                 .padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(offer.code, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f))

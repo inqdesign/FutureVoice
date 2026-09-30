@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.Visibility
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.shape.CircleShape
@@ -488,7 +489,7 @@ fun DrillDeckScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(999.dp))
+                                .background(MaterialTheme.colorScheme.surface, ContinuousShape(999.dp))
                                 .padding(horizontal = 12.dp, vertical = 5.dp),
                         )
                     }
@@ -552,10 +553,10 @@ private fun DrillCardFace(
         modifier
             .heightIn(min = 240.dp)
             // The accent IS the card, so it needs its own lift off the page.
-            .shadow(10.dp, RoundedCornerShape(22.dp),
+            .shadow(10.dp, ContinuousShape(22.dp),
                 ambientColor = MaterialTheme.colorScheme.primary,
                 spotColor = MaterialTheme.colorScheme.primary)
-            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.primary, ContinuousShape(22.dp))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
@@ -591,7 +592,7 @@ private fun DrillCardFace(
                 listOf(1f, 1f, 0.55f).forEach { fraction ->
                     Box(
                         Modifier.fillMaxWidth(fraction).height(22.dp)
-                            .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(6.dp)))
+                            .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
                 }
             }
         }
@@ -774,7 +775,7 @@ private fun CardPill(
 ) {
     val tint = Color.White.copy(alpha = if (enabled) 1f else 0.5f)
     Row(
-        Modifier.border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
+        Modifier.border(1.dp, Color.White.copy(alpha = 0.35f), ContinuousShape(999.dp))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,

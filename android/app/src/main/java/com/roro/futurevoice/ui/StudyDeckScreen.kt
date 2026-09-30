@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.border
@@ -343,7 +344,7 @@ fun StudyDeckScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surface,
-                                    androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                                    ContinuousShape(999.dp))
                                 .padding(horizontal = 12.dp, vertical = 5.dp),
                         )
                     }
@@ -436,8 +437,8 @@ private fun StudyCard(
     val onCardSecondary = Color.White.copy(alpha = 0.72f)
     Column(
         modifier
-            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.primary, ContinuousShape(18.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), ContinuousShape(18.dp))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {

@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -471,7 +472,7 @@ fun TalkGoalSheet(
                     androidx.compose.foundation.layout.Column(
                         Modifier.fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceVariant,
-                                androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                ContinuousShape(12.dp))
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {

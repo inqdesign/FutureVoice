@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.graphics.Bitmap
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -290,7 +291,7 @@ private fun StepHeader(question: String, detail: String) {
 @Composable
 private fun Card(content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth()
-        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(14.dp),
+        .background(MaterialTheme.colorScheme.surface, ContinuousShape(12.dp)).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
 }
 

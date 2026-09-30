@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.Manifest
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -781,7 +782,7 @@ private fun MicButton(phase: ShadowPhase, onTap: () -> Unit) {
 private fun PastAttemptRow(a: ShadowAttempt, onPlay: ((String) -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(ContinuousShape(10.dp))
             .background(AppSurfaces.card)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),

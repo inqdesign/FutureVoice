@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import com.roro.futurevoice.data.Recency
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import com.roro.futurevoice.data.StudyCollections
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -216,7 +217,7 @@ fun PracticeBody(
             // at zero, so the shelf is something to fill rather than a
             // surprise the first time it appears.
             Row(Modifier
-                .clip(RoundedCornerShape(999.dp))
+                .clip(ContinuousShape(999.dp))
                 .background(MaterialTheme.colorScheme.surface)
                 .clickable { showFinished = true }
                 .padding(horizontal = 12.dp, vertical = 7.dp),

@@ -306,7 +306,7 @@ fun LevelHero(modifier: Modifier = Modifier) {
 @Composable
 private fun HeroPanel(content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+        Modifier.fillMaxWidth().clip(ContinuousShape(18.dp))
             .background(AppSurfaces.card).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) { content() }

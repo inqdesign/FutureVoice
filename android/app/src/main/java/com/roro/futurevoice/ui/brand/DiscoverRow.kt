@@ -47,7 +47,7 @@ fun DiscoverRow(
     Row(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(ContinuousShape(18.dp))
             .background(AppSurfaces.card)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(14.dp),

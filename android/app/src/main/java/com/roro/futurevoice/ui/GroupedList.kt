@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.ui.text.withStyle
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -47,7 +48,7 @@ fun GroupedSectionSpacer() {
 fun GroupedCard(content: @Composable () -> Unit) {
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(12.dp))
+            .background(AppSurfaces.card, ContinuousShape(com.roro.futurevoice.ui.brand.IosRadius.groupedCard))
             .padding(vertical = 4.dp),
     ) { content() }
 }

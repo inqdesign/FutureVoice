@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -151,7 +152,7 @@ fun DailyCallPage(
                                 Text("%02d:%02d".format(m / 60, m % 60),
                                     style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(ContinuousShape(8.dp))
                                         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                                         .clickable {
                                             android.app.TimePickerDialog(context, { _, h, min ->

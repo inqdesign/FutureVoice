@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.app.Activity
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -569,12 +570,12 @@ private fun PlanCard(
     val accent = MaterialTheme.colorScheme.primary
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(16.dp))
+            .background(AppSurfaces.card, ContinuousShape(16.dp))
             .border(
                 width = if (selected) 2.dp else 1.dp,
                 color = if (selected) accent
                 else MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(16.dp))
+                shape = ContinuousShape(16.dp))
             .clickable(onClick = onSelect)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

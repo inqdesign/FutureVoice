@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.clickable
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -594,12 +595,12 @@ fun CloneFlowScreen(
                         FutureselfTheme.entries.forEach { t ->
                             Column(
                                 Modifier
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(ContinuousShape(14.dp))
                                     .border(
                                         width = if (t == theme) 2.dp else 1.dp,
                                         color = if (t == theme) t.tint()
                                         else MaterialTheme.colorScheme.outlineVariant,
-                                        shape = RoundedCornerShape(14.dp))
+                                        shape = ContinuousShape(14.dp))
                                     .clickable {
                                         theme = t
                                         context.getSharedPreferences("futurevoice", 0).edit()

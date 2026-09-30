@@ -94,8 +94,8 @@ fun DialogueLine(
             }
             Column(
                 Modifier
-                    .background(fill, RoundedCornerShape(14.dp))
-                    .then(if (isCurrent) Modifier.border(2.dp, ring, RoundedCornerShape(14.dp))
+                    .background(fill, ContinuousShape(14.dp))
+                    .then(if (isCurrent) Modifier.border(2.dp, ring, ContinuousShape(14.dp))
                     else Modifier)
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {

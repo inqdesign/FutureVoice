@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.content.Context
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -314,7 +315,7 @@ private fun HeadlineStats(headline: Headline) {
     )
     Row(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(16.dp))
+            .background(AppSurfaces.card, ContinuousShape(16.dp))
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -404,7 +405,7 @@ private fun MonthWall(
                         val heat = heatAlpha(seconds)
                         Box(
                             Modifier.weight(1f).aspectRatio(1f)
-                                .clip(RoundedCornerShape(9.dp))
+                                .clip(ContinuousShape(9.dp))
                                 .background(
                                     if (active) accent.copy(alpha = heat)
                                     else MaterialTheme.colorScheme.surfaceVariant
@@ -416,7 +417,7 @@ private fun MonthWall(
                                         day == today -> accent.copy(alpha = 0.45f)
                                         else -> Color.Transparent
                                     },
-                                    shape = RoundedCornerShape(9.dp))
+                                    shape = ContinuousShape(9.dp))
                                 .clickable(enabled = !future) { onSelect(day) },
                         ) {
                             if (photo != null) {
@@ -574,7 +575,7 @@ private fun DaySummary(
 
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(16.dp))
+            .background(AppSurfaces.card, ContinuousShape(16.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -605,7 +606,7 @@ private fun DaySummary(
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(
                 Modifier.size(PREVIEW_WIDTH, PREVIEW_WIDTH * 5 / 4)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(ContinuousShape(12.dp))
                     .clickable { onShare() },
                 contentAlignment = Alignment.Center,
             ) {

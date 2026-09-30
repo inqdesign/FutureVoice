@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.GraphicEq
+import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
@@ -488,7 +489,7 @@ private fun ExampleRow(text: String, meaning: String?) {
 private fun PhraseRow(phrase: String, meaning: String) {
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(12.dp))
+            .background(AppSurfaces.card, ContinuousShape(12.dp))
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
@@ -506,7 +507,7 @@ private fun SourceRow(text: String) {
         text,
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, ContinuousShape(12.dp))
             .padding(10.dp),
     )
 }
