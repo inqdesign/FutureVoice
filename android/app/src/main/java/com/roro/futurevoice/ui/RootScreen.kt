@@ -1312,7 +1312,12 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         Modifier
             .fillMaxWidth()
             .height(heroHeight)
-            .onGloballyPositioned { heroTopPx = it.boundsInWindow().top }
+            // Measured ONCE, at rest. The page scrolls, so the hero's window
+            // top moves with it — and feeding a scrolled position back into
+            // the hero's own height made the page oscillate between two scroll
+            // offsets on a fling (seen as a double image). The first layout is
+            // always at scroll 0, and nothing above the hero changes height.
+            .onGloballyPositioned { if (heroTopPx == 0f) heroTopPx = it.boundsInWindow().top }
             .padding(top = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
