@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui.brand
 
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.border
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -77,7 +78,9 @@ fun BookCard(
         modifier = modifier.fillMaxWidth().heightIn(min = 150.dp).then(
             if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            // White off the grouped ground, as iOS's book cards are — the
+            // tinted Material container read as a second, greyer surface.
+            containerColor = AppSurfaces.card),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
@@ -111,10 +114,16 @@ fun BookCard(
             }
             Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 progress?.let {
+                    // iOS's strip: one rounded hairline on a grey track — no
+                    // Material stop dot, no gap between fill and track.
                     LinearProgressIndicator(
                         progress = { it.coerceIn(0f, 1f) },
                         color = if (mastered) Books.mastery else accent,
-                        modifier = Modifier.fillMaxWidth())
+                        trackColor = iosFill(),
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                        gapSize = 0.dp,
+                        drawStopIndicator = {},
+                        modifier = Modifier.fillMaxWidth().height(4.dp))
                 }
                 progressLabel?.let {
                     Text(it, style = MaterialTheme.typography.labelSmall,

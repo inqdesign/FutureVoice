@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.layout
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.outlined.Circle
@@ -15,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -318,8 +320,10 @@ private fun ChallengeTile(
         modifier
             // Clipped before the background so both ripples stay inside the
             // tile's corners.
-            .clip(ContinuousShape(12.dp))
-            .background(AppSurfaces.ground),
+            // iOS draws the tile in `tertiarySystemFill` over the white card —
+            // a touch darker than the page ground, measured (239,239,240).
+            .clip(ContinuousShape(14.dp))
+            .background(com.roro.futurevoice.ui.brand.iosFill()),
     ) {
         Column(
             Modifier.clickable(onClick = onClick)
@@ -405,14 +409,26 @@ fun <T> BookRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text("$count", style = MaterialTheme.typography.bodyMedium,
+            // iOS: the count at the TITLE's size, regular weight, in grey —
+            // one line read as "Talk 102", not a title with a footnote.
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text("$count", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Normal,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.outline)
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // The row runs to the SCREEN's edges (iOS): the page's 20 dp gutter is
+        // given back as content padding, so the first card still lines up
+        // with the header and the next one slides out from under the edge.
+        LazyRow(
+            Modifier.layout { m, c ->
+                val extra = (PAGE_GUTTER * 2).roundToPx()
+                val p = m.measure(c.copy(minWidth = c.minWidth + extra, maxWidth = c.maxWidth + extra))
+                layout(p.width - extra, p.height) { p.place(-extra / 2, 0) }
+            },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = PAGE_GUTTER),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             items(items.size) { i ->
                 Column(Modifier.width(ROW_CARD_WIDTH)) { card(items[i]) }
             }
@@ -420,7 +436,30 @@ fun <T> BookRow(
     }
 }
 
+/**
+ * A shelf's books two to a row (iOS `LazyVGrid`, two flexible columns, 14 pt
+ * apart). Both cards in a row end on the same line; [card] gets the modifier
+ * that makes it fill its cell.
+ */
+@Composable
+fun <T> BookGrid(items: List<T>, card: @Composable (T, Modifier) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        items.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                row.forEach { item ->
+                    Box(Modifier.weight(1f).fillMaxHeight()) { card(item, Modifier.fillMaxHeight()) }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
 private val ROW_CARD_WIDTH = 190.dp
+
+/** The home shell's horizontal page padding, which [BookRow] bleeds past. */
+private val PAGE_GUTTER = 20.dp
 
 @Composable
 private fun stringResource(id: Int) = androidx.compose.ui.res.stringResource(id)

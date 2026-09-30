@@ -55,6 +55,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.outlined.People
 import com.roro.futurevoice.BuildConfig
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -236,6 +237,8 @@ fun RootScreen() {
     }
     val localActivity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
     var showPeople by remember { mutableStateOf(false) }
+    /** The finished-books page (iOS "Finished"), opened from Practice's header seal. */
+    var finishedBooks by remember { mutableStateOf<List<FinishedBook>?>(null) }
     var recloning by remember { mutableStateOf(false) }
     var personDetailId by remember { mutableStateOf<String?>(null) }
     var clonePreview by remember { mutableStateOf(false) }
@@ -623,6 +626,16 @@ fun RootScreen() {
         )
 
         // Above Me, so backing out of these lands on Me rather than the tabs.
+        // Below the book branches on purpose: a book opened from here comes
+        // back to this page, as a pushed page does on iOS.
+        finishedBooks != null -> FinishedBooksScreen(
+            books = finishedBooks!!,
+            onOpen = { book ->
+                if (book.isTalk) detailSessionId = book.id else bookScenarioId = book.id
+            },
+            onBack = { finishedBooks = null },
+        )
+
         showCreditGuide -> CreditGuideScreen(onBack = { showCreditGuide = false })
 
         showPlanPage -> PlanPageScreen(
@@ -801,6 +814,7 @@ fun RootScreen() {
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
+            onOpenFinished = { finishedBooks = it },
             onOpenActivity = { showActivity = true },
             onOpenAssessment = { showAssessment = true },
             tab = tab,
@@ -969,6 +983,8 @@ internal fun HomeScreen(
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
+    /** Practice's header seal → the finished-books page, with the books it counted. */
+    onOpenFinished: (List<FinishedBook>) -> Unit = {},
     onOpenActivity: () -> Unit = {},
     onOpenAssessment: () -> Unit = {},
     /** Hoisted by the root — see the comment on its declaration there. */
@@ -986,9 +1002,25 @@ internal fun HomeScreen(
     onOpenDueReview: () -> Unit = {},
     onSwitchLanguage: (String) -> Unit = {},
     onAddLanguage: () -> Unit = {},
+    /** Which shelf Practice opens on — the capture harness's seam. */
+    initialPracticeShelf: Shelf = Shelf.STUDYING,
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
+
+    // The finished shelf is counted for the HEADER, where iOS keeps it: one
+    // number visible from every Practice shelf. A curriculum build per talk,
+    // so off the main thread, and only once Practice has been opened.
+    var finished by remember { mutableStateOf<List<FinishedBook>>(emptyList()) }
+    val onPractice = tab == HomeTab.PRACTICE
+    val storeRevision by StoreEvents.revision.collectAsStateWithLifecycle()
+    LaunchedEffect(onPractice, state.targetLanguage, state.level, storeRevision) {
+        if (!onPractice) return@LaunchedEffect
+        finished = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { loadFinishedBooks(context, state.targetLanguage, state.level) }
+                .getOrDefault(emptyList())
+        }
+    }
 
     // The call's first word, on disk before the tap. Synthesizing the
     // openers here costs one round trip per NEW line, once, and takes the
@@ -1127,13 +1159,25 @@ internal fun HomeScreen(
                             MaterialTheme.typography.headlineMedium))
                     },
                     actions = {
+                        // iOS 26 toolbar buttons: white glass, a circle for an
+                        // icon and a capsule for icon + count.
                         // The people page opens from the WATCH header, as on iOS.
                         if (tab == HomeTab.WATCH) {
-                            IconButton(onClick = onOpenPeople) {
-                                Icon(Symbols.icon("person.2"),
+                            com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onOpenPeople,
+                                circle = true, modifier = Modifier.padding(end = 12.dp)) {
+                                // iOS draws `person.2` as an OUTLINE here.
+                                Icon(Icons.Outlined.People,
                                     contentDescription = stringResource(R.string.people),
-                                    tint = MaterialTheme.colorScheme.primary)
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp))
                             }
+                        }
+                        // Books taken all the way to mastered — a running
+                        // tally, so it sits in the chrome (iOS `finishedShelfButton`).
+                        if (tab == HomeTab.PRACTICE) {
+                            FinishedShelfButton(count = finished.size,
+                                onClick = { onOpenFinished(finished) },
+                                modifier = Modifier.padding(end = 12.dp))
                         }
                     },
                 )
@@ -1218,6 +1262,7 @@ internal fun HomeScreen(
                     )
 
                     HomeTab.PRACTICE -> PracticeBody(
+                        initialShelf = initialPracticeShelf,
                         level = state.level,
                         language = state.targetLanguage,
                         onOpenDeck = onOpenDeck,

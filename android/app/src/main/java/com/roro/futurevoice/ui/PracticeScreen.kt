@@ -63,6 +63,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -131,8 +132,8 @@ fun PracticeBody(
     var wordsAll by remember { mutableStateOf<Int?>(null) }
     var expressionsAll by remember { mutableStateOf<Int?>(null) }
     var shadowAll by remember { mutableStateOf<Int?>(null) }
-    var finished by remember { mutableStateOf<List<FinishedBook>>(emptyList()) }
-    var showFinished by remember { mutableStateOf(false) }
+    /** Each talk book's mastered / total — the shelf card's strip. */
+    var talkProgress by remember { mutableStateOf<Map<String, Pair<Int, Int>>>(emptyMap()) }
     /** Finished books. They keep their progress and can come back. */
     var archivedTalks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var archivedScenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
@@ -158,79 +159,32 @@ fun PracticeBody(
         wordsAll = StudyCollections.wordsToStudy(context, language)
         expressionsAll = StudyCollections.expressionsToStudy(context, language)
         shadowAll = StudyCollections.shadowToStudy(context, language)
-        // Archiving is tidying; this is the achievement — so archived books
-        // count too, and both kinds land on the same shelf.
-        val vocabStore = VocabStore.shared(context)
-        val attempts = ShadowAttemptStore.shared(context).load(language)
-        val cards = DrillStore.shared(context).load(language)
-        finished = (allTalks.mapNotNull { s ->
-            val snap = runCatching {
-                TalkCurriculum.build(s, level, language, vocabStore, attempts, cards)
-            }.getOrNull()
-            if (snap?.isMastered != true) null
-            else FinishedBook(s.id, s.displayTitle ?: "", context.getString(R.string.talk),
-                Icons.AutoMirrored.Filled.Chat, snap.totalCount, isTalk = true,
-                finishedLabel = shelfDate(s.endedAt ?: s.startedAt))
-        } + allScenarios.mapNotNull { sc ->
-            val cur = sc.curriculum ?: return@mapNotNull null
-            val total = cur.words.size + cur.expressions.size
-            val done = cur.words.count { it.masteredAt != null } +
-                cur.expressions.count { it.masteredAt != null }
-            if (total == 0 || done < total) null
-            else FinishedBook(sc.id, sc.cardTitle,
-                // "Scene · with Sarah" — who it was with is part of what the
-                // book WAS, and the row is the only place it still shows.
-                listOfNotNull(context.getString(R.string.scene),
-                    sc.role.takeIf { it.isNotBlank() }
-                        ?.let { context.getString(R.string.with, it) })
-                    .joinToString(" · "),
-                Icons.Filled.Movie, total, isTalk = false,
-                finishedLabel = shelfDate(sc.createdAt))
-        })
+        // A curriculum build per talk — off the main thread.
+        talkProgress = withContext(Dispatchers.Default) {
+            val vocab = VocabStore.shared(context)
+            val attempts = ShadowAttemptStore.shared(context).load(language)
+            val cards = DrillStore.shared(context).load(language)
+            allTalks.mapNotNull { s ->
+                runCatching { TalkCurriculum.build(s, level, language, vocab, attempts, cards) }
+                    .getOrNull()?.let { s.id to (it.masteredCount to it.totalCount) }
+            }.toMap()
+        }
     }
 
-    if (showFinished) {
-        FinishedBooksSheet(
-            books = finished,
-            onOpen = { book ->
-                showFinished = false
-                if (book.isTalk) onOpenTalk(book.id) else onOpenScenarioBook(book.id)
-            },
-            onDismiss = { showFinished = false })
-    }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) {
-                ShelfChips(
-                    selected = shelf,
-                    counts = { s ->
-                        when (s) {
-                            Shelf.STUDYING -> null
-                            Shelf.TALK -> talks.size.takeIf { it > 0 }
-                            Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
-                        }
-                    },
-                    onSelect = { shelf = it },
-                )
-            }
-            // Books where every word and line is mastered. A pill, shown even
-            // at zero, so the shelf is something to fill rather than a
-            // surprise the first time it appears.
-            Row(Modifier
-                .clip(ContinuousShape(999.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .clickable { showFinished = true }
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
-                    modifier = Modifier.size(17.dp),
-                    tint = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Books.mastery)
-                Text("${finished.size}", style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Books.mastery)
-            }
-        }
+        // The finished-books seal lives in the tab's HEADER (RootScreen), as
+        // iOS puts it in the toolbar — visible from every shelf.
+        ShelfChips(
+            selected = shelf,
+            counts = { s ->
+                when (s) {
+                    Shelf.STUDYING -> null
+                    Shelf.TALK -> talks.size.takeIf { it > 0 }
+                    Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+                }
+            },
+            onSelect = { shelf = it },
+        )
 
         when (shelf) {
             // The cross-cutting page: what today asks for, then the books
@@ -296,8 +250,10 @@ fun PracticeBody(
             }
 
             Shelf.TALK -> {
-                talks.forEach {
-                    TalkCard(it, onOpenTalk,
+                // Two columns, as iOS's `LazyVGrid` — a full-width card per
+                // talk made the shelf a list of banners.
+                BookGrid(talks) { t, m ->
+                    TalkCard(t, onOpenTalk, progress = talkProgress[t.id], modifier = m,
                         onArchive = { id, on -> scope.launch {
                             SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
                         onDelete = { id -> scope.launch {
@@ -314,8 +270,8 @@ fun PracticeBody(
                 }
             }
             Shelf.WATCH -> {
-                scenarios.forEach {
-                    ScenarioCard(it, onOpenScenarioBook,
+                BookGrid(scenarios) { sc, m ->
+                    ScenarioCard(sc, onOpenScenarioBook, modifier = m,
                         onArchive = { id, on -> scope.launch {
                             ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
                         onDelete = { id -> scope.launch {
@@ -365,6 +321,9 @@ private fun BookMenu(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TalkCard(t: Session, onOpen: (String) -> Unit,
+                     /** Mastered / total of the talk's book, once counted. */
+                     progress: Pair<Int, Int>? = null,
+                     modifier: Modifier = Modifier,
                      onArchive: ((String, Boolean) -> Unit)? = null,
                      onDelete: ((String) -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
@@ -378,7 +337,8 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         ))
     BookCard(
         title = t.displayTitle ?: stringResource(R.string.conversation),
-        icon = Icons.AutoMirrored.Filled.Chat,
+        // iOS `bubble.left.and.bubble.right.fill` — two bubbles, a conversation.
+        icon = Icons.Filled.Forum,
         origin = when (t.origin?.name?.lowercase()) {
             "news" -> stringResource(R.string.news)
             "scenario" -> stringResource(R.string.scenarios)
@@ -389,7 +349,12 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         // the book is studied, which a fixed date does not.
         detail = stringResource(R.string.studied, Recency.label(t.endedAt ?: t.startedAt)),
         score = t.summary?.scorecard?.overall,
-        modifier = Modifier.padding(vertical = 4.dp)
+        // The book's mastery strip, as iOS's TalkBookCard carries it.
+        progress = progress?.takeIf { it.second > 0 }?.let { it.first / it.second.toFloat() },
+        progressLabel = progress?.takeIf { it.second > 0 }
+            ?.let { stringResource(R.string.lld_of_lld_mastered, it.first, it.second) },
+        mastered = progress != null && progress.second > 0 && progress.first == progress.second,
+        modifier = modifier
             .combinedClickable(onClick = { onOpen(t.id) }, onLongClick = { menu = true }),
     )
     }
@@ -399,6 +364,7 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
 @Composable
 private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
                          onTalk: ((Scenario) -> Unit)? = null,
+                         modifier: Modifier = Modifier,
                          onArchive: ((String, Boolean) -> Unit)? = null,
                          onDelete: ((String) -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
@@ -420,7 +386,7 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
         else stringResource(R.string.lld_of_lld_mastered, done, total),
         mastered = total > 0 && done == total,
         progress = if (total == 0) null else done / total.toFloat(),
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = modifier
             .combinedClickable(onClick = { onOpen(sc.id) }, onLongClick = { menu = true }),
     )
     BookMenu(menu, { menu = false }, listOfNotNull(

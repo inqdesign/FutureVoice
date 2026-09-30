@@ -16,6 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -27,7 +30,7 @@ import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.DrillDeckScreen
-import com.roro.futurevoice.ui.FinishedBooksSheet
+import com.roro.futurevoice.ui.FinishedBooksScreen
 import com.roro.futurevoice.ui.LibraryKind
 import com.roro.futurevoice.ui.LibraryScreen
 import com.roro.futurevoice.ui.PracticeBody
@@ -154,14 +157,30 @@ object CapturePractice {
     /** The Practice tab's body. The tab shell (title, tab bar) is RootScreen's. */
     @Composable
     private fun Practice(c: Context, shelf: Shelf) {
-        Column(
-            Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
-                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-        ) {
-            PracticeBody(language = lang(c), level = level(c),
-                onOpenDeck = {}, onOpenWords = {}, onOpenExpressions = {},
-                onOpenScenarioBook = {}, onOpenTalk = {}, initialShelf = shelf)
+        // The real tab shell, so the header — the large title and the
+        // finished-books seal at its right — is in the shot, as on iOS.
+        val state = remember {
+            val l = lang(c)
+            com.roro.futurevoice.ui.AppState(
+                resolvingSession = false, signedIn = true, setupComplete = true,
+                persona = runBlocking { com.roro.futurevoice.data.PersonaStore.shared(c).load() },
+                personaResolved = true, voiceId = "capture-voice",
+                targetLanguage = l, enrolledLanguages = listOf(l),
+                nativeLanguage = native(c), level = level(c))
         }
+        var tab by androidx.compose.runtime.remember {
+            androidx.compose.runtime.mutableStateOf(com.roro.futurevoice.ui.HomeTab.PRACTICE)
+        }
+        var finished by androidx.compose.runtime.remember {
+            androidx.compose.runtime.mutableStateOf<List<com.roro.futurevoice.ui.FinishedBook>?>(null)
+        }
+        finished?.let { books ->
+            FinishedBooksScreen(books = books, onOpen = {}, onBack = { finished = null })
+            return
+        }
+        com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _ -> }, onOpenMe = {},
+            tab = tab, onTabChange = { tab = it }, initialPracticeShelf = shelf,
+            onOpenFinished = { finished = it })
     }
 
     @Composable
@@ -339,12 +358,12 @@ object CapturePractice {
 
         "finished" to mode { _ ->
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
-                FinishedBooksSheet(books = CaptureSeed.sampleFinishedBooks, onOpen = {}, onDismiss = {})
+                FinishedBooksScreen(books = CaptureSeed.sampleFinishedBooks, onOpen = {}, onBack = {})
             }
         },
         "finished-empty" to mode { _ ->
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
-                FinishedBooksSheet(books = emptyList(), onOpen = {}, onDismiss = {})
+                FinishedBooksScreen(books = emptyList(), onOpen = {}, onBack = {})
             }
         },
 
