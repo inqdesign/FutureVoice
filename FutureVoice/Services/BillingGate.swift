@@ -93,7 +93,8 @@ final class BillingGate: ObservableObject {
     /// purchase, a finished call).
     func invalidate() {
         fetchedAt = nil
-        // A purchase is what brings a PARKED voice back (see `VoiceParking`).
+        // A purchase changes what a PARKED voice may do (see `VoiceParking`);
+        // re-check it so the next tap knows.
         if VoiceParking.parkedVoiceId != nil {
             NotificationCenter.default.post(name: .billingStateChanged, object: nil)
         }
@@ -109,14 +110,18 @@ final class BillingGate: ObservableObject {
     /// through dismissing — silently never appears.
     static func start(orShow paywall: Binding<Bool>, _ start: @escaping () -> Void) {
         Task { @MainActor in
-            if await shared.blocks() { paywall.wrappedValue = true } else { start() }
+            if await shared.blocks() { paywall.wrappedValue = true }
+            // Allowed to spend, but the voice was PARKED: rebuild it in front
+            // of the learner, then go straight on (`VoiceRevival`).
+            else if await VoiceRevival.ensureVoice(for: .call) { start() }
         }
     }
 
     /// `start(orShow:)` for a launch that writes a Watch scene.
     static func startScene(orShow paywall: Binding<Bool>, _ start: @escaping () -> Void) {
         Task { @MainActor in
-            if await shared.blocksScene() { paywall.wrappedValue = true } else { start() }
+            if await shared.blocksScene() { paywall.wrappedValue = true }
+            else if await VoiceRevival.ensureVoice(for: .scene) { start() }
         }
     }
 

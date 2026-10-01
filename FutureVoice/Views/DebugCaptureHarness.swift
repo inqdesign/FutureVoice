@@ -765,6 +765,13 @@ enum DebugCapture {
                 }
             }
             return AnyView(ConversationHome())
+        case "voice-revival", "voice-revival-tune":
+            // A parked voice brought back at the call tap (`VoiceRevival`):
+            // the rebuild, then the speed + accent page.
+            let sample = FileManager.default.temporaryDirectory
+                .appendingPathComponent("capture-sample.wav")
+            return AnyView(VoiceRevivalView(sample: sample, purpose: .call) { _ in }
+                .environmentObject(appState))
         case "talk-alt":
             // Layout experiment — How-We-Feel-style Talk home (design review).
             return AnyView(TalkHomeExperiment())

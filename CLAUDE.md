@@ -1850,12 +1850,29 @@ the phone's recording when it is wanted again. `park-idle-voices` (hourly,
   enrichment and weekly-test players now answer that with their own
   `PaywallView` (they used to stay silent), the rest already did. The daily
   call stands down while parked.
-- **It comes back by itself** (`AppState.refreshParkedVoice`, foreground ·
-  sign-in · every `BillingGate.invalidate` while parked): once the account has
-  something to spend — a plan, or free minutes — `regenerateVoiceClone` runs
-  on `VoiceSampleStore`. The sample is never synced and the server copy lives
-  24 h, so a phone without it gets the reclaimed-voice "make your voice again"
-  screen. A parked id is never staged for deletion (it's already gone), and
+- **It comes back at the TAP, in front of the learner** (2026-10-01, founder
+  decision, `VoiceRevival` / `VoiceRevivalView`). `refreshParkedVoice` only
+  LEARNS the state (foreground · sign-in · purchase). There is no "your voice
+  is resting" notice anywhere — the tap answers: nothing to spend → the
+  paywall, as `BillingGate` always did; allowed to spend → `BillingGate.start`
+  / `startScene` presents a full-screen "Recreating your voice" (UIKit-presented
+  on top of whatever is up, because a launcher can sit in a sheet), rebuilds
+  from `VoiceSampleStore`, then a page to set the speed and accent again (the
+  remix died with the old voice), and **Start the call** runs the tap's own
+  action. A slot is only taken back by someone about to use it. The sample is
+  never synced and the server copy lives 24 h, so a phone without it gets the
+  reclaimed-voice "make your voice again" screen instead. Surfaces outside the
+  launchers (a word's audio button) still answer a parked voice with their
+  paywall.
+- **Never parked unannounced** (2026-10-01, `20261001120000_voice_park_notice`).
+  `park-idle-voices` announces two days before a voice qualifies — a
+  `voice_park_notices` row fixes the date, a push (`kind: voice_parking`, app
+  language, title by rule: a plan keeps it / one call keeps it) names it, says
+  it is deleted for safety and can be made again anytime — and parks only after
+  that date, only for the same idle stretch. The date is a UTC day and parking
+  waits until noon UTC the day after, so "after <date>" is true in every zone.
+  No push token still gets a row; the row is the rule, the push a courtesy.
+- A parked id is never staged for deletion (it's already gone), and
   `elevenlabs-voice-delete` now treats `voice_does_not_exist` as done.
   Re-cloning drops the accent remix, and each re-clone spends one of the
   account's monthly voice add/edits (Pro: 290).

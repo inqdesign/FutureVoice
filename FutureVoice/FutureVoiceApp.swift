@@ -296,6 +296,21 @@ final class AppState: ObservableObject {
     @Published private(set) var voiceWasReclaimed = false {
         didSet { UserDefaults.standard.set(voiceWasReclaimed, forKey: Self.voiceWasReclaimedKey) }
     }
+    /// The phone's voice is PARKED (see `VoiceParking`). A mirror of the
+    /// defaults key, which stays the truth because `ElevenLabsClient` reads it
+    /// off the main actor; every write goes through `setParkedVoice` so the
+    /// two can't disagree.
+    @Published private(set) var voiceIsParked = VoiceParking.parkedVoiceId != nil
+
+    private func setParkedVoice(_ id: String?) {
+        VoiceParking.parkedVoiceId = id
+        voiceIsParked = id != nil
+    }
+
+    #if DEBUG
+    /// Capture harness only: a parked voice needs a server row to reach.
+    func debugParkVoice() { setParkedVoice(voiceCloneId ?? "capture-voice") }
+    #endif
     /// The accent last APPLIED to the clone (`VoiceAccent.id`), nil when the
     /// clone speaks with whatever the TTS model guesses. A remixed voice id
     /// carries no record of the accent it was remixed WITH, so without this
@@ -497,6 +512,10 @@ final class AppState: ObservableObject {
     private static let setupCompleteKey = "futurevoice.setupComplete"
     private static let onboardingStartedKey = "futurevoice.onboardingStarted"
 
+    /// The one live instance, for the few places that act on the learner's
+    /// voice from outside a view tree (`VoiceRevival`, run from `BillingGate`).
+    @MainActor static weak var live: AppState?
+
     init() {
         let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey).map(LanguageCatalog.normalizedNative)
             ?? LanguageCatalog.defaultNative
@@ -559,6 +578,7 @@ final class AppState: ObservableObject {
         // Before anything can call with it: a voice left unclaimed past the
         // grace is gone upstream, and the app must say so rather than dial it.
         checkForReclaimedVoice()
+        Self.live = self
         Task { await self.observeAuth() }
     }
 
@@ -574,13 +594,14 @@ final class AppState: ObservableObject {
 
     /// Last time the server was asked whether this phone's voice is parked.
     private var parkedCheckedAt: Date?
-    private var revivingParkedVoice = false
 
-    /// Is this phone's voice PARKED (see `VoiceParking`), and can it come back?
+    /// Is this phone's voice PARKED (see `VoiceParking`)?
     ///
     /// Asks the server at most every 10 minutes (`force` skips that — sign-in,
-    /// a purchase). A parked voice is revived the moment the account has
-    /// something to spend it with: a subscription, or free minutes left.
+    /// a purchase). Only LEARNS the state: bringing the voice back is the
+    /// call tap's job (`VoiceRevival`), because rebuilding it is something the
+    /// learner should see happen, with the speed and accent to set again, and
+    /// a slot should only be taken back by someone about to use it.
     /// Read in a query of its OWN: a `.select()` naming `parked_at` on a
     /// database without it would fail, and this must never break the restore.
     func refreshParkedVoice(force: Bool = false) async {
@@ -604,11 +625,11 @@ final class AppState: ObservableObject {
                 parkedCheckedAt = Date()
                 guard let row = rows.first else { return }
                 if row.parked_at == nil {
-                    if alreadyParked { VoiceParking.parkedVoiceId = nil }
+                    if alreadyParked { setParkedVoice(nil) }
                     return
                 }
                 if !alreadyParked {
-                    VoiceParking.parkedVoiceId = voiceId
+                    setParkedVoice(voiceId)
                     Analytics.capture("voice_parked_notice")
                     Telemetry.log("voice_parked_notice")
                 }
@@ -618,38 +639,31 @@ final class AppState: ObservableObject {
                 if !alreadyParked { return }
             }
         }
-
-        // Parked. Back only for someone who can use it — the paywall is the
-        // answer for everyone else, and `ElevenLabsClient` already gives it.
-        guard let account = await BillingGate.shared.snapshot(force: true),
-              !account.needsSubscription else { return }
-        await reviveParkedVoice()
     }
 
-    /// Rebuild a parked voice from the recording on this phone. No recording
-    /// (a reinstall, a second device — the sample is never synced) → the same
-    /// "let's make your voice again" screen a reclaimed voice gets.
-    private func reviveParkedVoice() async {
-        guard !revivingParkedVoice, let parked = voiceCloneId,
-              VoiceParking.isParked(parked) else { return }
-        revivingParkedVoice = true
-        defer { revivingParkedVoice = false }
-        guard let sample = VoiceSampleStore.shared.url else {
-            Analytics.capture("voice_parked_revive", ["result": "no_sample"])
-            VoiceParking.parkedVoiceId = nil
-            voiceWasDeleted(reason: "parked_no_sample")
-            return
-        }
+    /// Rebuild a parked voice from the recording on this phone
+    /// (`VoiceRevivalView`'s first stage). Throws, and the voice stays parked,
+    /// if the rebuild fails — the screen offers Try again.
+    func reviveParkedVoice(from sample: URL) async throws {
         do {
             try await regenerateVoiceClone(fromSampleAt: sample)
             Analytics.capture("voice_parked_revive", ["result": "ok"])
             Telemetry.log("voice_parked_revive", ["result": "ok"])
         } catch {
-            // Stays parked; the next foreground tries again.
             Analytics.capture("voice_parked_revive", ["result": "failed"])
             Telemetry.log("voice_parked_revive", ["result": "failed",
                                                   "error": String(describing: error).prefix(200).description])
+            throw error
         }
+    }
+
+    /// A parked voice with no recording on this phone (a reinstall, another
+    /// device — the sample is never synced) can't be rebuilt here: the same
+    /// "let's make your voice again" screen a reclaimed voice gets.
+    func parkedVoiceNeedsRecording() {
+        Analytics.capture("voice_parked_revive", ["result": "no_sample"])
+        setParkedVoice(nil)
+        voiceWasDeleted(reason: "parked_no_sample")
     }
 
     /// The voice this phone holds no longer exists upstream. Drop it and send
@@ -1398,7 +1412,7 @@ final class AppState: ObservableObject {
         if let old = voiceCloneId, old != newId {
             // A parked voice is already gone upstream; its row went inactive
             // when the clone function inserted this one. Nothing to delete.
-            if VoiceParking.isParked(old) { VoiceParking.parkedVoiceId = nil }
+            if VoiceParking.isParked(old) { setParkedVoice(nil) }
             else { pendingDeleteVoiceId = old }
         }
         voiceCloneId = newId
