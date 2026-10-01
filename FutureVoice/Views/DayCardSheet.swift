@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 import PhotosUI
 import UIKit
 import UniformTypeIdentifiers
@@ -32,6 +33,10 @@ struct DayCardSheet: View {
     @State private var exported: SharedCard?
     @State private var thumb: UIImage?
     @State private var photoStamp = 0
+    /// Where "Save to Photos" stands for the card as it is drawn now; any
+    /// change to the card puts it back to `.idle`, since that is a new picture.
+    @State private var saveState: SaveState = .idle
+    @State private var photosDenied = false
     /// The headline field — the learner's OWN words only. A picked talk
     /// title shows as a checkmark on its row, never in here. Edits show on
     /// the card as they're typed; the store is written when the field is
@@ -66,6 +71,9 @@ struct DayCardSheet: View {
                     .pickerStyle(.segmented)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
+                }
+                Section {
+                    saveButton
                 }
                 Section {
                     // The day's talks, to pick from. The card's automatic
@@ -159,6 +167,16 @@ struct DayCardSheet: View {
             }
         }
         .task(id: renderKey) { await renderForShare() }
+        .alert("Allow access to Photos", isPresented: $photosDenied) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Turn on Photos for nawana in Settings to save the card.")
+        }
         .fullScreenCover(isPresented: $showingCamera) {
             CameraPicker { setPhoto($0) }
                 .ignoresSafeArea()
@@ -176,6 +194,48 @@ struct DayCardSheet: View {
             // beside iOS 26's large container radius read as a mismatch.
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+    }
+
+    private enum SaveState { case idle, saving, saved }
+
+    /// The card straight into the photo library. The share sheet's own "Save
+    /// Image" is easy to miss among the apps, and keeping the day is the
+    /// commonest thing to do with it.
+    private var saveButton: some View {
+        Button {
+            Task { await saveToPhotos() }
+        } label: {
+            switch saveState {
+            case .saved:
+                Label("Saved to Photos", systemImage: "checkmark")
+            default:
+                Label("Save to Photos", systemImage: "square.and.arrow.down")
+            }
+        }
+        .disabled(exported == nil || saveState != .idle)
+    }
+
+    /// Add-only access: the app never reads the library, so it never asks to.
+    /// The PNG goes in as is — the same bytes the share sheet hands out.
+    @MainActor
+    private func saveToPhotos() async {
+        guard let png = exported?.png else { return }
+        saveState = .saving
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            saveState = .idle
+            photosDenied = true
+            return
+        }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetCreationRequest.forAsset().addResource(with: .photo, data: png, options: nil)
+            }
+            HapticEngine.success()
+            saveState = .saved
+        } catch {
+            saveState = .idle
+        }
     }
 
     private struct RenderKey: Equatable {
@@ -228,6 +288,7 @@ struct DayCardSheet: View {
     @MainActor
     private func renderForShare() async {
         exported = nil
+        saveState = .idle
         guard let data else { return }
         // Let a burst of edits settle — a render is a 1080-wide bitmap.
         try? await Task.sleep(for: .milliseconds(250))

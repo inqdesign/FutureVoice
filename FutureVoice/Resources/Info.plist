@@ -48,6 +48,8 @@
 	<string>nawana takes a photo of where you studied, for today's card.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>nawana saves your day's card to your photo library.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>nawana transcribes what you say on-device so it can compare your speech with the fluent version of your voice.</string>
 	<key>SUPABASE_ANON_KEY</key>
