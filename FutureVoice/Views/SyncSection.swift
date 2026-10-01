@@ -13,6 +13,9 @@ struct SyncSection: View {
     @State private var enableError: String?
     @State private var confirmingCloudDelete = false
     @State private var cloudDeleteError: String?
+    /// What this device's practice takes on disk — roughly what it needs in
+    /// iCloud. Nil until measured.
+    @State private var localBytes: Int64?
 
     var body: some View {
         Section {
@@ -23,7 +26,11 @@ struct SyncSection: View {
             }
             .disabled(!auth.isSignedIn || enabling)
             if enabled {
-                statusRow
+                if let scope = engine.quotaFull {
+                    quotaRow(scope)
+                } else {
+                    statusRow
+                }
                 if let progress = engine.progress {
                     progressRow(progress)
                 }
@@ -47,6 +54,7 @@ struct SyncSection: View {
         } footer: {
             Text(footer)
         }
+        .task { localBytes = await Self.measurePractice() }
         .onChange(of: enabled) { _, on in
             Task { await set(enabled: on) }
         }
@@ -120,6 +128,51 @@ struct SyncSection: View {
         }
     }
 
+    /// iCloud refused for lack of space: say what is on this device only and
+    /// how to get it moving again, in the same words as the one-time alert.
+    private func quotaRow(_ scope: SyncEngine.QuotaScope) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label {
+                Text(SyncQuotaNotice.title)
+                    .font(.subheadline.weight(.semibold))
+            } icon: {
+                Image(systemName: "exclamationmark.icloud.fill")
+                    .foregroundStyle(.orange)
+            }
+            Text(SyncQuotaNotice.detail(scope))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Text(SyncQuotaNotice.howTo)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// Talks, cards, words and every recording live under these two
+    /// folders; caches don't, and aren't synced.
+    nonisolated private static func measurePractice() async -> Int64 {
+        await Task.detached(priority: .utility) {
+            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            var total: Int64 = 0
+            for name in ["lang", "TurnAudio"] {
+                let root = docs.appendingPathComponent(name, isDirectory: true)
+                guard let walker = FileManager.default.enumerator(
+                    at: root, includingPropertiesForKeys: [.fileSizeKey]) else { continue }
+                for case let url as URL in walker {
+                    total += Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+                }
+            }
+            return total
+        }.value
+    }
+
+    private var sizeLine: String? {
+        guard let localBytes, localBytes > 0 else { return nil }
+        let size = ByteCountFormatter.string(fromByteCount: localBytes, countStyle: .file)
+        return explain("Your practice on this device takes about \(size). That's roughly the space it needs in iCloud.")
+    }
+
     private var pendingText: String {
         var parts: [String] = []
         if engine.pendingItems > 0 { parts.append(explain("\(engine.pendingItems) to send")) }
@@ -166,9 +219,16 @@ struct SyncSection: View {
         if !auth.isSignedIn {
             return explain("Sign in to sync your practice between your iPhone and iPad.")
         }
-        return enabled
+        let base = enabled
             ? explain("Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.")
             : explain("Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.")
+        // The recording the voice is made from goes too (`VoiceSampleStore`).
+        let voice = explain("Your voice recording goes too, so a new phone makes your voice again without recording.")
+        // iOS never lets an app speak at deletion time, so with sync off this
+        // is said here, for as long as it is true.
+        let onlyHere = enabled || (localBytes ?? 0) == 0 ? nil
+            : explain("Right now your practice is on this device only. If you delete the app, your talks, books and recordings are gone for good.")
+        return [onlyHere, base, voice, sizeLine].compactMap { $0 }.joined(separator: "\n\n")
     }
 
     private func set(enabled on: Bool) async {

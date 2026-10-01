@@ -29,7 +29,11 @@ enum VoiceRevival {
         guard let app = AppState.live, let voiceId = app.voiceCloneId,
               VoiceParking.isParked(voiceId) else { return true }
         guard !showing else { return false }
-        guard let sample = VoiceSampleStore.shared.url else {
+        // No recording here: one in the learner's iCloud is fetched on the
+        // screen itself (`VoiceSampleStore` syncs it); with sync off there is
+        // nowhere to fetch from, so straight to recording again.
+        let sample = VoiceSampleStore.shared.url
+        guard sample != nil || SyncEngine.shared.isEnabled else {
             app.parkedVoiceNeedsRecording()
             return false
         }
@@ -37,7 +41,7 @@ enum VoiceRevival {
         // in a sheet, and SwiftUI silently drops a cover asked for from
         // underneath one (the same trap `BillingGate.start` documents for the
         // paywall). A full-screen cover, not a sheet — the call follows it.
-        guard let top = topViewController() else { return false }
+        guard let top = TopPresenter.top() else { return false }
         showing = true
         defer { showing = false }
         Analytics.capture("voice_revival_shown", ["purpose": purpose.rawValue])
@@ -56,19 +60,11 @@ enum VoiceRevival {
             top.present(controller, animated: true)
         }
     }
-
-    private static func topViewController() -> UIViewController? {
-        let scene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive }
-        var vc = scene?.keyWindow?.rootViewController
-        while let next = vc?.presentedViewController, !next.isBeingDismissed { vc = next }
-        return vc
-    }
 }
 
 struct VoiceRevivalView: View {
-    let sample: URL
+    /// Nil = not on this phone; fetched from iCloud first.
+    let sample: URL?
     let purpose: VoiceRevival.Purpose
     /// true = start what was tapped; false = closed.
     let onFinish: (Bool) -> Void
@@ -83,6 +79,8 @@ struct VoiceRevivalView: View {
     @State private var paceLoading: SpeechSpeed?
     @State private var accentToPick: VoiceAccent?
     @State private var removingAccent = false
+    /// The recording the voice was rebuilt from (fetched, if `sample` was nil).
+    @State private var resolvedSample: URL?
 
     private var paceLine: String {
         VoiceCloneScript.paceSample(for: appState.targetLanguage)
@@ -309,8 +307,17 @@ struct VoiceRevivalView: View {
             return
         }
         #endif
+        var recording = sample
+        if recording == nil { recording = await SyncEngine.shared.fetchVoiceSample() }
+        guard let recording else {
+            // Nothing in iCloud either: record again.
+            onFinish(false)
+            appState.parkedVoiceNeedsRecording()
+            return
+        }
+        resolvedSample = recording
         do {
-            try await appState.reviveParkedVoice(from: sample)
+            try await appState.reviveParkedVoice(from: recording)
             HapticEngine.success()
             stage = .tune
         } catch {
@@ -325,7 +332,8 @@ struct VoiceRevivalView: View {
         removingAccent = true
         Task {
             defer { removingAccent = false }
-            try? await appState.regenerateVoiceClone(fromSampleAt: sample)
+            guard let recording = resolvedSample ?? sample else { return }
+            try? await appState.regenerateVoiceClone(fromSampleAt: recording)
         }
     }
 

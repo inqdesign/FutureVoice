@@ -203,7 +203,24 @@ reasons are the design:
   the day sync is uninstalled.
 - **Never synced:** every cache (PhraseAudio, DrillEnrichment, topics, news,
   translations, openers), the daily call (two devices must not ring at once),
-  consent, `voice_sample.wav`, and `BackupService.excludedDefaults`.
+  consent, and `BackupService.excludedDefaults`.
+- **The voice recording IS synced** (2026-10-01, founder decision, kind
+  `.blobVoiceSample`): a learner reinstalled, paid, and was sent to record
+  again because `voice_sample.wav` lived on one install. `VoiceSampleStore`
+  keeps a copy in `Documents/VoiceSamples/sample-<ms>.wav` — a NEW name per
+  recording, because a blob is never edited — and reads the newest copy back
+  when the phone has none or an older take. `VoiceRevival` fetches it from
+  iCloud on demand (`SyncEngine.fetchVoiceSample`). It goes to the learner's
+  own iCloud only; our server copy still lives 24 h.
+- **A full iCloud is remembered, and SAID** (`SyncEngine.quotaFull`). The
+  refused half (audio, or everything) is not retried for 6 h unless Sync now
+  is tapped — it was retried on every write, once per turn of a live call —
+  and `SyncQuotaNotice` tells the learner once, outside a call, that their
+  recordings are on this device only and will go with the app. Me → Devices
+  keeps the same words, and the size of this device's practice.
+- **Nothing warns at deletion time — iOS gives an app no hook** — so it is
+  said before: Me → Devices says "on this device only" while sync is off, and
+  `BackupOfferSheet` asks once, after the third finished talk.
 - Tests: `SyncTests` runs two engines over `InMemorySyncTransport` as two
   devices (`SyncFiles.documentsOverride`) — convergence, deletion cascade,
   conflict → next pass, no ping-pong, blobs as assets.

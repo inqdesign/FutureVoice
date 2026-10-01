@@ -303,6 +303,10 @@ enum DailyCallScheduler {
     /// next launch's re-arm puts the rings back.
     private static var liveCallSince: Date?
 
+    /// A conversation is on screen right now — anything that would interrupt
+    /// it (an alert, `SyncQuotaNotice`) waits.
+    static var isLiveCall: Bool { liveCallSince != nil }
+
     /// A scheduled ring must not land on a call the learner is already in.
     /// An AlarmKit alert takes the audio session — the live call's engine
     /// stops under it and the call dies with an error — and there is nothing

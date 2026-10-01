@@ -42,6 +42,11 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     case blobRecording
     case blobDayCard
     case blobAvatar
+    /// The voice-clone recording (`VoiceSampleStore`), so a new phone or a
+    /// reinstall rebuilds the voice without recording again (2026-10-01,
+    /// founder decision). An older build can't name this kind and skips the
+    /// record (`CloudKitTransport.makeSyncRecord`), so no schema bump.
+    case blobVoiceSample
 
     /// Whether items live under `Documents/lang/<code>/` (one set per
     /// enrolled language) or once per install.
@@ -54,7 +59,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults,
-             .blobTurn, .blobRecording, .blobDayCard, .blobAvatar:
+             .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample:
             return false
         }
     }
@@ -63,7 +68,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// only a fingerprint (size + mtime), never the bytes.
     var isBlob: Bool {
         switch self {
-        case .blobTurn, .blobRecording, .blobDayCard, .blobAvatar: return true
+        case .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample: return true
         default: return false
         }
     }

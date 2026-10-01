@@ -21,6 +21,9 @@ final class InMemorySyncTransport: SyncTransport {
     var nextSaveError: SyncTransportError?
     var nextChangesError: SyncTransportError?
     var saves = 0
+    /// iCloud full for audio: every save carrying a blob is refused.
+    var quotaForBlobs = false
+    var blobSaveAttempts = 0
 
     func accountAvailable() async -> SyncAccountState { account }
 
@@ -48,6 +51,10 @@ final class InMemorySyncTransport: SyncTransport {
     func save(_ records: [SyncRecord], in zone: String) async throws -> [String: SyncSaveOutcome] {
         saves += 1
         if let e = nextSaveError { nextSaveError = nil; throw e }
+        if records.contains(where: { $0.kind.isBlob }) {
+            blobSaveAttempts += 1
+            if quotaForBlobs { throw SyncTransportError.quotaExceeded }
+        }
         guard zones.contains(zone) else { throw SyncTransportError.zoneMissing }
         var out: [String: SyncSaveOutcome] = [:]
         for var record in records {
@@ -464,5 +471,51 @@ final class SyncTests: XCTestCase {
         let landed = b.root.appendingPathComponent("TurnAudio/T1.mp3")
         XCTAssertEqual(try Data(contentsOf: landed), Data([1, 2, 3, 4]))
         XCTAssertEqual(b.engine.blobState(kind: .blobTurn, key: "T1.mp3"), .local)
+    }
+
+    // MARK: - iCloud full
+
+    /// A full iCloud is remembered: talks still go up, audio is not retried
+    /// on every write (it was, once per turn of a live call), and Sync now
+    /// is what tries again.
+    func testFullICloudStopsRetryingAudioUntilSyncNow() async throws {
+        let key = "futurevoice.sync.quota.\(user)"
+        UserDefaults.standard.removeObject(forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+
+        let cloud = InMemorySyncTransport()
+        cloud.quotaForBlobs = true
+        let a = device(cloud)
+        try writeSessions([sample("x")], a.root)
+        let turnDir = a.root.appendingPathComponent("TurnAudio", isDirectory: true)
+        try FileManager.default.createDirectory(at: turnDir, withIntermediateDirectories: true)
+        try Data([1, 2, 3]).write(to: turnDir.appendingPathComponent("T1.mp3"))
+        try await a.engine.enable()
+        await a.engine.waitUntilIdle()
+
+        XCTAssertEqual(a.engine.quotaFull, .audio)
+        XCTAssertEqual(a.engine.status, .paused(.quotaExceeded))
+        XCTAssertTrue(a.engine.quotaNoticePending)
+
+        // The talk itself still reached iCloud.
+        let b = device(cloud)
+        try await b.engine.enable()
+        XCTAssertEqual(sessions(b.root).count, 1)
+
+        // Another recording: the next pass does not try the audio again.
+        on(a.root)
+        try Data([4, 5]).write(to: turnDir.appendingPathComponent("T2.mp3"))
+        let attempts = cloud.blobSaveAttempts
+        await sync(a)
+        XCTAssertEqual(cloud.blobSaveAttempts, attempts)
+        XCTAssertEqual(a.engine.quotaFull, .audio)
+
+        // Room again, and the learner taps Sync now.
+        cloud.quotaForBlobs = false
+        on(a.root)
+        a.engine.syncNow()
+        await a.engine.waitUntilIdle()
+        XCTAssertNil(a.engine.quotaFull)
+        XCTAssertEqual(a.engine.status, .idle)
     }
 }

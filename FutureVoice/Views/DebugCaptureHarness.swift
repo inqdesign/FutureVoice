@@ -765,6 +765,10 @@ enum DebugCapture {
                 }
             }
             return AnyView(ConversationHome())
+        case "backup-offer":
+            // "Keep your practice in iCloud?" over the Talk home.
+            once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
+            return AnyView(ConversationHome().sheet(isPresented: .constant(true)) { BackupOfferSheet() })
         case "voice-revival", "voice-revival-tune":
             // A parked voice brought back at the call tap (`VoiceRevival`):
             // the rebuild, then the speed + accent page.

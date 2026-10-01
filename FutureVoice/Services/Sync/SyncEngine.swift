@@ -54,6 +54,98 @@ final class SyncEngine: ObservableObject {
     /// A record from a newer build is on file; this build can't carry it.
     @Published private(set) var needsAppUpdate = false
 
+    // MARK: iCloud full
+
+    /// What iCloud refused for lack of space (2026-10-01). A real learner
+    /// turned sync on with a full iCloud and every turn of the call that
+    /// followed retried the upload and failed (`sync_error` every ~9 s): the
+    /// pause was a status nobody remembered, so the next store write started
+    /// the same doomed upload again — sharing the network with the live call
+    /// — and nothing on screen said their recordings were now on that phone
+    /// only. Now the refusal is REMEMBERED per account: the refused half
+    /// (`audio`, or `everything` when even the small items bounced) is not
+    /// retried for `quotaBackoff` unless the learner taps Sync now, the pull
+    /// keeps running (downloading costs them no space), and the learner is
+    /// told once, in plain words, what is not backed up (`SyncQuotaNotice`).
+    enum QuotaScope: String { case audio, everything }
+
+    @Published private(set) var quotaFull: QuotaScope?
+    private var quotaHitAt: Date?
+    /// The one-time alert for this episode has not been shown yet.
+    private(set) var quotaNoticePending = false
+    static let quotaBackoff: TimeInterval = 6 * 3600
+    /// "Sync now" retries even inside the backoff.
+    private var forceRetry = false
+
+    private var quotaKey: String? { userId.map { "futurevoice.sync.quota.\($0)" } }
+
+    private func loadQuota() {
+        guard let key = quotaKey,
+              let d = UserDefaults.standard.dictionary(forKey: key),
+              let raw = d["scope"] as? String, let scope = QuotaScope(rawValue: raw) else {
+            quotaFull = nil; quotaHitAt = nil; quotaNoticePending = false
+            return
+        }
+        quotaFull = scope
+        quotaHitAt = d["at"] as? Date
+        quotaNoticePending = !(d["noticed"] as? Bool ?? false)
+    }
+
+    private func saveQuota() {
+        guard let key = quotaKey else { return }
+        if let quotaFull {
+            UserDefaults.standard.set(["scope": quotaFull.rawValue,
+                                       "at": quotaHitAt ?? Date(),
+                                       "noticed": !quotaNoticePending], forKey: key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
+    /// iCloud said no. Records the WIDER of what was refused and reports the
+    /// first refusal of an episode only — a full iCloud is one fact, not one
+    /// event per turn.
+    private func noteQuota(_ scope: QuotaScope) {
+        let first = quotaFull == nil
+        if quotaFull != .everything { quotaFull = scope }
+        quotaHitAt = Date()
+        if first {
+            quotaNoticePending = true
+            Analytics.capture("sync_error", ["reason": Self.describe(.quotaExceeded),
+                                             "scope": scope.rawValue])
+        }
+        saveQuota()
+    }
+
+    /// A push of the refused half went through: there is room again.
+    private func clearQuota(_ scope: QuotaScope) {
+        guard let current = quotaFull else { return }
+        // Items fitting says nothing about the audio; audio fitting means
+        // everything does.
+        if scope == .everything && current == .audio { return }
+        quotaFull = nil
+        quotaHitAt = nil
+        quotaNoticePending = false
+        saveQuota()
+        Analytics.capture("sync_quota_cleared")
+    }
+
+    /// Inside the backoff, and not a manual retry.
+    private var quotaHolds: Bool {
+        guard quotaFull != nil, !forceRetry, let at = quotaHitAt else { return false }
+        return Date().timeIntervalSince(at) < Self.quotaBackoff
+    }
+
+    /// Raises the one-time alert (`SyncQuotaNotice`); set by the app, so the
+    /// engine stays free of UI and test engines raise nothing.
+    var onQuotaNotice: (() -> Void)?
+
+    /// The alert has been shown for this episode.
+    func markQuotaNoticed() {
+        quotaNoticePending = false
+        saveQuota()
+    }
+
     /// Fired after a pull wrote files, with the kinds it touched — AppState
     /// re-reads its published copies from there.
     var onApplied: ((Set<SyncKind>) -> Void)?
@@ -117,6 +209,7 @@ final class SyncEngine: ObservableObject {
         }
         index = SyncIndex(userId: id)
         status = .idle
+        loadQuota()
         refreshCounts()
         // Re-registers this install with APNs every launch (the token can be
         // reissued) and re-asks for the zone subscription if it was never
@@ -183,6 +276,7 @@ final class SyncEngine: ObservableObject {
         SyncStore.setEnabled(true, userId: userId)
         index = SyncIndex(userId: userId)
         status = .idle
+        loadQuota()
         // The zone exists as of the line above, which is the earliest a
         // subscription can be attached to it.
         SyncPush.activate(zone: zone, userId: userId, transport: transport)
@@ -270,6 +364,7 @@ final class SyncEngine: ObservableObject {
     /// "Sync now" in settings.
     func syncNow() {
         guard isEnabled else { return }
+        forceRetry = true
         requestSync(kinds: nil)
     }
 
@@ -339,23 +434,46 @@ final class SyncEngine: ObservableObject {
         case .restricted: status = .paused(.restricted); return
         }
         status = .syncing
-        defer { progress = nil; refreshCounts() }
+        defer {
+            progress = nil
+            refreshCounts()
+            forceRetry = false
+            if quotaFull != nil, status == .idle { status = .paused(.quotaExceeded) }
+            if quotaNoticePending { onQuotaNotice?() }
+        }
+        // What iCloud refused last time stays un-retried for the backoff
+        // (see `quotaFull`); the pull always runs.
+        let holding = quotaHolds
+        let skipItems = holding && quotaFull == .everything
+        let skipAudio = holding
+        var phase: QuotaScope = .everything
         do {
             try await pull(index: index, zone: zone)
-            let itemKinds = (kinds ?? Set(SyncKind.allCases)).filter { !$0.isBlob }
-            var conflicts = try await push(kinds: itemKinds, index: index, zone: zone)
-            if conflicts {
-                try await pull(index: index, zone: zone)
-                conflicts = try await push(kinds: itemKinds, index: index, zone: zone)
+            if !skipItems {
+                let itemKinds = (kinds ?? Set(SyncKind.allCases)).filter { !$0.isBlob }
+                var conflicts = try await push(kinds: itemKinds, index: index, zone: zone)
+                if conflicts {
+                    try await pull(index: index, zone: zone)
+                    conflicts = try await push(kinds: itemKinds, index: index, zone: zone)
+                }
+                if quotaFull == .everything { clearQuota(.everything) }
             }
             if scope == .everything {
-                let blobKinds = (kinds ?? Set(SyncKind.allCases)).filter { $0.isBlob }
-                _ = try await push(kinds: blobKinds, index: index, zone: zone)
+                if !skipAudio {
+                    phase = .audio
+                    let blobKinds = (kinds ?? Set(SyncKind.allCases)).filter { $0.isBlob }
+                    _ = try await push(kinds: blobKinds, index: index, zone: zone)
+                    clearQuota(.audio)
+                }
                 try await downloadWanted(index: index, zone: zone)
             }
             index.save()
             lastSyncAt = Date()
             status = .idle
+        } catch SyncTransportError.quotaExceeded {
+            index.save()
+            noteQuota(phase)
+            status = .paused(.quotaExceeded)
         } catch let e as SyncTransportError {
             index.save()
             handle(e)
@@ -849,6 +967,28 @@ final class SyncEngine: ObservableObject {
         requestedBlobs.removeAll { $0 == name }
         requestedBlobs.insert(name, at: 0)
         requestSync(kinds: [])
+    }
+
+    /// The voice recording from iCloud, now — for a phone that has to rebuild
+    /// a voice and holds no recording of its own (a reinstall, a new device).
+    /// Pulls if this install has not heard of one yet, puts the newest at the
+    /// front of the download queue, and waits for it up to `timeout`. Nil
+    /// when sync is off, iCloud holds none, or it didn't arrive in time.
+    func fetchVoiceSample(timeout: TimeInterval = 25) async -> URL? {
+        guard isEnabled else { return nil }
+        if let here = VoiceSampleStore.shared.url { return here }
+        func newestWanted() -> String? {
+            index?.wantedBlobs.filter { $0.kind == .blobVoiceSample }.map(\.key).max()
+        }
+        if newestWanted() == nil { await syncAndWait(kinds: [], scope: .items) }
+        guard let key = newestWanted() else { return VoiceSampleStore.shared.url }
+        requestBlob(kind: .blobVoiceSample, key: key)
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if blobState(kind: .blobVoiceSample, key: key) == .local { return VoiceSampleStore.shared.url }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        return nil
     }
 
     // MARK: - Counts

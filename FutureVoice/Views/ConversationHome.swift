@@ -33,6 +33,9 @@ struct ConversationHome: View {
     /// the deepenRow re-opens it while the narrative fields stay empty.
     @State private var showingDeepen = false
     @AppStorage("futurevoice.personaDeepenPrompted") private var deepenPrompted = false
+    /// "Keep your practice in iCloud?" — asked once (`BackupOfferSheet`).
+    @State private var showingBackupOffer = false
+    @AppStorage("futurevoice.backupOffered") private var backupOffered = false
     /// Today card → activity calendar (Button-driven so the row shows no
     /// disclosure chevron).
     @State private var showingActivity = false
@@ -137,6 +140,7 @@ struct ConversationHome: View {
             .onChange(of: appState.talkHomeReloadToken) { _, _ in
                 HeroGreeting.advanceRotation()
                 reload()
+                maybeOfferBackup()
             }
             // A language switch happens with this page ON SCREEN (the chip is
             // in its own toolbar, Me is a sheet over it), so nothing here
@@ -181,6 +185,9 @@ struct ConversationHome: View {
             .sheet(isPresented: $showingDeepen) {
                 PersonaDeepenSheet().environmentObject(appState)
             }
+            .sheet(isPresented: $showingBackupOffer) {
+                BackupOfferSheet()
+            }
             .sheet(isPresented: $showingBuilder) {
                 ScenarioComposerSheet(person: nil, mode: .custom,
                                       ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
@@ -202,6 +209,7 @@ struct ConversationHome: View {
                 reload()
                 drawRing()
                 maybePromptDeepen()
+                maybeOfferBackup()
                 // The call just consumed a warmed greeting — top the cache
                 // back up so the NEXT call opens instantly too (no-op once
                 // every pool line is cached).
@@ -637,6 +645,17 @@ struct ConversationHome: View {
     /// ends — the moment the "richer persona = more real talks" pitch has
     /// lived evidence behind it. The delay lets the call's fullScreenCover
     /// dismissal settle before a new sheet comes up.
+    /// After the third finished talk, once, while sync is off and the
+    /// account could turn it on. Never on top of the deepen sheet.
+    private func maybeOfferBackup() {
+        guard !backupOffered, sessionCount >= 3, auth.isSignedIn,
+              !SyncEngine.shared.isEnabled, !showingDeepen else { return }
+        backupOffered = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            showingBackupOffer = true
+        }
+    }
+
     private func maybePromptDeepen() {
         guard !deepenPrompted, sessionCount > 0, personaNeedsDepth else { return }
         deepenPrompted = true

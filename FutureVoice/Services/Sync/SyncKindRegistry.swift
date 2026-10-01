@@ -66,6 +66,9 @@ enum SyncKindRegistry {
         DefaultsKind(),
         BlobKind(kind: .blobTurn, directory: SyncFiles.documents.appendingPathComponent("TurnAudio", isDirectory: true)),
         BlobKind(kind: .blobRecording, directory: SyncFiles.documents.appendingPathComponent("Recordings", isDirectory: true)),
+        BlobKind(kind: .blobVoiceSample,
+                 directory: SyncFiles.documents.appendingPathComponent(VoiceSampleStore.syncFolder, isDirectory: true),
+                 accepts: { $0.hasSuffix(".wav") }),
     ] }
 
     static func handler(for kind: SyncKind) -> (any SyncKindHandler)? {

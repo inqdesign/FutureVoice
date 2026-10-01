@@ -135,7 +135,11 @@ struct FutureVoiceApp: App {
                 SyncBackground.schedule()
             }
             // Pull the other devices' practice, then push ours.
-            if phase == .active { SyncEngine.shared.foregrounded() }
+            if phase == .active {
+                SyncEngine.shared.foregrounded()
+                // Told once, outside a call (see `SyncEngine.quotaFull`).
+                SyncQuotaNotice.presentIfNeeded()
+            }
             // Cards drift due over time even with no store writes, so re-snapshot
             // the widget's study queue at both edges of a foreground stint.
             //
@@ -572,6 +576,9 @@ final class AppState: ObservableObject {
             Task { @MainActor in await self?.refreshParkedVoice(force: true) }
         }
 
+        SyncEngine.shared.onQuotaNotice = { SyncQuotaNotice.presentIfNeeded() }
+        // A recording made before it travelled to iCloud gets its synced copy.
+        VoiceSampleStore.shared.ensureSyncedCopy()
         SyncEngine.shared.onApplied = { [weak self] kinds in
             self?.adoptSyncedChanges(kinds)
         }

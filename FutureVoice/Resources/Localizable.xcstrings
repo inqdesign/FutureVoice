@@ -804,6 +804,236 @@
         }
       }
     },
+    "Keep your practice in iCloud?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben in iCloud aufbewahren?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Guardar tu práctica en iCloud?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garder ta pratique dans iCloud ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習記録をiCloudに保管しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록을 iCloud에 보관할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要把练习记录保存在 iCloud 吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要把練習紀錄保存在 iCloud 嗎？"
+          }
+        }
+      }
+    },
+    "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In deiner eigenen iCloud warten sie auf jedem Handy oder iPad, auf dem du dich anmeldest – auch deine Stimmaufnahme, damit deine Stimme ohne neue Aufnahme zurückkommt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardados en tu propio iCloud, te esperan en cualquier teléfono o iPad donde inicies sesión, también la grabación de tu voz, así que tu voz vuelve sin grabar de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gardés dans ton propre iCloud, ils t’attendent sur chaque téléphone ou iPad où tu te connectes, ton enregistrement vocal aussi : ta voix revient sans réenregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のiCloudに保管しておけば、ログインしたどのiPhoneやiPadでもそのまま続けられます。声の録音も一緒なので、録り直さなくても声が戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 iCloud에 보관해 두면 로그인하는 어느 폰이나 iPad에서든 그대로 이어져요. 목소리 녹음도 함께 보관돼서, 다시 녹음하지 않아도 목소리가 돌아와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存在你自己的 iCloud，登录任何 iPhone 或 iPad 都能接着用。声音录音也会一起保存，不用重录就能找回你的声音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存在你自己的 iCloud，登入任何 iPhone 或 iPad 都能接著用。聲音錄音也會一起保存，不用重錄就能找回你的聲音。"
+          }
+        }
+      }
+    },
+    "Keep in iCloud" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In iCloud aufbewahren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar en iCloud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garder dans iCloud"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudに保管する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud에 보관하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存到 iCloud"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存到 iCloud"
+          }
+        }
+      }
+    },
+    "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Gespräche und Aufnahmen werden gerade nicht in iCloud gesichert und liegen nur auf diesem Gerät. Wenn du die App hier löschst, sind sie mit ihr weg."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora tus nuevas conversaciones y grabaciones no se guardan en iCloud, así que solo están en este dispositivo. Si eliminas la app aquí, se eliminan con ella."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes nouvelles conversations et tes enregistrements ne sont plus sauvegardés dans iCloud pour l’instant : ils sont seulement sur cet appareil. Si tu supprimes l’app ici, ils disparaissent avec elle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いまは新しい会話と録音がiCloudに保存できず、この端末にしかありません。この端末でアプリを削除すると、一緒に消えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 새 대화와 녹음이 iCloud에 올라가지 못해서 이 기기에만 있어요. 이 기기에서 앱을 지우면 함께 지워져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前新的对话和录音无法备份到 iCloud，只保存在这台设备上。如果在这台设备上删除 App，它们也会一起删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前新的對話和錄音無法備份到 iCloud，只存在這台裝置上。如果在這台裝置上刪除 App，它們也會一起刪除。"
+          }
+        }
+      }
+    },
+    "Free up space in Settings → your name → iCloud, and syncing picks up where it stopped." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schaff Platz unter Einstellungen → dein Name → iCloud, dann geht die Synchronisierung dort weiter, wo sie aufgehört hat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Libera espacio en Ajustes → tu nombre → iCloud y la sincronización seguirá donde se quedó."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Libère de l’espace dans Réglages → ton nom → iCloud, et la synchronisation reprend là où elle s’est arrêtée."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定 → 自分の名前 → iCloud で空き容量を作ると、止まったところから再開します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정 → 내 이름 → iCloud에서 공간을 비우면 멈춘 곳부터 다시 올라가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到“设置”→ 你的名字 → iCloud 释放空间，同步就会从中断的地方继续。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到「設定」→ 你的名字 → iCloud 釋出空間，同步就會從中斷的地方繼續。"
+          }
+        }
+      }
+    },
     "Nothing you hide is lost — your talk's book keeps every correction." : {
       "localizations" : {
         "de" : {
@@ -1030,6 +1260,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在重新製作你的聲音"
+          }
+        }
+      }
+    },
+    "Right now your practice is on this device only. If you delete the app, your talks, books and recordings are gone for good." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben ist gerade nur auf diesem Gerät. Wenn du die App löschst, sind Gespräche, Bücher und Aufnahmen für immer weg."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora tu práctica solo está en este dispositivo. Si eliminas la app, tus conversaciones, cuadernos y grabaciones se pierden para siempre."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour l’instant, ta pratique est uniquement sur cet appareil. Si tu supprimes l’app, tes conversations, carnets et enregistrements sont perdus pour de bon."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いまの練習記録はこの端末にしかありません。アプリを削除すると、会話・ブック・録音はすべて消え、元に戻せません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 연습 기록은 이 기기에만 있어요. 앱을 지우면 대화·책·녹음이 모두 사라지고 되돌릴 수 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前练习记录只在这台设备上。删除 App 后，对话、复习本和录音都会永久消失。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前練習紀錄只在這台裝置上。刪除 App 後，對話、複習本和錄音都會永久消失。"
           }
         }
       }
@@ -1632,6 +1908,190 @@
         }
       }
     },
+    "Your iCloud storage is full" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein iCloud-Speicher ist voll"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu almacenamiento de iCloud está lleno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton stockage iCloud est plein"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudのストレージがいっぱいです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 저장 공간이 가득 찼어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 iCloud 存储空间已满"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 iCloud 儲存空間已滿"
+          }
+        }
+      }
+    },
+    "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahmen werden gerade nicht in iCloud gesichert und liegen nur auf diesem Gerät. Wenn du die App hier löschst, sind sie mit ihr weg."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora tus grabaciones no se guardan en iCloud, así que solo están en este dispositivo. Si eliminas la app aquí, se eliminan con ella."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes enregistrements ne sont plus sauvegardés dans iCloud pour l’instant : ils sont seulement sur cet appareil. Si tu supprimes l’app ici, ils disparaissent avec elle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いまは録音がiCloudに保存できず、この端末にしかありません。この端末でアプリを削除すると、録音も一緒に消えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 녹음이 iCloud에 올라가지 못해서 이 기기에만 있어요. 이 기기에서 앱을 지우면 녹음도 함께 지워져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前录音无法备份到 iCloud，只保存在这台设备上。如果在这台设备上删除 App，录音也会一起删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前錄音無法備份到 iCloud，只存在這台裝置上。如果在這台裝置上刪除 App，錄音也會一起刪除。"
+          }
+        }
+      }
+    },
+    "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben auf diesem Gerät belegt etwa %@. Ungefähr so viel Platz braucht es auch in iCloud."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu práctica en este dispositivo ocupa unos %@. Es más o menos el espacio que necesita en iCloud."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta pratique sur cet appareil occupe environ %@. C’est à peu près l’espace qu’il lui faut dans iCloud."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この端末の練習記録は約%@です。iCloudにもほぼ同じ容量が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기의 연습 기록은 약 %@예요. iCloud에도 그만큼 공간이 필요해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台设备上的练习记录约 %@，iCloud 也大约需要这么多空间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台裝置上的練習紀錄約 %@，iCloud 也大約需要這麼多空間。"
+          }
+        }
+      }
+    },
+    "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Gespräche, Bücher und Aufnahmen sind nur auf diesem Handy. Wenn du die App löschst oder das Handy wechselst, sind sie für immer weg."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus conversaciones, cuadernos y grabaciones solo están en este teléfono. Si eliminas la app o cambias de teléfono, se pierden para siempre."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes conversations, carnets et enregistrements sont uniquement sur ce téléphone. Si tu supprimes l’app ou changes de téléphone, ils sont perdus pour de bon."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会話・ブック・録音はいまこの端末にしかありません。アプリを削除したり機種変更したりすると、元に戻せずに消えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화·책·녹음이 지금 이 폰에만 있어요. 앱을 지우거나 폰을 바꾸면 되돌릴 수 없이 사라져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的对话、复习本和录音目前只在这部手机上。删除 App 或换手机后，就会永久消失。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的對話、複習本和錄音目前只在這支手機上。刪除 App 或換手機後，就會永久消失。"
+          }
+        }
+      }
+    },
     "Your voice is back" : {
       "localizations" : {
         "de" : {
@@ -1674,6 +2134,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的聲音回來了"
+          }
+        }
+      }
+    },
+    "Your voice recording goes too, so a new phone makes your voice again without recording." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimmaufnahme kommt mit, damit ein neues Handy deine Stimme ohne neue Aufnahme erstellt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La grabación de tu voz también se guarda, así que un teléfono nuevo recrea tu voz sin grabar otra vez."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton enregistrement vocal suit aussi : un nouveau téléphone recrée ta voix sans réenregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声の録音も一緒に保管されるので、新しい端末でも録り直さずに声を作れます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리 녹음도 함께 보관돼서, 새 폰에서도 다시 녹음하지 않고 목소리를 만들 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声音录音也会一起保存，换新手机也不用重录就能做出你的声音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聲音錄音也會一起保存，換新手機也不用重錄就能做出你的聲音。"
           }
         }
       }
