@@ -250,9 +250,15 @@ could read. Now a situation can carry MATERIAL (`ScenarioBrief`, on
   dropped) and plain text, 10 MB in total; links are read by the model.
 - **Read ONCE, before the first scene, with a board** (`SceneWatchView` →
   `ScenarioBriefEngine.read`, `BriefProgressView`). One streaming call on the
-  default model, `purpose: "brief"` (cap 20/day, no learner charge); links
-  go through `url_context` + `google_search` with a fallback ladder (tools →
-  search only → none), files ride inline via `Message.inlineFiles`. The
+  default model, `purpose: "brief"` (cap 20/day, no learner charge); a link is
+  fetched FROM THE PHONE first (`ScenarioLinkReader`, Safari's UA and
+  Accept, one retry on LinkedIn's 999) and its text rides in the message —
+  Gemini's `url_context` fetcher is refused by LinkedIn outright (measured
+  2026-10-01, `URL_RETRIEVAL_STATUS_ERROR`), and search can't stand in for
+  a fresh posting whose URL names only an id. Only a link the phone could
+  not read goes through `url_context` + `google_search` with the fallback
+  ladder (tools → search only → none); files ride inline via
+  `Message.inlineFiles`. The
   schema's key order is load-bearing for the board (`sources` → `summary`
   → `counterpart_facts` → `likely_questions` → `learner_facts` →
   `key_expressions`). A failed reading is the scene's error state, never a

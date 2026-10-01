@@ -120,6 +120,138 @@ private extension UIImage {
     }
 }
 
+/// Fetches a linked page FROM THE PHONE and hands the model its text.
+/// Gemini's own `url_context` fetcher is refused by the sites a situation
+/// most often links to — measured 2026-10-01 on a LinkedIn job posting:
+/// `URL_RETRIEVAL_STATUS_ERROR` with the URL tool alone and with search on
+/// beside it, and the model never fell back to searching — while the same
+/// URL fetched as a browser returns the whole posting. The learner's own
+/// phone asking for a public page is what opening it in Safari does, so the
+/// page is read here and `url_context` stays only for a page this cannot
+/// read (a login wall, a script-only page, no network).
+enum ScenarioLinkReader {
+    /// Enough for any posting or listing; a page longer than this is mostly
+    /// navigation and "similar jobs".
+    static let maxCharacters = 30_000
+    /// Under this, what came back is a wall or a shell, not the page.
+    static let minCharacters = 300
+    private static let maxBytes = 3 * 1024 * 1024
+    private static let userAgent =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
+        + "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+
+    /// The page's readable text, or nil when it could not be read.
+    static func text(of link: String) async -> String? {
+        guard let url = URL(string: link.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http"
+        else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 15)
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        // Safari's own Accept, byte for byte: LinkedIn answers an unusual
+        // one with its bot status (999) about half the time, measured.
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                         forHTTPHeaderField: "Accept")
+        if let lang = Locale.preferredLanguages.first {
+            request.setValue(lang, forHTTPHeaderField: "Accept-Language")
+        }
+        var result = try? await URLSession.shared.data(for: request)
+        // 999 is LinkedIn's "looks automated"; a second ask usually passes.
+        if (result?.1 as? HTTPURLResponse)?.statusCode == 999 {
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            result = try? await URLSession.shared.data(for: request)
+        }
+        guard let (data, response) = result,
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              data.count <= maxBytes
+        else { return nil }
+        let mime = http.mimeType?.lowercased() ?? "text/html"
+        guard mime.hasPrefix("text/") || mime.contains("html") || mime.contains("xml") else { return nil }
+        guard let raw = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1)
+        else { return nil }
+        // A login wall answers 200 at its own address.
+        if let final = http.url?.path.lowercased(),
+           ["/authwall", "/login", "/signin", "/checkpoint"].contains(where: { final.hasPrefix($0) }) {
+            return nil
+        }
+        let text = mime.contains("html") || mime.contains("xml") ? readable(html: raw) : raw
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= minCharacters else { return nil }
+        return String(trimmed.prefix(maxCharacters))
+    }
+
+    /// Title, description and the visible text of an HTML page, one block
+    /// per line. Deliberately crude — the model reads it, and a model reads
+    /// a page with its menus left in perfectly well; what it cannot read is
+    /// script and markup.
+    static func readable(html: String) -> String {
+        var parts: [String] = []
+        if let t = firstMatch(#"<title[^>]*>(.*?)</title>"#, in: html) {
+            parts.append("Title: " + decode(t))
+        }
+        if let d = firstMatch(#"<meta[^>]+(?:name|property)=["'](?:og:)?description["'][^>]*content=["']([^"']*)["']"#, in: html) {
+            parts.append("Description: " + decode(d))
+        }
+        var body = html
+        for tag in ["script", "style", "noscript", "svg", "template", "head"] {
+            body = body.replacingOccurrences(of: "<\(tag)\\b[^>]*>[\\s\\S]*?</\(tag)>", with: " ",
+                                             options: [.regularExpression, .caseInsensitive])
+        }
+        body = body.replacingOccurrences(of: "<!--[\\s\\S]*?-->", with: " ", options: .regularExpression)
+        body = body.replacingOccurrences(
+            of: "<(?:br|/p|/div|/li|/h[1-6]|/tr|/section|/article|/ul|/ol)\\b[^>]*>", with: "\n",
+            options: [.regularExpression, .caseInsensitive])
+        body = body.replacingOccurrences(of: "<li\\b[^>]*>", with: "\n• ",
+                                         options: [.regularExpression, .caseInsensitive])
+        body = body.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+        let lines = decode(body).components(separatedBy: .newlines)
+            .map { $0.replacingOccurrences(of: "[ \\t\u{00A0}]+", with: " ", options: .regularExpression)
+                     .trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && $0 != "•" }
+        parts.append(contentsOf: lines)
+        return parts.joined(separator: "\n")
+    }
+
+    private static func firstMatch(_ pattern: String, in s: String) -> String? {
+        guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]),
+              let m = re.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
+              m.numberOfRanges > 1, let r = Range(m.range(at: 1), in: s)
+        else { return nil }
+        let v = s[r].trimmingCharacters(in: .whitespacesAndNewlines)
+        return v.isEmpty ? nil : v
+    }
+
+    private static let named: [String: String] = [
+        "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'", "nbsp": " ",
+        "ndash": "–", "mdash": "—", "hellip": "…", "rsquo": "’", "lsquo": "‘",
+        "rdquo": "”", "ldquo": "“", "bull": "•", "middot": "·", "euro": "€",
+    ]
+
+    private static func decode(_ s: String) -> String {
+        guard s.contains("&") else { return s }
+        guard let re = try? NSRegularExpression(pattern: "&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);") else { return s }
+        var out = ""
+        var last = s.startIndex
+        for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)) {
+            guard let whole = Range(m.range, in: s), let inner = Range(m.range(at: 1), in: s) else { continue }
+            out += s[last..<whole.lowerBound]
+            let name = String(s[inner])
+            if name.hasPrefix("#x") || name.hasPrefix("#X"), let v = UInt32(name.dropFirst(2), radix: 16),
+               let u = Unicode.Scalar(v) {
+                out.unicodeScalars.append(u)
+            } else if name.hasPrefix("#"), let v = UInt32(name.dropFirst()), let u = Unicode.Scalar(v) {
+                out.unicodeScalars.append(u)
+            } else if let r = named[name.lowercased()] {
+                out += r
+            } else {
+                out += s[whole]
+            }
+            last = whole.upperBound
+        }
+        out += s[last...]
+        return out
+    }
+}
+
 /// ONE Gemini call turns a situation's attached material into a
 /// `ScenarioBrief`. Links are read by the model itself (`url_context`), with
 /// web search filling what a page would not give up (a login-walled posting
@@ -176,11 +308,19 @@ enum ScenarioBriefEngine {
         var files: [GeminiClient.Message.InlineFile] = []
         var fileLines: [String] = []
         var linkLines: [String] = []
+        var pageTexts: [String] = []
+        var unfetchedLinks = 0
         var total = 0
         for (i, src) in brief.sources.enumerated() {
             switch src.kind {
             case .link:
-                linkLines.append("- source \(i + 1) (link): \(src.label)")
+                if let text = await ScenarioLinkReader.text(of: src.label) {
+                    linkLines.append("- source \(i + 1) (link, its page text is given below — do not open it): \(src.label)")
+                    pageTexts.append("=== source \(i + 1) — page text of \(src.label) ===\n\(text)\n=== end of source \(i + 1) ===")
+                } else {
+                    linkLines.append("- source \(i + 1) (link): \(src.label)")
+                    unfetchedLinks += 1
+                }
             case .file, .image:
                 var got = BriefAttachmentCache.shared.take(src.id)
                 if got == nil, let bm = src.bookmark,
@@ -199,7 +339,9 @@ enum ScenarioBriefEngine {
             }
         }
 
-        let hasLinks = !linkLines.isEmpty
+        // Tools are for the links the phone could not read; a page whose
+        // text is already in the message needs no fetcher.
+        let hasLinks = unfetchedLinks > 0
         var user: [String] = ["situation (the learner's own words): \(scenario.environment)"]
         if let p = persona, p.isMinimallyComplete {
             var about: [String] = []
@@ -213,9 +355,16 @@ enum ScenarioBriefEngine {
         user.append(contentsOf: fileLines + linkLines)
         if hasLinks {
             user.append("")
-            user.append("Open every link above with the URL tool and read it. If a page cannot be opened, "
+            user.append("Open every link above that has no page text below with the URL tool and read it. If a page cannot be opened, "
                         + "search the web for what it names (the company and the position, the listing) "
                         + "and say in that source's `detail` that you read coverage instead of the page.")
+        }
+        if !pageTexts.isEmpty {
+            user.append("")
+            user.append("The page text below was fetched from the link as a browser sees it, menus and all. "
+                        + "Read the posting or listing in it and ignore the site's navigation, ads and "
+                        + "\"similar\" listings.")
+            user.append(contentsOf: pageTexts)
         }
         user.append("")
         user.append("Today is \(ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])).")
