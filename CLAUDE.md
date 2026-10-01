@@ -1828,11 +1828,18 @@ paying is deleted upstream after **7 days** (founder's call) and rebuilt from
 the phone's recording when it is wanted again. `park-idle-voices` (hourly,
 `20260928140000`, cron created DISABLED) + `VoiceParking.swift`.
 
-- **Two rules, both 7 days** (`parkable_voice_owners`): not entitled and
-  nothing left to spend → 7 days after the balance was last spent or the
-  subscription last ran; not entitled but free minutes left → 7 days with no
-  activity at all. Grants are not activity (the 09-26 top-up wrote a row on
-  every account). Anonymous users stay with `cleanup-anonymous-voices`.
+- **One rule: no plan, and the app not opened for 7 days** (2026-10-01,
+  founder decision, `voice_parking_candidates` in
+  `20261001150000_park_by_last_open`; free minutes left or not makes no
+  difference). It replaced two rules that judged a learner with nothing to
+  spend by when they last SPENT, so someone who kept opening the app to look
+  was parked as if gone. "Opened" is read off `auth.refresh_tokens` /
+  `auth.sessions.refreshed_at` (the client refreshes its token on any launch
+  an hour after the last; matched PostHog opens for a real learner), plus
+  ledger debits, client events, a subscription's end and the clone itself.
+  Grants are not activity. Anonymous users stay with
+  `cleanup-anonymous-voices`. `parkable_voice_owners` still holds the old
+  rules and nothing calls it.
 - **Parking is a stamp, not `is_active = false`.** The row stays active and
   `parked_at` is set, because an old build that finds no active row runs
   `voiceWasDeleted` → re-record → a free clone that takes the slot straight
@@ -1867,7 +1874,7 @@ the phone's recording when it is wanted again. `park-idle-voices` (hourly,
 - **Never parked unannounced** (2026-10-01, `20261001120000_voice_park_notice`).
   `park-idle-voices` announces two days before a voice qualifies — a
   `voice_park_notices` row fixes the date, a push (`kind: voice_parking`, app
-  language, title by rule: a plan keeps it / one call keeps it) names it, says
+  language, title by rule: a plan keeps it / opening the app keeps it) names it, says
   it is deleted for safety and can be made again anytime — and parks only after
   that date, only for the same idle stretch. The date is a UTC day and parking
   waits until noon UTC the day after, so "after <date>" is true in every zone.

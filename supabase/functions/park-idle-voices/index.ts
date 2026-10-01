@@ -213,8 +213,9 @@ function parkDate(idleSince: string, now: number): { date: Date; parkAfter: Date
 
 /// Chrome, so it speaks the app language the install reported (`push-send`
 /// picks by `device_tokens.app_language`). Title by rule: someone with
-/// nothing to spend is told the plan keeps it; someone with free minutes
-/// left is told a call does. Returns how many devices were sent to.
+/// nothing to spend is told a plan keeps it; someone with free minutes left
+/// is told opening the app does — the rule is 7 days without an open
+/// (`20261001150000_park_by_last_open`). Returns how many devices were sent to.
 async function announce(r: Candidate, date: Date, secret: string): Promise<number> {
   const locales: Record<string, string> = {
     en: "en-US", ko: "ko-KR", ja: "ja-JP", de: "de-DE", es: "es-ES",
@@ -224,21 +225,21 @@ async function announce(r: Candidate, date: Date, secret: string): Promise<numbe
     { month: "long", day: "numeric", timeZone: "UTC" }).format(date)
   const spent = r.rule === "spent"
   const copy: Record<string, { spent: string; idle: string; body: (d: string) => string }> = {
-    en: { spent: "Subscribe to keep your voice", idle: "One call keeps your voice",
+    en: { spent: "Subscribe to keep your voice", idle: "Open the app once to keep your voice",
           body: (d) => `For your safety, a voice that isn't in use is deleted automatically after ${d}. You can make it again anytime.` },
-    ko: { spent: "구독하면 내 목소리를 계속 쓸 수 있어요", idle: "통화 한 번이면 내 목소리가 그대로 남아요",
+    ko: { spent: "구독하면 내 목소리를 계속 쓸 수 있어요", idle: "앱을 한 번 열면 내 목소리가 그대로 남아요",
           body: (d) => `쓰지 않는 목소리는 안전을 위해 ${d} 이후 자동으로 삭제돼요. 언제든 다시 만들 수 있어요.` },
-    ja: { spent: "登録すると、自分の声をそのまま使えます", idle: "通話を1回すれば、自分の声はそのまま残ります",
+    ja: { spent: "登録すると、自分の声をそのまま使えます", idle: "アプリを一度開けば、自分の声はそのまま残ります",
           body: (d) => `使われていない声は、安全のため${d}以降に自動で削除されます。いつでも作り直せます。` },
-    de: { spent: "Mit einem Abo behältst du deine Stimme", idle: "Ein Anruf, und deine Stimme bleibt",
+    de: { spent: "Mit einem Abo behältst du deine Stimme", idle: "Öffne die App einmal, und deine Stimme bleibt",
           body: (d) => `Zu deiner Sicherheit wird eine ungenutzte Stimme nach dem ${d} automatisch gelöscht. Du kannst sie jederzeit neu erstellen.` },
-    es: { spent: "Suscríbete y conserva tu voz", idle: "Una llamada y tu voz se queda",
+    es: { spent: "Suscríbete y conserva tu voz", idle: "Abre la app una vez y tu voz se queda",
           body: (d) => `Por tu seguridad, una voz que no se usa se elimina automáticamente después del ${d}. Puedes volver a crearla cuando quieras.` },
-    fr: { spent: "Abonne-toi pour garder ta voix", idle: "Un appel, et ta voix reste",
+    fr: { spent: "Abonne-toi pour garder ta voix", idle: "Ouvre l’app une fois, et ta voix reste",
           body: (d) => `Pour ta sécurité, une voix inutilisée est supprimée automatiquement après le ${d}. Tu peux la recréer à tout moment.` },
-    "zh-Hant": { spent: "訂閱就能繼續使用你的聲音", idle: "通話一次，你的聲音就會保留",
+    "zh-Hant": { spent: "訂閱就能繼續使用你的聲音", idle: "打開 App 一次，你的聲音就會保留",
           body: (d) => `為了安全，未使用的聲音會在${d}之後自動刪除。你隨時都能重新製作。` },
-    "zh-Hans": { spent: "订阅就能继续使用你的声音", idle: "通话一次，你的声音就会保留",
+    "zh-Hans": { spent: "订阅就能继续使用你的声音", idle: "打开 App 一次，你的声音就会保留",
           body: (d) => `为了安全，未使用的声音会在${d}之后自动删除。你随时都能重新制作。` },
   }
   const texts: Record<string, { title: string; body: string }> = {}
