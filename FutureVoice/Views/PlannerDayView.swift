@@ -165,7 +165,7 @@ struct PlannerDayCard: View {
         let now = Date()
         // Where "now" falls: before the first item that hasn't started.
         let nowIndex = isToday ? (list.firstIndex { $0.start > now } ?? list.count) : nil
-        return VStack(spacing: 6) {
+        return VStack(spacing: 0) {
             if list.isEmpty {
                 Text("Nothing planned this day.")
                     .font(.subheadline)
@@ -174,7 +174,8 @@ struct PlannerDayCard: View {
             }
             ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
                 if index == nowIndex { nowLine(now) }
-                block(item).frame(height: 40)
+                else if index > 0 { Divider().padding(.leading, 76) }
+                row(item)
             }
             if let nowIndex, nowIndex == list.count, !list.isEmpty { nowLine(now) }
         }
@@ -188,15 +189,19 @@ struct PlannerDayCard: View {
         })
     }
 
+    /// Where today stands: the time in red, the way Calendar marks it —
+    /// a label, not a rule across the card.
     private func nowLine(_ now: Date) -> some View {
         HStack(spacing: 6) {
+            Circle().fill(Color.red).frame(width: 6, height: 6)
             Text(clock(now))
-                .font(.caption2.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(.red)
-            Rectangle().fill(Color.red).frame(height: 1.5)
+            Spacer()
         }
-        .padding(.vertical, 2)
+        .padding(.leading, 4)
+        .padding(.vertical, 6)
         .accessibilityLabel(Text("Now"))
     }
 
@@ -205,58 +210,68 @@ struct PlannerDayCard: View {
         return String(format: "%d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
+    /// One line of the day, like a row in Reminders: the time, the kind's
+    /// icon (the only colour), what it is, and a circle that is ticked once
+    /// it happened. No borders, no fills.
     @ViewBuilder
-    private func block(_ item: Item) -> some View {
+    private func row(_ item: Item) -> some View {
         switch item.body {
-        case .actual(let a, let fulfils):
-            HStack(spacing: 6) {
-                Image(systemName: a.kind.symbol).font(.caption.weight(.bold))
-                Text(a.title.map { "\(a.kind.label) · \($0)" } ?? a.kind.label)
-                    .font(.footnote.weight(.semibold))
-                    .lineLimit(1)
-                Spacer(minLength: 4)
-                Text(verbatim: "\(clock(a.start))–\(clock(a.end))")
-                    .font(.caption2).monospacedDigit()
-                if fulfils { Image(systemName: "checkmark").font(.caption2.weight(.heavy)) }
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(a.kind.color))
+        case .actual(let a, _):
+            rowLayout(time: clock(a.start), symbol: a.kind.symbol, tint: a.kind.color,
+                      title: a.title ?? a.kind.label,
+                      detail: a.title == nil ? "\(clock(a.start))–\(clock(a.end))"
+                                             : "\(a.kind.label) · \(clock(a.start))–\(clock(a.end))",
+                      state: .done)
         case .plan(let occ, let done):
             let lapsed = !done && occ.end < Date()
-            let color = lapsed ? Color.secondary : occ.kind.color
             let load = occ.kind == .review ? snapshot.reviewLoad[occ.start] : nil
-            Button {
-                if occ.kind == .sayItAgain, !done { onSayItAgain() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: done ? "checkmark" : occ.kind.symbol).font(.caption.weight(.bold))
-                    Text(explain("\(occ.kind.label) · \(occ.minutes) min"))
-                        .font(.footnote.weight(.semibold))
-                        .lineLimit(1)
-                    if let load, load > 0 {
-                        Text(explain("About \(load) waiting")).font(.caption2).lineLimit(1)
-                    }
-                    Spacer(minLength: 4)
-                    Text(clock(occ.start)).font(.caption2).monospacedDigit()
-                    if occ.kind == .sayItAgain, !done {
-                        Image(systemName: "chevron.right").font(.caption2)
-                    }
-                }
-                .foregroundStyle(color)
-                .padding(.horizontal, 8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(color.opacity(done ? 0.12 : 0.06)))
-                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(color.opacity(lapsed || done ? 0.5 : 1),
-                                  style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])))
+            let detail: String? = done ? explain("Done at another time")
+                : load.flatMap { $0 > 0 ? explain("About \($0) waiting") : nil }
+                ?? (occ.kind == .sayItAgain ? explain("Pick a talk") : nil)
+            let line = rowLayout(time: clock(occ.start), symbol: occ.kind.symbol,
+                                 tint: lapsed ? .secondary : occ.kind.color,
+                                 title: explain("\(occ.kind.label) · \(occ.minutes) min"),
+                                 detail: detail,
+                                 state: done ? .done : (lapsed ? .missed : .planned))
+            if occ.kind == .sayItAgain && !done {
+                Button(action: onSayItAgain) { line }.buttonStyle(.plain)
+            } else {
+                line
             }
-            .buttonStyle(.plain)
-            // Not `.disabled`: that greys the whole block, and an upcoming
-            // plan must read as clearly as one you can tap.
-            .allowsHitTesting(occ.kind == .sayItAgain && !done)
         }
+    }
+
+    private enum RowState { case done, planned, missed }
+
+    private func rowLayout(time: String, symbol: String, tint: Color, title: String,
+                           detail: String?, state: RowState) -> some View {
+        HStack(spacing: 12) {
+            Text(time)
+                .font(.subheadline)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 44, alignment: .leading)
+            Image(systemName: symbol)
+                .font(.body)
+                .foregroundStyle(tint)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(state == .missed ? Color.secondary : Color.primary)
+                    .lineLimit(1)
+                if let detail {
+                    Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            Image(systemName: state == .done ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(state == .done ? Color.green
+                                 : Color.secondary.opacity(state == .missed ? 0.4 : 0.8))
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+        .contentShape(Rectangle())
     }
 }
