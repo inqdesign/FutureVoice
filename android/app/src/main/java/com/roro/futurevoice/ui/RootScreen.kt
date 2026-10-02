@@ -892,6 +892,7 @@ internal fun SignInScreen(
             Text(
                 stringResource(R.string.sign_in_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
             // Google first — the PRIMARY provider on Android; Apple stays for
             // iPhone switchers (their clone follows the account).
@@ -901,7 +902,7 @@ internal fun SignInScreen(
                     Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_google))
                 }
             }
-            Button(onClick = onSignIn, enabled = !state.busy) {
+            Button(onClick = onSignIn, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_apple))
             }
             state.error?.let {
