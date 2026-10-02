@@ -7,11 +7,11 @@ import Combine
 ///
 /// What is stored is a weekly TEMPLATE plus two kinds of per-date edits:
 /// a rest day (nothing planned, nothing rings) and an exception (that date's
-/// blocks replaced, from "just this once" on a drag). Two block kinds are
-/// not stored at all but derived from the settings that already own them, so
-/// there is never a second copy to drift: the weekly test (`WeeklyTestSettings`)
-/// and the review slot (`autoReview` + its time). "Say it again" is an
-/// ordinary block since the founder asked to place it like any other.
+/// blocks replaced, from "just this once" on a drag). One block kind is not
+/// stored but derived from the setting that owns it, so there is never a
+/// second copy to drift: the weekly test (`WeeklyTestSettings`). Review and
+/// "say it again" are ordinary blocks, placed like any other (founder: every
+/// separate switch for them was one more thing to understand).
 ///
 /// Device-local, like the daily call it schedules: two synced devices must not
 /// both ring.
@@ -46,7 +46,7 @@ struct StudyPlan: Codable, Equatable {
 
         /// Kinds the learner can place by hand. Review, say it again and the
         /// test come from toggles and their own settings.
-        static let placeable: [Kind] = [.talk, .sayItAgain, .words, .expressions, .shadow]
+        static let placeable: [Kind] = [.talk, .review, .sayItAgain, .words, .expressions, .shadow]
     }
 
     struct Block: Codable, Equatable, Hashable, Identifiable {
@@ -85,6 +85,11 @@ struct StudyPlan: Codable, Equatable {
     var autoSayItAgain: Bool = false
     /// `yyyy-MM-dd` days with nothing planned and nothing ringing.
     var restDays: Set<String> = []
+    /// Weekdays the routine rests every week (`Calendar.weekday`): nothing
+    /// is planned and nothing rings. "Every day" is empty, "weekends off" is
+    /// [1, 7]. The week is ONE plan that repeats, so rest is set by weekday,
+    /// not per date.
+    var offWeekdays: Set<Int>? = nil
     /// The day the learner made this plan their PROMISE (founder, 2026-10-02:
     /// "it's a promise I kept to myself"). From that day the streak counts a
     /// day only when everything planned for it was done, and a day with
@@ -159,7 +164,8 @@ struct StudyPlan: Codable, Equatable {
     func occurrences(on day: Date,
                      test: WeeklyTestSchedule? = nil,
                      calendar: Calendar = .current) -> [Occurrence] {
-        guard !isRestDay(day, calendar: calendar) else { return [] }
+        guard !isRestDay(day, calendar: calendar),
+              !(offWeekdays ?? []).contains(calendar.component(.weekday, from: day)) else { return [] }
         let key = Self.dayKey(day, calendar: calendar)
         let isException = exceptions[key] != nil
         func at(_ hour: Int, _ minute: Int) -> Date? {
@@ -170,13 +176,6 @@ struct StudyPlan: Codable, Equatable {
             return Occurrence(kind: b.kind, start: start, amount: b.minutes,
                               source: isException ? .exception(b.id) : .template(b.id),
                               remind: b.remind)
-        }
-        // The review slot belongs to PLANNED days: a weekday with no block
-        // at all is the learner's day off, not a review day.
-        let plannedDay = !out.isEmpty
-        if autoReview, plannedDay, let start = at(reviewHour, reviewMinute) {
-            out.append(Occurrence(kind: .review, start: start, amount: reviewMinutes,
-                                  source: .review, remind: true))
         }
         if let test, calendar.component(.weekday, from: day) == test.weekday,
            let start = at(test.hour, test.minute) {
@@ -223,7 +222,6 @@ struct StudyPlan: Codable, Equatable {
 
     /// The review slots from `now` on, across `days` days, soonest first.
     func reviewSlots(from now: Date, days: Int = 14, calendar: Calendar = .current) -> [Date] {
-        guard autoReview else { return [] }
         let today = calendar.startOfDay(for: now)
         return (0..<days).flatMap { offset -> [Date] in
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { return [] }
@@ -389,6 +387,24 @@ struct StudyPlan: Codable, Equatable {
         return plan
     }
 
+    /// Whether any review block is planned — then the review reminder rings
+    /// at those blocks only.
+    var hasReviewBlocks: Bool { blocks.contains { $0.kind == .review } }
+
+    /// A plan saved while review was a switch (`autoReview` + one time):
+    /// the same slot as an ordinary block, on every weekday that had a plan.
+    func convertingReviewSwitch() -> StudyPlan {
+        guard autoReview else { return self }
+        var plan = self
+        plan.autoReview = false
+        let days = Set(blocks.flatMap(\.weekdays))
+        plan.blocks.append(Block(kind: .review, weekdays: days.isEmpty ? Set(1...7) : days,
+                                 hour: reviewHour, minute: reviewMinute,
+                                 minutes: Kind.review.defaultAmount))
+        plan.mergeTwins()
+        return plan
+    }
+
     /// A plan saved while every block was measured in minutes: a talk keeps
     /// its minutes, everything else takes its kind's default COUNT (the old
     /// number was a duration and means nothing as a count).
@@ -454,8 +470,8 @@ final class StudyPlanStore: ObservableObject {
         url = docs.appendingPathComponent(filename)
         if let data = try? Data(contentsOf: url),
            let decoded = try? JSONDecoder().decode(StudyPlan.self, from: data) {
-            plan = decoded.convertingLegacySayItAgain().convertingToCounts()
-            if decoded.autoSayItAgain || decoded.unitsVersion == nil { write(plan) }
+            plan = decoded.convertingLegacySayItAgain().convertingToCounts().convertingReviewSwitch()
+            if decoded.autoSayItAgain || decoded.unitsVersion == nil || decoded.autoReview { write(plan) }
         } else {
             plan = StudyPlan.seeded(callTimes: DailyCallStore.shared.times,
                                     goalMinutes: Self.goalMinutes)
@@ -493,17 +509,27 @@ final class StudyPlanStore: ObservableObject {
 
     /// Replace the plan. Returns false (and changes nothing) when it would
     /// need more call times than the call can ring.
+    /// - Parameter byLearner: the learner changed their routine by hand.
+    ///   That is what makes it their PROMISE (founder: a separate switch for
+    ///   it made no sense): the first hand edit starts `streakSince`, and from
+    ///   then on the streak counts days the routine was kept. The routine the
+    ///   app seeded is never a promise; neither is an empty one.
     @discardableResult
-    func update(_ new: StudyPlan) -> Bool {
+    func update(_ new: StudyPlan, byLearner: Bool = false) -> Bool {
         var new = new
+        if new.blocks.isEmpty {
+            new.streakSince = nil
+        } else if byLearner, new.streakSince == nil {
+            new.streakSince = Calendar.current.startOfDay(for: Date())
+        }
         new.pruneBefore(Date())
         guard new.isCallable else { return false }
         let callsChanged = new.callTimes != plan.callTimes
             || new.blocks.filter({ $0.kind == .talk }) != plan.blocks.filter({ $0.kind == .talk })
             || new.exceptions != plan.exceptions || new.restDays != plan.restDays
-        let reviewChanged = new.autoReview != plan.autoReview
-            || new.reviewHour != plan.reviewHour || new.reviewMinute != plan.reviewMinute
-            || new.restDays != plan.restDays || new.blocks != plan.blocks
+            || new.offWeekdays != plan.offWeekdays
+        let reviewChanged = new.restDays != plan.restDays || new.blocks != plan.blocks
+            || new.offWeekdays != plan.offWeekdays
         plan = new
         write(new)
         // The day's promise standing follows the plan it is judged by.

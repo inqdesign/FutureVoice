@@ -215,7 +215,7 @@ struct PlanBlockEditor: View {
             plan.blocks.append(edited(nil))
         }
         plan.mergeTwins()
-        guard store.update(plan) else {
+        guard store.update(plan, byLearner: true) else {
             refused = true
             return
         }
@@ -237,97 +237,8 @@ struct PlanBlockEditor: View {
         } else {
             plan.blocks.removeAll { $0.id == id }
         }
-        store.update(plan)
+        store.update(plan, byLearner: true)
         dismiss()
-    }
-}
-
-/// The toggles that place blocks for the learner — the review slot, say it
-/// again — and the week's days off.
-struct PlanSettingsSheet: View {
-    /// The week on screen, for the days-off list.
-    let week: [Date]
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var store = StudyPlanStore.shared
-
-    private let cal = Calendar.current
-    private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
-
-    private func binding<T>(_ path: WritableKeyPath<StudyPlan, T>) -> Binding<T> {
-        Binding(get: { store.plan[keyPath: path] },
-                set: { var p = store.plan; p[keyPath: path] = $0; store.update(p) })
-    }
-
-    private var reviewTime: Binding<Date> {
-        Binding(get: {
-            cal.date(bySettingHour: store.plan.reviewHour, minute: store.plan.reviewMinute,
-                     second: 0, of: Date()) ?? Date()
-        }, set: { new in
-            let c = cal.dateComponents([.hour, .minute], from: new)
-            var p = store.plan
-            p.reviewHour = c.hour ?? 21
-            p.reviewMinute = c.minute ?? 0
-            store.update(p)
-        })
-    }
-
-    /// Talk planned over the next 30 days, in minutes.
-    private var plannedTalkMinutes: Int {
-        let today = cal.startOfDay(for: Date())
-        return (0..<30).reduce(0) { acc, offset in
-            guard let day = cal.date(byAdding: .day, value: offset, to: today) else { return acc }
-            return acc + store.plan.occurrences(on: day).filter { $0.kind == .talk }.reduce(0) { $0 + $1.minutes }
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Toggle("Review slot", isOn: binding(\.autoReview))
-                    if store.plan.autoReview {
-                        DatePicker("Time", selection: reviewTime, displayedComponents: .hourAndMinute)
-                            .environment(\.locale, uiLocale)
-                        Stepper(value: binding(\.reviewMinutes), in: 5...60, step: 5) {
-                            HStack {
-                                Text(explain("How many"))
-                                Spacer()
-                                Text(StudyPlan.Kind.review.amountText(store.plan.reviewMinutes))
-                                    .foregroundStyle(.secondary).monospacedDigit()
-                            }
-                        }
-                    }
-                } footer: {
-                    Text("On every planned day. The review reminder then comes at this time, once something is waiting.")
-                }
-                Section {
-                    ForEach(week.filter { $0 >= cal.startOfDay(for: Date()) }, id: \.self) { day in
-                        Toggle(isOn: Binding(
-                            get: { store.plan.isRestDay(day) },
-                            set: { rest in
-                                var p = store.plan
-                                let key = StudyPlan.dayKey(day)
-                                if rest { p.restDays.insert(key) } else { p.restDays.remove(key) }
-                                store.update(p)
-                            })) {
-                            Text(day.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide).month().day()))
-                        }
-                    }
-                } header: {
-                    Text("Days off this week")
-                } footer: {
-                    Text("Nothing is planned and nothing rings on a day off.")
-                }
-                Section {
-                    LabeledContent(explain("Talk in the next 30 days"), value: explain("\(plannedTalkMinutes) min"))
-                }
-            }
-            .navigationTitle(explain("Timetable"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
-            }
-        }
     }
 }
 
@@ -341,7 +252,6 @@ struct WeeklyPlanEditor: View {
 
     @State private var snapshot: PlannerSnapshot?
     @State private var blockEditor: PlanBlockEditor.Target?
-    @State private var showSettings = false
     /// A block that ran on several weekdays had ONE of them dragged to a new
     /// time. That one has already moved; this asks whether the rest follow.
     @State private var pendingFollow: PendingFollow?
@@ -392,7 +302,7 @@ struct WeeklyPlanEditor: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    promiseToggle
+                    restDays
                     weekdayHeader
                 }
             }
@@ -408,19 +318,11 @@ struct WeeklyPlanEditor: View {
             .navigationTitle(explain("Weekly plan"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showSettings = true } label: {
-                        Label("Plan settings", systemImage: "slider.horizontal.3")
-                    }
-                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
             .sheet(item: $blockEditor) { PlanBlockEditor(target: $0) }
-            .sheet(isPresented: $showSettings) {
-                PlanSettingsSheet(week: weekForSettings)
-            }
             .confirmationDialog(explain("Move the other days too?"), isPresented: Binding(
                 get: { pendingFollow != nil }, set: { if !$0 { pendingFollow = nil } }),
                 titleVisibility: .visible) {
@@ -442,27 +344,69 @@ struct WeeklyPlanEditor: View {
         }
     }
 
-    /// The switch that turns this plan into a promise: from today the
-    /// streak counts only days the plan is kept. Off, the streak counts any
-    /// day studied — which is where every learner starts.
-    private var promiseToggle: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Toggle(isOn: Binding(
-                get: { store.plan.streakSince != nil },
-                set: { on in
-                    var p = store.plan
-                    p.streakSince = on ? cal.startOfDay(for: Date()) : nil
-                    store.update(p)
-                    Analytics.capture("plan_promise", ["on": on])
-                })) {
-                Text("Make this plan my promise").font(.subheadline.weight(.semibold))
+    private enum RestChoice: Hashable { case none, weekends, custom }
+
+    private var restChoice: RestChoice {
+        let off = store.plan.offWeekdays ?? []
+        if off.isEmpty { return .none }
+        if off == [1, 7] { return .weekends }
+        return .custom
+    }
+
+    @State private var choosingDays = false
+
+    private func setOff(_ days: Set<Int>) {
+        var p = store.plan
+        p.offWeekdays = days
+        store.update(p, byLearner: true)
+    }
+
+    /// Rest is a property of the WEEK, which is one plan that repeats:
+    /// every day, weekends off, or the learner's own weekdays.
+    private var restDays: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Rest days").font(.subheadline.weight(.semibold))
+                Spacer()
+                Picker("Rest days", selection: Binding(
+                    get: { choosingDays ? .custom : restChoice },
+                    set: { choice in
+                        switch choice {
+                        case .none: choosingDays = false; setOff([])
+                        case .weekends: choosingDays = false; setOff([1, 7])
+                        case .custom: choosingDays = true
+                        }
+                    })) {
+                    Text("None").tag(RestChoice.none)
+                    Text("Weekends").tag(RestChoice.weekends)
+                    Text("Choose").tag(RestChoice.custom)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 210)
             }
-            Text(store.plan.streakSince != nil
-                 ? explain("From today, a day keeps your streak when you do everything planned for it.")
-                 : explain("Your streak counts every day you study. Turn this on to hold yourself to this plan."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if choosingDays || restChoice == .custom {
+                HStack(spacing: 6) {
+                    let symbols: [String] = {
+                        var c = cal; c.locale = uiLocale
+                        return c.veryShortWeekdaySymbols
+                    }()
+                    ForEach((0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }, id: \.self) { wd in
+                        let off = (store.plan.offWeekdays ?? []).contains(wd)
+                        Button {
+                            var days = store.plan.offWeekdays ?? []
+                            if off { days.remove(wd) } else { days.insert(wd) }
+                            setOff(days)
+                        } label: {
+                            Text(symbols[wd - 1])
+                                .font(.subheadline.weight(off ? .semibold : .regular))
+                                .frame(maxWidth: .infinity, minHeight: 32)
+                                .background(Capsule().fill(off ? Color.accentColor : Color(.tertiarySystemFill)))
+                                .foregroundStyle(off ? Color.white : Color.primary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -483,12 +427,6 @@ struct WeeklyPlanEditor: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .background(.bar)
-    }
-
-    /// This week's dates, for the days-off list in the settings sheet.
-    private var weekForSettings: [Date] {
-        let start = PlannerSnapshot.startOfWeek(Date())
-        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
     }
 
     private func reload() {
@@ -520,7 +458,7 @@ struct WeeklyPlanEditor: View {
             // The cell lands where it was dropped, at once: this weekday is
             // split off to the new time (or moved, if it was the only one).
             guard let moved = store.plan.moving(blockId: id, on: day, to: newStart, scope: .everyWeek),
-                  store.update(moved) else {
+                  store.update(moved, byLearner: true) else {
                 refused = true
                 return
             }
@@ -540,7 +478,7 @@ struct WeeklyPlanEditor: View {
         let c = cal.dateComponents([.hour, .minute], from: follow.newStart)
         guard let new = store.plan.following(blockId: follow.remainingId,
                                              toHour: c.hour ?? 0, minute: c.minute ?? 0),
-              store.update(new) else {
+              store.update(new, byLearner: true) else {
             refused = true
             return
         }

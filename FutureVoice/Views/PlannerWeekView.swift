@@ -84,7 +84,7 @@ struct PlannerSnapshot {
 
         // Upcoming review slots and what each will find waiting.
         var load: [Date: Int] = [:]
-        if plan.autoReview {
+        if plan.hasReviewBlocks {
             let slots = plan.reviewSlots(from: now, days: 21, calendar: cal)
             let due = DrillStore.shared.load().filter { $0.box < DrillStore.maxBox }.map(\.nextReviewAt)
                 + ReviewQueue.returnDates()

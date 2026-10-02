@@ -50,15 +50,6 @@ final class StudyPlanTests: XCTestCase {
 
     // MARK: - Derived blocks
 
-    func testReviewOnlyOnPlannedDays() {
-        var plan = StudyPlan()
-        plan.blocks = [.init(kind: .talk, weekdays: [2], hour: 8, minute: 0, minutes: 10)]
-        plan.autoReview = true
-        XCTAssertEqual(plan.occurrences(on: at(5, 0), calendar: cal).map(\.kind), [.talk, .review])
-        // Tuesday has nothing planned, so no review slot either.
-        XCTAssertTrue(plan.occurrences(on: at(6, 0), calendar: cal).isEmpty)
-    }
-
     func testSayItAgainIsAnOrdinaryBlock() {
         // Seeded after the first talk, every day — and movable like any block.
         let plan = StudyPlan.seeded(callTimes: [t(8), t(13)], goalMinutes: 10)
@@ -240,4 +231,26 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(walk([2: .kept, 3: .missed, 4: .kept], today: 4), 1)
     }
 
+
+    func testRestWeekdaysPlanNothing() {
+        var plan = StudyPlan.seeded(callTimes: [t(8)], goalMinutes: 10)
+        plan.offWeekdays = [1, 7]
+        XCTAssertTrue(plan.occurrences(on: at(10, 0), calendar: cal).isEmpty)   // Saturday
+        XCTAssertFalse(plan.occurrences(on: at(9, 0), calendar: cal).isEmpty)   // Friday
+        // Friday evening → the call skips the weekend to Monday.
+        XCTAssertEqual(plan.callDates(after: at(9, 20), calendar: cal), [at(12, 8)])
+    }
+
+    func testReviewSwitchBecomesABlock() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .talk, weekdays: [2, 4], hour: 8, minute: 0, minutes: 10)]
+        plan.autoReview = true
+        plan.reviewHour = 21
+        let c = plan.convertingReviewSwitch()
+        XCTAssertFalse(c.autoReview)
+        let review = c.blocks.first { $0.kind == .review }
+        XCTAssertEqual(review?.weekdays, [2, 4])
+        XCTAssertEqual(review?.hour, 21)
+        XCTAssertTrue(c.hasReviewBlocks)
+    }
 }

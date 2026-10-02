@@ -78,13 +78,6 @@ struct ActivityView: View {
                                    onEdit: {
                                        Analytics.capture("plan_edit_opened", [:])
                                        showPlanEditor = true
-                                   },
-                                   onMakePromise: {
-                                       var p = planStore.plan
-                                       p.streakSince = cal.startOfDay(for: Date())
-                                       planStore.update(p)
-                                       Analytics.capture("plan_promise", ["on": true, "from": "journal"])
-                                       load()
                                    })
                 HStack {
                     Text("Journey").font(.title3.weight(.semibold))

@@ -544,6 +544,14 @@ its own branch so the founder picks the build it ships in.
   other rep gets a time from `ActivityEventLog`, written inside
   `PracticeLog.record` (the one door every rep walks through) and at the end
   of a say-it-again run. It only has times from this build on, kept 60 days.
+- **The week is ONE plan that repeats, so rest is set by WEEKDAY**
+  (`StudyPlan.offWeekdays`: None · Weekends · Choose, top of the editor).
+  The per-date "Days off this week" list and the whole settings sheet were
+  cut (founder: "the weekly plan isn't remade every week"). Review is an
+  ORDINARY block now, placed like any other (`convertingReviewSwitch` moves
+  an old review switch into one); the review reminder rings at review
+  blocks whenever there are any (`hasReviewBlocks`). Only the weekly test is
+  still derived (from its own settings).
 - **Activity's week is READ-ONLY; the plan is edited on its own page**
   (same day, founder: "you're not editing the activity, you're editing the
   weekly plan — and give it room"). "Edit weekly plan" under the grid opens
@@ -592,9 +600,13 @@ its own branch so the founder picks the build it ships in.
   (`PracticeStats.activeDays`, the old rule, where everyone starts — the
   seeded plan never sets it); set → from that day a day counts only when
   every block planned for it was done, and a day with nothing planned is a
-  REST day that neither counts nor breaks. It is switched on by hand
-  ("Make this plan my promise", top of the weekly plan editor) — never by
-  editing the plan. Each promise day is judged by the plan it HAD
+  REST day that neither counts nor breaks. **Changing the routine by hand IS
+  making the promise** — there is no switch (a "Make this plan my promise"
+  toggle shipped for an hour and the founder asked why it existed):
+  `StudyPlanStore.update(_:byLearner: true)`, called by every edit in the
+  editor, starts `streakSince` the first time; the seeded routine is never
+  a promise, and emptying the routine ends it. The card says it once while
+  it isn't one yet ("Change it to make it your promise."). Each promise day is judged by the plan it HAD
   (`PromiseLedger`, `Documents/promise_days.json`: planned/done per day,
   today provisional, frozen once the day is over by `PromiseJudge.refresh`,
   run from every widget refresh, on Activity load and on every plan

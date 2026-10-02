@@ -299,7 +299,6 @@ struct RoutinePromiseCard: View {
     let test: WeeklyTestSchedule
     let streak: Int
     let onEdit: () -> Void
-    let onMakePromise: () -> Void
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
@@ -352,9 +351,12 @@ struct RoutinePromiseCard: View {
             weekGraphic
             legendRow
             HStack {
-                if !isPromise && !legend.isEmpty {
-                    Button(explain("Make it a promise"), action: onMakePromise)
-                        .font(.subheadline.weight(.semibold))
+                // Editing the routine by hand is what makes it a promise —
+                // said once here while it isn't one yet.
+                if !isPromise {
+                    Text("Change it to make it your promise.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button(explain("Edit"), action: onEdit)

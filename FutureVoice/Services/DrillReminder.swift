@@ -13,8 +13,8 @@ import UserNotifications
 ///     tomorrow morning instead — nudging about a queue they can see is noise.
 ///   • Permission is requested only from a foreground moment right after new
 ///     cards were created (post-session), never from the background path.
-///   • With a review slot in the study timetable (`StudyPlan.autoReview`), it
-///     fires at that slot instead — the learner chose when.
+///   • With review blocks in the study timetable, it fires at those blocks
+///     instead — the learner chose when.
 @MainActor
 enum DrillReminder {
 
@@ -73,7 +73,7 @@ enum DrillReminder {
 
         let fireDate: Date
         let plan = StudyPlanStore.shared.plan
-        if plan.autoReview {
+        if plan.hasReviewBlocks {
             // The learner set a review time in the timetable: ring there and
             // only there — the first slot with something waiting by then.
             guard let slot = plan.reviewSlots(from: now)

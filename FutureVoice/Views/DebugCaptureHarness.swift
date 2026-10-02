@@ -340,10 +340,6 @@ enum DebugCapture {
                 TalkTimeLog.add(seconds: 8 * 60, language: appState.targetLanguage)
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
-        case "plan-settings":
-            let start = PlannerSnapshot.startOfWeek(Date())
-            return AnyView(PlanSettingsSheet(week: (0..<7).compactMap {
-                Calendar.current.date(byAdding: .day, value: $0, to: start) }))
         case "plan-editor":
             once("plan-editor") {
                 var plan = StudyPlan()
@@ -352,14 +348,12 @@ enum DebugCapture {
                     .init(kind: .sayItAgain, weekdays: [2, 4], hour: 20, minute: 30, minutes: 1),
                     .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
                     .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 2),
+                    .init(kind: .review, weekdays: Set(1...7), hour: 21, minute: 0, minutes: 20),
                 ]
-                plan.autoReview = true
+                plan.offWeekdays = [1]
                 StudyPlanStore.shared.update(plan)
             }
             return AnyView(WeeklyPlanEditor())
-        case "say-again-picker":
-            once("say-again-picker") { SessionStore.shared.save(Self.talkDetailSession) }
-            return AnyView(SayItAgainPicker().environmentObject(appState))
         case "plan-block":
             return AnyView(PlanBlockEditor(target: .new(day: Date())))
         case "activity-week", "activity-week-edit":
@@ -379,8 +373,7 @@ enum DebugCapture {
                     .init(kind: .sayItAgain, weekdays: Set(2...6), hour: 8, minute: 10, minutes: 1),
                     .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
                 ]
-                plan.autoReview = true
-                plan.reviewHour = 21
+                plan.blocks.append(.init(kind: .review, weekdays: Set(2...6), hour: 21, minute: 0, minutes: 20))
                 // "-capture activity-week" shows a promise kept since Monday;
                 // the plain studied-days rule is the default everywhere else.
                 plan.streakSince = cal.date(byAdding: .day, value: -4, to: today)
