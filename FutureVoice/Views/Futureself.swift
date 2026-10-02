@@ -46,6 +46,24 @@ enum FutureselfTheme: Int, CaseIterable, Identifiable {
         }
     }
 
+    /// The same hue, deep enough to READ on a wash of `tint` — the ink for
+    /// tone-on-tone surfaces (Say it again's prompter). Light mode pulls the
+    /// accent toward black, dark mode toward white, so text keeps its
+    /// contrast on every palette, Amber included, whose raw accent is too
+    /// pale to read on its own wash.
+    var ink: Color {
+        let base = UIColor(tint)
+        return Color(UIColor { traits in
+            let dark = traits.userInterfaceStyle == .dark
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            base.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+            let toward: CGFloat = dark ? 1 : 0
+            let k: CGFloat = dark ? 0.55 : 0.5
+            return UIColor(red: r + (toward - r) * k, green: g + (toward - g) * k,
+                           blue: b + (toward - b) * k, alpha: 1)
+        })
+    }
+
     private static func adaptive(light: UIColor, dark: UIColor) -> Color {
         Color(UIColor { $0.userInterfaceStyle == .dark ? dark : light })
     }

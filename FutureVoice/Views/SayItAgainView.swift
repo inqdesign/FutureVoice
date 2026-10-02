@@ -108,6 +108,7 @@ struct SayItAgainView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var appState: AppState
     @StateObject private var player = AudioPlayer()
     @StateObject private var recorder = AudioRecorder()
@@ -125,9 +126,8 @@ struct SayItAgainView: View {
     /// one-off retry from the finished screen doesn't wind the history back.
     @State private var promptStep: SayItAgainScript.Step?
     @State private var oneOffRetry = false
-    /// Set by "Done reading" so the wait ends without ending the run, and by
-    /// Skip so the step is abandoned unscored.
-    @State private var endReadingNow = false
+    /// Skip abandons the step unscored. There is no "done" — a take ends on
+    /// silence.
     @State private var skipRequested = false
     /// The playing file reached its end (or was stopped).
     @State private var playbackDone = false
@@ -143,6 +143,7 @@ struct SayItAgainView: View {
     /// the learner made rather than on top of a run already going.
     static let introSeenKey = "futurevoice.sayItAgain.introSeen"
     @AppStorage(introSeenKey) private var introSeen = false
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     @State private var micError: String?
     @State private var askingMicChoice = false
     @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
@@ -393,48 +394,81 @@ struct SayItAgainView: View {
         }
     }
 
+    /// The teleprompter. A card washed in the learner's own Futureself colour
+    /// with the line in a deep shade of the same hue (tone-on-tone), so it
+    /// reads as a script held up in front of them rather than one more row
+    /// of the grey transcript above it. There is no "done" button: the take ends on
+    /// its own when they go quiet (`waitForReadToEnd`), the same way a call
+    /// turn does, so a button would only ask them to confirm what the mic
+    /// already knows. Skip stays, small, for a line they don't want to say.
     @ViewBuilder
     private var readingPanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 14) {
             HStack(spacing: 6) {
-                Image(systemName: "mic.fill")
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 8))
                     .foregroundStyle(.red)
                     .symbolEffect(.pulse, isActive: true)
                 Text(promptStep?.isCorrected == true ? "Say it the fixed way" : "Say your line")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.ink.opacity(0.7))
                 Spacer()
+                Button("Skip") { skipRequested = true }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(theme.ink.opacity(0.7))
             }
             if let step = promptStep {
                 Group {
                     if step.isCorrected {
-                        Text(highlightedCorrection(step.text, original: step.said, baseFont: .title2))
+                        Text(highlightedCorrection(step.text, original: step.said,
+                                                   baseFont: .title2.weight(.semibold)))
                     } else {
                         Text(step.text)
                     }
                 }
-                .font(.title2)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(lineInk)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .frame(maxWidth: .infinity)
                 .fixedSize(horizontal: false, vertical: true)
                 if !step.note.isEmpty {
-                    Text(step.note).font(.caption).foregroundStyle(.secondary)
+                    Text(step.note).font(.footnote).foregroundStyle(theme.ink.opacity(0.7))
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            HStack(spacing: 10) {
-                Button("Skip") { skipRequested = true }
-                    .buttonStyle(.bordered)
-                Button {
-                    endReadingNow = true
-                } label: {
-                    Label("Done reading", systemImage: "checkmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
+            // Says how the take ends, since nothing on the card does it.
+            HStack(spacing: 6) {
+                Image(systemName: "waveform")
+                    .symbolEffect(.variableColor.iterative, isActive: live.level > 0.05)
+                Text("Moves on when you finish")
             }
-            .controlSize(.large)
+            .font(.caption)
+            .foregroundStyle(theme.ink.opacity(0.5))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity)
+        .background(theme.tint.opacity(washOpacity),
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(theme.tint.opacity(washOpacity * 2), lineWidth: 1)
+        }
     }
+
+    private var theme: FutureselfTheme { FutureselfTheme(rawValue: storedTheme) ?? .blue }
+    /// Mono's accent IS its ink (charcoal / light grey), so the fixed words
+    /// — drawn in the accent — would vanish into the line. There the rest of
+    /// the line steps back to grey and the fix stays at full strength.
+    /// Mono's light accent is near-black charcoal, so the colours' 14% wash
+    /// comes out a muddy mid-grey there; it gets a paper-light 5% instead.
+    private var washOpacity: Double {
+        theme == .mono && colorScheme == .light ? 0.05 : 0.14
+    }
+    private var lineInk: Color { theme == .mono ? theme.ink.opacity(0.55) : theme.ink }
 
     private var finishedPanel: some View {
         VStack(spacing: 10) {
@@ -563,7 +597,6 @@ struct SayItAgainView: View {
     private func readStep(_ step: SayItAgainScript.Step) async {
         phase = .reading
         promptStep = step
-        endReadingNow = false
         skipRequested = false
         takes[step.id] = nil
         scoreTasks[step.id]?.cancel()
@@ -591,8 +624,7 @@ struct SayItAgainView: View {
 
         let spoke = await waitForReadToEnd(text: step.text)
 
-        // Tail grace — a "Done reading" tap lands mid-syllable, and a clipped
-        // tail reads as a deletion in the diff.
+        // Tail grace — a clipped tail reads as a deletion in the diff.
         try? await Task.sleep(nanoseconds: 300_000_000)
         let liveText = live.stop()
         _ = recorder.stop()
@@ -611,19 +643,19 @@ struct SayItAgainView: View {
     /// word, then for the line's own length, then for silence.
     private func waitForReadToEnd(text: String) async -> Bool {
         let firstVoiceDeadline = Date().addingTimeInterval(Self.firstVoiceSeconds)
-        while !Task.isCancelled, !skipRequested, !endReadingNow,
+        while !Task.isCancelled, !skipRequested,
               live.lastVoicedAt == nil, Date() < firstVoiceDeadline {
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
         guard !Task.isCancelled, !skipRequested else { return false }
-        guard live.lastVoicedAt != nil || endReadingNow else { return false }
+        guard live.lastVoicedAt != nil else { return false }
 
         let lineMs = max(1200, WordSplitter.count(text) * Self.readMsPerWord)
         let began = Date()
         let earliest = began.addingTimeInterval(Double(lineMs) / 1000)
         let hardStop = began.addingTimeInterval(
             Double(ShadowDrillView.attemptCutoffMs(targetMs: lineMs)) / 1000)
-        while !Task.isCancelled, !skipRequested, !endReadingNow, Date() < hardStop {
+        while !Task.isCancelled, !skipRequested, Date() < hardStop {
             // "Quiet" is the shadow surface's 1.5 s, not a call's 0.6 s: a
             // mid-sentence breath runs up to 1.5 s, and someone reading a
             // line for the first time breathes more than a talker does.
