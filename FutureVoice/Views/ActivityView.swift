@@ -71,21 +71,28 @@ struct ActivityView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                // A journal of the learner's routine (founder, 2026-10-02):
-                // the promise in words at the top, the journey of keeping it
-                // underneath — read by day, month or year.
-                RoutinePromiseCard(plan: planStore.plan, test: WeeklyTestSettings.shared.schedule,
-                                   streak: currentStreak)
-                HStack {
-                    Text("Journey").font(.title3.weight(.semibold))
+                // A journal of the learner's routine (founder, 2026-10-02).
+                // The promise card above the journey repeated what the day
+                // view already shows — each day's list IS what that day
+                // holds — so it folded into one row: how long the promise
+                // has been kept, and how to read the journey.
+                HStack(alignment: .firstTextBaseline) {
+                    Label {
+                        Text(currentStreak > 0 ? explain("Kept for \(currentStreak) days")
+                                               : explain("Keep it today for day 1"))
+                            .monospacedDigit()
+                    } icon: {
+                        Image(systemName: "flame.fill")
+                            .foregroundStyle(currentStreak > 0 ? Color.orange : Color.secondary)
+                    }
+                    .font(.headline)
                     Spacer()
                     Picker("View", selection: $viewMode) {
                         ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 168)
+                    .frame(width: 150)
                 }
-                .padding(.top, 6)
                 switch viewMode {
                 case .day:   plannerSection
                 case .month: statsBar; monthCard
