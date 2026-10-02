@@ -112,6 +112,8 @@ final class PracticeLog {
         let snapshot = days
         lock.unlock()
         save(snapshot)
+        // The time of day too, for the study timetable.
+        ActivityEventLog.shared.record(ActivityEventLog.Kind(kind), at: date)
     }
 
     func day(_ date: Date) -> Day? {

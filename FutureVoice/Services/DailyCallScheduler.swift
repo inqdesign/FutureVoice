@@ -401,20 +401,35 @@ enum DailyCallScheduler {
     /// a person behaves: they try again later with the same thing to say.
     /// Answering cancels the rest, and the session that follows writes the
     /// next call fresh.
+    ///
+    /// The times come from the study timetable (`StudyPlan`): a talk block IS
+    /// a call. A timetable seeded from the call times, with every block on
+    /// every day, gives exactly the old answer; weekdays, rest days and
+    /// one-off moves are what it adds.
     static func fireDates(after now: Date, calendar: Calendar = .current) -> [Date] {
-        let times = DailyCallStore.shared.times
-        let todays = times.compactMap {
-            fireDateToday(hour: $0.hour, minute: $0.minute, on: now, calendar: calendar)
+        StudyPlanStore.shared.plan.callDates(after: now, calendar: calendar)
+    }
+
+    /// The timetable changed: put the rings where it now says. The stored
+    /// voicemail is kept (it is still the same unheard message) but moved to
+    /// the next slot if its own time is no longer one; nothing planned in the
+    /// next two weeks takes every ring down.
+    static func rearmFromStoredPlan() {
+        guard liveCallSince == nil else { return }
+        Task {
+            let store = DailyCallStore.shared
+            guard store.isEnabled, var plan = store.load(), !plan.isSettled else { return }
+            let dates = fireDates(after: Date())
+            guard let first = dates.first else {
+                await cancelPendingRequest()
+                return
+            }
+            if !dates.contains(plan.scheduledFor) {
+                plan.scheduledFor = first
+                store.save(plan)
+            }
+            await schedule(plan, callerName: nil)
         }
-        let remaining = todays.filter { $0 > now }.sorted()
-        if !remaining.isEmpty { return remaining }
-        // Past the last one: tomorrow's first.
-        guard let first = times.first,
-              let today = fireDateToday(hour: first.hour, minute: first.minute,
-                                        on: now, calendar: calendar),
-              let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
-        else { return [] }
-        return [tomorrow]
     }
 
     private static func fireDateToday(hour: Int, minute: Int,

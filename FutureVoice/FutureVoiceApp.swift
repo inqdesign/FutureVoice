@@ -127,7 +127,7 @@ struct FutureVoiceApp: App {
             // Drill grading may have moved due dates — leave with an accurate
             // reminder. Background path never prompts for permission.
             if phase == .background {
-                Task { await DrillReminder.reschedule() }
+                Task { await DrillReminder.reschedule(); await PlanReminder.reschedule() }
                 Task { await WeeklyTestReminder.reschedule() }
                 // Push what this stint changed before iOS suspends us.
                 SyncEngine.shared.backgrounded()

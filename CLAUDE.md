@@ -498,6 +498,57 @@ Nobody opens a language app because a streak asks them to; they answer a phone t
 - Tapping is handled by `DailyCallNotificationDelegate` (installed from `AppDelegate` — the delegate MUST be set before launch finishes or a lock-screen answer is lost), which posts to `DailyCallInbox.shared`; `RootTabView` presents the call from there.
 - `interruptionLevel = .timeSensitive` is set but inert until the Time Sensitive capability is added to the App ID — harmless without the entitlement, no signing change needed today.
 
+## The study timetable (2026-10-02, branch `feat/study-planner`)
+
+The Talk header's streak chip opens Activity, and Activity now opens on a
+**Week** view: a timetable of what the learner PLANNED (dashed outlines) laid
+over what HAPPENED (filled blocks). Founder's ask: "my study planner — talk at
+this time, words at that time, per weekday, combined with my activity". Kept on
+its own branch so the founder picks the build it ships in.
+
+- **`StudyPlan` is a weekly template + per-date edits** (`Services/StudyPlan.swift`,
+  `Documents/study_plan.json`, device-local like the daily call it schedules).
+  Rest days and one-off exceptions ("just this day" on a drag) are keyed
+  `yyyy-MM-dd`. Three kinds are DERIVED, never stored, so no second copy can
+  drift: the weekly test (`WeeklyTestSettings`), the review slot (`autoReview`
+  + time, planned days only) and "say it again" (right after the day's first
+  talk).
+- **A talk block IS a daily-call time.** `DailyCallScheduler.fireDates` reads
+  `StudyPlan.callDates` — the old shape (today's remaining slots, else the next
+  day's first) with weekdays, rest days and exceptions honoured. The first
+  plan is SEEDED from `DailyCallStore.times` on every day, which gives exactly
+  the old rings (`StudyPlanTests.testSeededPlanRingsLikeTheOldCall`). The two
+  stay one list: the plan mirrors its distinct talk times into
+  `DailyCallStore.times`, and that setter (Me → Call, onboarding) feeds
+  `adoptCallTimes` back. At most 4 distinct talk times across the week, so the
+  mirror is exact; a move that would make a fifth is refused.
+- **Review slot on = the review reminder fires there only** (`DrillReminder`,
+  first slot with something due by then). Off = the old "when a card comes
+  due, 9–21" behaviour. Hand-placed words/expressions/shadow blocks get their
+  own local reminders (`PlanReminder`, next 7 days, rebuilt on every plan
+  change and on background; permission asked only when saving such a block).
+- **Done means the same KIND happened that day, at any time** (`PlannerDay`).
+  An 8:00 talk done at noon is done; a planner that marks it missed is the one
+  people switch off. Talk actuals come from `Session.startedAt/endedAt`; every
+  other rep gets a time from `ActivityEventLog`, written inside
+  `PracticeLog.record` (the one door every rep walks through) and at the end
+  of a say-it-again run. It only has times from this build on, kept 60 days.
+- **Editing**: Activity → Edit. Long-press a FUTURE planned block and drag —
+  vertical = time (15-minute steps), sideways = day. A template block asks
+  "just this day / every <weekday> / every day at this time"; the review slot
+  and the test move their own settings directly. Past blocks and actuals never
+  move. `+` adds a block, the slider opens `PlanSettingsSheet` (review slot,
+  say it again, this week's days off, planned talk minutes for 30 days).
+- Future review slots show how many items will be waiting
+  (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
+- Talk is `.blue`, not the accent: a theme's accent can be green, and then a
+  talk reads as a review. The legend says "Planned" — "Plan" is the billing
+  plan's key (요금제).
+- Captures: `-capture activity-week` / `activity-week-edit` / `plan-settings`
+  / `plan-block`. Tests: `StudyPlanTests`.
+- Not built: Talk tab's "today" list, onboarding plan step, per-block topics,
+  syncing the plan.
+
 ## The Core (100 seats, per language)
 
 **One club PER TARGET LANGUAGE** (`20260816120000_core_by_language`) —

@@ -13,6 +13,8 @@ import UserNotifications
 ///     tomorrow morning instead — nudging about a queue they can see is noise.
 ///   • Permission is requested only from a foreground moment right after new
 ///     cards were created (post-session), never from the background path.
+///   • With a review slot in the study timetable (`StudyPlan.autoReview`), it
+///     fires at that slot instead — the learner chose when.
 @MainActor
 enum DrillReminder {
 
@@ -69,10 +71,21 @@ enum DrillReminder {
             break
         }
 
-        let hasDueNow = allDates.contains { $0 <= now }
-        let nextFutureDue = allDates.filter { $0 > now }.min()
-        guard let fireDate = fireDate(now: now, nextDue: nextFutureDue, hasDueNow: hasDueNow),
-              fireDate > now else { return }
+        let fireDate: Date
+        let plan = StudyPlanStore.shared.plan
+        if plan.autoReview {
+            // The learner set a review time in the timetable: ring there and
+            // only there — the first slot with something waiting by then.
+            guard let slot = plan.reviewSlots(from: now)
+                .first(where: { slot in allDates.contains { $0 <= slot } }) else { return }
+            fireDate = slot
+        } else {
+            let hasDueNow = allDates.contains { $0 <= now }
+            let nextFutureDue = allDates.filter { $0 > now }.min()
+            guard let picked = Self.fireDate(now: now, nextDue: nextFutureDue, hasDueNow: hasDueNow),
+                  picked > now else { return }
+            fireDate = picked
+        }
 
         // How many items will be waiting at fire time.
         let countAtFire = allDates.filter { $0 <= fireDate }.count

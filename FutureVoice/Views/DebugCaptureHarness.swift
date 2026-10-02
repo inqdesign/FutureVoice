@@ -340,6 +340,51 @@ enum DebugCapture {
                 TalkTimeLog.add(seconds: 8 * 60, language: appState.targetLanguage)
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "plan-settings":
+            let start = PlannerSnapshot.startOfWeek(Date())
+            return AnyView(PlanSettingsSheet(week: (0..<7).compactMap {
+                Calendar.current.date(byAdding: .day, value: $0, to: start) }))
+        case "plan-block":
+            return AnyView(PlanBlockEditor(target: .new(day: Date())))
+        case "activity-week", "activity-week-edit":
+            // The study timetable: a weekday talk at 8:00, words twice a
+            // week, a review slot, and a few days of what actually happened —
+            // one talk moved to noon, one unplanned shadowing sitting.
+            once("activity-week") {
+                let cal = Calendar.current
+                let today = cal.startOfDay(for: Date())
+                func at(_ back: Int, _ h: Int, _ m: Int = 0) -> Date {
+                    cal.date(bySettingHour: h, minute: m, second: 0,
+                             of: cal.date(byAdding: .day, value: -back, to: today)!)!
+                }
+                var plan = StudyPlan()
+                plan.blocks = [
+                    .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
+                    .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
+                ]
+                plan.autoReview = true
+                plan.reviewHour = 21
+                StudyPlanStore.shared.update(plan)
+                for (back, start, end, title) in [(3, at(3, 8, 3), at(3, 8, 15), "Weekend plans"),
+                                                  (2, at(2, 12, 20), at(2, 12, 33), "Moving apartments"),
+                                                  (1, at(1, 8, 1), at(1, 8, 12), "The interview follow-up"),
+                                                  (0, at(0, 8, 2), at(0, 8, 14), "Coffee with Sarah")] {
+                    _ = back
+                    var s = Self.talkDetailSession
+                    s = Session(id: UUID(), userId: s.userId, targetLanguage: s.targetLanguage, mode: s.mode,
+                                topic: title, startedAt: start, endedAt: end,
+                                turns: s.turns, summary: s.summary)
+                    SessionStore.shared.save(s)
+                }
+                var events: [ActivityEventLog.Event] = []
+                for minute in stride(from: 5, to: 20, by: 3) { events.append(.init(kind: .drill, at: at(3, 21, minute))) }
+                for minute in stride(from: 0, to: 12, by: 4) { events.append(.init(kind: .shadow, at: at(2, 17, minute))) }
+                for minute in stride(from: 32, to: 45, by: 4) { events.append(.init(kind: .word, at: at(2, 19, minute))) }
+                for minute in stride(from: 2, to: 18, by: 3) { events.append(.init(kind: .drill, at: at(1, 21, minute))) }
+                events.append(.init(kind: .sayItAgain, at: at(0, 8, 20)))
+                ActivityEventLog.shared.replaceAll(events)
+            }
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "activity", "activity-cards":
             // The activity calendar with today selected — the day summary
             // carries the share-card button. "-cards" opens the card grid,

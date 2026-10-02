@@ -542,6 +542,7 @@ struct SayItAgainView: View {
         guard !Task.isCancelled else { return }
         index = max(0, steps.count - 1)
         phase = .finished
+        ActivityEventLog.shared.record(.sayItAgain)
         Telemetry.log("say_again_run", [
             "kind": source.kind,
             "lines": "\(spokenCount)",
