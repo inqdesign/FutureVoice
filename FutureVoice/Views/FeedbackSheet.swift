@@ -72,6 +72,10 @@ struct FeedbackSheet: View {
     @State private var sending = false
     @State private var sendError: String?
     @State private var sent = false
+    /// `sent` drives the thank-you alert and goes false when it closes, so
+    /// whether this sheet ever delivered is kept apart for `report`.
+    @State private var delivered = false
+    @State private var lastSendError: String?
 
     var body: some View {
         NavigationStack {
@@ -131,6 +135,33 @@ struct FeedbackSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .onAppear { report("feedback_sheet_shown") }
+        .onDisappear {
+            if !delivered { report("feedback_dismissed", dismissedProps) }
+        }
+    }
+
+    /// Shown → sent | dismissed, one row each (2026-10-02). Until then the
+    /// table held only what was SENT, so a learner who saw the sheet and
+    /// closed it was indistinguishable from one who was never asked, and the
+    /// answer rate could not be read at all.
+    private func report(_ event: String, _ extra: [String: String] = [:]) {
+        var props = ["context": context.rawValue]
+        props.merge(extra) { _, new in new }
+        Telemetry.log(event, props)
+        Analytics.capture(event, props)
+    }
+
+    /// What a closed sheet had in it: a learner who rated and then left is a
+    /// different answer from one who never touched it, and a failed send
+    /// that was then abandoned is a bug, not a choice.
+    private var dismissedProps: [String: String] {
+        var props = [
+            "rated": (appRating > 0 || callRating > 0) ? "1" : "0",
+            "typed": feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "0" : "1",
+        ]
+        if let lastSendError { props["send_error"] = String(lastSendError.prefix(200)) }
+        return props
     }
 
     /// A score on its own is a complete answer, and so is a sentence on its
@@ -175,8 +206,15 @@ struct FeedbackSheet: View {
                     app_build: info?["CFBundleVersion"] as? String
                 ))
                 .execute()
+            delivered = true
             sent = true
+            report("feedback_sent", [
+                "app_rating": String(appRating),
+                "call_rating": String(callRating),
+                "typed": feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "0" : "1",
+            ])
         } catch {
+            lastSendError = error.localizedDescription
             sendError = explain("Couldn't send — please try again. (\(error.localizedDescription))")
         }
         sending = false
