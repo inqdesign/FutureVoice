@@ -323,6 +323,8 @@ struct WatchView: View {
     /// often and most never hit it. False on Plus: nothing left to sell
     /// there, and the answer really is next month.
     @State private var canUpgradePlan = false
+    /// The tier "Move to …" lands on (`AccountStatus.upgradeTier`).
+    @State private var upgradeTier: String?
     /// A minute pack is on offer at a talk wall: counted subscription, not a
     /// trial (2026-09-26). Watch's own wall is scenes, which a pack doesn't
     /// buy — the sheet only draws it for `kind == .talk`.
@@ -385,6 +387,7 @@ struct WatchView: View {
         DailyAllowanceSheet(
             kind: capKind,
             canUpgrade: canUpgradePlan,
+            upgradeName: AccountStatus.tierName(upgradeTier),
             allowance: capAllowance,
             renewsOn: renewalLabel,
             endsInstead: planEndsAtPeriodEnd,
@@ -444,10 +447,9 @@ struct WatchView: View {
         .sheet(isPresented: $sceneCapReached, onDismiss: {
             switch capChoice {
             case .upgrade:
-                // "plus", not "unlimited" — the paywall matches this against its
-                // own tier ids, so the old name silently preselected nothing
-                // and left the sheet on the plan they already hold.
-                paywallTier = "plus"
+                // The next tier up (`AccountStatus.upgradeTier`), as a tier id the
+                // paywall matches against its own — never the plan they hold.
+                paywallTier = upgradeTier ?? "plus"
                 showingPaywall = true
             // Switching tabs is enough: RootTabView follows the staged route,
             // and this scene stays pushed for whenever they come back to it.
@@ -846,7 +848,8 @@ struct WatchView: View {
                 // button already decided instead of growing one a beat later.
                 let account = await AccountStatus.fetch()
                 capKind = capped.isDailyCapReached ? .talk : .scenes
-                canUpgradePlan = account.isLightPlan
+                upgradeTier = account.upgradeTier
+                canUpgradePlan = account.upgradeTier != nil
                 canTopUpTalk = account.isEntitled && !account.isUncappedTalk && !account.isTrialing
                 accountIsTrialing = account.isTrialing
                 planMinutesAfterTrial = account.planMonthlySeconds.map { $0 / 60 }

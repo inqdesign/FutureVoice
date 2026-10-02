@@ -134,6 +134,8 @@ struct ConversationView: View {
     /// moment the wall lands. False on Plus: nothing left to sell, and the
     /// answer really is next month.
     @State private var canUpgradePlan = false
+    /// The tier "Move to …" lands on (`AccountStatus.upgradeTier`).
+    @State private var upgradeTier: String?
     /// A minute pack is on offer at the wall: counted subscription, not a
     /// trial (2026-09-26).
     @State private var canTopUpTalk = false
@@ -1025,10 +1027,9 @@ struct ConversationView: View {
             .sheet(isPresented: $dailyCapReached, onDismiss: {
                 switch capChoice {
                 case .upgrade:
-                    // "plus", not "unlimited" — the paywall matches this against its own
-                    // tier ids, so the old name silently preselected nothing and left
-                    // the sheet on the plan they already hold.
-                    paywallTier = "plus"
+                    // The next tier up (`AccountStatus.upgradeTier`), as a tier id the
+                    // paywall matches against its own — never the plan they hold.
+                    paywallTier = upgradeTier ?? "plus"
                     paywallSource = "talk_spent_month"
                     showingPaywall = true
                 case .review:  leaveForPractice()
@@ -1042,6 +1043,7 @@ struct ConversationView: View {
                 DailyAllowanceSheet(
                     kind: .talk,
                     canUpgrade: canUpgradePlan,
+                    upgradeName: AccountStatus.tierName(upgradeTier),
                     allowance: poolMinutes,
                     renewsOn: renewalLabel,
                     endsInstead: planEndsAtPeriodEnd,
@@ -1110,7 +1112,8 @@ struct ConversationView: View {
             }
             .task {
                 let account = await AccountStatus.fetch()
-                canUpgradePlan = account.isLightPlan
+                upgradeTier = account.upgradeTier
+                canUpgradePlan = account.upgradeTier != nil
                 canTopUpTalk = account.isEntitled && !account.isUncappedTalk && !account.isTrialing
                 poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
                 renewalLabel = account.renewalLabel

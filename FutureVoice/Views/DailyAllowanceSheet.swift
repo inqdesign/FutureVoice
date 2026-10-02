@@ -19,9 +19,12 @@ struct DailyAllowanceSheet: View {
 
     let kind: Kind
 
-    /// This account is on Light → Plus is a real answer right now.
-    /// False on Plus (and on the admin account): nothing to sell.
+    /// A bigger plan is on sale for this account right now
+    /// (`AccountStatus.upgradeTier`): Light → Plus, and Plus → Max since
+    /// 2026-10-02. False at the top, and on the admin account.
     let canUpgrade: Bool
+    /// The tier that move lands on, named the way the cards name it.
+    var upgradeName: String = AccountStatus.tierName("plus")
 
     /// The pool's size, when the client knows it — the plan's own number,
     /// read live from the account snapshot rather than hardcoded.
@@ -125,7 +128,7 @@ struct DailyAllowanceSheet: View {
                     }
                 }
                 if canUpgrade && !isTrial {
-                    action(explain("Move to Plus"), prominent: !packLeads) {
+                    action(explain("Move to \(upgradeName)"), prominent: !packLeads) {
                         onUpgrade()
                         dismiss()
                     }
@@ -249,11 +252,11 @@ struct DailyAllowanceSheet: View {
         // button is the same wrong promise the prominence rule had.
         if packLeads {
             return canUpgrade
-                ? explain("Add minutes to keep going now, move to Plus, or review what this month left you.")
+                ? explain("Add minutes to keep going now, move to \(upgradeName), or review what this month left you.")
                 : explain("Add minutes to keep going now, or review what this month left you.")
         }
         return canUpgrade
-            ? explain("Review what this month left you, or move to Plus to keep going now.")
+            ? explain("Review what this month left you, or move to \(upgradeName) to keep going now.")
             : explain("Review stays free, and always did.")
     }
 

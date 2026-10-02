@@ -1002,7 +1002,8 @@ enum DebugCapture {
         case "free-minutes-welcome":
             // The first-visit free-minutes welcome over the Talk home.
             return AnyView(WelcomeCaptureHost().environmentObject(appState))
-        case "paywall", "paywall-plans":
+        case "paywall", "paywall-plans", "paywall-max",
+             "paywall-ladder", "paywall-ladder-yearly", "paywall-ladder-pack", "paywall-ladder-anim":
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
             return AnyView(PaywallView().environmentObject(appState))

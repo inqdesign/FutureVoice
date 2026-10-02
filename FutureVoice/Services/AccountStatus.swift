@@ -284,10 +284,39 @@ struct AccountStatus {
     /// keyed by English text would give both one translation (see
     /// `explain(key:default:)`).
     static func tierName(_ planId: String?) -> String {
-        (planId?.hasPrefix("plus") ?? false)
+        if planId?.hasPrefix("max") ?? false {
+            return explain(key: "plan.tier.max", default: "Max")
+        }
+        return (planId?.hasPrefix("plus") ?? false)
             ? explain(key: "plan.tier.plus", default: "Plus")
             : explain(key: "plan.tier.light", default: "Light")
     }
+
+    /// The tiers in order of SIZE, smallest first. Order is the only thing
+    /// it says — a tier missing from the catalog is skipped, never assumed.
+    static let tierOrder = ["light", "plus", "max"]
+
+    /// The tier (`light` / `plus` / `max`) of the plan held, or nil.
+    var tier: String? {
+        guard isEntitled, let planId else { return nil }
+        return planId.split(separator: "_").first.map(String.init)
+    }
+
+    /// The next bigger tier actually ON SALE, for every "move up?" offer —
+    /// Light → Plus, Plus → Max (2026-10-02). Nil at the top, on a trial (a
+    /// trial is metered at the same pro-rated pool whatever it trials, so the
+    /// move would cost money and change nothing), for the admin account, and
+    /// while the catalog couldn't be read: an offer for a plan nobody can buy
+    /// opens a card with no price on it.
+    var upgradeTier: String? {
+        guard let tier, !isTrialing,
+              let i = Self.tierOrder.firstIndex(of: tier) else { return nil }
+        return Self.tierOrder.dropFirst(i + 1).first { tiersOnSale.contains($0) }
+    }
+
+    /// Tiers with an active catalog row — read in `fetch()` so `upgradeTier`
+    /// can't offer Max before the App Store sells it.
+    var tiersOnSale: Set<String> = []
 
     /// "Free", or "Light · Monthly" while the subscription actually entitles.
     var planLabel: String {
@@ -522,6 +551,18 @@ struct AccountStatus {
             .value,
            let plan = rows.first, plan.talk_unlimited != true {
             out.planMonthlySeconds = plan.monthly_seconds
+        }
+
+        // What is on sale, in a query of its OWN — a failure costs only the
+        // "move up" offers, never the entitlement above.
+        struct TierRow: Decodable { let tier: String }
+        if let rows: [TierRow] = try? await SupabaseProvider.shared
+            .from("subscription_plans")
+            .select("tier")
+            .eq("is_active", value: true)
+            .execute()
+            .value {
+            out.tiersOnSale = Set(rows.map(\.tier))
         }
 
         // The receipt, as the store wrote it: the latest charge, and whether

@@ -267,6 +267,27 @@ final class StoreKitService: ObservableObject {
     private func fetchCatalog() async {
         loading = true
         defer { loading = false }
+        #if DEBUG
+        // `-capture paywall-max` / `paywall-ladder…`: the plan picker for
+        // screenshots. A Debug build can never be priced by StoreKit, and Max
+        // is off sale until its build is submitted, so the catalog is seeded
+        // with the live rows' figures. Never reachable outside `-capture`.
+        if let c = UserDefaults.standard.string(forKey: "capture"),
+           c.hasPrefix("paywall-max") || c.hasPrefix("paywall-ladder") {
+            func row(_ tier: String, _ period: String, _ seconds: Int, _ scenes: Int) -> PlanOption {
+                PlanOption(plan: DBPlan(id: "\(tier)_\(period)", tier: tier, period: period,
+                                        daily_seconds: seconds / 30, daily_scenes: nil,
+                                        monthly_seconds: seconds, monthly_scenes: scenes,
+                                        talk_unlimited: false,
+                                        apple_product_id: "com.roro.futurevoice.\(tier)_\(period)"),
+                           product: nil, storefrontCountry: "USA")
+            }
+            options = [row("light", "monthly", 9000, 10), row("plus", "monthly", 36000, 30),
+                       row("max", "monthly", 72000, 30),
+                       row("light", "annual", 9000, 10), row("plus", "annual", 36000, 30)]
+            return
+        }
+        #endif
 
         var plans: [DBPlan] = []
         do {

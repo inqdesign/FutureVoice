@@ -55,6 +55,13 @@ final class TalkTopUpService: ObservableObject {
     }
 
     private func fetch() async {
+        #if DEBUG
+        // `-capture paywall-ladder…`: a Debug build has no priced product.
+        if UserDefaults.standard.string(forKey: "capture")?.hasPrefix("paywall-ladder") == true {
+            pack = Pack(productId: "com.roro.futurevoice.talk_50", seconds: 3000, product: nil)
+            return
+        }
+        #endif
         struct Row: Decodable { let apple_product_id: String; let seconds: Int }
         guard let rows: [Row] = try? await SupabaseProvider.shared
             .from("talk_topups")
