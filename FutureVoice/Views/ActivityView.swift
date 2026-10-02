@@ -502,12 +502,6 @@ struct ActivityView: View {
             HStack(alignment: .top, spacing: 16) {
                 cardPreviewRow(day)
                 VStack(spacing: 12) {
-                    factRow("Talk time", PracticeStats.talkClock(seconds: talkSeconds))
-                    if talks > 0 { factRow("Talks", "\(talks)") }
-                    if study > 0 { factRow("Study time", explain("\(study) min")) }
-                    if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
-                    if reviewed > 0 { factRow("Drills", "\(reviewed)") }
-                    Spacer(minLength: 0)
                     Button { cardDay = CardDay(date: day) } label: {
                         Label("Share card", systemImage: "square.and.arrow.up")
                             .font(.subheadline)
@@ -515,8 +509,13 @@ struct ActivityView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.tint)
+                    factRow("Talk time", PracticeStats.talkClock(seconds: talkSeconds))
+                    if talks > 0 { factRow("Talks", "\(talks)") }
+                    if study > 0 { factRow("Study time", explain("\(study) min")) }
+                    if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
+                    if reviewed > 0 { factRow("Drills", "\(reviewed)") }
                 }
-                .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight)
+                .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight, alignment: .top)
             }
         }
     }

@@ -34,19 +34,25 @@ struct PlannerDayCard: View {
     var body: some View {
         // A panel pinned to the bottom of the page: its height never follows
         // the list, which scrolls inside it.
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                dayList
-                if let footer {
-                    Divider()
-                    footer
+        // The share card sits at the panel's FOOT: a short day leaves the
+        // space between the list and the card, a long one pushes it down.
+        GeometryReader { geo in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    dayList
+                    Spacer(minLength: 0)
+                    if let footer {
+                        Divider()
+                        footer
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .frame(minHeight: geo.size.height, alignment: .top)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
+            .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
             .fill(Color(.secondarySystemGroupedBackground))
@@ -246,7 +252,7 @@ struct PlannerDayStrip: View {
             // long the promise has been kept; "Today" to come back.
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(shown.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.wide)))
+                    Text(shown.formatted(Date.FormatStyle(locale: uiLocale).month(.abbreviated).day().weekday(.abbreviated)))
                         .font(.title3.weight(.bold))
                         .contentTransition(.numericText())
                     StreakLine(streak: streak)
@@ -281,6 +287,8 @@ struct PlannerDayStrip: View {
                 .contentMargins(.horizontal, (geo.size.width - Self.cell) / 2, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $scrolled, anchor: .center)
+                // A tick each time a new day settles in the middle, like a picker wheel.
+                .sensoryFeedback(.selection, trigger: scrolled)
                 .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
                                              .init(color: .black, location: 0.12),
                                              .init(color: .black, location: 0.88),
