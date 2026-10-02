@@ -158,6 +158,14 @@ private enum class ShadowPhase { IDLE, LOADING_AUDIO, COUNTDOWN, RECORDING, ANAL
      *  back to Apple's pass; here nothing is scored on a reading nobody has. */
     READ_FAILED }
 
+/**
+ * The coach call outlives the screen: closing it right after a take must not
+ * cost the RECORD its bullets (iOS's unstructured Task carries on the same
+ * way). What lands after the screen is gone only updates the store.
+ */
+private val coachScope = kotlinx.coroutines.CoroutineScope(
+    kotlinx.coroutines.SupervisorJob() + Dispatchers.Main)
+
 /** iOS `ShadowDrillView.stillSpeakingSeconds` — a breath is 0.5–1.5 s. */
 internal const val STILL_SPEAKING_MS = 1_500L
 
@@ -220,8 +228,11 @@ fun ShadowScreen(
     val takePlayer = remember { Mp3Player(context.cacheDir, source = "shadow") }
     val recorder = remember { WavRecorder() }
     val attempts = remember { ShadowAttemptStore.shared(context) }
-    /** One id per line, so attempts of a line with no turn still group. */
-    val lineId = remember(turnId, line) { turnId ?: "line-" + InstallSalt.ttsKey(line, "", false) }
+    /** One id per line, so attempts of a line with no turn still group — a
+     *  UUID, because iOS decodes `turnId` as one (a backup crosses over). */
+    val lineId = remember(turnId, line) {
+        turnId ?: java.util.UUID.nameUUIDFromBytes(line.toByteArray()).toString().uppercase()
+    }
 
     var phase by remember { mutableStateOf(ShadowPhase.IDLE) }
     var countdown by remember { mutableIntStateOf(0) }
@@ -585,7 +596,7 @@ fun ShadowScreen(
             if (coachable) {
                 // Its own job: a retry tapped meanwhile must not cancel the
                 // record's bullets, only keep them off the new screen.
-                scope.launch { coach(attempt, text, analysis, r, learnerDurMs) }
+                coachScope.launch { coach(attempt, text, analysis, r, learnerDurMs) }
             }
         }
     }
