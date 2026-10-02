@@ -365,7 +365,10 @@ fun ShadowScreen(
         }
         val bytes = audio ?: return@LaunchedEffect
         val file = withContext(Dispatchers.IO) {
-            File(context.cacheDir, "shadow-target-${InstallSalt.ttsKey(line, voiceId, false)}.mp3")
+            // The key is `tts:<install>:<hash>` — a colon in a path makes
+            // MediaPlayer / MediaMetadataRetriever read it as a URI scheme
+            // and fail (error 1, a 0.1 s timeline) on every real device line.
+            File(context.cacheDir, "shadow-target-${InstallSalt.ttsKey(line, voiceId, false).replace(':', '_')}.mp3")
                 .also { it.writeBytes(bytes) }
         }
         val duration = withContext(Dispatchers.IO) { mediaDurationMs(file) }

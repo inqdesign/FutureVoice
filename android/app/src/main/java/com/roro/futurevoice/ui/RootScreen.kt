@@ -963,7 +963,8 @@ internal fun AccountScreen(
  *  capture build can open the shell on a tab. */
 internal enum class HomeTab(val label: Int) {
     TALK(R.string.talk), WATCH(R.string.watch),
-    PRACTICE(R.string.practice), PROGRESS(R.string.progress)
+    // "Review" since iOS 2026-09-30 (RootTabView): the tab is the review home.
+    PRACTICE(R.string.review), PROGRESS(R.string.progress)
 }
 
 /**

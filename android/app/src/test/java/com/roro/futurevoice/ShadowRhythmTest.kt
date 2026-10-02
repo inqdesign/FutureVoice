@@ -188,6 +188,22 @@ class AudioOnsetTest {
         val w = WavPcm(rate, wav(0.3, 0.6).samples + ShortArray(rate))
         assertEquals(0.9, AudioOnset.lastVoiceOffset(w.samples, rate)!!, 0.03)
     }
+
+    @Test fun aStopClickAfterThePauseIsNotTheEnd() {
+        val rate = 16_000
+        // Speech 0.3–0.9 s, 1.4 s of silence, a 0.15 s click, silence.
+        val w = WavPcm(rate, wav(0.3, 0.6).samples + ShortArray(rate * 14 / 10) +
+            wav(0.0, 0.15).samples + ShortArray(rate / 5))
+        assertEquals(0.9, AudioOnset.lastVoiceOffset(w.samples, rate)!!, 0.03)
+    }
+
+    @Test fun aShortLastWordRightAfterSpeechStillCounts() {
+        val rate = 16_000
+        // A short word 0.2 s after the speech is speech, not a click.
+        val w = WavPcm(rate, wav(0.3, 0.6).samples + ShortArray(rate / 5) +
+            wav(0.0, 0.15).samples + ShortArray(rate / 2))
+        assertEquals(1.25, AudioOnset.lastVoiceOffset(w.samples, rate)!!, 0.03)
+    }
 }
 
 /** ElevenLabs alignment → words (iOS `JapaneseShadowTimingTests`' first half). */

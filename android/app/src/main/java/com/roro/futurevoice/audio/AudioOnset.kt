@@ -26,6 +26,9 @@ object AudioOnset {
     private const val BLOCK_SECONDS = 0.01
     private const val MIN_VOICED_SECONDS = 0.04
     private const val ONSET_LEAD_IN = 0.03
+    /** A trailing burst this short, after a pause this long, is a click. */
+    private const val STRAY_MAX_SECONDS = 0.25
+    private const val STRAY_GAP_SECONDS = 0.6
 
     /** Block RMS levels, 0…1. */
     fun envelope(samples: ShortArray, sampleRate: Int): FloatArray {
@@ -72,12 +75,26 @@ object AudioOnset {
         if (loudest <= 1e-5f) return null
         val gate = loudest * SPEECH_GATE_RATIO
         val needed = maxOf(1, Math.round(MIN_VOICED_SECONDS / BLOCK_SECONDS).toInt())
-        var run = 0
-        for (b in levels.indices.reversed()) {
-            if (levels[b] > gate) {
-                run += 1
-                if (run >= needed) return minOf(levels.size * BLOCK_SECONDS, (b + run) * BLOCK_SECONDS)
-            } else run = 0
+        val strayMax = Math.round(STRAY_MAX_SECONDS / BLOCK_SECONDS).toInt()
+        val strayGap = Math.round(STRAY_GAP_SECONDS / BLOCK_SECONDS).toInt()
+        // Voiced segments, latest first. A short burst standing alone after
+        // a real pause is not the end of the speech — measured on device:
+        // the recorder's stop leaves a ~0.2 s click 1.5 s after the last
+        // word, and counting it read a 3.5 s take as 5.4 s (pace 1.96×).
+        var end = levels.size
+        while (end > 0) {
+            var e = end - 1
+            while (e >= 0 && levels[e] <= gate) e--
+            if (e < 0) return null
+            var s = e
+            while (s > 0 && levels[s - 1] > gate) s--
+            val len = e - s + 1
+            var gapStart = s - 1
+            while (gapStart >= 0 && levels[gapStart] <= gate) gapStart--
+            val gap = s - 1 - gapStart
+            val isStray = len <= strayMax && gap >= strayGap && gapStart >= 0
+            if (!isStray && len >= needed) return minOf(levels.size * BLOCK_SECONDS, (e + 1) * BLOCK_SECONDS)
+            end = s
         }
         return null
     }
