@@ -499,19 +499,17 @@ struct PlannerWeekCard: View {
         let draggable = canDrag(occ)
         let load = occ.kind == .review ? snapshot.reviewLoad[occ.start] : nil
         return RoundedRectangle(cornerRadius: 4, style: .continuous)
-            .fill(color.opacity(isMaster ? 0.16 : (done ? 0.15 : (isDragging ? 0.25 : 0.06))))
-            .overlay(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .strokeBorder(color.opacity(done || lapsed ? 0.5 : 1),
-                                  style: StrokeStyle(lineWidth: isMaster ? 1.4 : 1.2,
-                                                     dash: isMaster ? [] : [3, 2]))
-            )
-            .overlay(alignment: .topLeading) {
-                HStack(spacing: 3) {
+            // Fill only, no outline (founder, 2026-10-02): the tint alone
+            // reads as the block.
+            .fill(color.opacity(isMaster ? (isDragging ? 0.3 : 0.18) : (done ? 0.15 : (isDragging ? 0.25 : 0.08))))
+            .overlay(alignment: h >= 30 ? .topLeading : .leading) {
+                // Baseline-aligned, so a glyph that sits high in its box
+                // (the phone) lines up with the time beside it.
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
                     // Done at another time of the day: the plan is ticked
                     // here, and the filled block shows where it happened.
                     Image(systemName: done ? "checkmark" : occ.kind.symbol)
-                        .font(.system(size: isMaster ? 10 : 9, weight: .bold))
+                        .font(.system(size: 9, weight: .bold))
                     if let load, load > 0, width >= 30 {
                         Text("\(load)").font(.system(size: 9, weight: .bold)).monospacedDigit()
                     }
@@ -527,8 +525,8 @@ struct PlannerWeekCard: View {
                     }
                 }
                 .foregroundStyle(color.opacity(lapsed ? 0.7 : 1))
-                .padding(.leading, 3)
-                .padding(.top, h >= 22 ? 3 : 1)
+                .padding(.leading, 4)
+                .padding(.top, h >= 30 ? 4 : 0)
                 .padding(.trailing, 2)
             }
             .overlay(alignment: .topLeading) {

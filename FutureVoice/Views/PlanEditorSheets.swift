@@ -329,11 +329,11 @@ struct WeeklyPlanEditor: View {
             .navigationTitle(explain("My routine"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Rest days are set once and rarely touched, so they live
+                // Study days are set once and rarely touched, so they live
                 // behind the gear rather than above the week.
                 ToolbarItem(placement: .cancellationAction) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                        .accessibilityLabel(Text("Rest days"))
+                        .accessibilityLabel(Text(explain("Study days")))
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -343,7 +343,7 @@ struct WeeklyPlanEditor: View {
                 NavigationStack {
                     VStack(alignment: .leading, spacing: 0) {
                         restDays
-                        Text(explain("Nothing is planned on a rest day, and it never breaks your streak."))
+                        Text(explain("The other days are rest days: nothing is planned, and they never break your streak."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 16)
@@ -351,7 +351,7 @@ struct WeeklyPlanEditor: View {
                         Spacer()
                     }
                     .padding(.top, 8)
-                    .navigationTitle(explain("Rest days"))
+                    .navigationTitle(explain("Study days"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
@@ -421,7 +421,7 @@ struct WeeklyPlanEditor: View {
     private var restDays: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Picker("Rest days", selection: Binding(
+                Picker("Study days", selection: Binding(
                     get: { choosingDays ? .custom : restChoice },
                     set: { choice in
                         switch choice {
@@ -430,8 +430,8 @@ struct WeeklyPlanEditor: View {
                         case .custom: choosingDays = true
                         }
                     })) {
-                    Text("None").tag(RestChoice.none)
-                    Text("Weekends").tag(RestChoice.weekends)
+                    Text("Every day").tag(RestChoice.none)
+                    Text("Weekdays").tag(RestChoice.weekends)
                     Text("Choose").tag(RestChoice.custom)
                 }
                 .pickerStyle(.segmented)
@@ -443,17 +443,20 @@ struct WeeklyPlanEditor: View {
                         return c.veryShortWeekdaySymbols
                     }()
                     ForEach((0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }, id: \.self) { wd in
+                        // A chip is a STUDY day: lit means "I study on this
+                        // day". At least one stays lit — a week of rest is
+                        // no routine.
                         let off = (store.plan.offWeekdays ?? []).contains(wd)
                         Button {
                             var days = store.plan.offWeekdays ?? []
-                            if off { days.remove(wd) } else { days.insert(wd) }
+                            if off { days.remove(wd) } else if days.count < 6 { days.insert(wd) }
                             setOff(days)
                         } label: {
                             Text(symbols[wd - 1])
-                                .font(.subheadline.weight(off ? .semibold : .regular))
+                                .font(.subheadline.weight(off ? .regular : .semibold))
                                 .frame(maxWidth: .infinity, minHeight: 32)
-                                .background(Capsule().fill(off ? Color.accentColor : Color(.tertiarySystemFill)))
-                                .foregroundStyle(off ? Color.white : Color.primary)
+                                .background(Capsule().fill(off ? Color(.tertiarySystemFill) : Color.accentColor))
+                                .foregroundStyle(off ? Color.primary : Color.white)
                         }
                         .buttonStyle(.plain)
                     }
