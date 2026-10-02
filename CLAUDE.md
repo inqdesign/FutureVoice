@@ -563,13 +563,18 @@ its own branch so the founder picks the build it ships in.
   test move their own settings. The slider opens `PlanSettingsSheet`. The
   dated grid in Activity runs 8 pt from the screen edge (it needs every
   point across) and has no edit mode.
-- **A past day is its RESULT, nothing more** (same day, founder: "for days
-  gone by I only care whether I kept the plan"). In the dated week a day
-  before today draws no blocks: under its date sits a green tick when every
-  planned block was done (and its column is tinted green), else `done/total`,
-  else nothing when nothing was planned. Today keeps plan + actual, later
-  days the plan only. The detail is still one tap away in the day list, and
-  past days no longer stretch the hour range.
+- **Activity shows ONE DAY, today first** (same day, founder: "what the
+  learner cares about is TODAY; before and after are a tap or a swipe away,
+  and each date says whether it was done"). `PlannerDayCard`: the week's
+  dates on top, each with its result (green tick = every planned block done,
+  `done/planned` otherwise, a dot on a future day with a plan) — tap a date,
+  or swipe the strip for the next/previous week; below, the selected day at
+  full width, every block labelled ("Talk · Coffee with Sarah 8:02–8:14 ✓"),
+  swipe it for the next/previous day. Two designs died the same day: the
+  seven-column grid (coloured bars nobody could read, and past columns were
+  empty space once they were reduced to a result) and the separate day list
+  under it (the same day twice). The 7-column grid survives only as the
+  weekly plan editor, where seeing the whole week IS the job.
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

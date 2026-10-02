@@ -108,6 +108,12 @@ struct ActivityView: View {
         }
         .onChange(of: planStore.plan) { _, _ in reloadPlanner() }
         .onChange(of: weekStart) { _, _ in reloadPlanner() }
+        // A day swiped or tapped into another week takes the week with it.
+        .onChange(of: selectedDay) { _, day in
+            guard viewMode == .week, let day else { return }
+            let start = PlannerSnapshot.startOfWeek(day)
+            if start != weekStart { weekStart = start }
+        }
     }
 
     // MARK: - Planner (week)
@@ -115,20 +121,14 @@ struct ActivityView: View {
     @ViewBuilder
     private var plannerSection: some View {
         if let planner {
-            PlannerWeekCard(snapshot: planner, selectedDay: $selectedDay, title: weekTitle,
-                            onShift: shiftWeek,
-                            onEditPlan: {
-                                Analytics.capture("plan_edit_opened", [:])
-                                showPlanEditor = true
-                            })
-            // The grid needs every point it can get across: let the card run
-            // closer to the screen edge than the page's other cards.
+            PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
+                           onShiftWeek: shiftWeek,
+                           onEditPlan: {
+                               Analytics.capture("plan_edit_opened", [:])
+                               showPlanEditor = true
+                           },
+                           onSayItAgain: { showSayItAgainPicker = true })
             .padding(.horizontal, -12)
-            if let day = selectedDay, planner.days.contains(where: { cal.isDate($0, inSameDayAs: day) }) {
-                PlannerDayTimeline(day: cal.startOfDay(for: day), snapshot: planner, editing: false,
-                                   onEdit: { _, _ in },
-                                   onSayItAgain: { showSayItAgainPicker = true })
-            }
         } else {
             ProgressView().frame(maxWidth: .infinity, minHeight: 200)
         }
@@ -142,15 +142,13 @@ struct ActivityView: View {
         }
     }
 
+    /// Move a week; the selected day moves with it (same weekday), so the
+    /// strip and the day under it never disagree.
     private func shiftWeek(_ by: Int) {
-        weekStart = cal.date(byAdding: .day, value: 7 * by, to: weekStart) ?? weekStart
+        let from = selectedDay ?? Date()
+        selectedDay = cal.date(byAdding: .day, value: 7 * by, to: from) ?? from
     }
 
-    private var weekTitle: String {
-        let end = cal.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-        let style = Date.FormatStyle(locale: uiLocale).month(.abbreviated).day()
-        return weekStart.formatted(style) + " – " + end.formatted(style)
-    }
 
     // MARK: - The day's card, inside the calendar
 
