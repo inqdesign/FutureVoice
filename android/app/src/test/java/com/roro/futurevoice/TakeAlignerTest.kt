@@ -64,3 +64,49 @@ class TakeAlignerTest {
         assertTrue("measured but off: $within/$measured", within * 10 >= measured * 9)
     }
 }
+
+/**
+ * The same bar on CONNECTED speech: every recording here is ElevenLabs
+ * (the synthesizer the model line comes from), so word onsets are its own
+ * measured alignment. The reference is one preset voice at speed 1.0; each
+ * take is another voice (or the same one slowed to 0.8/0.9), with two
+ * hesitations cut in at word boundaries, a 350 ms lead-in like the
+ * recorder's, and room noise. English and Korean.
+ */
+class TakeAlignerConnectedSpeechTest {
+    private val truth = Json.parseToJsonElement(
+        javaClass.getResourceAsStream("/take-align-el/truth.json")!!.bufferedReader().readText()).jsonObject
+
+    private fun wav(n: String) = WavPcm.parse(javaClass.getResourceAsStream("/take-align-el/$n.wav")!!.readBytes())!!
+
+    @Test fun measuredOnsetsLandOnTheBeat() {
+        var measured = 0; var within = 0; var total = 0
+        val errs = mutableListOf<Int>()
+        val out = StringBuilder()
+        for (lang in listOf("en", "ko")) {
+            val ref = truth["$lang-ref"]!!.jsonArray.map { it.jsonArray }
+            val timings = ref.map { WordTiming(it[0].jsonPrimitive.content, it[1].jsonPrimitive.int, it[2].jsonPrimitive.int) }
+            for (key in truth.keys.filter { it.startsWith("$lang-l") }.sorted()) {
+                val expect = truth[key]!!.jsonObject["onsets"]!!.jsonArray.map { it.jsonPrimitive.int }
+                val mapped = TakeAligner.map(wav("$lang-ref"), timings, wav(key))!!
+                mapped.forEachIndexed { k, m ->
+                    val err = m.onsetMs - expect[k]
+                    total += 1
+                    if (m.confident) { measured += 1; errs += abs(err); if (abs(err) <= 120) within += 1 }
+                    out.append("%s %-10s err %+5d slope %.2f cost %.2f %s\n".format(key, timings[k].word, err,
+                        m.slope, m.cost, if (m.confident) "measured" else "-"))
+                }
+            }
+        }
+        println(out)
+        errs.sort()
+        println("connected: measured $measured/$total, on the beat $within/$measured, " +
+            "median ${errs.getOrNull(errs.size / 2)} ms, p90 ${errs.getOrNull(errs.size * 9 / 10)} ms")
+        // The truth here is ElevenLabs' own alignment, which is itself off by
+        // 100–200 ms on some words (a first word always "starts" at 0, before
+        // the voice does), so the bar is lower than on the built fixtures.
+        assertTrue(measured * 2 >= total)
+        assertTrue("measured but off: $within/$measured", within * 4 >= measured * 3)
+        assertTrue("median ${errs[errs.size / 2]}", errs[errs.size / 2] <= 40)
+    }
+}

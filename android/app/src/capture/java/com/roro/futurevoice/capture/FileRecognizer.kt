@@ -1,4 +1,4 @@
-package com.roro.futurevoice.talk
+package com.roro.futurevoice.capture
 
 import android.content.Context
 import android.content.Intent
@@ -20,24 +20,18 @@ import java.io.File
 import kotlin.coroutines.resume
 
 /**
- * The platform recognizer run over a recording ALREADY ON DISK — Android's
- * `SFSpeechURLRecognitionRequest`, which is where word TIMES come from.
+ * PROBE ONLY (capture build): the platform recognizer run over a recording
+ * already on disk — the measurement behind plan 2.9's choice of take timing.
  *
- * The shadow take is recorded first and read afterwards, so the mic is free
- * by the time this runs: Android 13 added `EXTRA_AUDIO_SOURCE` (feed the
- * recognizer a file descriptor instead of the mic) and Android 14 added
- * `EXTRA_REQUEST_WORD_TIMING`, whose `RecognitionPart`s carry each word's
- * onset. Nothing is ever sent anywhere new and nothing is billed: it is the
- * device's own recognizer.
- *
- * A part carries an ONSET and no end — the end of a word is taken as the
- * next word's onset (the last one ends at the file's last voiced moment,
- * which the caller supplies). Onsets are all the rhythm grade reads; the
- * ends only shape the pace figure and the karaoke window.
- *
- * Returns null whenever the platform can't do it — an older OS, a
- * recognizer that ignores the audio source or returns no parts — so every
- * caller keeps what it had (the estimate, or "words only").
+ * Android 13 added `EXTRA_AUDIO_SOURCE` (feed the recognizer a file
+ * descriptor) and Android 14 `EXTRA_REQUEST_WORD_TIMING`, whose
+ * `RecognitionPart`s should carry each word's onset. Measured 2026-10-02 on
+ * the Pixel 9 emulator (API 36, Google recognizer): a plain request returns
+ * an EMPTY result; a segmented session returns the words, perfectly
+ * ("soak it all in right we could grab…", 0.6 s) but no parts; the on-device
+ * recognizer refuses until a language pack is downloaded (error 13). So no
+ * recognizer the app can reach returns word times for a file, and the app
+ * measures the learner with `TakeAligner` instead. `probe-asr` reruns this.
  */
 object FileRecognizer {
 

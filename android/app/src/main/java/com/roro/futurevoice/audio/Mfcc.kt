@@ -21,7 +21,7 @@ object Mfcc {
     private const val WIN = 400    // 25 ms
     private const val N_FFT = 512
     private const val N_MELS = 26
-    private const val N_CEPS = 12  // c1…c12 (c0 = loudness, dropped)
+    private const val N_CEPS = 12  // c0…c11 — c0 (loudness) is what lets the warp find syllables and pauses
 
     private val window = DoubleArray(WIN) { 0.54 - 0.46 * cos(2 * PI * it / (WIN - 1)) }
     private val melBank: Array<DoubleArray> = run {
@@ -72,11 +72,13 @@ object Mfcc {
                 for (k in 0..N_FFT / 2) if (fb[k] != 0.0) e += fb[k] * (re[k] * re[k] + im[k] * im[k])
                 logMel[m] = ln(e + 1e-10)
             }
-            // DCT-II (orthonormal), coefficients 1…N_CEPS.
-            for (c in 1..N_CEPS) {
+            // DCT-II (orthonormal), c0…c(N_CEPS-1). c0 is kept: dropping it
+            // (speaker-neutral cepstra only) put 77% of connected-speech
+            // onsets within 120 ms; keeping it, 84%.
+            for (c in 0 until N_CEPS) {
                 var s = 0.0
                 for (m in 0 until N_MELS) s += logMel[m] * cos(PI * c * (2 * m + 1) / (2 * N_MELS))
-                ceps[f][c - 1] = s * sqrt(2.0 / N_MELS)
+                ceps[f][c] = s * sqrt((if (c == 0) 1.0 else 2.0) / N_MELS)
             }
         }
         return ceps
