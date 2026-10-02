@@ -334,13 +334,15 @@ struct WeeklyPlanEditor: View {
     @State private var snapshot: PlannerSnapshot?
     @State private var blockEditor: PlanBlockEditor.Target?
     @State private var showSettings = false
-    @State private var pendingSplit: PendingSplit?
+    /// A block that ran on several weekdays had ONE of them dragged to a new
+    /// time. That one has already moved; this asks whether the rest follow.
+    @State private var pendingFollow: PendingFollow?
     @State private var refused = false
     @State private var noDay: Date?
 
-    private struct PendingSplit {
-        var occurrence: StudyPlan.Occurrence
-        var day: Date
+    private struct PendingFollow {
+        /// The block still holding the other weekdays.
+        var remainingId: UUID
         var newStart: Date
     }
 
@@ -406,13 +408,16 @@ struct WeeklyPlanEditor: View {
             .sheet(isPresented: $showSettings) {
                 PlanSettingsSheet(week: weekForSettings)
             }
-            .confirmationDialog(splitTitle, isPresented: Binding(
-                get: { pendingSplit != nil }, set: { if !$0 { pendingSplit = nil } }),
+            .confirmationDialog(explain("Move the other days too?"), isPresented: Binding(
+                get: { pendingFollow != nil }, set: { if !$0 { pendingFollow = nil } }),
                 titleVisibility: .visible) {
-                if let split = pendingSplit {
-                    Button(explain("Only on \(weekdayName(split.newStart))")) { apply(split, .everyWeek) }
-                    Button(explain("Every day it runs")) { apply(split, .allDays) }
-                    Button("Cancel", role: .cancel) { pendingSplit = nil }
+                if let follow = pendingFollow {
+                    Button(explain("Every day it runs")) { applyFollow(follow) }
+                    // Already done: the dragged one moved on release. Tapping
+                    // outside means the same.
+                    Button(explain("Only on \(weekdayName(follow.newStart))"), role: .cancel) {
+                        pendingFollow = nil
+                    }
                 }
             }
             .alert("Too many call times", isPresented: $refused) {
@@ -454,11 +459,6 @@ struct WeeklyPlanEditor: View {
         date.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide))
     }
 
-    private var splitTitle: String {
-        guard let split = pendingSplit else { return "" }
-        return explain("Move to \(split.newStart.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated).hour().minute()))")
-    }
-
     private func handleMove(_ occ: StudyPlan.Occurrence, _ day: Date, _ newStart: Date) {
         let c = cal.dateComponents([.hour, .minute], from: newStart)
         switch occ.source {
@@ -477,24 +477,35 @@ struct WeeklyPlanEditor: View {
         case .template(let id):
             let spans = (store.plan.blocks.first { $0.id == id }?.weekdays.count ?? 1) > 1
             let sameDay = cal.isDate(day, inSameDayAs: newStart)
-            let split = PendingSplit(occurrence: occ, day: day, newStart: newStart)
-            // Only a time change on a block that runs on several weekdays is
-            // ambiguous; moving to another weekday takes just this one.
-            if spans && sameDay { pendingSplit = split } else { apply(split, .everyWeek) }
+            // The cell lands where it was dropped, at once: this weekday is
+            // split off to the new time (or moved, if it was the only one).
+            guard let moved = store.plan.moving(blockId: id, on: day, to: newStart, scope: .everyWeek),
+                  store.update(moved) else {
+                refused = true
+                return
+            }
+            reload()
+            HapticEngine.light()
+            Analytics.capture("plan_block_moved", ["kind": occ.kind.rawValue, "scope": "weekday"])
+            // Only a time change on a block that also runs on other weekdays
+            // leaves a question: should those follow?
+            if spans && sameDay { pendingFollow = PendingFollow(remainingId: id, newStart: newStart) }
         case .exception, .sayItAgain:
             break
         }
     }
 
-    private func apply(_ split: PendingSplit, _ scope: StudyPlan.Scope) {
-        pendingSplit = nil
-        guard let id = split.occurrence.blockId,
-              let new = store.plan.moving(blockId: id, on: split.day, to: split.newStart, scope: scope),
+    private func applyFollow(_ follow: PendingFollow) {
+        pendingFollow = nil
+        let c = cal.dateComponents([.hour, .minute], from: follow.newStart)
+        guard let new = store.plan.following(blockId: follow.remainingId,
+                                             toHour: c.hour ?? 0, minute: c.minute ?? 0),
               store.update(new) else {
             refused = true
             return
         }
+        reload()
         HapticEngine.light()
-        Analytics.capture("plan_block_moved", ["kind": split.occurrence.kind.rawValue, "scope": "\(scope)"])
+        Analytics.capture("plan_block_moved", ["scope": "all_days"])
     }
 }

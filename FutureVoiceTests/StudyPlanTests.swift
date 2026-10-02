@@ -167,4 +167,19 @@ final class StudyPlanTests: XCTestCase {
             talks: [.init(id: UUID(), start: at(6, 12), end: at(6, 12, 10), title: "x")], events: [])
         XCTAssertTrue(PlannerDay.absorbed(planned: tue, actuals: atNoon).isEmpty)
     }
+
+    func testDraggedDayLandsFirstThenTheRestCanFollow() {
+        var plan = StudyPlan()
+        let id = UUID()
+        plan.blocks = [.init(id: id, kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10)]
+        // Release: Tuesday alone is already at 9:00.
+        let moved = plan.moving(blockId: id, on: at(6, 0), to: at(6, 9), scope: .everyWeek, calendar: cal)!
+        XCTAssertEqual(moved.occurrences(on: at(6, 0), calendar: cal).first?.start, at(6, 9))
+        XCTAssertEqual(moved.occurrences(on: at(7, 0), calendar: cal).first?.start, at(7, 8))
+        // "Every day it runs": the rest follow, and it is one block again.
+        let all = moved.following(blockId: id, toHour: 9, minute: 0)!
+        XCTAssertEqual(all.blocks.count, 1)
+        XCTAssertEqual(all.blocks[0].weekdays, Set(2...6))
+        XCTAssertEqual(all.occurrences(on: at(7, 0), calendar: cal).first?.start, at(7, 9))
+    }
 }

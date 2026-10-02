@@ -273,6 +273,19 @@ struct StudyPlan: Codable, Equatable {
         return plan.isCallable ? plan : nil
     }
 
+    /// After one weekday of a block was dragged to a new time, take the rest
+    /// of its weekdays there too ("every day it runs"). The two halves become
+    /// one block again. Nil if that would need more call times than the call
+    /// can ring.
+    func following(blockId: UUID, toHour hour: Int, minute: Int) -> StudyPlan? {
+        var plan = self
+        guard let i = plan.blocks.firstIndex(where: { $0.id == blockId }) else { return nil }
+        plan.blocks[i].hour = hour
+        plan.blocks[i].minute = minute
+        plan.mergeTwins()
+        return plan.isCallable ? plan : nil
+    }
+
     /// Two template blocks of the same kind, time and length are one block on
     /// more weekdays.
     mutating func mergeTwins() {

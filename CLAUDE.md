@@ -542,9 +542,13 @@ its own branch so the founder picks the build it ships in.
   block showing its 24-hour start time, weekday header pinned above the
   scrolling hours. Tap an empty spot to add a block there (half-hour steps);
   tap a block to edit it; long-press and drag to move it — vertical = time
-  (15-minute steps), sideways = weekday. Only a time change on a block that
-  runs on several weekdays asks "only on <weekday> / every day it runs";
-  a move to another weekday takes just that one. The review slot and the
+  (15-minute steps), sideways = weekday. A dropped cell is ALREADY where it
+  was dropped (founder: the release itself is the move): that weekday is
+  split off to the new time at once (`moving(.everyWeek)`), and only then,
+  if the block also runs on other weekdays and only its time changed, a
+  dialog asks whether the rest follow — "every day it runs" moves them too
+  (`StudyPlan.following`, which merges the halves back into one block);
+  "only on <weekday>" or tapping outside leaves it as it already is. The review slot and the
   test move their own settings. The slider opens `PlanSettingsSheet`. The
   dated grid in Activity runs 8 pt from the screen edge (it needs every
   point across) and has no edit mode.
