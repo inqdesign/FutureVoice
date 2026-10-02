@@ -981,6 +981,11 @@ extension Error {
         if let g = self as? GeminiError, case let .malformedJSON(detail, excerpt) = g {
             return "\(detail) «\(excerpt)»"
         }
+        // An HTTP failure logged as `GeminiError:1` and nothing else, so a 429,
+        // a 503 and the gateway's own refusal all read the same (2026-10-02).
+        if let g = self as? GeminiError, case let .httpError(status, body) = g {
+            return "http \(status) «\(body.prefix(160))»"
+        }
         guard let error = self as? DecodingError else { return nil }
         func path(_ context: DecodingError.Context) -> String {
             context.codingPath.map(\.stringValue).joined(separator: ".")

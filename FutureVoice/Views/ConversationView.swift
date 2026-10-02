@@ -3992,7 +3992,13 @@ struct ConversationView: View {
     }
 
     private func endSession() async {
-        guard !turns.isEmpty, !isEnding else { return }
+        // Once the summary sheet has closed, the call is wrapped up and the
+        // screen is on its way out. The sheet's Done sits where the call's End
+        // does (both top trailing), so a quick second tap on Done landed on
+        // End and summarized the same talk again — every call of one learner
+        // on build 65 (prod, 2026-10-02). When that second run failed it left
+        // the draft's `summary: nil` on disk over a summary that had worked.
+        guard !turns.isEmpty, !isEnding, !postCallExitStarted, !isTornDown else { return }
         phoneCallActive = false
         // The call is over — summary generation isn't talk time, and the lock
         // screen must stop showing a call that has hung up.
