@@ -235,9 +235,10 @@ struct PracticeTab: View {
             .sheet(isPresented: $showingDrills, onDismiss: reload) {
                 DrillSheet().environmentObject(appState)
             }
-            .sheet(isPresented: $showingGoalsEditor) {
-                StudyGoalsSheet()
-                    .presentationDetents([.medium, .large])
+            // Today's edit opens the ROUTINE (founder, 2026-10-02): what a
+            // day asks for is set in one place.
+            .fullScreenCover(isPresented: $showingGoalsEditor, onDismiss: reload) {
+                WeeklyPlanEditor()
             }
             // Deck sessions write snoozes ("back in 10 minutes") — honor them
             // with the shared review reminder the moment the sheet closes.

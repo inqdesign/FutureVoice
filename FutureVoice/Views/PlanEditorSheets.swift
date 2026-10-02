@@ -256,6 +256,7 @@ struct WeeklyPlanEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = StudyPlanStore.shared
 
+    @State private var showSettings = false
     @State private var snapshot: PlannerSnapshot?
     @State private var blockEditor: PlanBlockEditor.Target?
     /// A block that ran on several weekdays had ONE of them dragged to a new
@@ -321,12 +322,22 @@ struct WeeklyPlanEditor: View {
                     .padding(.vertical, 10)
                     .background(.bar)
             }
-            .navigationTitle(explain("Weekly plan"))
+            .navigationTitle(explain("My routine"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Reminders and the weekly test's day live in the review
+                // settings; the routine editor is now where Review's Today
+                // card sends its edit button, so they stay one tap away.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel(Text("Settings"))
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showSettings) {
+                StudyGoalsSheet().presentationDetents([.medium, .large])
             }
             .sheet(item: $blockEditor) { PlanBlockEditor(target: $0) }
             .confirmationDialog(explain("Move the other days too?"), isPresented: Binding(
