@@ -604,11 +604,21 @@ its own branch so the founder picks the build it ships in.
   the pure walk (`StudyPlanTests`). A talk block is done by MINUTES of
   metered talk (`TalkTimeLog`, the ring's number), filled in plan order —
   4 of 10 minutes is a 40% ring and "4 of 10 min", not a miss.
-- Activity, top to bottom: the promise card ("My promise · Day N in a row ·
-  Best M", the rule in one line, the week as circles — green kept, grey
-  ring missed, bare number rest, today a filling ring, dashed future plans —
-  with ‹ ›), then the selected day's list; "Edit routine" is the nav bar's
-  button; the past sits under its own "History" header with Month/Year.
+- **The page is a JOURNAL OF MY ROUTINE** (same day, founder: "this is a
+  journal of my routine — my promise at the top, 'this is what I will do',
+  and under it the journey, by Day/Month/Year; the materials were there,
+  they just weren't framed"). Titled "My routine" (not Activity). Top:
+  `RoutinePromiseCard` — the promise IN WORDS, one line per thing promised
+  ("Talk 10 min · Weekdays 8:00", "Words 10 min · Tue·Thu 19:30", the review
+  slot and the weekly test included), its own Edit button, and under a
+  divider the flame line ("Kept for N days · Best M", or "N days in a row"
+  with a "Make it a promise" button while it isn't one yet). Below:
+  "Journey" with Day | Month | Year — Day is `PlannerDayCard` (week circles
+  + the day's list), Month and Year are the calendar this page always had,
+  with the totals; the day's journal card (photo, share) stays under all
+  three. Two earlier framings were cut the same day: an "Edit routine"
+  nav button beside a page titled Activity (the title and the action named
+  two different pages), and a "History" section under a streak card.
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

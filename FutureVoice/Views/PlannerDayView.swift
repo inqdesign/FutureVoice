@@ -14,8 +14,6 @@ import SwiftUI
 struct PlannerDayCard: View {
     let snapshot: PlannerSnapshot
     @Binding var selectedDay: Date?
-    let streak: Int
-    let best: Int
     let isPromise: Bool
     let activeDays: Set<Date>
     let onShiftWeek: (Int) -> Void
@@ -32,7 +30,6 @@ struct PlannerDayCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            promise
             week
             Divider()
             dayList
@@ -40,30 +37,6 @@ struct PlannerDayCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-    }
-
-    // MARK: - The promise
-
-    private var promise: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(isPromise ? explain("My promise") : explain("Streak"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(explain("Day \(streak) in a row"))
-                    .font(.system(size: 34, weight: .bold))
-                    .monospacedDigit()
-                Text(explain("Best \(best)"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            Text(isPromise
-                 ? explain("A day counts when you do everything you planned. Days with nothing planned are rest days.")
-                 : explain("Every day you study counts. Make your plan a promise to raise the bar."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 
     // MARK: - The week
@@ -313,5 +286,116 @@ private struct ProgressRing: View {
             }
         }
         .frame(width: 22, height: 22)
+    }
+}
+
+/// The top of the routine journal: the learner's promise, IN WORDS — what
+/// they said they would do — and how long they have kept it. The founder,
+/// 2026-10-02: "my routine at the top: I will do this, a promise to myself;
+/// under it the journey, by day, month and year." Everything below the card
+/// is the record of keeping it.
+struct RoutinePromiseCard: View {
+    let plan: StudyPlan
+    let test: WeeklyTestSchedule
+    let streak: Int
+    let best: Int
+    let onEdit: () -> Void
+    let onMakePromise: () -> Void
+
+    private let cal = Calendar.current
+    private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
+    private var isPromise: Bool { plan.streakSince != nil }
+
+    /// One line per thing promised, in the order a week runs.
+    private struct Line: Identifiable {
+        var id: String
+        var days: String
+        var time: String
+        var kind: StudyPlan.Kind
+        var minutes: Int
+        var sort: Int
+    }
+
+    private var lines: [Line] {
+        var out: [Line] = plan.blocks.map {
+            Line(id: $0.id.uuidString, days: daysLabel($0.weekdays), time: clock($0.hour, $0.minute),
+                 kind: $0.kind, minutes: $0.minutes, sort: $0.startMinute)
+        }
+        if plan.autoReview {
+            let planned = Set(plan.blocks.flatMap(\.weekdays))
+            out.append(Line(id: "review", days: daysLabel(planned.isEmpty ? Set(1...7) : planned),
+                            time: clock(plan.reviewHour, plan.reviewMinute),
+                            kind: .review, minutes: plan.reviewMinutes,
+                            sort: plan.reviewHour * 60 + plan.reviewMinute))
+        }
+        out.append(Line(id: "test", days: daysLabel([test.weekday]), time: clock(test.hour, test.minute),
+                        kind: .test, minutes: 15, sort: 24 * 60 + test.hour * 60 + test.minute))
+        return out.sorted { $0.sort < $1.sort }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(isPromise ? explain("My promise") : explain("My routine"))
+                    .font(.headline)
+                Spacer()
+                Button(explain("Edit"), action: onEdit)
+                    .font(.subheadline)
+            }
+            if lines.isEmpty {
+                Text("Nothing planned yet.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(lines) { line in
+                        HStack(spacing: 10) {
+                            Image(systemName: line.kind.symbol)
+                                .font(.subheadline)
+                                .foregroundStyle(line.kind.color)
+                                .frame(width: 20)
+                            Text(explain("\(line.kind.label) \(line.minutes) min"))
+                                .font(.subheadline)
+                            Spacer(minLength: 8)
+                            Text(verbatim: "\(line.days) \(line.time)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
+                }
+            }
+            Divider()
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "flame.fill").foregroundStyle(.orange)
+                Text(isPromise ? explain("Kept for \(streak) days") : explain("\(streak) days in a row"))
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                Text(explain("Best \(best)"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !isPromise && !lines.isEmpty {
+                    Button(explain("Make it a promise"), action: onMakePromise)
+                        .font(.footnote.weight(.semibold))
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    private func clock(_ h: Int, _ m: Int) -> String { String(format: "%d:%02d", h, m) }
+
+    /// "Every day", "Weekdays", "Weekends", else the days themselves ("Tue·Thu").
+    private func daysLabel(_ days: Set<Int>) -> String {
+        if days.count == 7 { return explain("Every day") }
+        if days == Set(2...6) { return explain("Weekdays") }
+        if days == [1, 7] { return explain("Weekends") }
+        var c = cal; c.locale = uiLocale
+        let symbols = c.shortWeekdaySymbols
+        let order = (0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }
+        return order.filter(days.contains).map { symbols[$0 - 1] }.joined(separator: "·")
     }
 }

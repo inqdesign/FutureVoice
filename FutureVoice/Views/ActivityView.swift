@@ -10,7 +10,7 @@ struct ActivityView: View {
 
     @State private var activeDays: Set<Date> = []
     @State private var displayedMonth = Date()
-    @State private var viewMode: ViewMode = .month
+    @State private var viewMode: ViewMode = .day
     @State private var currentStreak = 0
     @State private var longestStreak = 0
     /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
@@ -34,13 +34,13 @@ struct ActivityView: View {
     @State private var cardDay: CardDay?
     private struct CardDay: Identifiable { let date: Date; var id: Date { date } }
 
-    /// The history calendar's scale. The promise card above it is always
-    /// there; this only picks how the past is laid out.
+    /// How the journey under the promise is read: one day, a month, a year.
     enum ViewMode: String, CaseIterable, Identifiable {
-        case month, year
+        case day, month, year
         var id: String { rawValue }
         var label: String {
             switch self {
+            case .day: return chrome("Day")
             case .month: return chrome("Month")
             case .year: return chrome("Year")
             }
@@ -70,23 +70,36 @@ struct ActivityView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                // The promise and today first: what the learner opened this
-                // page for. The past is below it, under its own header.
-                plannerSection
+                // A journal of the learner's routine (founder, 2026-10-02):
+                // the promise in words at the top, the journey of keeping it
+                // underneath — read by day, month or year.
+                RoutinePromiseCard(plan: planStore.plan, test: WeeklyTestSettings.shared.schedule,
+                                   streak: currentStreak, best: longestStreak,
+                                   onEdit: {
+                                       Analytics.capture("plan_edit_opened", [:])
+                                       showPlanEditor = true
+                                   },
+                                   onMakePromise: {
+                                       var p = planStore.plan
+                                       p.streakSince = cal.startOfDay(for: Date())
+                                       planStore.update(p)
+                                       Analytics.capture("plan_promise", ["on": true, "from": "journal"])
+                                       load()
+                                   })
                 HStack {
-                    Text("History").font(.title3.weight(.semibold))
+                    Text("Journey").font(.title3.weight(.semibold))
                     Spacer()
                     Picker("View", selection: $viewMode) {
                         ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 140)
+                    .frame(width: 168)
                 }
-                .padding(.top, 8)
-                statsBar
+                .padding(.top, 6)
                 switch viewMode {
-                case .month: monthCard
-                case .year:  yearCard
+                case .day:   plannerSection
+                case .month: statsBar; monthCard
+                case .year:  statsBar; yearCard
                 }
                 // Always rendered when a day is selected — never toggled off,
                 // so switching days doesn't pop the card in and out and jump
@@ -100,18 +113,10 @@ struct ActivityView: View {
             .padding(.bottom, 28)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Activity")
+        .navigationTitle(explain("My routine"))
         .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit routine") {
-                    Analytics.capture("plan_edit_opened", [:])
-                    showPlanEditor = true
-                }
-            }
-        }
         .onAppear {
             load()
             #if DEBUG
@@ -140,7 +145,6 @@ struct ActivityView: View {
     private var plannerSection: some View {
         if let planner {
             PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
-                           streak: currentStreak, best: longestStreak,
                            isPromise: planStore.plan.streakSince != nil,
                            activeDays: studiedDays,
                            onShiftWeek: shiftWeek,
@@ -625,7 +629,7 @@ struct ActivityView: View {
 
     private var canGoNext: Bool {
         switch viewMode {
-        case .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+        case .day, .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
         case .year:  return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .year)
         }
     }
