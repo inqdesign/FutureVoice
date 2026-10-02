@@ -16,7 +16,6 @@ struct PlannerDayCard: View {
     @Binding var selectedDay: Date?
     let isPromise: Bool
     let activeDays: Set<Date>
-    let onShiftWeek: (Int) -> Void
     let onSayItAgain: () -> Void
     /// A talk in the day's list was tapped: open its book.
     var onOpenTalk: (UUID) -> Void = { _ in }
@@ -70,34 +69,64 @@ struct PlannerDayCard: View {
         }
     }
 
+    /// The week strip, the way Calendar and Fitness draw one: no arrows —
+    /// swipe for another week, and a month title with a "Today" capsule to
+    /// come back. The selected day sits on a soft pill; the circle inside
+    /// keeps the day's standing.
     private var week: some View {
-        HStack(spacing: 0) {
-            Button { onShiftWeek(-1) } label: {
-                Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
-                    .frame(width: 22, height: 44)
-            }
-            ForEach(snapshot.days, id: \.self) { d in
-                Button { selectedDay = d } label: {
-                    VStack(spacing: 5) {
-                        Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        dayCircle(d)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+        VStack(spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(day.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).year()))
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if !cal.isDate(day, inSameDayAs: today) {
+                    Button(explain("Today")) { go(to: today) }
+                        .font(.footnote.weight(.semibold))
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.mini)
+                        .transition(.opacity)
                 }
-                .buttonStyle(.plain)
             }
-            Button { onShiftWeek(1) } label: {
-                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
-                    .frame(width: 22, height: 44)
+            .frame(height: 24)
+            HStack(spacing: 4) {
+                ForEach(snapshot.days, id: \.self) { d in
+                    let selected = cal.isDate(d, inSameDayAs: day)
+                    Button { go(to: d) } label: {
+                        VStack(spacing: 6) {
+                            Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
+                                .font(.caption2.weight(selected ? .semibold : .regular))
+                                .foregroundStyle(selected ? Color.primary : Color.secondary)
+                            dayCircle(d)
+                        }
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(selected ? Color(.tertiarySystemFill) : .clear))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .id(snapshot.days.first)
+            .transition(.asymmetric(insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                                    removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)))
+            .clipped()
         }
+        .contentShape(Rectangle())
         .gesture(DragGesture(minimumDistance: 24).onEnded { v in
-            guard abs(v.translation.width) > abs(v.translation.height) else { return }
-            onShiftWeek(v.translation.width < 0 ? 1 : -1)
+            guard abs(v.translation.width) > abs(v.translation.height),
+                  let next = cal.date(byAdding: .day, value: v.translation.width < 0 ? 7 : -7, to: day)
+            else { return }
+            go(to: next)
         })
+    }
+
+    @State private var forward = true
+
+    private func go(to d: Date) {
+        forward = d >= day
+        withAnimation(.snappy(duration: 0.28)) { selectedDay = d }
     }
 
     @ViewBuilder
@@ -130,11 +159,8 @@ struct PlannerDayCard: View {
         let number = Text("\(cal.component(.day, from: d))")
             .font(.footnote.weight(.semibold))
             .monospacedDigit()
-        let selected = cal.isDate(d, inSameDayAs: day)
         return ZStack { circleFace(d, number: number) }
             .frame(width: 32, height: 32)
-            .padding(3)
-            .overlay(Circle().strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 2))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide).month().day())))
     }
@@ -172,11 +198,6 @@ struct PlannerDayCard: View {
         let list = items
         let talk = snapshot.progress[day] ?? [:]
         return VStack(alignment: .leading, spacing: 0) {
-            Text(cal.isDateInToday(day) ? explain("Today")
-                 : day.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.abbreviated)))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 4)
             if list.isEmpty {
                 Text(isPromise ? explain("Rest day.") : explain("Nothing planned this day."))
                     .font(.subheadline)
@@ -184,7 +205,7 @@ struct PlannerDayCard: View {
                     .padding(.vertical, 12)
             }
             ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { Divider().padding(.leading, 76) }
+                if index > 0 { Divider().padding(.leading, 48) }
                 row(item, talk: talk)
             }
         }
@@ -193,7 +214,7 @@ struct PlannerDayCard: View {
             guard abs(v.translation.width) > abs(v.translation.height) * 1.5,
                   let next = cal.date(byAdding: .day, value: v.translation.width < 0 ? 1 : -1, to: day)
             else { return }
-            selectedDay = next
+            go(to: next)
         })
     }
 
@@ -219,9 +240,9 @@ struct PlannerDayCard: View {
     private func row(_ item: Item, talk: [String: Double]) -> some View {
         switch item.body {
         case .actual(let a):
-            let line = rowLayout(time: clock(a.start), symbol: a.kind.symbol, tint: a.kind.color,
+            let line = rowLayout(time: "\(clock(a.start))–\(clock(a.end))", symbol: a.kind.symbol, tint: a.kind.color,
                                  title: a.title ?? a.kind.label,
-                                 detail: explain("Extra · \(clock(a.start))–\(clock(a.end))"),
+                                 detail: explain("Extra"),
                                  progress: 1)
             if let id = a.sessionId {
                 Button { onOpenTalk(id) } label: { line }.buttonStyle(.plain)
@@ -244,34 +265,33 @@ struct PlannerDayCard: View {
         }
     }
 
-    /// One line, like a row in Reminders: time, the kind's icon (the only
-    /// colour), what it is over one detail line, and a ring that fills as it
-    /// is done.
+    /// One line, like a row in Settings or Reminders: the kind's icon on a
+    /// tinted tile (the only colour), what it is over its time and one
+    /// detail, and a ring that fills as it is done.
     private func rowLayout(time: String, symbol: String, tint: Color, title: String,
                            detail: String?, progress: Double, faded: Bool = false) -> some View {
         HStack(spacing: 12) {
-            Text(time)
-                .font(.subheadline)
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-                .frame(width: 44, alignment: .leading)
             Image(systemName: symbol)
-                .font(.body)
-                .foregroundStyle(tint)
-                .frame(width: 20)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(faded ? Color.secondary : tint)
+                .frame(width: 36, height: 36)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill((faded ? Color.secondary : tint).opacity(0.14)))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.body)
+                    .font(.body.weight(.medium))
                     .foregroundStyle(faded ? Color.secondary : Color.primary)
                     .lineLimit(1)
-                if let detail {
-                    Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
+                Text([time, detail].compactMap { $0 }.joined(separator: " · "))
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 8)
             ProgressRing(progress: progress, faded: faded)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
     }
 }

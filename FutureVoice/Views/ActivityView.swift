@@ -156,7 +156,6 @@ struct ActivityView: View {
             PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
                            isPromise: planStore.plan.streakSince != nil,
                            activeDays: studiedDays,
-                           onShiftWeek: shiftWeek,
                            onSayItAgain: { showSayItAgainPicker = true },
                            onOpenTalk: { id in
                                openTalk = sessionsByDay.values.flatMap { $0 }.first { $0.id == id }
