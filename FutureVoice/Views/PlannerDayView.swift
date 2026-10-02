@@ -20,8 +20,6 @@ struct PlannerDayCard: View {
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
-    static let hourHeight: CGFloat = 46
-    private let labelWidth: CGFloat = 40
 
     private var day: Date {
         let d = selectedDay.map { cal.startOfDay(for: $0) } ?? cal.startOfDay(for: Date())
@@ -158,81 +156,27 @@ struct PlannerDayCard: View {
         return out
     }
 
-    /// The hours shown: the day's own span, never less than 7–22.
-    private var hours: ClosedRange<Int> {
-        let starts = items.map { cal.component(.hour, from: $0.start) }
-        let ends = items.map { min(24, cal.component(.hour, from: $0.end) + 1) }
-        return min(7, starts.min() ?? 7)...max(22, ends.max() ?? 22)
-    }
-
-    private func y(_ date: Date) -> CGFloat {
-        let c = cal.dateComponents([.hour, .minute], from: date)
-        let h: Int = c.hour ?? 0
-        let m: Int = c.minute ?? 0
-        let mins: Int = h * 60 + m - hours.lowerBound * 60
-        return CGFloat(mins) / 60 * Self.hourHeight
-    }
-
-    private func blockHeight(_ item: Item) -> CGFloat {
-        let h = CGFloat(item.end.timeIntervalSince(item.start)) / 3600 * Self.hourHeight
-        return max(30, h)
-    }
-
-    /// Tops, pushed down so a short block drawn taller than its minutes never
-    /// covers the next one.
-    private func tops(_ items: [Item]) -> [String: CGFloat] {
-        var out: [String: CGFloat] = [:]
-        var bottom: CGFloat = -.infinity
-        for item in items {
-            let top = max(y(item.start), bottom + 2)
-            out[item.id] = top
-            bottom = top + blockHeight(item)
-        }
-        return out
-    }
-
+    /// The day as a list, in order — no hour axis. A scaled timeline was
+    /// mostly empty hours to scroll past (founder: "the timeline only means
+    /// something when editing"); that lives in the weekly plan editor.
     private var timeline: some View {
         let list = items
-        let tops = tops(list)
-        let height = CGFloat(hours.upperBound - hours.lowerBound) * Self.hourHeight
-        return HStack(alignment: .top, spacing: 6) {
-            ZStack(alignment: .topTrailing) {
-                ForEach(Array(hours), id: \.self) { h in
-                    Text(verbatim: "\(h):00")
-                        .font(.caption2)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .offset(y: CGFloat(h - hours.lowerBound) * Self.hourHeight - 7)
-                }
+        let isToday = cal.isDateInToday(day)
+        let now = Date()
+        // Where "now" falls: before the first item that hasn't started.
+        let nowIndex = isToday ? (list.firstIndex { $0.start > now } ?? list.count) : nil
+        return VStack(spacing: 6) {
+            if list.isEmpty {
+                Text("Nothing planned this day.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 80)
             }
-            .frame(width: labelWidth, height: height, alignment: .topTrailing)
-
-            ZStack(alignment: .topLeading) {
-                ForEach(Array(hours), id: \.self) { h in
-                    Rectangle().fill(Color(.separator).opacity(0.5))
-                        .frame(height: 0.5)
-                        .offset(y: CGFloat(h - hours.lowerBound) * Self.hourHeight)
-                }
-                ForEach(list) { item in
-                    block(item)
-                        .frame(height: blockHeight(item))
-                        .offset(y: tops[item.id] ?? y(item.start))
-                }
-                if list.isEmpty {
-                    Text("Nothing planned this day.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .offset(y: Self.hourHeight * 2)
-                }
-                if cal.isDateInToday(day), hours.contains(cal.component(.hour, from: Date())) {
-                    Rectangle().fill(Color.red).frame(height: 1.5)
-                        .offset(y: y(Date()))
-                        .allowsHitTesting(false)
-                }
+            ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
+                if index == nowIndex { nowLine(now) }
+                block(item).frame(height: 40)
             }
-            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
-            .clipped()
+            if let nowIndex, nowIndex == list.count, !list.isEmpty { nowLine(now) }
         }
         .contentShape(Rectangle())
         // Swipe the day for the one before or after.
@@ -242,6 +186,18 @@ struct PlannerDayCard: View {
             else { return }
             selectedDay = next
         })
+    }
+
+    private func nowLine(_ now: Date) -> some View {
+        HStack(spacing: 6) {
+            Text(clock(now))
+                .font(.caption2.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.red)
+            Rectangle().fill(Color.red).frame(height: 1.5)
+        }
+        .padding(.vertical, 2)
+        .accessibilityLabel(Text("Now"))
     }
 
     private func clock(_ d: Date) -> String {
@@ -298,7 +254,9 @@ struct PlannerDayCard: View {
                                   style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])))
             }
             .buttonStyle(.plain)
-            .disabled(occ.kind != .sayItAgain || done)
+            // Not `.disabled`: that greys the whole block, and an upcoming
+            // plan must read as clearly as one you can tap.
+            .allowsHitTesting(occ.kind == .sayItAgain && !done)
         }
     }
 }

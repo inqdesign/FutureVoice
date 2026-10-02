@@ -570,7 +570,10 @@ its own branch so the founder picks the build it ships in.
   `done/planned` otherwise, a dot on a future day with a plan) — tap a date,
   or swipe the strip for the next/previous week; below, the selected day at
   full width, every block labelled ("Talk · Coffee with Sarah 8:02–8:14 ✓"),
-  swipe it for the next/previous day. Two designs died the same day: the
+  swipe it for the next/previous day. The day is a LIST in time order
+  with a red "now" line between past and upcoming — not an hour axis,
+  which was mostly empty hours to scroll past (founder: the timeline only
+  means something while editing). Two designs died the same day: the
   seven-column grid (coloured bars nobody could read, and past columns were
   empty space once they were reduced to a result) and the separate day list
   under it (the same day twice). The 7-column grid survives only as the
