@@ -10,6 +10,8 @@ struct ConversationHome: View {
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
+    /// Today's promise is already kept — the header flame lights up.
+    @State private var keptToday = false
     @State private var snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -346,30 +348,34 @@ struct ConversationHome: View {
     ///
     /// So the button is always there and only its CONTENTS change. No zero is
     /// ever shown; with no streak it simply says what it opens.
+    ///
+    /// Alive by one thing only (founder, 2026-10-02: the chip didn't feel
+    /// alive, and a richer chip was "too much"): the flame is grey until
+    /// today's promise is kept, then it lights up. It wears the same system
+    /// glass as the language and profile buttons beside it.
     private var streakChip: some View {
         Button {
             showingActivity = true
         } label: {
             HStack(spacing: 4) {
-                if snapshot.streakDays > 0 {
+                if snapshot.streakDays > 0 || keptToday {
                     Image(systemName: "flame.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.orange)
-                    Text("\(snapshot.streakDays) day streak")
-                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(keptToday ? Color.orange : Color.secondary)
+                        .symbolEffect(.bounce, value: keptToday)
+                    Text("\(max(snapshot.streakDays, 1)) day streak")
                         .foregroundStyle(.primary)
+                        .monospacedDigit()
                 } else {
                     Image(systemName: "calendar")
-                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text("Activity")
-                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(.primary)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Capsule().fill(Color(.secondarySystemFill)))
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .modifier(HeaderGlass())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(snapshot.streakDays > 0
@@ -704,6 +710,7 @@ struct ConversationHome: View {
             .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
         sessionCount = sessions.count
         snapshot = PracticeStats.snapshot()
+        keptToday = PracticeStats.standing(of: Date(), activeDays: PracticeStats.activeDays()) == .kept
         VocabStore.shared.backfillFromSessions()
 
         let cal = Calendar.current
@@ -1174,6 +1181,19 @@ private struct HeaderGlassCircle: ViewModifier {
             content.glassEffect(.regular.interactive(), in: Circle())
         } else {
             content
+        }
+    }
+}
+
+/// The header's own glass capsule, matching the system glass iOS 26 draws
+/// around the language and profile buttons (the centre slot gets none of
+/// its own). Before 26, a plain fill.
+private struct HeaderGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            content.background(Capsule().fill(Color(.secondarySystemFill)))
         }
     }
 }
