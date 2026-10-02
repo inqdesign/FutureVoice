@@ -753,9 +753,11 @@ final class AppState: ObservableObject {
     ///   Never pass it from a view refresh.
     func maybeGenerateWeeklyReport(retryNow: Bool = false) {
         if retryNow { weeklyReportRetryAfter = nil }
-        // Archived talks are out of the evidence pool — same rule as the
-        // Progress tab's score stats.
-        let sessions = SessionStore.shared.load().filter { $0.endedAt != nil && $0.archivedAt == nil }
+        // Archived talks and practice (coach mode) calls are out of the
+        // evidence pool — same rule as the Progress tab's score stats. A
+        // practice call must never move the learner's level.
+        let sessions = SessionStore.shared.load()
+            .filter { $0.endedAt != nil && $0.archivedAt == nil && !$0.isPractice }
         let last = weeklyReports.first
         guard case .ready = WeeklyReportEngine.unlockState(
             endedSessions: sessions,
@@ -1143,8 +1145,10 @@ final class AppState: ObservableObject {
               var c = s.curriculum else { return }
 
         let spoken = SessionStore.shared.load()
-            .filter { $0.topic == s.displayTitle }
+            .filter { $0.topic == s.displayTitle && !$0.isPractice }
             .flatMap { $0.turns }
+        // A practice (coach mode) call read its answers off a suggestion —
+        // practice, not a phrase the learner produced.
             .filter { $0.role == .user }
             .map(\.transcript)
             .joined(separator: " ")

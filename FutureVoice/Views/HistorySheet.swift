@@ -101,7 +101,7 @@ struct SessionDetailView: View {
     var body: some View {
         List {
             if let summary = session.summary {
-                if let card = summary.scorecard {
+                if let card = summary.scorecard, !session.isPractice {
                     Section("Nutrition") {
                         ScorecardView(scorecard: card, grammarIssues: summary.grammarIssues,
                                       userTurns: session.turns.filter { $0.role == .user },

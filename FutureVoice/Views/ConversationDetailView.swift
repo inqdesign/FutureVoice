@@ -187,7 +187,12 @@ struct ConversationDetailView: View {
         coverBlock
         missingSummaryBlock
         if curriculum.isMastered && archivedAt == nil { masteredBanner }
-        if let sc = session.summary?.scorecard {
+        if session.isPractice {
+            // A practice call is never scored on the page: the answers were
+            // read off coach mode's suggestions (`Session.coached`).
+            Divider().padding(.leading, 20)
+            practiceBlock
+        } else if let sc = session.summary?.scorecard {
             Divider().padding(.leading, 20)
             scoreBlock(sc)
         }
@@ -516,6 +521,19 @@ struct ConversationDetailView: View {
 
     /// A small group label inside a page that stacks more than one kind of
     /// material.
+    /// Stands where the score would be on a practice (coach mode) call.
+    private var practiceBlock: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            groupLabel("Practice call", icon: "lightbulb")
+            Text(explain("You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+        }
+    }
+
     private func groupLabel(_ title: LocalizedStringKey, icon: String) -> some View {
         Label(title, systemImage: icon)
             .font(.footnote.weight(.semibold))

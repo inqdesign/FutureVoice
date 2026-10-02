@@ -616,6 +616,11 @@ struct ConversationView: View {
     @State private var coachHint: TalkGoalItem?
     /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
     /// the learner's recurring mistakes on appear, named in their language,
+    /// Coach mode's "try saying" for the line just spoken (`CoachSuggester`).
+    @State private var coachReply: CoachReply?
+    /// Coach mode was on at some point in this call — the whole call is then
+    /// a practice call (`Session.coached`).
+    @State private var coachWasOn = false
     /// and watched on every correction. nil = none this call.
     @State private var grammarFocus: GrammarFocus?
     /// Learner turns whose correction was the focus coming back — their card
@@ -1094,12 +1099,14 @@ struct ConversationView: View {
             .task {
                 goalItems = pickGoalItems()
                 coachExtras = TalkGoalPicker.coachExtras(excluding: Set(goalItems.map(\.key)))
+                if coachMode { coachWasOn = true }
                 await loadGrammarFocus()
             }
             .onChange(of: coachMode) { _, on in
                 if on, grammarFocus == nil { Task { await loadGrammarFocus() } }
                 syncCoachSteer()
-                if !on { coachHint = nil }
+                if on { coachWasOn = true }
+                if !on { coachHint = nil; coachReply = nil }
             }
             .task {
                 let account = await AccountStatus.fetch()
@@ -1354,10 +1361,7 @@ struct ConversationView: View {
                             // their partial has text.
                             if showsTranscript,
                                !turns.isEmpty || !realtime.partial.isEmpty {
-                                PartialTurnView(text: realtime.partial, coach: coachHint,
-                                                coachUsed: coachHint.map { usedGoalKeys.contains($0.key) } ?? false) {
-                                    goalDetail = coachHint
-                                }
+                                PartialTurnView(text: realtime.partial)
                                     .id("partial-listening")
                                     .transition(.opacity)
                             }
@@ -1466,9 +1470,18 @@ struct ConversationView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
-            // The hint lives in the learner's own listening bubble; only with
-            // subtitles off (no bubble) does it fall back to a line here.
-            if let item = coachHint, !showsTranscript {
+            // Coach mode's help sits HERE, right above the pill, and never in
+            // the learner's listening bubble (2026-10-01, device test): the
+            // suggestion lands a beat after the bubble is drawn, the bubble
+            // grew under the bar with nothing scrolling it back into view,
+            // and "Listening…" beside a bold sentence read as two voices in
+            // one shape. A fixed spot can't be scrolled away.
+            if let reply = coachReply {
+                CoachReplyLabel(reply: reply)
+                    .padding(.horizontal, 32)
+                    .transition(.opacity)
+            }
+            if let item = coachHint {
                 CoachHintLine(item: item, used: usedGoalKeys.contains(item.key)) {
                     goalDetail = item
                 }
@@ -2528,8 +2541,8 @@ struct ConversationView: View {
         realtime.onReplyBegan = { context in
             guard !isTornDown else { return }
             // The hint belonged to the question just answered.
-            if coachHint != nil {
-                withAnimation(.easeInOut(duration: 0.2)) { coachHint = nil }
+            if coachHint != nil || coachReply != nil {
+                withAnimation(.easeInOut(duration: 0.2)) { coachHint = nil; coachReply = nil }
             }
             let turn = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
                             transcript: "", durationMs: 0, timestamp: Date(),
@@ -3407,34 +3420,41 @@ struct ConversationView: View {
         realtime.setSteer(steer)
     }
 
-    /// Coach mode's one step per fluent-self line: if a hint may be drawn and
-    /// the line asked something, ask `CoachJudge` which studied item a
-    /// natural answer to THAT question uses — the hint is the question's,
-    /// never the list's. Then re-set the steer for the next line.
+    /// Coach mode's one step per fluent-self line: ask `CoachSuggester` for
+    /// something the learner could say back, every line, the opener included.
+    /// When a word hint may be drawn (the ration below, and only once the
+    /// learner has spoken) the studied items ride along, and an answer that
+    /// naturally uses one names it — that is the word hint now. Then re-set
+    /// the steer for the next line.
     private func advanceCoach(afterReply text: String, turnId: UUID) {
-        // The opener asks before the learner has said a word — no hint on it,
-        // and it doesn't spend the gap either.
-        guard coachMode, learnerSpokeThisCall else { return }
-        let mayHint = coach.mayHint
-        coach.replyFinished()
-        let candidates = coachCandidates()
-        if mayHint, !candidates.isEmpty, CoachPlan.endsInQuestion(text) {
-            let learnerSaid = turns.last(where: { $0.role == .user })?.transcript
-            Task { @MainActor in
-                guard let item = await CoachJudge.pick(question: text, learnerSaid: learnerSaid,
-                                                       candidates: candidates,
-                                                       key: turnId.uuidString),
-                      coachMode, !isTornDown,
-                      // Still the line being answered — a late verdict must
-                      // never label the NEXT question.
-                      turns.last(where: { $0.role == .fluentSelf })?.id == turnId,
-                      !usedGoalKeys.contains(item.key) else { return }
+        guard coachMode else { return }
+        var candidates: [TalkGoalItem] = []
+        if learnerSpokeThisCall {
+            let mayHint = coach.mayHint
+            coach.replyFinished()
+            if mayHint, CoachPlan.endsInQuestion(text) { candidates = coachCandidates() }
+        }
+        let learnerSaid = turns.last(where: { $0.role == .user })?.transcript
+        let earlier = turns.filter { $0.role == .fluentSelf && $0.id != turnId }.last?.transcript
+        Task { @MainActor in
+            guard let result = await CoachSuggester.suggest(
+                    line: text, learnerSaid: learnerSaid,
+                    earlier: learnerSaid == nil ? nil : earlier,
+                    candidates: candidates,
+                    target: appState.targetLanguage, native: appState.nativeLanguage,
+                    level: appState.proficiency, turnId: turnId),
+                  coachMode, !isTornDown,
+                  // Still the line being answered — a late suggestion must
+                  // never sit under the NEXT one.
+                  turns.last(where: { $0.role == .fluentSelf })?.id == turnId else { return }
+            withAnimation(.easeInOut(duration: 0.25)) { coachReply = result.reply }
+            if let item = result.item, !usedGoalKeys.contains(item.key) {
                 coach.hintShown(item)
                 withAnimation(.easeInOut(duration: 0.25)) { coachHint = item }
                 syncCoachSteer()
             }
         }
-        syncCoachSteer()
+        if learnerSpokeThisCall { syncCoachSteer() }
     }
 
     /// Pick this call's grammar focus and name it. Coach mode only; a free
@@ -4053,8 +4073,8 @@ struct ConversationView: View {
         // The draft save below overwrites a resumed talk's previous analysis
         // (summary: nil is what marks the row "needs analysis") — capture it
         // first so the summarizer can MERGE with it instead of losing it.
-        let priorSummary = SessionStore.shared.load()
-            .first { $0.id == sessionId }?.summary
+        let prior = SessionStore.shared.load().first { $0.id == sessionId }
+        let priorSummary = prior?.summary
         let draft = Session(
             id: sessionId,
             userId: userId,
@@ -4071,7 +4091,9 @@ struct ConversationView: View {
             // Only a call the learner spoke in says anything about the focus;
             // an empty one must not count as a clean call and retire it.
             grammarFocus: learnerSpokeThisCall
-                ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil
+                ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil,
+            // A resumed practice call stays one: its earlier half was coached.
+            coached: (coachWasOn || prior?.isPractice == true) ? true : nil
         )
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true
@@ -4555,29 +4577,14 @@ struct SuggestionChip: View {
 
 private struct PartialTurnView: View {
     let text: String
-    /// Coach mode's word for this answer, drawn INSIDE the bubble the answer
-    /// is being spoken into — the one place the learner is already looking.
-    var coach: TalkGoalItem? = nil
-    var coachUsed = false
-    var onCoachTap: () -> Void = {}
 
     /// The in-progress user line — same slot and fill as the finished turn it
     /// becomes, so nothing jumps sideways when the final transcript lands.
     var body: some View {
         DialogueLine(speaker: .user, name: "You", scale: .call) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(text.isEmpty ? "Listening…" : text)
-                    .foregroundStyle(.secondary)
-                    .italic(text.isEmpty)
-                if let coach {
-                    Button(action: onCoachTap) {
-                        CoachHintLabel(item: coach, used: coachUsed)
-                    }
-                    .buttonStyle(.plain)
-                    .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: coachUsed)
+            Text(text.isEmpty ? "Listening…" : text)
+                .foregroundStyle(.secondary)
+                .italic(text.isEmpty)
         }
     }
 }

@@ -2129,8 +2129,11 @@ struct ProgressTab: View {
         // Archived talks are out: the user shelved them, so they stop counting
         // as score/assessment evidence (unarchiving brings them back). The
         // activity/effort panels above still count them — time spoken is real.
+        // Practice calls (coach mode, `Session.coached`) are out the same way:
+        // the learner was reading a suggested answer, which measures nothing.
         let scoredSessions = SessionStore.shared.load()
-            .filter { $0.endedAt != nil && $0.archivedAt == nil && $0.summary?.scorecard != nil }
+            .filter { $0.endedAt != nil && $0.archivedAt == nil && !$0.isPractice
+                && $0.summary?.scorecard != nil }
             .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
         out.scoredCount = scoredSessions.count
 
@@ -2258,7 +2261,7 @@ struct ProgressTab: View {
         // to end would leave the user staring at a full progress bar with
         // nothing happening.)
         let endedSessions = SessionStore.shared.load()
-            .filter { $0.endedAt != nil && $0.archivedAt == nil }
+            .filter { $0.endedAt != nil && $0.archivedAt == nil && !$0.isPractice }
         out.reportUnlock = WeeklyReportEngine.unlockState(
             endedSessions: endedSessions,
             lastReport: input.weeklyReports.first

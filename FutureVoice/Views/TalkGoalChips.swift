@@ -503,8 +503,50 @@ struct CoachHintLabel: View {
     }
 }
 
-/// Coach mode's line above the pill, for a call with subtitles off (the
-/// hint's home is the listening bubble, which isn't drawn then).
+/// Coach mode's "try saying": one easy answer to the line just spoken, its
+/// blanks the learner's to fill, and what it means in their own language.
+/// Centred above the pill, like the hint line under it; no icon — the label
+/// says what it is, and the sentence is what the eye should land on.
+struct CoachReplyLabel: View {
+    let reply: CoachReply
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("Try saying")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Self.text(reply.say, color: .primary)
+                .font(.body.weight(.semibold))
+            if !reply.meaning.isEmpty {
+                Self.text(reply.meaning, color: .secondary)
+                    .font(.subheadline)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// "[7]" is a placeholder for the learner's own words: drawn faded and
+    /// underlined, brackets dropped, the rest of the line as is.
+    static func text(_ line: String, color: Color) -> Text {
+        var out = Text("")
+        var rest = Substring(line)
+        while let open = rest.firstIndex(of: "["),
+              let close = rest[open...].firstIndex(of: "]") {
+            out = out + Text(verbatim: String(rest[..<open])).foregroundColor(color)
+            let example = String(rest[rest.index(after: open)..<close])
+            out = out + Text(verbatim: example)
+                .foregroundColor(Color(.tertiaryLabel))
+                .underline(true, color: Color(.tertiaryLabel))
+            rest = rest[rest.index(after: close)...]
+        }
+        return out + Text(verbatim: String(rest)).foregroundColor(color)
+    }
+}
+
+/// Coach mode's word hint, on the line above the pill (under the "try
+/// saying" sentence when there is one).
 /// Tapping opens the same one-sense sheet a chip does — a beginner handed a
 /// word mid-call may need its meaning before they can use it.
 struct CoachHintLine: View {

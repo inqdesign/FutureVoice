@@ -554,6 +554,52 @@ enum DebugCapture {
                     }
                 }
             })
+        case "call-coach":
+            // Coach mode's "try saying" above the pill, the listening bubble
+            // plain. Staged like call-focus: a real one needs a live call.
+            let ko = appState.nativeLanguage.hasPrefix("ko")
+            let reply = CoachReply(say: "Yes, I want to try [the one in Sinjeon].",
+                                   meaning: ko ? "응, [신전떡볶이] 먹어보고 싶어." : "",
+                                   turnId: UUID())
+            return AnyView(NavigationStack {
+                VStack(spacing: 0) {
+                    TalkGoalChipsRow(items: [
+                        TalkGoalItem(key: "total", text: "total", isWord: true),
+                        TalkGoalItem(key: "battery", text: "battery", isWord: true),
+                        TalkGoalItem(key: "next", text: "next", isWord: true),
+                    ], used: ["next"])
+                    Divider().opacity(0.15)
+                    VStack(alignment: .leading, spacing: 18) {
+                        DialogueLine(speaker: .user, name: "You") {
+                            Text("Not yet, but I want to go there next week.")
+                        }
+                        DialogueLine(speaker: .other, name: "Future self") {
+                            Text("Oh, nice! Next week will be here before you know it. Do you have a specific place in mind?")
+                        }
+                        DialogueLine(speaker: .user, name: "You", scale: .call) {
+                            Text("Listening…").foregroundStyle(.secondary).italic()
+                        }
+                        Spacer()
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(spacing: 10) {
+                        CoachReplyLabel(reply: reply).padding(.horizontal, 32)
+                        Capsule().fill(Color(.secondarySystemBackground))
+                            .frame(width: 156, height: 64)
+                        Text("Listening · pause to send · tap to stop")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 14).padding(.bottom, 20)
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) { Text("Let's talk").font(.headline) }
+                    ToolbarItem(placement: .topBarLeading) { Image(systemName: "xmark") }
+                    ToolbarItem(placement: .topBarTrailing) { Text("End").fontWeight(.semibold) }
+                }
+            })
         case "call-focus", "call-focus-sheet":
             // Coach mode's grammar focus pinned above the chips, one repeat
             // already counted, and the learner's card wearing the badge.

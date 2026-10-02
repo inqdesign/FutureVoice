@@ -265,7 +265,14 @@ enum SessionSummarizer {
         let knownWordsBefore = vocab.unconfirmedKnownWords
         let studyingExpressionsBefore = vocab.studyingExpressions
         let knownExpressionsBefore = vocab.unconfirmedKnownExpressions
-        let freshWords = VocabStore.shared.ingest(
+        // A practice call (coach mode, `Session.coached`) credits NOTHING as
+        // used: the learner answered with a suggested sentence in front of
+        // them, and "used in a talk" is the strongest state an item has — it
+        // takes a word out of the notebook and retires a card. What they said
+        // there is counted as practice instead (one expression rep per ticked
+        // item, below), and the word stays where it was in the deck.
+        let practice = session.isPractice
+        let freshWords = practice ? [] : VocabStore.shared.ingest(
             sessionId: sessionId, userTexts: userTexts)
         let priorWords = session.summary?.newWordsUsed ?? []
         computed.newWordsUsed = priorWords + freshWords.filter { !priorWords.contains($0) }
@@ -295,10 +302,12 @@ enum SessionSummarizer {
         // A pre-per-key-tracking session being re-analyzed: what it already
         // counted is its previous summary's list — seed the store so those
         // don't count twice (no-op when per-key data exists).
-        VocabStore.shared.notePriorExpressions(
-            sessionId: sessionId, phrases: session.summary?.expressionsUsed ?? [])
-        VocabStore.shared.ingestExpressions(
-            sessionId: sessionId, phrases: verifiedExpressions)
+        if !practice {
+            VocabStore.shared.notePriorExpressions(
+                sessionId: sessionId, phrases: session.summary?.expressionsUsed ?? [])
+            VocabStore.shared.ingestExpressions(
+                sessionId: sessionId, phrases: verifiedExpressions)
+        }
 
         // The other direction: phrases the FLUENT SELF used. Same verbatim
         // guard against ITS turns, and cheaper to satisfy — that text is
@@ -386,11 +395,17 @@ enum SessionSummarizer {
         // need nothing here: `ingest` above already credits every tracked
         // word the learner said. `ingestExpressions` dedupes per session, so
         // a phrase the model ALSO listed is counted once.
-        VocabStore.shared.ingestExpressions(
-            sessionId: sessionId,
-            phrases: carryovers
-                .filter { $0.source == .studyingExpression || $0.source == .knownExpression }
-                .map(\.item))
+        if !practice {
+            VocabStore.shared.ingestExpressions(
+                sessionId: sessionId,
+                phrases: carryovers
+                    .filter { $0.source == .studyingExpression || $0.source == .knownExpression }
+                    .map(\.item))
+        } else if session.summary == nil {
+            // Practice: each studied item said is a rep, not a graduation.
+            // Only on the first analysis — a regenerate must not count twice.
+            for _ in carryovers { PracticeLog.shared.record(.expression) }
+        }
 
         // Free-talk sessions (no picked topic) take the summary's generated
         // title so History/Practice lists don't fill with identical
@@ -415,11 +430,13 @@ enum SessionSummarizer {
         report { $0.cards = mintedCards }
         // Producing a card's phrase live outranks any flashcard tap — credit
         // it against the SRS schedule, not just the wrap-up.
-        DrillStore.shared.markUsedInConversation(
-            ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
+        if !practice {
+            DrillStore.shared.markUsedInConversation(
+                ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
+        }
         // A suggestion adopted later in the SAME call: the card it just
         // minted is born confirmed — they already said the corrected line.
-        let adopted = Set(carryovers.filter { $0.source == .suggestion }
+        let adopted = practice ? [] : Set(carryovers.filter { $0.source == .suggestion }
             .map { CarryoverDetector.normalized($0.item) })
         if !adopted.isEmpty {
             DrillStore.shared.markUsedInConversation(
@@ -430,8 +447,10 @@ enum SessionSummarizer {
         }
         // Same principle for book material: producing it live masters it,
         // wherever the book lives.
-        appState.markCurriculumItemsUsedInConversation(
-            itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
+        if !practice {
+            appState.markCurriculumItemsUsedInConversation(
+                itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
+        }
         if !carryovers.isEmpty {
             Analytics.capture("carryovers_detected", [
                 "count": carryovers.count,

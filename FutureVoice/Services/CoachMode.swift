@@ -17,9 +17,11 @@ import Foundation
 /// no relation to what they had just been asked (device test, same day). Now:
 /// - the steer hands the model the whole CANDIDATE list as permission ("if
 ///   one of these fits what you're already talking about…"), and
-/// - after each line, `CoachJudge` reads the question that was ACTUALLY asked
-///   and returns the candidate a natural answer would use — or nothing, which
-///   is the ordinary answer and draws no hint.
+/// - after each line, `CoachSuggester` writes an answer to the line that was
+///   ACTUALLY said, and only names a candidate when that answer naturally
+///   uses one — nothing, the ordinary case, draws no word hint (the
+///   suggestion itself is drawn every line; it replaced `CoachJudge`
+///   2026-10-01).
 ///
 /// `CoachPlan` rations it in code: at most `maxHints` a call and
 /// `repliesBetweenHints` plain lines after each; the steer is withdrawn
@@ -92,55 +94,6 @@ struct CoachPlan: Equatable {
     }
 }
 
-/// Reads the question the fluent self just asked and names the studied item
-/// a natural answer to it would use. Free (`purpose: "coach"`, flash-lite),
-/// off the voice's path — it runs while the learner is already thinking.
-@MainActor
-enum CoachJudge {
-    private struct Verdict: Decodable { let word: String? }
-
-    static func pick(question: String,
-                     learnerSaid: String?,
-                     candidates: [TalkGoalItem],
-                     key: String) async -> TalkGoalItem? {
-        guard !candidates.isEmpty else { return nil }
-        let list = candidates.map { "- \($0.text)" }.joined(separator: "\n")
-        var content = ""
-        if let learnerSaid, !learnerSaid.isEmpty {
-            content += "The learner had said: \"\(learnerSaid)\"\n"
-        }
-        content += "They were then asked: \"\(question)\"\n\nStudied items:\n\(list)"
-        let verdict: Verdict? = try? await GeminiClient.background.sendJSON(
-            system: system,
-            messages: [GeminiClient.Message(role: .user, content: content)],
-            model: .flashLite31,
-            maxTokens: 200,
-            purpose: "coach",
-            idempotencyKey: "coach:\(key)",
-            requestTimeout: 8,
-            fastThinking: true)
-        guard let word = verdict?.word?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !word.isEmpty else { return nil }
-        let wanted = CarryoverDetector.normalized(word)
-        return candidates.first { $0.key == wanted || CarryoverDetector.normalized($0.text) == wanted }
-    }
-
-    private static let system = """
-        A language learner is on a spoken call and has just been asked a \
-        question. They are studying the items listed. Decide whether a \
-        natural, honest answer to THAT question would use one of those items.
-
-        Return {"word": "<the item exactly as listed>"} only when the fit is \
-        obvious: the item would carry what the answer MEANS — the thing the \
-        question is about — in its usual sense. A reaction word that could \
-        end any answer ("awesome", "sure") or a small word that could appear \
-        in any sentence does not count. If the learner would have to force \
-        it in, if the line asks nothing, or if nothing fits, return \
-        {"word": null}. null is the usual answer. Never return a word that \
-        is not listed.
-        """
-}
-
 extension ConversationEngine {
     /// The steer coach mode hands the gateway while a hint may be drawn:
     /// the candidate list as PERMISSION, never an assignment. English like
@@ -173,5 +126,113 @@ extension ConversationEngine {
                 """)
         }
         return parts.joined(separator: "\n\n")
+    }
+}
+
+/// Coach mode's answer for EVERY line (2026-10-01, founder: "every turn, a
+/// suggestion of how to answer"). The word hint above only ever fired when a
+/// studied item fit, so most turns a beginner faced the question empty-handed
+/// — and the empty hand, not the question, is what stops them talking.
+///
+/// One short thing they could say back, at their level, with a blank where
+/// only they know the answer ("I usually get up at ___."), and its meaning in
+/// their own language. It is a starting point, not a script: the blank makes
+/// them add their own words. It runs on the opener too — the first answer of
+/// a call is the hardest one. When a studied item fits the answer naturally
+/// the suggestion carries it and names it, which is how the word hint is
+/// drawn now (one call per line, not two).
+struct CoachReply: Equatable {
+    /// Target language. "[7]" is an example the learner swaps for their own
+    /// words — drawn faded (`CoachReplyLabel`).
+    let say: String
+    /// Native language, the same brackets translated.
+    let meaning: String
+    let turnId: UUID
+}
+
+@MainActor
+enum CoachSuggester {
+    private struct Payload: Decodable {
+        let say: String?
+        let meaning: String?
+        let word: String?
+    }
+
+    static func suggest(line: String,
+                        learnerSaid: String?,
+                        earlier: String?,
+                        candidates: [TalkGoalItem],
+                        target: String,
+                        native: String,
+                        level: CEFRLevel,
+                        turnId: UUID) async -> (reply: CoachReply, item: TalkGoalItem?)? {
+        var content = ""
+        if let earlier, !earlier.isEmpty { content += "Earlier they said: \"\(earlier)\"\n" }
+        if let learnerSaid, !learnerSaid.isEmpty { content += "The learner said: \"\(learnerSaid)\"\n" }
+        content += "Now the other speaker says: \"\(line)\""
+        if !candidates.isEmpty {
+            content += "\n\nStudied items:\n" + candidates.map { "- \($0.text)" }.joined(separator: "\n")
+        }
+        let payload: Payload? = try? await GeminiClient.background.sendJSON(
+            system: system(target: target, native: native, level: level),
+            messages: [GeminiClient.Message(role: .user, content: content)],
+            model: .flashLite31,
+            maxTokens: 300,
+            purpose: "coach",
+            idempotencyKey: "coach-reply:\(turnId.uuidString)",
+            requestTimeout: 8,
+            fastThinking: true)
+        // The line it answers can carry another script — the learner's name
+        // in Hangul on an English call — and flash-lite followed it and wrote
+        // the whole suggestion in Korean (device test, 2026-10-01). A
+        // suggestion they can't say in the call's language is no suggestion.
+        guard let say = payload?.say?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !say.isEmpty,
+              TextScript.isInTargetScript(say, language: target) else { return nil }
+        // A learner whose own language IS the one on the call (an English
+        // app learning English) would read the same sentence twice.
+        let meaning = LanguageCatalog.sameLanguage(target, native) ? ""
+            : payload?.meaning?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var item: TalkGoalItem?
+        if let word = payload?.word?.trimmingCharacters(in: .whitespacesAndNewlines), !word.isEmpty {
+            let wanted = CarryoverDetector.normalized(word)
+            item = candidates.first { $0.key == wanted || CarryoverDetector.normalized($0.text) == wanted }
+        }
+        return (CoachReply(say: say, meaning: meaning, turnId: turnId), item)
+    }
+
+    private static func system(target: String, native: String, level: CEFRLevel) -> String {
+        let targetName = LanguageCatalog.englishName(target)
+        let nativeName = LanguageCatalog.englishName(native)
+        let scale = ConversationEngine.speechScale(for: level)
+        return """
+        A \(level.rawValue.uppercased()) learner of \(targetName) is on a spoken call. \
+        The other speaker has just said the line below. Write ONE short thing \
+        the learner could say back next — an easy, natural answer the way a \
+        real person would reply, not a textbook sentence.
+
+        - "say": in \(targetName) ONLY — always, even when the line contains \
+          names or words in another language. 3–10 words, one sentence (two \
+          very short ones at most). \(scale.vocabulary)
+        - Where the answer depends on something only the learner knows (their \
+          name, a time, a place, what they did, what they like), put a \
+          plausible EXAMPLE in square brackets — "I usually get up at [7]." — \
+          which the learner swaps for their own. It is shown faded as a \
+          placeholder, so it is never a claim about them. One or two \
+          brackets, a word or two inside each, nothing else in brackets.
+        - If the line asks nothing, "say" is a natural reaction or a short \
+          follow-up question back.
+        - Use the same form of address the other speaker uses with them \
+          (Korean 반말 or 존댓말, Japanese plain or polite, du or Sie, tu or \
+          vous…).
+        - "meaning": the \(nativeName) translation, natural, with the \
+          bracketed example translated inside brackets in the matching place.
+        - "word": if studied items are listed and one fits this answer \
+          naturally — in its usual sense, carrying what the answer means — \
+          use it in "say" and return it exactly as listed. Otherwise null, \
+          which is the usual case. Never force one in.
+
+        Return STRICT JSON only: {"say": "...", "meaning": "...", "word": null}
+        """
     }
 }

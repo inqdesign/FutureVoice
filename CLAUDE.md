@@ -1970,10 +1970,10 @@ word to come up by chance. Coach mode (Call settings; **on by default for A1/A2*
 `CoachMode.resolve`, the learner's own flip always wins; a beginner's
 slower call) makes it come up on purpose: the fluent self asks a
 question whose natural answer uses a studied item, and while the learner
-thinks, their own "Listening…" bubble carries "💡 Try using · **profound**"
-and ticks when they do (the chips' own `CarryoverDetector`; tap = the chip
-sheet). Worded so the word never needs a particle or article. A line above
-the pill only when subtitles are off (no bubble). The pool is the chip row
+thinks, the line above the pill carries "Try using · **profound**" (under
+the "try saying" sentence, below) and ticks when they do (the chips' own
+`CarryoverDetector`; tap = the chip sheet). Worded so the word never needs a
+particle or article. It sat in the "Listening…" bubble until 2026-10-01. The pool is the chip row
 PLUS talk-kept notebook words (`coachExtras`) — the first device test had
 eleven words on file, all auto-kept, and the chip row alone was empty.
 `CoachMode.swift` + `CoachHintLabel`.
@@ -2004,8 +2004,25 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
   coached call — the measure of "forced".
 - **Nothing before the learner has spoken** (enforced 2026-09-30 — the
   ration above was documented but not in code: the opener's question could
-  be judged and the first reply steered). `syncCoachSteer` and
-  `advanceCoach` both wait for `learnerSpokeThisCall`.
+  be judged and the first reply steered). `syncCoachSteer` and the WORD
+  hint wait for `learnerSpokeThisCall`; the "try saying" below does not.
+- **Every line gets a "try saying"** (2026-10-01, founder: "every turn, a
+  suggestion of how to answer"; `CoachSuggester`, which replaced
+  `CoachJudge`). One flash-lite call per fluent-self line, the opener
+  included: a short answer at the learner's level, `___` where only they
+  know the fact (a faded example in `[brackets]` since the same day), its meaning in the native language (hidden when native ==
+  target). A studied item that fits rides inside it and becomes the word
+  hint (still rationed by `CoachPlan`). Drawn ABOVE THE PILL, never in the
+  listening bubble — it lands a beat late and the bubble grew out of view.
+  A suggestion not in the target script is dropped (`TextScript`): a
+  Hangul name in the line once turned the whole suggestion Korean.
+- **A coached call is a PRACTICE call** (`Session.coached`, 2026-10-01,
+  founder decision): coach mode on at any point = the whole call. It is out
+  of the weekly assessment, its unlock gate and every Progress measurement,
+  its page shows "Practice call" instead of a score, and NOTHING said in it
+  is credited as used (words, expressions, drill cards, book items) — a
+  studied item said there is a practice rep. Minutes, streak, the Core,
+  corrections → cards and the book all stand.
 - **The grammar FOCUS** (2026-09-30, founder: "a real coach goes past
   words — mind the tense"; `GrammarFocus.swift`, `GrammarFocusViews.swift`).
   One recurring mistake per call, from `LearnerProfile.recurringMistakes`

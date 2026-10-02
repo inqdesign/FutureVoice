@@ -316,6 +316,18 @@ struct Session: Codable, Identifiable {
     /// (`GrammarFocus`). Optional so old rows decode unchanged; also what the
     /// next call reads to retire a focus the learner has stopped tripping on.
     var grammarFocus: GrammarFocusRecord? = nil
+    /// The call ran with coach mode on at some point — a PRACTICE call
+    /// (2026-10-01, founder decision). The learner was answering with a
+    /// suggested sentence in front of them, so nothing said in it is evidence
+    /// of their level: it is left out of the weekly assessment and every
+    /// Progress measurement, and what they said is credited as practice, never
+    /// as "used in a talk". Everything else about a talk stands — minutes,
+    /// streak, corrections → cards, the book. Optional so old rows decode
+    /// unchanged; an older build ignores it.
+    var coached: Bool? = nil
+
+    /// See `coached`.
+    var isPractice: Bool { coached == true }
 }
 
 /// One call's grammar focus, as it was shown and as it went (2026-09-30).

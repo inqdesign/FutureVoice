@@ -232,7 +232,7 @@ struct LevelInfoSheet: View {
             .onAppear {
                 unlock = WeeklyReportEngine.unlockState(
                     endedSessions: SessionStore.shared.load()
-                        .filter { $0.endedAt != nil && $0.archivedAt == nil },
+                        .filter { $0.endedAt != nil && $0.archivedAt == nil && !$0.isPractice },
                     lastReport: appState.weeklyReports.first
                 )
             }

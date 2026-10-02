@@ -193,7 +193,8 @@ struct TalkBookCard: View {
                 }
                 // How the talk itself went — the single headline number, only
                 // once the summary has scored it.
-                if let sc = session.summary?.scorecard {
+                // A practice (coach mode) call has no score to headline.
+                if let sc = session.summary?.scorecard, !session.isPractice {
                     scoreChip(sc.overall)
                 }
             }
