@@ -103,6 +103,70 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         }
     }
 
+    @Serializable
+    private data class AlignmentDto(
+        val characters: List<String> = emptyList(),
+        val character_start_times_seconds: List<Double> = emptyList(),
+        val character_end_times_seconds: List<Double> = emptyList(),
+    )
+
+    @Serializable
+    private data class TimestampsResponse(
+        val audio_base64: String,
+        val alignment: AlignmentDto? = null,
+        val normalized_alignment: AlignmentDto? = null,
+    )
+
+    /**
+     * Same TTS through the `with-timestamps` endpoint: MP3 bytes plus one
+     * MEASURED window per word (iOS `synthesizeWithTimestamps`). Used only
+     * for the FIRST synthesis of a shadow line — the one place that line is
+     * ever billed — so its karaoke and its rhythm grade stand on where the
+     * synthesizer really put each word. Any failure of the timestamps path
+     * falls back to plain audio under the same idempotency key (one logical
+     * synthesis, one charge) with no timings.
+     */
+    suspend fun synthesizeWithTimestamps(
+        voiceId: String,
+        text: String,
+        language: String,
+        modelId: String = CONVERSATION_MODEL_ID,
+        idempotencyKey: String? = null,
+        purpose: String? = null,
+    ): Pair<ByteArray, List<com.roro.futurevoice.talk.WordTiming>> = withContext(Dispatchers.IO) {
+        val key = idempotencyKey ?: InstallSalt.ttsKey(text, voiceId, true)
+        val viaTimestamps = runCatching {
+            val request = buildRequest(
+                voiceId, text, modelId, withTimestamps = true, stream = false,
+                purpose = purpose, idempotencyKey = key, accept = "application/json",
+            )
+            Edge.client.newCall(request).execute().use { response ->
+                val raw = response.body.string()
+                if (response.code !in 200..299) {
+                    if (response.code == 402) throw EdgeError.wall(raw)
+                    throw EdgeError.Http(response.code, raw.take(512))
+                }
+                val decoded = Edge.json.decodeFromString(TimestampsResponse.serializer(), raw)
+                val audio = android.util.Base64.decode(decoded.audio_base64, android.util.Base64.DEFAULT)
+                // RAW alignment first, always: `normalized_alignment` indexes
+                // ElevenLabs' own normalized text, which romanizes Korean.
+                val align = decoded.alignment ?: decoded.normalized_alignment
+                val timings = align?.let {
+                    com.roro.futurevoice.talk.TtsAlignment.wordTimings(
+                        it.characters, it.character_start_times_seconds, it.character_end_times_seconds, language)
+                }.orEmpty()
+                audio to if (com.roro.futurevoice.talk.TtsAlignment.alignmentMatches(text, timings)) timings
+                else emptyList()
+            }
+        }
+        viaTimestamps.getOrElse { e ->
+            // A wall is a wall on either endpoint — never retried as plain.
+            if (e === EdgeError.InsufficientCredits || e === EdgeError.DailyCapReached ||
+                e === EdgeError.SceneCapReached) throw e
+            synthesize(voiceId, text, modelId, idempotencyKey = key, purpose = purpose) to emptyList()
+        }
+    }
+
     /**
      * Streaming TTS: playback starts on the first chunk instead of after the
      * full file. Chunks arrive in order via [onPcmChunk] — 16-bit LE mono PCM

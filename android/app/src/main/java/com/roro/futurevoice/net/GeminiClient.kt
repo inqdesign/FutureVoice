@@ -160,11 +160,14 @@ class GeminiClient(private val auth: AuthRepository) {
         purpose: String? = null,
         idempotencyKey: String? = null,
         urlContext: Boolean = false,
+        /** gen-3 "minimal" thinking — perception calls (a transcript), where
+         *  thought tokens are wait time and buy no better answer. */
+        fastThinking: Boolean = false,
     ): T = withContext(Dispatchers.IO) {
         val request = buildRequest(
             system, messages, model, maxTokens, temperature, searchGrounding,
             purpose, idempotencyKey, jsonResponse = true, stream = false,
-            urlContext = urlContext,
+            urlContext = urlContext, fastThinking = fastThinking,
         )
         val (raw, finishReason) = Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -387,6 +390,7 @@ class GeminiClient(private val auth: AuthRepository) {
         jsonResponse: Boolean,
         stream: Boolean,
         urlContext: Boolean = false,
+        fastThinking: Boolean = false,
     ): Request {
         val usesTools = searchGrounding || urlContext
         val body = BodyDto(
@@ -413,7 +417,7 @@ class GeminiClient(private val auth: AuthRepository) {
                 maxOutputTokens = maxTokens,
                 // Latency floor for the phone-call loop: thinking OFF on 2.5, the
                 // minimum "low" level on gen-3 (which can't fully disable).
-                thinkingConfig = if (model.isGen3) ThinkingConfigDto(thinkingLevel = "low")
+                thinkingConfig = if (model.isGen3) ThinkingConfigDto(thinkingLevel = if (fastThinking) "minimal" else "low")
                 else ThinkingConfigDto(thinkingBudget = 0),
                 // Force JSON at the API level — prompt-only JSON drifts back to
                 // prose in long conversations because the model imitates its own

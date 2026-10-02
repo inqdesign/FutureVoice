@@ -87,6 +87,43 @@ class PhraseAudioStore private constructor(context: Context) {
         runCatching { file(voiceId, text).writeBytes(data) }
     }
 
+    /** The audio file that answers for this line (own clone lineage
+     *  included), or null — the timings beside it describe THAT take. */
+    private fun existingFile(text: String, voiceId: String): File? {
+        file(voiceId, text).takeIf { it.exists() }?.let { return it }
+        if (voiceId !in ownVoiceLineage) return null
+        return ownVoiceLineage.asSequence().filter { it != voiceId }
+            .map { file(it, text) }.firstOrNull { it.exists() }
+    }
+
+    /**
+     * The word timings saved with this line's audio — ElevenLabs' measured
+     * alignment, kept from the one synthesis that ever bills it (iOS
+     * `<key>.timings.json`, same JSON, so a backup reads on either platform).
+     * Null when the line was cached without them.
+     */
+    fun timings(text: String, voiceId: String): List<com.roro.futurevoice.talk.WordTiming>? {
+        val audio = existingFile(text, voiceId) ?: return null
+        val f = File(audio.parentFile, audio.nameWithoutExtension + ".timings.json")
+        if (!f.exists()) return null
+        return runCatching {
+            StoreJson.json.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(com.roro.futurevoice.talk.WordTiming.serializer()),
+                f.readText())
+        }.getOrNull()
+    }
+
+    fun saveTimings(timings: List<com.roro.futurevoice.talk.WordTiming>, text: String, voiceId: String) {
+        if (timings.isEmpty()) return
+        val audio = existingFile(text, voiceId) ?: file(voiceId, text)
+        runCatching {
+            File(audio.parentFile, audio.nameWithoutExtension + ".timings.json").writeText(
+                StoreJson.json.encodeToString(
+                    kotlinx.serialization.builtins.ListSerializer(com.roro.futurevoice.talk.WordTiming.serializer()),
+                    timings))
+        }
+    }
+
     /**
      * Account deletion / local wipe — the next learner inherits no lineage.
      * Scoped hard to this one folder: everything else in `filesDir` is the

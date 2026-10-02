@@ -112,13 +112,13 @@ object ShadowPicks {
         val retries = latestByTurn.values
             // A phrase take is practice, never a verdict on the line — it
             // must not decide whether the line comes back.
-            .filter { !it.isPartial && it.matchScore < RETRY_THRESHOLD }
+            .filter { !it.isPartial && it.overallScore < RETRY_THRESHOLD }
             .sortedByDescending { it.createdAt }
             .map { a ->
                 val turn = turnById[a.turnId] ?: Turn(
                     id = a.turnId, role = TurnRole.FLUENT_SELF, transcript = a.targetText,
                     timestamp = a.createdAt)
-                Pick(turn, "retry:${a.matchScore}")
+                Pick(turn, "retry:${a.overallScore}")
             }
 
         // At most one retry crowds out a fresh line — the hand should still

@@ -223,7 +223,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
         val attempts = ShadowAttemptStore.shared(context).load(language)
         avgShadowScore = attempts.filterNot { it.isPartial }
             .sortedByDescending { it.createdAt }.take(10)
-            .map { it.matchScore }.takeIf { it.isNotEmpty() }?.average()?.toInt() ?: 0
+            .map { it.overallScore }.takeIf { it.isNotEmpty() }?.average()?.toInt() ?: 0
         // The walk is several passes over every ended talk plus a scorecard
         // recomputation each — off the main thread, or the tab opens on the
         // still-empty state and a learner with a year of talks reads zeroes.

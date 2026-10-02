@@ -25,11 +25,14 @@ import kotlin.math.min
  * exactly what an on-device pass collapses, and the learner was being told
  * they had skipped three words they said perfectly well (iOS `3ffb602`).
  *
- * Android differs from iOS in ONE way, decided 2026-09-23: there is no
- * second reader. `SpeechRecognizer` is mic-only — it cannot be pointed at a
- * file — so the on-device middle tier iOS falls back to does not exist here.
- * A failed read is therefore reported as a failure and nothing is scored,
- * rather than being graded on a weaker reading the learner cannot see.
+ * Android differs from iOS in ONE way: there is no second reader of the
+ * WORDS. iOS falls back to Apple's file pass when the audio read fails;
+ * Android's `SpeechRecognizer` can read a file since Android 13, but only as
+ * a segmented session that returns no word times, so it would add a weaker
+ * transcript and nothing else. A failed read is therefore reported as a
+ * failure and nothing is scored, rather than being graded on a weaker
+ * reading the learner cannot see. The TIMES iOS takes from Apple come from
+ * [TakeAligner] here (plan 2.9).
  */
 object ShadowTranscriber {
 
@@ -75,6 +78,9 @@ object ShadowTranscriber {
                     serializer = Payload.serializer(),
                     maxTokens = 1024,
                     purpose = "transcribe",
+                    // Perception, not reasoning: thought tokens on a six-word
+                    // line are wait time the learner sits through (iOS).
+                    fastThinking = true,
                 )
             }.transcript?.trim().orEmpty()
         }.getOrElse { e ->
@@ -101,7 +107,8 @@ object ShadowTranscriber {
         // Silence, or already at a good level — hand back what we have.
         val target = (32767 * 0.707).toInt()   // -3 dBFS
         if (peak == 0 || peak >= target) return raw
-        val gain = min(target.toDouble() / peak, 8.0)
+        // Capped at +30 dB, as on iOS (`peakNormalizedWAV`).
+        val gain = min(target.toDouble() / peak, 31.62)
         val out = raw.copyOf()
         val buf = ByteBuffer.wrap(out, 44, out.size - 44).order(ByteOrder.LITTLE_ENDIAN)
         var i = 44

@@ -52,6 +52,15 @@ data class ShadowAttempt(
 ) {
     /** A take of PART of the line — never a verdict on the line itself. */
     val isPartial: Boolean get() = phraseFirst != null && phraseLast != null
+
+    /**
+     * The ONE number a take is judged by — history, mastery, retry picks
+     * (iOS `ShadowAttempt.overallScore`). Words and beat when the beat was
+     * measured; words alone otherwise, so every attempt saved before rhythm
+     * existed keeps its score.
+     */
+    val overallScore: Int
+        get() = com.roro.futurevoice.talk.ShadowScore.overallScore(matchScore, rhythmScore)
 }
 
 class ShadowAttemptStore private constructor(private val context: Context) {
@@ -86,6 +95,32 @@ class ShadowAttemptStore private constructor(private val context: Context) {
             val all = (read(language) + attempt).takeLast(MAX)
             file(language).writeText(
                 StoreJson.json.encodeToString(ListSerializer(ShadowAttempt.serializer()), all))
+        }
+        StoreEvents.bump()
+    }
+
+    /**
+     * Replace an attempt already on file — the coach's bullets land on the
+     * record the take saved, never as a second attempt (a second `add` would
+     * count the take twice).
+     */
+    suspend fun update(attempt: ShadowAttempt, language: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val all = read(language)
+            if (all.none { it.id == attempt.id }) return@withLock
+            file(language).writeText(StoreJson.json.encodeToString(
+                ListSerializer(ShadowAttempt.serializer()), all.map { if (it.id == attempt.id) attempt else it }))
+        }
+        StoreEvents.bump()
+    }
+
+    /** Remove one attempt (the past-attempt row's Delete) and its recording. */
+    suspend fun delete(id: String, language: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val all = read(language)
+            all.firstOrNull { it.id == id }?.recordingFilename?.let { runCatching { File(it).delete() } }
+            file(language).writeText(StoreJson.json.encodeToString(
+                ListSerializer(ShadowAttempt.serializer()), all.filterNot { it.id == id }))
         }
         StoreEvents.bump()
     }
