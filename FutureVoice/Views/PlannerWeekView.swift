@@ -560,6 +560,8 @@ struct PlannerDayTimeline: View {
     let snapshot: PlannerSnapshot
     let editing: Bool
     let onEdit: (StudyPlan.Occurrence, Date) -> Void
+    /// A say-it-again row was tapped: pick a talk and start.
+    var onSayItAgain: () -> Void = {}
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
@@ -644,6 +646,7 @@ struct PlannerDayTimeline: View {
         case .planned(let occ, let done):
             Button {
                 if editing, occ.blockId != nil { onEdit(occ, day) }
+                else if occ.kind == .sayItAgain, !done { onSayItAgain() }
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(time(occ.start)).font(.caption).monospacedDigit()
@@ -660,7 +663,7 @@ struct PlannerDayTimeline: View {
                     Spacer()
                     if done {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    } else if editing, occ.blockId != nil {
+                    } else if (editing && occ.blockId != nil) || occ.kind == .sayItAgain {
                         Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
                     }
                 }
@@ -687,7 +690,7 @@ struct PlannerDayTimeline: View {
             if let n = snapshot.reviewLoad[occ.start], n > 0 { return explain("About \(n) waiting") }
             return nil
         case .sayItAgain:
-            return done ? nil : explain("Right after the talk")
+            return done ? nil : explain("Pick a recent talk")
         default:
             return nil
         }

@@ -12,6 +12,8 @@ import UserNotifications
 @MainActor
 enum PlanReminder {
     private static let prefix = "futurevoice.plan."
+    /// Tapping lands on the talk picker, not just the app.
+    static let sayItAgainCategoryId = "futurevoice.plan.say-again"
     static let horizonDays = 7
 
     static func reschedule(now: Date = Date(), calendar: Calendar = .current) async {
@@ -31,12 +33,18 @@ enum PlanReminder {
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
             for occ in plan.occurrences(on: day, calendar: calendar)
             where occ.remind && occ.start > now && occ.blockId != nil
-                && [.words, .expressions, .shadow].contains(occ.kind) {
+                && [.sayItAgain, .words, .expressions, .shadow].contains(occ.kind) {
                 let content = UNMutableNotificationContent()
                 content.title = title(for: occ.kind)
-                content.body = explain("\(occ.minutes) min, as planned.")
+                content.body = occ.kind == .sayItAgain
+                    ? explain("Pick a recent talk and say it again.")
+                    : explain("\(occ.minutes) min, as planned.")
                 content.sound = .default
-                if occ.kind != .shadow { content.categoryIdentifier = DrillReminder.categoryId }
+                switch occ.kind {
+                case .sayItAgain: content.categoryIdentifier = sayItAgainCategoryId
+                case .words, .expressions: content.categoryIdentifier = DrillReminder.categoryId
+                default: break
+                }
                 let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: occ.start)
                 let id = prefix + occ.id
                 try? await center.add(UNNotificationRequest(
@@ -59,6 +67,7 @@ enum PlanReminder {
         case .words: return explain("Time for your words")
         case .expressions: return explain("Time for your expressions")
         case .shadow: return explain("Time for shadowing")
+        case .sayItAgain: return explain("Time to say it again")
         default: return explain("Time to practice")
         }
     }

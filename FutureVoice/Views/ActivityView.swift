@@ -63,6 +63,7 @@ struct ActivityView: View {
     @State private var weekStart = PlannerSnapshot.startOfWeek(Date())
     @State private var planner: PlannerSnapshot?
     @State private var showPlanEditor = false
+    @State private var showSayItAgainPicker = false
 
 
     var body: some View {
@@ -102,6 +103,9 @@ struct ActivityView: View {
         }
         .onChange(of: cardStore.version) { _, _ in thumbs = [:]; loadCellPhotos() }
         .fullScreenCover(isPresented: $showPlanEditor) { WeeklyPlanEditor() }
+        .sheet(isPresented: $showSayItAgainPicker, onDismiss: reloadPlanner) {
+            SayItAgainPicker().environmentObject(appState)
+        }
         .onChange(of: planStore.plan) { _, _ in reloadPlanner() }
         .onChange(of: weekStart) { _, _ in reloadPlanner() }
     }
@@ -122,7 +126,8 @@ struct ActivityView: View {
             .padding(.horizontal, -12)
             if let day = selectedDay, planner.days.contains(where: { cal.isDate($0, inSameDayAs: day) }) {
                 PlannerDayTimeline(day: cal.startOfDay(for: day), snapshot: planner, editing: false,
-                                   onEdit: { _, _ in })
+                                   onEdit: { _, _ in },
+                                   onSayItAgain: { showSayItAgainPicker = true })
             }
         } else {
             ProgressView().frame(maxWidth: .infinity, minHeight: 200)

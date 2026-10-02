@@ -349,6 +349,7 @@ enum DebugCapture {
                 var plan = StudyPlan()
                 plan.blocks = [
                     .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
+                    .init(kind: .sayItAgain, weekdays: [2, 4], hour: 20, minute: 30, minutes: 10),
                     .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 15),
                     .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 20),
                 ]
@@ -356,6 +357,9 @@ enum DebugCapture {
                 StudyPlanStore.shared.update(plan)
             }
             return AnyView(WeeklyPlanEditor())
+        case "say-again-picker":
+            once("say-again-picker") { SessionStore.shared.save(Self.talkDetailSession) }
+            return AnyView(SayItAgainPicker().environmentObject(appState))
         case "plan-block":
             return AnyView(PlanBlockEditor(target: .new(day: Date())))
         case "activity-week", "activity-week-edit":
@@ -372,6 +376,7 @@ enum DebugCapture {
                 var plan = StudyPlan()
                 plan.blocks = [
                     .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
+                    .init(kind: .sayItAgain, weekdays: Set(2...6), hour: 8, minute: 10, minutes: 5),
                     .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
                 ]
                 plan.autoReview = true

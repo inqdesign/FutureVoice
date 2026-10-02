@@ -509,10 +509,21 @@ its own branch so the founder picks the build it ships in.
 - **`StudyPlan` is a weekly template + per-date edits** (`Services/StudyPlan.swift`,
   `Documents/study_plan.json`, device-local like the daily call it schedules).
   Rest days and one-off exceptions ("just this day" on a drag) are keyed
-  `yyyy-MM-dd`. Three kinds are DERIVED, never stored, so no second copy can
-  drift: the weekly test (`WeeklyTestSettings`), the review slot (`autoReview`
-  + time, planned days only) and "say it again" (right after the day's first
-  talk).
+  `yyyy-MM-dd`. Two kinds are DERIVED, never stored, so no second copy can
+  drift: the weekly test (`WeeklyTestSettings`) and the review slot
+  (`autoReview` + time, planned days only).
+- **"Say it again" is an ordinary block** (same day, founder: "a toggle for
+  'after the talk' doesn't fit"). It was first derived — right after the
+  day's first talk, on a settings toggle — and is now placed, dragged and
+  deleted like words or shadowing. Plans saved while it was derived are
+  converted on load (`convertingLegacySayItAgain`, same slots, so nothing
+  moves on screen); a seeded plan puts one after the first talk. A
+  say-it-again block names NO talk — it recurs weekly and the talk worth
+  redoing is whichever just happened — so the talk is picked when it is
+  time: `SayItAgainPicker` (the last 14 days' talks the learner spoke in,
+  newest pre-selected, one tap to start), reached from its reminder
+  (`PlanReminder.sayItAgainCategoryId` → `DailyCallInbox.pendingSayItAgain`
+  → `RootTabView`) and from its row in Activity's day list.
 - **A talk block IS a daily-call time.** `DailyCallScheduler.fireDates` reads
   `StudyPlan.callDates` — the old shape (today's remaining slots, else the next
   day's first) with weekdays, rest days and exceptions honoured. The first

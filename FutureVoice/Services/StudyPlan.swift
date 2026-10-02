@@ -7,11 +7,11 @@ import Combine
 ///
 /// What is stored is a weekly TEMPLATE plus two kinds of per-date edits:
 /// a rest day (nothing planned, nothing rings) and an exception (that date's
-/// blocks replaced, from "just this once" on a drag). Three block kinds are
+/// blocks replaced, from "just this once" on a drag). Two block kinds are
 /// not stored at all but derived from the settings that already own them, so
-/// there is never a second copy to drift: the weekly test (`WeeklyTestSettings`),
-/// the review slot (`autoReview` + its time) and "say it again" (right after
-/// the day's first talk).
+/// there is never a second copy to drift: the weekly test (`WeeklyTestSettings`)
+/// and the review slot (`autoReview` + its time). "Say it again" is an
+/// ordinary block since the founder asked to place it like any other.
 ///
 /// Device-local, like the daily call it schedules: two synced devices must not
 /// both ring.
@@ -22,7 +22,7 @@ struct StudyPlan: Codable, Equatable {
 
         /// Kinds the learner can place by hand. Review, say it again and the
         /// test come from toggles and their own settings.
-        static let placeable: [Kind] = [.talk, .words, .expressions, .shadow]
+        static let placeable: [Kind] = [.talk, .sayItAgain, .words, .expressions, .shadow]
     }
 
     struct Block: Codable, Equatable, Hashable, Identifiable {
@@ -47,8 +47,10 @@ struct StudyPlan: Codable, Equatable {
     var reviewHour: Int = 21
     var reviewMinute: Int = 0
     var reviewMinutes: Int = 15
-    /// A "say it again" slot right after the day's first talk.
-    var autoSayItAgain: Bool = true
+    /// LEGACY: "say it again" used to be derived, right after the day's
+    /// first talk. Plans saved then are converted into ordinary blocks on
+    /// load (`convertingLegacySayItAgain`); nothing reads it otherwise.
+    var autoSayItAgain: Bool = false
     /// `yyyy-MM-dd` days with nothing planned and nothing ringing.
     var restDays: Set<String> = []
     /// `yyyy-MM-dd` → that date's own blocks, replacing the template's.
@@ -67,7 +69,7 @@ struct StudyPlan: Codable, Equatable {
         enum Source: Equatable {
             case template(UUID)
             case exception(UUID)
-            case review, sayItAgain, test
+            case review, test
         }
         var kind: Kind
         var start: Date
@@ -88,7 +90,6 @@ struct StudyPlan: Codable, Equatable {
             case .template(let id): return "t\(id.uuidString)"
             case .exception(let id): return "x\(id.uuidString)"
             case .review: return "review"
-            case .sayItAgain: return "again"
             case .test: return "test"
             }
         }
@@ -127,14 +128,9 @@ struct StudyPlan: Codable, Equatable {
                               source: isException ? .exception(b.id) : .template(b.id),
                               remind: b.remind)
         }
-        // Review and say-it-again belong to PLANNED days: a weekday with no
-        // block at all is the learner's day off, not a review day.
+        // The review slot belongs to PLANNED days: a weekday with no block
+        // at all is the learner's day off, not a review day.
         let plannedDay = !out.isEmpty
-        if autoSayItAgain,
-           let firstTalk = out.filter({ $0.kind == .talk }).min(by: { $0.start < $1.start }) {
-            out.append(Occurrence(kind: .sayItAgain, start: firstTalk.end,
-                                  minutes: Self.sayItAgainMinutes, source: .sayItAgain, remind: false))
-        }
         if autoReview, plannedDay, let start = at(reviewHour, reviewMinute) {
             out.append(Occurrence(kind: .review, start: start, minutes: reviewMinutes,
                                   source: .review, remind: true))
@@ -335,10 +331,46 @@ struct StudyPlan: Codable, Equatable {
     /// block every day at each daily-call time, as long as the daily goal.
     static func seeded(callTimes: [DailyCallStore.CallTime], goalMinutes: Int) -> StudyPlan {
         var plan = StudyPlan()
+        let minutes = max(5, goalMinutes)
         plan.blocks = callTimes.map {
-            Block(kind: .talk, weekdays: Set(1...7), hour: $0.hour, minute: $0.minute,
-                  minutes: max(5, goalMinutes))
+            Block(kind: .talk, weekdays: Set(1...7), hour: $0.hour, minute: $0.minute, minutes: minutes)
         }
+        // And a say-it-again right after the first talk.
+        if let first = callTimes.min() {
+            let end = first.hour * 60 + first.minute + minutes
+            if end + sayItAgainMinutes <= 24 * 60 {
+                plan.blocks.append(Block(kind: .sayItAgain, weekdays: Set(1...7), hour: end / 60,
+                                         minute: end % 60, minutes: sayItAgainMinutes))
+            }
+        }
+        return plan
+    }
+
+    /// A plan saved while say-it-again was derived: the same slots, as
+    /// ordinary blocks — after each weekday's first talk, and after each
+    /// one-off day's first talk — so nothing moves on screen.
+    func convertingLegacySayItAgain() -> StudyPlan {
+        guard autoSayItAgain else { return self }
+        var plan = self
+        plan.autoSayItAgain = false
+        func after(_ list: [Block]) -> Block? {
+            guard let first = list.filter({ $0.kind == .talk }).min(by: { $0.startMinute < $1.startMinute })
+            else { return nil }
+            let end = first.startMinute + first.minutes
+            guard end + Self.sayItAgainMinutes <= 24 * 60 else { return nil }
+            return Block(kind: .sayItAgain, weekdays: [], hour: end / 60, minute: end % 60,
+                         minutes: Self.sayItAgainMinutes)
+        }
+        for weekday in 1...7 {
+            if var b = after(blocks.filter { $0.weekdays.contains(weekday) }) {
+                b.weekdays = [weekday]
+                plan.blocks.append(b)
+            }
+        }
+        for (key, list) in exceptions {
+            if let b = after(list) { plan.exceptions[key]?.append(b) }
+        }
+        plan.mergeTwins()
         return plan
     }
 }
@@ -360,7 +392,8 @@ final class StudyPlanStore: ObservableObject {
         url = docs.appendingPathComponent(filename)
         if let data = try? Data(contentsOf: url),
            let decoded = try? JSONDecoder().decode(StudyPlan.self, from: data) {
-            plan = decoded
+            plan = decoded.convertingLegacySayItAgain()
+            if decoded.autoSayItAgain { write(plan) }
         } else {
             plan = StudyPlan.seeded(callTimes: DailyCallStore.shared.times,
                                     goalMinutes: Self.goalMinutes)

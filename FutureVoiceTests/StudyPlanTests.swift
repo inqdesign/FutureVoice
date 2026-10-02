@@ -50,16 +50,37 @@ final class StudyPlanTests: XCTestCase {
 
     // MARK: - Derived blocks
 
-    func testReviewAndSayItAgainOnlyOnPlannedDays() {
+    func testReviewOnlyOnPlannedDays() {
         var plan = StudyPlan()
         plan.blocks = [.init(kind: .talk, weekdays: [2], hour: 8, minute: 0, minutes: 10)]
         plan.autoReview = true
-        plan.autoSayItAgain = true
-        let monday = plan.occurrences(on: at(5, 0), calendar: cal)
-        XCTAssertEqual(monday.map(\.kind), [.talk, .sayItAgain, .review])
-        XCTAssertEqual(monday[1].start, at(5, 8, 10))
+        XCTAssertEqual(plan.occurrences(on: at(5, 0), calendar: cal).map(\.kind), [.talk, .review])
         // Tuesday has nothing planned, so no review slot either.
         XCTAssertTrue(plan.occurrences(on: at(6, 0), calendar: cal).isEmpty)
+    }
+
+    func testSayItAgainIsAnOrdinaryBlock() {
+        // Seeded after the first talk, every day — and movable like any block.
+        let plan = StudyPlan.seeded(callTimes: [t(8), t(13)], goalMinutes: 10)
+        let again = plan.blocks.first { $0.kind == .sayItAgain }!
+        XCTAssertEqual(again.startMinute, 8 * 60 + 10)
+        let moved = plan.moving(blockId: again.id, on: at(6, 0), to: at(6, 20), scope: .everyWeek, calendar: cal)!
+        XCTAssertEqual(moved.occurrences(on: at(6, 0), calendar: cal).last?.kind, .sayItAgain)
+        XCTAssertEqual(moved.occurrences(on: at(6, 0), calendar: cal).last?.start, at(6, 20))
+    }
+
+    func testLegacyDerivedSayItAgainBecomesBlocks() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .talk, weekdays: [2, 3], hour: 8, minute: 0, minutes: 10),
+                       .init(kind: .talk, weekdays: [3], hour: 7, minute: 0, minutes: 15)]
+        plan.autoSayItAgain = true
+        let converted = plan.convertingLegacySayItAgain()
+        XCTAssertFalse(converted.autoSayItAgain)
+        // After each weekday's FIRST talk, where it used to be drawn.
+        XCTAssertEqual(converted.occurrences(on: at(5, 0), calendar: cal)
+            .first { $0.kind == .sayItAgain }?.start, at(5, 8, 10))
+        XCTAssertEqual(converted.occurrences(on: at(6, 0), calendar: cal)
+            .first { $0.kind == .sayItAgain }?.start, at(6, 7, 15))
     }
 
     func testWeeklyTestLandsOnItsWeekday() {

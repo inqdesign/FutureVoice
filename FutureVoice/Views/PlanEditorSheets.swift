@@ -97,6 +97,8 @@ struct PlanBlockEditor: View {
                 } footer: {
                     if kind == .talk {
                         Text("A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.")
+                    } else if kind == .sayItAgain {
+                        Text("When it's time, you pick which recent talk to say again.")
                     }
                 }
                 if existingId != nil {
@@ -286,11 +288,6 @@ struct PlanSettingsSheet: View {
                     }
                 } footer: {
                     Text("On every planned day. The review reminder then comes at this time, once something is waiting.")
-                }
-                Section {
-                    Toggle("Say it again after a talk", isOn: binding(\.autoSayItAgain))
-                } footer: {
-                    Text("Right after the day's first talk.")
                 }
                 Section {
                     ForEach(week.filter { $0 >= cal.startOfDay(for: Date()) }, id: \.self) { day in
@@ -490,7 +487,7 @@ struct WeeklyPlanEditor: View {
             // Only a time change on a block that also runs on other weekdays
             // leaves a question: should those follow?
             if spans && sameDay { pendingFollow = PendingFollow(remainingId: id, newStart: newStart) }
-        case .exception, .sayItAgain:
+        case .exception:
             break
         }
     }

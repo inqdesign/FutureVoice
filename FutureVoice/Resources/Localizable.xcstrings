@@ -2544,6 +2544,52 @@
       },
       "shouldTranslate" : false
     },
+    "%@ · %lld lines" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld Zeilen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld líneas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld répliques"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld줄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld 句"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %lld 句"
+          }
+        }
+      }
+    },
     "%@ · %lld mastered · %@" : {
       "localizations" : {
         "de" : {
@@ -51271,6 +51317,52 @@
         }
       }
     },
+    "No talks to say again yet. Have a talk first." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch kein Gespräch zum Nochmal-Sagen. Führ zuerst ein Gespräch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay conversaciones para volver a decir. Primero ten una conversación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore de conversation à redire. Commence par parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだもう一度話せるトークがありません。まずトークしてみましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 말할 대화가 아직 없어요. 먼저 대화를 해보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有可以重说的对话。先来一次对话吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有可以重說的對話。先來一次對話吧。"
+          }
+        }
+      }
+    },
     "no timings" : {
       "localizations" : {
         "de" : {
@@ -56896,6 +56988,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "從檔案選取"
+          }
+        }
+      }
+    },
+    "Pick a recent talk" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl eines deiner letzten Gespräche"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige una conversación reciente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis une conversation récente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近のトークを選ぶ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 대화 고르기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选一段最近的对话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選一段最近的對話"
+          }
+        }
+      }
+    },
+    "Pick a recent talk and say it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl eines deiner letzten Gespräche und sag es nochmal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige una conversación reciente y vuelve a decirla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis une conversation récente et redis-la."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近のトークを選んで、もう一度話しましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 대화를 하나 골라 다시 말해봐요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选一段最近的对话，再说一次吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選一段最近的對話，再說一次吧。"
           }
         }
       }
@@ -65166,98 +65350,6 @@
         }
       }
     },
-    "Right after the day's first talk." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Direkt nach dem ersten Gespräch des Tages."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Justo después de la primera conversación del día."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Juste après la première conversation du jour."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "その日最初のトークのすぐ後です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "그날 첫 대화 바로 뒤예요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在当天第一次对话之后。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在當天第一次對話之後。"
-          }
-        }
-      }
-    },
-    "Right after the talk" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Direkt nach dem Gespräch"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Justo después de hablar"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Juste après la conversation"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "トークのすぐ後"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대화 바로 뒤"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "对话之后"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "對話之後"
-          }
-        }
-      }
-    },
     "Right now" : {
       "localizations" : {
         "de" : {
@@ -66491,52 +66583,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再說一次。目前的麥克風是 %@。"
-          }
-        }
-      }
-    },
-    "Say it again after a talk" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nach dem Gespräch nochmal sagen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver a decirlo después de hablar"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Redire après la conversation"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "トークの後にもう一度話す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대화 뒤에 다시 말하기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "对话后重说一次"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "對話後重說一次"
           }
         }
       }
@@ -80497,6 +80543,52 @@
         }
       }
     },
+    "The whole talk again, with your lines the way they should have gone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ganze Gespräch nochmal, deine Sätze so, wie sie hätten klingen sollen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toda la conversación otra vez, con tus frases como debieron sonar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toute la conversation à nouveau, avec tes répliques comme elles auraient dû être."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トーク全体をもう一度。自分のセリフは自然な言い方で。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 전체를 다시, 내 말은 더 자연스러운 표현으로 해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把整段对话再来一次，你的台词换成更自然的说法。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把整段對話再來一次，你的台詞換成更自然的說法。"
+          }
+        }
+      }
+    },
     "The word cloud, CEFR estimate, and stats never cost anything." : {
       "localizations" : {
         "de" : {
@@ -82619,6 +82711,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "該練習了"
+          }
+        }
+      }
+    },
+    "Time to say it again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeit, es nochmal zu sagen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es hora de volver a decirlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est l’heure de redire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度話す時間です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 말하기 할 시간이에요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该重说一次了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該重說一次了"
           }
         }
       }
@@ -90529,6 +90667,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "朋友用你的邀請碼註冊，兩人各拿到%lld分鐘通話時間。邀請得到的時間會比這個月的額度先用。"
+          }
+        }
+      }
+    },
+    "When it's time, you pick which recent talk to say again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn es so weit ist, wählst du, welches deiner letzten Gespräche du nochmal sagst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando sea la hora, eliges qué conversación reciente volver a decir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le moment venu, tu choisis quelle conversation récente redire."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時間になったら、どの最近のトークをもう一度話すか選びます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시간이 되면 어떤 최근 대화를 다시 말할지 골라요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间到了，再选要重说哪一段最近的对话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時間到了，再選要重說哪一段最近的對話。"
           }
         }
       }
