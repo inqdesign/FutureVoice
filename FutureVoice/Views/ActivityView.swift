@@ -120,6 +120,9 @@ struct ActivityView: View {
         .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        // The strips and the day list swipe sideways; the page's back swipe
+        // stays on the edge so it doesn't take those swipes.
+        .edgeOnlyBackSwipe()
         .toolbar {
             // The page is the routine, so its Edit is the page's own.
             ToolbarItem(placement: .topBarTrailing) {
