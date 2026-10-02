@@ -483,26 +483,36 @@ struct WeeklyPlanEditor: View {
                 }
             }
             if anytime.contains(where: { !$0.isEmpty }) {
+                // Blocks with no hour. The row is named over its full width —
+                // a side label in the 16-pt hour gutter broke into "An / y" —
+                // and a chip says icon + number only, which fits a column in
+                // every language ("10 items" was cut in all of them).
+                Text(explain("Any time of day"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, PlannerWeekCard.labelWidth + PlannerWeekCard.gap)
                 HStack(alignment: .top, spacing: PlannerWeekCard.gap) {
-                    Text("Any")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                        .frame(width: PlannerWeekCard.labelWidth, alignment: .trailing)
+                    Color.clear.frame(width: PlannerWeekCard.labelWidth, height: 1)
                     ForEach(Array(days.enumerated()), id: \.offset) { i, _ in
                         VStack(spacing: 3) {
                             ForEach(anytime[i]) { occ in
                                 Button {
                                     if let id = occ.blockId { blockEditor = .inWeek(blockId: id) }
                                 } label: {
-                                    HStack(spacing: 2) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 2) {
                                         Image(systemName: occ.kind.symbol)
-                                        Text(occ.kind.amountText(occ.amount)).lineLimit(1).minimumScaleFactor(0.6)
+                                        if occ.amount > 1 || occ.kind.isTimed {
+                                            Text("\(occ.amount)").monospacedDigit()
+                                        }
                                     }
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(occ.kind.color)
-                                    .frame(maxWidth: .infinity, minHeight: 20)
-                                    .background(RoundedRectangle(cornerRadius: 4).fill(occ.kind.color.opacity(0.16)))
-                                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(occ.kind.color, lineWidth: 1.2))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, minHeight: 22)
+                                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                        .fill(occ.kind.color.opacity(0.18)))
+                                    .accessibilityLabel(Text(occ.kind.titled(occ.amount)))
                                 }
                                 .buttonStyle(.plain)
                             }

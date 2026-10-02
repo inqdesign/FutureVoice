@@ -341,13 +341,16 @@ enum DebugCapture {
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "plan-editor":
-            once("plan-editor") {
+            once("plan-editor-anytime") {
                 var plan = StudyPlan()
                 plan.blocks = [
                     .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
                     .init(kind: .sayItAgain, weekdays: [2, 4], hour: 20, minute: 30, minutes: 1),
                     .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
                     .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 2),
+                    // Blocks with no hour, for the editor's "any time" row.
+                    .init(kind: .expressions, weekdays: Set(2...7), hour: 0, minute: 0, minutes: 3, anytime: true),
+                    .init(kind: .words, weekdays: [2, 4, 6], hour: 0, minute: 0, minutes: 10, anytime: true),
                     .init(kind: .review, weekdays: Set(1...7), hour: 21, minute: 0, minutes: 20),
                 ]
                 plan.offWeekdays = [1]
