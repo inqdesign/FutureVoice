@@ -634,8 +634,12 @@ its own branch so the founder picks the build it ships in.
   a promise". One colour per kind (talk blue, say it again teal, review
   green, words purple, expressions pink, shadowing yellow, test orange) —
   two kinds sharing green read as one bar. Below: "Journey", Day | Month |
-  Year; Day is `PlannerDayCard` (week circles + the day's list with
-  progress rings), Month/Year the calendar this page always had.
+  Year; Day is `PlannerDayCard` — ONE card per day (founder): the week
+  circles, the day's list with progress rings (a talk row opens its book),
+  and at its foot the day's journal entry (share card + numbers,
+  `dayJournal`), at the same width as the promise card. Month/Year are the
+  calendar this page always had and show no day card; tapping a date there
+  opens it in Day.
 - **Only a talk is promised in minutes** (founder: "why is everything but
   Talk in minutes?"). Every other block is a COUNT the app keeps — words /
   expressions judged, sentence cards, shadow lines, say-it-again runs, a

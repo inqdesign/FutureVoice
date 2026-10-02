@@ -18,6 +18,10 @@ struct PlannerDayCard: View {
     let activeDays: Set<Date>
     let onShiftWeek: (Int) -> Void
     let onSayItAgain: () -> Void
+    /// A talk in the day's list was tapped: open its book.
+    var onOpenTalk: (UUID) -> Void = { _ in }
+    /// The day's journal entry (its share card and numbers), at the foot.
+    var footer: AnyView? = nil
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
@@ -33,6 +37,10 @@ struct PlannerDayCard: View {
             week
             Divider()
             dayList
+            if let footer {
+                Divider()
+                footer
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,10 +219,15 @@ struct PlannerDayCard: View {
     private func row(_ item: Item, talk: [String: Double]) -> some View {
         switch item.body {
         case .actual(let a):
-            rowLayout(time: clock(a.start), symbol: a.kind.symbol, tint: a.kind.color,
-                      title: a.title ?? a.kind.label,
-                      detail: explain("Extra · \(clock(a.start))–\(clock(a.end))"),
-                      progress: 1)
+            let line = rowLayout(time: clock(a.start), symbol: a.kind.symbol, tint: a.kind.color,
+                                 title: a.title ?? a.kind.label,
+                                 detail: explain("Extra · \(clock(a.start))–\(clock(a.end))"),
+                                 progress: 1)
+            if let id = a.sessionId {
+                Button { onOpenTalk(id) } label: { line }.buttonStyle(.plain)
+            } else {
+                line
+            }
         case .plan(let occ, let done):
             let lapsed = !done && occ.isOver()
             let progress: Double = done ? 1 : (talk[occ.id] ?? 0)

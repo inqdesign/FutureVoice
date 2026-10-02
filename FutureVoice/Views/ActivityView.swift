@@ -63,6 +63,7 @@ struct ActivityView: View {
     @State private var planner: PlannerSnapshot?
     @State private var showPlanEditor = false
     @State private var showSayItAgainPicker = false
+    @State private var openTalk: Session?
     /// `PracticeStats.activeDays` — what the no-promise rule counts.
     @State private var studiedDays: Set<Date> = []
 
@@ -94,12 +95,6 @@ struct ActivityView: View {
                 case .month: statsBar; monthCard
                 case .year:  statsBar; yearCard
                 }
-                // Always rendered when a day is selected — never toggled off,
-                // so switching days doesn't pop the card in and out and jump
-                // the scroll position.
-                if let day = selectedDay {
-                    dayDetailCard(day)
-                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -119,6 +114,12 @@ struct ActivityView: View {
         }
         .onChange(of: cardStore.version) { _, _ in thumbs = [:]; loadCellPhotos() }
         .fullScreenCover(isPresented: $showPlanEditor) { WeeklyPlanEditor() }
+        .navigationDestination(isPresented: Binding(get: { openTalk != nil },
+                                                    set: { if !$0 { openTalk = nil } })) {
+            if let openTalk {
+                ConversationDetailView(session: openTalk).environmentObject(appState)
+            }
+        }
         .sheet(isPresented: $showSayItAgainPicker, onDismiss: reloadPlanner) {
             SayItAgainPicker().environmentObject(appState)
         }
@@ -137,12 +138,19 @@ struct ActivityView: View {
     @ViewBuilder
     private var plannerSection: some View {
         if let planner {
+            // The day is ONE card: its plan, what happened, and the day's
+            // share card at the foot (founder: one card per day, and the
+            // same width as the promise above).
             PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
                            isPromise: planStore.plan.streakSince != nil,
                            activeDays: studiedDays,
                            onShiftWeek: shiftWeek,
-                           onSayItAgain: { showSayItAgainPicker = true })
-            .padding(.horizontal, -12)
+                           onSayItAgain: { showSayItAgainPicker = true },
+                           onOpenTalk: { id in
+                               openTalk = sessionsByDay.values.flatMap { $0 }.first { $0.id == id }
+                                   ?? SessionStore.shared.loadAcrossLanguages().first { $0.id == id }
+                           },
+                           footer: selectedDay.map { AnyView(dayJournal(cal.startOfDay(for: $0))) })
         } else {
             ProgressView().frame(maxWidth: .infinity, minHeight: 200)
         }
@@ -407,7 +415,7 @@ struct ActivityView: View {
                                       lineWidth: isSelected ? 2.5 : 1.5)
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { if !future { selectedDay = day } }
+                .onTapGesture { if !future { selectedDay = day; viewMode = .day } }
         } else {
             Color.clear.aspectRatio(1, contentMode: .fit)
         }
@@ -433,7 +441,7 @@ struct ActivityView: View {
                                       lineWidth: isSelected ? 1.5 : (cal.isDateInToday(date) ? 1 : 0))
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { if !future { selectedDay = day } }
+                .onTapGesture { if !future { selectedDay = day; viewMode = .day } }
         } else {
             Color.clear.aspectRatio(1, contentMode: .fit)
         }
@@ -457,12 +465,12 @@ struct ActivityView: View {
 
     // MARK: - Day detail (tap a day)
 
-    private func dayDetailCard(_ day: Date) -> some View {
-        let mins = minutesByDay[day] ?? 0
-        let daySessions = sessionsByDay[day] ?? []
-        let talks = daySessions.count
-        // Same per-kind numbers (and the same log-plus-backfill policy) as
-        // Progress's activity mix chart.
+    /// The foot of the day's card: its share card beside the day's numbers.
+    /// The day's talks are rows in the list above (tap one for its book),
+    /// so they aren't listed again here.
+    @ViewBuilder
+    private func dayJournal(_ day: Date) -> some View {
+        let talks = (sessionsByDay[day] ?? []).count
         let log = PracticeLog.shared.day(day)
         let shadowed = max(log?.shadowReps ?? 0,
                            appState.shadowAttempts.filter { cal.isDate($0.createdAt, inSameDayAs: day) }.count)
@@ -470,96 +478,30 @@ struct ActivityView: View {
                            drillCards.filter { c in
                                c.lastReviewedAt.map { cal.isDate($0, inSameDayAs: day) } ?? false
                            }.count)
-
         let study = studyMinutesByDay[day] ?? 0
-        let isEmpty = mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0 && study == 0
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 8) {
-                Text(dayTitle(day))
-                    .font(.headline)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                Spacer(minLength: 8)
-                // The day's share card — only for a day that has something
-                // on it; an empty day has nothing to put on a card. A talk
-                // closed without saving still counts: it was metered.
-                if !isEmpty {
-                    // A bare glyph, no container. The label said what the
-                    // glyph already says, and a bordered capsule drawn around
-                    // one icon has no padding that looks right at either
-                    // control size. The tap target comes from padding instead,
-                    // which keeps the glyph flush with the card's own inset;
-                    // `Label` keeps "Share card" as the accessibility name.
+        let talkSeconds = talkSecondsByDay[day] ?? 0
+        let isEmpty = talkSeconds == 0 && talks == 0 && shadowed == 0 && reviewed == 0 && study == 0
+        if !isEmpty {
+            HStack(alignment: .top, spacing: 16) {
+                cardPreviewRow(day)
+                VStack(spacing: 12) {
+                    factRow("Talk time", PracticeStats.talkClock(seconds: talkSeconds))
+                    if talks > 0 { factRow("Talks", "\(talks)") }
+                    if study > 0 { factRow("Study time", explain("\(study) min")) }
+                    if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
+                    if reviewed > 0 { factRow("Drills", "\(reviewed)") }
+                    Spacer(minLength: 0)
                     Button { cardDay = CardDay(date: day) } label: {
                         Label("Share card", systemImage: "square.and.arrow.up")
-                            .labelStyle(.iconOnly)
-                            .font(.title3)
-                            .padding(.leading, 14)
-                            .padding(.vertical, 6)
-                            .contentShape(Rectangle())
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.tint)
                 }
-            }
-            if isEmpty {
-                Text(explain("No practice this day."))
-                    .font(.subheadline).foregroundStyle(.secondary)
-            } else {
-                // The card beside its facts. The card already prints the
-                // day's minutes, so an icon row repeating them under it was
-                // the same number twice — the facts now fill the half of the
-                // row the thumbnail used to leave empty.
-                HStack(alignment: .top, spacing: 16) {
-                    cardPreviewRow(day)
-                    VStack(spacing: 12) {
-                        // Talk time leads, and is shown even at zero on a day
-                        // that has something else: it is the number the home
-                        // ring reports, and a day whose talk was closed
-                        // without saving has nothing else to name it by.
-                        factRow("Talk time",
-                                PracticeStats.talkClock(seconds: talkSecondsByDay[day] ?? 0))
-                        if talks > 0 { factRow("Talks", "\(talks)") }
-                        if study > 0 { factRow("Study time", explain("\(study) min")) }
-                        if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
-                        if reviewed > 0 { factRow("Drills", "\(reviewed)") }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight)
-                }
-                // The day's talks as tappable rows — the record links straight
-                // back to each talk's book for review.
-                if !daySessions.isEmpty {
-                    CardDivider(inset: 0)
-                    ForEach(daySessions) { session in
-                        NavigationLink {
-                            ConversationDetailView(session: session)
-                                .environmentObject(appState)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "bubble.left.and.bubble.right.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tint)
-                                    .frame(width: 24)
-                                Text(session.displayTitle)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     /// One fact beside the card: what it is, then how much of it. Label left,
