@@ -154,4 +154,17 @@ final class StudyPlanTests: XCTestCase {
         let acts = PlannerDay.actuals(talks: [], events: events)
         XCTAssertEqual(acts.map(\.count), [3, 1])
     }
+
+    func testASittingOnThePlanIsOneBlock() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .talk, weekdays: [3, 4], hour: 8, minute: 0, minutes: 10)]
+        let tue = plan.occurrences(on: at(6, 0), calendar: cal)
+        let onTime = PlannerDay.actuals(
+            talks: [.init(id: UUID(), start: at(6, 8, 3), end: at(6, 8, 15), title: "x")], events: [])
+        XCTAssertEqual(PlannerDay.absorbed(planned: tue, actuals: onTime).count, 1)
+        // At noon it is done, but drawn where it happened, not merged.
+        let atNoon = PlannerDay.actuals(
+            talks: [.init(id: UUID(), start: at(6, 12), end: at(6, 12, 10), title: "x")], events: [])
+        XCTAssertTrue(PlannerDay.absorbed(planned: tue, actuals: atNoon).isEmpty)
+    }
 }

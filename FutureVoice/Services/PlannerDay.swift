@@ -18,7 +18,19 @@ enum PlannerDay {
         var title: String?
         var sessionId: UUID?
         var count: Int
-        var id: String { "\(kind.rawValue)-\(start.timeIntervalSinceReferenceDate)" }
+        var id: String {
+            sessionId.map { "talk-\($0.uuidString)" }
+                ?? "\(kind.rawValue)-\(start.timeIntervalSinceReferenceDate)"
+        }
+
+        /// Whether this sitting is the kind of practice a planned block asks for.
+        func covers(_ planned: StudyPlan.Kind) -> Bool {
+            switch (kind, planned) {
+            case (.talk, .talk), (.shadow, .shadow), (.sayItAgain, .sayItAgain): return true
+            case (.review, .review), (.review, .words), (.review, .expressions): return true
+            default: return false
+            }
+        }
     }
 
     /// Reps closer together than this are one sitting.
@@ -93,6 +105,28 @@ enum PlannerDay {
             case .test: hit = testFinished
             }
             if hit { out.insert(occ.id) }
+        }
+        return out
+    }
+
+    /// Planned blocks that a real sitting landed ON — same kind, starting
+    /// within `absorbWindow` of the plan. The week grid draws such a pair as
+    /// ONE filled block instead of an outline with a second block over it.
+    /// Keyed by occurrence id, valued by the actual's id.
+    static let absorbWindow: TimeInterval = 45 * 60
+
+    static func absorbed(planned: [StudyPlan.Occurrence], actuals: [Actual]) -> [String: String] {
+        var out: [String: String] = [:]
+        var used = Set<String>()
+        for occ in planned.sorted(by: { $0.start < $1.start }) {
+            let match = actuals.first { a in
+                !used.contains(a.id) && a.covers(occ.kind)
+                    && abs(a.start.timeIntervalSince(occ.start)) <= absorbWindow
+            }
+            if let match {
+                out[occ.id] = match.id
+                used.insert(match.id)
+            }
         }
         return out
     }

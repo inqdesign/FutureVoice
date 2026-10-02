@@ -369,9 +369,10 @@ enum DebugCapture {
                                                   (2, at(2, 12, 20), at(2, 12, 33), "Moving apartments"),
                                                   (1, at(1, 8, 1), at(1, 8, 12), "The interview follow-up"),
                                                   (0, at(0, 8, 2), at(0, 8, 14), "Coffee with Sarah")] {
-                    _ = back
+                    // A fixed id per seeded talk, so a second capture run
+                    // replaces it instead of stacking a copy on the grid.
                     var s = Self.talkDetailSession
-                    s = Session(id: UUID(), userId: s.userId, targetLanguage: s.targetLanguage, mode: s.mode,
+                    s = Session(id: UUID(uuidString: "00000000-0000-0000-0000-0000000000a\(back)")!, userId: s.userId, targetLanguage: s.targetLanguage, mode: s.mode,
                                 topic: title, startedAt: start, endedAt: end,
                                 turns: s.turns, summary: s.summary)
                     SessionStore.shared.save(s)

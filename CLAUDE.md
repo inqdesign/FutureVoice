@@ -541,6 +541,16 @@ its own branch so the founder picks the build it ships in.
   say it again, this week's days off, planned talk minutes for 30 days).
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
+- **One block per sitting, and every block names itself** (same day, founder:
+  "it isn't clear what the bars are"). A sitting that started within 45 min
+  of a planned block of its kind is drawn as ONE filled block with a tick
+  (`PlannerDay.absorbed`), never an outline with a half-width bar over it;
+  done at another time, the plan keeps a dashed outline with a tick and the
+  filled block sits where it happened; a plan whose time passed undone is
+  grey, never red. Every block carries its kind's icon (blocks are at least
+  16 pt tall, and `stackedTops` pushes a block below the one before so a
+  10-minute talk and the say-it-again after it don't overlap), and the
+  legend lists all five kinds plus the two strokes.
 - Talk is `.blue`, not the accent: a theme's accent can be green, and then a
   talk reads as a review. The legend says "Planned" — "Plan" is the billing
   plan's key (요금제).
