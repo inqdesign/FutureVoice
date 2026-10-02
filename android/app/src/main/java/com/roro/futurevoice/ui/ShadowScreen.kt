@@ -692,70 +692,8 @@ fun ShadowScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 // ---- target line
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.target_line), style = MaterialTheme.typography.labelMedium,
-                            color = secondary)
-                        Spacer(Modifier.weight(1f))
-                        val r = rhythm
-                        when {
-                            r != null -> {
-                                // How many words the score stands on, when
-                                // not all of them — the only place it lives.
-                                val total = activeRange?.count() ?: timings.size
-                                val judged = r.words.count { it.isMeasured }
-                                Row(verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    if (judged < total) Text("$judged/$total",
-                                        style = MaterialTheme.typography.labelSmall, color = tertiary)
-                                    Icon(Icons.Filled.AvTimer, null, Modifier.size(14.dp), tint = scoreColor(r.score))
-                                    Text("${r.score}", style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold, color = scoreColor(r.score))
-                                }
-                            }
-                            timings.isEmpty() -> Text(stringResource(R.string.no_timings),
-                                style = MaterialTheme.typography.labelSmall, color = tertiary)
-                            practiceRange != null -> Text(stringResource(R.string.practicing_the_selected_phrase),
-                                style = MaterialTheme.typography.labelSmall, color = tertiary)
-                            else -> Text(stringResource(R.string.tap_words_to_pick_a_phrase),
-                                style = MaterialTheme.typography.labelSmall, color = tertiary)
-                        }
-                    }
-                    if (timings.isEmpty()) {
-                        Text(line, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                    } else {
-                        if (tick < 0) return@Column   // read: the karaoke redraws on the clock
-                        val nowMs: Int? = when {
-                            phase == ShadowPhase.RECORDING && syncStartedAt > 0 ->
-                                (System.currentTimeMillis() - syncStartedAt).toInt() +
-                                    (activeRange?.let { timings[it.first].startMs } ?: 0)
-                            target.isPlaying -> target.positionMs
-                            else -> null
-                        }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(if (spaced) 1.dp else 0.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            timings.forEachIndexed { i, wt ->
-                                val selected = selection?.contains(i) == true
-                                // As wide as the WORD: the dot row may not
-                                // push words apart ("I" and "to" gapped).
-                                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min).clickable(
-                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                        indication = null) { tapWord(i) }) {
-                                    Text(wt.word,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = wordColor(i, wt, nowMs, recording = phase == ShadowPhase.RECORDING,
-                                            activeRange = activeRange, hasDiff = steps.isNotEmpty(), ops = wordOps),
-                                        modifier = Modifier.clip(RoundedCornerShape(4.dp))
-                                            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else Color.Transparent)
-                                            .padding(horizontal = if (spaced) 2.dp else 0.dp, vertical = 1.dp))
-                                    BeatMark(wordBeats[i])
-                                }
-                            }
-                        }
-                    }
-                }
+                TargetLineSection(line, timings, selection, activeRange, practiceRange != null, rhythm, steps,
+                    wordOps, wordBeats, spaced, phase, syncStartedAt, target, tick, ::tapWord)
 
                 // ---- durations (after analysis only)
                 if (steps.isNotEmpty() && attemptTargetDurationMs > 0) {
@@ -789,63 +727,10 @@ fun ShadowScreen(
 
                 // ---- your take
                 feedback?.let { fb ->
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.your_take), style = MaterialTheme.typography.labelMedium, color = secondary)
-                            Spacer(Modifier.weight(1f))
-                            // Words AND beat — and when the beat could not be
-                            // measured the badge says so, rather than quietly
-                            // changing what the number means.
-                            if (fb.rhythmScore == null) Text(stringResource(R.string.words_only),
-                                style = MaterialTheme.typography.labelSmall, color = tertiary)
-                            Spacer(Modifier.width(6.dp))
-                            Icon(Icons.Filled.Speed, null, Modifier.size(16.dp), tint = scoreColor(fb.overallScore))
-                            Text(" ${fb.overallScore}", style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold, color = scoreColor(fb.overallScore))
-                        }
-                        if (steps.isNotEmpty()) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Icon(Icons.AutoMirrored.Filled.Notes, null, Modifier.width(20.dp).size(18.dp),
-                                    tint = MaterialTheme.colorScheme.primary)
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(stringResource(R.string.your_match), style = MaterialTheme.typography.labelMedium, color = secondary)
-                                    Text(diffText(steps, wrong = orange(), missed = secondary, kept = MaterialTheme.colorScheme.onSurface),
-                                        style = MaterialTheme.typography.bodyLarge)
-                                    if (said.isNotBlank()) {
-                                        Text(stringResource(R.string.what_i_heard), style = MaterialTheme.typography.labelMedium,
-                                            color = secondary, modifier = Modifier.padding(top = 4.dp))
-                                        Text(said, style = MaterialTheme.typography.bodyMedium, color = secondary)
-                                    }
-                                }
-                            }
-                        }
-                        if (takeRecording != null) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    BorderedButton(stringResource(R.string.hear_target), Icons.Filled.PlayCircleOutline,
-                                        Modifier.weight(1f)) { previewTarget() }
-                                    BorderedButton(stringResource(R.string.hear_my_attempt), Icons.Filled.RecordVoiceOver,
-                                        Modifier.weight(1f)) { takeRecording?.let { playTake(it) } }
-                                }
-                                // Its own row: hearing the two over each other is
-                                // the thing worth doing here.
-                                BorderedButton(stringResource(R.string.both_at_once), Icons.Filled.Groups,
-                                    Modifier.fillMaxWidth()) { playTogether() }
-                                Text(stringResource(R.string.your_take_over_the_line_both_starting_on_their_first_word_he_891e29),
-                                    style = MaterialTheme.typography.labelSmall, color = tertiary)
-                            }
-                        }
-                        if (coachPending) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                                Text(stringResource(R.string.writing_feedback), style = MaterialTheme.typography.bodySmall,
-                                    color = secondary)
-                            }
-                        }
-                        if (fb.pronunciation.isNotEmpty()) Bullet(Icons.Filled.GraphicEq, stringResource(R.string.pronunciation), fb.pronunciation)
-                        if (fb.pacing.isNotEmpty()) Bullet(Icons.Filled.AvTimer, stringResource(R.string.pacing), fb.pacing)
-                        if (fb.fix.isNotEmpty()) Bullet(Icons.Filled.AutoAwesome, stringResource(R.string.try_this), fb.fix)
-                    }
+                    TakeSection(fb, steps, said, takeRecording != null, coachPending,
+                        onHearTarget = ::previewTarget,
+                        onHearTake = { takeRecording?.let { playTake(it) } },
+                        onTogether = ::playTogether)
                 }
 
                 // Android's hand: only after a score — moving on before saying
@@ -1180,4 +1065,151 @@ private fun rhythmColor(deviationMs: Int): Color = when (ShadowScore.rhythmGrade
     2 -> green()
     1 -> orange()
     else -> red()
+}
+
+/** The line itself: header, karaoke words, beat dots. Its own function so
+ *  the screen body stays small enough for the JIT. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TargetLineSection(
+    line: String, timings: List<WordTiming>, selection: IntRange?, activeRange: IntRange?,
+    phraseSelected: Boolean, rhythm: ShadowScore.RhythmAnalysis?, steps: List<ShadowScore.DiffStep>,
+    wordOps: Map<Int, ShadowScore.DiffOp>, wordBeats: Map<Int, ShadowScore.RhythmWord>, spaced: Boolean,
+    phase: ShadowPhase, syncStartedAt: Long, target: TargetPlayer, tick: Long, tapWord: (Int) -> Unit,
+) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val tertiary = secondary.copy(alpha = 0.6f)
+    val practiceRange = if (phraseSelected) selection else null
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.target_line), style = MaterialTheme.typography.labelMedium,
+                color = secondary)
+            Spacer(Modifier.weight(1f))
+            val r = rhythm
+            when {
+                r != null -> {
+                    // How many words the score stands on, when
+                    // not all of them — the only place it lives.
+                    val total = activeRange?.count() ?: timings.size
+                    val judged = r.words.count { it.isMeasured }
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (judged < total) Text("$judged/$total",
+                            style = MaterialTheme.typography.labelSmall, color = tertiary)
+                        Icon(Icons.Filled.AvTimer, null, Modifier.size(14.dp), tint = scoreColor(r.score))
+                        Text("${r.score}", style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold, color = scoreColor(r.score))
+                    }
+                }
+                timings.isEmpty() -> Text(stringResource(R.string.no_timings),
+                    style = MaterialTheme.typography.labelSmall, color = tertiary)
+                practiceRange != null -> Text(stringResource(R.string.practicing_the_selected_phrase),
+                    style = MaterialTheme.typography.labelSmall, color = tertiary)
+                else -> Text(stringResource(R.string.tap_words_to_pick_a_phrase),
+                    style = MaterialTheme.typography.labelSmall, color = tertiary)
+            }
+        }
+        if (timings.isEmpty()) {
+            Text(line, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        } else {
+            if (tick < 0) return@Column   // read: the karaoke redraws on the clock
+            val nowMs: Int? = when {
+                phase == ShadowPhase.RECORDING && syncStartedAt > 0 ->
+                    (System.currentTimeMillis() - syncStartedAt).toInt() +
+                        (activeRange?.let { timings[it.first].startMs } ?: 0)
+                target.isPlaying -> target.positionMs
+                else -> null
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(if (spaced) 1.dp else 0.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                timings.forEachIndexed { i, wt ->
+                    val selected = selection?.contains(i) == true
+                    // As wide as the WORD: the dot row may not
+                    // push words apart ("I" and "to" gapped).
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min).clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null) { tapWord(i) }) {
+                        Text(wt.word,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = wordColor(i, wt, nowMs, recording = phase == ShadowPhase.RECORDING,
+                                activeRange = activeRange, hasDiff = steps.isNotEmpty(), ops = wordOps),
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else Color.Transparent)
+                                .padding(horizontal = if (spaced) 2.dp else 0.dp, vertical = 1.dp))
+                        BeatMark(wordBeats[i])
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** "Your take": the headline score, the diff, the three playback buttons,
+ *  the coach. */
+@Composable
+private fun TakeSection(
+    fb: ShadowFeedback, steps: List<ShadowScore.DiffStep>, said: String, hasTake: Boolean, coachPending: Boolean,
+    onHearTarget: () -> Unit, onHearTake: () -> Unit, onTogether: () -> Unit,
+) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val tertiary = secondary.copy(alpha = 0.6f)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.your_take), style = MaterialTheme.typography.labelMedium, color = secondary)
+            Spacer(Modifier.weight(1f))
+            // Words AND beat — and when the beat could not be
+            // measured the badge says so, rather than quietly
+            // changing what the number means.
+            if (fb.rhythmScore == null) Text(stringResource(R.string.words_only),
+                style = MaterialTheme.typography.labelSmall, color = tertiary)
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.Filled.Speed, null, Modifier.size(16.dp), tint = scoreColor(fb.overallScore))
+            Text(" ${fb.overallScore}", style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold, color = scoreColor(fb.overallScore))
+        }
+        if (steps.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.AutoMirrored.Filled.Notes, null, Modifier.width(20.dp).size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.your_match), style = MaterialTheme.typography.labelMedium, color = secondary)
+                    Text(diffText(steps, wrong = orange(), missed = secondary, kept = MaterialTheme.colorScheme.onSurface),
+                        style = MaterialTheme.typography.bodyLarge)
+                    if (said.isNotBlank()) {
+                        Text(stringResource(R.string.what_i_heard), style = MaterialTheme.typography.labelMedium,
+                            color = secondary, modifier = Modifier.padding(top = 4.dp))
+                        Text(said, style = MaterialTheme.typography.bodyMedium, color = secondary)
+                    }
+                }
+            }
+        }
+        if (hasTake) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BorderedButton(stringResource(R.string.hear_target), Icons.Filled.PlayCircleOutline,
+                        Modifier.weight(1f)) { onHearTarget() }
+                    BorderedButton(stringResource(R.string.hear_my_attempt), Icons.Filled.RecordVoiceOver,
+                        Modifier.weight(1f)) { onHearTake() }
+                }
+                // Its own row: hearing the two over each other is
+                // the thing worth doing here.
+                BorderedButton(stringResource(R.string.both_at_once), Icons.Filled.Groups,
+                    Modifier.fillMaxWidth()) { onTogether() }
+                Text(stringResource(R.string.your_take_over_the_line_both_starting_on_their_first_word_he_891e29),
+                    style = MaterialTheme.typography.labelSmall, color = tertiary)
+            }
+        }
+        if (coachPending) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                Text(stringResource(R.string.writing_feedback), style = MaterialTheme.typography.bodySmall,
+                    color = secondary)
+            }
+        }
+        if (fb.pronunciation.isNotEmpty()) Bullet(Icons.Filled.GraphicEq, stringResource(R.string.pronunciation), fb.pronunciation)
+        if (fb.pacing.isNotEmpty()) Bullet(Icons.Filled.AvTimer, stringResource(R.string.pacing), fb.pacing)
+        if (fb.fix.isNotEmpty()) Bullet(Icons.Filled.AutoAwesome, stringResource(R.string.try_this), fb.fix)
+    }
 }

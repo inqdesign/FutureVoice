@@ -129,8 +129,9 @@ fun ShadowTimeline(
 
     // The track ends where the SPEECH does, not the file's silent tail.
     val trackEnd: Int = run {
-        val file = maxOf(duration, 10)
         val spoken = (timings.lastOrNull()?.endMs ?: 0) + TL.TAIL_RELEASE_MS
+        // Before the player reports a length, the words are the length.
+        val file = if (duration > 0) duration else maxOf(spoken, 1_000)
         if (spoken in 1 until file) spoken else file
     }
     val sel = selectionMs(selection, timings)
@@ -148,7 +149,7 @@ fun ShadowTimeline(
         BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 4.dp).height(TL.trackHeight)) {
             val wPx = constraints.maxWidth.toFloat()
             val density = LocalDensity.current
-            fun xOf(ms: Int): Dp = with(density) { (ms.toFloat() / trackEnd * wPx).toDp() }
+            fun xOf(ms: Int): Dp = with(density) { (ms.coerceIn(0, trackEnd).toFloat() / trackEnd * wPx).toDp() }
             fun msAt(x: Float): Int = (x / wPx * trackEnd).toInt().coerceIn(0, trackEnd)
             val grabPx = with(density) { TL.grab.toPx() }
             Box(
