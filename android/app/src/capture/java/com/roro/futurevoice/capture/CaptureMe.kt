@@ -116,12 +116,12 @@ object CaptureMe {
      * anything, so the cards render without a price row — as they do on any
      * device Play hasn't priced.
      */
-    private val samplePlans: List<BillingService.Plan> = listOf("monthly", "annual").flatMap { period ->
+    private val samplePlans: List<BillingService.Plan> = listOf("monthly").flatMap { period ->
         listOf(
             BillingService.Plan(id = "light_$period", tier = "light", period = period,
-                monthly_seconds = 9000, monthly_scenes = 60),
+                monthly_seconds = 9000, monthly_scenes = 10),
             BillingService.Plan(id = "plus_$period", tier = "plus", period = period,
-                monthly_seconds = 108000, monthly_scenes = 120, talk_unlimited = true),
+                monthly_seconds = 36000, monthly_scenes = 30),
         )
     }
 

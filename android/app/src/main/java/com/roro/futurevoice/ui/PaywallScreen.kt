@@ -499,7 +499,9 @@ private fun PlansStep(
                 savings = annualSavingsPercent(offers, "plus", period),
                 period = period,
                 name = stringResource(R.string.plan_tier_plus),
-                audience = stringResource(R.string.as_much_as_you_want_whenever_you_want),
+                // "As much as you want" went with the uncapped pool on
+                // 2026-09-26 — Plus is 600 min now (iOS PaywallView, same day).
+                audience = stringResource(R.string.for_the_weeks_you_re_all_in),
                 selected = tier == "plus",
                 onSelect = { onTier("plus") },
             )
