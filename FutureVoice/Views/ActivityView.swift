@@ -69,44 +69,34 @@ struct ActivityView: View {
 
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                // A journal of the learner's routine (founder, 2026-10-02).
-                // The promise card above the journey repeated what the day
-                // view already shows — each day's list IS what that day
-                // holds — so it folded into one row: how long the promise
-                // has been kept, and how to read the journey.
-                HStack(alignment: .firstTextBaseline) {
-                    Label {
-                        Text(currentStreak > 0 ? explain("Kept for \(currentStreak) days")
-                                               : explain("Keep it today for day 1"))
-                            .monospacedDigit()
-                    } icon: {
-                        Image(systemName: "flame.fill")
-                            .foregroundStyle(currentStreak > 0 ? Color.orange : Color.secondary)
-                    }
-                    .font(.headline)
-                    Spacer()
-                    Picker("View", selection: $viewMode) {
-                        ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 150)
-                }
-                switch viewMode {
-                case .day:
+        // A journal of the learner's routine (founder, 2026-10-02). The view
+        // switch spans the top like Health's D/W/M/Y; under it the streak
+        // and the chosen day are ONE header. In the day view the page does
+        // not scroll: the day's card is pinned to the bottom and its list
+        // scrolls inside, so the card never jumps with the list's length.
+        Group {
+            if viewMode == .day {
+                VStack(spacing: 14) {
+                    modePicker.padding(.horizontal, 20)
                     PlannerDayStrip(selectedDay: $selectedDay,
                                     isPromise: planStore.plan.streakSince != nil,
-                                    activeDays: studiedDays, plan: planStore.plan)
-                        .padding(.horizontal, -20)
+                                    activeDays: studiedDays, plan: planStore.plan,
+                                    streak: currentStreak)
                     plannerSection
-                case .month: statsBar; monthCard
-                case .year:  statsBar; yearCard
+                }
+                .padding(.top, 8)
+            } else {
+                ScrollView {
+                    VStack(spacing: 18) {
+                        modePicker
+                        streakLine.frame(maxWidth: .infinity, alignment: .leading)
+                        if viewMode == .month { statsBar; monthCard } else { statsBar; yearCard }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 28)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 28)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle(explain("My routine"))
@@ -170,6 +160,17 @@ struct ActivityView: View {
         } else {
             ProgressView().frame(maxWidth: .infinity, minHeight: 200)
         }
+    }
+
+    private var modePicker: some View {
+        Picker("View", selection: $viewMode) {
+            ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var streakLine: some View {
+        StreakLine(streak: currentStreak).font(.headline)
     }
 
     private func reloadPlanner() {

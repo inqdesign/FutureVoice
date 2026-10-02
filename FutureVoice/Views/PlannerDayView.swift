@@ -32,16 +32,26 @@ struct PlannerDayCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            dayList
-            if let footer {
-                Divider()
-                footer
+        // A panel pinned to the bottom of the page: its height never follows
+        // the list, which scrolls inside it.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                dayList
+                if let footer {
+                    Divider()
+                    footer
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+        .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+            .fill(Color(.secondarySystemGroupedBackground))
+            .shadow(color: .black.opacity(0.06), radius: 12, y: -2)
+            .ignoresSafeArea(edges: .bottom))
     }
 
     private func go(to d: Date) {
@@ -93,7 +103,7 @@ struct PlannerDayCard: View {
             }
         }
         .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 24).onEnded { v in
+        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { v in
             guard abs(v.translation.width) > abs(v.translation.height) * 1.5,
                   let next = cal.date(byAdding: .day, value: v.translation.width < 0 ? 1 : -1, to: day)
             else { return }
@@ -215,6 +225,7 @@ struct PlannerDayStrip: View {
     let isPromise: Bool
     let activeDays: Set<Date>
     let plan: StudyPlan
+    let streak: Int
 
     @State private var scrolled: Date?
     private let cal = Calendar.current
@@ -231,27 +242,31 @@ struct PlannerDayStrip: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            ZStack {
-                Text(shown.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.wide)))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                HStack {
-                    Spacer()
-                    if !cal.isDate(shown, inSameDayAs: today) {
-                        Button { scrollTo(today) } label: {
-                            Label(explain("Today"), systemImage: shown < today ? "arrow.right" : "arrow.left")
-                                .labelStyle(TodayLabelStyle(trailingIcon: shown < today))
-                        }
-                        .font(.footnote.weight(.semibold))
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.small)
-                        .transition(.opacity)
+            // One header for the strip: the chosen day, and under it how
+            // long the promise has been kept; "Today" to come back.
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(shown.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.wide)))
+                        .font(.title3.weight(.bold))
+                        .contentTransition(.numericText())
+                    StreakLine(streak: streak)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if !cal.isDate(shown, inSameDayAs: today) {
+                    Button { scrollTo(today) } label: {
+                        Label(explain("Today"), systemImage: shown < today ? "arrow.right" : "arrow.left")
+                            .labelStyle(TodayLabelStyle(trailingIcon: shown < today))
                     }
+                    .font(.footnote.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.small)
+                    .transition(.opacity)
                 }
             }
             .padding(.horizontal, 20)
-            .frame(height: 30)
             .animation(.easeOut(duration: 0.2), value: cal.isDate(shown, inSameDayAs: today))
 
             GeometryReader { geo in
@@ -377,6 +392,20 @@ private struct TodayLabelStyle: LabelStyle {
             if !trailingIcon { configuration.icon }
             configuration.title
             if trailingIcon { configuration.icon }
+        }
+    }
+}
+
+/// How long the promise has been kept, one line wherever it is shown.
+struct StreakLine: View {
+    let streak: Int
+    var body: some View {
+        Label {
+            Text(streak > 0 ? explain("Kept for \(streak) days") : explain("Keep it today for day 1"))
+                .monospacedDigit()
+        } icon: {
+            Image(systemName: "flame.fill")
+                .foregroundStyle(streak > 0 ? Color.orange : Color.secondary)
         }
     }
 }
