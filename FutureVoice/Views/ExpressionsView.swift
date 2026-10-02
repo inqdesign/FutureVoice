@@ -98,6 +98,8 @@ struct ExpressionsView: View {
                                 row(entry)
                             }
                             .buttonStyle(.plain)
+                            .swipeActions(edge: .leading) { keepAction(entry) }
+                            .swipeActions(edge: .trailing) { knownAction(entry) }
                             .task(id: entry.text) { await loadMeaning(entry) }
                         }
                     } header: {
@@ -148,6 +150,29 @@ struct ExpressionsView: View {
         case .toStudy: return explain("Expressions from your calls — yours and your fluent self's — and the ones your watched scenes hand you collect here.")
         case .known:   return explain("Mark expressions you've got down as known.")
         }
+    }
+
+    /// The card's two verdicts, a swipe away — the words page's rule, to
+    /// the letter (right = Keep, left = I know), with the same store calls as
+    /// `ExpressionSheet.actionBar`.
+    private func keepAction(_ entry: ExpressionCatalog.Item) -> some View {
+        let studying = store.isStudyingExpression(entry.text)
+        return Button {
+            store.setStudyingExpression(entry.text, !studying)
+        } label: {
+            Label("Keep", systemImage: studying ? "bookmark.slash" : "bookmark")
+        }
+        .tint(studying ? .gray : .accentColor)
+    }
+
+    private func knownAction(_ entry: ExpressionCatalog.Item) -> some View {
+        let known = store.isKnownExpression(entry.text)
+        return Button {
+            store.setKnownExpression(entry.text, !known)
+        } label: {
+            Label("I know", systemImage: known ? "arrow.uturn.backward" : "checkmark.circle")
+        }
+        .tint(known ? .gray : .green)
     }
 
     private func row(_ entry: ExpressionCatalog.Item) -> some View {

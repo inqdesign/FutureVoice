@@ -185,6 +185,8 @@ struct WordsView: View {
                                 row(item)
                             }
                             .buttonStyle(.plain)
+                            .swipeActions(edge: .leading) { keepAction(item) }
+                            .swipeActions(edge: .trailing) { knownAction(item) }
                             .task(id: item.key) { await loadMeaning(item) }
                         }
                     } header: {
@@ -254,6 +256,35 @@ struct WordsView: View {
         case .toStudy, .all: return explain("Keep a word from a talk, or watch a situation — its words collect here.")
         case .known:         return explain("Words you say in a talk land here on their own; you can also mark one known from its card.")
         }
+    }
+
+    /// The card's two verdicts, a swipe away (right = Keep, left = I know),
+    /// so a list of words can be sorted without opening every card. Same
+    /// store calls and the same toggles as `WordCard.actionBar` — the row
+    /// must never mean something the card doesn't. The icon shows what the
+    /// swipe will DO, so an already-kept word offers the slashed bookmark.
+    private func keepAction(_ item: WordCatalog.Item) -> some View {
+        let studying = store.isStudying(item.text)
+        return Button {
+            studying ? store.removeStudying(item.text) : store.addStudying(item.text)
+        } label: {
+            Label("Keep", systemImage: studying ? "bookmark.slash" : "bookmark")
+        }
+        .tint(studying ? .gray : .accentColor)
+    }
+
+    private func knownAction(_ item: WordCatalog.Item) -> some View {
+        // `WordCard.isKnown`: a bookmark outranks a `.used` record on the row.
+        let known: Bool = {
+            guard let state = store.state(of: item.text) else { return false }
+            return state == .known || !store.isStudying(item.text)
+        }()
+        return Button {
+            known ? store.unmark(item.text) : store.markKnown(item.text)
+        } label: {
+            Label("I know", systemImage: known ? "arrow.uturn.backward" : "checkmark.circle")
+        }
+        .tint(known ? .gray : .green)
     }
 
     private func row(_ item: WordCatalog.Item) -> some View {
