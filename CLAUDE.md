@@ -566,8 +566,9 @@ its own branch so the founder picks the build it ships in.
 - **Activity shows ONE DAY, today first** (same day, founder: "what the
   learner cares about is TODAY; before and after are a tap or a swipe away,
   and each date says whether it was done"). `PlannerDayCard`: the week's
-  dates on top, each with its result (green tick = every planned block done,
-  `done/planned` otherwise, a dot on a future day with a plan) — tap a date,
+  dates on top, each with ONE mark: a green tick when every planned block
+  was done, nothing otherwise (counts like `2/4` and a dot for future plans
+  were tried and cut as noise — done or not is the only question) — tap a date,
   or swipe the strip for the next/previous week; below, the selected day at
   full width, every block labelled ("Talk · Coffee with Sarah 8:02–8:14 ✓"),
   swipe it for the next/previous day. The day is a LIST in time order,

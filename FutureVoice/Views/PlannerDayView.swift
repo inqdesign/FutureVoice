@@ -84,25 +84,18 @@ struct PlannerDayCard: View {
         })
     }
 
-    /// Whether the day's plan was kept: a tick when all of it was, the count
-    /// otherwise. A day still ahead only says it has something planned.
+    /// Whether the day's plan was kept, and nothing else: a green tick when
+    /// every planned block was done, blank otherwise (founder: counts like
+    /// 2/4 were noise — done or not is the only question).
     @ViewBuilder
     private func mark(for d: Date, future: Bool) -> some View {
-        if let r = result(d) {
-            if future {
-                Circle().fill(Color.secondary.opacity(0.5)).frame(width: 4, height: 4)
-            } else if r.done >= r.total {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            } else {
-                Text(verbatim: "\(r.done)/\(r.total)")
-                    .font(.caption2.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
+        if !future, let r = result(d), r.done >= r.total {
+            Image(systemName: "checkmark")
+                .font(.caption2.weight(.heavy))
+                .foregroundStyle(.green)
+                .accessibilityLabel(Text("Done"))
         } else {
-            Color.clear.frame(width: 4, height: 4)
+            Color.clear
         }
     }
 
@@ -114,12 +107,6 @@ struct PlannerDayCard: View {
                 Text("Today").font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
-            if let r = result(day), day <= cal.startOfDay(for: Date()) {
-                Text(verbatim: "\(r.done)/\(r.total)")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(r.done >= r.total ? Color.green : Color.secondary)
-            }
         }
         .padding(.horizontal, 4)
     }
