@@ -32,7 +32,7 @@ enum PlanReminder {
         for offset in 0..<horizonDays {
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
             for occ in plan.occurrences(on: day, calendar: calendar)
-            where occ.remind && occ.start > now && occ.blockId != nil
+            where occ.remind && !occ.anytime && occ.start > now && occ.blockId != nil
                 && [.sayItAgain, .words, .expressions, .shadow].contains(occ.kind) {
                 let content = UNMutableNotificationContent()
                 content.title = title(for: occ.kind)

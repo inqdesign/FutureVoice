@@ -407,7 +407,21 @@ enum DailyCallScheduler {
     /// every day, gives exactly the old answer; weekdays, rest days and
     /// one-off moves are what it adds.
     static func fireDates(after now: Date, calendar: Calendar = .current) -> [Date] {
-        StudyPlanStore.shared.plan.callDates(after: now, calendar: calendar)
+        let plan = StudyPlanStore.shared.plan
+        if plan.hasTimedTalk { return plan.callDates(after: now, calendar: calendar) }
+        // A routine with no talk TIME ("talk 10 minutes, any time") doesn't
+        // place the call: it rings at the learner's call times, every day.
+        let times = DailyCallStore.shared.times
+        let todays = times.compactMap {
+            fireDateToday(hour: $0.hour, minute: $0.minute, on: now, calendar: calendar)
+        }
+        let remaining = todays.filter { $0 > now }.sorted()
+        if !remaining.isEmpty { return remaining }
+        guard let first = times.first,
+              let today = fireDateToday(hour: first.hour, minute: first.minute, on: now, calendar: calendar),
+              let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
+        else { return [] }
+        return [tomorrow]
     }
 
     /// The timetable changed: put the rings where it now says. The stored

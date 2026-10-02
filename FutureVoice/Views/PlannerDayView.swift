@@ -216,9 +216,9 @@ struct PlannerDayCard: View {
                       detail: explain("Extra · \(clock(a.start))–\(clock(a.end))"),
                       progress: 1)
         case .plan(let occ, let done):
-            let lapsed = !done && occ.end < Date()
+            let lapsed = !done && occ.isOver()
             let progress: Double = done ? 1 : (talk[occ.id] ?? 0)
-            let line = rowLayout(time: clock(occ.start), symbol: occ.kind.symbol,
+            let line = rowLayout(time: occ.anytime ? explain("Anytime") : clock(occ.start), symbol: occ.kind.symbol,
                                  tint: lapsed ? .secondary : occ.kind.color,
                                  title: occ.kind.titled(occ.amount),
                                  detail: planDetail(occ, done: done, progress: progress),
@@ -351,13 +351,6 @@ struct RoutinePromiseCard: View {
             weekGraphic
             legendRow
             HStack {
-                // Editing the routine by hand is what makes it a promise —
-                // said once here while it isn't one yet.
-                if !isPromise {
-                    Text("Change it to make it your promise.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
                 Spacer()
                 Button(explain("Edit"), action: onEdit)
                     .font(.subheadline)

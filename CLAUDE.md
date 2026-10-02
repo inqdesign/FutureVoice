@@ -600,13 +600,20 @@ its own branch so the founder picks the build it ships in.
   (`PracticeStats.activeDays`, the old rule, where everyone starts — the
   seeded plan never sets it); set → from that day a day counts only when
   every block planned for it was done, and a day with nothing planned is a
-  REST day that neither counts nor breaks. **Changing the routine by hand IS
-  making the promise** — there is no switch (a "Make this plan my promise"
-  toggle shipped for an hour and the founder asked why it existed):
-  `StudyPlanStore.update(_:byLearner: true)`, called by every edit in the
-  editor, starts `streakSince` the first time; the seeded routine is never
-  a promise, and emptying the routine ends it. The card says it once while
-  it isn't one yet ("Change it to make it your promise."). Each promise day is judged by the plan it HAD
+  REST day that neither counts nor breaks. **The routine IS the promise,
+  from onboarding** (founder: "the routine is already set — X minutes a day,
+  chosen in onboarding"): `StudyPlan.seeded` writes talk X minutes every day
+  (`dailyGoalMinutes`) with `streakSince` = that day — at the daily call's
+  times when the call is on, otherwise ANYTIME (`Block.anytime`: no hour is
+  invented; it lasts the whole day, sits in an "Any" row above the editor's
+  grid, and reads "Anytime" in the day list). A routine with no timed talk
+  doesn't place the call — `fireDates` falls back to the call's own times.
+  Plans saved before this (`unitsVersion` < 2) that the learner never
+  touched become this onboarding promise on load
+  (`upgradingToOnboardingPromise`); the promise runs from TODAY, so the past
+  keeps the studied-days rule it was counted by. There is no switch (a
+  "Make this plan my promise" toggle lived for an hour). Emptying the
+  routine ends the promise; a hand edit after that starts it again. Each promise day is judged by the plan it HAD
   (`PromiseLedger`, `Documents/promise_days.json`: planned/done per day,
   today provisional, frozen once the day is over by `PromiseJudge.refresh`,
   run from every widget refresh, on Activity load and on every plan

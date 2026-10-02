@@ -354,6 +354,14 @@ enum DebugCapture {
                 StudyPlanStore.shared.update(plan)
             }
             return AnyView(WeeklyPlanEditor())
+        case "routine-new":
+            // A learner who never set a call time: the onboarding routine,
+            // talk 10 minutes any time of day.
+            once("routine-new") {
+                StudyPlanStore.shared.update(StudyPlan.seeded(callTimes: [], goalMinutes: 10, callEnabled: false))
+                PromiseLedger.shared.replaceAll([:])
+            }
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "plan-block":
             return AnyView(PlanBlockEditor(target: .new(day: Date())))
         case "activity-week", "activity-week-edit":

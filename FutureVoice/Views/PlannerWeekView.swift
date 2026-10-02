@@ -384,7 +384,9 @@ struct PlannerWeekCard: View {
         // in the day list below.
         let past = isPast(day)
         let kept = past && (result(day).map { $0.done >= $0.total } ?? false)
-        let shownPlans = past ? [] : planned.filter { absorbed[$0.id] == nil }
+        // An "anytime" block has no place on an hour axis; the editor lists
+        // it in its own row above the grid.
+        let shownPlans = past ? [] : planned.filter { absorbed[$0.id] == nil && !$0.anytime }
         let shownActuals = past ? [] : actuals
         let tops = stackedTops(plans: shownPlans, actuals: shownActuals)
         return ZStack(alignment: .topLeading) {
@@ -486,7 +488,7 @@ struct PlannerWeekCard: View {
         let isDragging = dragging == occ.id
         let h = height(occ.start, occ.end)
         // A plan whose time has passed without it: grey and quiet, never red.
-        let lapsed = !isMaster && !done && occ.end < Date()
+        let lapsed = !isMaster && !done && occ.isOver()
         let color = lapsed ? Color.secondary : occ.kind.color
         let draggable = canDrag(occ)
         let load = occ.kind == .review ? snapshot.reviewLoad[occ.start] : nil

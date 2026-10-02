@@ -61,6 +61,11 @@ struct StudyPlan: Codable, Equatable {
         /// disk decode.
         var minutes: Int
         var amount: Int { minutes }
+        /// No set time: "some time today". The onboarding routine is this
+        /// for anyone who never picked a call time — a talk of X minutes a
+        /// day, with no hour invented for it. `hour`/`minute` are ignored.
+        var anytime: Bool? = nil
+        var isAnytime: Bool { anytime == true }
         /// A local reminder at the block's time. Talk blocks ignore it — they
         /// ring as the daily call when that is on (Me → Call).
         var remind: Bool = true
@@ -122,11 +127,19 @@ struct StudyPlan: Codable, Equatable {
         var amount: Int
         var source: Source
         var remind: Bool
+        /// No set time today (see `Block.anytime`); `start` is midnight.
+        var anytime: Bool = false
         /// How long it is drawn — a talk's own minutes, a fixed slot otherwise.
         var minutes: Int { kind.drawnMinutes(amount: amount) }
 
         var id: String { "\(start.timeIntervalSinceReferenceDate)-\(kind.rawValue)-\(sourceKey)" }
         var end: Date { start.addingTimeInterval(TimeInterval(minutes * 60)) }
+
+        /// Whether the chance to do it has passed: an anytime block lasts
+        /// until the day ends.
+        func isOver(now: Date = Date(), calendar: Calendar = .current) -> Bool {
+            anytime ? calendar.startOfDay(for: now) > calendar.startOfDay(for: start) : end < now
+        }
         var blockId: UUID? {
             switch source {
             case .template(let id), .exception(let id): return id
@@ -172,10 +185,11 @@ struct StudyPlan: Codable, Equatable {
             calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
         }
         var out: [Occurrence] = storedBlocks(on: day, calendar: calendar).compactMap { b in
-            guard let start = at(b.hour, b.minute) else { return nil }
+            guard let start = b.isAnytime ? calendar.startOfDay(for: day) : at(b.hour, b.minute)
+            else { return nil }
             return Occurrence(kind: b.kind, start: start, amount: b.minutes,
                               source: isException ? .exception(b.id) : .template(b.id),
-                              remind: b.remind)
+                              remind: b.remind && !b.isAnytime, anytime: b.isAnytime)
         }
         if let test, calendar.component(.weekday, from: day) == test.weekday,
            let start = at(test.hour, test.minute) {
@@ -196,7 +210,7 @@ struct StudyPlan: Codable, Equatable {
         let today = calendar.startOfDay(for: now)
         func talks(on day: Date) -> [Date] {
             occurrences(on: day, calendar: calendar)
-                .filter { $0.kind == .talk }.map(\.start)
+                .filter { $0.kind == .talk && !$0.anytime }.map(\.start)
         }
         let remaining = Array(Set(talks(on: today).filter { $0 > now })).sorted()
         if !remaining.isEmpty { return Array(remaining.prefix(Self.maxCallTimes)) }
@@ -210,9 +224,15 @@ struct StudyPlan: Codable, Equatable {
     /// The distinct times of day talk blocks ring at, across the template and
     /// every exception still ahead — what `DailyCallStore.times` mirrors.
     var callTimes: [DailyCallStore.CallTime] {
-        let all = blocks.filter { $0.kind == .talk }
-            + exceptions.values.flatMap { $0 }.filter { $0.kind == .talk }
+        let all = (blocks + exceptions.values.flatMap { $0 })
+            .filter { $0.kind == .talk && !$0.isAnytime }
         return Array(Set(all.map { DailyCallStore.CallTime(hour: $0.hour, minute: $0.minute) })).sorted()
+    }
+
+    /// Whether any talk block has a set time — only then does the timetable
+    /// decide when the daily call rings.
+    var hasTimedTalk: Bool {
+        (blocks + exceptions.values.flatMap { $0 }).contains { $0.kind == .talk && !$0.isAnytime }
     }
 
     /// Whether the plan stays within what the call can ring.
@@ -226,7 +246,7 @@ struct StudyPlan: Codable, Equatable {
         return (0..<days).flatMap { offset -> [Date] in
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { return [] }
             return occurrences(on: day, calendar: calendar)
-                .filter { $0.kind == .review && $0.start > now }.map(\.start)
+                .filter { $0.kind == .review && !$0.anytime && $0.start > now }.map(\.start)
         }.sorted()
     }
 
@@ -351,6 +371,9 @@ struct StudyPlan: Codable, Equatable {
     /// elsewhere (Me → Call, onboarding). A time that stays keeps its
     /// weekdays; a new time runs every day; a removed one goes.
     mutating func adoptCallTimes(_ times: [DailyCallStore.CallTime], defaultMinutes: Int) {
+        // An "anytime" talk routine isn't tied to call times; the call rings
+        // on its own list (`DailyCallScheduler.fireDates`).
+        guard hasTimedTalk else { return }
         let wanted = Set(times)
         let current = Set(callTimes)
         guard wanted != current else { return }
@@ -368,22 +391,52 @@ struct StudyPlan: Codable, Equatable {
         }
     }
 
-    /// The first timetable: what the learner already told the app. A talk
-    /// block every day at each daily-call time, as long as the daily goal.
-    static func seeded(callTimes: [DailyCallStore.CallTime], goalMinutes: Int) -> StudyPlan {
+    /// The first routine: what the learner already told the app in
+    /// onboarding — talk X minutes a day. With the daily call on, at its
+    /// times (and a say-it-again right after the first); without it, "some
+    /// time today", never a made-up hour. It IS the learner's promise from
+    /// the start (founder: "the routine is already set — X minutes a day").
+    static func seeded(callTimes: [DailyCallStore.CallTime], goalMinutes: Int,
+                       callEnabled: Bool = true, now: Date = Date()) -> StudyPlan {
         var plan = StudyPlan()
         let minutes = max(5, goalMinutes)
-        plan.blocks = callTimes.map {
-            Block(kind: .talk, weekdays: Set(1...7), hour: $0.hour, minute: $0.minute, minutes: minutes)
-        }
-        // And a say-it-again right after the first talk.
-        if let first = callTimes.min() {
-            let end = first.hour * 60 + first.minute + minutes
-            if end + sayItAgainMinutes <= 24 * 60 {
-                plan.blocks.append(Block(kind: .sayItAgain, weekdays: Set(1...7), hour: end / 60,
-                                         minute: end % 60, minutes: 1))
+        if callEnabled, !callTimes.isEmpty {
+            plan.blocks = callTimes.map {
+                Block(kind: .talk, weekdays: Set(1...7), hour: $0.hour, minute: $0.minute, minutes: minutes)
             }
+            if let first = callTimes.min() {
+                let end = first.hour * 60 + first.minute + minutes
+                if end + sayItAgainMinutes <= 24 * 60 {
+                    plan.blocks.append(Block(kind: .sayItAgain, weekdays: Set(1...7), hour: end / 60,
+                                             minute: end % 60, minutes: 1))
+                }
+            }
+        } else {
+            plan.blocks = [Block(kind: .talk, weekdays: Set(1...7), hour: 0, minute: 0,
+                                 minutes: minutes, anytime: true)]
         }
+        plan.streakSince = Calendar.current.startOfDay(for: now)
+        plan.unitsVersion = 2
+        return plan
+    }
+
+    /// Plans from before version 2 were seeded with a talk block at the call
+    /// time whether the call was on or not — an hour nobody chose. If the
+    /// learner never touched the routine (no promise yet) and the call is
+    /// off, that becomes the onboarding promise: talk X minutes, any time.
+    /// Either way the routine is a promise from today on.
+    func upgradingToOnboardingPromise(callEnabled: Bool, goalMinutes: Int, now: Date = Date()) -> StudyPlan {
+        guard (unitsVersion ?? 0) < 2 else { return self }
+        var plan = self
+        if plan.streakSince == nil && !callEnabled {
+            plan.blocks.removeAll { $0.kind == .talk || $0.kind == .sayItAgain }
+            plan.blocks.insert(Block(kind: .talk, weekdays: Set(1...7), hour: 0, minute: 0,
+                                     minutes: max(5, goalMinutes), anytime: true), at: 0)
+        }
+        if plan.streakSince == nil, !plan.blocks.isEmpty {
+            plan.streakSince = Calendar.current.startOfDay(for: now)
+        }
+        plan.unitsVersion = 2
         return plan
     }
 
@@ -471,10 +524,13 @@ final class StudyPlanStore: ObservableObject {
         if let data = try? Data(contentsOf: url),
            let decoded = try? JSONDecoder().decode(StudyPlan.self, from: data) {
             plan = decoded.convertingLegacySayItAgain().convertingToCounts().convertingReviewSwitch()
-            if decoded.autoSayItAgain || decoded.unitsVersion == nil || decoded.autoReview { write(plan) }
+                .upgradingToOnboardingPromise(callEnabled: DailyCallStore.shared.isEnabled,
+                                              goalMinutes: Self.goalMinutes)
+            if plan != decoded { write(plan) }
         } else {
             plan = StudyPlan.seeded(callTimes: DailyCallStore.shared.times,
-                                    goalMinutes: Self.goalMinutes)
+                                    goalMinutes: Self.goalMinutes,
+                                    callEnabled: DailyCallStore.shared.isEnabled)
             write(plan)
         }
     }

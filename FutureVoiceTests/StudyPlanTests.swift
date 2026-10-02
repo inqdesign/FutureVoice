@@ -253,4 +253,31 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(review?.hour, 21)
         XCTAssertTrue(c.hasReviewBlocks)
     }
+
+    func testOnboardingRoutineWithoutACallIsAnytime() {
+        let plan = StudyPlan.seeded(callTimes: [t(8)], goalMinutes: 15, callEnabled: false, now: at(5, 9))
+        XCTAssertEqual(plan.blocks.count, 1)
+        XCTAssertTrue(plan.blocks[0].isAnytime)
+        XCTAssertEqual(plan.blocks[0].minutes, 15)
+        XCTAssertNotNil(plan.streakSince)              // a promise from the start
+        XCTAssertFalse(plan.hasTimedTalk)              // the call keeps its own times
+        let occ = plan.occurrences(on: at(6, 0), calendar: cal)[0]
+        XCTAssertFalse(occ.isOver(now: at(6, 23, 59), calendar: cal))  // anytime lasts the day
+        XCTAssertTrue(occ.isOver(now: at(7, 0, 1), calendar: cal))
+    }
+
+    func testAnUntouchedOldPlanBecomesTheOnboardingPromise() {
+        var old = StudyPlan.seeded(callTimes: [t(8)], goalMinutes: 10)   // timed, from the old seeding
+        old.streakSince = nil
+        old.unitsVersion = 1
+        let up = old.upgradingToOnboardingPromise(callEnabled: false, goalMinutes: 10, now: at(5, 9))
+        XCTAssertEqual(up.blocks.filter { $0.kind == .talk }.map(\.isAnytime), [true])
+        XCTAssertFalse(up.blocks.contains { $0.kind == .sayItAgain })
+        XCTAssertNotNil(up.streakSince)
+        // A routine the learner already changed is kept as it is.
+        var mine = old
+        mine.streakSince = at(1, 0)
+        let kept = mine.upgradingToOnboardingPromise(callEnabled: false, goalMinutes: 10)
+        XCTAssertEqual(kept.blocks, mine.blocks)
+    }
 }

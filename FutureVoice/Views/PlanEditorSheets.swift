@@ -29,6 +29,7 @@ struct PlanBlockEditor: View {
     @State private var time = Date()
     @State private var minutes = 10
     @State private var remind = true
+    @State private var anytime = false
     @State private var loaded = false
     @State private var refused = false
 
@@ -89,8 +90,11 @@ struct PlanBlockEditor: View {
                     }
                 }
                 Section {
-                    DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
-                        .environment(\.locale, uiLocale)
+                    Toggle("Any time of day", isOn: $anytime)
+                    if !anytime {
+                        DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                            .environment(\.locale, uiLocale)
+                    }
                     // A talk is promised in minutes; everything else in the
                     // count the app actually keeps.
                     Stepper(value: $minutes, in: kind.isTimed ? 5...60 : 1...50, step: kind.isTimed ? 5 : 1) {
@@ -175,6 +179,7 @@ struct PlanBlockEditor: View {
             time = cal.date(bySettingHour: block.hour, minute: block.minute, second: 0, of: day) ?? day
             minutes = block.minutes
             remind = block.remind
+            anytime = block.isAnytime
         } else if case .newInWeek(let wd, let h, let m) = target {
             weekdays = [wd]
             time = cal.date(bySettingHour: h, minute: m, second: 0, of: day) ?? day
@@ -196,6 +201,7 @@ struct PlanBlockEditor: View {
         b.minute = c.minute ?? 0
         b.minutes = minutes
         b.remind = kind == .talk ? true : remind
+        b.anytime = anytime ? true : nil
         return b
     }
 
@@ -413,15 +419,49 @@ struct WeeklyPlanEditor: View {
         .background(.bar)
     }
 
-    /// Stays put above the scrolling hours.
+    /// Stays put above the scrolling hours. Under the day names, the
+    /// day's "anytime" blocks — no hour, so no place on the grid.
     private var weekdayHeader: some View {
-        HStack(spacing: PlannerWeekCard.gap) {
-            Color.clear.frame(width: PlannerWeekCard.labelWidth, height: 1)
-            ForEach(snapshot?.days ?? [], id: \.self) { day in
-                Text(day.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated)))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
+        let days = snapshot?.days ?? []
+        let anytime = days.map { d in (snapshot?.planned[d] ?? []).filter(\.anytime) }
+        return VStack(spacing: 6) {
+            HStack(spacing: PlannerWeekCard.gap) {
+                Color.clear.frame(width: PlannerWeekCard.labelWidth, height: 1)
+                ForEach(days, id: \.self) { day in
+                    Text(day.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated)))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            if anytime.contains(where: { !$0.isEmpty }) {
+                HStack(alignment: .top, spacing: PlannerWeekCard.gap) {
+                    Text("Any")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                        .frame(width: PlannerWeekCard.labelWidth, alignment: .trailing)
+                    ForEach(Array(days.enumerated()), id: \.offset) { i, _ in
+                        VStack(spacing: 3) {
+                            ForEach(anytime[i]) { occ in
+                                Button {
+                                    if let id = occ.blockId { blockEditor = .inWeek(blockId: id) }
+                                } label: {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: occ.kind.symbol)
+                                        Text(occ.kind.amountText(occ.amount)).lineLimit(1).minimumScaleFactor(0.6)
+                                    }
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(occ.kind.color)
+                                    .frame(maxWidth: .infinity, minHeight: 20)
+                                    .background(RoundedRectangle(cornerRadius: 4).fill(occ.kind.color.opacity(0.16)))
+                                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(occ.kind.color, lineWidth: 1.2))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
             }
         }
         .padding(.horizontal, 8)
