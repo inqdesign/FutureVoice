@@ -136,6 +136,80 @@ object TalkTimeLog {
         return talked || PracticeLog.day(context, at)?.didSomething == true
     }
 
+    // MARK: - Server backfill (iOS `syncFromServer`)
+
+    @kotlinx.serialization.Serializable
+    private data class LedgerRow(val created_at: String, val metadata: Meta? = null) {
+        @kotlinx.serialization.Serializable
+        data class Meta(val seconds: Int? = null, val language: String? = null)
+    }
+
+    private const val BACKFILL_DAYS = 14
+    private const val CORRECT_DOWN_DAYS = 3
+
+    /**
+     * Rebuild the log from `usage_ledger`, where the meter's accepted ticks
+     * actually landed. The local log only counts whole 30 s ticks the phone
+     * sent itself — a call's last partial tick lands on the server alone
+     * (the gateway meters it), so without this the ring under-reads every
+     * call (measured 2026-10-02: 18 s billed, 1 s on the ring), and a
+     * reinstall or a second device reads 0 for a day the receipt counts.
+     * Today is corrected only with no meter running; older days up to
+     * [CORRECT_DOWN_DAYS] back are the ledger's figure, further back a floor.
+     */
+    suspend fun syncFromServer(context: Context, now: Long = System.currentTimeMillis()): Boolean =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val auth = AuthRepository()
+            val uid = auth.userId ?: return@withContext false
+            val token = runCatching { auth.accessToken() }.getOrNull() ?: return@withContext false
+            val cal = Calendar.getInstance().apply {
+                timeInMillis = now; add(Calendar.DAY_OF_YEAR, -(BACKFILL_DAYS - 1))
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val since = java.time.Instant.ofEpochMilli(cal.timeInMillis).toString()
+            val url = "${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/usage_ledger" +
+                "?select=created_at,metadata&user_id=eq.$uid&action=eq.talk_time" +
+                "&created_at=gte.${java.net.URLEncoder.encode(since, "UTF-8")}&limit=4000"
+            val rows = runCatching {
+                val req = okhttp3.Request.Builder().url(url)
+                    .header("Authorization", "Bearer $token")
+                    .header("apikey", com.roro.futurevoice.core.Config.supabaseAnonKey).build()
+                com.roro.futurevoice.net.Edge.client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) null
+                    else com.roro.futurevoice.net.Edge.json.decodeFromString(
+                        kotlinx.serialization.builtins.ListSerializer(LedgerRow.serializer()), resp.body.string())
+                }
+            }.getOrNull() ?: return@withContext false
+
+            val server = mutableMapOf<String, Int>()
+            for (r in rows) {
+                val sec = r.metadata?.seconds ?: continue
+                if (sec <= 0) continue
+                val at = runCatching { java.time.OffsetDateTime.parse(r.created_at.replace(" ", "T")).toInstant().toEpochMilli() }
+                    .getOrNull() ?: continue
+                val k = key(at, r.metadata.language)
+                server[k] = (server[k] ?: 0) + sec
+            }
+            if (server.isEmpty()) return@withContext false
+            val map = load(context).toMutableMap()
+            val before = map.toMap()
+            val today = dayKey(now)
+            val correctableFrom = dayKey(now - CORRECT_DOWN_DAYS * 86_400_000L)
+            fun correctable(date: String) =
+                if (date == today) !com.roro.futurevoice.talk.TalkMeter.isRunning else date >= correctableFrom
+            for (k in map.keys.toList()) {
+                if (correctable(k.substringBefore(SEPARATOR)) && server[k] == null) map.remove(k)
+            }
+            for ((k, sec) in server) {
+                if (correctable(k.substringBefore(SEPARATOR))) map[k] = sec
+                else if (sec > (map[k] ?: 0)) map[k] = sec
+            }
+            val next = prune(map, now)
+            if (next == before) return@withContext false
+            save(context, next)
+            true
+        }
+
     private fun dayKey(now: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(now))
 

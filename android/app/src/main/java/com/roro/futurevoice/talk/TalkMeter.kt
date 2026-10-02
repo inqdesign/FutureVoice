@@ -93,6 +93,7 @@ class TalkMeter(
 
     fun start(sessionId: String, language: String) {
         stop()
+        isRunning = true
         billedSeconds = 0L
         sessionKey = sessionId
         this.language = language.lowercase()
@@ -122,6 +123,7 @@ class TalkMeter(
     fun stop() {
         job?.cancel()
         job = null
+        isRunning = false
     }
 
     @Serializable
@@ -211,6 +213,10 @@ class TalkMeter(
     }
 
     companion object {
+        /** A call is being metered right now — read by
+         *  `TalkTimeLog.syncFromServer`, which must not lower today mid-call. */
+        @Volatile var isRunning = false
+
         const val TICK_SECONDS = 30
 
         /**

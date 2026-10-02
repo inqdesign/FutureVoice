@@ -1334,6 +1334,9 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
     LaunchedEffect(revision, state.targetLanguage) {
         seconds = TalkTimeLog.secondsToday(context)
         sessionCount = SessionStore.shared(context).load(state.targetLanguage).size
+        // The ledger is the receipt (iOS `backfillTalkTime`): re-read only
+        // if it moved the number.
+        if (TalkTimeLog.syncFromServer(context)) seconds = TalkTimeLog.secondsToday(context)
     }
     val theme = remember { FutureselfTheme.stored(context) }
 
