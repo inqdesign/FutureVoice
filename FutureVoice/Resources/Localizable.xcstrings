@@ -194,6 +194,52 @@
         }
       }
     },
+    "Allow notifications so your routine can remind you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube Mitteilungen, damit deine Routine dich erinnern kann"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite las notificaciones para que tu rutina pueda recordártelo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorise les notifications pour que ta routine puisse te le rappeler"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンのリマインダーを受け取るには通知を許可してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴 알림을 받으려면 알림을 허용해 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许通知，作息才能提醒你"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允許通知，作息才能提醒你"
+          }
+        }
+      }
+    },
     "Edit routine" : {
       "localizations" : {
         "de" : {
@@ -482,6 +528,52 @@
         }
       }
     },
+    "Nothing is planned on a rest day, and it never breaks your streak." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An einem Ruhetag ist nichts geplant, und deine Serie reißt nicht ab."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En un día de descanso no hay nada planeado y tu racha no se rompe."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un jour de repos, rien n’est prévu et ta série ne s’interrompt pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休みの日は予定がなく、連続記録も途切れません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "쉬는 날엔 계획이 없고, 연속 기록도 끊기지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息日没有安排，也不会中断连续记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息日沒有安排，也不會中斷連續紀錄。"
+          }
+        }
+      }
+    },
     "Nothing to review in today's routine. Add some to your routine." : {
       "localizations" : {
         "de" : {
@@ -524,6 +616,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天的作息沒有複習。加一些到作息裡吧。"
+          }
+        }
+      }
+    },
+    "Notifications are off, so your routine can't remind you. Turn them on in Settings" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen sind aus, deshalb kann dich deine Routine nicht erinnern. Schalte sie in den Einstellungen ein"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las notificaciones están desactivadas, así que tu rutina no puede recordártelo. Actívalas en Ajustes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les notifications sont désactivées, ta routine ne peut donc pas te le rappeler. Active-les dans Réglages"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知がオフなので、ルーティンのリマインダーが届きません。設定でオンにしてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알림이 꺼져 있어서 루틴 알림이 울리지 않아요. 설정에서 켜 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知已关闭，作息无法提醒你。请到设置开启"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知已關閉，作息無法提醒你。請到設定開啟"
           }
         }
       }

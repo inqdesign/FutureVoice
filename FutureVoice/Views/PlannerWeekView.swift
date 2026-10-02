@@ -543,7 +543,7 @@ struct PlannerWeekCard: View {
                     y: top + (isDragging ? dragOffset.height : 0))
             .zIndex(isDragging ? 10 : 0)
             .onTapGesture {
-                if isMaster, occ.blockId != nil { onEdit(occ, day) }
+                if isMaster, occ.blockId != nil || occ.kind == .test { onEdit(occ, day) }
                 else if !isMaster { selectedDay = day }
             }
             .gesture(

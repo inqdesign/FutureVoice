@@ -256,7 +256,10 @@ struct WeeklyPlanEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = StudyPlanStore.shared
 
+    @State private var showTestEditor = false
     @State private var showSettings = false
+    /// Whether the routine's reminders can ring at all — only said when they can't.
+    @State private var notifications: ReviewNotifications.Status?
     @State private var snapshot: PlannerSnapshot?
     @State private var blockEditor: PlanBlockEditor.Target?
     /// A block that ran on several weekdays had ONE of them dragged to a new
@@ -285,6 +288,7 @@ struct WeeklyPlanEditor: View {
                                         onMove: handleMove,
                                         onEdit: { occ, _ in
                                             if let id = occ.blockId { blockEditor = .inWeek(blockId: id) }
+                                            else if occ.kind == .test { showTestEditor = true }
                                         },
                                         onAdd: { start in
                                             let c = cal.dateComponents([.weekday, .hour, .minute], from: start)
@@ -309,7 +313,7 @@ struct WeeklyPlanEditor: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    restDays
+                    notificationsBanner
                     weekdayHeader
                 }
             }
@@ -325,20 +329,54 @@ struct WeeklyPlanEditor: View {
             .navigationTitle(explain("My routine"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Reminders and the weekly test's day live in the review
-                // settings; the routine editor is now where Review's Today
-                // card sends its edit button, so they stay one tap away.
+                // Rest days are set once and rarely touched, so they live
+                // behind the gear rather than above the week.
                 ToolbarItem(placement: .cancellationAction) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                        .accessibilityLabel(Text("Settings"))
+                        .accessibilityLabel(Text("Rest days"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
-            .sheet(isPresented: $showSettings) {
-                StudyGoalsSheet().presentationDetents([.medium, .large])
+            .sheet(isPresented: $showSettings, onDismiss: reload) {
+                NavigationStack {
+                    VStack(alignment: .leading, spacing: 0) {
+                        restDays
+                        Text(explain("Nothing is planned on a rest day, and it never breaks your streak."))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 4)
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+                    .navigationTitle(explain("Rest days"))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showSettings = false }
+                        }
+                    }
+                }
+                .presentationDetents([.height(260)])
             }
+            // The weekly test is a block like any other: tap it to set its
+            // day, time and reminder (it used to hide in a settings sheet).
+            .sheet(isPresented: $showTestEditor, onDismiss: reload) {
+                NavigationStack {
+                    Form { WeeklyTestSettingsSection(notifications: $notifications) }
+                        .navigationTitle(explain("Weekly test"))
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showTestEditor = false }
+                            }
+                        }
+                }
+                .presentationDetents([.medium])
+            }
+            .task { notifications = await ReviewNotifications.status() }
             .sheet(item: $blockEditor) { PlanBlockEditor(target: $0) }
             .confirmationDialog(explain("Move the other days too?"), isPresented: Binding(
                 get: { pendingFollow != nil }, set: { if !$0 { pendingFollow = nil } }),
@@ -383,8 +421,6 @@ struct WeeklyPlanEditor: View {
     private var restDays: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Rest days").font(.subheadline.weight(.semibold))
-                Spacer()
                 Picker("Rest days", selection: Binding(
                     get: { choosingDays ? .custom : restChoice },
                     set: { choice in
@@ -399,7 +435,6 @@ struct WeeklyPlanEditor: View {
                     Text("Choose").tag(RestChoice.custom)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 210)
             }
             if choosingDays || restChoice == .custom {
                 HStack(spacing: 6) {
@@ -427,7 +462,6 @@ struct WeeklyPlanEditor: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.bar)
     }
 
     /// Stays put above the scrolling hours. Under the day names, the
@@ -482,6 +516,43 @@ struct WeeklyPlanEditor: View {
 
     private func reload() {
         snapshot = PlannerSnapshot.master(plan: store.plan)
+    }
+
+    /// Said only when the routine's reminders CAN'T ring: when they can,
+    /// there is nothing to say (a "Reminders on" row with no switch read as
+    /// a setting nobody could change).
+    @ViewBuilder
+    private var notificationsBanner: some View {
+        switch notifications {
+        case .notAsked:
+            Button {
+                Task { notifications = await ReviewNotifications.request() }
+            } label: {
+                bannerLabel(icon: "bell", tint: .accentColor,
+                            text: explain("Allow notifications so your routine can remind you"))
+            }
+            .buttonStyle(.plain)
+        case .denied:
+            Button { ReviewNotifications.openSettings() } label: {
+                bannerLabel(icon: "bell.slash", tint: .orange,
+                            text: explain("Notifications are off, so your routine can't remind you. Turn them on in Settings"))
+            }
+            .buttonStyle(.plain)
+        default:
+            EmptyView()
+        }
+    }
+
+    private func bannerLabel(icon: String, tint: Color, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).foregroundStyle(tint)
+            Text(text).font(.footnote).multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
     }
 
     private func weekdayName(_ date: Date) -> String {
