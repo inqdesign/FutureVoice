@@ -304,14 +304,14 @@ private struct ProgressRing: View {
 /// The top of the routine journal: the learner's promise, and what a week of
 /// it looks like (founder, 2026-10-02: "my routine at the top — I will do
 /// this — and show the week simply: what Monday holds, what the weekend
-/// holds"). Seven columns, each a stack of colour bars in the order of the
-/// day — one bar per thing promised — with a legend that names the colours
-/// and their amounts. A day with no bar is a rest day.
+/// holds"). No title — the page is called My routine. The lead line is how
+/// long the promise has been kept; under it seven columns, each the icons of
+/// what that day holds, so the week reads without a legend. Edit is the
+/// page's own toolbar button. An empty column is a rest day.
 struct RoutinePromiseCard: View {
     let plan: StudyPlan
     let test: WeeklyTestSchedule
     let streak: Int
-    let onEdit: () -> Void
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
@@ -335,87 +335,52 @@ struct RoutinePromiseCard: View {
         template.occurrences(on: day, test: test, calendar: cal)
     }
 
-    /// One entry per kind in the week, with the amount it asks for.
-    private var legend: [(kind: StudyPlan.Kind, amount: Int)] {
-        var seen: [StudyPlan.Kind: Int] = [:]
-        var order: [StudyPlan.Kind] = []
-        for d in weekDays {
-            for o in blocks(on: d) where seen[o.kind] == nil {
-                seen[o.kind] = o.amount
-                order.append(o.kind)
-            }
-        }
-        return order.map { ($0, seen[$0] ?? 0) }
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(isPromise ? explain("My promise") : explain("My routine"))
+        VStack(alignment: .leading, spacing: 16) {
+            // The promise kept is the headline; the week below says what it is.
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(streak > 0 ? Color.orange : Color.secondary)
+                Text(streak > 0 ? explain("Kept for \(streak) days") : explain("Keep it today for day 1"))
                     .font(.headline)
-                Spacer()
-                if streak > 0 {
-                    Label(explain("\(streak) days in a row"), systemImage: "flame.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(.orange)
-                }
+                    .monospacedDigit()
             }
             weekGraphic
-            legendRow
-            HStack {
-                Spacer()
-                Button(explain("Edit"), action: onEdit)
-                    .font(.subheadline)
-            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    /// The week's shape: what each day holds, as stacked bars.
+    /// The week's shape, read without a legend: each day a column of the
+    /// icons of what it holds, in the day's order. An empty column is a rest
+    /// day; today's column is lightly marked.
     private var weekGraphic: some View {
         let todayWeekday = cal.component(.weekday, from: Date())
-        let rows = max(1, weekDays.map { blocks(on: $0).count }.max() ?? 1)
-        return HStack(alignment: .top, spacing: 6) {
+        return HStack(alignment: .top, spacing: 4) {
             ForEach(weekDays, id: \.self) { d in
                 let isToday = cal.component(.weekday, from: d) == todayWeekday
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
                         .font(.caption.weight(isToday ? .bold : .regular))
                         .foregroundStyle(isToday ? Color.primary : Color.secondary)
-                    VStack(spacing: 3) {
-                        let list = blocks(on: d)
-                        ForEach(list) { o in
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(o.kind.color)
-                                .frame(height: 10)
-                        }
-                        // Keep every column the same height, so the bars
-                        // line up from the top like a timetable.
-                        ForEach(0..<(rows - list.count), id: \.self) { _ in
-                            Color.clear.frame(height: 10)
+                    VStack(spacing: 6) {
+                        ForEach(blocks(on: d)) { o in
+                            Image(systemName: o.kind.symbol)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(o.kind.color)
+                                .frame(width: 28, height: 28)
+                                .background(Circle().fill(o.kind.color.opacity(0.14)))
                         }
                     }
                 }
+                .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isToday ? Color.accentColor.opacity(0.08) : Color.clear))
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide))))
-                .accessibilityValue(Text(blocks(on: d).map { $0.kind.label }.joined(separator: ", ")))
-            }
-        }
-    }
-
-    private var legendRow: some View {
-        FlowLayout(spacing: 12) {
-            ForEach(legend, id: \.kind) { item in
-                HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 2).fill(item.kind.color).frame(width: 10, height: 10)
-                    Text(item.kind.titled(item.amount))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                .accessibilityValue(Text(blocks(on: d).map { $0.kind.titled($0.amount) }.joined(separator: ", ")))
             }
         }
     }

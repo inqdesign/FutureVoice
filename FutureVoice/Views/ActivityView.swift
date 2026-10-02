@@ -75,11 +75,7 @@ struct ActivityView: View {
                 // the promise in words at the top, the journey of keeping it
                 // underneath — read by day, month or year.
                 RoutinePromiseCard(plan: planStore.plan, test: WeeklyTestSettings.shared.schedule,
-                                   streak: currentStreak,
-                                   onEdit: {
-                                       Analytics.capture("plan_edit_opened", [:])
-                                       showPlanEditor = true
-                                   })
+                                   streak: currentStreak)
                 HStack {
                     Text("Journey").font(.title3.weight(.semibold))
                     Spacer()
@@ -105,6 +101,15 @@ struct ActivityView: View {
         .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            // The page is the routine, so its Edit is the page's own.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(explain("Edit")) {
+                    Analytics.capture("plan_edit_opened", [:])
+                    showPlanEditor = true
+                }
+            }
+        }
         .onAppear {
             load()
             #if DEBUG
