@@ -20,6 +20,30 @@ struct StudyPlan: Codable, Equatable {
         case talk, review, sayItAgain, words, expressions, shadow, test
         var id: String { rawValue }
 
+        /// Only a talk is measured in MINUTES (the talk meter). Every other
+        /// kind is a COUNT the app actually keeps — words judged, cards
+        /// reviewed, lines shadowed, runs finished — because a "10 minutes of
+        /// words" promise had nothing to check it against (founder: "why is
+        /// everything but Talk in minutes?").
+        var isTimed: Bool { self == .talk }
+
+        /// How much a new block of this kind asks for — the daily goals'
+        /// own defaults (`GoalStore`), so the two never disagree.
+        var defaultAmount: Int {
+            switch self {
+            case .talk: return 10
+            case .words: return 10
+            case .expressions: return 3
+            case .review: return 20
+            case .shadow: return 2
+            case .sayItAgain, .test: return 1
+            }
+        }
+
+        /// How tall the block is drawn in the weekly editor, in minutes —
+        /// a count has no length, so it gets a fixed one.
+        func drawnMinutes(amount: Int) -> Int { isTimed ? amount : 15 }
+
         /// Kinds the learner can place by hand. Review, say it again and the
         /// test come from toggles and their own settings.
         static let placeable: [Kind] = [.talk, .sayItAgain, .words, .expressions, .shadow]
@@ -32,7 +56,11 @@ struct StudyPlan: Codable, Equatable {
         var weekdays: Set<Int>
         var hour: Int
         var minute: Int
+        /// The AMOUNT promised: minutes for a talk, a count for everything
+        /// else (see `Kind.isTimed`). The key stays `minutes` so plans on
+        /// disk decode.
         var minutes: Int
+        var amount: Int { minutes }
         /// A local reminder at the block's time. Talk blocks ignore it — they
         /// ring as the daily call when that is on (Me → Call).
         var remind: Bool = true
@@ -46,7 +74,11 @@ struct StudyPlan: Codable, Equatable {
     var autoReview: Bool = false
     var reviewHour: Int = 21
     var reviewMinute: Int = 0
-    var reviewMinutes: Int = 15
+    /// The review slot's AMOUNT: sentence cards (named for when it was minutes).
+    var reviewMinutes: Int = 20
+    /// nil = saved while every block was measured in minutes; converted to
+    /// counts on load (`convertingToCounts`). 1 = counts.
+    var unitsVersion: Int? = 1
     /// LEGACY: "say it again" used to be derived, right after the day's
     /// first talk. Plans saved then are converted into ordinary blocks on
     /// load (`convertingLegacySayItAgain`); nothing reads it otherwise.
@@ -81,9 +113,12 @@ struct StudyPlan: Codable, Equatable {
         }
         var kind: Kind
         var start: Date
-        var minutes: Int
+        /// The amount promised (minutes for a talk, else a count).
+        var amount: Int
         var source: Source
         var remind: Bool
+        /// How long it is drawn — a talk's own minutes, a fixed slot otherwise.
+        var minutes: Int { kind.drawnMinutes(amount: amount) }
 
         var id: String { "\(start.timeIntervalSinceReferenceDate)-\(kind.rawValue)-\(sourceKey)" }
         var end: Date { start.addingTimeInterval(TimeInterval(minutes * 60)) }
@@ -132,7 +167,7 @@ struct StudyPlan: Codable, Equatable {
         }
         var out: [Occurrence] = storedBlocks(on: day, calendar: calendar).compactMap { b in
             guard let start = at(b.hour, b.minute) else { return nil }
-            return Occurrence(kind: b.kind, start: start, minutes: b.minutes,
+            return Occurrence(kind: b.kind, start: start, amount: b.minutes,
                               source: isException ? .exception(b.id) : .template(b.id),
                               remind: b.remind)
         }
@@ -140,12 +175,12 @@ struct StudyPlan: Codable, Equatable {
         // at all is the learner's day off, not a review day.
         let plannedDay = !out.isEmpty
         if autoReview, plannedDay, let start = at(reviewHour, reviewMinute) {
-            out.append(Occurrence(kind: .review, start: start, minutes: reviewMinutes,
+            out.append(Occurrence(kind: .review, start: start, amount: reviewMinutes,
                                   source: .review, remind: true))
         }
         if let test, calendar.component(.weekday, from: day) == test.weekday,
            let start = at(test.hour, test.minute) {
-            out.append(Occurrence(kind: .test, start: start, minutes: 15, source: .test, remind: false))
+            out.append(Occurrence(kind: .test, start: start, amount: 1, source: .test, remind: false))
         }
         return out.sorted { $0.start < $1.start }
     }
@@ -348,9 +383,28 @@ struct StudyPlan: Codable, Equatable {
             let end = first.hour * 60 + first.minute + minutes
             if end + sayItAgainMinutes <= 24 * 60 {
                 plan.blocks.append(Block(kind: .sayItAgain, weekdays: Set(1...7), hour: end / 60,
-                                         minute: end % 60, minutes: sayItAgainMinutes))
+                                         minute: end % 60, minutes: 1))
             }
         }
+        return plan
+    }
+
+    /// A plan saved while every block was measured in minutes: a talk keeps
+    /// its minutes, everything else takes its kind's default COUNT (the old
+    /// number was a duration and means nothing as a count).
+    func convertingToCounts() -> StudyPlan {
+        guard unitsVersion == nil else { return self }
+        var plan = self
+        func convert(_ b: Block) -> Block {
+            var b = b
+            if !b.kind.isTimed { b.minutes = b.kind.defaultAmount }
+            return b
+        }
+        plan.blocks = plan.blocks.map(convert)
+        plan.exceptions = plan.exceptions.mapValues { $0.map(convert) }
+        plan.reviewMinutes = Kind.review.defaultAmount
+        plan.unitsVersion = 1
+        plan.mergeTwins()
         return plan
     }
 
@@ -367,7 +421,7 @@ struct StudyPlan: Codable, Equatable {
             let end = first.startMinute + first.minutes
             guard end + Self.sayItAgainMinutes <= 24 * 60 else { return nil }
             return Block(kind: .sayItAgain, weekdays: [], hour: end / 60, minute: end % 60,
-                         minutes: Self.sayItAgainMinutes)
+                         minutes: 1)
         }
         for weekday in 1...7 {
             if var b = after(blocks.filter { $0.weekdays.contains(weekday) }) {
@@ -400,8 +454,8 @@ final class StudyPlanStore: ObservableObject {
         url = docs.appendingPathComponent(filename)
         if let data = try? Data(contentsOf: url),
            let decoded = try? JSONDecoder().decode(StudyPlan.self, from: data) {
-            plan = decoded.convertingLegacySayItAgain()
-            if decoded.autoSayItAgain { write(plan) }
+            plan = decoded.convertingLegacySayItAgain().convertingToCounts()
+            if decoded.autoSayItAgain || decoded.unitsVersion == nil { write(plan) }
         } else {
             plan = StudyPlan.seeded(callTimes: DailyCallStore.shared.times,
                                     goalMinutes: Self.goalMinutes)

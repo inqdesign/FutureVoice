@@ -80,11 +80,11 @@ enum PromiseJudge {
             .filter { $0.endedAt != nil && $0.startedAt >= start && $0.startedAt < end }
             .map { PlannerDay.Talk(id: $0.id, start: $0.startedAt, end: $0.endedAt ?? $0.startedAt,
                                    title: $0.displayTitle) }
-        let acts = PlannerDay.actuals(talks: talks, events: events)
         let tested = WeeklyTestStore.shared.load().compactMap(\.finishedAt)
             .contains { cal.isDate($0, inSameDayAs: start) }
-        let done = PlannerDay.done(planned: occ, actuals: acts, events: events, testFinished: tested,
-                                   talkSeconds: TalkTimeLog.seconds(on: start))
+        _ = talks
+        let done = PlannerDay.done(planned: occ,
+                                   totals: PlannerDay.totals(on: start, events: events, testFinished: tested))
         return .init(planned: occ.count, done: done.count, settled: true)
     }
 

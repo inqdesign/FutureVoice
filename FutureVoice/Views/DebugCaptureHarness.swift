@@ -349,9 +349,9 @@ enum DebugCapture {
                 var plan = StudyPlan()
                 plan.blocks = [
                     .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
-                    .init(kind: .sayItAgain, weekdays: [2, 4], hour: 20, minute: 30, minutes: 10),
-                    .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 15),
-                    .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 20),
+                    .init(kind: .sayItAgain, weekdays: [2, 4], hour: 20, minute: 30, minutes: 1),
+                    .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
+                    .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 2),
                 ]
                 plan.autoReview = true
                 StudyPlanStore.shared.update(plan)
@@ -376,7 +376,7 @@ enum DebugCapture {
                 var plan = StudyPlan()
                 plan.blocks = [
                     .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
-                    .init(kind: .sayItAgain, weekdays: Set(2...6), hour: 8, minute: 10, minutes: 5),
+                    .init(kind: .sayItAgain, weekdays: Set(2...6), hour: 8, minute: 10, minutes: 1),
                     .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
                 ]
                 plan.autoReview = true

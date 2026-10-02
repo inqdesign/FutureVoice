@@ -82,45 +82,62 @@ enum PlannerDay {
                title: nil, sessionId: nil, count: c.count)
     }
 
-    /// Which planned blocks the day's practice covers, by occurrence id.
-    /// Talks are matched in order — two planned talks need two talks.
-    ///
-    /// A talk block asks for MINUTES, so it is measured on the metered talk
-    /// time (`talkSeconds`, the ring's number): two 10-minute talk blocks are
-    /// both done at 20 minutes of talking that day, the first at 10. With no
-    /// meter reading (nil) a block is done by any finished talk, in order.
-    static func done(planned: [StudyPlan.Occurrence],
-                     actuals: [Actual],
-                     events: [ActivityEventLog.Event],
-                     testFinished: Bool,
-                     talkSeconds: Int? = nil) -> Set<String> {
-        var out = Set<String>()
-        let plannedTalks = planned.filter { $0.kind == .talk }.sorted { $0.start < $1.start }
-        if let talkSeconds {
-            var needed = 0
-            for occ in plannedTalks {
-                needed += occ.minutes * 60
-                if talkSeconds >= needed { out.insert(occ.id) }
+    /// What a day added up to, in the units blocks are promised in.
+    struct Totals: Equatable {
+        var talkMinutes: Double = 0
+        var words: Double = 0
+        var expressions: Double = 0
+        var cards: Double = 0
+        var shadow: Double = 0
+        var sayItAgain: Double = 0
+        var test: Double = 0
+
+        func amount(for kind: StudyPlan.Kind) -> Double {
+            switch kind {
+            case .talk: return talkMinutes
+            case .words: return words
+            case .expressions: return expressions
+            case .review: return cards
+            case .shadow: return shadow
+            case .sayItAgain: return sayItAgain
+            case .test: return test
             }
-        } else {
-            let talkCount = actuals.filter { $0.kind == .talk }.count
-            for (i, occ) in plannedTalks.enumerated() where i < talkCount { out.insert(occ.id) }
         }
-        let kinds = Set(events.map(\.kind))
-        for occ in planned {
-            let hit: Bool
-            switch occ.kind {
-            case .talk: continue
-            case .review: hit = !kinds.isDisjoint(with: [.drill, .word, .expression])
-            case .words: hit = kinds.contains(.word)
-            case .expressions: hit = kinds.contains(.expression)
-            case .shadow: hit = kinds.contains(.shadow)
-            case .sayItAgain: hit = kinds.contains(.sayItAgain)
-            case .test: hit = testFinished
-            }
-            if hit { out.insert(occ.id) }
+    }
+
+    /// A day's totals from the logs that already count them: the talk meter
+    /// (the ring's minutes), the practice log's FINISHED counts — the same
+    /// numbers the daily goals are judged by, so postponing a card is not
+    /// doing it — and finished say-it-again runs and tests.
+    static func totals(on day: Date, events: [ActivityEventLog.Event], testFinished: Bool) -> Totals {
+        let log = PracticeLog.shared.day(day) ?? PracticeLog.Day()
+        return Totals(talkMinutes: Double(TalkTimeLog.seconds(on: day)) / 60,
+                      words: Double(log.wordDone),
+                      expressions: Double(log.expressionDone),
+                      cards: Double(log.drillDone),
+                      shadow: Double(log.shadowDone),
+                      sayItAgain: Double(events.filter { $0.kind == .sayItAgain }.count),
+                      test: testFinished ? 1 : 0)
+    }
+
+    /// How far along each planned block is, 0…1. Blocks of the same kind
+    /// fill in plan order: two 10-minute talks are half done at 10 minutes,
+    /// not both. Done at any time of day counts — doing the 8:00 talk at noon
+    /// is doing it.
+    static func progress(planned: [StudyPlan.Occurrence], totals: Totals) -> [String: Double] {
+        var out: [String: Double] = [:]
+        var left: [StudyPlan.Kind: Double] = [:]
+        for occ in planned.sorted(by: { $0.start < $1.start }) {
+            let have = left[occ.kind] ?? totals.amount(for: occ.kind)
+            let need = Double(max(1, occ.amount))
+            out[occ.id] = min(1, max(0, have / need))
+            left[occ.kind] = max(0, have - need)
         }
         return out
+    }
+
+    static func done(planned: [StudyPlan.Occurrence], totals: Totals) -> Set<String> {
+        Set(progress(planned: planned, totals: totals).filter { $0.value >= 1 }.map(\.key))
     }
 
     /// Planned blocks that a real sitting landed ON — same kind, starting
@@ -141,19 +158,6 @@ enum PlannerDay {
                 out[occ.id] = match.id
                 used.insert(match.id)
             }
-        }
-        return out
-    }
-
-    /// How far along each planned talk block is, 0…1, filling them in order
-    /// from the day's metered talk time.
-    static func talkProgress(planned: [StudyPlan.Occurrence], talkSeconds: Int) -> [String: Double] {
-        var out: [String: Double] = [:]
-        var left = Double(talkSeconds)
-        for occ in planned.filter({ $0.kind == .talk }).sorted(by: { $0.start < $1.start }) {
-            let need = Double(max(1, occ.minutes * 60))
-            out[occ.id] = min(1, max(0, left / need))
-            left = max(0, left - need)
         }
         return out
     }

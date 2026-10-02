@@ -604,21 +604,26 @@ its own branch so the founder picks the build it ships in.
   the pure walk (`StudyPlanTests`). A talk block is done by MINUTES of
   metered talk (`TalkTimeLog`, the ring's number), filled in plan order —
   4 of 10 minutes is a 40% ring and "4 of 10 min", not a miss.
-- **The page is a JOURNAL OF MY ROUTINE** (same day, founder: "this is a
-  journal of my routine — my promise at the top, 'this is what I will do',
-  and under it the journey, by Day/Month/Year; the materials were there,
-  they just weren't framed"). Titled "My routine" (not Activity). Top:
-  `RoutinePromiseCard` — the promise IN WORDS, one line per thing promised
-  ("Talk 10 min · Weekdays 8:00", "Words 10 min · Tue·Thu 19:30", the review
-  slot and the weekly test included), its own Edit button, and under a
-  divider the flame line ("Kept for N days · Best M", or "N days in a row"
-  with a "Make it a promise" button while it isn't one yet). Below:
-  "Journey" with Day | Month | Year — Day is `PlannerDayCard` (week circles
-  + the day's list), Month and Year are the calendar this page always had,
-  with the totals; the day's journal card (photo, share) stays under all
-  three. Two earlier framings were cut the same day: an "Edit routine"
-  nav button beside a page titled Activity (the title and the action named
-  two different pages), and a "History" section under a streak card.
+- **The page is a JOURNAL OF MY ROUTINE** (same day, founder: "my promise
+  at the top, 'this is what I will do', and under it the journey by
+  Day/Month/Year"). Titled "My routine". Top: `RoutinePromiseCard` — "My
+  promise" with the flame streak at its right, then THE WEEK AS A PICTURE:
+  seven columns, each a stack of colour bars in the day's order, one bar per
+  thing promised (founder: "show simply what Monday holds and what the
+  weekend holds" — a progress bar per day was the wrong reading and was not
+  built), a legend naming each colour with its amount, and Edit / "Make it
+  a promise". One colour per kind (talk blue, say it again teal, review
+  green, words purple, expressions pink, shadowing yellow, test orange) —
+  two kinds sharing green read as one bar. Below: "Journey", Day | Month |
+  Year; Day is `PlannerDayCard` (week circles + the day's list with
+  progress rings), Month/Year the calendar this page always had.
+- **Only a talk is promised in minutes** (founder: "why is everything but
+  Talk in minutes?"). Every other block is a COUNT the app keeps — words /
+  expressions judged, sentence cards, shadow lines, say-it-again runs, a
+  test — read from `PracticeLog`'s FINISHED counts (the daily goals' own
+  numbers), and filled in plan order (`PlannerDay.progress`). The stored
+  key is still `minutes`; `unitsVersion` nil marks a plan saved in minutes,
+  converted on load to each kind's default count (`convertingToCounts`).
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

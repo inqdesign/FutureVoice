@@ -38,7 +38,7 @@ enum PlanReminder {
                 content.title = title(for: occ.kind)
                 content.body = occ.kind == .sayItAgain
                     ? explain("Pick a recent talk and say it again.")
-                    : explain("\(occ.minutes) min, as planned.")
+                    : explain("\(occ.kind.titled(occ.amount)), as planned.")
                 content.sound = .default
                 switch occ.kind {
                 case .sayItAgain: content.categoryIdentifier = sayItAgainCategoryId

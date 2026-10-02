@@ -61,7 +61,14 @@ struct PlanBlockEditor: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Activity", selection: $kind) {
+                    Picker("Activity", selection: Binding(
+                        get: { kind },
+                        set: { new in
+                            // A new kind starts from its own amount (10 min
+                            // of talk is not 10 runs of say it again).
+                            if new != kind { minutes = new.defaultAmount }
+                            kind = new
+                        })) {
                         ForEach(StudyPlan.Kind.placeable) { k in
                             Label(k.label, systemImage: k.symbol).tag(k)
                         }
@@ -84,11 +91,14 @@ struct PlanBlockEditor: View {
                 Section {
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                         .environment(\.locale, uiLocale)
-                    Stepper(value: $minutes, in: 5...60, step: 5) {
+                    // A talk is promised in minutes; everything else in the
+                    // count the app actually keeps.
+                    Stepper(value: $minutes, in: kind.isTimed ? 5...60 : 1...50, step: kind.isTimed ? 5 : 1) {
                         HStack {
-                            Text("Length")
+                            Text(kind.isTimed ? explain("Length") : explain("How many"))
                             Spacer()
-                            Text(explain("\(minutes) min")).foregroundStyle(.secondary).monospacedDigit()
+                            Text(kind.amountText(minutes).isEmpty ? "1" : kind.amountText(minutes))
+                                .foregroundStyle(.secondary).monospacedDigit()
                         }
                     }
                     if kind != .talk {
@@ -169,6 +179,7 @@ struct PlanBlockEditor: View {
             weekdays = [wd]
             time = cal.date(bySettingHour: h, minute: m, second: 0, of: day) ?? day
             kind = .words
+            minutes = StudyPlan.Kind.words.defaultAmount
         } else {
             weekdays = [weekday]
             time = cal.date(bySettingHour: 20, minute: 0, second: 0, of: day) ?? day
@@ -279,9 +290,9 @@ struct PlanSettingsSheet: View {
                             .environment(\.locale, uiLocale)
                         Stepper(value: binding(\.reviewMinutes), in: 5...60, step: 5) {
                             HStack {
-                                Text("Length")
+                                Text(explain("How many"))
                                 Spacer()
-                                Text(explain("\(store.plan.reviewMinutes) min"))
+                                Text(StudyPlan.Kind.review.amountText(store.plan.reviewMinutes))
                                     .foregroundStyle(.secondary).monospacedDigit()
                             }
                         }

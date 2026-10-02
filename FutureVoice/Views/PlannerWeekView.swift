@@ -8,6 +8,8 @@ struct PlannerSnapshot {
     var actuals: [Date: [PlannerDay.Actual]]
     var events: [Date: [ActivityEventLog.Event]]
     var done: [Date: Set<String>]
+    /// Each planned block's progress, 0…1, per day.
+    var progress: [Date: [String: Double]] = [:]
     /// Items each upcoming review slot will find waiting, keyed by the slot.
     var reviewLoad: [Date: Int]
     var startHour: Int
@@ -50,6 +52,7 @@ struct PlannerSnapshot {
         var actuals: [Date: [PlannerDay.Actual]] = [:]
         var events: [Date: [ActivityEventLog.Event]] = [:]
         var done: [Date: Set<String>] = [:]
+        var progress: [Date: [String: Double]] = [:]
         var minHour = 7, maxHour = 23
         for day in days {
             let occ = plan.occurrences(on: day, test: test, calendar: cal)
@@ -62,10 +65,12 @@ struct PlannerSnapshot {
             planned[day] = occ
             actuals[day] = acts
             events[day] = dayEvents
-            done[day] = PlannerDay.done(
-                planned: occ, actuals: acts, events: dayEvents,
-                testFinished: finishedTests.contains { cal.isDate($0, inSameDayAs: day) },
-                talkSeconds: TalkTimeLog.seconds(on: day))
+            let totals = PlannerDay.totals(
+                on: day, events: dayEvents,
+                testFinished: finishedTests.contains { cal.isDate($0, inSameDayAs: day) })
+            let prog = PlannerDay.progress(planned: occ, totals: totals)
+            progress[day] = prog
+            done[day] = Set(prog.filter { $0.value >= 1 }.map(\.key))
             // A past day draws no blocks (only its result), so it must not
             // stretch the hours either.
             guard day >= cal.startOfDay(for: now) else { continue }
@@ -86,7 +91,7 @@ struct PlannerSnapshot {
             load = StudyPlan.reviewLoad(slots: slots, dueDates: due)
         }
         return PlannerSnapshot(days: days, planned: planned, actuals: actuals, events: events,
-                               done: done, reviewLoad: load,
+                               done: done, progress: progress, reviewLoad: load,
                                startHour: max(0, minHour), endHour: min(24, max(maxHour, minHour + 6)))
     }
 }
@@ -98,9 +103,14 @@ extension StudyPlan.Kind {
         switch self {
         // Not the accent: a theme's accent can be green, and then a talk
         // reads as a review.
+        // One colour per kind: the promise card stacks them in a single
+        // column per day, so two kinds sharing a colour read as one.
         case .talk: return .blue
-        case .review, .words, .expressions: return .green
-        case .shadow, .sayItAgain: return .teal
+        case .sayItAgain: return .teal
+        case .review: return .green
+        case .words: return .purple
+        case .expressions: return .pink
+        case .shadow: return .yellow
         case .test: return .orange
         }
     }
@@ -115,6 +125,24 @@ extension StudyPlan.Kind {
         case .sayItAgain: return "arrow.counterclockwise"
         case .test: return "checkmark.seal.fill"
         }
+    }
+
+    /// The amount in its own unit: minutes for a talk, a count otherwise;
+    /// empty for a one-off (one run of say it again, one test).
+    func amountText(_ n: Int) -> String {
+        switch self {
+        case .talk: return explain("\(n) min")
+        case .words, .expressions: return explain("\(n) items")
+        case .review: return explain("\(n) cards")
+        case .shadow: return explain("\(n) lines")
+        case .sayItAgain, .test: return n == 1 ? "" : explain("\(n) times")
+        }
+    }
+
+    /// "Words 10 items", or just "Say it again".
+    func titled(_ n: Int) -> String {
+        let a = amountText(n)
+        return a.isEmpty ? label : label + " " + a
     }
 
     var label: String {

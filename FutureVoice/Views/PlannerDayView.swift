@@ -162,8 +162,7 @@ struct PlannerDayCard: View {
 
     private var dayList: some View {
         let list = items
-        let talk = PlannerDay.talkProgress(planned: snapshot.planned[day] ?? [],
-                                           talkSeconds: TalkTimeLog.seconds(on: day))
+        let talk = snapshot.progress[day] ?? [:]
         return VStack(alignment: .leading, spacing: 0) {
             Text(cal.isDateInToday(day) ? explain("Today")
                  : day.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.abbreviated)))
@@ -197,9 +196,9 @@ struct PlannerDayCard: View {
 
     private func planDetail(_ occ: StudyPlan.Occurrence, done: Bool, progress: Double) -> String? {
         guard !done else { return nil }
-        if occ.kind == .talk, progress > 0 {
-            let did = Int((progress * Double(occ.minutes)).rounded(.down))
-            return explain("\(did) of \(occ.minutes) min")
+        if progress > 0, occ.amount > 1 {
+            let did = Int((progress * Double(occ.amount)).rounded(.down))
+            return explain("\(did) of \(occ.kind.amountText(occ.amount))")
         }
         if occ.kind == .review, let n = snapshot.reviewLoad[occ.start], n > 0 {
             return explain("About \(n) waiting")
@@ -218,10 +217,10 @@ struct PlannerDayCard: View {
                       progress: 1)
         case .plan(let occ, let done):
             let lapsed = !done && occ.end < Date()
-            let progress: Double = done ? 1 : (occ.kind == .talk ? (talk[occ.id] ?? 0) : 0)
+            let progress: Double = done ? 1 : (talk[occ.id] ?? 0)
             let line = rowLayout(time: clock(occ.start), symbol: occ.kind.symbol,
                                  tint: lapsed ? .secondary : occ.kind.color,
-                                 title: explain("\(occ.kind.label) · \(occ.minutes) min"),
+                                 title: occ.kind.titled(occ.amount),
                                  detail: planDetail(occ, done: done, progress: progress),
                                  progress: progress, faded: lapsed)
             if occ.kind == .sayItAgain && !done {
@@ -289,16 +288,16 @@ private struct ProgressRing: View {
     }
 }
 
-/// The top of the routine journal: the learner's promise, IN WORDS — what
-/// they said they would do — and how long they have kept it. The founder,
-/// 2026-10-02: "my routine at the top: I will do this, a promise to myself;
-/// under it the journey, by day, month and year." Everything below the card
-/// is the record of keeping it.
+/// The top of the routine journal: the learner's promise, and what a week of
+/// it looks like (founder, 2026-10-02: "my routine at the top — I will do
+/// this — and show the week simply: what Monday holds, what the weekend
+/// holds"). Seven columns, each a stack of colour bars in the order of the
+/// day — one bar per thing promised — with a legend that names the colours
+/// and their amounts. A day with no bar is a rest day.
 struct RoutinePromiseCard: View {
     let plan: StudyPlan
     let test: WeeklyTestSchedule
     let streak: Int
-    let best: Int
     let onEdit: () -> Void
     let onMakePromise: () -> Void
 
@@ -306,79 +305,60 @@ struct RoutinePromiseCard: View {
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
     private var isPromise: Bool { plan.streakSince != nil }
 
-    /// One line per thing promised, in the order a week runs.
-    private struct Line: Identifiable {
-        var id: String
-        var days: String
-        var time: String
-        var kind: StudyPlan.Kind
-        var minutes: Int
-        var sort: Int
+    /// The template's days, Monday-first (the learner's first weekday),
+    /// as next week's dates so one-off edits and days off stay out.
+    private var weekDays: [Date] {
+        let start = cal.date(byAdding: .day, value: 7, to: PlannerSnapshot.startOfWeek(Date(), calendar: cal)) ?? Date()
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
     }
 
-    private var lines: [Line] {
-        var out: [Line] = plan.blocks.map {
-            Line(id: $0.id.uuidString, days: daysLabel($0.weekdays), time: clock($0.hour, $0.minute),
-                 kind: $0.kind, minutes: $0.minutes, sort: $0.startMinute)
+    private var template: StudyPlan {
+        var p = plan
+        p.exceptions = [:]
+        p.restDays = []
+        return p
+    }
+
+    private func blocks(on day: Date) -> [StudyPlan.Occurrence] {
+        template.occurrences(on: day, test: test, calendar: cal)
+    }
+
+    /// One entry per kind in the week, with the amount it asks for.
+    private var legend: [(kind: StudyPlan.Kind, amount: Int)] {
+        var seen: [StudyPlan.Kind: Int] = [:]
+        var order: [StudyPlan.Kind] = []
+        for d in weekDays {
+            for o in blocks(on: d) where seen[o.kind] == nil {
+                seen[o.kind] = o.amount
+                order.append(o.kind)
+            }
         }
-        if plan.autoReview {
-            let planned = Set(plan.blocks.flatMap(\.weekdays))
-            out.append(Line(id: "review", days: daysLabel(planned.isEmpty ? Set(1...7) : planned),
-                            time: clock(plan.reviewHour, plan.reviewMinute),
-                            kind: .review, minutes: plan.reviewMinutes,
-                            sort: plan.reviewHour * 60 + plan.reviewMinute))
-        }
-        out.append(Line(id: "test", days: daysLabel([test.weekday]), time: clock(test.hour, test.minute),
-                        kind: .test, minutes: 15, sort: 24 * 60 + test.hour * 60 + test.minute))
-        return out.sorted { $0.sort < $1.sort }
+        return order.map { ($0, seen[$0] ?? 0) }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text(isPromise ? explain("My promise") : explain("My routine"))
                     .font(.headline)
                 Spacer()
+                if streak > 0 {
+                    Label(explain("\(streak) days in a row"), systemImage: "flame.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.orange)
+                }
+            }
+            weekGraphic
+            legendRow
+            HStack {
+                if !isPromise && !legend.isEmpty {
+                    Button(explain("Make it a promise"), action: onMakePromise)
+                        .font(.subheadline.weight(.semibold))
+                }
+                Spacer()
                 Button(explain("Edit"), action: onEdit)
                     .font(.subheadline)
-            }
-            if lines.isEmpty {
-                Text("Nothing planned yet.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(lines) { line in
-                        HStack(spacing: 10) {
-                            Image(systemName: line.kind.symbol)
-                                .font(.subheadline)
-                                .foregroundStyle(line.kind.color)
-                                .frame(width: 20)
-                            Text(explain("\(line.kind.label) \(line.minutes) min"))
-                                .font(.subheadline)
-                            Spacer(minLength: 8)
-                            Text(verbatim: "\(line.days) \(line.time)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    }
-                }
-            }
-            Divider()
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Image(systemName: "flame.fill").foregroundStyle(.orange)
-                Text(isPromise ? explain("Kept for \(streak) days") : explain("\(streak) days in a row"))
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                Text(explain("Best \(best)"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if !isPromise && !lines.isEmpty {
-                    Button(explain("Make it a promise"), action: onMakePromise)
-                        .font(.footnote.weight(.semibold))
-                }
             }
         }
         .padding(16)
@@ -386,16 +366,49 @@ struct RoutinePromiseCard: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    private func clock(_ h: Int, _ m: Int) -> String { String(format: "%d:%02d", h, m) }
+    /// The week's shape: what each day holds, as stacked bars.
+    private var weekGraphic: some View {
+        let todayWeekday = cal.component(.weekday, from: Date())
+        let rows = max(1, weekDays.map { blocks(on: $0).count }.max() ?? 1)
+        return HStack(alignment: .top, spacing: 6) {
+            ForEach(weekDays, id: \.self) { d in
+                let isToday = cal.component(.weekday, from: d) == todayWeekday
+                VStack(spacing: 6) {
+                    Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
+                        .font(.caption.weight(isToday ? .bold : .regular))
+                        .foregroundStyle(isToday ? Color.primary : Color.secondary)
+                    VStack(spacing: 3) {
+                        let list = blocks(on: d)
+                        ForEach(list) { o in
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(o.kind.color)
+                                .frame(height: 10)
+                        }
+                        // Keep every column the same height, so the bars
+                        // line up from the top like a timetable.
+                        ForEach(0..<(rows - list.count), id: \.self) { _ in
+                            Color.clear.frame(height: 10)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide))))
+                .accessibilityValue(Text(blocks(on: d).map { $0.kind.label }.joined(separator: ", ")))
+            }
+        }
+    }
 
-    /// "Every day", "Weekdays", "Weekends", else the days themselves ("Tue·Thu").
-    private func daysLabel(_ days: Set<Int>) -> String {
-        if days.count == 7 { return explain("Every day") }
-        if days == Set(2...6) { return explain("Weekdays") }
-        if days == [1, 7] { return explain("Weekends") }
-        var c = cal; c.locale = uiLocale
-        let symbols = c.shortWeekdaySymbols
-        let order = (0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }
-        return order.filter(days.contains).map { symbols[$0 - 1] }.joined(separator: "·")
+    private var legendRow: some View {
+        FlowLayout(spacing: 12) {
+            ForEach(legend, id: \.kind) { item in
+                HStack(spacing: 5) {
+                    RoundedRectangle(cornerRadius: 2).fill(item.kind.color).frame(width: 10, height: 10)
+                    Text(item.kind.titled(item.amount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }

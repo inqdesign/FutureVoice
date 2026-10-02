@@ -154,19 +154,32 @@ final class StudyPlanTests: XCTestCase {
 
     // MARK: - What happened
 
-    func testDoneAtAnotherTimeStillCounts() {
+    func testCountsFillBlocksInOrder() {
         var plan = StudyPlan()
         plan.blocks = [.init(kind: .talk, weekdays: [3], hour: 8, minute: 0, minutes: 10),
-                       .init(kind: .words, weekdays: [3], hour: 20, minute: 0, minutes: 10)]
+                       .init(kind: .talk, weekdays: [3], hour: 20, minute: 0, minutes: 10),
+                       .init(kind: .words, weekdays: [3], hour: 19, minute: 0, minutes: 10)]
         let occ = plan.occurrences(on: at(6, 0), calendar: cal)
-        let talks = [PlannerDay.Talk(id: UUID(), start: at(6, 12, 20), end: at(6, 12, 32), title: "x")]
-        let events = [ActivityEventLog.Event(kind: .shadow, at: at(6, 15))]
-        let actuals = PlannerDay.actuals(talks: talks, events: events)
-        let done = PlannerDay.done(planned: occ, actuals: actuals, events: events, testFinished: false)
-        XCTAssertTrue(done.contains(occ.first { $0.kind == .talk }!.id))
-        XCTAssertFalse(done.contains(occ.first { $0.kind == .words }!.id))
-        // Shadowing wasn't planned; it is listed as extra.
-        XCTAssertEqual(PlannerDay.unplanned(actuals: actuals, planned: occ).map(\.kind), [.shadow])
+        var totals = PlannerDay.Totals()
+        totals.talkMinutes = 15
+        totals.words = 4
+        let p = PlannerDay.progress(planned: occ, totals: totals)
+        let talks = occ.filter { $0.kind == .talk }
+        XCTAssertEqual(p[talks[0].id], 1)
+        XCTAssertEqual(p[talks[1].id]!, 0.5, accuracy: 0.001)
+        XCTAssertEqual(p[occ.first { $0.kind == .words }!.id]!, 0.4, accuracy: 0.001)
+        XCTAssertEqual(PlannerDay.done(planned: occ, totals: totals), [talks[0].id])
+    }
+
+    func testOldMinutePlansBecomeCounts() {
+        var plan = StudyPlan()
+        plan.unitsVersion = nil
+        plan.blocks = [.init(kind: .talk, weekdays: [2], hour: 8, minute: 0, minutes: 15),
+                       .init(kind: .sayItAgain, weekdays: [2], hour: 8, minute: 15, minutes: 5)]
+        let c = plan.convertingToCounts()
+        XCTAssertEqual(c.blocks.first { $0.kind == .talk }?.minutes, 15)
+        XCTAssertEqual(c.blocks.first { $0.kind == .sayItAgain }?.minutes, 1)
+        XCTAssertEqual(c.unitsVersion, 1)
     }
 
     func testRepsCloseTogetherAreOneSitting() {
@@ -227,16 +240,4 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(walk([2: .kept, 3: .missed, 4: .kept], today: 4), 1)
     }
 
-    func testTalkBlocksFillByMinutes() {
-        var plan = StudyPlan()
-        plan.blocks = [.init(kind: .talk, weekdays: [3], hour: 8, minute: 0, minutes: 10),
-                       .init(kind: .talk, weekdays: [3], hour: 20, minute: 0, minutes: 10)]
-        let occ = plan.occurrences(on: at(6, 0), calendar: cal)
-        let p = PlannerDay.talkProgress(planned: occ, talkSeconds: 15 * 60)
-        XCTAssertEqual(p[occ[0].id], 1)
-        XCTAssertEqual(p[occ[1].id]!, 0.5, accuracy: 0.001)
-        let done = PlannerDay.done(planned: occ, actuals: [], events: [], testFinished: false,
-                                   talkSeconds: 4 * 60)
-        XCTAssertTrue(done.isEmpty)   // 4 of 10 minutes is not done
-    }
 }

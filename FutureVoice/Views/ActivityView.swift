@@ -74,7 +74,7 @@ struct ActivityView: View {
                 // the promise in words at the top, the journey of keeping it
                 // underneath — read by day, month or year.
                 RoutinePromiseCard(plan: planStore.plan, test: WeeklyTestSettings.shared.schedule,
-                                   streak: currentStreak, best: longestStreak,
+                                   streak: currentStreak,
                                    onEdit: {
                                        Analytics.capture("plan_edit_opened", [:])
                                        showPlanEditor = true
