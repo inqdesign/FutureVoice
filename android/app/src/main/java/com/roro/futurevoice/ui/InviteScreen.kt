@@ -244,7 +244,7 @@ fun InviteScreen(onBack: () -> Unit) {
                                             codeInput = ""
                                             reload()
                                         }
-                                        .onFailure { e -> error = context.getString(reasonText(e)) }
+                                        .onFailure { e -> error = context.getString(redeemFailureText(e)) }
                                     redeeming = false
                                 }
                             }
@@ -283,7 +283,7 @@ private const val PLAY_URL = "https://play.google.com/store/apps/details?id=com.
 
 /** Each refusal names the server-side guard that fired, so the learner is
  *  told the actual reason rather than "try again". */
-private fun reasonText(e: Throwable): Int = when (
+internal fun redeemFailureText(e: Throwable): Int = when (
     (e as? ReferralClient.RedeemFailure)?.reason
 ) {
     ReferralClient.RedeemError.INVALID -> R.string.that_invite_code_isn_t_valid

@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.app.Activity
+import kotlinx.coroutines.launch
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -144,13 +145,14 @@ fun PaywallScreen(onDismiss: () -> Unit) {
 
     // Trial length and eligibility come from Play's own pricing phases: a
     // trial is a phase priced at zero, and Play only attaches one to an
-    // account that can still take it. With NOTHING loaded the funnel still
-    // runs on the default — there is nothing purchasable either way, and
-    // guessing "no trial" would strip the whole pitch off the screen on a
-    // device that simply cannot reach Play.
+    // account that can still take it. Nothing loaded = NO trial (iOS reads
+    // `trialEligible` the same way): the trial came off sale on 2026-09-26,
+    // and a funnel promising "N days free" with nothing behind it is the
+    // one screen a tester without Play products would otherwise meet.
     val trialDays = offers.mapNotNull { trialDaysOf(it.details).takeIf { d -> d > 0 } }
         .maxOrNull() ?: DEFAULT_TRIAL_DAYS
-    val showsTrial = offers.isEmpty() || offers.any { trialDaysOf(it.details) > 0 }
+    val showsTrial = offers.any { trialDaysOf(it.details) > 0 }
+    var redeemOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(settled, showsTrial) {
         if (settled && step == PaywallStep.RESOLVING) {
@@ -216,6 +218,7 @@ fun PaywallScreen(onDismiss: () -> Unit) {
                 showsTrial = showsTrial,
                 canBuy = chosen != null,
                 chosenTrialDays = chosen?.let { trialDaysOf(it.details) } ?: 0,
+                onCode = { redeemOpen = true },
                 onPrimary = {
                     when (step) {
                         PaywallStep.RESOLVING -> Unit
@@ -262,6 +265,13 @@ fun PaywallScreen(onDismiss: () -> Unit) {
             }
         }
     }
+    if (redeemOpen) RedeemCodeDialog(
+        onDismiss = { redeemOpen = false },
+        // A comp is a plan: the wall this paywall stands for is gone, so the
+        // paywall goes with the dialog. Invite minutes leave it up — they
+        // are minutes, and the plans are still the answer after them.
+        onComp = { redeemOpen = false; onDismiss() },
+    )
 }
 
 /** The pinned CTA, and the one line that de-risks it. */
@@ -272,6 +282,7 @@ private fun PaywallBottomBar(
     showsTrial: Boolean,
     canBuy: Boolean,
     chosenTrialDays: Int,
+    onCode: () -> Unit,
     onPrimary: () -> Unit,
 ) {
     val resolving = step == PaywallStep.RESOLVING
@@ -307,6 +318,14 @@ private fun PaywallBottomBar(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
+                }
+                // iOS's "Have a code?" (Apple's offer-code sheet there). On
+                // Android a code is the server's own — comp and invite codes
+                // both go through `redeem_referral` — so it opens that field.
+                if (step == PaywallStep.PLANS) {
+                    androidx.compose.material3.TextButton(onClick = onCode) {
+                        Text(stringResource(R.string.have_a_code))
+                    }
                 }
                 if (step == PaywallStep.PITCH || step == PaywallStep.TIMELINE) {
                     Text(
@@ -744,3 +763,59 @@ private fun trialDaysOf(details: ProductDetails): Int {
  */
 private fun grouped(n: Int): String =
     NumberFormat.getIntegerInstance(Locale.getDefault()).format(n)
+
+/** One field, one button: a code from the server's own table (a tester's
+ *  comp, a friend's invite), the same `redeem_referral` Me → Invite calls. */
+@Composable
+private fun RedeemCodeDialog(onDismiss: () -> Unit, onComp: () -> Unit) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val client = remember { com.roro.futurevoice.net.ReferralClient(com.roro.futurevoice.data.AuthRepository()) }
+    var code by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf<String?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(stringResource(R.string.have_a_code)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = code, onValueChange = { code = it.uppercase(); note = null },
+                    placeholder = { Text(stringResource(R.string.enter_invite_code)) },
+                    singleLine = true,
+                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                )
+                note?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = if (failed) MaterialTheme.colorScheme.error else Color(0xFF34C759))
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                enabled = !busy && code.isNotBlank(),
+                onClick = {
+                    busy = true
+                    scope.launch {
+                        runCatching { client.redeem(code) }
+                            .onSuccess { r ->
+                                failed = false
+                                if (r.isComp) onComp()
+                                else note = context.getString(R.string.redeemed_lld_minutes_added,
+                                    com.roro.futurevoice.net.ReferralClient.bonusMinutes)
+                            }
+                            .onFailure { e -> failed = true; note = context.getString(redeemFailureText(e)) }
+                        busy = false
+                    }
+                },
+            ) { Text(stringResource(R.string.redeem)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss, enabled = !busy) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
