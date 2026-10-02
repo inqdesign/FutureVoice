@@ -563,6 +563,13 @@ its own branch so the founder picks the build it ships in.
   test move their own settings. The slider opens `PlanSettingsSheet`. The
   dated grid in Activity runs 8 pt from the screen edge (it needs every
   point across) and has no edit mode.
+- **A past day is its RESULT, nothing more** (same day, founder: "for days
+  gone by I only care whether I kept the plan"). In the dated week a day
+  before today draws no blocks: under its date sits a green tick when every
+  planned block was done (and its column is tinted green), else `done/total`,
+  else nothing when nothing was planned. Today keeps plan + actual, later
+  days the plan only. The detail is still one tap away in the day list, and
+  past days no longer stretch the hour range.
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

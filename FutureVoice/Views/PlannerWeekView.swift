@@ -65,6 +65,9 @@ struct PlannerSnapshot {
             done[day] = PlannerDay.done(
                 planned: occ, actuals: acts, events: dayEvents,
                 testFinished: finishedTests.contains { cal.isDate($0, inSameDayAs: day) })
+            // A past day draws no blocks (only its result), so it must not
+            // stretch the hours either.
+            guard day >= cal.startOfDay(for: now) else { continue }
             for d in occ.map(\.start) + acts.map(\.start) {
                 minHour = min(minHour, cal.component(.hour, from: d))
             }
@@ -246,6 +249,37 @@ struct PlannerWeekCard: View {
         .frame(height: gridHeight)
     }
 
+    /// A day already over: what is left of it is whether the plan was kept.
+    private func isPast(_ day: Date) -> Bool {
+        !isMaster && day < cal.startOfDay(for: Date())
+    }
+
+    /// (done, planned) for a past day; nil when nothing was planned.
+    private func result(_ day: Date) -> (done: Int, total: Int)? {
+        let total = snapshot.planned[day]?.count ?? 0
+        guard total > 0 else { return nil }
+        return (snapshot.done[day]?.count ?? 0, total)
+    }
+
+    @ViewBuilder
+    private func resultMark(_ day: Date) -> some View {
+        if let r = result(day) {
+            if r.done >= r.total {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+                    .accessibilityLabel(Text("Done"))
+            } else {
+                Text(verbatim: "\(r.done)/\(r.total)")
+                    .font(.caption2.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Color.clear
+        }
+    }
+
     private var dayHeader: some View {
         HStack(spacing: gap) {
             Color.clear.frame(width: labelWidth, height: 1)
@@ -263,6 +297,10 @@ struct PlannerWeekCard: View {
                             .frame(width: 22, height: 22)
                             .background(Circle().fill(isToday ? Color.accentColor : Color.clear))
                             .overlay(Circle().strokeBorder(isSelected && !isToday ? Color.primary.opacity(0.4) : .clear))
+                        // Same height on every day, so the dates line up.
+                        resultMark(day)
+                            .frame(height: 18)
+                            .opacity(isPast(day) ? 1 : 0)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -312,11 +350,19 @@ struct PlannerWeekCard: View {
         // outline with another block on top of it.
         let absorbed = PlannerDay.absorbed(planned: planned, actuals: actuals)
         let fulfilling = Set(absorbed.values)
-        let shownPlans = planned.filter { absorbed[$0.id] == nil }
-        let tops = stackedTops(plans: shownPlans, actuals: actuals)
+        // A past day is its result, nothing more (founder: "for days gone by
+        // I only care whether I kept the plan"). The blocks are one tap away
+        // in the day list below.
+        let past = isPast(day)
+        let kept = past && (result(day).map { $0.done >= $0.total } ?? false)
+        let shownPlans = past ? [] : planned.filter { absorbed[$0.id] == nil }
+        let shownActuals = past ? [] : actuals
+        let tops = stackedTops(plans: shownPlans, actuals: shownActuals)
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isToday ? Color.accentColor.opacity(0.08) : Color(.tertiarySystemFill).opacity(0.5))
+                .fill(isToday ? Color.accentColor.opacity(0.08)
+                      : kept ? Color.green.opacity(0.10)
+                      : Color(.tertiarySystemFill).opacity(past ? 0.3 : 0.5))
             if isMaster {
                 // Hour lines, so a drop lands where the eye expects.
                 ForEach(snapshot.startHour..<snapshot.endHour, id: \.self) { h in
@@ -330,7 +376,7 @@ struct PlannerWeekCard: View {
                 plannedBlock(occ, day: day, width: width, done: done.contains(occ.id),
                              top: tops["p" + occ.id] ?? y(occ.start))
             }
-            ForEach(actuals) { a in
+            ForEach(shownActuals) { a in
                 actualBlock(a, width: width, fulfilsPlan: fulfilling.contains(a.id),
                             top: tops["a" + a.id] ?? y(a.start))
             }
@@ -342,6 +388,9 @@ struct PlannerWeekCard: View {
             }
         }
         .frame(width: width, height: gridHeight, alignment: .topLeading)
+        // Late blocks pushed down by `stackedTops` must not spill past the
+        // last hour onto the legend.
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture(coordinateSpace: .local) { location in
             if isMaster {
