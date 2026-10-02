@@ -98,8 +98,7 @@ struct DrillView: View {
     /// falls back to the default hand.
     @MainActor
     static var sessionCap: Int {
-        let goal = GoalStore.shared.sentencesPerDay
-        return goal > 0 ? goal : defaultSessionCap
+        GoalStore.shared.target(.review) ?? defaultSessionCap
     }
     /// What the Sentences goal itself defaults to (`GoalStore`).
     static let defaultSessionCap = 20

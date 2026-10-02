@@ -21,6 +21,8 @@ struct PracticeTab: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var vocab = VocabStore.shared
     @ObservedObject private var goals = GoalStore.shared
+    /// Today's targets come from the routine, so a routine edit redraws the card.
+    @ObservedObject private var planStore = StudyPlanStore.shared
 
     /// Programmatic push of the vocabulary notebook, driven by the
     /// futurevoice://vocab deep link (study widget tap).
@@ -624,28 +626,22 @@ struct PracticeTab: View {
     /// `GoalStore`) plus the due SRS deck, then the week strip that those
     /// finished days accumulate into. The books below stay the supply; this
     /// card is the ask.
+    private var reviewPlannedToday: Bool {
+        [.review, .words, .expressions, .shadow].contains { goals.target($0) != nil }
+    }
+
     private var todayCard: some View {
         let today = todayLog
-        let streak = goals.streak()
         return VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Text("Today").font(.headline)
                 Spacer()
-                if streak > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill")
-                        Text("\(streak)").monospacedDigit()
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.orange)
-                    .accessibilityLabel("\(streak) day streak")
-                }
                 Button { showingGoalsEditor = true } label: {
                     Image(systemName: "slider.horizontal.3")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                .accessibilityLabel("Edit daily goals")
+                .accessibilityLabel(Text(explain("Edit routine")))
             }
             .padding(.horizontal, 14)
             .padding(.top, 12)
@@ -682,12 +678,13 @@ struct PracticeTab: View {
                 // `DrillView.sessionCap` — so a 400-card backlog asks for
                 // today's number), and on a day with nothing due and nothing
                 // done there's nothing to ask for.
-                if goals.sentencesPerDay > 0, dueDrillCount > 0 || today.drillDone > 0 {
+                if dueDrillCount > 0 || today.drillDone > 0 || goals.target(.review) != nil {
                     // The learner's goal, but never more than exists to do —
                     // asking for 20 when 3 cards are due makes the day
                     // unwinnable through no fault of theirs.
-                    let cardsGoal = max(today.drillDone,
-                                        min(today.drillDone + dueDrillCount, goals.sentencesPerDay))
+                    let cardsGoal = goals.target(.review).map {
+                        max(today.drillDone, min(today.drillDone + dueDrillCount, $0))
+                    }
                     challengeTile(icon: "rectangle.stack", title: "Sentences",
                                   done: today.drillDone, goal: cardsGoal,
                                   allCount: sentencesToStudy,
@@ -700,22 +697,22 @@ struct PracticeTab: View {
                         showingDrills = true
                     }
                 }
-                if goals.wordsPerDay > 0 {
+                do {
                     // Lands in the dealt-hand session, not the explore cloud —
                     // a challenge hands you today's ten, it doesn't open a map.
                     // "To study" lands in the LIST the number counts, not the
                     // CEFR cloud — the cloud is one row inside it now. See
                     // WordsView for why.
                     challengeTile(icon: "text.book.closed.fill", title: "Words",
-                                  done: today.wordDone, goal: goals.wordsPerDay,
+                                  done: today.wordDone, goal: goals.target(.words),
                                   allCount: wordsToStudy,
                                   all: { WordsView().environmentObject(appState) }) {
                         showingDailyWords = true
                     }
                 }
-                if goals.expressionsPerDay > 0 {
+                do {
                     challengeTile(icon: "quote.bubble.fill", title: "Expressions",
-                                  done: today.expressionDone, goal: goals.expressionsPerDay,
+                                  done: today.expressionDone, goal: goals.target(.expressions),
                                   allCount: expressionsToStudy,
                                   all: {
                                       ExpressionsView()
@@ -726,12 +723,12 @@ struct PracticeTab: View {
                         showingDailyExpressions = true
                     }
                 }
-                if goals.shadowsPerDay > 0 {
+                do {
                     // Today's PICKS, not the full browser — the same dealt-hand
                     // rule as Words and Expressions. Falls back to the browser
                     // only when there's nothing to pick from yet.
                     challengeTile(icon: "waveform.badge.mic", title: "Shadowing",
-                                  done: today.shadowDone, goal: goals.shadowsPerDay,
+                                  done: today.shadowDone, goal: goals.target(.shadow),
                                   allCount: shadowToStudy,
                                   all: {
                                       ShadowBrowserView()
@@ -743,7 +740,7 @@ struct PracticeTab: View {
                             sessions: talks + archivedTalks,
                             attempts: appState.shadowAttempts,
                             level: appState.proficiency,
-                            limit: max(goals.shadowsPerDay, 1))
+                            limit: goals.handSize(.shadow))
                         if picks.isEmpty {
                             showingShadowBrowser = true
                         } else {
@@ -755,11 +752,12 @@ struct PracticeTab: View {
             .padding(.horizontal, 14)
             .padding(.top, 12)
             .padding(.bottom, 4)
-            if goals.anyEnabled {
-                weekStrip
-            } else {
+            // What a day asks for is the ROUTINE's; days kept are its
+            // journey. This card is only today's doors into the work, so it
+            // carries neither a streak nor a week of its own.
+            if !reviewPlannedToday {
                 Button { showingGoalsEditor = true } label: {
-                    Text(explain("No daily goals set — tap to pick how many words, expressions and shadow takes make a day."))
+                    Text(explain("Nothing to review in today's routine. Add some to your routine."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -767,6 +765,8 @@ struct PracticeTab: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+            } else {
+                Color.clear.frame(height: 10)
             }
         }
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
@@ -950,12 +950,14 @@ struct PracticeTab: View {
     /// have below) separated by the same hairline every card uses.
     private func challengeTile<D: View>(
         icon: String, title: LocalizedStringKey,
-        done: Int, goal: Int,
+        done: Int, goal: Int?,
         allCount: Int,
         @ViewBuilder all: () -> D,
         action: @escaping () -> Void
     ) -> some View {
-        let complete = done >= goal
+        // No goal = the routine asks for none of this today: the tile is
+        // still the door, and says what was done without judging it.
+        let complete = goal.map { done >= $0 } ?? false
         return VStack(spacing: 0) {
             Button(action: action) {
                 VStack(alignment: .leading, spacing: 7) {
@@ -971,9 +973,9 @@ struct PracticeTab: View {
                         Spacer(minLength: 0)
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text("\(done)/\(goal)")
+                        Text(goal.map { "\(done)/\($0)" } ?? "\(done)")
                             .font(.title3.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(goal == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                         if complete {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.footnote)
@@ -983,9 +985,22 @@ struct PracticeTab: View {
                     }
                     // Slim by design: the fraction above already carries the
                     // number, so the bar only has to be glanceable.
-                    ProgressView(value: Double(min(done, goal)), total: Double(max(goal, 1)))
-                        .tint(complete ? .green : .accentColor)
-                        .scaleEffect(x: 1, y: 0.7, anchor: .center)
+                    // One fixed-height line, so a tile with a goal and one
+                    // without stand the same height side by side.
+                    Group {
+                        if let goal {
+                            ProgressView(value: Double(min(done, goal)), total: Double(max(goal, 1)))
+                                .tint(complete ? .green : .accentColor)
+                                .scaleEffect(x: 1, y: 0.7, anchor: .center)
+                        } else {
+                            Text(explain("Not in today's routine"))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+                    .frame(height: 14, alignment: .leading)
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 11)
@@ -1023,32 +1038,6 @@ struct PracticeTab: View {
         }
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(Color(.tertiarySystemFill)))
-    }
-
-    /// The last seven days, today last — a filled check for each day every
-    /// enabled challenge was met. What the streak is made of, made visible.
-    private var weekStrip: some View {
-        let cal = Calendar.current
-        let days: [Date] = (0..<7).reversed()
-            .compactMap { cal.date(byAdding: .day, value: -$0, to: Date()) }
-        return HStack(spacing: 0) {
-            ForEach(days, id: \.self) { d in
-                let met = goals.met(on: d)
-                let isToday = cal.isDateInToday(d)
-                VStack(spacing: 5) {
-                    Text(d, format: .dateTime.weekday(.narrow))
-                        .font(.caption2)
-                        .foregroundStyle(isToday ? .primary : .secondary)
-                    Image(systemName: met ? "checkmark.circle.fill" : "circle")
-                        .font(.subheadline)
-                        .foregroundStyle(met ? AnyShapeStyle(Color.green)
-                                             : (isToday ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary)))
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
     }
 
     /// When a book came into existence. The one ordering the whole tab now
@@ -1450,22 +1439,6 @@ struct StudyGoalsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Stepper(value: $goals.sentencesPerDay, in: 0...50) {
-                        goalLabel("rectangle.stack", "Sentences", goals.sentencesPerDay)
-                    }
-                    Stepper(value: $goals.wordsPerDay, in: 0...50) {
-                        goalLabel("text.book.closed.fill", "Words", goals.wordsPerDay)
-                    }
-                    Stepper(value: $goals.expressionsPerDay, in: 0...30) {
-                        goalLabel("quote.bubble.fill", "Expressions", goals.expressionsPerDay)
-                    }
-                    Stepper(value: $goals.shadowsPerDay, in: 0...30) {
-                        goalLabel("waveform.badge.mic", "Shadowing", goals.shadowsPerDay)
-                    }
-                } footer: {
-                    Text(explain("A day counts once every goal here is met — and only FINISHED work counts: \u{201C}Got it\u{201D} on a sentence, \u{201C}I know\u{201D} on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn\u{2019}t done. Set a goal to 0 to leave it out."))
-                }
                 // Whether the schedule can actually ring. Without this the
                 // learner drops a card on "10 min", nothing comes back, and
                 // the feature looks broken instead of unpermitted.
@@ -1477,7 +1450,7 @@ struct StudyGoalsSheet: View {
                 WeeklyTestSettingsSection(notifications: $notifications)
             }
             .task { notifications = await ReviewNotifications.status() }
-            .navigationTitle("Daily goals")
+            .navigationTitle(explain("Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -1535,18 +1508,6 @@ struct StudyGoalsSheet: View {
         }
     }
 
-    private func goalLabel(_ icon: String, _ title: LocalizedStringKey, _ value: Int) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(.tint)
-                .frame(width: 24)
-            Text(title)
-            Spacer()
-            Text(value == 0 ? "Off" : "\(value)")
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
-    }
 }
 
 // MARK: - Finished books shelf

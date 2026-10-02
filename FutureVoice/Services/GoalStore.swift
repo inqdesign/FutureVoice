@@ -57,6 +57,35 @@ final class GoalStore: ObservableObject {
         if shadowsPerDay != sh { shadowsPerDay = sh }
     }
 
+    // MARK: - The routine sets the day (2026-10-02)
+    //
+    // What a day ASKS for is the routine's (founder: one place to set it).
+    // The per-day numbers above are no longer a goal anyone edits; they are
+    // only the hand a deck deals on a day the routine says nothing about.
+
+    /// How much of `kind` the routine asks for on `date` — nil when it asks
+    /// for none (a rest day, or a day without that block).
+    func target(_ kind: StudyPlan.Kind, on date: Date = Date()) -> Int? {
+        let total = StudyPlanStore.shared.plan
+            .occurrences(on: date, test: WeeklyTestSettings.shared.schedule)
+            .filter { $0.kind == kind }
+            .reduce(0) { $0 + $1.amount }
+        return total > 0 ? total : nil
+    }
+
+    /// How many a deck deals today: the routine's number when it has one,
+    /// else the standing default.
+    func handSize(_ kind: StudyPlan.Kind) -> Int {
+        if let t = target(kind) { return t }
+        switch kind {
+        case .review: return max(sentencesPerDay, 1)
+        case .words: return max(wordsPerDay, 1)
+        case .expressions: return max(expressionsPerDay, 1)
+        case .shadow: return max(shadowsPerDay, 1)
+        default: return 1
+        }
+    }
+
     var anyEnabled: Bool {
         sentencesPerDay > 0 || wordsPerDay > 0 || expressionsPerDay > 0 || shadowsPerDay > 0
     }

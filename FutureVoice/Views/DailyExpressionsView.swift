@@ -32,7 +32,7 @@ struct DailyExpressionsView: View {
         }
         .onAppear {
             guard !dealt else { return }
-            picks = Self.pick(goal: max(GoalStore.shared.expressionsPerDay, 1),
+            picks = Self.pick(goal: GoalStore.shared.handSize(.expressions),
                               appState: appState)
             dealt = true
         }
