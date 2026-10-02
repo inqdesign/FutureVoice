@@ -381,6 +381,10 @@ enum DebugCapture {
                 ]
                 plan.autoReview = true
                 plan.reviewHour = 21
+                // "-capture activity-week" shows a promise kept since Monday;
+                // the plain studied-days rule is the default everywhere else.
+                plan.streakSince = cal.date(byAdding: .day, value: -4, to: today)
+                PromiseLedger.shared.replaceAll([:])
                 StudyPlanStore.shared.update(plan)
                 for (back, start, end, title) in [(3, at(3, 8, 3), at(3, 8, 15), "Weekend plans"),
                                                   (2, at(2, 12, 20), at(2, 12, 33), "Moving apartments"),

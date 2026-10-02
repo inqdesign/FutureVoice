@@ -84,14 +84,28 @@ enum PlannerDay {
 
     /// Which planned blocks the day's practice covers, by occurrence id.
     /// Talks are matched in order — two planned talks need two talks.
+    ///
+    /// A talk block asks for MINUTES, so it is measured on the metered talk
+    /// time (`talkSeconds`, the ring's number): two 10-minute talk blocks are
+    /// both done at 20 minutes of talking that day, the first at 10. With no
+    /// meter reading (nil) a block is done by any finished talk, in order.
     static func done(planned: [StudyPlan.Occurrence],
                      actuals: [Actual],
                      events: [ActivityEventLog.Event],
-                     testFinished: Bool) -> Set<String> {
+                     testFinished: Bool,
+                     talkSeconds: Int? = nil) -> Set<String> {
         var out = Set<String>()
-        let talkCount = actuals.filter { $0.kind == .talk }.count
         let plannedTalks = planned.filter { $0.kind == .talk }.sorted { $0.start < $1.start }
-        for (i, occ) in plannedTalks.enumerated() where i < talkCount { out.insert(occ.id) }
+        if let talkSeconds {
+            var needed = 0
+            for occ in plannedTalks {
+                needed += occ.minutes * 60
+                if talkSeconds >= needed { out.insert(occ.id) }
+            }
+        } else {
+            let talkCount = actuals.filter { $0.kind == .talk }.count
+            for (i, occ) in plannedTalks.enumerated() where i < talkCount { out.insert(occ.id) }
+        }
         let kinds = Set(events.map(\.kind))
         for occ in planned {
             let hit: Bool
@@ -127,6 +141,19 @@ enum PlannerDay {
                 out[occ.id] = match.id
                 used.insert(match.id)
             }
+        }
+        return out
+    }
+
+    /// How far along each planned talk block is, 0…1, filling them in order
+    /// from the day's metered talk time.
+    static func talkProgress(planned: [StudyPlan.Occurrence], talkSeconds: Int) -> [String: Double] {
+        var out: [String: Double] = [:]
+        var left = Double(talkSeconds)
+        for occ in planned.filter({ $0.kind == .talk }).sorted(by: { $0.start < $1.start }) {
+            let need = Double(max(1, occ.minutes * 60))
+            out[occ.id] = min(1, max(0, left / need))
+            left = max(0, left - need)
         }
         return out
     }

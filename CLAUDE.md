@@ -583,6 +583,32 @@ its own branch so the founder picks the build it ships in.
   empty space once they were reduced to a result) and the separate day list
   under it (the same day twice). The 7-column grid survives only as the
   weekly plan editor, where seeing the whole week IS the job.
+- **The streak is the learner's OWN promise** (same day, founder: "the
+  more I plan, the more I have to keep — a first-time user keeps it just by
+  using the app, and when I raise my own bar the streak means something
+  else. It's a promise I kept to myself"). ONE streak number, app-wide (Home
+  chip, widget, day card, Activity), whose RULE is per learner:
+  `StudyPlan.streakSince` nil → a day counts when they studied at all
+  (`PracticeStats.activeDays`, the old rule, where everyone starts — the
+  seeded plan never sets it); set → from that day a day counts only when
+  every block planned for it was done, and a day with nothing planned is a
+  REST day that neither counts nor breaks. It is switched on by hand
+  ("Make this plan my promise", top of the weekly plan editor) — never by
+  editing the plan. Each promise day is judged by the plan it HAD
+  (`PromiseLedger`, `Documents/promise_days.json`: planned/done per day,
+  today provisional, frozen once the day is over by `PromiseJudge.refresh`,
+  run from every widget refresh, on Activity load and on every plan
+  update), so raising the bar never rewrites the past; days before the
+  promise keep the studied rule, so the run carries across the switch.
+  `PracticeStats.standing` is the one per-day answer and `streak(endingAt:)`
+  the pure walk (`StudyPlanTests`). A talk block is done by MINUTES of
+  metered talk (`TalkTimeLog`, the ring's number), filled in plan order —
+  4 of 10 minutes is a 40% ring and "4 of 10 min", not a miss.
+- Activity, top to bottom: the promise card ("My promise · Day N in a row ·
+  Best M", the rule in one line, the week as circles — green kept, grey
+  ring missed, bare number rest, today a filling ring, dashed future plans —
+  with ‹ ›), then the selected day's list; "Edit routine" is the nav bar's
+  button; the past sits under its own "History" header with Month/Year.
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

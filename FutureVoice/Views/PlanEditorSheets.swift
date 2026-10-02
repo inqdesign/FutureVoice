@@ -379,7 +379,12 @@ struct WeeklyPlanEditor: View {
                     DispatchQueue.main.async { proxy.scrollTo("seven", anchor: .top) }
                 }
             }
-            .safeAreaInset(edge: .top, spacing: 0) { weekdayHeader }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                VStack(spacing: 0) {
+                    promiseToggle
+                    weekdayHeader
+                }
+            }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 Text("Tap an empty spot to add. Hold a block and drag to move it.")
                     .font(.footnote)
@@ -424,6 +429,33 @@ struct WeeklyPlanEditor: View {
             }
             .onChange(of: store.plan) { _, _ in reload() }
         }
+    }
+
+    /// The switch that turns this plan into a promise: from today the
+    /// streak counts only days the plan is kept. Off, the streak counts any
+    /// day studied — which is where every learner starts.
+    private var promiseToggle: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: Binding(
+                get: { store.plan.streakSince != nil },
+                set: { on in
+                    var p = store.plan
+                    p.streakSince = on ? cal.startOfDay(for: Date()) : nil
+                    store.update(p)
+                    Analytics.capture("plan_promise", ["on": on])
+                })) {
+                Text("Make this plan my promise").font(.subheadline.weight(.semibold))
+            }
+            Text(store.plan.streakSince != nil
+                 ? explain("From today, a day keeps your streak when you do everything planned for it.")
+                 : explain("Your streak counts every day you study. Turn this on to hold yourself to this plan."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
     }
 
     /// Stays put above the scrolling hours.

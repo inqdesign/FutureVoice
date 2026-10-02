@@ -203,4 +203,40 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(all.blocks[0].weekdays, Set(2...6))
         XCTAssertEqual(all.occurrences(on: at(7, 0), calendar: cal).first?.start, at(7, 9))
     }
+
+    // MARK: - The promise
+
+    private func walk(_ marks: [Int: PracticeStats.DayStanding], today: Int) -> Int {
+        PracticeStats.streak(endingAt: at(today, 12), floor: at(1, 0), calendar: cal) { d in
+            marks[self.cal.component(.day, from: d)] ?? .missed
+        }
+    }
+
+    func testRestDaysNeitherCountNorBreak() {
+        // Thu kept, Fri rest, Sat kept, Sun kept → 3.
+        XCTAssertEqual(walk([1: .kept, 2: .rest, 3: .kept, 4: .kept], today: 4), 3)
+    }
+
+    func testTodayIsAliveUntilItIsOver() {
+        // Today (5th) not kept yet: the streak is yesterday's.
+        XCTAssertEqual(walk([3: .kept, 4: .kept, 5: .missed], today: 5), 2)
+        XCTAssertEqual(walk([3: .kept, 4: .kept, 5: .kept], today: 5), 3)
+    }
+
+    func testAMissedDayEndsIt() {
+        XCTAssertEqual(walk([2: .kept, 3: .missed, 4: .kept], today: 4), 1)
+    }
+
+    func testTalkBlocksFillByMinutes() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .talk, weekdays: [3], hour: 8, minute: 0, minutes: 10),
+                       .init(kind: .talk, weekdays: [3], hour: 20, minute: 0, minutes: 10)]
+        let occ = plan.occurrences(on: at(6, 0), calendar: cal)
+        let p = PlannerDay.talkProgress(planned: occ, talkSeconds: 15 * 60)
+        XCTAssertEqual(p[occ[0].id], 1)
+        XCTAssertEqual(p[occ[1].id]!, 0.5, accuracy: 0.001)
+        let done = PlannerDay.done(planned: occ, actuals: [], events: [], testFinished: false,
+                                   talkSeconds: 4 * 60)
+        XCTAssertTrue(done.isEmpty)   // 4 of 10 minutes is not done
+    }
 }

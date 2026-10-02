@@ -64,7 +64,8 @@ struct PlannerSnapshot {
             events[day] = dayEvents
             done[day] = PlannerDay.done(
                 planned: occ, actuals: acts, events: dayEvents,
-                testFinished: finishedTests.contains { cal.isDate($0, inSameDayAs: day) })
+                testFinished: finishedTests.contains { cal.isDate($0, inSameDayAs: day) },
+                talkSeconds: TalkTimeLog.seconds(on: day))
             // A past day draws no blocks (only its result), so it must not
             // stretch the hours either.
             guard day >= cal.startOfDay(for: now) else { continue }

@@ -53,6 +53,14 @@ struct StudyPlan: Codable, Equatable {
     var autoSayItAgain: Bool = false
     /// `yyyy-MM-dd` days with nothing planned and nothing ringing.
     var restDays: Set<String> = []
+    /// The day the learner made this plan their PROMISE (founder, 2026-10-02:
+    /// "it's a promise I kept to myself"). From that day the streak counts a
+    /// day only when everything planned for it was done, and a day with
+    /// nothing planned is a rest day that neither counts nor breaks it.
+    /// nil = no promise made: the streak is the plain "studied today" rule.
+    /// Never set by seeding — a first-time learner keeps the easy rule until
+    /// they raise the bar themselves.
+    var streakSince: Date? = nil
     /// `yyyy-MM-dd` → that date's own blocks, replacing the template's.
     var exceptions: [String: [Block]] = [:]
 
@@ -401,6 +409,29 @@ final class StudyPlanStore: ObservableObject {
         }
     }
 
+    // MARK: - Off the main actor
+
+    private nonisolated(unsafe) static var cached: StudyPlan?
+    private static let cacheLock = NSLock()
+
+    /// The plan, readable from anywhere — the streak is computed off the main
+    /// actor (widget refresh, day cards). Read from disk once, then kept in
+    /// step by every write.
+    nonisolated static var current: StudyPlan {
+        cacheLock.lock(); defer { cacheLock.unlock() }
+        if let cached { return cached }
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("study_plan.json")
+        let plan = (try? Data(contentsOf: url))
+            .flatMap { try? JSONDecoder().decode(StudyPlan.self, from: $0) } ?? StudyPlan()
+        cached = plan
+        return plan
+    }
+
+    private nonisolated static func setCurrent(_ plan: StudyPlan) {
+        cacheLock.lock(); cached = plan; cacheLock.unlock()
+    }
+
     static var goalMinutes: Int {
         let v = UserDefaults.standard.integer(forKey: "futurevoice.dailyGoalMinutes")
         return v > 0 ? v : 10
@@ -421,6 +452,8 @@ final class StudyPlanStore: ObservableObject {
             || new.restDays != plan.restDays || new.blocks != plan.blocks
         plan = new
         write(new)
+        // The day's promise standing follows the plan it is judged by.
+        PromiseJudge.refresh()
         if callsChanged {
             mirroring = true
             if !new.callTimes.isEmpty { DailyCallStore.shared.times = new.callTimes }
@@ -445,6 +478,7 @@ final class StudyPlanStore: ObservableObject {
     }
 
     private func write(_ plan: StudyPlan) {
+        Self.setCurrent(plan)
         let enc = JSONEncoder()
         enc.outputFormatting = [.sortedKeys]
         guard let data = try? enc.encode(plan) else { return }

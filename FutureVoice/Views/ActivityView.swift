@@ -10,9 +10,7 @@ struct ActivityView: View {
 
     @State private var activeDays: Set<Date> = []
     @State private var displayedMonth = Date()
-    /// Opens on the WEEK: the study timetable, planned against what
-    /// happened. Month and Year are the calendar it always was.
-    @State private var viewMode: ViewMode = .week
+    @State private var viewMode: ViewMode = .month
     @State private var currentStreak = 0
     @State private var longestStreak = 0
     /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
@@ -36,12 +34,13 @@ struct ActivityView: View {
     @State private var cardDay: CardDay?
     private struct CardDay: Identifiable { let date: Date; var id: Date { date } }
 
+    /// The history calendar's scale. The promise card above it is always
+    /// there; this only picks how the past is laid out.
     enum ViewMode: String, CaseIterable, Identifiable {
-        case week, month, year
+        case month, year
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .week: return chrome("Week")
             case .month: return chrome("Month")
             case .year: return chrome("Year")
             }
@@ -64,18 +63,28 @@ struct ActivityView: View {
     @State private var planner: PlannerSnapshot?
     @State private var showPlanEditor = false
     @State private var showSayItAgainPicker = false
+    /// `PracticeStats.activeDays` — what the no-promise rule counts.
+    @State private var studiedDays: Set<Date> = []
 
 
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                statsBar
-                Picker("View", selection: $viewMode) {
-                    ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
+                // The promise and today first: what the learner opened this
+                // page for. The past is below it, under its own header.
+                plannerSection
+                HStack {
+                    Text("History").font(.title3.weight(.semibold))
+                    Spacer()
+                    Picker("View", selection: $viewMode) {
+                        ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 140)
                 }
-                .pickerStyle(.segmented)
+                .padding(.top, 8)
+                statsBar
                 switch viewMode {
-                case .week:  plannerSection
                 case .month: monthCard
                 case .year:  yearCard
                 }
@@ -95,11 +104,20 @@ struct ActivityView: View {
         .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit routine") {
+                    Analytics.capture("plan_edit_opened", [:])
+                    showPlanEditor = true
+                }
+            }
+        }
         .onAppear {
             load()
             #if DEBUG
             if UserDefaults.standard.string(forKey: "capture") == "activity-week-edit" { showPlanEditor = true }
             #endif
+            if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
         }
         .onChange(of: cardStore.version) { _, _ in thumbs = [:]; loadCellPhotos() }
         .fullScreenCover(isPresented: $showPlanEditor) { WeeklyPlanEditor() }
@@ -110,7 +128,7 @@ struct ActivityView: View {
         .onChange(of: weekStart) { _, _ in reloadPlanner() }
         // A day swiped or tapped into another week takes the week with it.
         .onChange(of: selectedDay) { _, day in
-            guard viewMode == .week, let day else { return }
+            guard let day else { return }
             let start = PlannerSnapshot.startOfWeek(day)
             if start != weekStart { weekStart = start }
         }
@@ -122,11 +140,10 @@ struct ActivityView: View {
     private var plannerSection: some View {
         if let planner {
             PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
+                           streak: currentStreak, best: longestStreak,
+                           isPromise: planStore.plan.streakSince != nil,
+                           activeDays: studiedDays,
                            onShiftWeek: shiftWeek,
-                           onEditPlan: {
-                               Analytics.capture("plan_edit_opened", [:])
-                               showPlanEditor = true
-                           },
                            onSayItAgain: { showSayItAgainPicker = true })
             .padding(.horizontal, -12)
         } else {
@@ -136,7 +153,7 @@ struct ActivityView: View {
 
     private func reloadPlanner() {
         planner = PlannerSnapshot.make(weekStart: weekStart, plan: planStore.plan)
-        if viewMode == .week, let days = planner?.days,
+        if let days = planner?.days,
            !(selectedDay.map { d in days.contains { cal.isDate($0, inSameDayAs: d) } } ?? false) {
             selectedDay = days.first { cal.isDateInToday($0) } ?? days.first
         }
@@ -206,11 +223,10 @@ struct ActivityView: View {
         var id: String { label }
     }
 
+    /// The past's totals. The streak and the best run live in the promise
+    /// card above, by the learner's own rule — not repeated here.
     private var headlineStats: [HeadlineStat] {
-        [HeadlineStat(value: "\(currentStreak)", label: explain("day streak"), icon: "flame.fill",
-                      tint: currentStreak > 0 ? .orange : .secondary),
-         HeadlineStat(value: "\(longestStreak)", label: explain("longest"), icon: "trophy.fill"),
-         HeadlineStat(value: totalTimeString, label: explain("total"), icon: "waveform"),
+        [HeadlineStat(value: totalTimeString, label: explain("total"), icon: "waveform"),
          HeadlineStat(value: "\(activeDays.count)", label: explain("days"), icon: "calendar")]
     }
 
@@ -609,7 +625,7 @@ struct ActivityView: View {
 
     private var canGoNext: Bool {
         switch viewMode {
-        case .week, .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+        case .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
         case .year:  return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .year)
         }
     }
@@ -743,14 +759,12 @@ struct ActivityView: View {
         // One rule, one implementation. This screen used to count its own
         // "days with any session", which was a third definition of streak
         // alongside PracticeStats' and the Core's — three numbers, one word.
+        studiedDays = studied
+        PromiseJudge.refresh()
         currentStreak = PracticeStats.snapshot().streakDays
-        longestStreak = longestStreak(in: studied)
-        // Land with a day already open so the detail card is present from the
-        // start (no first-tap height jump): today if active, else most recent.
-        if selectedDay == nil {
-            let today = cal.startOfDay(for: Date())
-            selectedDay = viewMode == .week ? today : (days.contains(today) ? today : days.max())
-        }
+        longestStreak = PracticeStats.longestStreak(calendar: cal)
+        // Land on today: the promise card is about today.
+        if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
         loadCellPhotos()
         reloadPlanner()
     }
@@ -781,21 +795,6 @@ struct ActivityView: View {
         return (cardStore.snapshot(for: day)?.talkMinutes ?? 0) * 60
     }
 
-    private func longestStreak(in days: Set<Date>) -> Int {
-        let sorted = days.sorted()
-        var longest = 0, run = 0
-        var prev: Date?
-        for d in sorted {
-            if let p = prev, cal.date(byAdding: .day, value: 1, to: p) == d {
-                run += 1
-            } else {
-                run = 1
-            }
-            longest = max(longest, run)
-            prev = d
-        }
-        return longest
-    }
 }
 
 private extension UIImage {

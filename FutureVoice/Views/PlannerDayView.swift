@@ -1,114 +1,161 @@
 import SwiftUI
 
-/// Activity's planner: ONE day at a time, today first (founder, 2026-10-02:
-/// "what the learner cares about is today — the days before and after are a
-/// tap or a swipe away, and each date says whether it was done"). A seven-
-/// column grid read as a table of coloured bars, and its past columns were
-/// empty space; a day at full width can SAY what each block is.
+/// Activity's top card: the learner's PROMISE and today (founder, 2026-10-02:
+/// "it's a promise I kept to myself"; "what the learner cares about is today").
 ///
-/// Above: the week's dates, each carrying its result (a tick when every
-/// planned block was done, `done/planned` otherwise). Swipe the strip for the
-/// week before or after. Below: the selected day's timeline — the plan as
-/// outlines, what happened as filled blocks, each labelled. Swipe it for the
-/// day before or after.
+/// - The streak, by the learner's own rule (`PracticeStats.standing`): with
+///   no promise made it counts days studied; once their plan is a promise it
+///   counts days the plan was kept, and a day with nothing planned rests.
+/// - The week as one circle per day — kept (green), missed (grey ring), rest
+///   (just the number), today filling as it goes — with ‹ › and a swipe for
+///   other weeks. Tapping a day shows it below.
+/// - The day as a list in time order, each line with a ring that fills as the
+///   block is done (a talk block by its minutes).
 struct PlannerDayCard: View {
     let snapshot: PlannerSnapshot
     @Binding var selectedDay: Date?
+    let streak: Int
+    let best: Int
+    let isPromise: Bool
+    let activeDays: Set<Date>
     let onShiftWeek: (Int) -> Void
-    let onEditPlan: () -> Void
     let onSayItAgain: () -> Void
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
+    private var today: Date { cal.startOfDay(for: Date()) }
 
     private var day: Date {
-        let d = selectedDay.map { cal.startOfDay(for: $0) } ?? cal.startOfDay(for: Date())
+        let d = selectedDay.map { cal.startOfDay(for: $0) } ?? today
         return snapshot.days.first { cal.isDate($0, inSameDayAs: d) } ?? snapshot.days.first ?? d
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            dateStrip
-            dayTitle
-            timeline
-            Button(action: onEditPlan) {
-                Label("Edit weekly plan", systemImage: "calendar.badge.clock")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
+        VStack(alignment: .leading, spacing: 14) {
+            promise
+            week
+            Divider()
+            dayList
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    // MARK: - Dates
+    // MARK: - The promise
 
-    private func result(_ d: Date) -> (done: Int, total: Int)? {
-        let total = snapshot.planned[d]?.count ?? 0
-        guard total > 0 else { return nil }
-        return (snapshot.done[d]?.count ?? 0, total)
+    private var promise: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(isPromise ? explain("My promise") : explain("Streak"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(explain("Day \(streak) in a row"))
+                    .font(.system(size: 34, weight: .bold))
+                    .monospacedDigit()
+                Text(explain("Best \(best)"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Text(isPromise
+                 ? explain("A day counts when you do everything you planned. Days with nothing planned are rest days.")
+                 : explain("Every day you study counts. Make your plan a promise to raise the bar."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
-    private var dateStrip: some View {
-        HStack(spacing: 2) {
+    // MARK: - The week
+
+    private enum Mark { case kept, missed, rest, today(Double), ahead(planned: Bool) }
+
+    private func mark(_ d: Date) -> Mark {
+        if d > today {
+            return .ahead(planned: !(snapshot.planned[d] ?? []).isEmpty)
+        }
+        let standing = PracticeStats.standing(of: d, activeDays: activeDays, calendar: cal)
+        if d == today {
+            if standing == .kept { return .kept }
+            if isPromise, let e = PromiseLedger.shared.entry(d, calendar: cal), e.planned > 0 {
+                return .today(Double(e.done) / Double(e.planned))
+            }
+            return .today(0)
+        }
+        switch standing {
+        case .kept: return .kept
+        case .missed: return .missed
+        case .rest: return .rest
+        }
+    }
+
+    private var week: some View {
+        HStack(spacing: 0) {
+            Button { onShiftWeek(-1) } label: {
+                Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
+                    .frame(width: 22, height: 44)
+            }
             ForEach(snapshot.days, id: \.self) { d in
-                let isToday = cal.isDateInToday(d)
-                let isSelected = cal.isDate(d, inSameDayAs: day)
-                let future = d > cal.startOfDay(for: Date())
                 Button { selectedDay = d } label: {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 5) {
                         Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text("\(cal.component(.day, from: d))")
-                            .font(.subheadline.weight(isSelected || isToday ? .bold : .regular))
-                            .monospacedDigit()
-                            .foregroundStyle(isSelected ? Color.white : (isToday ? Color.accentColor : Color.primary))
-                            .frame(width: 30, height: 30)
-                            .background(Circle().fill(isSelected ? Color.accentColor : Color.clear))
-                        mark(for: d, future: future)
-                            .frame(height: 16)
+                        dayCircle(d)
                     }
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
+            Button { onShiftWeek(1) } label: {
+                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
+                    .frame(width: 22, height: 44)
+            }
         }
-        // Swipe the dates for the week before or after.
         .gesture(DragGesture(minimumDistance: 24).onEnded { v in
             guard abs(v.translation.width) > abs(v.translation.height) else { return }
             onShiftWeek(v.translation.width < 0 ? 1 : -1)
         })
     }
 
-    /// Whether the day's plan was kept, and nothing else: a green tick when
-    /// every planned block was done, blank otherwise (founder: counts like
-    /// 2/4 were noise — done or not is the only question).
     @ViewBuilder
-    private func mark(for d: Date, future: Bool) -> some View {
-        if !future, let r = result(d), r.done >= r.total {
-            Image(systemName: "checkmark")
-                .font(.caption2.weight(.heavy))
-                .foregroundStyle(.green)
-                .accessibilityLabel(Text("Done"))
-        } else {
-            Color.clear
+    private func circleFace(_ d: Date, number: Text) -> some View {
+        switch mark(d) {
+        case .kept:
+            Circle().fill(Color.green)
+            number.foregroundStyle(.white)
+        case .missed:
+            Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
+            number.foregroundStyle(.secondary)
+        case .rest:
+            number.foregroundStyle(.tertiary)
+        case .today(let progress):
+            Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
+            Circle().trim(from: 0, to: max(0.001, progress))
+                .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(1.5)
+            number.foregroundStyle(.primary)
+        case .ahead(let planned):
+            if planned {
+                Circle().strokeBorder(Color(.systemGray4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+            }
+            number.foregroundStyle(.secondary)
         }
     }
 
-    private var dayTitle: some View {
-        HStack {
-            Text(day.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.wide)))
-                .font(.headline)
-            if cal.isDateInToday(day) {
-                Text("Today").font(.subheadline).foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 4)
+    private func dayCircle(_ d: Date) -> some View {
+        let number = Text("\(cal.component(.day, from: d))")
+            .font(.footnote.weight(.semibold))
+            .monospacedDigit()
+        let selected = cal.isDate(d, inSameDayAs: day)
+        return ZStack { circleFace(d, number: number) }
+            .frame(width: 32, height: 32)
+            .padding(3)
+            .overlay(Circle().strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 2))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide).month().day())))
     }
 
     // MARK: - The day
@@ -116,11 +163,10 @@ struct PlannerDayCard: View {
     private struct Item: Identifiable {
         enum Body {
             case plan(StudyPlan.Occurrence, done: Bool)
-            case actual(PlannerDay.Actual, fulfils: Bool)
+            case actual(PlannerDay.Actual)
         }
         var id: String
         var start: Date
-        var end: Date
         var body: Body
     }
 
@@ -128,46 +174,41 @@ struct PlannerDayCard: View {
         let planned = snapshot.planned[day] ?? []
         let actuals = snapshot.actuals[day] ?? []
         let done = snapshot.done[day] ?? []
-        let absorbed = PlannerDay.absorbed(planned: planned, actuals: actuals)
-        let fulfilling = Set(absorbed.values)
+        // Each planned block shows as itself; what happened OUTSIDE the plan
+        // is listed too, so the day reads as the day.
         var out: [Item] = []
-        for occ in planned where absorbed[occ.id] == nil {
-            out.append(Item(id: "p" + occ.id, start: occ.start, end: occ.end,
-                            body: .plan(occ, done: done.contains(occ.id))))
+        for occ in planned {
+            out.append(Item(id: "p" + occ.id, start: occ.start, body: .plan(occ, done: done.contains(occ.id))))
         }
-        for a in actuals {
-            out.append(Item(id: "a" + a.id, start: a.start, end: a.end,
-                            body: .actual(a, fulfils: fulfilling.contains(a.id))))
+        for a in PlannerDay.unplanned(actuals: actuals, planned: planned) {
+            out.append(Item(id: "a" + a.id, start: a.start, body: .actual(a)))
         }
         out.sort { $0.start < $1.start }
         return out
     }
 
-    /// The day as a list, in order — no hour axis. A scaled timeline was
-    /// mostly empty hours to scroll past (founder: "the timeline only means
-    /// something when editing"); that lives in the weekly plan editor.
-    private var timeline: some View {
+    private var dayList: some View {
         let list = items
-        let isToday = cal.isDateInToday(day)
-        let now = Date()
-        // Where "now" falls: before the first item that hasn't started.
-        let nowIndex = isToday ? (list.firstIndex { $0.start > now } ?? list.count) : nil
-        return VStack(spacing: 0) {
+        let talk = PlannerDay.talkProgress(planned: snapshot.planned[day] ?? [],
+                                           talkSeconds: TalkTimeLog.seconds(on: day))
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(cal.isDateInToday(day) ? explain("Today")
+                 : day.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.abbreviated)))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 4)
             if list.isEmpty {
-                Text("Nothing planned this day.")
+                Text(isPromise ? explain("Rest day.") : explain("Nothing planned this day."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .padding(.vertical, 12)
             }
             ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
-                if index == nowIndex { nowLine(now) }
-                else if index > 0 { Divider().padding(.leading, 76) }
-                row(item)
+                if index > 0 { Divider().padding(.leading, 76) }
+                row(item, talk: talk)
             }
-            if let nowIndex, nowIndex == list.count, !list.isEmpty { nowLine(now) }
         }
         .contentShape(Rectangle())
-        // Swipe the day for the one before or after.
         .gesture(DragGesture(minimumDistance: 24).onEnded { v in
             guard abs(v.translation.width) > abs(v.translation.height) * 1.5,
                   let next = cal.date(byAdding: .day, value: v.translation.width < 0 ? 1 : -1, to: day)
@@ -176,50 +217,40 @@ struct PlannerDayCard: View {
         })
     }
 
-    /// Where today stands: the time in red, the way Calendar marks it —
-    /// a label, not a rule across the card.
-    private func nowLine(_ now: Date) -> some View {
-        HStack(spacing: 6) {
-            Circle().fill(Color.red).frame(width: 6, height: 6)
-            Text(clock(now))
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(.red)
-            Spacer()
-        }
-        .padding(.leading, 4)
-        .padding(.vertical, 6)
-        .accessibilityLabel(Text("Now"))
-    }
-
     private func clock(_ d: Date) -> String {
         let c = cal.dateComponents([.hour, .minute], from: d)
         return String(format: "%d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
-    /// One line of the day, like a row in Reminders: the time, the kind's
-    /// icon (the only colour), what it is, and a circle that is ticked once
-    /// it happened. No borders, no fills.
+    private func planDetail(_ occ: StudyPlan.Occurrence, done: Bool, progress: Double) -> String? {
+        guard !done else { return nil }
+        if occ.kind == .talk, progress > 0 {
+            let did = Int((progress * Double(occ.minutes)).rounded(.down))
+            return explain("\(did) of \(occ.minutes) min")
+        }
+        if occ.kind == .review, let n = snapshot.reviewLoad[occ.start], n > 0 {
+            return explain("About \(n) waiting")
+        }
+        if occ.kind == .sayItAgain { return explain("Pick a talk") }
+        return nil
+    }
+
     @ViewBuilder
-    private func row(_ item: Item) -> some View {
+    private func row(_ item: Item, talk: [String: Double]) -> some View {
         switch item.body {
-        case .actual(let a, _):
+        case .actual(let a):
             rowLayout(time: clock(a.start), symbol: a.kind.symbol, tint: a.kind.color,
                       title: a.title ?? a.kind.label,
-                      detail: a.title == nil ? "\(clock(a.start))–\(clock(a.end))"
-                                             : "\(a.kind.label) · \(clock(a.start))–\(clock(a.end))",
-                      state: .done)
+                      detail: explain("Extra · \(clock(a.start))–\(clock(a.end))"),
+                      progress: 1)
         case .plan(let occ, let done):
             let lapsed = !done && occ.end < Date()
-            let load = occ.kind == .review ? snapshot.reviewLoad[occ.start] : nil
-            let detail: String? = done ? explain("Done at another time")
-                : load.flatMap { $0 > 0 ? explain("About \($0) waiting") : nil }
-                ?? (occ.kind == .sayItAgain ? explain("Pick a talk") : nil)
+            let progress: Double = done ? 1 : (occ.kind == .talk ? (talk[occ.id] ?? 0) : 0)
             let line = rowLayout(time: clock(occ.start), symbol: occ.kind.symbol,
                                  tint: lapsed ? .secondary : occ.kind.color,
                                  title: explain("\(occ.kind.label) · \(occ.minutes) min"),
-                                 detail: detail,
-                                 state: done ? .done : (lapsed ? .missed : .planned))
+                                 detail: planDetail(occ, done: done, progress: progress),
+                                 progress: progress, faded: lapsed)
             if occ.kind == .sayItAgain && !done {
                 Button(action: onSayItAgain) { line }.buttonStyle(.plain)
             } else {
@@ -228,10 +259,11 @@ struct PlannerDayCard: View {
         }
     }
 
-    private enum RowState { case done, planned, missed }
-
+    /// One line, like a row in Reminders: time, the kind's icon (the only
+    /// colour), what it is over one detail line, and a ring that fills as it
+    /// is done.
     private func rowLayout(time: String, symbol: String, tint: Color, title: String,
-                           detail: String?, state: RowState) -> some View {
+                           detail: String?, progress: Double, faded: Bool = false) -> some View {
         HStack(spacing: 12) {
             Text(time)
                 .font(.subheadline)
@@ -245,20 +277,41 @@ struct PlannerDayCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body)
-                    .foregroundStyle(state == .missed ? Color.secondary : Color.primary)
+                    .foregroundStyle(faded ? Color.secondary : Color.primary)
                     .lineLimit(1)
                 if let detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             Spacer(minLength: 8)
-            Image(systemName: state == .done ? "checkmark.circle.fill" : "circle")
-                .font(.title3)
-                .foregroundStyle(state == .done ? Color.green
-                                 : Color.secondary.opacity(state == .missed ? 0.4 : 0.8))
+            ProgressRing(progress: progress, faded: faded)
         }
         .padding(.vertical, 10)
-        .padding(.horizontal, 4)
         .contentShape(Rectangle())
+    }
+}
+
+/// Empty circle → filling ring → green tick.
+private struct ProgressRing: View {
+    let progress: Double
+    var faded = false
+
+    var body: some View {
+        ZStack {
+            if progress >= 1 {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.green)
+            } else {
+                Circle().strokeBorder(Color(.systemGray4).opacity(faded ? 0.6 : 1), lineWidth: 2)
+                if progress > 0 {
+                    Circle().trim(from: 0, to: progress)
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .padding(1)
+                }
+            }
+        }
+        .frame(width: 22, height: 22)
     }
 }
