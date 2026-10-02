@@ -36,28 +36,14 @@ struct PlannerDayCard: View {
         // the list, which scrolls inside it.
         // The share card sits at the panel's FOOT: a short day leaves the
         // space between the list and the card, a long one pushes it down.
-        GeometryReader { geo in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    dayList
-                    Spacer(minLength: 0)
-                    if let footer {
-                        Divider()
-                        footer
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-                .frame(minHeight: geo.size.height, alignment: .top)
+        PinnedPanel {
+            dayList
+            Spacer(minLength: 0)
+            if let footer {
+                Divider()
+                footer
             }
-            .scrollIndicators(.hidden)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
-            .fill(Color(.secondarySystemGroupedBackground))
-            .shadow(color: .black.opacity(0.06), radius: 12, y: -2)
-            .ignoresSafeArea(edges: .bottom))
     }
 
     private func go(to d: Date) {
@@ -237,7 +223,6 @@ struct PlannerDayStrip: View {
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
     private var today: Date { cal.startOfDay(for: Date()) }
-    private static let cell: CGFloat = 52
 
     /// Every day the strip can reach: half a year back, a month ahead.
     private var days: [Date] {
@@ -248,54 +233,19 @@ struct PlannerDayStrip: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            // One header for the strip: the chosen day, and under it how
-            // long the promise has been kept; "Today" to come back.
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(shown.formatted(Date.FormatStyle(locale: uiLocale).month(.abbreviated).day().weekday(.abbreviated)))
-                        .font(.title3.weight(.bold))
-                        .contentTransition(.numericText())
-                    StreakLine(streak: streak)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if !cal.isDate(shown, inSameDayAs: today) {
-                    Button { scrollTo(today) } label: {
-                        Label(explain("Today"), systemImage: shown < today ? "arrow.right" : "arrow.left")
-                            .labelStyle(TodayLabelStyle(trailingIcon: shown < today))
-                    }
-                    .font(.footnote.weight(.semibold))
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.small)
-                    .transition(.opacity)
-                }
-            }
-            .padding(.horizontal, 20)
-            .animation(.easeOut(duration: 0.2), value: cal.isDate(shown, inSameDayAs: today))
+            JourneyHeader(title: shown.formatted(Date.FormatStyle(locale: uiLocale).month(.abbreviated).day().weekday(.abbreviated)),
+                          streak: streak,
+                          away: cal.isDate(shown, inSameDayAs: today) ? nil : (shown < today ? .past : .future),
+                          onToday: { scrollTo(today) })
 
-            GeometryReader { geo in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 6) {
-                        ForEach(days, id: \.self) { d in
-                            cell(d).id(d)
-                        }
-                    }
-                    .scrollTargetLayout()
+            CenteredStrip(items: days, selection: $scrolled) { d, selected in
+                VStack(spacing: 6) {
+                    Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
+                        .font(.caption2.weight(selected ? .semibold : .regular))
+                        .foregroundStyle(selected ? Color.primary : Color.secondary)
+                    dayCircle(d)
                 }
-                .contentMargins(.horizontal, (geo.size.width - Self.cell) / 2, for: .scrollContent)
-                .scrollTargetBehavior(.viewAligned)
-                .scrollPosition(id: $scrolled, anchor: .center)
-                // A tick each time a new day settles in the middle, like a picker wheel.
-                .sensoryFeedback(.selection, trigger: scrolled)
-                .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
-                                             .init(color: .black, location: 0.12),
-                                             .init(color: .black, location: 0.88),
-                                             .init(color: .clear, location: 1)],
-                                     startPoint: .leading, endPoint: .trailing))
             }
-            .frame(height: 76)
         }
         .onAppear { scrolled = shown }
         .onChange(of: scrolled) { _, d in
@@ -312,26 +262,6 @@ struct PlannerDayStrip: View {
     private func scrollTo(_ d: Date) {
         withAnimation(.snappy(duration: 0.35)) { scrolled = d }
     }
-
-    private func cell(_ d: Date) -> some View {
-        let selected = cal.isDate(d, inSameDayAs: shown)
-        return Button { scrollTo(d) } label: {
-            VStack(spacing: 6) {
-                Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
-                    .font(.caption2.weight(selected ? .semibold : .regular))
-                    .foregroundStyle(selected ? Color.primary : Color.secondary)
-                dayCircle(d)
-            }
-            .frame(width: Self.cell, height: 72)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(selected ? Color(.secondarySystemGroupedBackground) : .clear))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(selected ? Color(.separator) : .clear, lineWidth: 0.5))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
 
     private enum Mark { case kept, missed, rest, today(Double), ahead(planned: Bool) }
 
@@ -415,5 +345,116 @@ struct StreakLine: View {
             Image(systemName: "flame.fill")
                 .foregroundStyle(streak > 0 ? Color.orange : Color.secondary)
         }
+    }
+}
+
+/// The header over a journey strip: what is chosen, how long the promise has
+/// been kept, and a "Today" capsule when the strip is elsewhere — the same
+/// for a day, a month and a year.
+struct JourneyHeader: View {
+    enum Away { case past, future }
+    let title: String
+    let streak: Int
+    let away: Away?
+    let onToday: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.title3.weight(.bold))
+                    .contentTransition(.numericText())
+                StreakLine(streak: streak)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if let away {
+                Button(action: onToday) {
+                    Label(explain("Today"), systemImage: away == .past ? "arrow.right" : "arrow.left")
+                        .labelStyle(TodayLabelStyle(trailingIcon: away == .past))
+                }
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 20)
+        .animation(.easeOut(duration: 0.2), value: away == nil)
+    }
+}
+
+/// One continuous row you scroll through, the chosen item held in the middle
+/// on a soft tile, the row running off both edges with a fade. Where the
+/// scroll settles is the selection; a tap scrolls that item to the middle;
+/// each new item in the middle ticks like a picker wheel.
+struct CenteredStrip<Item: Hashable, Cell: View>: View {
+    let items: [Item]
+    @Binding var selection: Item?
+    var cellWidth: CGFloat = 52
+    @ViewBuilder let cell: (Item, Bool) -> Cell
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 6) {
+                    ForEach(items, id: \.self) { item in
+                        let selected = item == selection
+                        Button {
+                            withAnimation(.snappy(duration: 0.35)) { selection = item }
+                        } label: {
+                            cell(item, selected)
+                                .frame(width: cellWidth, height: 72)
+                                .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(selected ? Color(.secondarySystemGroupedBackground) : .clear))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(selected ? Color(.separator) : .clear, lineWidth: 0.5))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .id(item)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .contentMargins(.horizontal, (geo.size.width - cellWidth) / 2, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $selection, anchor: .center)
+            .sensoryFeedback(.selection, trigger: selection)
+            .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
+                                         .init(color: .black, location: 0.12),
+                                         .init(color: .black, location: 0.88),
+                                         .init(color: .clear, location: 1)],
+                                 startPoint: .leading, endPoint: .trailing))
+        }
+        .frame(height: 76)
+    }
+}
+
+/// The panel a journey's content lives in: pinned to the bottom of the page,
+/// its height never following its content, which scrolls inside it. Content
+/// is laid out at least the panel's height, so a `Spacer` in it pushes what
+/// follows to the foot.
+struct PinnedPanel<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) { content() }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                    .frame(minHeight: geo.size.height, alignment: .top)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+            .fill(Color(.secondarySystemGroupedBackground))
+            .shadow(color: .black.opacity(0.06), radius: 12, y: -2)
+            .ignoresSafeArea(edges: .bottom))
     }
 }

@@ -11,6 +11,8 @@ struct ActivityView: View {
     @State private var activeDays: Set<Date> = []
     @State private var displayedMonth = Date()
     @State private var viewMode: ViewMode = .day
+    /// The month (or year) held in the middle of the period strip.
+    @State private var scrolledPeriod: Date?
     @State private var currentStreak = 0
     @State private var longestStreak = 0
     /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
@@ -86,15 +88,30 @@ struct ActivityView: View {
                 }
                 .padding(.top, 8)
             } else {
-                ScrollView {
-                    VStack(spacing: 18) {
-                        modePicker
-                        streakLine.frame(maxWidth: .infinity, alignment: .leading)
-                        if viewMode == .month { statsBar; monthCard } else { statsBar; yearCard }
+                // Month and year read the same way as a day: the header,
+                // a strip of months (or years) to scroll through, and the
+                // period's calendar in a panel pinned to the bottom.
+                VStack(spacing: 14) {
+                    modePicker.padding(.horizontal, 20)
+                    JourneyHeader(title: periodTitle, streak: currentStreak,
+                                  away: canGoNext ? .past : nil,
+                                  onToday: { withAnimation(.snappy(duration: 0.35)) { scrolledPeriod = periodKey(Date()) } })
+                    CenteredStrip(items: periods, selection: $scrolledPeriod,
+                                  cellWidth: viewMode == .year ? 64 : 52) { p, selected in
+                        periodCell(p, selected: selected)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 28)
+                    .id(viewMode)
+                    PinnedPanel {
+                        if viewMode == .month { monthCard } else { yearCard }
+                        Spacer(minLength: 0)
+                        statsBar
+                    }
+                }
+                .padding(.top, 8)
+                .onAppear { scrolledPeriod = periodKey(displayedMonth) }
+                .onChange(of: viewMode) { _, _ in scrolledPeriod = periodKey(displayedMonth) }
+                .onChange(of: scrolledPeriod) { _, p in
+                    if let p, periodKey(displayedMonth) != p { displayedMonth = p }
                 }
             }
         }
@@ -116,6 +133,7 @@ struct ActivityView: View {
             load()
             #if DEBUG
             if UserDefaults.standard.string(forKey: "capture") == "activity-week-edit" { showPlanEditor = true }
+            if let m = UserDefaults.standard.string(forKey: "activityMode").flatMap(ViewMode.init(rawValue:)) { viewMode = m }
             #endif
             if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
         }
@@ -269,7 +287,7 @@ struct ActivityView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 4)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.tertiarySystemGroupedBackground)))
     }
 
     private var statDivider: some View {
@@ -305,8 +323,6 @@ struct ActivityView: View {
 
     private var monthCard: some View {
         VStack(spacing: 14) {
-            periodHeader
-
             HStack(spacing: 0) {
                 ForEach(weekdaySymbols, id: \.self) { s in
                     Text(s).font(.caption2).foregroundStyle(.secondary)
@@ -325,20 +341,16 @@ struct ActivityView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     // MARK: - Year view (contribution grid)
 
     private var yearCard: some View {
         VStack(spacing: 16) {
-            periodHeader
-
             // 12 mini-months, 3 across — the whole year on one screen, no
             // horizontal scroll.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3),
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14, alignment: .top), count: 3),
                       spacing: 16) {
                 ForEach(Array(monthsOfYear.enumerated()), id: \.offset) { _, month in
                     miniMonth(month)
@@ -350,9 +362,7 @@ struct ActivityView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     private func miniMonth(_ month: Date) -> some View {
@@ -370,22 +380,69 @@ struct ActivityView: View {
         }
     }
 
-    // MARK: - Period header (shared)
+    // MARK: - Period strip (shared)
 
-    private var periodHeader: some View {
-        HStack {
-            Button { shift(-1) } label: {
-                Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
+    /// The first day of the month (or year) `date` falls in — the strip's ids.
+    private func periodKey(_ date: Date) -> Date {
+        let comps = viewMode == .year ? cal.dateComponents([.year], from: date)
+                                      : cal.dateComponents([.year, .month], from: date)
+        return cal.date(from: comps) ?? date
+    }
+
+    /// Three years of months, or five years, ending now.
+    private var periods: [Date] {
+        let now = periodKey(Date())
+        let unit: Calendar.Component = viewMode == .year ? .year : .month
+        let back = viewMode == .year ? 4 : 35
+        return (-back...0).compactMap { cal.date(byAdding: unit, value: $0, to: now) }
+    }
+
+    /// One month (or year) in the strip: its name, and a circle holding the
+    /// days the promise was kept in it — the ring fills as that share of its
+    /// days so far, so a month reads like a day does.
+    private func periodCell(_ start: Date, selected: Bool) -> some View {
+        let unit: Calendar.Component = viewMode == .year ? .year : .month
+        let today = cal.startOfDay(for: Date())
+        let end = min(cal.date(byAdding: unit, value: 1, to: start) ?? start, cal.date(byAdding: .day, value: 1, to: today) ?? today)
+        var kept = 0, counted = 0
+        var d = start
+        while d < end {
+            switch PracticeStats.standing(of: d, activeDays: studiedDays, calendar: cal) {
+            case .kept: kept += 1; counted += 1
+            case .missed: counted += 1
+            case .rest: break
             }
-            Spacer()
-            Text(periodTitle).font(.headline)
-            Spacer()
-            Button { shift(1) } label: {
-                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
-            }
-            .disabled(!canGoNext)
-            .opacity(canGoNext ? 1 : 0.3)
+            d = cal.date(byAdding: .day, value: 1, to: d) ?? end
         }
+        let share = counted > 0 ? Double(kept) / Double(counted) : 0
+        let f = DateFormatter()
+        f.locale = uiLocale
+        f.setLocalizedDateFormatFromTemplate(viewMode == .year ? "yyyy" : "MMM")
+        return VStack(spacing: 6) {
+            Text(f.string(from: start))
+                .font(.caption2.weight(selected ? .semibold : .regular))
+                .foregroundStyle(selected ? Color.primary : Color.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            ZStack {
+                Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
+                if share > 0 {
+                    Circle().trim(from: 0, to: share)
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .padding(1.5)
+                }
+                Text("\(kept)")
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(kept > 0 ? Color.primary : Color.secondary)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(width: viewMode == .year ? 40 : 32, height: viewMode == .year ? 40 : 32)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(f.string(from: start)))
+        .accessibilityValue(Text(explain("Kept for \(kept) days")))
     }
 
     // MARK: - Cells
