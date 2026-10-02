@@ -49,8 +49,13 @@ object ConversationEngine {
         cast: Cast? = null,
         /** A scenario talk's attached material (iOS `briefBlock`, `59c6481`). */
         brief: ScenarioBrief? = null,
+        /** When this is (iOS `clock:`), pinned at call start. */
+        clock: PromptClock? = null,
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
+        // History is left out for a cast stranger (no shared past) and the
+        // first meeting (its own block says you have never spoken).
+        val clockBlock = clock?.promptBlock(includeHistory = cast == null && !firstMeeting) ?: ""
         val patterns = topPatterns.take(3)
             .joinToString("\n") { "- ${it.mistake} → ${it.correction} (${it.context})" }
         val weak = if (weakVocabAreas.isEmpty()) "—" else weakVocabAreas.joinToString(", ")
@@ -126,7 +131,7 @@ object ConversationEngine {
         You're in a real-feeling SPOKEN $languageName conversation with the user. The point is for it to sound like two actual people talking — not a language-class exchange. Read everything below, then talk like a real person.
         $castBlock
 
-        ${personaBlock(persona, languageName, forStranger = cast != null)}${if (firstMeeting && cast == null) FirstCallBlock.build(languageName) else ""}
+        ${personaBlock(persona, languageName, forStranger = cast != null)}${if (firstMeeting && cast == null) FirstCallBlock.build(languageName) else ""}$clockBlock
 
         Language profile:
         - Native language: ${LanguageCatalog.englishName(nativeLanguage)}
@@ -185,6 +190,7 @@ object ConversationEngine {
         - Restating the theme instead of answering ("yeah, security's a huge deal these days…") IS the vague deflection banned above. If they asked WHICH, say names.
         - Not fully sure of the details? Give your best specific answer and flag it naturally: "off the top of my head, X and Y — I'd double-check the newer ones."
         - Only for fast-moving specifics you genuinely can't know (today's prices, this morning's headlines) admit the limit plainly and pivot — never fake precision.
+        - The date, the time of day and how often you two have talked are NOT knowledge — they come only from what this prompt says about time. If it isn't written here, you don't know it, and saying so is fine.
 
         Role-play caveat: if a scenario role is set, you still know things — the role mostly governs TONE / FORMALITY / your relationship with the user, not your factual horizon. A doctor character can still have an opinion on a Rick Rubin book.
 
@@ -309,7 +315,9 @@ object ConversationEngine {
 
     /** "today" · "yesterday" · "5 days ago" · "3 weeks ago" · "2 months ago" (iOS `age(of:)`). */
     fun age(learnedAt: Long, now: Long = System.currentTimeMillis()): String {
-        val days = maxOf(0L, (now - learnedAt) / 86_400_000L).toInt()
+        // CALENDAR days (iOS 2026-09-28): elapsed/24h read a line heard at
+        // 23:00 as "today" at 08:00 the next morning.
+        val days = PromptClock.calendarDays(learnedAt, now)
         return when {
             days == 0 -> "today"
             days == 1 -> "yesterday"

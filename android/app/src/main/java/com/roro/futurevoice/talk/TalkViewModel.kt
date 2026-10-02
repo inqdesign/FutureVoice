@@ -21,6 +21,7 @@ import com.roro.futurevoice.net.GeminiClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -264,6 +265,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     newsFacts = config.newsFacts,
                     cast = config.cast,
                     brief = scenarioBrief(config),
+                    clock = pinPromptClock(config),
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
@@ -343,6 +345,14 @@ class TalkViewModel(context: Context) : ViewModel() {
     // ------------------------------------------------------------------
     // Realtime path
 
+    /** iOS `pinPromptClock`: read once per call, from every language's talks. */
+    private suspend fun pinPromptClock(config: TalkConfig): PromptClock = withContext(Dispatchers.IO) {
+        val store = com.roro.futurevoice.data.SessionStore.shared(appContext)
+        val langs = (com.roro.futurevoice.data.LanguageScope.enrolled(appContext) + config.targetLanguage).distinct()
+        val sessions = langs.flatMap { runCatching { store.load(it) }.getOrDefault(emptyList()) }
+        PromptClock.make(sessions = sessions, excluding = sessionId)
+    }
+
     private fun startRealtime(config: TalkConfig) {
         lastActivityAt = System.currentTimeMillis()
         // Nobody-there watch on THIS path too (iOS `f41d045`): it was only
@@ -377,6 +387,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     newsFacts = config.newsFacts,
                     cast = config.cast,
                     brief = scenarioBrief(config),
+                    clock = pinPromptClock(config),
                 ) + REALTIME_STYLE_RULES
                 // The first line, spoken by the fluent self before the learner
                 // says anything — spoken BY THE GATEWAY, not the app: two
