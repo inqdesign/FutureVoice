@@ -50,7 +50,14 @@ struct BookDocument: Sendable {
     }
 
     struct Section: Sendable {
+        /// What the section IS, independent of its (localized) title — the
+        /// workbook gives each kind its own page shape (a word gets writing
+        /// bands, a correction gets a blank to redo it). The reader PDF and
+        /// Markdown ignore it.
+        enum Kind: Sendable { case scene, overview, words, expressions, shadow, drill, transcript, glossary, other }
+
         var title: String
+        var kind: Kind = .other
         var blurb: String = ""
         var entries: [Entry] = []
         var lines: [Line] = []
@@ -78,6 +85,9 @@ struct BookDocument: Sendable {
     var meta: [String] = []
     var sections: [Section] = []
     var terms: [Term] = []
+    /// The target language's code — the workbook rules Latin script in four
+    /// lines and Japanese/Korean/Chinese in square cells.
+    var language: String = ""
 
     /// Filename stem, safe on every filesystem the share sheet can reach.
     var filename: String {
@@ -100,6 +110,7 @@ extension BookDocument {
     static func make(scenario: Scenario, appState: AppState) -> BookDocument {
         var doc = BookDocument(kind: chrome("Watch book"),
                                title: scenario.cardTitle)
+        doc.language = appState.targetLanguage
 
         let role = scenario.role.trimmingCharacters(in: .whitespaces)
         let persona = scenario.counterpartId.flatMap { id in
@@ -120,6 +131,7 @@ extension BookDocument {
             let other = persona ?? (role.isEmpty ? chrome("The other person") : role)
             doc.sections.append(Section(
                 title: c.dialogueTitle ?? chrome("Scene"),
+                kind: .scene,
                 lines: dialogue.map {
                     Line(speaker: $0.speaker == "user" ? chrome("You") : other,
                          text: $0.text,
@@ -128,17 +140,18 @@ extension BookDocument {
             ))
         }
 
-        func section(_ title: String, _ items: [ScenarioCurriculum.Item]) -> Section? {
+        func section(_ title: String, _ kind: Section.Kind,
+                     _ items: [ScenarioCurriculum.Item]) -> Section? {
             guard !items.isEmpty else { return nil }
-            return Section(title: title, entries: items.map {
+            return Section(title: title, kind: kind, entries: items.map {
                 Entry(text: $0.text, note: $0.note, example: $0.example ?? "",
                       mastered: $0.masteredAt != nil)
             })
         }
         doc.sections += [
-            section(chrome("Words"), c.words),
-            section(chrome("Expressions"), c.expressions),
-            section(chrome("Shadow"), c.shadowLines),
+            section(chrome("Words"), .words, c.words),
+            section(chrome("Expressions"), .expressions, c.expressions),
+            section(chrome("Shadow"), .shadow, c.shadowLines),
         ].compactMap { $0 }
 
         doc.terms = c.words.map { Term(text: $0.text, isExpression: false) }
@@ -155,6 +168,7 @@ extension BookDocument {
                      appState: AppState) -> BookDocument {
         var doc = BookDocument(kind: chrome("Talk book"),
                                title: session.displayTitle)
+        doc.language = appState.targetLanguage
 
         doc.meta.append(dateLine(session.endedAt ?? session.startedAt))
         if curriculum.totalCount > 0 {
@@ -167,14 +181,14 @@ extension BookDocument {
 
         if let note = session.summary?.overallNote.trimmingCharacters(in: .whitespacesAndNewlines),
            !note.isEmpty {
-            doc.sections.append(Section(title: chrome("Overview"), blurb: note))
+            doc.sections.append(Section(title: chrome("Overview"), kind: .overview, blurb: note))
         }
 
         let firstTimeWords = session.summary?.newWordsUsed ?? []
         doc.terms = (firstTimeWords + curriculum.words.map(\.text))
             .map { Term(text: $0, isExpression: false) }
         if !firstTimeWords.isEmpty || !curriculum.words.isEmpty {
-            var s = Section(title: chrome("Words"))
+            var s = Section(title: chrome("Words"), kind: .words)
             s.entries = firstTimeWords.map { Entry(text: $0, note: explain("You used this for the first time.")) }
                 + curriculum.words.map {
                     Entry(text: $0.text, note: $0.note, mastered: $0.masteredAt != nil)
@@ -196,7 +210,7 @@ extension BookDocument {
         }
         doc.terms += curriculum.expressions.map { Term(text: $0.text, isExpression: true) }
         if !curriculum.expressions.isEmpty {
-            var s = Section(title: chrome("Expressions"))
+            var s = Section(title: chrome("Expressions"), kind: .expressions)
             s.entries = offered.map {
                 Entry(text: $0.text,
                       note: explain("Your fluent self used this — you didn't."),
@@ -210,6 +224,7 @@ extension BookDocument {
         if !curriculum.shadowLines.isEmpty {
             doc.sections.append(Section(
                 title: chrome("Shadow"),
+                kind: .shadow,
                 entries: curriculum.shadowLines.map {
                     Entry(text: $0.text, mastered: $0.masteredAt != nil)
                 }))
@@ -255,7 +270,7 @@ extension BookDocument {
                          mastered: line.masteredAt != nil)
         }
         if !corrections.isEmpty {
-            doc.sections.append(Section(title: chrome("Drill"), entries: corrections))
+            doc.sections.append(Section(title: chrome("Drill"), kind: .drill, entries: corrections))
         }
 
         let transcript = session.turns.filter {
@@ -264,6 +279,7 @@ extension BookDocument {
         if !transcript.isEmpty {
             doc.sections.append(Section(
                 title: chrome("Transcript"),
+                kind: .transcript,
                 lines: transcript.map { turn in
                     Line(speaker: turn.role == .user ? chrome("You") : chrome("Future self"),
                          text: turn.transcript,

@@ -80,7 +80,7 @@ enum BookGlossary {
         }
 
         guard !entries.isEmpty else { return nil }
-        return BookDocument.Section(title: chrome("Glossary"), entries: entries)
+        return BookDocument.Section(title: chrome("Glossary"), kind: .glossary, entries: entries)
     }
 
     /// One dictionary entry flattened into the book's `Entry` shape: the
