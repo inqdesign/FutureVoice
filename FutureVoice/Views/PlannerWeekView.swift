@@ -27,7 +27,12 @@ struct PlannerSnapshot {
         template.exceptions = [:]
         template.restDays = []
         let start = cal.date(byAdding: .day, value: 7, to: startOfWeek(now, calendar: cal)) ?? now
+        // A rest weekday has no column in the editor (founder, 2026-10-02):
+        // nothing can be planned on it, so an empty column is only width
+        // taken from the days that can. The gear brings a day back.
+        let off = plan.offWeekdays ?? []
         let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+            .filter { !off.contains(cal.component(.weekday, from: $0)) }
         let test = WeeklyTestSettings.shared.schedule
         var planned: [Date: [StudyPlan.Occurrence]] = [:]
         for day in days { planned[day] = template.occurrences(on: day, test: test, calendar: cal) }
@@ -267,7 +272,8 @@ struct PlannerWeekCard: View {
 
     private var grid: some View {
         GeometryReader { geo in
-            let colW = max(10, (geo.size.width - labelWidth - gap * 7) / 7)
+            let cols = CGFloat(max(snapshot.days.count, 1))
+            let colW = max(10, (geo.size.width - labelWidth - gap * cols) / cols)
             HStack(alignment: .top, spacing: gap) {
                 hourLabels.frame(width: labelWidth, height: gridHeight)
                 ForEach(snapshot.days, id: \.self) { day in
@@ -577,10 +583,15 @@ struct PlannerWeekCard: View {
     /// end of the target day or out of the week.
     private func newStart(_ occ: StudyPlan.Occurrence, translation: CGSize, columnWidth: CGFloat) -> Date? {
         let minutes = Int((translation.height / hourHeight * 60 / 15).rounded()) * 15
-        let days = Int((translation.width / (columnWidth + gap)).rounded())
-        guard let shifted = cal.date(byAdding: .day, value: days, to: occ.start),
-              let first = snapshot.days.first, let last = snapshot.days.last,
-              cal.startOfDay(for: shifted) >= first, cal.startOfDay(for: shifted) <= last
+        // Moves by COLUMN, not by calendar day: a rest weekday has no
+        // column, so the column to the right may be two days later.
+        let steps = Int((translation.width / (columnWidth + gap)).rounded())
+        guard let from = snapshot.days.firstIndex(where: { cal.isDate($0, inSameDayAs: occ.start) }),
+              snapshot.days.indices.contains(from + steps),
+              let shifted = cal.date(byAdding: .day,
+                                     value: cal.dateComponents([.day], from: snapshot.days[from],
+                                                               to: snapshot.days[from + steps]).day ?? 0,
+                                     to: occ.start)
         else { return nil }
         let dayStart = cal.startOfDay(for: shifted)
         let offset = cal.dateComponents([.minute], from: dayStart, to: shifted).minute ?? 0
