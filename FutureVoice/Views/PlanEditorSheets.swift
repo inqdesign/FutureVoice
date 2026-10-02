@@ -4,12 +4,18 @@ import SwiftUI
 /// A block opened from a one-off day edits that day only.
 struct PlanBlockEditor: View {
     enum Target: Identifiable {
+        /// On a dated day (a one-off plan applies if the day has one).
         case new(day: Date)
         case existing(blockId: UUID, day: Date)
+        /// In the weekly plan: no date, only a weekday.
+        case newInWeek(weekday: Int, hour: Int, minute: Int)
+        case inWeek(blockId: UUID)
         var id: String {
             switch self {
             case .new(let d): return "new-\(d.timeIntervalSinceReferenceDate)"
             case .existing(let id, _): return id.uuidString
+            case .newInWeek(let w, let h, let m): return "week-\(w)-\(h)-\(m)"
+            case .inWeek(let id): return "week-" + id.uuidString
             }
         }
     }
@@ -32,14 +38,23 @@ struct PlanBlockEditor: View {
     private var day: Date {
         switch target {
         case .new(let d), .existing(_, let d): return d
+        case .newInWeek, .inWeek: return cal.startOfDay(for: Date())
         }
     }
     private var dayKey: String { StudyPlan.dayKey(day) }
+    private var isWeekly: Bool {
+        switch target {
+        case .newInWeek, .inWeek: return true
+        default: return false
+        }
+    }
     /// Opened from a day that has its own one-off blocks.
-    private var isException: Bool { store.plan.exceptions[dayKey] != nil }
+    private var isException: Bool { !isWeekly && store.plan.exceptions[dayKey] != nil }
     private var existingId: UUID? {
-        if case .existing(let id, _) = target { return id }
-        return nil
+        switch target {
+        case .existing(let id, _), .inWeek(let id): return id
+        default: return nil
+        }
     }
 
     var body: some View {
@@ -148,6 +163,10 @@ struct PlanBlockEditor: View {
             time = cal.date(bySettingHour: block.hour, minute: block.minute, second: 0, of: day) ?? day
             minutes = block.minutes
             remind = block.remind
+        } else if case .newInWeek(let wd, let h, let m) = target {
+            weekdays = [wd]
+            time = cal.date(bySettingHour: h, minute: m, second: 0, of: day) ?? day
+            kind = .words
         } else {
             weekdays = [weekday]
             time = cal.date(bySettingHour: 20, minute: 0, second: 0, of: day) ?? day
@@ -301,5 +320,181 @@ struct PlanSettingsSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
         }
+    }
+}
+
+/// The weekly plan, edited on its own page with room to work: Monday to
+/// Sunday with no dates, because what is being changed is the plan every
+/// week follows — not a week that already happened. Opened from Activity's
+/// Week view ("Edit weekly plan").
+struct WeeklyPlanEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var store = StudyPlanStore.shared
+
+    @State private var snapshot: PlannerSnapshot?
+    @State private var blockEditor: PlanBlockEditor.Target?
+    @State private var showSettings = false
+    @State private var pendingSplit: PendingSplit?
+    @State private var refused = false
+    @State private var noDay: Date?
+
+    private struct PendingSplit {
+        var occurrence: StudyPlan.Occurrence
+        var day: Date
+        var newStart: Date
+    }
+
+    private let cal = Calendar.current
+    private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
+    static let hourHeight: CGFloat = 40
+
+    var body: some View {
+        NavigationStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if let snapshot {
+                        PlannerWeekCard(snapshot: snapshot, mode: .master, hourHeight: Self.hourHeight,
+                                        selectedDay: $noDay,
+                                        onMove: handleMove,
+                                        onEdit: { occ, _ in
+                                            if let id = occ.blockId { blockEditor = .inWeek(blockId: id) }
+                                        },
+                                        onAdd: { start in
+                                            let c = cal.dateComponents([.weekday, .hour, .minute], from: start)
+                                            blockEditor = .newInWeek(weekday: c.weekday ?? 2,
+                                                                     hour: c.hour ?? 20, minute: c.minute ?? 0)
+                                        })
+                        .padding(.horizontal, 8)
+                        .padding(.top, 6)
+                        .padding(.bottom, 24)
+                        .overlay(alignment: .topLeading) {
+                            // Scroll anchor at 7:00.
+                            Color.clear.frame(height: 1)
+                                .offset(y: (7 - CGFloat(snapshot.startHour)) * Self.hourHeight)
+                                .id("seven")
+                        }
+                    }
+                }
+                .onAppear {
+                    reload()
+                    DispatchQueue.main.async { proxy.scrollTo("seven", anchor: .top) }
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) { weekdayHeader }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Text("Tap an empty spot to add. Hold a block and drag to move it.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(.bar)
+            }
+            .navigationTitle(explain("Weekly plan"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showSettings = true } label: {
+                        Label("Plan settings", systemImage: "slider.horizontal.3")
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .sheet(item: $blockEditor) { PlanBlockEditor(target: $0) }
+            .sheet(isPresented: $showSettings) {
+                PlanSettingsSheet(week: weekForSettings)
+            }
+            .confirmationDialog(splitTitle, isPresented: Binding(
+                get: { pendingSplit != nil }, set: { if !$0 { pendingSplit = nil } }),
+                titleVisibility: .visible) {
+                if let split = pendingSplit {
+                    Button(explain("Only on \(weekdayName(split.newStart))")) { apply(split, .everyWeek) }
+                    Button(explain("Every day it runs")) { apply(split, .allDays) }
+                    Button("Cancel", role: .cancel) { pendingSplit = nil }
+                }
+            }
+            .alert("Too many call times", isPresented: $refused) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("The daily call can ring at up to 4 times of day. Move this talk to one of them, or remove another.")
+            }
+            .onChange(of: store.plan) { _, _ in reload() }
+        }
+    }
+
+    /// Stays put above the scrolling hours.
+    private var weekdayHeader: some View {
+        HStack(spacing: PlannerWeekCard.gap) {
+            Color.clear.frame(width: PlannerWeekCard.labelWidth, height: 1)
+            ForEach(snapshot?.days ?? [], id: \.self) { day in
+                Text(day.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated)))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    /// This week's dates, for the days-off list in the settings sheet.
+    private var weekForSettings: [Date] {
+        let start = PlannerSnapshot.startOfWeek(Date())
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+    }
+
+    private func reload() {
+        snapshot = PlannerSnapshot.master(plan: store.plan)
+    }
+
+    private func weekdayName(_ date: Date) -> String {
+        date.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide))
+    }
+
+    private var splitTitle: String {
+        guard let split = pendingSplit else { return "" }
+        return explain("Move to \(split.newStart.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated).hour().minute()))")
+    }
+
+    private func handleMove(_ occ: StudyPlan.Occurrence, _ day: Date, _ newStart: Date) {
+        let c = cal.dateComponents([.hour, .minute], from: newStart)
+        switch occ.source {
+        case .review:
+            var p = store.plan
+            p.reviewHour = c.hour ?? p.reviewHour
+            p.reviewMinute = c.minute ?? p.reviewMinute
+            store.update(p)
+        case .test:
+            let settings = WeeklyTestSettings.shared
+            settings.weekday = cal.component(.weekday, from: newStart)
+            settings.hour = c.hour ?? settings.hour
+            settings.minute = c.minute ?? settings.minute
+            Task { await WeeklyTestReminder.reschedule() }
+            reload()
+        case .template(let id):
+            let spans = (store.plan.blocks.first { $0.id == id }?.weekdays.count ?? 1) > 1
+            let sameDay = cal.isDate(day, inSameDayAs: newStart)
+            let split = PendingSplit(occurrence: occ, day: day, newStart: newStart)
+            // Only a time change on a block that runs on several weekdays is
+            // ambiguous; moving to another weekday takes just this one.
+            if spans && sameDay { pendingSplit = split } else { apply(split, .everyWeek) }
+        case .exception, .sayItAgain:
+            break
+        }
+    }
+
+    private func apply(_ split: PendingSplit, _ scope: StudyPlan.Scope) {
+        pendingSplit = nil
+        guard let id = split.occurrence.blockId,
+              let new = store.plan.moving(blockId: id, on: split.day, to: split.newStart, scope: scope),
+              store.update(new) else {
+            refused = true
+            return
+        }
+        HapticEngine.light()
+        Analytics.capture("plan_block_moved", ["kind": split.occurrence.kind.rawValue, "scope": "\(scope)"])
     }
 }

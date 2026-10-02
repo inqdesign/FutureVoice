@@ -62,19 +62,8 @@ struct ActivityView: View {
     @ObservedObject private var planStore = StudyPlanStore.shared
     @State private var weekStart = PlannerSnapshot.startOfWeek(Date())
     @State private var planner: PlannerSnapshot?
-    @State private var editingPlan = false
-    @State private var blockEditor: PlanBlockEditor.Target?
-    @State private var showPlanSettings = false
-    @State private var pendingMove: PendingMove?
-    @State private var moveRefused = false
+    @State private var showPlanEditor = false
 
-    /// A dragged stored block, waiting for "this day / every week".
-    private struct PendingMove {
-        var occurrence: StudyPlan.Occurrence
-        var day: Date
-        var newStart: Date
-        var spansDays: Bool
-    }
 
     var body: some View {
         ScrollView {
@@ -108,57 +97,13 @@ struct ActivityView: View {
         .onAppear {
             load()
             #if DEBUG
-            if UserDefaults.standard.string(forKey: "capture") == "activity-week-edit" { editingPlan = true }
+            if UserDefaults.standard.string(forKey: "capture") == "activity-week-edit" { showPlanEditor = true }
             #endif
         }
         .onChange(of: cardStore.version) { _, _ in thumbs = [:]; loadCellPhotos() }
-        .toolbar {
-            if viewMode == .week {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if editingPlan {
-                        Button { showPlanSettings = true } label: {
-                            Label("Plan settings", systemImage: "slider.horizontal.3")
-                        }
-                        Button {
-                            blockEditor = .new(day: max(selectedDay ?? Date(), cal.startOfDay(for: Date())))
-                        } label: {
-                            Label("Add block", systemImage: "plus")
-                        }
-                    }
-                    Button(editingPlan ? "Done" : "Edit") {
-                        editingPlan.toggle()
-                        if editingPlan { Analytics.capture("plan_edit_opened", [:]) }
-                    }
-                    .fontWeight(editingPlan ? .semibold : .regular)
-                }
-            }
-        }
-        .sheet(item: $blockEditor) { PlanBlockEditor(target: $0) }
-        .sheet(isPresented: $showPlanSettings) {
-            PlanSettingsSheet(week: planner?.days ?? [])
-        }
-        .confirmationDialog(moveDialogTitle, isPresented: Binding(
-            get: { pendingMove != nil }, set: { if !$0 { pendingMove = nil } }),
-            titleVisibility: .visible) {
-            if let move = pendingMove {
-                Button(explain("Just this day")) { applyMove(move, .thisDay) }
-                Button(explain("Every \(weekdayName(move.newStart))")) { applyMove(move, .everyWeek) }
-                if move.spansDays, cal.isDate(move.day, inSameDayAs: move.newStart) {
-                    Button(explain("Every day at this time")) { applyMove(move, .allDays) }
-                }
-                Button("Cancel", role: .cancel) { pendingMove = nil }
-            }
-        }
-        .alert("Too many call times", isPresented: $moveRefused) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("The daily call can ring at up to 4 times of day. Move this talk to one of them, or remove another.")
-        }
+        .fullScreenCover(isPresented: $showPlanEditor) { WeeklyPlanEditor() }
         .onChange(of: planStore.plan) { _, _ in reloadPlanner() }
         .onChange(of: weekStart) { _, _ in reloadPlanner() }
-        .onChange(of: viewMode) { _, mode in
-            if mode != .week { editingPlan = false }
-        }
     }
 
     // MARK: - Planner (week)
@@ -166,17 +111,18 @@ struct ActivityView: View {
     @ViewBuilder
     private var plannerSection: some View {
         if let planner {
-            PlannerWeekCard(snapshot: planner, selectedDay: $selectedDay, editing: editingPlan,
-                            title: weekTitle, onShift: shiftWeek,
-                            onMove: handleMove,
-                            onEdit: { occ, day in
-                                if let id = occ.blockId { blockEditor = .existing(blockId: id, day: day) }
+            PlannerWeekCard(snapshot: planner, selectedDay: $selectedDay, title: weekTitle,
+                            onShift: shiftWeek,
+                            onEditPlan: {
+                                Analytics.capture("plan_edit_opened", [:])
+                                showPlanEditor = true
                             })
+            // The grid needs every point it can get across: let the card run
+            // closer to the screen edge than the page's other cards.
+            .padding(.horizontal, -12)
             if let day = selectedDay, planner.days.contains(where: { cal.isDate($0, inSameDayAs: day) }) {
-                PlannerDayTimeline(day: cal.startOfDay(for: day), snapshot: planner, editing: editingPlan,
-                                   onEdit: { occ, day in
-                                       if let id = occ.blockId { blockEditor = .existing(blockId: id, day: day) }
-                                   })
+                PlannerDayTimeline(day: cal.startOfDay(for: day), snapshot: planner, editing: false,
+                                   onEdit: { _, _ in })
             }
         } else {
             ProgressView().frame(maxWidth: .infinity, minHeight: 200)
@@ -199,52 +145,6 @@ struct ActivityView: View {
         let end = cal.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
         let style = Date.FormatStyle(locale: uiLocale).month(.abbreviated).day()
         return weekStart.formatted(style) + " – " + end.formatted(style)
-    }
-
-    private func weekdayName(_ date: Date) -> String {
-        date.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide))
-    }
-
-    private var moveDialogTitle: String {
-        guard let move = pendingMove else { return "" }
-        return explain("Move to \(move.newStart.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated).hour().minute()))")
-    }
-
-    private func handleMove(_ occ: StudyPlan.Occurrence, _ day: Date, _ newStart: Date) {
-        let c = cal.dateComponents([.hour, .minute], from: newStart)
-        switch occ.source {
-        case .review:
-            var p = planStore.plan
-            p.reviewHour = c.hour ?? p.reviewHour
-            p.reviewMinute = c.minute ?? p.reviewMinute
-            planStore.update(p)
-        case .test:
-            let settings = WeeklyTestSettings.shared
-            settings.weekday = cal.component(.weekday, from: newStart)
-            settings.hour = c.hour ?? settings.hour
-            settings.minute = c.minute ?? settings.minute
-            Task { await WeeklyTestReminder.reschedule() }
-            reloadPlanner()
-        case .template(let id):
-            let spans = (planStore.plan.blocks.first { $0.id == id }?.weekdays.count ?? 1) > 1
-            pendingMove = PendingMove(occurrence: occ, day: day, newStart: newStart, spansDays: spans)
-        case .exception:
-            applyMove(PendingMove(occurrence: occ, day: day, newStart: newStart, spansDays: false), .thisDay)
-        case .sayItAgain:
-            break
-        }
-    }
-
-    private func applyMove(_ move: PendingMove, _ scope: StudyPlan.Scope) {
-        pendingMove = nil
-        guard let id = move.occurrence.blockId,
-              let new = planStore.plan.moving(blockId: id, on: move.day, to: move.newStart, scope: scope),
-              planStore.update(new) else {
-            moveRefused = true
-            return
-        }
-        Analytics.capture("plan_block_moved", ["kind": move.occurrence.kind.rawValue,
-                                               "scope": "\(scope)"])
     }
 
     // MARK: - The day's card, inside the calendar

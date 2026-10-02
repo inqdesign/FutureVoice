@@ -533,12 +533,21 @@ its own branch so the founder picks the build it ships in.
   other rep gets a time from `ActivityEventLog`, written inside
   `PracticeLog.record` (the one door every rep walks through) and at the end
   of a say-it-again run. It only has times from this build on, kept 60 days.
-- **Editing**: Activity → Edit. Long-press a FUTURE planned block and drag —
-  vertical = time (15-minute steps), sideways = day. A template block asks
-  "just this day / every <weekday> / every day at this time"; the review slot
-  and the test move their own settings directly. Past blocks and actuals never
-  move. `+` adds a block, the slider opens `PlanSettingsSheet` (review slot,
-  say it again, this week's days off, planned talk minutes for 30 days).
+- **Activity's week is READ-ONLY; the plan is edited on its own page**
+  (same day, founder: "you're not editing the activity, you're editing the
+  weekly plan — and give it room"). "Edit weekly plan" under the grid opens
+  `WeeklyPlanEditor` full-screen: Monday–Sunday with NO dates
+  (`PlannerSnapshot.master` — next week's days as stand-ins, exceptions and
+  days off left out, because those belong to dates), 40 pt per hour, every
+  block showing its 24-hour start time, weekday header pinned above the
+  scrolling hours. Tap an empty spot to add a block there (half-hour steps);
+  tap a block to edit it; long-press and drag to move it — vertical = time
+  (15-minute steps), sideways = weekday. Only a time change on a block that
+  runs on several weekdays asks "only on <weekday> / every day it runs";
+  a move to another weekday takes just that one. The review slot and the
+  test move their own settings. The slider opens `PlanSettingsSheet`. The
+  dated grid in Activity runs 8 pt from the screen edge (it needs every
+  point across) and has no edit mode.
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

@@ -17,6 +17,22 @@ struct PlannerSnapshot {
         cal.dateInterval(of: .weekOfYear, for: date)?.start ?? cal.startOfDay(for: date)
     }
 
+    /// The weekly plan itself, with no dates: next week's Monday–Sunday as
+    /// stand-ins (always in the future, so nothing reads as lapsed), with
+    /// one-off edits and days off left out — they belong to dates.
+    static func master(plan: StudyPlan, now: Date = Date(), calendar cal: Calendar = .current) -> PlannerSnapshot {
+        var template = plan
+        template.exceptions = [:]
+        template.restDays = []
+        let start = cal.date(byAdding: .day, value: 7, to: startOfWeek(now, calendar: cal)) ?? now
+        let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+        let test = WeeklyTestSettings.shared.schedule
+        var planned: [Date: [StudyPlan.Occurrence]] = [:]
+        for day in days { planned[day] = template.occurrences(on: day, test: test, calendar: cal) }
+        return PlannerSnapshot(days: days, planned: planned, actuals: [:], events: [:], done: [:],
+                               reviewLoad: [:], startHour: 6, endHour: 24)
+    }
+
     static func make(weekStart: Date, plan: StudyPlan, now: Date = Date(),
                      calendar cal: Calendar = .current) -> PlannerSnapshot {
         let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: weekStart) }
@@ -144,60 +160,90 @@ extension PlannerDay.Actual.Kind {
 // MARK: - The week grid
 
 /// Seven days side by side, time running down: the plan as dashed outlines,
-/// what happened as filled blocks on top. In edit mode a future planned block
-/// can be long-pressed and dragged — up and down for the time, sideways for
-/// the day, snapping to 15 minutes.
+/// what happened as filled blocks.
+///
+/// Two modes, because they are two different things. `.record` is a dated
+/// week in Activity — read-only, what was planned against what happened.
+/// `.master` is the weekly plan itself, Monday to Sunday with no dates
+/// (`WeeklyPlanEditor`): there a block is long-pressed and dragged — up and
+/// down for the time, sideways for the weekday, 15-minute steps — and an
+/// empty spot is tapped to add one.
 struct PlannerWeekCard: View {
+    enum Mode { case record, master }
+
     let snapshot: PlannerSnapshot
+    var mode: Mode = .record
+    var hourHeight: CGFloat = 24
     @Binding var selectedDay: Date?
-    let editing: Bool
-    let title: String
-    let onShift: (Int) -> Void
-    /// A drag ended: the block, the day it was on, its new start.
-    let onMove: (StudyPlan.Occurrence, Date, Date) -> Void
-    /// A planned block was tapped in edit mode.
-    let onEdit: (StudyPlan.Occurrence, Date) -> Void
+    var title: String = ""
+    var onShift: (Int) -> Void = { _ in }
+    /// `.record`: open the weekly plan editor.
+    var onEditPlan: () -> Void = {}
+    /// `.master`: a drag ended — the block, the day it was on, its new start.
+    var onMove: (StudyPlan.Occurrence, Date, Date) -> Void = { _, _, _ in }
+    /// `.master`: a planned block was tapped.
+    var onEdit: (StudyPlan.Occurrence, Date) -> Void = { _, _ in }
+    /// `.master`: an empty spot was tapped — a new block starting then.
+    var onAdd: (Date) -> Void = { _ in }
 
     @State private var dragging: String?
     @State private var dragOffset: CGSize = .zero
 
-    private let hourHeight: CGFloat = 24
-    private let labelWidth: CGFloat = 18
-    private let gap: CGFloat = 3
+    static let labelWidth: CGFloat = 16
+    static let gap: CGFloat = 3
+    private var labelWidth: CGFloat { Self.labelWidth }
+    private var gap: CGFloat { Self.gap }
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
+    private var isMaster: Bool { mode == .master }
 
     private var gridHeight: CGFloat { CGFloat(snapshot.endHour - snapshot.startHour) * hourHeight }
 
     var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Button { onShift(-1) } label: {
-                    Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
-                }
-                Spacer()
-                Text(title).font(.headline)
-                Spacer()
-                Button { onShift(1) } label: {
-                    Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
-                }
-            }
-            dayHeader
-            GeometryReader { geo in
-                let colW = max(10, (geo.size.width - labelWidth - gap * 7) / 7)
-                HStack(alignment: .top, spacing: gap) {
-                    hourLabels.frame(width: labelWidth, height: gridHeight)
-                    ForEach(snapshot.days, id: \.self) { day in
-                        column(day, width: colW)
+        if isMaster {
+            grid
+        } else {
+            VStack(spacing: 10) {
+                HStack {
+                    Button { onShift(-1) } label: {
+                        Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
+                    }
+                    Spacer()
+                    Text(title).font(.headline)
+                    Spacer()
+                    Button { onShift(1) } label: {
+                        Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
                     }
                 }
+                .padding(.horizontal, 6)
+                dayHeader
+                grid
+                legend
+                Button(action: onEditPlan) {
+                    Label("Edit weekly plan", systemImage: "calendar.badge.clock")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
             }
-            .frame(height: gridHeight)
-            legend
+            .padding(.horizontal, 8)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
         }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    private var grid: some View {
+        GeometryReader { geo in
+            let colW = max(10, (geo.size.width - labelWidth - gap * 7) / 7)
+            HStack(alignment: .top, spacing: gap) {
+                hourLabels.frame(width: labelWidth, height: gridHeight)
+                ForEach(snapshot.days, id: \.self) { day in
+                    column(day, width: colW)
+                }
+            }
+        }
+        .frame(height: gridHeight)
     }
 
     private var dayHeader: some View {
@@ -226,8 +272,9 @@ struct PlannerWeekCard: View {
     }
 
     private var hourLabels: some View {
-        ZStack(alignment: .topTrailing) {
-            ForEach(Array(stride(from: snapshot.startHour, through: snapshot.endHour, by: 3)), id: \.self) { h in
+        let step = hourHeight >= 36 ? 1 : 3
+        return ZStack(alignment: .topTrailing) {
+            ForEach(Array(stride(from: snapshot.startHour, through: snapshot.endHour, by: step)), id: \.self) { h in
                 Text("\(h)")
                     .font(.system(size: 9))
                     .monospacedDigit()
@@ -236,6 +283,11 @@ struct PlannerWeekCard: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+    }
+
+    private func clock(_ date: Date) -> String {
+        let c = cal.dateComponents([.hour, .minute], from: date)
+        return String(format: "%d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
     private func y(_ date: Date) -> CGFloat {
@@ -252,7 +304,7 @@ struct PlannerWeekCard: View {
     }
 
     private func column(_ day: Date, width: CGFloat) -> some View {
-        let isToday = cal.isDateInToday(day)
+        let isToday = !isMaster && cal.isDateInToday(day)
         let planned = snapshot.planned[day] ?? []
         let actuals = snapshot.actuals[day] ?? []
         let done = snapshot.done[day] ?? []
@@ -265,6 +317,15 @@ struct PlannerWeekCard: View {
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isToday ? Color.accentColor.opacity(0.08) : Color(.tertiarySystemFill).opacity(0.5))
+            if isMaster {
+                // Hour lines, so a drop lands where the eye expects.
+                ForEach(snapshot.startHour..<snapshot.endHour, id: \.self) { h in
+                    Rectangle().fill(Color(.separator).opacity(0.5))
+                        .frame(width: width, height: 0.5)
+                        .offset(y: CGFloat(h - snapshot.startHour) * hourHeight)
+                }
+                .allowsHitTesting(false)
+            }
             ForEach(shownPlans) { occ in
                 plannedBlock(occ, day: day, width: width, done: done.contains(occ.id),
                              top: tops["p" + occ.id] ?? y(occ.start))
@@ -282,7 +343,17 @@ struct PlannerWeekCard: View {
         }
         .frame(width: width, height: gridHeight, alignment: .topLeading)
         .contentShape(Rectangle())
-        .onTapGesture { selectedDay = day }
+        .onTapGesture(coordinateSpace: .local) { location in
+            if isMaster {
+                // Half-hour steps for a new block; dragging refines it.
+                let minutes = Int((location.y / hourHeight * 60 / 30).rounded(.down)) * 30
+                    + snapshot.startHour * 60
+                let clamped = min(max(0, minutes), 23 * 60 + 30)
+                onAdd(cal.startOfDay(for: day).addingTimeInterval(TimeInterval(clamped * 60)))
+            } else {
+                selectedDay = day
+            }
+        }
     }
 
     /// Where each block is drawn. A short block is drawn taller than its
@@ -329,8 +400,7 @@ struct PlannerWeekCard: View {
     }
 
     private func canDrag(_ occ: StudyPlan.Occurrence) -> Bool {
-        editing && occ.start > Date()
-            && (occ.blockId != nil || occ.kind == .review || occ.kind == .test)
+        isMaster && (occ.blockId != nil || occ.kind == .review || occ.kind == .test)
     }
 
     private func plannedBlock(_ occ: StudyPlan.Occurrence, day: Date, width: CGFloat, done: Bool,
@@ -338,27 +408,42 @@ struct PlannerWeekCard: View {
         let isDragging = dragging == occ.id
         let h = height(occ.start, occ.end)
         // A plan whose time has passed without it: grey and quiet, never red.
-        let lapsed = !done && occ.end < Date()
+        let lapsed = !isMaster && !done && occ.end < Date()
         let color = lapsed ? Color.secondary : occ.kind.color
         let draggable = canDrag(occ)
         let load = occ.kind == .review ? snapshot.reviewLoad[occ.start] : nil
         return RoundedRectangle(cornerRadius: 4, style: .continuous)
-            .fill(color.opacity(done ? 0.15 : (isDragging ? 0.25 : 0.06)))
+            .fill(color.opacity(isMaster ? 0.16 : (done ? 0.15 : (isDragging ? 0.25 : 0.06))))
             .overlay(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .strokeBorder(color.opacity(done || lapsed ? 0.5 : 1),
-                                  style: StrokeStyle(lineWidth: draggable ? 1.6 : 1.2, dash: [3, 2]))
+                                  style: StrokeStyle(lineWidth: isMaster ? 1.4 : 1.2,
+                                                     dash: isMaster ? [] : [3, 2]))
             )
-            .overlay(alignment: .leading) {
-                HStack(spacing: 1) {
+            .overlay(alignment: .topLeading) {
+                HStack(spacing: 3) {
                     // Done at another time of the day: the plan is ticked
                     // here, and the filled block shows where it happened.
                     Image(systemName: done ? "checkmark" : occ.kind.symbol)
-                    if let load, load > 0, width >= 30 { Text("\(load)").monospacedDigit() }
+                        .font(.system(size: isMaster ? 10 : 9, weight: .bold))
+                    if let load, load > 0, width >= 30 {
+                        Text("\(load)").font(.system(size: 9, weight: .bold)).monospacedDigit()
+                    }
+                    // In the plan editor a block says when it is — that is
+                    // what the learner is there to change.
+                    if isMaster {
+                        // 24-hour, like the axis beside it: a 12-hour time with
+                        // the AM/PM dropped read 21:00 as "09:00".
+                        Text(clock(occ.start))
+                            .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
                 }
-                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(color.opacity(lapsed ? 0.7 : 1))
                 .padding(.leading, 3)
+                .padding(.top, h >= 22 ? 3 : 1)
+                .padding(.trailing, 2)
             }
             .overlay(alignment: .topLeading) {
                 if isDragging {
@@ -378,7 +463,8 @@ struct PlannerWeekCard: View {
                     y: top + (isDragging ? dragOffset.height : 0))
             .zIndex(isDragging ? 10 : 0)
             .onTapGesture {
-                if editing, occ.blockId != nil { onEdit(occ, day) } else { selectedDay = day }
+                if isMaster, occ.blockId != nil { onEdit(occ, day) }
+                else if !isMaster { selectedDay = day }
             }
             .gesture(
                 LongPressGesture(minimumDuration: 0.25)
@@ -408,21 +494,23 @@ struct PlannerWeekCard: View {
     }
 
     /// Where a drag would land: 15-minute steps, whole columns, never off the
-    /// end of the target day.
+    /// end of the target day or out of the week.
     private func newStart(_ occ: StudyPlan.Occurrence, translation: CGSize, columnWidth: CGFloat) -> Date? {
         let minutes = Int((translation.height / hourHeight * 60 / 15).rounded()) * 15
         let days = Int((translation.width / (columnWidth + gap)).rounded())
-        guard let shifted = cal.date(byAdding: .day, value: days, to: occ.start) else { return nil }
+        guard let shifted = cal.date(byAdding: .day, value: days, to: occ.start),
+              let first = snapshot.days.first, let last = snapshot.days.last,
+              cal.startOfDay(for: shifted) >= first, cal.startOfDay(for: shifted) <= last
+        else { return nil }
         let dayStart = cal.startOfDay(for: shifted)
         let offset = cal.dateComponents([.minute], from: dayStart, to: shifted).minute ?? 0
         let clamped = min(max(0, offset + minutes), 24 * 60 - max(15, occ.minutes))
-        let target = dayStart.addingTimeInterval(TimeInterval(clamped * 60))
-        return target > Date() ? target : nil
+        return dayStart.addingTimeInterval(TimeInterval(clamped * 60))
     }
 
     private func dropTime(_ occ: StudyPlan.Occurrence, translation: CGSize, columnWidth: CGFloat) -> String {
         let target = newStart(occ, translation: translation, columnWidth: columnWidth) ?? occ.start
-        return target.formatted(Date.FormatStyle(locale: uiLocale).hour().minute())
+        return target.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated).hour().minute())
     }
 
     /// What the colours and the two strokes mean. Without it the grid is
@@ -435,13 +523,9 @@ struct PlannerWeekCard: View {
             HStack(spacing: 12) {
                 styleKey(filled: false, Text("Planned"))
                 styleKey(filled: true, Text("Done"))
-                Spacer()
-                if editing {
-                    Text("Hold and drag to move")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
             }
         }
+        .padding(.horizontal, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
