@@ -23,6 +23,17 @@ enum PlannerDay {
                 ?? "\(kind.rawValue)-\(start.timeIntervalSinceReferenceDate)"
         }
 
+        /// The practice to open for this sitting; nil for a Watch scene.
+        var planKind: StudyPlan.Kind? {
+            switch kind {
+            case .talk: return .talk
+            case .review: return .review
+            case .shadow: return .shadow
+            case .sayItAgain: return .sayItAgain
+            case .scene: return nil
+            }
+        }
+
         /// Whether this sitting is the kind of practice a planned block asks for.
         func covers(_ planned: StudyPlan.Kind) -> Bool {
             switch (kind, planned) {

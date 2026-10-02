@@ -65,6 +65,7 @@ struct ActivityView: View {
     @State private var planner: PlannerSnapshot?
     @State private var showPlanEditor = false
     @State private var showSayItAgainPicker = false
+    @State private var routineSheet: RoutineSheet?
     @State private var openTalk: Session?
     /// `PracticeStats.activeDays` — what the no-promise rule counts.
     @State private var studiedDays: Set<Date> = []
@@ -148,6 +149,7 @@ struct ActivityView: View {
                 ConversationDetailView(session: openTalk).environmentObject(appState)
             }
         }
+        .sheet(item: $routineSheet, onDismiss: { load(); reloadPlanner() }) { routineSheetView($0) }
         .sheet(isPresented: $showSayItAgainPicker, onDismiss: reloadPlanner) {
             SayItAgainPicker().environmentObject(appState)
         }
@@ -172,7 +174,7 @@ struct ActivityView: View {
             PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
                            isPromise: planStore.plan.streakSince != nil,
                            activeDays: studiedDays,
-                           onSayItAgain: { showSayItAgainPicker = true },
+                           onOpen: open,
                            onOpenTalk: { id in
                                openTalk = sessionsByDay.values.flatMap { $0 }.first { $0.id == id }
                                    ?? SessionStore.shared.loadAcrossLanguages().first { $0.id == id }
@@ -192,6 +194,64 @@ struct ActivityView: View {
 
     private var streakLine: some View {
         StreakLine(streak: currentStreak).font(.headline)
+    }
+
+    /// What a routine line opens — the same screens the Review tab's
+    /// Today card opens for each kind.
+    private enum RoutineSheet: Identifiable {
+        case words, expressions, review, test
+        case shadow([PracticeStats.ShadowPick])
+        var id: String {
+            switch self {
+            case .words: return "words"
+            case .expressions: return "expressions"
+            case .review: return "review"
+            case .test: return "test"
+            case .shadow: return "shadow"
+            }
+        }
+    }
+
+    private func open(_ kind: StudyPlan.Kind) {
+        switch kind {
+        case .talk: appState.pendingFreeTalk = true
+        case .sayItAgain: showSayItAgainPicker = true
+        case .words: routineSheet = .words
+        case .expressions: routineSheet = .expressions
+        case .review: routineSheet = .review
+        case .test: routineSheet = .test
+        case .shadow:
+            let picks = PracticeStats.shadowPicks(
+                sessions: SessionStore.shared.load().filter { $0.endedAt != nil },
+                attempts: appState.shadowAttempts,
+                level: appState.proficiency,
+                limit: GoalStore.shared.handSize(.shadow))
+            routineSheet = .shadow(picks)
+        }
+    }
+
+    @ViewBuilder
+    private func routineSheetView(_ sheet: RoutineSheet) -> some View {
+        switch sheet {
+        case .words: DailyWordsView().environmentObject(appState)
+        case .expressions: DailyExpressionsView().environmentObject(appState)
+        case .review: DrillSheet().environmentObject(appState)
+        case .test: WeeklyTestView().environmentObject(appState)
+        case .shadow(let picks):
+            if picks.isEmpty {
+                NavigationStack {
+                    ShadowBrowserView()
+                        .navigationTitle("Shadowing")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .environmentObject(appState)
+                }
+            } else {
+                NavigationStack {
+                    PracticeSessionView(shadowPicks: picks, includeCards: false)
+                        .environmentObject(appState)
+                }
+            }
+        }
     }
 
     private func reloadPlanner() {

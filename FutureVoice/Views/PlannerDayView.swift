@@ -16,7 +16,8 @@ struct PlannerDayCard: View {
     @Binding var selectedDay: Date?
     let isPromise: Bool
     let activeDays: Set<Date>
-    let onSayItAgain: () -> Void
+    /// A line was tapped: open that kind of practice (every line is a door).
+    let onOpen: (StudyPlan.Kind) -> Void
     /// A talk in the day's list was tapped: open its book.
     var onOpenTalk: (UUID) -> Void = { _ in }
     /// The day's journal entry (its share card and numbers), at the foot.
@@ -121,33 +122,47 @@ struct PlannerDayCard: View {
         return nil
     }
 
+    /// Every line is a door (founder, 2026-10-02: some lines tapped and
+    /// some didn't). A talk that happened opens its book; a planned talk
+    /// already done opens the talk that did it; everything else opens that
+    /// kind of practice.
     @ViewBuilder
     private func row(_ item: Item, talk: [String: Double]) -> some View {
         switch item.body {
         case .actual(let a):
-            let line = rowLayout(time: "\(clock(a.start))–\(clock(a.end))", symbol: a.kind.symbol, tint: a.kind.color,
-                                 title: a.title ?? a.kind.label,
-                                 detail: explain("Extra"),
-                                 progress: 1)
-            if let id = a.sessionId {
-                Button { onOpenTalk(id) } label: { line }.buttonStyle(.plain)
-            } else {
-                line
+            Button {
+                if let id = a.sessionId { onOpenTalk(id) }
+                else if let kind = a.planKind { onOpen(kind) }
+            } label: {
+                rowLayout(time: "\(clock(a.start))–\(clock(a.end))", symbol: a.kind.symbol, tint: a.kind.color,
+                          title: a.title ?? a.kind.label,
+                          detail: explain("Extra"),
+                          progress: 1)
             }
+            .buttonStyle(.plain)
         case .plan(let occ, let done):
             let lapsed = !done && occ.isOver()
             let progress: Double = done ? 1 : (talk[occ.id] ?? 0)
-            let line = rowLayout(time: occ.anytime ? explain("Anytime") : clock(occ.start), symbol: occ.kind.symbol,
-                                 tint: lapsed ? .secondary : occ.kind.color,
-                                 title: occ.kind.titled(occ.amount),
-                                 detail: planDetail(occ, done: done, progress: progress),
-                                 progress: progress, faded: lapsed)
-            if occ.kind == .sayItAgain && !done {
-                Button(action: onSayItAgain) { line }.buttonStyle(.plain)
-            } else {
-                line
+            Button {
+                if occ.kind == .talk, done, let id = talkThatDidIt {
+                    onOpenTalk(id)
+                } else {
+                    onOpen(occ.kind)
+                }
+            } label: {
+                rowLayout(time: occ.anytime ? explain("Anytime") : clock(occ.start), symbol: occ.kind.symbol,
+                          tint: lapsed ? .secondary : occ.kind.color,
+                          title: occ.kind.titled(occ.amount),
+                          detail: planDetail(occ, done: done, progress: progress),
+                          progress: progress, faded: lapsed)
             }
+            .buttonStyle(.plain)
         }
+    }
+
+    /// The day's latest talk, for a planned talk that is already done.
+    private var talkThatDidIt: UUID? {
+        (snapshot.actuals[day] ?? []).filter { $0.kind == .talk }.last?.sessionId
     }
 
     /// One line, like a row in Settings or Reminders: the kind's icon on a
