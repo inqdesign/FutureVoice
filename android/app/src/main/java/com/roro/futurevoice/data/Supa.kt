@@ -85,9 +85,12 @@ class AuthRepository {
         get() = com.roro.futurevoice.BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()
 
     suspend fun signInWithGoogle(context: android.content.Context) {
-        val option = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
-            .setServerClientId(com.roro.futurevoice.BuildConfig.GOOGLE_WEB_CLIENT_ID)
-            .setFilterByAuthorizedAccounts(false)
+        // The BUTTON flow (Sign in with Google), not the one-tap sheet:
+        // `GetGoogleIdOption` fails outright with "No credentials available"
+        // on a phone with no Google account signed in, while this one opens
+        // Google's own sheet, where an account can be added.
+        val option = com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+            .Builder(com.roro.futurevoice.BuildConfig.GOOGLE_WEB_CLIENT_ID)
             .build()
         val request = androidx.credentials.GetCredentialRequest.Builder()
             .addCredentialOption(option)

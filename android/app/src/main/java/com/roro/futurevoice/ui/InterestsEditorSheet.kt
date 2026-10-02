@@ -74,7 +74,7 @@ fun InterestsEditorSheet(
                 (PRESETS + interests.filter { it !in PRESETS }).forEach { tag ->
                     val on = tag in interests
                     Text(
-                        tag,
+                        presetLabel(tag),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (on) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.onSurface,

@@ -469,7 +469,20 @@ fun RootScreen() {
             // choice that only arrives at the end leaves the learner
             // answering in a language they just said they cannot read.
             onPickNative = app::setNativeLanguage,
-            onFinish = app::completeSetup,
+            onFinish = { native, target, level, goal ->
+                app.completeSetup(native, target, level, goal)
+                // Setup speaks the picked language through its own wrapped
+                // context; the activity was attached in the DEVICE language,
+                // so everything after setup (persona, voice, Talk) read
+                // English to a learner who had just chosen Korean. Same cure
+                // as Me → App language: a fresh context.
+                val activity = localActivity as? android.app.Activity
+                val want = com.roro.futurevoice.core.UILanguage.normalize(native)
+                    ?.let { java.util.Locale.forLanguageTag(it) }
+                val have = activity?.resources?.configuration?.locales?.get(0)
+                if (activity != null && want != null && have != null &&
+                    (want.language != have.language || want.script != have.script)) activity.recreate()
+            },
         )
         editProfile -> PersonaIntakeScreen(
             initial = state.persona ?: com.roro.futurevoice.talk.UserPersona(),

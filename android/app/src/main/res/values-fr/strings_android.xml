@@ -248,4 +248,5 @@
     <string name="widget_progress_description">L’objectif du jour, la série et ce qu’il reste à réviser.</string>
     <string name="widget_free_talk_description">Appelle ton moi fluide d’un seul geste.</string>
     <string name="widget_to_review">à revoir</string>
+    <string name="google_sign_in_failed">Connexion avec Google impossible. Réessaie.</string>
 </resources>

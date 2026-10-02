@@ -261,4 +261,5 @@
     <string name="widget_progress_description">El objetivo de hoy, la racha y lo que queda por estudiar.</string>
     <string name="widget_free_talk_description">Un toque para llamar a tu yo fluido.</string>
     <string name="widget_to_review">por repasar</string>
+    <string name="google_sign_in_failed">No se pudo iniciar sesión con Google. Inténtalo de nuevo.</string>
 </resources>

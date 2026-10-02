@@ -154,7 +154,30 @@ object LanguageCatalog {
      * `getDisplayLanguage` drops it, so both Chinese columns came back as
      * plain 中文 and the two rows of the picker read identically.
      */
+    /**
+     * The two Chinese scripts as iOS names them (`localizedString(forIdentifier:)`,
+     * CLDR's short form). Android's ICU writes "Chinese (Traditional Han)" /
+     * "中文 (繁體中文)" — the script's TECHNICAL name, and twice the length on a
+     * picker row. Keyed by the locale's base language (zh by script).
+     */
+    private val chineseNames: Map<String, Pair<String, String>> = mapOf(
+        "en" to ("Chinese, Traditional" to "Chinese, Simplified"),
+        "ko" to ("중국어(번체)" to "중국어(간체)"),
+        "ja" to ("中国語（繁体字）" to "中国語（簡体字）"),
+        "zh-Hant" to ("中文（繁體）" to "中文（簡體）"),
+        "zh-Hans" to ("中文（繁体）" to "中文（简体）"),
+        "es" to ("Chino tradicional" to "Chino simplificado"),
+        "fr" to ("Chinois traditionnel" to "Chinois simplifié"),
+        "de" to ("Chinesisch (traditionell)" to "Chinesisch (vereinfacht)"),
+    )
+
     private fun name(code: String, locale: String): String {
+        if (code == "zh-Hant" || code == "zh-Hans") {
+            val loc = java.util.Locale.forLanguageTag(locale)
+            val key = if (loc.language == "zh") (if (loc.script == "Hans" || locale.endsWith("Hans")) "zh-Hans" else "zh-Hant")
+                else loc.language
+            chineseNames[key]?.let { return if (code == "zh-Hant") it.first else it.second }
+        }
         val of = java.util.Locale.forLanguageTag(code)
         val inLocale = java.util.Locale.forLanguageTag(locale)
         val display = if (of.script.isNotEmpty()) of.getDisplayName(inLocale)

@@ -200,7 +200,14 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             runCatching { auth.signInWithGoogle(activityContext) }
-                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+                .onFailure { e ->
+                    // Backing out of Google's sheet is not an error. Anything
+                    // else gets one line in the app language — the raw
+                    // exception text is English and names Android internals.
+                    if (e is androidx.credentials.exceptions.GetCredentialCancellationException) return@onFailure
+                    android.util.Log.w("Auth", "google sign-in failed", e)
+                    _state.update { it.copy(error = activityContext.getString(com.roro.futurevoice.R.string.google_sign_in_failed)) }
+                }
             _state.update { it.copy(busy = false) }
         }
     }

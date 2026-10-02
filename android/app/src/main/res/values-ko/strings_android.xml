@@ -245,4 +245,5 @@
     <string name="widget_progress_description">오늘 목표와 연속 기록, 남은 학습량이 한눈에.</string>
     <string name="widget_free_talk_description">한 번 눌러 유창한 나에게 전화하세요.</string>
     <string name="widget_to_review">복습 대기</string>
+    <string name="google_sign_in_failed">Google로 로그인하지 못했어요. 다시 해 볼까요?</string>
 </resources>

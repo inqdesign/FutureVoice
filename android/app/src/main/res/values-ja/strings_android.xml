@@ -245,4 +245,5 @@
     <string name="widget_progress_description">今日の目標と連続記録、残りの学習量をひと目で。</string>
     <string name="widget_free_talk_description">ワンタップで流暢な自分に電話します。</string>
     <string name="widget_to_review">復習待ち</string>
+    <string name="google_sign_in_failed">Googleでログインできませんでした。もう一度お試しください。</string>
 </resources>

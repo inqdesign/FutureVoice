@@ -261,4 +261,5 @@
     <string name="widget_progress_description">Today\'s goal, streak, and what\'s left to study.</string>
     <string name="widget_free_talk_description">One tap to call your fluent self.</string>
     <string name="widget_to_review">to review</string>
+    <string name="google_sign_in_failed">Couldn\'t sign in with Google. Try again.</string>
 </resources>

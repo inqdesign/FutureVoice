@@ -380,7 +380,7 @@ private fun InlineField(value: String, onChange: (String) -> Unit, placeholder: 
 @Composable
 private fun IntakeChipLabel(text: String, isOn: Boolean, onClick: () -> Unit) {
     Text(
-        text,
+        presetLabel(text),
         style = MaterialTheme.typography.bodyMedium,
         color = if (isOn) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
         modifier = Modifier

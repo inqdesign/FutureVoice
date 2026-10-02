@@ -189,7 +189,7 @@ private fun ChipGrid(presets: List<String>, selection: Set<String>, onToggle: (S
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         presets.forEach { tag ->
             FilterChip(selected = tag in selection, onClick = { onToggle(tag) },
-                label = { Text(tag) })
+                label = { Text(presetLabel(tag)) })
         }
     }
 }
