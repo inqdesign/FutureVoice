@@ -94,7 +94,12 @@ struct ActivityView: View {
                     .frame(width: 150)
                 }
                 switch viewMode {
-                case .day:   plannerSection
+                case .day:
+                    PlannerDayStrip(selectedDay: $selectedDay,
+                                    isPromise: planStore.plan.streakSince != nil,
+                                    activeDays: studiedDays, plan: planStore.plan)
+                        .padding(.horizontal, -20)
+                    plannerSection
                 case .month: statsBar; monthCard
                 case .year:  statsBar; yearCard
                 }

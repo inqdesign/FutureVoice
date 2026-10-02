@@ -33,8 +33,6 @@ struct PlannerDayCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            week
-            Divider()
             dayList
             if let footer {
                 Divider()
@@ -46,123 +44,8 @@ struct PlannerDayCard: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    // MARK: - The week
-
-    private enum Mark { case kept, missed, rest, today(Double), ahead(planned: Bool) }
-
-    private func mark(_ d: Date) -> Mark {
-        if d > today {
-            return .ahead(planned: !(snapshot.planned[d] ?? []).isEmpty)
-        }
-        let standing = PracticeStats.standing(of: d, activeDays: activeDays, calendar: cal)
-        if d == today {
-            if standing == .kept { return .kept }
-            if isPromise, let e = PromiseLedger.shared.entry(d, calendar: cal), e.planned > 0 {
-                return .today(Double(e.done) / Double(e.planned))
-            }
-            return .today(0)
-        }
-        switch standing {
-        case .kept: return .kept
-        case .missed: return .missed
-        case .rest: return .rest
-        }
-    }
-
-    /// The week strip, the way Calendar and Fitness draw one: no arrows —
-    /// swipe for another week, and a month title with a "Today" capsule to
-    /// come back. The selected day sits on a soft pill; the circle inside
-    /// keeps the day's standing.
-    private var week: some View {
-        VStack(spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(day.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).year()))
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                if !cal.isDate(day, inSameDayAs: today) {
-                    Button(explain("Today")) { go(to: today) }
-                        .font(.footnote.weight(.semibold))
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.mini)
-                        .transition(.opacity)
-                }
-            }
-            .frame(height: 24)
-            HStack(spacing: 4) {
-                ForEach(snapshot.days, id: \.self) { d in
-                    let selected = cal.isDate(d, inSameDayAs: day)
-                    Button { go(to: d) } label: {
-                        VStack(spacing: 6) {
-                            Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
-                                .font(.caption2.weight(selected ? .semibold : .regular))
-                                .foregroundStyle(selected ? Color.primary : Color.secondary)
-                            dayCircle(d)
-                        }
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(selected ? Color(.tertiarySystemFill) : .clear))
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .id(snapshot.days.first)
-            .transition(.asymmetric(insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                                    removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)))
-            .clipped()
-        }
-        .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 24).onEnded { v in
-            guard abs(v.translation.width) > abs(v.translation.height),
-                  let next = cal.date(byAdding: .day, value: v.translation.width < 0 ? 7 : -7, to: day)
-            else { return }
-            go(to: next)
-        })
-    }
-
-    @State private var forward = true
-
     private func go(to d: Date) {
-        forward = d >= day
         withAnimation(.snappy(duration: 0.28)) { selectedDay = d }
-    }
-
-    @ViewBuilder
-    private func circleFace(_ d: Date, number: Text) -> some View {
-        switch mark(d) {
-        case .kept:
-            Circle().fill(Color.green)
-            number.foregroundStyle(.white)
-        case .missed:
-            Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
-            number.foregroundStyle(.secondary)
-        case .rest:
-            number.foregroundStyle(.tertiary)
-        case .today(let progress):
-            Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
-            Circle().trim(from: 0, to: max(0.001, progress))
-                .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .padding(1.5)
-            number.foregroundStyle(.primary)
-        case .ahead(let planned):
-            if planned {
-                Circle().strokeBorder(Color(.systemGray4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
-            }
-            number.foregroundStyle(.secondary)
-        }
-    }
-
-    private func dayCircle(_ d: Date) -> some View {
-        let number = Text("\(cal.component(.day, from: d))")
-            .font(.footnote.weight(.semibold))
-            .monospacedDigit()
-        return ZStack { circleFace(d, number: number) }
-            .frame(width: 32, height: 32)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide).month().day())))
     }
 
     // MARK: - The day
@@ -321,3 +204,179 @@ private struct ProgressRing: View {
     }
 }
 
+/// The day strip, OUTSIDE the day's card (founder, 2026-10-02, after a
+/// reference with a scrolling row of days): one continuous row you scroll
+/// through, the chosen day held in the middle on a soft tile, the row running
+/// off both edges. Where the scroll settles is the day shown; a tap scrolls
+/// that day to the middle. Each circle keeps the day's standing — kept
+/// (green), missed (grey ring), rest (just the number), today filling.
+struct PlannerDayStrip: View {
+    @Binding var selectedDay: Date?
+    let isPromise: Bool
+    let activeDays: Set<Date>
+    let plan: StudyPlan
+
+    @State private var scrolled: Date?
+    private let cal = Calendar.current
+    private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
+    private var today: Date { cal.startOfDay(for: Date()) }
+    private static let cell: CGFloat = 52
+
+    /// Every day the strip can reach: half a year back, a month ahead.
+    private var days: [Date] {
+        (-180...30).compactMap { cal.date(byAdding: .day, value: $0, to: today) }
+    }
+
+    private var shown: Date { cal.startOfDay(for: selectedDay ?? today) }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Text(shown.formatted(Date.FormatStyle(locale: uiLocale).month(.wide).day().weekday(.wide)))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Spacer()
+                    if !cal.isDate(shown, inSameDayAs: today) {
+                        Button { scrollTo(today) } label: {
+                            Label(explain("Today"), systemImage: shown < today ? "arrow.right" : "arrow.left")
+                                .labelStyle(TodayLabelStyle(trailingIcon: shown < today))
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.small)
+                        .transition(.opacity)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 30)
+            .animation(.easeOut(duration: 0.2), value: cal.isDate(shown, inSameDayAs: today))
+
+            GeometryReader { geo in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 6) {
+                        ForEach(days, id: \.self) { d in
+                            cell(d).id(d)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, (geo.size.width - Self.cell) / 2, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $scrolled, anchor: .center)
+                .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
+                                             .init(color: .black, location: 0.12),
+                                             .init(color: .black, location: 0.88),
+                                             .init(color: .clear, location: 1)],
+                                     startPoint: .leading, endPoint: .trailing))
+            }
+            .frame(height: 76)
+        }
+        .onAppear { scrolled = shown }
+        .onChange(of: scrolled) { _, d in
+            guard let d, !cal.isDate(d, inSameDayAs: shown) else { return }
+            selectedDay = d
+        }
+        .onChange(of: selectedDay) { _, d in
+            let d = cal.startOfDay(for: d ?? today)
+            guard scrolled.map({ !cal.isDate($0, inSameDayAs: d) }) ?? true else { return }
+            withAnimation(.snappy(duration: 0.3)) { scrolled = d }
+        }
+    }
+
+    private func scrollTo(_ d: Date) {
+        withAnimation(.snappy(duration: 0.35)) { scrolled = d }
+    }
+
+    private func cell(_ d: Date) -> some View {
+        let selected = cal.isDate(d, inSameDayAs: shown)
+        return Button { scrollTo(d) } label: {
+            VStack(spacing: 6) {
+                Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.narrow)))
+                    .font(.caption2.weight(selected ? .semibold : .regular))
+                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+                dayCircle(d)
+            }
+            .frame(width: Self.cell, height: 72)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(selected ? Color(.secondarySystemGroupedBackground) : .clear))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(selected ? Color(.separator) : .clear, lineWidth: 0.5))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+
+    private enum Mark { case kept, missed, rest, today(Double), ahead(planned: Bool) }
+
+    private func mark(_ d: Date) -> Mark {
+        if d > today {
+            return .ahead(planned: !plan.occurrences(on: d, test: WeeklyTestSettings.shared.schedule).isEmpty)
+        }
+        let standing = PracticeStats.standing(of: d, activeDays: activeDays, calendar: cal)
+        if d == today {
+            if standing == .kept { return .kept }
+            if isPromise, let e = PromiseLedger.shared.entry(d, calendar: cal), e.planned > 0 {
+                return .today(Double(e.done) / Double(e.planned))
+            }
+            return .today(0)
+        }
+        switch standing {
+        case .kept: return .kept
+        case .missed: return .missed
+        case .rest: return .rest
+        }
+    }
+
+
+    @ViewBuilder
+    private func circleFace(_ d: Date, number: Text) -> some View {
+        switch mark(d) {
+        case .kept:
+            Circle().fill(Color.green)
+            number.foregroundStyle(.white)
+        case .missed:
+            Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
+            number.foregroundStyle(.secondary)
+        case .rest:
+            number.foregroundStyle(.tertiary)
+        case .today(let progress):
+            Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
+            Circle().trim(from: 0, to: max(0.001, progress))
+                .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(1.5)
+            number.foregroundStyle(.primary)
+        case .ahead(let planned):
+            if planned {
+                Circle().strokeBorder(Color(.systemGray4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+            }
+            number.foregroundStyle(.secondary)
+        }
+    }
+
+    private func dayCircle(_ d: Date) -> some View {
+        let number = Text("\(cal.component(.day, from: d))")
+            .font(.footnote.weight(.semibold))
+            .monospacedDigit()
+        return ZStack { circleFace(d, number: number) }
+            .frame(width: 32, height: 32)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(d.formatted(Date.FormatStyle(locale: uiLocale).weekday(.wide).month().day())))
+    }
+
+}
+
+private struct TodayLabelStyle: LabelStyle {
+    let trailingIcon: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            if !trailingIcon { configuration.icon }
+            configuration.title
+            if trailingIcon { configuration.icon }
+        }
+    }
+}
