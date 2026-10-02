@@ -41,8 +41,10 @@ set_plist() { /usr/libexec/PlistBuddy -c "Set :$2 $3" "$1"; }
 
 SUPABASE_REF=chhzjtigzdotacutwcyo
 APP_STORE_ID=6792794655
-NOTES_KO_FILE=fastlane/metadata/ko/release_notes.txt
-NOTES_EN_FILE=fastlane/metadata/en-US/release_notes.txt
+# Overridable so scripts/release-watch.sh can hand `released` the LIVE
+# version's notes from App Store Connect when the tree has moved on.
+NOTES_KO_FILE=${NOTES_KO_FILE:-fastlane/metadata/ko/release_notes.txt}
+NOTES_EN_FILE=${NOTES_EN_FILE:-fastlane/metadata/en-US/release_notes.txt}
 
 supabase_token() {
   local raw
@@ -130,7 +132,7 @@ fi
 # store first — announcing a build the store hasn't got is exactly the bug
 # this command exists to end.
 if [[ "${1:-}" == "released" ]]; then
-  VERSION=$(plist "$APP_PLIST" CFBundleShortVersionString)
+  VERSION=${RELEASE_VERSION:-$(plist "$APP_PLIST" CFBundleShortVersionString)}
   BUILD=${2:-$(plist "$APP_PLIST" CFBundleVersion)}
   live=$(curl -s "https://itunes.apple.com/lookup?id=$APP_STORE_ID&t=$(date +%s)" \
          | python3 -c 'import json,sys; r=json.load(sys.stdin)["results"]; print(r[0]["version"] if r else "")')

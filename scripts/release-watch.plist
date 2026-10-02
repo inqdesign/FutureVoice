@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Moves the in-app update sheet within 30 minutes of a build going live
+  (scripts/release-watch.sh). Install once:
+
+    cp scripts/release-watch.plist ~/Library/LaunchAgents/com.nawana.release-watch.plist
+    launchctl load ~/Library/LaunchAgents/com.nawana.release-watch.plist
+
+  Remove:  launchctl unload ~/Library/LaunchAgents/com.nawana.release-watch.plist
+  Output:  ~/Desktop/beta audio/release-watch.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nawana.release-watch</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/eunggyuelee/FutureVoice/scripts/release-watch.sh</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string>
+    <key>HOME</key>
+    <string>/Users/eunggyuelee</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/eunggyuelee/Desktop/beta audio/release-watch.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/eunggyuelee/Desktop/beta audio/release-watch.log</string>
+</dict>
+</plist>
