@@ -6,7 +6,9 @@
 #   ./scripts/beta.sh              # bump, archive, export, upload (TestFlight)
 #   ./scripts/beta.sh --no-bump    # re-archive + upload the current build number
 #   ./scripts/beta.sh released     # AFTER App Review: tell App Store installs
-#                                  # about the build that is now live
+#                                  # about the build that is now live,
+#                                  # and post it on nawana.app/community
+#   ./scripts/beta.sh community    # (re)post the current version's news only
 #
 # Two audiences, two numbers (20260911140000_app_release_testflight): an
 # upload moves `latest_testflight_build`; only `released` moves `latest_build`,
@@ -86,6 +88,43 @@ if any(l.strip().startswith(marks) for l in lines):
 print("\n".join(lines).strip())' "$1"
 }
 
+# Every release is news on nawana.app/community (founder, 2026-10-02: "every
+# build update, always"). Posted from the SAME release notes the store and the
+# update sheet show — already public, so publishing them discloses nothing new —
+# with the sections kept (the page renders the body as written). The headline
+# is the first new feature's name, the part before its colon ("1.1.3 업데이트:
+# 한 주 돌아보기"); fix it afterwards in the DB if it reads badly. Once per
+# version: a post whose title already names this version is left alone.
+community_post() {
+  local version="$1" exists head_ko head_en body_ko body_en title_ko title_en
+  exists=$(supabase_sql "select count(*) as n from community_news where title_en like $(sql_text "%$version%") or title_ko like $(sql_text "%$version%");" \
+           | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["n"])') \
+    || { echo "  ! community: lookup failed — post by hand: python3 scripts/community.py news-add …" >&2; return 0; }
+  if [[ "$exists" != "0" ]]; then echo "✓ community: $version already has a post"; return 0; fi
+  headline() {
+    python3 -c '
+import sys
+for l in open(sys.argv[1]).read().splitlines():
+    s = l.strip()
+    if s.startswith(("- ", "• ", "· ", "* ")):
+        s = s[2:].strip()
+        print((s.split(":")[0] if ":" in s[:40] else s.rstrip(".")).strip()); break' "$1"
+  }
+  head_ko=$(headline "$NOTES_KO_FILE"); head_en=$(headline "$NOTES_EN_FILE")
+  title_ko="$version 업데이트${head_ko:+: $head_ko}"; title_en="Version $version${head_en:+: $head_en}"
+  body_ko=$(cat "$NOTES_KO_FILE"); body_en=$(cat "$NOTES_EN_FILE")
+  supabase_sql "insert into community_news (published_at, title_ko, title_en, body_ko, body_en, link_url, is_published) values (now(), $(sql_text "$title_ko"), $(sql_text "$title_en"), $(sql_text "$body_ko"), $(sql_text "$body_en"), 'https://apps.apple.com/app/id$APP_STORE_ID', true);" >/dev/null \
+    && echo "✓ community: posted \"$title_ko\" / \"$title_en\"" \
+    || echo "  ! community: post failed — python3 scripts/community.py news-add …" >&2
+}
+
+# `./scripts/beta.sh community` posts the current version's news on its own
+# (a release whose `released` ran before this hook existed, or a failed post).
+if [[ "${1:-}" == "community" ]]; then
+  community_post "$(plist "$APP_PLIST" CFBundleShortVersionString)"
+  exit 0
+fi
+
 # --- 0. `released`: the build is live on the App Store ----------------------
 # Run after App Review approves and the version shows on the store. Checks the
 # store first — announcing a build the store hasn't got is exactly the bug
@@ -104,6 +143,7 @@ if [[ "${1:-}" == "released" ]]; then
   supabase_sql "update public.app_release set latest_build = $BUILD, latest_version = $(sql_text "$VERSION"), notes_ko = $(sql_text "$notes_ko"), notes_en = $(sql_text "$notes_en"), updated_at = now() where platform = 'ios';" >/dev/null \
     && echo "✓ app_release.latest_build → $BUILD ($VERSION). App Store installs now see the update sheet." \
     || { echo "✗ app_release update failed" >&2; exit 1; }
+  community_post "$VERSION"
   exit 0
 fi
 
