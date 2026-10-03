@@ -71,10 +71,25 @@ class VocabStore private constructor(context: Context) {
                     val word = VocabLemmas.lemma(surface, language)
                     if (word.length < 3 || word in pool || CoreVocabulary.isUngraded(word, language)) continue
                     if (isCapitalizedMidSentence(text, m.range.first, surface)) continue
+                    if (isCompoundPiece(text, m.range.first, m.range.last)) continue
                     if (seenHere.add(word)) out[word] = (out[word] ?: 0) + 1
                 }
             }
             return out
+        }
+
+        /**
+         * One half of a hyphenated compound ("non" in "non-stop", "self" in
+         * "self-aware"). The letter run is not the word the fluent self said,
+         * and on its own it is often no word at all — "non" sat in a call's
+         * chip row (plan 7.9 i2). An ungraded compound is skipped whole; its
+         * graded halves still reach the book through the graded path.
+         */
+        private fun isCompoundPiece(text: String, first: Int, last: Int): Boolean {
+            fun hyphen(c: Char) = c == '-' || c == '\u2010' || c == '\u2011'
+            val before = first >= 2 && hyphen(text[first - 1]) && text[first - 2].isLetter()
+            val after = last + 2 < text.length && hyphen(text[last + 1]) && text[last + 2].isLetter()
+            return before || after
         }
 
         /** Capitalized, and not because it opens a sentence. */

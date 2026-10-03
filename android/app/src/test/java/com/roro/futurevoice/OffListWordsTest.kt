@@ -72,4 +72,13 @@ class OffListWordsTest {
         // behaviour before this existed.
         assertFalse(CoreVocabulary.isUngraded("the", "ko"))
     }
+
+    @Test fun halvesOfAHyphenatedCompoundAreNotWords() {
+        val counts = VocabStore.offListContentWords(listOf(
+            "We talked non-stop about my sublet, a self-aware chore list."), "en")
+        assertFalse(counts.toString(), "non" in counts)
+        assertFalse(counts.toString(), "aware" in counts && "self" in counts)
+        assertTrue(counts.toString(), "sublet" in counts)
+        assertTrue(counts.toString(), "chore" in counts)
+    }
 }
