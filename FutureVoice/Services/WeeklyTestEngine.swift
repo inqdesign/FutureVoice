@@ -97,8 +97,7 @@ enum WeeklyTestEngine {
         }
 
         var items: [WeeklyTestItem] = []
-        items += await meaningItems(fluentTexts: fluentTurns.map(\.turn.transcript),
-                                    appState: appState, rng: &rng)
+        items += await meaningItems(sessions: windowSessions, appState: appState, rng: &rng)
         items += gapItems(sessions: windowSessions, fluentTurns: fluentTurns,
                           userTurns: userTurns, appState: appState, rng: &rng)
         items += buildItems(start: start, end: end, now: now, rng: &rng)
@@ -305,22 +304,33 @@ enum WeeklyTestEngine {
     // MARK: meaning
 
     private static func meaningItems(
-        fluentTexts: [String], appState: AppState, rng: inout WeeklyTestRandom
+        sessions: [Session], appState: AppState, rng: inout WeeklyTestRandom
     ) async -> [WeeklyTestItem] {
         let vocab = VocabStore.shared
-        let weekLemmas = VocabStore.lemmas(in: fluentTexts)
-        // Notebook words the week's talks used lead; the rest of the notebook
-        // follows; words the learner produced this week close the list.
-        var candidates: [String] = []
+        // The words come from the week's talk BOOKS and nowhere else (user,
+        // 2026-10-03): a book's Words chapter is already the fluent self's
+        // words at or above the learner's level, minus every word the learner
+        // said in that talk — exactly "what this talk taught you". The old
+        // sources (the whole notebook, then words the learner had USED this
+        // week) could hand a B2 learner "house": a word they had just proven
+        // they know, tested as if it were new. Not yet mastered first; a
+        // thin week asks fewer word questions rather than reaching outside.
+        var unmastered: [String] = []
+        var mastered: [String] = []
         var seen = Set<String>()
-        func add(_ w: String) {
-            let k = w.lowercased()
-            guard !k.isEmpty, !seen.contains(k), isInTargetScript(w) else { return }
-            seen.insert(k); candidates.append(w)
+        for session in sessions.sorted(by: { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }) {
+            let book = TalkCurriculum.build(session: session, proficiency: appState.proficiency,
+                                            shadowAttempts: [], drillCards: [])
+            for item in book.words {
+                let w = item.text
+                let k = w.lowercased()
+                guard !k.isEmpty, !seen.contains(k), isInTargetScript(w) else { continue }
+                seen.insert(k)
+                if item.masteredAt == nil { unmastered.append(w) } else { mastered.append(w) }
+            }
+            await Task.yield()
         }
-        vocab.studying.filter { weekLemmas.contains($0.lowercased()) }.forEach(add)
-        vocab.studying.forEach(add)
-        vocab.usedWords(withinDays: 7).forEach(add)
+        let candidates = unmastered.shuffled(using: &rng) + mastered.shuffled(using: &rng)
 
         // Decoys: the graded list at the learner's level leads, the two
         // neighbouring bands follow — a same-class word one band off beats an
