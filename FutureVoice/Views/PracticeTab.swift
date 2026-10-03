@@ -39,9 +39,10 @@ struct PracticeTab: View {
     @State private var dueReviewCount = 0
     /// This week's test, as the Today card reports it.
     @State private var showingWeeklyTest = false
-    /// The closed week's cards, reopened from the Today card.
-    @State private var weekRecap: WeekRecap?
-    @State private var lastWeekRecap: WeekRecap?
+    /// The week in progress, and the archive of closed weeks behind it.
+    @State private var thisWeek: WeekInProgress?
+    @State private var hasPastWeeks = false
+    @State private var showingWeekArchive = false
     @State private var weekRecapAction: WeekRecapSheet.Action?
     @State private var weeklyTestState: WeeklyTestSchedule.State = .ready
     @State private var showingMonthlyTest = false
@@ -298,15 +299,16 @@ struct PracticeTab: View {
                 WeeklyTestView()
                     .environmentObject(appState)
             }
-            .sheet(item: $weekRecap, onDismiss: {
+            .sheet(isPresented: $showingWeekArchive, onDismiss: {
+                reload()
                 guard let action = weekRecapAction else { return }
                 weekRecapAction = nil
                 switch action {
                 case .test: showingWeeklyTest = true
                 case .talk: appState.pendingFreeTalk = true
                 }
-            }) { recap in
-                WeekRecapSheet(recap: recap, action: $weekRecapAction)
+            }) {
+                WeekRecapArchiveView { weekRecapAction = $0 }
                     .environmentObject(appState)
             }
             .sheet(isPresented: $showingMonthlyTest, onDismiss: {
@@ -369,6 +371,12 @@ struct PracticeTab: View {
             showingExpressions = false
             shelf = .studying
             showingWeeklyTest = true
+        case .weekArchive:
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            showingWeekArchive = true
         case .vocabulary:
             appState.pendingPracticeRoute = nil
             showingVocabulary = true
@@ -657,10 +665,10 @@ struct PracticeTab: View {
             if dueReviewCount > 0 {
                 dueReviewRow
             }
-            // The week behind, as cards — the same deck that slides up when
-            // the week turns, reachable until the next one does.
-            if let recap = lastWeekRecap, recap.hasActivity {
-                weekRecapRow(recap)
+            // The week in progress ("ready Sat 10:00") — its deck arrives
+            // when it closes — and behind it every closed week's deck.
+            if let week = thisWeek, week.hasActivity || hasPastWeeks {
+                weekRecapRow(week)
             }
             // The week's one sit-down: always here, so the week has a place
             // to be looked back on even when nothing is due.
@@ -815,10 +823,10 @@ struct PracticeTab: View {
         .accessibilityIdentifier("practice.weeklyTest")
     }
 
-    private func weekRecapRow(_ recap: WeekRecap) -> some View {
+    private func weekRecapRow(_ week: WeekInProgress) -> some View {
         Button {
             weekRecapAction = nil
-            weekRecap = WeekRecapStore.shared.recap(endingAt: recap.end) ?? recap
+            showingWeekArchive = true
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "rectangle.stack")
@@ -829,7 +837,7 @@ struct PracticeTab: View {
                     Text("Your week")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
-                    Text("\(recap.daysActive) days · \(recap.talkMinutes) min of talk")
+                    Text(WeekRecapArchiveView.progressLine(week))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1368,7 +1376,9 @@ struct PracticeTab: View {
         weeklyTestState = WeeklyTestSettings.shared.schedule.state(
             tests: tests, settings: WeeklyTestSettings.shared)
         monthlyTestState = WeeklyTestSettings.shared.schedule.monthlyState(tests: tests)
-        lastWeekRecap = WeekRecapStore.shared.lastWeek()
+        _ = WeekRecapStore.shared.lastWeek()   // freezes the closed week
+        thisWeek = WeekRecapBuilder.thisWeek()
+        hasPastWeeks = !WeekRecapStore.shared.archive().isEmpty
         vocab.backfillFromSessions()
         let cards = DrillStore.shared.load()
         dueDrillCount = cards.filter { $0.nextReviewAt <= Date() }.count

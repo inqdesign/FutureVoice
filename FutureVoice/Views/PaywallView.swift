@@ -234,6 +234,8 @@ struct PaywallView: View {
             if capture == "paywall-max" { selectedTier = "max" }
             if capture?.contains("-yearly") == true { period = .annual }
             if capture?.hasSuffix("-pack") == true { selectedTier = "pack" }
+            if capture?.hasSuffix("-light") == true { selectedTier = "light" }
+            if capture?.hasSuffix("-max") == true { selectedTier = "max" }
             if capture == "paywall-ladder-anim" {
                 // Walks the highlight down the ladder and back, for a screen
                 // recording of the slide. Capture runs can't tap.
@@ -943,9 +945,7 @@ struct PaywallView: View {
     /// monthly period alone.
     private var availablePeriods: [PlanPeriod] {
         #if DEBUG
-        if let c = Self.seededCapture {
-            return c.contains("yearly") ? [.monthly, .annual] : [.monthly]
-        }
+        if Self.seededCapture != nil { return [.monthly, .annual] }
         #endif
         let live = PlanPeriod.allCases.filter { p in
             store.options.contains { $0.plan.period == p.rawValue && $0.product != nil }

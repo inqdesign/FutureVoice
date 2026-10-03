@@ -490,9 +490,9 @@ Nobody opens a language app because a streak asks them to; they answer a phone t
 - **Every call settles into a `DailyCallOutcome`** (answered / declined / missed) and lands in `DailyCallStore.history()`. **Declining is just not taking the call** (2026-09-21, user decision): no callback, no "call back in…" choice, and the app does NOT open — `DeclineDailyCallIntent` runs with `openAppWhenRun = false` and the notification's single decline action is a background one. The old callback sheet asked a question every time the learner said no, which was the app nagging; don't bring a callback back. The learner's own later times today still ring (they chose them), so a decline settles the plan as `.declined` only once no slot is left today; until then `callbackCount` (name kept for decoding) counts declines, and a plan that then rings out settles as `.declined`, not `.missed`. An untouched call is settled as `.missed` on the next launch (`settleIfRangOut`, after `rangOutGrace`) — it can't be noticed at the time because nothing is running.
 - **That history is what the NEXT script is written from** (`VoicemailEngine.Context.lastOutcome` / `consecutiveUnanswered`). This is the feature, not a nicety: an alarm knows nothing about you; a caller who opens with "couldn't talk yesterday?" reads as a person. Never make it scold — guilt is what makes people stop picking up.
 - **The missed-call row on the Talk tab was REMOVED 2026-09-02** (user decision) — a missed call no longer leaves a visible trace on the home. The store machinery survives untouched (`DailyCallStore.unheardVoicemail`, `keepUnheard`/`clearUnheard`, `DailyCallScheduler.markVoicemailHeard`) because the record is a single row overwritten by the next miss, and restoring the row is a UI-only change. If it ever comes back, the old rules still hold: read `unheardVoicemail`, never the plan (`refresh` overwrites the plan with the NEXT call moments after settling), and `markVoicemailHeard` must never stamp `heardAt` on the plan, which by then is the next call.
-- **The voicemail is synthesized at generation time**, saved into `PhraseAudioStore` under its own (script, voiceId). `VoicemailEngine` writes a 2–3 sentence script (`flash-lite`) grounded in the last talk's topic and phrases, **always ending in a question** — an unanswered question is the whole pull. Target language: it's material. `synthesizeRingtone` takes the STREAMING TTS path purely for its **raw PCM** output — `UNNotificationSound` only plays Linear PCM / µLaw / aLaw in .wav/.caf/.aiff, never MP3 — levels it through `AudioLoudness.gain(forSpeechRMS:)`, and writes it under `Library/Sounds/` with a **never-reused filename** (iOS caches notification sounds by name). Hard 30s OS ceiling, enforced twice: `maxScriptCharacters` and `VoicemailEngine.trim`.
-- **Generation happens at SESSION END, never in the morning** (`SessionSummarizer` → `AppState.refreshDailyCall(force: true)`). iOS won't reliably run background work at a chosen hour, and a call that fails to generate is a call that never rings. By 8am the script and audio are on disk, so the ring works offline. The `scenePhase == .active` re-arm is only a safety net (reinstall, missed fire, language switch) and is a no-op when a usable plan exists.
-- **One synthesis, two uses.** The ringtone WAV is saved into `PhraseAudioStore` under the same (script, voiceId), so answering opens `ConversationView(initialOpener:)` and that cache hit IS the call's first spoken line — no second TTS, no round trip, and the voice never changes across the hand-off.
+- **The voicemail's SCRIPT is written at generation time; its AUDIO once per sitting** (2026-10-02, `DailyCallScheduler.ensureVoicemailAudio`). Measured over 14 days: 254 voicemails synthesized on 86 learner-days — the script is rewritten at every session end and on stale launches, only the last is ever heard, so two in three were paid for and overwritten. The audio is now made when the app leaves the foreground (one take however many talks the sitting held), or by a refresh within `voicemailLeadTime` (3 h) of the ring; a plan with no audio still answers, because the gateway speaks an opener it has no local take of. Saved into `PhraseAudioStore` under (script, voiceId). `VoicemailEngine` writes a 2–3 sentence script (`flash-lite`) grounded in the last talk's topic and phrases, **always ending in a question** — an unanswered question is the whole pull. Target language: it's material. Hard 30s ceiling, enforced twice: `maxScriptCharacters` and `VoicemailEngine.trim`. (What RINGS is the bundled tone — see below.)
+- **Generation happens at SESSION END, never in the morning** (`SessionSummarizer` → `AppState.refreshDailyCall(force: true)`). iOS won't reliably run background work at a chosen hour, and a call that fails to generate is a call that never rings. By 8am the script is on disk and the audio usually is (see above), so the ring works offline. The `scenePhase == .active` re-arm is only a safety net (reinstall, missed fire, language switch) and is a no-op when a usable plan exists.
+- **The voicemail take IS the call's first line.** Answering opens `ConversationView(initialOpener:)` and the `PhraseAudioStore` hit under (script, voiceId) is played locally — no second TTS, no round trip, and the voice never changes across the hand-off. A miss costs one gateway round trip, nothing else.
 - **A live call holds every ring** (2026-09-28, `DailyCallScheduler.holdForLiveCall` / `releaseAfterLiveCall`, bracketed beside `CallNowPlaying` in `ConversationView`). An AlarmKit alert takes the audio session, so a scheduled call landing mid-talk killed the talk with an error. While a call is live the pending rings are cancelled and `schedule` refuses to arm; on hang-up they are re-armed from the stored plan, and a slot that came due DURING the call settles the plan as answered (they were talking to that same person). The hold is in memory, so a killed app re-arms on its next launch.
 - **A decline is not a failure.** No scold, no broken counter, and `PracticeStats`' streak is untouched by a declined or missed call; tomorrow's is written as usual.
 - Tapping is handled by `DailyCallNotificationDelegate` (installed from `AppDelegate` — the delegate MUST be set before launch finishes or a lock-screen answer is lost), which posts to `DailyCallInbox.shared`; `RootTabView` presents the call from there.
@@ -1510,6 +1510,35 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
   seeders clear the store first — a test minted by one launch would
   otherwise be the next launch's window start.
 
+## Your week — one showing per week, then the archive (2026-10-03)
+
+The week's deck (`WeekRecap`, `WeekRecapSheet`) closes with the weekly
+test's opening and slides up by itself ONCE (`RootTabView.offerWeekRecap`).
+Reported: the same deck came up again. Three doors did it, each closed:
+
+- **A notice left in Notification Center** was a second door: the auto
+  slide-up showed the deck, the notice stayed, and tapping it later bypassed
+  "seen" (a tap counts as asking). `markShown` now clears the delivered
+  notice, and a notice tapped for a week already seen routes to the archive
+  (`PracticeRoute.weekArchive`), never the deck.
+- **A week is identified by an absolute end moment** computed from the test
+  schedule in the phone's time zone, so moving the test day or flying
+  Seoul↔Berlin produced a "new" week a few hours or days off the one seen.
+  `WeekRecapStore.sameWeekTolerance` (6 days) is the rule: two ends closer
+  than that are the same week — for "seen", for the frozen copy
+  `lastWeek()` returns, and for the archive. `WeekRecapStoreTests` pins it.
+- The Me developer button still resets it, on purpose.
+
+Practice's "Your week" row is the week IN PROGRESS ("ready Sat, Oct 10" — a
+date, because on the opening day a bare weekday is ambiguous) and opens
+`WeekRecapArchiveView`: this week (not openable, its deck doesn't exist
+yet), then every closed week newest first, "New" on one not yet opened.
+Replaying a closed week is manual only. "Seen" is device-local; a second
+device shows its own once. The weekly notice is still off by default; the
+deck's last card offers it ("Tell me when next week's is ready") while it is
+off and permission isn't refused — asked after the learner has seen what it
+brings, never cold. Captures: `-capture week-archive` / `practice-week`.
+
 ## Japanese as a TARGET language (2026-09-18)
 
 Japanese was wired for STT, shadow scoring and the clone script from the
@@ -1655,8 +1684,11 @@ A `say` is only ever the FIRST line: it is ignored once a turn has happened, so
 a late greeting can never talk over a conversation already under way.
 
 **The greeting is played from the phrase cache, and the gateway is never
-asked for it** (2026-09-13). The Talk launcher already synthesizes every pool
-opener into `PhraseAudioStore` (`FreeTalkOpeners.warmAudio`) — and the realtime
+asked for it** (2026-09-13). The Talk launcher already synthesizes the pool
+openers into `PhraseAudioStore` (`FreeTalkOpeners.warmAudio` — since 2026-10-02
+only the next `warmAhead` (2) in rotation, billed as `purpose: "opener"` so the
+ledger can tell a warm-up from a call's reply; the whole pool of six was paid
+for up front, and again on every speed change or new voice) — and the realtime
 path ignored all of it, so the first word waited on the gateway's own
 ElevenLabs round trip for a line the phone had had on disk since the tab was
 opened. `connect(openerAudio:)` decodes that take and `playLocalOpener` speaks
@@ -2023,6 +2055,25 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
   is credited as used (words, expressions, drill cards, book items) — a
   studied item said there is a practice rep. Minutes, streak, the Core,
   corrections → cards and the book all stand.
+- **A beginner is asked ONE concrete question** (2026-10-03, founder: "not
+  'tell me about yourself' — 'what's your name?', 'where do you live?'";
+  `ConversationEngine.beginnerQuestions`, A1/A2 only, last in the prompt and
+  saying it outranks the thread/open-question rules above). One question per
+  turn, answerable in a few words, no "tell me about / how was / why", one
+  subject in small steps, a short reaction that says a mistake back the right
+  way, two choices when they're stuck. B1+ prompts are byte-identical
+  (`BeginnerQuestionTests`). Measured with `scripts/beginner-probe.py`, which
+  runs the LIVE prompt (dumped by `ConversationPromptDumpTests`) with the
+  gateway's settings: A2 open questions 2–3/14 → 0/14 in en/ko/ja/de, and a
+  first call that used to answer a name with "How was your day?" now asks
+  "Do you work or study?". Re-run it before touching the conversation prompt.
+- **"How was your first call?"** (`FirstCallCheckSheet`, 2026-10-03): once,
+  after the first talk the learner spoke in — from the summary's onDismiss
+  (before the plans pitch) or from `close()` for exits with no summary
+  (closed without saving, a failed summary). Easy / Just right / Hard pre-set
+  the level, the voice speed and coach mode below (Hard: a level down, Slow,
+  coach on), the level row says the move ("A2 → A1"), and nothing applies
+  until Save. Installs with a talk history never see it.
 - **The grammar FOCUS** (2026-09-30, founder: "a real coach goes past
   words — mind the tense"; `GrammarFocus.swift`, `GrammarFocusViews.swift`).
   One recurring mistake per call, from `LearnerProfile.recurringMistakes`
@@ -2052,25 +2103,6 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
-- **A beginner is asked ONE concrete question** (2026-10-03, founder: "not
-  'tell me about yourself' — 'what's your name?', 'where do you live?'";
-  `ConversationEngine.beginnerQuestions`, A1/A2 only, last in the prompt and
-  saying it outranks the thread/open-question rules above). One question per
-  turn, answerable in a few words, no "tell me about / how was / why", one
-  subject in small steps, a short reaction that says a mistake back the right
-  way, two choices when they're stuck. B1+ prompts are byte-identical
-  (`BeginnerQuestionTests`). Measured with `scripts/beginner-probe.py`, which
-  runs the LIVE prompt (dumped by `ConversationPromptDumpTests`) with the
-  gateway's settings: A2 open questions 2–3/14 → 0/14 in en/ko/ja/de, and a
-  first call that used to answer a name with "How was your day?" now asks
-  "Do you work or study?". Re-run it before touching the conversation prompt.
-- **"How was your first call?"** (`FirstCallCheckSheet`, 2026-10-03): once,
-  after the first talk the learner spoke in — from the summary's onDismiss
-  (before the plans pitch) or from `close()` for exits with no summary
-  (closed without saving, a failed summary). Easy / Just right / Hard pre-set
-  the level, the voice speed and coach mode below (Hard: a level down, Slow,
-  coach on), the level row says the move ("A2 → A1"), and nothing applies
-  until Save. Installs with a talk history never see it.
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).

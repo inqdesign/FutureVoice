@@ -139,10 +139,41 @@ struct WeekRecap: Codable, Identifiable, Equatable {
     var hasActivity: Bool { daysActive > 0 || talkSeconds > 0 }
 }
 
+/// The week still running — not a recap yet, only how far it has got. Its
+/// deck is built at `readyAt`, when the week is over.
+struct WeekInProgress: Equatable {
+    let start: Date
+    let readyAt: Date
+    var daysActive: Int
+    var talkSeconds: Int
+    var talkMinutes: Int { talkSeconds / 60 }
+    var hasActivity: Bool { daysActive > 0 || talkSeconds > 0 }
+}
+
 // MARK: - Build
 
 @MainActor
 enum WeekRecapBuilder {
+
+    /// The week still running: from the most recent opening to the next.
+    /// Counted the same way `build` counts a closed week, so the row that
+    /// says "so far" and the deck that arrives at `readyAt` agree.
+    static func thisWeek(now: Date = Date(), calendar: Calendar = .current) -> WeekInProgress {
+        let schedule = WeeklyTestSettings.shared.schedule
+        let start = schedule.currentOpening(now: now, calendar: calendar)
+        let readyAt = schedule.nextOpening(after: now, calendar: calendar)
+        var talkSeconds = 0
+        var day = calendar.startOfDay(for: start)
+        while day <= now {
+            talkSeconds += TalkTimeLog.seconds(on: day)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        let daysActive = PracticeStats.activeDays(calendar: calendar)
+            .filter { $0 >= calendar.startOfDay(for: start) && $0 < readyAt }.count
+        return WeekInProgress(start: start, readyAt: readyAt,
+                              daysActive: daysActive, talkSeconds: talkSeconds)
+    }
 
     /// The week that the most recent opening closed.
     static func lastWeek(now: Date = Date(), calendar: Calendar = .current) -> (start: Date, end: Date) {
@@ -326,10 +357,11 @@ final class WeekRecapStore {
     static let shared = WeekRecapStore()
 
     private let fileURL: URL
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private static let seenKey = "futurevoice.weekRecap.seenEnd"
 
-    init(filename: String = "week-recaps-v3.json") {
+    init(filename: String = "week-recaps-v3.json", defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         fileURL = dir.appendingPathComponent(filename)
     }
@@ -344,6 +376,30 @@ final class WeekRecapStore {
         load().first { abs($0.end.timeIntervalSince(end)) < 1 }
     }
 
+    /// Two week ends closer than this are the SAME week. A week's end is an
+    /// absolute moment computed from the test schedule in the phone's time
+    /// zone, so moving the test day, or flying between Seoul and Berlin,
+    /// yields an end a few hours or days off the one already frozen and
+    /// seen — and an exact match called that a new week and slid the same
+    /// deck up again. Real weeks are 7 days apart (±1 h of DST).
+    static let sameWeekTolerance: TimeInterval = 6 * 86_400
+
+    private func recap(near end: Date) -> WeekRecap? {
+        load().first { abs($0.end.timeIntervalSince(end)) < Self.sameWeekTolerance }
+    }
+
+    /// Every closed week that had something in it, newest first, one per
+    /// week — the archive the Practice row opens.
+    func archive() -> [WeekRecap] {
+        var kept: [WeekRecap] = []
+        for recap in load() where recap.hasActivity {
+            guard !kept.contains(where: { abs($0.end.timeIntervalSince(recap.end)) < Self.sameWeekTolerance })
+            else { continue }
+            kept.append(recap)
+        }
+        return kept
+    }
+
     func save(_ recap: WeekRecap) {
         var all = load()
         all.removeAll { abs($0.end.timeIntervalSince(recap.end)) < 1 }
@@ -356,19 +412,27 @@ final class WeekRecapStore {
     @MainActor
     func lastWeek(now: Date = Date()) -> WeekRecap {
         let week = WeekRecapBuilder.lastWeek(now: now)
-        if let kept = recap(endingAt: week.end) { return kept }
+        if let kept = recap(near: week.end) { return kept }
         let built = WeekRecapBuilder.build(start: week.start, end: week.end)
         save(built)
         return built
     }
 
+    /// Seen, or a week within `sameWeekTolerance` of the newest one seen.
     func wasShown(_ recap: WeekRecap) -> Bool {
-        defaults.double(forKey: Self.seenKey) >= recap.end.timeIntervalSince1970
+        let seen = defaults.double(forKey: Self.seenKey)
+        return seen > 0 && recap.end.timeIntervalSince1970 < seen + Self.sameWeekTolerance
     }
 
+    /// Also clears the week's notice from Notification Center: once the deck
+    /// has been seen, a notice still sitting there is a second door to the
+    /// same deck, and tapping it later was how a learner met it twice.
+    @MainActor
     func markShown(_ recap: WeekRecap) {
         defaults.set(max(defaults.double(forKey: Self.seenKey), recap.end.timeIntervalSince1970),
                      forKey: Self.seenKey)
+        UNUserNotificationCenter.current()
+            .removeDeliveredNotifications(withIdentifiers: [WeeklyTestReminder.requestId])
     }
 
     func resetShown() { defaults.removeObject(forKey: Self.seenKey) }

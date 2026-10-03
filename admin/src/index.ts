@@ -114,6 +114,15 @@ async function fetchData(env: Env) {
     console.log(`admin_talk_cost: ${(e as Error).message}`);
     return null;
   });
+  // The app version each learner last reported (2026-10-02), shown beside
+  // their name. client_events carries `build`/`version` on every row since
+  // build 50 and is small (thousands of rows in total), so the newest row per
+  // user is read straight off it, newest first. Optional — a failure only
+  // leaves the chip off.
+  raw.app_builds = await latestAppBuilds(env).catch((e) => {
+    console.log(`app_builds: ${(e as Error).message}`);
+    return [];
+  });
   // Reply turns per (user, UTC day, UTC hour), so the heatmap can be drawn in
   // the reader's zone with its turn counts (2026-09-27). Optional — without it
   // the heatmap still draws, and its tooltip leaves the turn count out.
@@ -184,7 +193,57 @@ async function dayLedger(env: Env): Promise<unknown[]> {
     rows.push(...batch);
     if (batch.length < page) break;
   }
-  return rows;
+  // The app's own records beside the ledger: a call that failed to start,
+  // a greeting that never downloaded, a paywall seen. The ledger only knows
+  // what the SERVER was asked for, so without these a learner who hit a
+  // timeout looked like one who simply wandered off. Same row shape, the
+  // event as `event:<name>` (what admin_live already calls them).
+  const events: unknown[] = [];
+  for (let from = 0; from < 20_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/client_events`
+      + `?select=u:user_id,at:created_at,event,language:properties->>language,`
+      + `err:properties->>error,code:properties->>code,build:properties->>build,version:properties->>version`
+      + `&created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null&order=created_at.asc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) { console.log(`client_events ${r.status}`); break; }
+    const batch = await r.json() as Array<Record<string, unknown>>;
+    for (const e of batch) {
+      const { event, ...rest } = e;
+      events.push({ ...rest, action: `event:${event}`, purpose: null, seconds: null });
+    }
+    if (batch.length < page) break;
+  }
+  // Interleave by time: sessionsOf walks each person's rows in order.
+  return [...rows, ...events].sort((a, b) =>
+    String((a as { at: string }).at).localeCompare(String((b as { at: string }).at)));
+}
+
+async function latestAppBuilds(env: Env): Promise<unknown[]> {
+  const seen = new Map<string, unknown>();
+  const page = 1000;
+  for (let from = 0; from < 50_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/client_events`
+      + `?select=id:user_id,at:created_at,build:properties->>build,version:properties->>version`
+      + `&user_id=not.is.null&properties->>build=not.is.null&order=created_at.desc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) throw new Error(`client_events ${r.status}`);
+    const batch = await r.json() as Array<{ id: string }>;
+    for (const row of batch) if (!seen.has(row.id)) seen.set(row.id, row);
+    if (batch.length < page) break;
+  }
+  return [...seen.values()];
 }
 
 async function profileLangs(env: Env): Promise<Record<string, { native: string | null; target: string | null }>> {

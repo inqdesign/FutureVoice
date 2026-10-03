@@ -396,6 +396,10 @@ enum DebugCapture {
             }
             return AnyView(VoiceCloneOnboardingView().environmentObject(appState)
                 .environmentObject(AuthService()))
+        case "page-intro-talk", "page-intro-watch", "page-intro-review", "page-intro-progress":
+            // The first-visit introduction, over the tab it introduces.
+            let page = PageIntro.Page(rawValue: String(name.dropFirst("page-intro-".count))) ?? .talk
+            return AnyView(PageIntroCaptureHost(page: page).environmentObject(appState))
         case "watchtab":
             // The Watch tab with the merged People entry in its header.
             return AnyView(WatchTab().environmentObject(appState))
@@ -885,6 +889,15 @@ enum DebugCapture {
             return AnyView(WeekRecapSheet(recap: recap, action: .constant(nil),
                                           startPage: UserDefaults.standard.integer(forKey: "recappage"))
                 .environmentObject(appState))
+        case "week-archive", "practice-week":
+            // "Your week" from Practice: this week in progress, then last
+            // week (unseen → "New") and the week before it.
+            once(name) { seedWeekArchive() }
+            if name == "practice-week" {
+                once("practice-week-content") { seedVocab(); seedSessions(); seedScenarios(into: appState) }
+                return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+            }
+            return AnyView(WeekRecapArchiveView { _ in }.environmentObject(appState))
         case "weekly-test-result":
             once("weekly-test-result") { seedFinishedWeeklyTest() }
             return AnyView(WeeklyTestView().environmentObject(appState))
@@ -1010,7 +1023,8 @@ enum DebugCapture {
             // The first-visit free-minutes welcome over the Talk home.
             return AnyView(WelcomeCaptureHost().environmentObject(appState))
         case "paywall", "paywall-plans", "paywall-max",
-             "paywall-ladder", "paywall-ladder-yearly", "paywall-ladder-pack", "paywall-ladder-anim":
+             "paywall-ladder", "paywall-ladder-yearly", "paywall-ladder-pack", "paywall-ladder-anim",
+             "paywall-ladder-yearly-light", "paywall-ladder-max":
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
             return AnyView(PaywallView().environmentObject(appState))
@@ -1833,6 +1847,26 @@ enum DebugCapture {
                        "Take this week's test. The two you missed are back."]))
     }
 
+    static func seedWeekArchive() {
+        let store = WeekRecapStore.shared
+        let last = sampleWeekRecap
+        for recap in store.load() { store.remove(endingAt: recap.end) }
+        store.resetShown()
+        let week: TimeInterval = 7 * 86_400
+        let older = WeekRecap(
+            start: last.start.addingTimeInterval(-week), end: last.end.addingTimeInterval(-week),
+            activeDays: [true, false, true, false, false, true, false], streak: 1,
+            talkSeconds: 28 * 60, previousTalkSeconds: 0, talks: [],
+            usedCount: 1, used: [], cardsCleared: 5, wordsKnown: 3, expressionsKnown: 1,
+            shadowTakes: 4, shadowAverage: 74, previousShadowAverage: nil, scenes: 1,
+            nowYours: [], sentencesGot: [],
+            newExpressionCount: 0, newExpressions: [], newCards: 2, stumbles: [], shakyLines: [],
+            testScore: nil, testTotal: nil, coach: nil)
+        store.save(older)
+        store.markShown(older)
+        store.save(last)
+    }
+
     static var sampleQuietWeek: WeekRecap {
         let week = WeekRecapBuilder.lastWeek()
         return WeekRecap(
@@ -2495,6 +2529,27 @@ private struct GoalSheetPreview: View {
         }
         .sheet(item: $item) {
             TalkGoalSheet(item: $0, used: false).environmentObject(appState)
+        }
+    }
+}
+
+private struct PageIntroCaptureHost: View {
+    let page: PageIntro.Page
+    @State private var showing = false
+
+    var body: some View {
+        Group {
+            switch page {
+            case .talk:     ConversationHome()
+            case .watch:    WatchTab()
+            case .review:   PracticeTab()
+            case .progress: ProgressTab()
+            }
+        }
+        .sheet(isPresented: $showing) { PageIntroSheet(page: page) }
+        .task {
+            try? await Task.sleep(for: .milliseconds(400))
+            showing = true
         }
     }
 }

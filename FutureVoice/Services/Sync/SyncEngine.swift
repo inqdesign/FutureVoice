@@ -386,6 +386,9 @@ final class SyncEngine: ObservableObject {
             let assertion = BackgroundAssertion.begin { [weak self] in self?.running?.cancel() }
             defer { assertion.end() }
             await self.runSync(kinds: kinds, scope: scope)
+            // The index saves on its own queue; let it land before the
+            // background assertion goes, without holding the main actor.
+            await Task.detached(priority: .utility) { SyncIndex.flush() }.value
             self.running = nil
             if self.rerunRequested {
                 self.rerunRequested = false
@@ -764,8 +767,17 @@ final class SyncEngine: ObservableObject {
                 : [nil]
             for lang in langs {
                 try Task.checkCancellation()
-                guard let snapshot = handler.read(lang: lang) else { continue }
-                diff(snapshot, handler: handler, lang: lang, index: index, now: now)
+                // Read and fingerprinted OFF the main actor: decoding a whole
+                // store and re-encoding every item canonically (or stat-ing
+                // every audio file) ran here in one unbroken block, and on a
+                // full library that froze the app for 2.3 s right after a
+                // foreground pull (HangTracer, 2026-10-02) — the Talk tab
+                // and the profile tap waited on it. Only the index
+                // bookkeeping below stays on the main actor.
+                guard let prepared = await Self.prepare(handler, lang: lang) else { continue }
+                try Task.checkCancellation()
+                let snapshot = prepared.snapshot
+                diff(prepared, handler: handler, lang: lang, index: index, now: now)
                 for entry in index.entries(kind: handler.kind, lang: lang) where entry.needsPush && !entry.frozen {
                     var record = SyncRecord(kind: entry.kind, key: entry.key, lang: entry.lang,
                                             modifiedAt: entry.observedAt, deletedAt: entry.deletedAt,
@@ -842,15 +854,40 @@ final class SyncEngine: ObservableObject {
         return conflicts
     }
 
+    /// A store's snapshot with every item's fingerprint, computed off the
+    /// main actor (see `push`).
+    struct Prepared {
+        let snapshot: SyncSnapshot
+        let hashes: [String: String]
+    }
+
+    /// Reads `handler`'s items for `lang` and fingerprints them on a
+    /// background thread. Handlers' `read` touches only files and
+    /// UserDefaults, never a main-actor store, which is what makes this safe.
+    /// Push only — a pull reads, merges and WRITES the same file, and a
+    /// suspension between its read and its write would let a store write
+    /// land in the gap and be overwritten.
+    nonisolated static func prepare(_ handler: any SyncKindHandler, lang: String?) async -> Prepared? {
+        await Task.detached(priority: .userInitiated) { () -> Prepared? in
+            guard let snapshot = handler.read(lang: lang) else { return nil }
+            var hashes: [String: String] = [:]
+            hashes.reserveCapacity(snapshot.count)
+            for (key, payload) in snapshot {
+                hashes[key] = handler.kind.isBlob
+                    ? String(decoding: payload, as: UTF8.self)
+                    : SyncCanonical.hash(payload)
+            }
+            return Prepared(snapshot: snapshot, hashes: hashes)
+        }.value
+    }
+
     /// Compares a snapshot with the index: new and changed items are marked
     /// for push, and anything the index knows that the file no longer holds
     /// becomes a tombstone.
-    private func diff(_ snapshot: SyncSnapshot, handler: any SyncKindHandler, lang: String?,
+    private func diff(_ prepared: Prepared, handler: any SyncKindHandler, lang: String?,
                       index: SyncIndex, now: Date) {
-        for (key, payload) in snapshot {
-            let hash = handler.kind.isBlob
-                ? String(decoding: payload, as: UTF8.self)
-                : SyncCanonical.hash(payload)
+        let snapshot = prepared.snapshot
+        for (key, hash) in prepared.hashes {
             if var entry = index.entry(kind: handler.kind, lang: lang, key: key) {
                 guard !entry.frozen else { continue }
                 if entry.hash != hash || entry.isDeleted {

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 /// Schedules the daily call and handles what the learner does with it.
@@ -41,6 +42,10 @@ enum DailyCallScheduler {
     /// phone still ringing on the table isn't written off while the learner
     /// walks over to it.
     static let rangOutGrace: TimeInterval = 5 * 60
+    /// A plan whose first ring is this close gets its voicemail synthesized
+    /// on the spot; anything further out waits for the app to leave the
+    /// foreground (`ensureVoicemailAudio`). See there for why.
+    static let voicemailLeadTime: TimeInterval = 3 * 60 * 60
 
     // MARK: - Category
 
@@ -145,6 +150,9 @@ enum DailyCallScheduler {
 
         if let plan = existing, reusable {
             await schedule(plan, callerName: callerName)
+            // A launch on the morning of the call: the plan was written last
+            // night and its audio deferred, so make it now, before the ring.
+            await ensureVoicemailAudio(within: voicemailLeadTime)
             return
         }
 
@@ -173,13 +181,6 @@ enum DailyCallScheduler {
         guard let script = try? await VoicemailEngine.writeScript(context),
               !script.isEmpty else { return }
 
-        // The voicemail is synthesized NOW, not on answer: it lands in the
-        // phrase cache so picking up starts the talk on audio that's already
-        // on disk. It is NOT what rings — see `DailyCallStore.ringtoneFilename`.
-        if let wav = await VoicemailEngine.synthesizeVoicemail(script: script, voiceId: voiceId) {
-            PhraseAudioStore.shared.save(wav, text: script, voiceId: voiceId)
-        }
-
         let plan = DailyCallPlan(
             id: UUID(),
             script: script,
@@ -194,10 +195,60 @@ enum DailyCallScheduler {
         )
         store.save(plan)
         await schedule(plan, callerName: callerName)
+        await ensureVoicemailAudio(within: voicemailLeadTime)
         Analytics.capture("daily_call_scheduled", [
             "hour": DailyCallStore.shared.hour,
             "consecutive_unanswered": context.consecutiveUnanswered
         ])
+    }
+
+    /// Synthesize the current plan's voicemail into the phrase cache, once,
+    /// unless it is already there — the audio picking up opens the talk on.
+    /// It is NOT what rings (see `DailyCallStore.ringtoneFilename`).
+    ///
+    /// **Deferred from the writing since 2026-10-02.** The script is rewritten
+    /// at every session end and on launches that find the plan stale, and
+    /// only the LAST one is ever heard: measured over 14 days, 254 voicemails
+    /// were synthesized on 86 learner-days, so about two in three were paid
+    /// for and overwritten unheard. Now the script and the alarm are written
+    /// as before (`refresh`), and the audio is made at one of two moments:
+    /// the app leaving the foreground (one take per sitting, however many
+    /// talks it held), or a refresh landing within `voicemailLeadTime` of the
+    /// ring. If neither happens — the app killed mid-talk — picking up still
+    /// works: the call's opener has no local audio and the gateway speaks the
+    /// line itself, one round trip later.
+    ///
+    /// - Parameter within: only when the first ring is at most this far off.
+    static func ensureVoicemailAudio(within: TimeInterval? = nil) async {
+        let store = DailyCallStore.shared
+        guard store.isEnabled, let plan = store.load(), !plan.isSettled,
+              let voiceId = plan.voiceId, !VoiceParking.isParked(voiceId) else { return }
+        let lead = plan.scheduledFor.timeIntervalSinceNow
+        guard lead > 0 else { return }
+        if let within, lead > within { return }
+        guard PhraseAudioStore.shared.data(text: plan.script, voiceId: voiceId,
+                                           allowLineage: false) == nil else { return }
+        guard let wav = await VoicemailEngine.synthesizeVoicemail(script: plan.script,
+                                                                  voiceId: voiceId) else { return }
+        // The plan may have been rewritten while the take was in flight; the
+        // take is still the audio of ITS script, so it is saved under that
+        // text either way and simply never asked for if superseded.
+        PhraseAudioStore.shared.save(wav, text: plan.script, voiceId: voiceId)
+    }
+
+    /// The background edge's call: iOS grants a few seconds after the app
+    /// leaves, which one synthesis fits in, and is asked for them explicitly
+    /// so the take isn't cut off by suspension.
+    static func ensureVoicemailAudioOnBackground() {
+        var task: UIBackgroundTaskIdentifier = .invalid
+        task = UIApplication.shared.beginBackgroundTask(withName: "voicemail") {
+            UIApplication.shared.endBackgroundTask(task)
+            task = .invalid
+        }
+        Task { @MainActor in
+            await ensureVoicemailAudio()
+            if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
+        }
     }
 
     /// They sent it away. That's the whole of it: nobody rings back, nothing

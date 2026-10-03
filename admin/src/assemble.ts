@@ -258,6 +258,8 @@ export function assemble(raw: any, truth: Truth | null = null) {
   const langByUser = new Map<string, string[]>(
     raw.langs.map((l: any) => [l.id, l.langs]));
 
+  // Newest app version each user reported (see latestAppBuilds in index.ts).
+  const appBuildOf = new Map<string, any>((raw.app_builds ?? []).map((r: any) => [r.id, r]));
   const users = raw.users.map((u: any, i: number) => {
     const a = agg.get(i) ?? { days: new Set<number>(), turns: 0, secs: 0,
                               spoke: null, spokeOf: 0 };
@@ -276,6 +278,9 @@ export function assemble(raw: any, truth: Truth | null = null) {
       email: u.email,
       dev: TEST_IDS.has(u.id),
       owner: u.id === OWNER_ID,
+      appVersion: appBuildOf.get(u.id)?.version ?? null,
+      appBuild: appBuildOf.get(u.id)?.build ?? null,
+      appSeenAt: appBuildOf.get(u.id)?.at ?? null,
       // Not a signup: an onboarding session that never reached Apple sign-in
       // (field absent until 20260923110000 is applied → false).
       anonymous: !!u.anonymous,

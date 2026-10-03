@@ -28,9 +28,14 @@ enum LanguageScope {
     /// UserDefaults key AppState's `targetLanguage` persists to — store path
     /// resolution and non-UI services (CoreVocabulary, VocabStore's
     /// lemmatizer route) read it from here without touching UI state.
-    static var active: String {
-        UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
-    }
+    ///
+    /// Cached: it is read once per WORD on the tagger/CEFR paths
+    /// (`CoreVocabulary.current`, `WordSplitter.spaced`, VocabStore's
+    /// language checks), and a cold talk-book rebuild read it ~110,000 times
+    /// on the main thread while the profile sheet was opening (2026-10-02).
+    /// Any write to UserDefaults drops the cache, so every writer — AppState,
+    /// a backup import, a test — is seen on the next read.
+    static var active: String { ActiveLanguageCache.shared.value }
 
     /// Enrolled target languages in enrollment order. Never empty — an
     /// install that predates multi-language reads as enrolled in its active
@@ -140,5 +145,41 @@ enum LanguageScope {
 
     private static func fileSize(_ url: URL) -> Int? {
         (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int
+    }
+}
+
+/// The one cache behind `LanguageScope.active`. A generation counter keeps a
+/// read that raced a write from storing the value it read before the write.
+private final class ActiveLanguageCache: @unchecked Sendable {
+    static let shared = ActiveLanguageCache()
+
+    private let lock = NSLock()
+    private var cached: String?
+    private var generation = 0
+    private var observer: NSObjectProtocol?
+
+    private init() {
+        observer = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: nil
+        ) { [weak self] _ in self?.invalidate() }
+    }
+
+    var value: String {
+        lock.lock()
+        if let cached { lock.unlock(); return cached }
+        let seen = generation
+        lock.unlock()
+        let read = UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        lock.lock()
+        if generation == seen { cached = read }
+        lock.unlock()
+        return read
+    }
+
+    private func invalidate() {
+        lock.lock()
+        cached = nil
+        generation += 1
+        lock.unlock()
     }
 }

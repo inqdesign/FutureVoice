@@ -43,6 +43,7 @@
 /* The map is the point of this tab, so it breaks out of the page column:
    as wide as the window allows (capped so a 4K screen isn't all ocean) and
    most of its height. The people list sits under it. */
+.lvchip{display:inline-block; font-size:10.5px; font-weight:600; padding:0 5px; border-radius:4px; border:1px solid var(--grid); color:var(--ink-2); line-height:15px}
 .livegrid{display:flex; flex-direction:column; gap:16px}
 /* The map STAYS while the timeline scrolls under it (sticky just below the
    tab bar), so a row can always be read against where it happened. Sticky
@@ -204,6 +205,9 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
 .dot{width:7px; height:7px; border-radius:50%; display:inline-block; flex:none}
 .ownchip{font-size:10.5px; font-weight:600; color:var(--s1); border:1px solid var(--s1);
   border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px}
+.verchip{display:inline-block; font-size:10.5px; font-weight:500; color:var(--muted); margin-left:6px;
+  font-variant-numeric:tabular-nums; white-space:nowrap}
+.verchip.old{color:var(--warn); font-weight:600}
 .devchip{font-size:10.5px; font-weight:600; color:var(--muted); border:1px solid var(--ring);
   border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px}
 .ok{color:var(--good-text); font-weight:600}
@@ -535,7 +539,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <section data-tab="funnel" hidden>
   <h2>가입한 날로부터</h2>
-  <p class="sub">가로가 가입 후 며칠째인지, 칸은 그날 대화한 사람 수예요. 아직 오지 않은 날은 비어 있어요.
+  <p class="sub">가로가 가입 후 며칠째인지, 칸은 그날 <b>앱에 돌아온 사람 수</b>예요 — 대화했든, Watch 장면이나 복습만 했든.
+  그중 대화한 사람은 칸 아래 <b>대화 N</b>으로 따로 적혀요. 아직 오지 않은 날은 비어 있어요.
   이게 이 제품이 답해야 할 단 하나의 질문이에요 — 다음 날 돌아오나.</p>
   <div class="card scroll"><table class="cohort" id="cohort"></table></div>
 </section>
@@ -993,7 +998,28 @@ const failureLabel = e => (EVENT_KO[e.event]||e.event)
 
 /* ------------------------------------------------------- user helpers */
 const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
-const badge = u => u.owner ? '<span class="ownchip">본인</span>'
+/** The app version a learner last reported, beside their name (2026-10-02).
+ *  Orange when it is behind the newest build real learners are on — the
+ *  question is almost always "is this a bug we already fixed?". The newest
+ *  build is read from the learners, not from app_release: that row only moves
+ *  when someone remembers `beta.sh released`. `b` overrides the snapshot with
+ *  a fresher sighting (the live feed). */
+let newestBuildMemo = null;
+function newestBuild(){
+  if(newestBuildMemo == null) newestBuildMemo = Math.max(0,
+    ...DATA.users.filter(u=>!u.dev && !u.owner && u.appBuild).map(u=>+u.appBuild));
+  return newestBuildMemo;
+}
+function verChip(u, b){
+  const build = b?.build || u?.appBuild, version = b?.version || u?.appVersion;
+  if(!build) return '';
+  const old = +build < newestBuild();
+  const seen = b ? '' : (u.appSeenAt ? ` · ${ago(u.appSeenAt)}에 마지막으로 봄` : '');
+  return `<span class="verchip${old?' old':''}" title="앱 버전${old?` — 최신 ${newestBuild()}보다 옛 빌드`:''}${seen}">`
+    + `${esc(version||'')} (${esc(build)})</span>`;
+}
+const badge = u => verChip(u) + badgeOnly(u);
+const badgeOnly = u => u.owner ? '<span class="ownchip">본인</span>'
   : u.dev ? '<span class="devchip">TEST</span>'
   // Cloned a voice, never reached Apple sign-in — not a signup. Swept 30 min
   // after creation, so one on screen is either mid-onboarding right now or
@@ -1140,6 +1166,10 @@ const dayIndex = Object.fromEntries(DATA.days.map((d,i)=>[d,i]));
  *  that means anything here (a server row can be a widget refresh). */
 const talkDays = {};
 for(const [u,d,rows,t] of DATA.cells){ if(t>0) (talkDays[u] ??= {})[d]=t; }
+/** userIdx -> {dayIdx: true} — "were they in the app that day": a turn, a
+ *  metered second, or any server row. The per-person grid's dot, by day. */
+const activeDays = {};
+for(const [u,d,rows,t,secs] of DATA.cells){ if(t>0 || secs>0 || rows>0) (activeDays[u] ??= {})[d]=true; }
 
 /* ============================================================ 오늘 */
 function renderTodayTiles(users){
@@ -1419,7 +1449,10 @@ function renderFunnel(users){
 }
 
 /** Rows are signup days, columns are days since. A cell is how many of that
- *  day's cohort talked on that day. This is the whole question. */
+ *  day's cohort came BACK that day — talked, or used the app without talking
+ *  (Watch, review), the same "here" the per-person grid marks with a dot —
+ *  with the talkers counted underneath. Talk-only (until 2026-10-02) drew a
+ *  Watch-only learner as someone who never returned. */
 function renderCohort(users){
   const days = DATA.days;
   const cohorts = {};
@@ -1435,27 +1468,29 @@ function renderCohort(users){
   let html = `<thead><tr><th>가입일</th><th class="num">인원</th>`;
   for(let o=0; o<=maxOffset; o++) html += `<th>${o===0?'당일':`+${o}일`}</th>`;
   html += `</tr></thead><tbody>`;
-  for(const k of keys){
-    const cohort = cohorts[k];
-    const start = days.indexOf(k);
-    html += `<tr><td><b>${fmtDate(k)}</b></td><td class="num">${cohort.length}</td>`;
+  for(const key of keys){
+    const cohort = cohorts[key];
+    const start = days.indexOf(key);
+    html += `<tr><td><b>${fmtDate(key)}</b></td><td class="num">${cohort.length}</td>`;
     for(let o=0; o<=maxOffset; o++){
       const di = start + o;
       if(di >= days.length){ html += `<td class="muted">·</td>`; continue; }
       const running = days[di] === SERVER_TODAY();
-      const n = cohort.filter(u => (talkDays[u.idx]||{})[di] > 0).length;
+      const back = cohort.filter(u => (activeDays[u.idx]||{})[di]);
+      const talked = back.filter(u => (talkDays[u.idx]||{})[di] > 0);
+      const n = back.length, k = talked.length;
       const pct = cohort.length ? n/cohort.length : 0;
       const bg = n===0 ? 'var(--chip)'
         : pct>=0.75 ? 'var(--seq5)' : pct>=0.5 ? 'var(--seq4)'
         : pct>=0.25 ? 'var(--seq3)' : 'var(--seq2)';
       const fg = (n>0 && pct>=0.5) ? 'var(--page)' : (n>0 ? 'var(--ink)' : 'var(--muted)');
-      const names = cohort.filter(u => (talkDays[u.idx]||{})[di] > 0)
-        .map(u=>esc(nameOf(u))).join(', ');
-      const tip = `<b>${fmtDate(k)} 가입 ${cohort.length}명</b><br>${fmtDate(days[di])}에 대화 ${n}명`
+      const names = back.map(u=>esc(nameOf(u)) + (talked.includes(u) ? '' : ' (앱만)')).join(', ');
+      const tip = `<b>${fmtDate(key)} 가입 ${cohort.length}명</b><br>${fmtDate(days[di])}에 돌아옴 ${n}명 · 대화 ${k}명`
         + (names?`<br>${names}`:'');
       html += `<td><span class="cc" style="background:${bg};color:${fg}"`
            +  ` data-tip="${tip.replace(/"/g,'&quot;')}${running?'<br>오늘 — 아직 진행 중':''}">${n}`
            +  `${cohort.length?` <span style="opacity:.75;font-weight:400">${Math.round(pct*100)}%</span>`:''}</span>`
+           +  `${n?`<div class="usub">대화 ${k}</div>`:''}`
            +  `${running?'<div class="usub">진행 중</div>':''}</td>`;
     }
     html += `</tr>`;
@@ -3382,20 +3417,33 @@ const LIVE_MS = 3*60e3, RECENT_MS = 30*60e3, POLL_MS = 15e3;
  *  only where purposes overlap (a `turn` TTS is a call, not "listening"). */
 function activityOf(r){
   const a = r.action||'', p = r.purpose||'';
-  if(a==='talk_time' || p==='turn' || p==='transcribe' || a.startsWith('event:talk_'))
-    return {k:'talk', e:'📞', t:'통화'};
-  if(p==='opener' || p==='freetalk-openers') return {k:'talk', e:'📞', t:'통화 거는 중'};
-  if(p==='summary' || a==='gemini_summary') return {k:'wrap', e:'📝', t:'통화 정리'};
-  // The next morning's call (script + voice) is written by the app itself the
-  // moment a talk ends — part of the wrap-up, not something anyone did.
-  if(p==='daily-call-script' || p==='daily-call') return {k:'wrap', e:'📝', t:'통화 정리'};
+  if(a==='talk_time') return {k:'talk', e:'📞', t:'통화'};
+  // Evidence that a CALL reached the model: a reply, a transcript, the coach
+  // line, the written opener of a cast call, or the app's own call records.
+  // Without a metered tick beside them it is "통화 시도", never 통화.
+  if((a==='gemini' && (p==='turn' || p==='coach' || p==='opener')) || p==='transcribe'
+     || /^event:talk_(rt_|opener|mode|coach|free_call)/.test(a))
+    return {k:'call', e:'📞', t:'통화'};
+  // The free-talk greeting pool, written and voiced AHEAD of any call
+  // (FreeTalkOpeners.warmAudio bills its lines as tts `turn` — the gateway's
+  // real call turns leave no tts row at all). A language switch rewrites the
+  // whole pool, which is what six "turn" lines in six seconds are.
+  if(p==='freetalk-openers' || (a==='tts' && (p==='turn' || p==='opener')))
+    return {k:'prep', e:'👋', t:'인사말 미리 만들기'};
+  if(p==='summary' || a==='gemini_summary' || /^event:(talk_summary|post_call_pitch)/.test(a))
+    return {k:'wrap', e:'📝', t:'통화 정리'};
+  // The next call's voicemail. The app rewrites it after a talk AND on launch
+  // whenever the plan is stale (language switch, reinstall) — so on its own
+  // it says "the app was opened", never "they talked".
+  if(p==='daily-call-script' || p==='daily-call') return {k:'voicemail', e:'📮', t:'다음 통화 음성메일'};
   if(a==='tts_scene' || p==='scene' || p==='scenario-curriculum') return {k:'scene', e:'🎬', t:'장면 보기'};
   if(p==='shadow' || a.startsWith('event:shadow')) return {k:'shadow', e:'🎙️', t:'쉐도잉'};
-  if(p==='drill' || p==='enrichment') return {k:'review', e:'🃏', t:'복습 카드'};
+  if(p==='drill' || p==='enrichment' || a==='event:say_again_run') return {k:'review', e:'🃏', t:'복습 카드'};
   if(p==='library') return {k:'review', e:'📚', t:'표현 듣기'};
   if(p==='topics') return {k:'browse', e:'📰', t:'주제 고르기'};
   if(p==='weekly') return {k:'browse', e:'📊', t:'주간 리포트'};
   if(a==='voice_clone' || a==='voice_remix' || p==='voice_preview') return {k:'voice', e:'🧬', t:'목소리 만들기'};
+  if(/^event:(paywall_|onboarding_paywall)/.test(a)) return {k:'pay', e:'💳', t:'요금제 화면'};
   return {k:'app', e:'✨', t:'앱 사용'};
 }
 const flagOf = cc => cc && /^[A-Z]{2}$/.test(cc)
@@ -3490,9 +3538,20 @@ function spread(list){
   return list;
 }
 
+/** A client event that says something went WRONG, in words: the name, plus
+ *  the one part of the error worth reading. Null for anything else. */
+const FAIL_KO = {opener_audio_failed:'첫 인사 음성 못 받음', freetalk_openers_failed:'인사말 생성 실패',
+  talk_rt_failed:'통화 끊김', talk_summary_error:'통화 요약 실패'};
+function failOf(r){
+  const m = /^event:(.+_(?:failed|error))$/.exec(r.action||''); if(!m) return null;
+  const err = String(r.err||'');
+  const why = /timed out/i.test(err) ? '시간 초과' : /offline|not connected/i.test(err) ? '오프라인'
+    : (/Code=(-?\d+)/.exec(err)||[])[1] ? `코드 ${/Code=(-?\d+)/.exec(err)[1]}` : (r.code || '');
+  return (FAIL_KO[m[1]] || m[1]) + (why ? ` (${why})` : '');
+}
 /** Activity colours: one per kind, shared by the hour strip and the rows. */
 const CAT_COLOR = {talk:'var(--s1)', try:'var(--seq2)', scene:'var(--s2)', shadow:'var(--s3)', review:'var(--warn)',
-  voice:'#8a5cd6', browse:'var(--baseline)', app:'var(--baseline)'};
+  voice:'#8a5cd6', browse:'var(--baseline)', prep:'var(--seq1)', pay:'var(--seq3)', app:'var(--baseline)'};
 const CAT_ORDER = ['talk','scene','shadow','review','voice','browse','app'];
 
 /** A day of ledger rows → SESSIONS: one person using the app once — rows
@@ -3507,11 +3566,12 @@ const CAT_ORDER = ['talk','scene','shadow','review','voice','browse','app'];
  *      a voice clone they are the onboarding greeting, alone they are a call
  *      that never got going ("통화 시도");
  *    - talk minutes are the metered ticks, the same figure billing uses. */
-const KIND_RANK = ['talk','scene','shadow','review','voice','browse','try','app'];
+const KIND_RANK = ['talk','scene','shadow','review','voice','browse','try','prep','pay','app'];
 const KIND_META = {
   talk:{e:'📞', t:'통화'}, scene:{e:'🎬', t:'장면'}, shadow:{e:'🎙️', t:'쉐도잉'},
   review:{e:'🃏', t:'복습'}, voice:{e:'🧬', t:'목소리 만들기'}, browse:{e:'📰', t:'둘러보기'},
-  try:{e:'📞', t:'통화 시도'}, app:{e:'📱', t:'앱 열어봄'},
+  try:{e:'📞', t:'통화 시도 · 과금 0초'}, prep:{e:'👋', t:'통화 준비만'}, pay:{e:'💳', t:'요금제 화면'},
+  app:{e:'📱', t:'앱 열어봄'},
 };
 function sessionsOf(events){
   const byUser = new Map();
@@ -3522,20 +3582,27 @@ function sessionsOf(events){
     for(const r of rows){
       const t = +new Date(r.at);
       if(!cur || t - cur.end > GAP){
-        cur = {u, start:t, end:t, kinds:{}, secs:0, lang:null, wrapped:false, turns:0};
+        cur = {u, start:t, end:t, kinds:{}, secs:0, lang:null, wrapped:false, turns:0, prep:0, vm:0, fails:[]};
         out.push(cur);
       }
       cur.end = t;
       const a = activityOf(r);
       if(r.action==='talk_time'){ cur.secs += +r.seconds||0; cur.lang = r.language || cur.lang;
         cur.kinds.talk = (cur.kinds.talk||0) + 1; continue; }
+      const fail = failOf(r); if(fail){ cur.fails.push(fail); if(a.k==='app') continue; }
+      if(r.language && !cur.lang) cur.lang = r.language;
       if(a.k==='wrap'){ cur.wrapped = true; continue; }
-      if(a.k==='talk'){ cur.turns++; continue; }
+      if(a.k==='voicemail'){ if(r.action==='tts') cur.vm++; continue; }
+      if(a.k==='call'){ cur.turns++; continue; }
+      // Count voiced lines, not the Gemini call that wrote the pool.
+      if(a.k==='prep'){ if(r.action==='tts') cur.prep++; continue; }
       cur.kinds[a.k] = (cur.kinds[a.k]||0) + 1;
     }
   }
   for(const x of out){
     if(!x.kinds.talk && x.turns && !x.kinds.voice) x.kinds.try = x.turns;
+    if(!x.kinds.talk && !x.kinds.try && !x.kinds.voice && x.prep) x.kinds.prep = x.prep;
+    x.fails = [...new Set(x.fails)];
     const ks = KIND_RANK.filter(k => x.kinds[k]);
     x.k = ks[0] || 'app';
     x.others = ks.slice(1);
@@ -3563,10 +3630,27 @@ function renderLive(){
   // same id (a session created since the page loaded has no row → null).
   const dayUser = id => (DATA.users||[]).find(x => x.id === id) || null;
   const voiceOf = id => (dayUser(id) || {}).voiceId || null;
+  // Newest build each person reported in the last 24 h (events are in time
+  // order), falling back to the page snapshot.
+  const liveBuild = new Map();
+  for(const r of (liveData.events||[])) if(r.build) liveBuild.set(r.u, {build:r.build, version:r.version});
+  const verOf = id => verChip(dayUser(id), liveBuild.get(id));
   // The same dot + two-word label the people tab uses, so 구독 중 / 체험 중 /
   // 플랜 없음 read the same colour everywhere.
   const subOf = id => { const f = dayUser(id); return f ? `${subDot(f)}${subShort(f)}` : ''; };
   const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
+  // The clone they talk to (its ElevenLabs name) and the CEFR level they
+  // picked in onboarding — `setup` only holds levels the app actually
+  // reported, so a missing one is "not in yet", never A1.
+  const voiceNameOf = id => (dayUser(id) || {}).voiceName || null;
+  // DATA.users carries no idx (visibleUsers() adds it), and `setup` rows are
+  // keyed by the position in DATA.users.
+  const levelOf = id => { const i = (DATA.users||[]).findIndex(x => x.id === id);
+    return i >= 0 ? chosenLevel(i) : null; };
+  const whoBits = id => [
+    levelOf(id) ? `<span class="lvchip" title="온보딩에서 고른 레벨">${levelOf(id).toUpperCase()}</span>` : '',
+    voiceNameOf(id) ? `<span class="muted" title="ElevenLabs 보이스 이름">🗣 ${esc(voiceNameOf(id))}</span>` : '',
+  ].filter(Boolean).join(' ');
 
   const note = document.getElementById('liveNote');
   note.hidden = !liveData.phError;
@@ -3650,14 +3734,23 @@ function renderLive(){
       const lang = LANG_KO[e.lang] || LANG_KO[person(e.u).target] || '';
       return `${lang ? lang+'로 ' : ''}통화${isNow(e)?' 중':''}`;
     }
-    return KIND_META[e.k].t + (isNow(e) && e.k!=='voice' ? ' 중' : '');
+    return KIND_META[e.k].t + (isNow(e) && !['voice','try','prep','pay','app'].includes(e.k) ? ' 중' : '');
   };
   const emojiOf = e => KIND_META[e.k].e;
   const detail = e => {
-    const mins = Math.round((e.end - e.start)/60000);
+    // Only a metered figure may read as talk time. Every other row says what
+    // the app DID — a wall-clock span here was read as "6분 통화" for a
+    // learner who never placed a call (2026-10-02).
     const bits = [];
     if(e.k==='talk' && e.secs) bits.push(`대화 ${fmtMin(e.secs)}`);
-    else if(!e.app) bits.push(mins >= 1 ? `${mins}분` : '잠깐');
+    if(e.kinds && e.kinds.try && !e.kinds.talk) bits.push(`응답 ${e.turns}번, 과금된 통화 없음`);
+    if(e.prep) bits.push(`인사말 ${e.prep}줄 미리 녹음${e.kinds && e.kinds.talk ? '' : ' (통화 안 함)'}`);
+    if(e.vm) bits.push(`다음 통화 음성메일 ${e.vm}번 새로 씀`);
+    if((e.fails||[]).length) bits.push(`<span style="color:var(--crit)">⚠ ${e.fails.map(esc).join(', ')}</span>`);
+    if(!bits.length && !e.app){
+      const mins = Math.round((e.end - e.start)/60000);
+      bits.push(mins >= 1 ? `앱 ${mins}분 사이` : '잠깐');
+    }
     // Outside a call, a wrap-up row is the app re-writing tomorrow's call on
     // launch — it only says the app was opened, which the label already does.
     if(e.wrapped && e.k==='talk') bits.push('정리까지');
@@ -3679,8 +3772,8 @@ function renderLive(){
         e.end - e.start >= 60e3 && !e.app ? `–${fmtClock(new Date(e.end).toISOString())}` : ''}</span>
       <span class="te">${emojiOf(e)}</span>
       <span class="tw">${esc(label(e))} <small>${detail(e)}</small>${chips(e)}</span>
-      <span class="tp"><b>${esc(liveName(u))}</b>${e.u===owner?'<span class="ownchip">본인</span>':''}${
-        subOf(e.u) ? ` · ${subOf(e.u)}` : ''} · ${where(g)}</span>
+      <span class="tp"><b>${esc(liveName(u))}</b>${verOf(e.u)}${e.u===owner?'<span class="ownchip">본인</span>':''}${
+        subOf(e.u) ? ` · ${subOf(e.u)}` : ''}${whoBits(e.u) ? ` · ${whoBits(e.u)}` : ''} · ${where(g)}</span>
       <span class="tid"><span title="Supabase 유저 ID — 클릭하면 전체 선택">${esc(e.u)}</span>${
         voiceOf(e.u) ? `<i>voice</i><span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택">${esc(voiceOf(e.u))}</span>` : ''}</span>
     </div>`;
@@ -3712,7 +3805,7 @@ function renderLive(){
       html:`<div class="lm ${st}${liveUser===p.id?' sel':''}" style="--st:${ST_COLOR[st]}">${tag}<div class="face">${p.e?emojiOf(p.e):''}</div></div>`});
     const mk = L.marker([+p.lat, +p.lon], {icon, zIndexOffset: st==='live'?1000:st==='recent'?500:st==='today'?100:0});
     const mine = shown.filter(e=>e.u===p.id).slice(0,4);
-    const tip = `<b>${esc(liveName(u))}</b> · ${where(p.g)}`
+    const tip = `<b>${esc(liveName(u))}</b>${whoBits(p.id) ? ` · ${whoBits(p.id)}` : ''} · ${where(p.g)}`
       + (mine.length
           ? mine.map(e=>`<br>${fmtClock(new Date(e.start).toISOString())} ${emojiOf(e)} ${esc(label(e))} <span class="muted">${detail(e)}</span>`).join('')
           : `<br><span class="muted">${liveHour!=null?'이 시간엔 조용':'24시간 넘게 조용'} · 앱 연 곳 ${ago(PH[p.id]?.lastAt)}</span>`);
@@ -3786,11 +3879,23 @@ setInterval(() => { const u = visibleUsers(); renderHoursToday(u); renderHours(u
 // The trial table's countdowns ("첫 결제 D-2", "5시간 12분 남음") tick too.
 setInterval(renderTrials, 60000);
 
-document.getElementById('asof').textContent =
-  `${fmtDate(DATA.windowStart)} 출시 ~ ${fmtDate(DATA.asOf)} · `
-  + (DATA.liveAt
-      ? `${fmtClock(DATA.liveAt)} 조회 (${tzLabel()} 시간) — 새로고침하면 다시 읽어요`
-      : '프로덕션 DB에서 직접 집계');
+// Everything but 라이브 is the snapshot baked into this page when it was
+// opened — the heatmap included. Say how old it is, and read it again when
+// the tab comes back after a while: a heatmap left open since the morning
+// looked like the server losing today's calls.
+const PAGE_LOADED_AT = Date.now(), STALE_MS = 10*60e3;
+function renderAsof(){
+  document.getElementById('asof').textContent =
+    `${fmtDate(DATA.windowStart)} 출시 ~ ${fmtDate(DATA.asOf)} · `
+    + (DATA.liveAt
+        ? `${fmtClock(DATA.liveAt)} 조회 (${tzLabel()} 시간, ${ago(DATA.liveAt)}) — 라이브 탭만 15초마다 새로 읽고, 나머지는 새로고침해야 갱신돼요`
+        : '프로덕션 DB에서 직접 집계');
+}
+renderAsof();
+setInterval(renderAsof, 60000);
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && Date.now() - PAGE_LOADED_AT > STALE_MS) location.reload();
+});
 
 render();
 let startTab = 'today';

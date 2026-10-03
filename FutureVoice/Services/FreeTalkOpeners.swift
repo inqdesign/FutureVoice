@@ -29,6 +29,22 @@ final class FreeTalkOpeners {
         let openers: [String]
     }
 
+    /// Lines being synthesized right now, so two warm-ups landing at once
+    /// (a new voice id arrives while the Talk tab's own warm-up is running)
+    /// make each take ONCE. Measured 2026-10-02: the same seven lines billed
+    /// twice in one second on a fresh clone.
+    private var inFlight: Set<String> = []
+    private let inFlightLock = NSLock()
+
+    /// How many lines ahead of the rotation are kept warm. Until 2026-10-02
+    /// every line of the pool was synthesized up front — six takes for a
+    /// learner who may call once, and the whole set again on every speed
+    /// change, pool rewrite or new voice. Only the NEXT line can open the next
+    /// call; one spare covers a second call before the launcher re-warms
+    /// (it does after every call). A miss is still a working call: the
+    /// gateway speaks the line itself, one round trip slower.
+    static let warmAhead = 2
+
     /// The single-pool file from before 2026-09-28 — read for migration only.
     private let fileURL: URL
     private let storeURL: URL
@@ -178,25 +194,25 @@ final class FreeTalkOpeners {
         return pool.lines[pool.cursor % pool.lines.count]
     }
 
-    /// Every line in the current pool (empty when none). Read-only — the
-    /// launcher warms EACH line's TTS once, so any rotation position opens
-    /// the call on cached audio.
-    func lines(language: String, personaName: String?) -> [String] {
+    /// The next `count` lines in rotation, starting at the one `next()` will
+    /// return (empty when there is no pool). Read-only.
+    func upcomingLines(language: String, personaName: String?, count: Int) -> [String] {
         guard let pool = load(key: Self.key(language: language, personaName: personaName)),
               !pool.lines.isEmpty else { return [] }
-        return pool.lines
+        let n = min(count, pool.lines.count)
+        return (0..<n).map { pool.lines[(pool.cursor + $0) % pool.lines.count] }
     }
 
-    /// Synthesize EVERY pool line's audio that isn't cached yet, so any
-    /// rotation position opens a call on cached audio — no ElevenLabs round
-    /// trip on the greeting. Bounded cost: one synthesis per unique line per
-    /// voice, ever (the content cache makes later uses free). A failure
-    /// aborts the sweep (the rest would fail the same way); the live call
-    /// still falls back to on-demand TTS.
+    /// Synthesize the next `warmAhead` lines' audio that isn't cached yet, so
+    /// the next call opens on cached audio — no ElevenLabs round trip on the
+    /// greeting. Called again after every call, so the window walks with the
+    /// rotation. A failure aborts the sweep (the rest would fail the same
+    /// way); the live call still falls back to on-demand TTS.
     func warmAudio(language: String, personaName: String?, voiceId: String?) async {
         guard let voiceId else { return }
         do {
-            for line in lines(language: language, personaName: personaName) {
+            for line in upcomingLines(language: language, personaName: personaName,
+                                      count: Self.warmAhead) {
                 guard !Task.isCancelled else { return }
                 try await warmLine(line, voiceId: voiceId)
             }
@@ -210,6 +226,10 @@ final class FreeTalkOpeners {
     /// call's lookup — warming a line the call would still consider a miss is
     /// pointless.
     private func warmLine(_ line: String, voiceId: String) async throws {
+        let flight = "\(voiceId)|\(line)"
+        let claimed: Bool = inFlightLock.withLock { inFlight.insert(flight).inserted }
+        guard claimed else { return }
+        defer { _ = inFlightLock.withLock { inFlight.remove(flight) } }
         let stale = needsBake(line)
         if stale { PhraseAudioStore.shared.removeAudio(text: line, voiceId: voiceId) }
         guard stale || PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
@@ -220,16 +240,21 @@ final class FreeTalkOpeners {
             // breathes like the answers after it (see `PacedSpeech`); a
             // one-sentence line, or an edge with no streaming, takes the
             // ordinary single synthesis.
+            //
+            // Billed as "opener", not "turn" (2026-10-02): the edge prices
+            // the two identically (`TALK_PURPOSES`), but a warm-up filed as
+            // "turn" was indistinguishable in the ledger from a call's reply,
+            // and the admin console read a language switch as a 6-minute call.
             if let paced = try await PacedSpeech.synthesizePCM(
                 voiceId: voiceId, text: line,
-                modelId: ElevenLabsClient.conversationModelId, purpose: "turn") {
+                modelId: ElevenLabsClient.conversationModelId, purpose: "opener") {
                 audio = AudioLoudness.wavData(fromPCM16: paced.pcm,
                                               sampleRate: Int(paced.sampleRate))
             } else {
                 audio = try await ElevenLabsClient.shared.synthesize(
                     voiceId: voiceId, text: line,
                     modelId: ElevenLabsClient.conversationModelId,
-                    purpose: "turn")
+                    purpose: "opener")
             }
         } catch {
             Self.report("opener_audio_failed", language: nil, error: error)
@@ -306,7 +331,7 @@ final class FreeTalkOpeners {
     /// whatever state it finds. While no pool exists, the bundled fallback
     /// line is what a call would speak — warm its audio FIRST (it's one short
     /// line, the cheapest path to an instant first call), then generate the
-    /// pool text, then warm every pool line. Everything is cache-checked, so
+    /// pool text, then warm the next `warmAhead` pool lines. Everything is cache-checked, so
     /// repeat calls cost nothing. Called from the Talk launcher and from
     /// every point that mints a new voice id (clone, re-record, accent remix)
     /// — a new id invalidates all warmed audio at once.

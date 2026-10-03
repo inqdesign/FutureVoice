@@ -56,6 +56,11 @@ struct RootTabView: View {
     /// first open after the week turns (and on the week-turn notification).
     @State private var weekRecap: WeekRecap?
     @State private var weekRecapAction: WeekRecapSheet.Action?
+    /// The first-visit introduction of the tab now on screen (`PageIntroSheet`).
+    @State private var pageIntro: PageIntro.Page?
+    /// The free-talk welcome waits behind the Talk introduction on a first
+    /// launch: "this is Talk" reads before "here are your minutes".
+    @State private var welcomeAfterIntro = false
     @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable {
@@ -73,6 +78,27 @@ struct RootTabView: View {
     }
 
     var body: some View {
+        tabRoot
+        // A tab opened while something else was up gets its introduction the
+        // moment that closes.
+        .onChange(of: anotherSheetUp) { _, up in
+            if !up { offerPageIntro() }
+        }
+        .sheet(item: $pageIntro, onDismiss: {
+            if welcomeAfterIntro {
+                welcomeAfterIntro = false
+                checkFreeTalkWelcome()
+            }
+        }) { page in
+            PageIntroSheet(page: page)
+                .onAppear {
+                    PageIntroStore.markSeen(page)
+                    Analytics.capture("page_intro_shown", ["page": page.rawValue])
+                }
+        }
+    }
+
+    private var tabRoot: some View {
         ZStack {
             TabView(selection: $selection) {
                 ConversationHome()
@@ -159,20 +185,11 @@ struct RootTabView: View {
             BillingGate.shared.warm()
             if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
                 showingAgeCheck = true
+            } else if selection == .home, PageIntroStore.isDue(.talk) {
+                welcomeAfterIntro = true
+                offerPageIntro()
             } else {
-                Task {
-                    // Asked before the check, which marks the install shown:
-                    // a repeat is time ADDED to the pool, and the two read
-                    // nothing alike in the funnel.
-                    let repeatWelcome = FreeTalkWelcome.hasBeenShown()
-                    if let minutes = await FreeTalkWelcome.minutesToAnnounce() {
-                        Analytics.capture("free_talk_welcome_shown",
-                                          ["minutes": minutes,
-                                           "kind": repeatWelcome ? "topup" : "first"])
-                        welcomeMinutes = minutes
-                        showingWelcome = true
-                    }
-                }
+                checkFreeTalkWelcome()
             }
             // Populate the home-screen widgets on first entry. The scenePhase
             // refresh only fires on background↔active transitions, so a cold
@@ -211,6 +228,7 @@ struct RootTabView: View {
             if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona, language: appState.targetLanguage) {
                 showingIntroPreview = true
             }
+            offerPageIntro()
         }
         .sheet(isPresented: $showingIntroPreview) {
             PublicIntroPreviewSheet().environmentObject(appState)
@@ -418,8 +436,78 @@ struct RootTabView: View {
 
     /// Raise the closed week's cards — softly, a beat after the app is up,
     /// and never over a call or another sheet. Unasked it appears once per
-    /// week and only for a week that had something in it; from the
-    /// notification it always appears (the learner asked).
+    /// week and only for a week that had something in it. The notice and the
+    /// automatic slide-up share that one showing: a notice tapped after the
+    /// deck was already seen opens the archive on Practice, not the deck.
+    /// The free-talk welcome (see `FreeTalkWelcome`): the minutes on a first
+    /// visit, and again whenever the free pool grows.
+    private func checkFreeTalkWelcome() {
+        Task {
+            // Asked before the check, which marks the install shown:
+            // a repeat is time ADDED to the pool, and the two read
+            // nothing alike in the funnel.
+            let repeatWelcome = FreeTalkWelcome.hasBeenShown()
+            if let minutes = await FreeTalkWelcome.minutesToAnnounce() {
+                Analytics.capture("free_talk_welcome_shown",
+                                  ["minutes": minutes,
+                                   "kind": repeatWelcome ? "topup" : "first"])
+                welcomeMinutes = minutes
+                showingWelcome = true
+            }
+        }
+    }
+
+    /// Anything the tab root presents (or the call it covers itself with).
+    /// The introduction never competes with one: SwiftUI drops a second sheet
+    /// silently, so it waits its turn instead.
+    private var anotherSheetUp: Bool {
+        showingAgeCheck || showingPaywall || showingWelcome || showingIntroPreview
+            || weekRecap != nil || freeTalkCallId != nil
+            || callInbox.pendingAnswer != nil
+            || appState.levelUpAnnouncement != nil
+            || referralInbox.pendingJoin != nil || updates.pending != nil
+    }
+
+    private static func introPage(_ tab: Tab) -> PageIntro.Page {
+        switch tab {
+        case .home:     return .talk
+        case .watch:    return .watch
+        case .practice: return .review
+        case .progress: return .progress
+        }
+    }
+
+    /// Raises the current tab's introduction if this install hasn't seen it.
+    /// A beat late, so the page draws first and the sheet rises over it.
+    private func offerPageIntro() {
+        #if DEBUG
+        if DebugCapture.isCapturing { return }
+        #endif
+        let page = Self.introPage(selection)
+        guard pageIntro == nil, !anotherSheetUp, PageIntroStore.isDue(page) else {
+            releaseHeldWelcome()
+            return
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard pageIntro == nil, !anotherSheetUp,
+                  Self.introPage(selection) == page,
+                  PageIntroStore.isDue(page) else {
+                releaseHeldWelcome()
+                return
+            }
+            pageIntro = page
+        }
+    }
+
+    /// A welcome held for an introduction that didn't rise still has to be
+    /// asked — the minutes are the one thing a new account must hear about.
+    private func releaseHeldWelcome() {
+        guard welcomeAfterIntro, pageIntro == nil else { return }
+        welcomeAfterIntro = false
+        checkFreeTalkWelcome()
+    }
+
     private func offerWeekRecap() {
         let asked = callInbox.pendingWeekRecap
         callInbox.pendingWeekRecap = false
@@ -428,6 +516,11 @@ struct RootTabView: View {
             try? await Task.sleep(nanoseconds: asked ? 400_000_000 : 1_200_000_000)
             let store = WeekRecapStore.shared
             let recap = store.lastWeek()
+            if asked && store.wasShown(recap) {
+                selection = .practice
+                appState.pendingPracticeRoute = .weekArchive
+                return
+            }
             guard asked || (recap.hasActivity && !store.wasShown(recap)) else { return }
             guard weekRecap == nil, freeTalkCallId == nil, !freeTalkClosing,
                   callInbox.pendingAnswer == nil,

@@ -133,6 +133,9 @@ struct FutureVoiceApp: App {
                 SyncEngine.shared.backgrounded()
                 // …and whatever doesn't fit in that, iOS finishes later.
                 SyncBackground.schedule()
+                // Tomorrow's voicemail, once per sitting rather than once per
+                // talk (see `DailyCallScheduler.ensureVoicemailAudio`).
+                DailyCallScheduler.ensureVoicemailAudioOnBackground()
             }
             // Pull the other devices' practice, then push ours.
             if phase == .active {
@@ -229,6 +232,9 @@ final class AppState: ObservableObject {
         case reviewItem(kind: String, value: String)
         /// The weekly test's reminder or deep link → open this week's test.
         case weeklyTest
+        /// A week's notice tapped after its deck was already seen → the
+        /// archive, never the same deck again.
+        case weekArchive
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 
@@ -1144,11 +1150,11 @@ final class AppState: ObservableObject {
         guard var s = scenarios.first(where: { $0.id == id }),
               var c = s.curriculum else { return }
 
+        // A practice (coach mode) call read its answers off a suggestion —
+        // practice, not a phrase the learner produced.
         let spoken = SessionStore.shared.load()
             .filter { $0.topic == s.displayTitle && !$0.isPractice }
             .flatMap { $0.turns }
-        // A practice (coach mode) call read its answers off a suggestion —
-        // practice, not a phrase the learner produced.
             .filter { $0.role == .user }
             .map(\.transcript)
             .joined(separator: " ")

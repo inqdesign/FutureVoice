@@ -281,19 +281,9 @@ enum WeeklyTestReminder {
     /// What the notice says, from the week in progress — the numbers are
     /// every one written in the app, so at fire time they are the week's.
     static func makeContent(now: Date = Date()) -> UNMutableNotificationContent {
-        let schedule = WeeklyTestSettings.shared.schedule
-        let opening = schedule.currentOpening(now: now)
-        let fire = schedule.nextOpening(after: now)
-        let calendar = Calendar.current
-        var talkSeconds = 0
-        var day = calendar.startOfDay(for: opening)
-        while day <= now {
-            talkSeconds += TalkTimeLog.seconds(on: day)
-            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-            day = next
-        }
-        let active = PracticeStats.activeDays(calendar: calendar)
-            .filter { $0 >= calendar.startOfDay(for: opening) && $0 < fire }.count
+        let week = WeekRecapBuilder.thisWeek(now: now)
+        let talkSeconds = week.talkSeconds
+        let active = week.daysActive
 
         let content = UNMutableNotificationContent()
         if active > 0 {

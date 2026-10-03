@@ -66,8 +66,18 @@ final class SyncIndex {
             .appendingPathComponent(userId, isDirectory: true)
     }
 
+    /// Every write of every index goes through this one serial queue, so
+    /// saves land in order and a `removeAll` can't be overtaken by a save
+    /// queued before it. Encoding the whole index (thousands of entries,
+    /// each with its change tag) ran on the main actor after every batch.
+    private static let writer = DispatchQueue(label: "com.roro.futurevoice.sync-index",
+                                              qos: .utility)
+
     init(directory: URL) {
         self.directory = directory
+        // A save queued by a previous instance must be on disk before this
+        // one reads.
+        Self.writer.sync {}
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let data = try? Data(contentsOf: entriesURL),
            let decoded = try? SyncCanonical.decode([String: Entry].self, from: data) {
@@ -135,12 +145,22 @@ final class SyncIndex {
     // MARK: - Persistence
 
     func save() {
-        if let data = try? SyncCanonical.encode(entries) {
-            try? data.write(to: entriesURL, options: .atomic)
+        let entries = entries, state = state
+        let entriesURL = entriesURL, stateURL = stateURL
+        Self.writer.async {
+            if let data = try? SyncCanonical.encode(entries) {
+                try? data.write(to: entriesURL, options: .atomic)
+            }
+            if let data = try? SyncCanonical.encode(state) {
+                try? data.write(to: stateURL, options: .atomic)
+            }
         }
-        if let data = try? SyncCanonical.encode(state) {
-            try? data.write(to: stateURL, options: .atomic)
-        }
+    }
+
+    /// Blocks until every queued save is on disk — for a caller about to
+    /// be suspended (or a test reading the files back).
+    static func flush() {
+        writer.sync {}
     }
 
     /// Forgets the server entirely — change tags and token — while keeping
@@ -162,6 +182,7 @@ final class SyncIndex {
     func removeAll() {
         entries = [:]
         state = State()
-        try? FileManager.default.removeItem(at: directory)
+        let directory = directory
+        Self.writer.async { try? FileManager.default.removeItem(at: directory) }
     }
 }

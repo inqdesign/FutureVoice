@@ -21,6 +21,11 @@ struct WeekRecapSheet: View {
     @State private var revealed: Set<Int>
     @State private var coachFailed = false
     @State private var testState: WeeklyTestSchedule.State = .ready
+    /// Whether the last card offers next week's notice: only while it is
+    /// off and the phone could still ring (a refused permission can't be
+    /// asked again from here, so the offer would be a dead button).
+    @State private var offerReminder = false
+    @State private var reminderJustOn = false
 
     init(recap: WeekRecap, action: Binding<Action?>, startPage: Int = 0) {
         _recap = State(initialValue: recap)
@@ -87,6 +92,8 @@ struct WeekRecapSheet: View {
             WeekRecapStore.shared.markShown(recap)
             testState = WeeklyTestSettings.shared.schedule.state(
                 tests: WeeklyTestStore.shared.load(), settings: .shared)
+            let notifications = await ReviewNotifications.status()
+            offerReminder = !WeeklyTestSettings.shared.reminderOn && notifications != .denied
             Analytics.capture("week_recap_opened", ["days": recap.daysActive,
                                                     "talk_min": recap.talkMinutes,
                                                     "cards": cards.count])
@@ -753,7 +760,40 @@ struct WeekRecapSheet: View {
                 Text("Not enough from this week yet for a test. A talk or two, and it's ready.")
                     .font(.title3)
             }
+            reminderOffer
         }
+    }
+
+    /// The deck slides up by itself only when the app is opened; the notice
+    /// is what reaches someone who doesn't. Asked here, once the learner has
+    /// seen what the notice would bring — never as a cold permission prompt.
+    @ViewBuilder private var reminderOffer: some View {
+        if reminderJustOn {
+            Label(explain("Next week's arrives \(readyDate)"), systemImage: "bell.fill")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        } else if offerReminder {
+            Button {
+                Task {
+                    let status = await ReviewNotifications.request()
+                    WeeklyTestSettings.shared.reminderOn = status.canRing
+                    await WeeklyTestReminder.reschedule()
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        reminderJustOn = status.canRing
+                        offerReminder = false
+                    }
+                    Analytics.capture("week_recap_reminder", ["on": status.canRing])
+                }
+            } label: {
+                Label("Tell me when next week's is ready", systemImage: "bell")
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var readyDate: String {
+        WeeklyTestSettings.shared.schedule.nextOpening()
+            .formatted(Date.FormatStyle(locale: chromeLocale).weekday(.abbreviated).month(.abbreviated).day())
     }
 
     // MARK: - Helpers
@@ -766,7 +806,7 @@ struct WeekRecapSheet: View {
 
     private var dateRange: String {
         let style = Date.FormatStyle(locale: chromeLocale).month(.abbreviated).day()
-        let last = recap.end.addingTimeInterval(-1)
+        let last = recap.end.addingTimeInterval(-86_400)   // seven days, as in the archive
         return "\(recap.start.formatted(style)) – \(last.formatted(style))"
     }
 

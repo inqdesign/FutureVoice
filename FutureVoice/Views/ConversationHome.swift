@@ -397,11 +397,10 @@ struct ConversationHome: View {
         s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
     }
 
-    /// Warm the opener pool and every pool greeting's TTS (see
-    /// FreeTalkOpeners.warmFirstCall) — so "Let's talk" always opens on
-    /// cached audio, whatever the rotation position. (Warming only the next
-    /// line left every fresh line in the rotation slow the first time it
-    /// came up.)
+    /// Warm the opener pool and the next pool greetings' TTS (see
+    /// FreeTalkOpeners.warmFirstCall) — so "Let's talk" opens on cached
+    /// audio. Runs again after every call, so the warm window walks with the
+    /// rotation (`FreeTalkOpeners.warmAhead`).
     private func prewarmFreeTalkOpenerAudio() async {
         await FreeTalkOpeners.shared.warmFirstCall(
             language: appState.targetLanguage,
