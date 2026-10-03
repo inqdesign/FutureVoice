@@ -210,9 +210,16 @@ struct PracticeTab: View {
             .tabBarScrollFeather()
             .background(TransparentRoundedNavBar())
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Review")
-            .toolbarTitleDisplayMode(.inlineLarge)
-            .toolbar { weekToolbar }
+            // The title holds its size (2026-10-03, user report: it shrank
+            // to an inline title the moment the list scrolled, for nothing).
+            // No system title at all — iOS 26 drew it beside ours whatever we
+            // asked — so the bar carries only our own, pinned at the leading
+            // edge; a pushed page's back button reads "Back".
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                fixedTitle
+                weekToolbar
+            }
             .onAppear {
                 reload()
                 consumePendingRoute()
@@ -668,6 +675,23 @@ struct PracticeTab: View {
     /// A weekday in the APP language — `formatted()` alone follows the phone's.
     static func weekdayName(_ date: Date, _ width: Date.FormatStyle.Symbol.Weekday) -> String {
         date.formatted(Date.FormatStyle(locale: Locale(identifier: UILanguage.chromeLanguage)).weekday(width))
+    }
+
+    @ToolbarContentBuilder
+    private var fixedTitle: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarLeading) { titleText }
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarLeading) { titleText }
+        }
+    }
+
+    private var titleText: some View {
+        Text("Review")
+            .geistPixel(34)
+            .fixedSize()
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// The week's things live in the page HEADER (2026-10-03, user decision):

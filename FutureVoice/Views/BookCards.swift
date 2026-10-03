@@ -83,6 +83,32 @@ struct OriginTag: View {
     }
 }
 
+/// A book card's icon: a soft tinted circle with the glyph (or initials)
+/// in it, or — for a person with a photo on file — the photo, clipped to
+/// the same circle.
+struct BookIconDisc<Content: View>: View {
+    var photoId: UUID? = nil
+    @ViewBuilder var content: () -> Content
+    @ObservedObject private var photos = CounterpartPhotoStore.shared
+    static var size: CGFloat { 44 }
+
+    var body: some View {
+        Group {
+            if let id = photoId, let img = photos.image(for: id) {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Circle()
+                    .fill(.tint.opacity(0.14))
+                    .overlay { content() }
+            }
+        }
+        .frame(width: Self.size, height: Self.size)
+        .clipShape(Circle())
+    }
+}
+
 /// One scenario/topic book on a shelf — cover avatar, title, partner, and
 /// the mastery strip. Tap/context actions are the caller's.
 struct ScenarioBookCard: View {
@@ -137,16 +163,21 @@ struct ScenarioBookCard: View {
         return r.isEmpty ? nil : r
     }
 
-    /// Bare tinted glyph, no background disc — the same icon vocabulary as
-    /// Watch's category cards, so books and situations read as one family.
+    /// In a soft round disc (2026-10-03, user decision). A scene with a
+    /// person shows THAT person — their photo, else their initials on the
+    /// same disc; otherwise the scene's own glyph.
     @ViewBuilder
     private var avatar: some View {
         if let name = personaName {
-            Text(Books.initials(name)).font(.title3.weight(.bold)).foregroundStyle(.tint)
+            BookIconDisc(photoId: scenario.counterpartId) {
+                Text(Books.initials(name)).font(.headline.weight(.bold)).foregroundStyle(.tint)
+            }
         } else if scenario.isTopic == true {
-            Image(systemName: "newspaper.fill").font(.title2).foregroundStyle(.tint)
+            BookIconDisc { Image(systemName: "newspaper.fill").font(.title3).foregroundStyle(.tint) }
         } else {
-            Image(systemName: Books.roleIcon(for: scenario.role)).font(.title2).foregroundStyle(.tint)
+            BookIconDisc {
+                Image(systemName: Books.roleIcon(for: scenario.role)).font(.title3).foregroundStyle(.tint)
+            }
         }
     }
 
@@ -191,7 +222,9 @@ struct TalkBookCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
-                Image(systemName: "bubble.left.and.bubble.right.fill").font(.title2).foregroundStyle(.tint)
+                BookIconDisc {
+                    Image(systemName: "bubble.left.and.bubble.right.fill").font(.title3).foregroundStyle(.tint)
+                }
                 Spacer()
                 if snapshot?.isMastered == true {
                     Image(systemName: "checkmark.seal.fill")
