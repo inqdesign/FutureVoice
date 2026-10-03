@@ -199,7 +199,7 @@ struct WeeklyTestView: View {
             switch kind {
             case .meaning: Label("Which word means this?", systemImage: "text.book.closed.fill")
             case .gap:     Label("Fill the blank", systemImage: "quote.bubble.fill")
-            case .build:   Label("Say it the fluent way", systemImage: "rectangle.stack")
+            case .build:   Label("Fix the sentence", systemImage: "rectangle.stack")
             case .listen:  Label("Listen and build it", systemImage: "ear")
             case .speak:   Label("Say it out loud", systemImage: "waveform.badge.mic")
             }
@@ -483,7 +483,23 @@ struct WeeklyTestView: View {
         let check: WeeklyTestEngine.TileCheck? = outcome == false
             ? WeeklyTestEngine.tileCheck(tiles: laid.map { item.options[$0] }, answer: item.answer)
             : nil
+        // A build item may carry decoys (the words the correction replaced),
+        // so some tiles are meant to be left over — said up front, or a
+        // leftover tile reads as a mistake or a bug (user, 2026-10-03).
+        let decoys = item.kind == .build ? WeeklyTestEngine.decoyTiles(of: item) : []
         return VStack(alignment: .leading, spacing: 16) {
+            if item.kind == .build, outcome == nil {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Write it as a correct sentence.")
+                        .font(.subheadline.weight(.semibold))
+                    if !decoys.isEmpty {
+                        Text("Some words are traps — you don't have to use them all.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
             // The sentence being laid.
             FlowLayout(spacing: 8, lineSpacing: 10) {
                 if outcome == nil, cursor == 0, !laid.isEmpty { caret }
@@ -506,7 +522,7 @@ struct WeeklyTestView: View {
                     .foregroundStyle(.tertiary)
             )
             .overlay(alignment: .topLeading) {
-                if laid.isEmpty {
+                if laid.isEmpty, item.kind == .listen {
                     Text("Tap the words in order")
                         .font(.subheadline)
                         .foregroundStyle(.tertiary)
@@ -530,6 +546,27 @@ struct WeeklyTestView: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Once graded, the leftover traps are named for what they are:
+            // the learner's own words from before the fix.
+            if outcome != nil, !decoys.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Trap words — what you said before the fix")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    // Right: the leftover tiles above ARE the traps, so the
+                    // label is enough. Wrong: leftovers may mix in answer
+                    // words, so the traps are spelled out.
+                    if outcome == false {
+                        Text(decoys.joined(separator: " · "))
+                            .font(.footnote)
+                            .strikethrough()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .transition(.opacity)
             }
 
             if let outcome, !outcome {

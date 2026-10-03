@@ -687,6 +687,20 @@ enum WeeklyTestEngine {
 
     static func tileKey(_ word: String) -> String { CarryoverDetector.normalized(word) }
 
+    /// The tiles the answer doesn't use — a build item's decoys, i.e. the
+    /// learner's own words the correction replaced. Read off the item (tiles
+    /// minus the answer's words, as a multiset) so items already on disk
+    /// need nothing new. Empty for dictation, which has no decoys.
+    static func decoyTiles(of item: WeeklyTestItem) -> [String] {
+        var needed: [String: Int] = [:]
+        for word in WordSplitter.words(item.answer) { needed[tileKey(word), default: 0] += 1 }
+        return item.options.filter { tile in
+            let key = tileKey(tile)
+            if let n = needed[key], n > 0 { needed[key] = n - 1; return false }
+            return true
+        }
+    }
+
     // MARK: - Writing back
 
     /// What a finished test does to the review loop. Runs once per test
