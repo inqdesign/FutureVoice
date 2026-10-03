@@ -588,10 +588,10 @@
 
 - ☐ 5.1 연속 (빌드 54: 공부했거나 말한 날, 모든 언어, 오늘/어제 기준)
 - ☐ 5.2 복습 간격과 폴더 (0·1·3·7·14·30, 은퇴, 곧/내일/나중에)
-- ☐ 5.3 교정 필터 (`saysTheSameThing`, 축약형 표)
+- ☑ 5.3 교정 필터 (`saysTheSameThing`, 축약형 표) — `CorrectionGuardTest`, iOS `CorrectionGuardTests` 그대로 4묶음 통과
 - ☐ 5.4 교정 강조 diff (`highlightedCorrection`)
 - ☐ 5.5 섀도잉 매치 점수
-- ☐ 5.6 복습한 걸 통화에서 썼는지 (`CarryoverDetector`)
+- ☑ 5.6 복습한 걸 통화에서 썼는지 (`CarryoverDetector`) — `CarryoverDetectorTest` 16개(iOS 케이스, 오탐 막는 쪽 위주) 첫 실행에 통과
 - ☐ 5.7 주울 단어 (`pickupCandidates`, 목록 밖 단어)
 - ☐ 5.8 책 스냅샷과 마스터리 (`TalkCurriculum`)
 - ☐ 5.9 통화 시간 표기 (하루 mm:ss, 기간 분)
