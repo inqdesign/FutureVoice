@@ -262,4 +262,12 @@
     <string name="widget_free_talk_description">One tap to call your fluent self.</string>
     <string name="widget_to_review">to review</string>
     <string name="google_sign_in_failed">Couldn\'t sign in with Google. Try again.</string>
+    <!-- Parked voice revival (iOS VoiceRevivalView) -->
+    <string name="recreating_your_voice">Recreating your voice</string>
+    <string name="this_takes_a_few_seconds">This takes a few seconds.</string>
+    <string name="couldn_t_make_your_voice">Couldn\'t make your voice</string>
+    <string name="your_voice_is_back">Your voice is back</string>
+    <string name="set_the_speed_and_accent_again_then_start">Set the speed and accent again, then start.</string>
+    <string name="start_the_call">Start the call</string>
+    <string name="accent_original">Original</string>
 </resources>

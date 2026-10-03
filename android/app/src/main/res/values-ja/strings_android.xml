@@ -246,4 +246,12 @@
     <string name="widget_free_talk_description">ワンタップで流暢な自分に電話します。</string>
     <string name="widget_to_review">復習待ち</string>
     <string name="google_sign_in_failed">Googleでログインできませんでした。もう一度お試しください。</string>
+    <!-- Parked voice revival (iOS VoiceRevivalView) -->
+    <string name="recreating_your_voice">声を作り直しています</string>
+    <string name="this_takes_a_few_seconds">数秒で終わります。</string>
+    <string name="couldn_t_make_your_voice">声を作れませんでした</string>
+    <string name="your_voice_is_back">声が戻りました</string>
+    <string name="set_the_speed_and_accent_again_then_start">スピードとアクセントを選び直してから始めましょう。</string>
+    <string name="start_the_call">通話を始める</string>
+    <string name="accent_original">そのまま</string>
 </resources>

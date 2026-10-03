@@ -31,26 +31,45 @@ object BillingGate {
     /** Fold in a status someone else just loaded (Me, a purchase result). */
     fun remember(status: AccountStatus) { cached = status }
 
-    fun invalidate() { cached = null }
+    fun invalidate() {
+        cached = null
+        // A purchase changes what a PARKED voice may do; re-read it so the
+        // next tap knows.
+        if (VoiceParking.parkedId.value != null) VoiceParking.requestRecheck(force = true)
+    }
 
     /**
      * Run [action] if the account can spend; otherwise raise the paywall and
      * return false.
+     *
+     * Allowed to spend but the voice is PARKED ([VoiceParking]): it is rebuilt
+     * in front of the learner first ([VoiceRevival]), and [action] runs only
+     * if they tap Start — false if they close it.
      */
-    suspend fun start(auth: AuthRepository, action: () -> Unit): Boolean {
+    suspend fun start(
+        auth: AuthRepository,
+        purpose: VoiceRevival.Purpose = VoiceRevival.Purpose.CALL,
+        action: () -> Unit,
+    ): Boolean {
         // A cached YES is answered instantly — that is the common case and the
         // one the primary button must never wait on.
-        if (cached?.needsSubscription == false) { action(); return true }
+        if (cached?.needsSubscription == false) return proceed(purpose, action)
 
         // A "no" is never given from cache, and it is never given from a
         // FAILURE either: if the account can't be read right now, the primary
         // button must not die silently — run the action, and let the metered
         // call's own 402 raise the wall if there is one.
         val fresh = runCatching { AccountStatus.load(auth) }.getOrNull()
-        if (fresh == null) { action(); return true }
+        if (fresh == null) return proceed(purpose, action)
         cached = fresh
-        if (!fresh.needsSubscription) { action(); return true }
+        if (!fresh.needsSubscription) return proceed(purpose, action)
         showPaywall.value = true
         return false
+    }
+
+    private suspend fun proceed(purpose: VoiceRevival.Purpose, action: () -> Unit): Boolean {
+        if (!VoiceRevival.ensureVoice(purpose)) return false
+        action()
+        return true
     }
 }

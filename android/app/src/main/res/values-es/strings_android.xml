@@ -262,4 +262,12 @@
     <string name="widget_free_talk_description">Un toque para llamar a tu yo fluido.</string>
     <string name="widget_to_review">por repasar</string>
     <string name="google_sign_in_failed">No se pudo iniciar sesión con Google. Inténtalo de nuevo.</string>
+    <!-- Parked voice revival (iOS VoiceRevivalView) -->
+    <string name="recreating_your_voice">Recreando tu voz</string>
+    <string name="this_takes_a_few_seconds">Solo tarda unos segundos.</string>
+    <string name="couldn_t_make_your_voice">No se pudo crear tu voz</string>
+    <string name="your_voice_is_back">Tu voz ha vuelto</string>
+    <string name="set_the_speed_and_accent_again_then_start">Vuelve a elegir la velocidad y el acento, y empieza.</string>
+    <string name="start_the_call">Empezar la llamada</string>
+    <string name="accent_original">Original</string>
 </resources>

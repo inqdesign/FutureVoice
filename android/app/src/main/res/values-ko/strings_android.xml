@@ -246,4 +246,12 @@
     <string name="widget_free_talk_description">한 번 눌러 유창한 나에게 전화하세요.</string>
     <string name="widget_to_review">복습 대기</string>
     <string name="google_sign_in_failed">Google로 로그인하지 못했어요. 다시 해 볼까요?</string>
+    <!-- Parked voice revival (iOS VoiceRevivalView) -->
+    <string name="recreating_your_voice">목소리를 다시 만들고 있어요</string>
+    <string name="this_takes_a_few_seconds">몇 초면 돼요.</string>
+    <string name="couldn_t_make_your_voice">목소리를 만들지 못했어요</string>
+    <string name="your_voice_is_back">목소리가 돌아왔어요</string>
+    <string name="set_the_speed_and_accent_again_then_start">속도와 억양을 다시 고르고 시작해요.</string>
+    <string name="start_the_call">통화 시작</string>
+    <string name="accent_original">그대로</string>
 </resources>

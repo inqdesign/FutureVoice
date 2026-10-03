@@ -257,7 +257,15 @@ fun RootScreen() {
     val gateScope = rememberCoroutineScope()
     /** Run a metered action, or raise the paywall. See [BillingGate]. */
     fun gate(action: () -> Unit) {
-        gateScope.launch { BillingGate.start(AuthRepository(), action) }
+        gateScope.launch { BillingGate.start(AuthRepository(), action = action) }
+    }
+    /** [gate] for a launch that plays a Watch scene (the revival's button
+     *  then reads Continue, not Start the call). */
+    fun gateScene(action: () -> Unit) {
+        gateScope.launch {
+            BillingGate.start(AuthRepository(),
+                com.roro.futurevoice.data.VoiceRevival.Purpose.SCENE, action)
+        }
     }
     // A widget tap or a review reminder arrives before anything is drawn, so
     // the Activity parks it and this reads it when there is a screen to open.
@@ -406,6 +414,10 @@ fun RootScreen() {
             callTopic = ""; callFacts = emptyList(); callScenarioId = null; inCall = true
         }
     }
+
+    // A PARKED voice is rebuilt at the metered tap, on top of whatever is
+    // up — sheets included (see `VoiceRevival`).
+    VoiceRevivalHost(app)
 
     val morphScope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -557,7 +569,7 @@ fun RootScreen() {
             language = state.targetLanguage,
             // A fresh take costs a scene count, so the wall is asked at the
             // tap here exactly as it is on the Watch tab.
-            onWatch = { id -> gate { watchScenarioId = id } },
+            onWatch = { id -> gateScene { watchScenarioId = id } },
             onTalk = { sc -> gate {
                 bookScenarioId = null
                 callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
@@ -842,7 +854,7 @@ fun RootScreen() {
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
             onOpenTalk = { detailSessionId = it },
-            onWatch = { id -> gate { watchScenarioId = id } },
+            onWatch = { id -> gateScene { watchScenarioId = id } },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
             onSavePersona = app::savePersona,

@@ -249,6 +249,10 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         accept: String?,
         sceneKey: String? = null,
         speed: Double? = null,): Request {
+        // A parked voice no longer exists upstream (see `VoiceParking`).
+        // Refused before the network with the error every surface already
+        // answers with its paywall; the revival happens at a launcher's tap.
+        if (com.roro.futurevoice.data.VoiceParking.isParked(voiceId)) throw EdgeError.InsufficientCredits
         val body = TtsBody(
             voice_id = voiceId,
             text = text,
@@ -316,6 +320,8 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
         promptStrength: Double =
             com.roro.futurevoice.data.VoiceAccentCatalog.PROMPT_STRENGTH,
     ): List<Preview> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        // A remix is built FROM the voice; a parked one no longer exists.
+        if (com.roro.futurevoice.data.VoiceParking.isParked(voiceId)) throw EdgeError.InsufficientCredits
         val body = buildJsonObject {
             put("voice_id", voiceId)
             put("voice_description", voiceDescription)

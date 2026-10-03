@@ -173,6 +173,9 @@ data class VoiceCloneRow(
 )
 
 @Serializable
+data class ParkedRow(@SerialName("parked_at") val parkedAt: String? = null)
+
+@Serializable
 data class ProfileRow(
     @SerialName("native_language") val nativeLanguage: String = "ko",
     @SerialName("target_language") val targetLanguage: String = "en",
@@ -197,6 +200,21 @@ class VoiceCloneRepository {
             }
             .decodeSingleOrNull<VoiceCloneRow>()
             ?.elevenlabsVoiceId
+
+    /**
+     * `parked_at` of this voice's row (see [VoiceParking]) — in a query of its
+     * OWN: a select naming a column the database hasn't got fails the whole
+     * query, and that must never break the voice restore above. Returns
+     * null-row = unknown (no row), and throws on a failure the caller keeps
+     * whatever it already knew through.
+     */
+    suspend fun parkedAt(voiceId: String): ParkedRow? =
+        Supa.client.from("voice_clones")
+            .select(io.github.jan.supabase.postgrest.query.Columns.list("parked_at")) {
+                filter { eq("elevenlabs_voice_id", voiceId) }
+                limit(1)
+            }
+            .decodeSingleOrNull<ParkedRow>()
 
     suspend fun profile(userId: String): ProfileRow? =
         Supa.client.from("profiles")

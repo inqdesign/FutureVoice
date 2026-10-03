@@ -134,6 +134,20 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 PersonaStore.shared(appContext).load()?.let { p -> _state.update { it.copy(persona = p) } }
             }
         }
+        // Foreground / purchase asks to re-read the parked state (see
+        // `VoiceParking`); the throttle lives in `refreshParkedVoice`.
+        viewModelScope.launch {
+            com.roro.futurevoice.data.VoiceParking.recheck.collect { force -> refreshParkedVoice(force) }
+        }
+        // A parked mark belongs to ONE voice: once the app holds another (a
+        // re-record here or on another device), the mark is stale.
+        viewModelScope.launch {
+            _state.collect { st ->
+                val parked = com.roro.futurevoice.data.VoiceParking.parkedId.value
+                if (st.voiceId != null && parked != null && parked != st.voiceId)
+                    com.roro.futurevoice.data.VoiceParking.set(null)
+            }
+        }
         viewModelScope.launch {
             auth.sessionStatus.collect { status ->
                 when (status) {
@@ -372,7 +386,97 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     /** A clone just landed on this device — the server row already exists. */
     fun onVoiceCloned(voiceId: String) {
+        // A fresh recording replaces whatever was parked or dropped.
+        com.roro.futurevoice.data.VoiceParking.set(null)
+        com.roro.futurevoice.data.VoiceParking.markDropped(null)
         _state.update { it.copy(voiceId = voiceId) }
+    }
+
+    /** Last time the server was asked whether this phone's voice is parked. */
+    private var parkedCheckedAt: Long? = null
+
+    /**
+     * Is this phone's voice PARKED (see `VoiceParking`)? Asks the server at
+     * most every 10 minutes (`force` skips that — sign-in, a purchase). Only
+     * LEARNS the state: bringing the voice back is the call tap's job
+     * (`VoiceRevival`), because rebuilding it is something the learner should
+     * see happen, with the speed and accent to set again.
+     */
+    fun refreshParkedVoice(force: Boolean = false) {
+        val st = _state.value
+        val voiceId = st.voiceId ?: return
+        if (!st.signedIn || st.isAnonymous) return
+        val parking = com.roro.futurevoice.data.VoiceParking
+        val already = parking.isParked(voiceId)
+        if (!parking.shouldCheck(already, force, parkedCheckedAt, System.currentTimeMillis())) return
+        viewModelScope.launch {
+            // Offline, or a database without the column yet: whatever was
+            // known stays known.
+            val row = runCatching { voices.parkedAt(voiceId) }.getOrElse { return@launch }
+            parkedCheckedAt = System.currentTimeMillis()
+            if (row == null) return@launch
+            // The voice may have moved on while the query ran.
+            if (_state.value.voiceId != voiceId) return@launch
+            val next = parking.nextParkedId(voiceId, row.parkedAt)
+            if (next == parking.parkedId.value) return@launch
+            parking.set(next)
+            if (next != null) {
+                com.roro.futurevoice.core.Analytics.capture("voice_parked_notice")
+                com.roro.futurevoice.core.Telemetry.log("voice_parked_notice")
+                // The daily call stands down while parked.
+                com.roro.futurevoice.data.DailyCallScheduler.cancel(appContext)
+            } else if (com.roro.futurevoice.data.DailyCallStore.isEnabled(appContext)) {
+                com.roro.futurevoice.data.DailyCallScheduler.schedule(appContext)
+            }
+        }
+    }
+
+    /**
+     * Rebuild a parked voice from the recording on this phone (the revival
+     * screen's first stage). The parked id stays in the lineage so audio made
+     * with it keeps playing. The accent died with the old voice, so it is
+     * cleared — the screen offers it again. Failure leaves the voice parked.
+     */
+    suspend fun reviveParkedVoice(): Result<String> {
+        val sample = VoiceComparison.sampleFile(appContext.filesDir)
+        val result = runCatching {
+            if (!sample.exists() || sample.length() == 0L) error("no_sample")
+            com.roro.futurevoice.net.VoiceCloneClient(auth).cloneVoice(
+                name = "Future Self",
+                sample = sample,
+                removeBackgroundNoise = false,
+            )
+        }
+        result.onSuccess { newId ->
+            com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(newId)
+            // The parked voice is already gone upstream; its row went inactive
+            // when the clone function inserted this one. Nothing to delete.
+            com.roro.futurevoice.data.VoiceParking.set(null)
+            prefs.edit().remove(ACCENT_KEY).apply()
+            _state.update { it.copy(voiceId = newId, voiceAccentId = null) }
+            if (com.roro.futurevoice.data.DailyCallStore.isEnabled(appContext))
+                com.roro.futurevoice.data.DailyCallScheduler.schedule(appContext)
+            com.roro.futurevoice.core.Analytics.capture("voice_parked_revive", mapOf("result" to "ok"))
+            com.roro.futurevoice.core.Telemetry.log("voice_parked_revive", mapOf("result" to "ok"))
+        }.onFailure { e ->
+            com.roro.futurevoice.core.Analytics.capture("voice_parked_revive", mapOf("result" to "failed"))
+            com.roro.futurevoice.core.Telemetry.log("voice_parked_revive",
+                mapOf("result" to "failed", "error" to e.toString().take(200)))
+        }
+        return result
+    }
+
+    /**
+     * A parked voice with no recording on this phone (a reinstall, another
+     * device) can't be rebuilt here: the "let's make your voice again" clone
+     * flow, the same one a reclaimed voice gets.
+     */
+    fun parkedVoiceNeedsRecording() {
+        com.roro.futurevoice.core.Analytics.capture("voice_parked_revive", mapOf("result" to "no_sample"))
+        val parking = com.roro.futurevoice.data.VoiceParking
+        parking.markDropped(_state.value.voiceId)
+        parking.set(null)
+        _state.update { it.copy(voiceId = null) }
     }
 
     /**
@@ -472,10 +576,14 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         viewModelScope.launch {
             // A swallowed failure here walks a paying learner into re-cloning
             // a voice they already own — say what went wrong, every time.
-            val voiceId = runCatching { voices.activeVoiceId(uid) }
+            val serverVoiceId = runCatching { voices.activeVoiceId(uid) }
                 .onFailure { android.util.Log.w("AppViewModel", "voice restore failed", it) }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
                 .getOrNull()
+            // A parked voice dropped for want of a recording keeps an active
+            // row; restoring it would skip the re-record it was dropped for.
+            val voiceId = com.roro.futurevoice.data.VoiceParking.restoredVoiceId(
+                serverVoiceId, com.roro.futurevoice.data.VoiceParking.droppedId())
             // The lineage is what keeps already-synthesized audio reachable
             // after a re-clone — without it a new voice id misses on every
             // cached line and the whole library re-bills itself.
@@ -500,6 +608,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                     level = if (localSetup) it.level else CefrLevel.from(profile?.proficiency),
                 )
             }
+            // Sign-in: was this voice parked while the app was away?
+            refreshParkedVoice(force = true)
         }
     }
 

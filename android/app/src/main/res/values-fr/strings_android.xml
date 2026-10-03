@@ -249,4 +249,12 @@
     <string name="widget_free_talk_description">Appelle ton moi fluide d’un seul geste.</string>
     <string name="widget_to_review">à revoir</string>
     <string name="google_sign_in_failed">Connexion avec Google impossible. Réessaie.</string>
+    <!-- Parked voice revival (iOS VoiceRevivalView) -->
+    <string name="recreating_your_voice">Recréation de ta voix</string>
+    <string name="this_takes_a_few_seconds">Ça ne prend que quelques secondes.</string>
+    <string name="couldn_t_make_your_voice">Impossible de créer ta voix</string>
+    <string name="your_voice_is_back">Ta voix est de retour</string>
+    <string name="set_the_speed_and_accent_again_then_start">Choisis à nouveau la vitesse et l’accent, puis lance-toi.</string>
+    <string name="start_the_call">Lancer l’appel</string>
+    <string name="accent_original">Original</string>
 </resources>

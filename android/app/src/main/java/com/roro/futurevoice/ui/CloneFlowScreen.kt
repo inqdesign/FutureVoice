@@ -758,7 +758,13 @@ private fun ConsentPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, 
 }
 
 @Composable
-private fun SpeedAudition(voiceId: String?, line: String, player: com.roro.futurevoice.audio.Mp3Player) {
+internal fun SpeedAudition(
+    voiceId: String?,
+    line: String,
+    player: com.roro.futurevoice.audio.Mp3Player,
+    /** The "change both later in settings" footnote — onboarding's alone. */
+    showLaterHint: Boolean = true,
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var selected by remember { mutableStateOf(com.roro.futurevoice.data.SpeechSpeed.current(context)) }
@@ -801,7 +807,7 @@ private fun SpeedAudition(voiceId: String?, line: String, player: com.roro.futur
         Text(line, style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Text(stringResource(R.string.you_can_change_both_later_in_settings),
+        if (showLaterHint) Text(stringResource(R.string.you_can_change_both_later_in_settings),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)

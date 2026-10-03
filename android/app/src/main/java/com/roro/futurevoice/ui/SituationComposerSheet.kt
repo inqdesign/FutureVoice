@@ -380,7 +380,14 @@ internal fun ScenarioComposer(
             // The CTA is the paid tap: the account is asked HERE, before
             // anything is generated. Blocked means the plans and nothing
             // else — no categorize call, no scenario minted.
-            val allowed = BillingGate.start(AuthRepository()) { }
+            val allowed = BillingGate.start(
+                AuthRepository(), com.roro.futurevoice.data.VoiceRevival.Purpose.SCENE) { }
+            if (!allowed && !BillingGate.showPaywall.value) {
+                // Not the paywall: a PARKED voice's revival screen was closed
+                // (see `VoiceRevival`). Nothing to buy; stay on the sheet.
+                committing = false
+                return@launch
+            }
             if (!allowed) {
                 // The gate raises the ROOT paywall, which would replace the
                 // screen this sheet is on and lose the situation just

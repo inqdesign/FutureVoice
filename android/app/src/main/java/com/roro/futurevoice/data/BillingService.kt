@@ -202,6 +202,10 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         if (result.responseCode != BillingClient.BillingResponseCode.OK || purchases == null) return
         for (purchase in purchases) {
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
+            // What the account may spend just changed: the gate's cached
+            // answer is stale, and a PARKED voice is re-read (iOS invalidate).
+            BillingGate.invalidate()
+            VoiceParking.requestRecheck(force = true)
             // The promise the paywall makes about a trial is kept here.
             if (pendingTrialDays > 0) {
                 TrialReminder.schedule(appContext, pendingTrialDays)

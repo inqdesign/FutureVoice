@@ -57,6 +57,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // An untouched ring can't be noticed when it happens — nothing runs.
         com.roro.futurevoice.data.DailyCallStore.settleIfRangOut(this)
+        // Has this phone's voice been PARKED since? Learned here, acted on at
+        // the next metered tap (`VoiceRevival`). Throttled inside.
+        com.roro.futurevoice.data.VoiceParking.requestRecheck()
         // Friends who joined with my code since last time — polled here
         // because there is no push infrastructure.
         lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }

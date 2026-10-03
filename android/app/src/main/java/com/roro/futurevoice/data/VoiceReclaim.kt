@@ -24,6 +24,9 @@ object VoiceReclaim {
 
     /** Back at the clone flow with an unclaimed voice past the grace: it's gone. */
     fun wasReclaimed(c: Context): Boolean {
+        // A PARKED voice with no recording on this phone was dropped the same
+        // way — the voice is gone, so the same words (see `VoiceParking`).
+        if (VoiceParking.droppedId() != null) return true
         val since = prefs(c).getLong(KEY, 0L)
         return since > 0 && System.currentTimeMillis() - since > GRACE_MS
     }

@@ -246,4 +246,12 @@
     <string name="widget_free_talk_description">点击，打给流利的自己。</string>
     <string name="widget_to_review">待复习</string>
     <string name="google_sign_in_failed">无法使用 Google 登录，请再试一次。</string>
+    <!-- Parked voice revival (iOS VoiceRevivalView) -->
+    <string name="recreating_your_voice">正在重新制作你的声音</string>
+    <string name="this_takes_a_few_seconds">只要几秒钟。</string>
+    <string name="couldn_t_make_your_voice">无法制作你的声音</string>
+    <string name="your_voice_is_back">你的声音回来了</string>
+    <string name="set_the_speed_and_accent_again_then_start">重新选好速度和口音，就可以开始了。</string>
+    <string name="start_the_call">开始通话</string>
+    <string name="accent_original">原声</string>
 </resources>

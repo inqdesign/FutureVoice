@@ -176,6 +176,10 @@ object DailyCallScheduler {
         ensureChannel(context)
         val now = System.currentTimeMillis()
         cancelAlarms(context)
+        // A PARKED voice (see `VoiceParking`) can't write tomorrow's voicemail,
+        // and answering would open a call straight into the paywall. Stand
+        // down; the revival re-arms it. The learner's setting is untouched.
+        if (VoiceParking.parkedId.value != null) return
         val today = if (fromTomorrow) emptyList() else remainingToday(context, now)
         val fires = today.ifEmpty { listOf(at(now, DailyCallStore.times(context).first(), 1)) }
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -255,6 +259,10 @@ object DailyCallScheduler {
 
     /** The ring: a call-style, full-screen, insistent notification. */
     fun ring(context: Context) {
+        // An alarm armed before the voice was parked: stay silent, and don't
+        // re-arm the next one either.
+        VoiceParking.init(context)
+        if (VoiceParking.parkedId.value != null) { cancelAlarms(context); return }
         ensureChannel(context)
         val answer = contentIntent(context)
         val n: Notification = NotificationCompat.Builder(context, CHANNEL_ID)
