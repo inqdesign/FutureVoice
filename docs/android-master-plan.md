@@ -587,7 +587,7 @@
 각 규칙에 Swift 기준 입력·정답 쌍을 걸고 안드로이드에서 초록으로 만든다.
 
 - ☐ 5.1 연속 (빌드 54: 공부했거나 말한 날, 모든 언어, 오늘/어제 기준)
-- ☐ 5.2 복습 간격과 폴더 (0·1·3·7·14·30, 은퇴, 곧/내일/나중에)
+- ☑ 5.2 복습 간격과 폴더 (0·1·3·7·14·30, 은퇴, 곧/내일/나중에) — `DrillRetireTest`(은퇴) + `StudyScheduleRuleTest`(iOS `StudyReminderPolicyTests` 그대로, 폴더 창 경계 12h/48h)
 - ☑ 5.3 교정 필터 (`saysTheSameThing`, 축약형 표) — `CorrectionGuardTest`, iOS `CorrectionGuardTests` 그대로 4묶음 통과
 - ☐ 5.4 교정 강조 diff (`highlightedCorrection`)
 - ☐ 5.5 섀도잉 매치 점수
