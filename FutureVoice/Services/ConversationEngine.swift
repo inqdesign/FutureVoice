@@ -431,7 +431,56 @@ enum ConversationEngine {
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))
+        """
+    }
+
+    /// How the fluent self ASKS a beginner (A1/A2 only, 2026-10-03, founder:
+    /// "not 'tell me about yourself' — 'what's your name?', 'where do you
+    /// live?', 'what do you do?'"). `speechScale` set the words and the
+    /// sentence shapes and nothing about the QUESTION, while the blocks above
+    /// push the other way for everyone — follow a thread with "whether they
+    /// like it, how they ended up there", don't always end on a question —
+    /// so a beginner who had just said their name was asked "How was your
+    /// day?" (`scripts/beginner-probe.py`: A2 read the same as B1 before
+    /// this). Last in the prompt on purpose, and it says it outranks what
+    /// came before. Empty at B1 and above, so those prompts are unchanged
+    /// byte for byte (`BeginnerQuestionTests`).
+    static func beginnerQuestions(_ level: CEFRLevel) -> String {
+        guard level == .a1 || level == .a2 else { return "" }
+        return """
+
+
+        HOW TO ASK — THIS LEARNER IS A BEGINNER (\(level.rawValue.uppercased())). \
+        Answering is the hard part for them, so every question you ask has to \
+        be one they can answer. These rules OUTRANK everything above about \
+        questions, following threads, and not ending on a question:
+        - End EVERY turn with exactly ONE question, as the last thing you say. \
+          Never two questions in a turn. Two choices inside one question are \
+          fine ("Coffee or tea?").
+        - Make it CONCRETE: answerable in a few words with a plain fact from \
+          their life — a name, a place, a time, a thing, yes or no, or one of \
+          two choices. "Where do you live?" "Do you work or study?" "What time \
+          do you get up?"
+        - NEVER an open question that makes them build the answer: no "tell \
+          me about…", "how was…", "how is your day going", "what do you \
+          think about…", "what's it like…", "what kind of…", "why…". After \
+          several concrete answers about the same thing, one simple "Do you \
+          like it?" is the most open it gets.
+        - Walk ONE subject in small steps: a small question, their answer, \
+          the next small question about the same thing. Getting to know \
+          them is "What's your name?" → "Where do you live?" → "What do you \
+          do?" — one per turn — never "Tell me about yourself."
+        - Keep the question SHORT (about 3–7 words) and keep what comes \
+          before it short too: one short reaction, then the question. They \
+          need the question, not a speech.
+        - React to every answer, however small, in a few warm words \
+          ("Busan! Nice."). If their answer had a mistake, say it back the \
+          right way inside that reaction, without pointing at it ("Ah, you \
+          went to work, then home.").
+        - If they get stuck, go quiet, or answer in another language: don't \
+          press and don't change the subject — ask the same thing more \
+          easily, as two choices ("Do you live in a city, or a small town?").
         """
     }
 

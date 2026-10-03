@@ -554,6 +554,13 @@ enum DebugCapture {
                     }
                 }
             })
+        case "first-call-check", "first-call-check-hard":
+            // The after-first-call sheet (`FirstCallCheckSheet`), on A2.
+            once("first-call-check") { appState.proficiency = .a2 }
+            return AnyView(Color(.systemGroupedBackground).sheet(isPresented: .constant(true)) {
+                FirstCallCheckSheet(feeling: name.hasSuffix("hard") ? .hard : nil)
+                    .environmentObject(appState)
+            })
         case "call-coach":
             // Coach mode's "try saying" above the pill, the listening bubble
             // plain. Staged like call-focus: a real one needs a live call.

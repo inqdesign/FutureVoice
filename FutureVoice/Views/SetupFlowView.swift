@@ -201,7 +201,7 @@ struct SetupFlowView: View {
     }
 
     /// Plain-language read of each CEFR band, from the learner's chair.
-    private static func levelBlurb(_ level: CEFRLevel) -> String {
+    static func levelBlurb(_ level: CEFRLevel) -> String {
         switch level {
         case .a1: return explain("Just starting — a few words and set phrases")
         case .a2: return explain("Basic — simple, everyday exchanges")

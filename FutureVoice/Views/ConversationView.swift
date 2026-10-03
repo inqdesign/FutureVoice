@@ -123,6 +123,12 @@ struct ConversationView: View {
     /// screen (every exit goes through `close()`), so nothing resets it
     /// except the unreferenced `startNewSession`.
     @State private var postCallExitStarted = false
+    /// "How was your first call?" (`FirstCallCheckSheet`) — raised once,
+    /// between the first call's summary and the rest of the exit.
+    @State private var showingFirstCallCheck = false
+    /// The check was raised by `close()` (an exit with no summary sheet), so
+    /// its dismissal finishes closing rather than continuing the wrap-up.
+    @State private var closeAfterFirstCallCheck = false
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -616,13 +622,13 @@ struct ConversationView: View {
     /// `TalkGoalPicker.coachExtras`. Picked with the row, once per call.
     @State private var coachExtras: [TalkGoalItem] = []
     @State private var coachHint: TalkGoalItem?
-    /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
-    /// the learner's recurring mistakes on appear, named in their language,
     /// Coach mode's "try saying" for the line just spoken (`CoachSuggester`).
     @State private var coachReply: CoachReply?
     /// Coach mode was on at some point in this call — the whole call is then
     /// a practice call (`Session.coached`).
     @State private var coachWasOn = false
+    /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
+    /// the learner's recurring mistakes on appear, named in their language,
     /// and watched on every correction. nil = none this call.
     @State private var grammarFocus: GrammarFocus?
     /// Learner turns whose correction was the focus coming back — their card
@@ -982,7 +988,14 @@ struct ConversationView: View {
                 // a 1.4 s snapshot. A swipe was already routed through this
                 // closure, and it broke the same way once (d48b0216) because
                 // the summary landed a second time — hence the guard above.
-                endAndClose()
+                if FirstCallCheckSheet.shouldShow(learnerSpoke: learnerSpokeThisCall) {
+                    // Its own onDismiss continues the exit, so the plans
+                    // pitch still comes — after it, never on top of it.
+                    FirstCallCheckSheet.markShown()
+                    showingFirstCallCheck = true
+                } else {
+                    endAndClose()
+                }
             }) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
                              onDone: {
@@ -1076,6 +1089,16 @@ struct ConversationView: View {
                 // sheet named, so "Go Unlimited" doesn't land on Daily.
                 PaywallView(source: paywallSource, preselectTier: paywallTier)
             }
+            .sheet(isPresented: $showingFirstCallCheck, onDismiss: {
+                if closeAfterFirstCallCheck {
+                    closeAfterFirstCallCheck = false
+                    close()
+                } else {
+                    endAndClose()
+                }
+            }) {
+                FirstCallCheckSheet().environmentObject(appState)
+            }
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
             }) { ctx in
@@ -1099,9 +1122,9 @@ struct ConversationView: View {
             }
             .task { refreshDashboard() }
             .task {
+                if coachMode { coachWasOn = true }
                 goalItems = pickGoalItems()
                 coachExtras = TalkGoalPicker.coachExtras(excluding: Set(goalItems.map(\.key)))
-                if coachMode { coachWasOn = true }
                 await loadGrammarFocus()
             }
             .onChange(of: coachMode) { _, on in
@@ -2591,7 +2614,7 @@ struct ConversationView: View {
             language: appState.targetLanguage,
             system: systemPrompt() + Self.realtimeStyleRules,
             opener: opener,
-            // The launcher warms every pool greeting's TTS into the phrase
+            // The launcher warms the next pool greetings' TTS into the phrase
             // cache (`FreeTalkOpeners.warmAudio`), so the line is usually
             // already here in the learner's own voice — the client plays it
             // the moment the call is up instead of waiting on the gateway's
@@ -4160,6 +4183,21 @@ struct ConversationView: View {
     /// RootTabView's ZStack, plain dismiss when presented as a cover.
     private func close() {
         tearDown()
+        // Every way out passes here, including the ones with NO summary sheet
+        // (closed without saving, a summary that failed) — the first call is
+        // asked about however it ended. Once shown it is never shown again,
+        // so the summary path, which asks before the plans pitch, can't be
+        // asked twice. A beat late: this can run while a confirmation dialog
+        // is still going away.
+        if FirstCallCheckSheet.shouldShow(learnerSpoke: learnerSpokeThisCall) {
+            FirstCallCheckSheet.markShown()
+            closeAfterFirstCallCheck = true
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                showingFirstCallCheck = true
+            }
+            return
+        }
         if let onClose { onClose() } else { dismiss() }
         // Staged AFTER the screen is gone, never before: the Practice tab
         // lives UNDER this overlay, and a route consumed while the call is

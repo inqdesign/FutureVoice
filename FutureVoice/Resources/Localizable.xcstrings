@@ -28473,6 +28473,52 @@
         }
       }
     },
+    "Easy" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leicht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fácil"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "簡単だった"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "쉬웠어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "很简单"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "很簡單"
+          }
+        }
+      }
+    },
     "easy to understand" : {
       "localizations" : {
         "de" : {
@@ -36381,6 +36427,52 @@
         }
       }
     },
+    "Great — keep it as it is, or adjust below." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Super – lass es so oder pass es unten an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Genial! Déjalo así o ajústalo abajo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Super ! Garde tout tel quel, ou ajuste en dessous."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よかったです！このままでも、下で変えてもOKです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋아요! 그대로 두거나, 아래에서 바꿔 보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "太好了！保持原样，或在下方调整。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "太好了！維持原樣，或在下方調整。"
+          }
+        }
+      }
+    },
     "Grounded in your profile — name, city, work, family, interests." : {
       "localizations" : {
         "de" : {
@@ -36602,6 +36694,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上市優惠碼半價套用中"
+          }
+        }
+      }
+    },
+    "Hard" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schwer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Difícil"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Difficile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "難しかった"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어려웠어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "很难"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "很難"
           }
         }
       }
@@ -37802,6 +37940,52 @@
         }
       }
     },
+    "How fast your future self talks, from the next call." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab dem nächsten Gespräch spricht dein fließendes Ich in diesem Tempo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu yo fluido hablará a esta velocidad desde la próxima conversación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton moi fluide parlera à cette vitesse dès la prochaine conversation."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の会話から、未来の自分がこの速さで話します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 대화부터 미래의 내가 이 속도로 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从下次对话开始，未来的你会用这个速度说话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從下次對話開始，未來的你會用這個速度說話。"
+          }
+        }
+      }
+    },
     "How is it going so far?" : {
       "localizations" : {
         "de" : {
@@ -38530,6 +38714,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天過得怎樣？"
+          }
+        }
+      }
+    },
+    "How was your first call?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie war dein erstes Gespräch?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué tal tu primera conversación?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment s’est passée ta première conversation ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初めての会話はどうでしたか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 대화 어땠어요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次对话感觉如何？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次對話感覺如何？"
           }
         }
       }
@@ -41980,6 +42210,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "註冊時用的邀請碼"
+          }
+        }
+      }
+    },
+    "Just right" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genau richtig"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Justo bien"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Juste bien"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ちょうどよかった"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "딱 좋았어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刚刚好"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剛剛好"
           }
         }
       }
@@ -52554,6 +52830,9 @@
         }
       }
     },
+    "Not yet, but I want to go there next week." : {
+      "shouldTranslate" : false
+    },
     "Note" : {
       "localizations" : {
         "de" : {
@@ -53803,6 +54082,9 @@
           }
         }
       }
+    },
+    "Oh, nice! Next week will be here before you know it. Do you have a specific place in mind?" : {
+      "shouldTranslate" : false
     },
     "OK" : {
       "localizations" : {
@@ -58149,6 +58431,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "練習"
+          }
+        }
+      }
+    },
+    "Practice call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übungsgespräch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversación de práctica"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversation d’entraînement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習の会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "练习对话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習對話"
           }
         }
       }
@@ -68013,6 +68341,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通話成績單、每週報告和每日來電全都免費。"
+          }
+        }
+      }
+    },
+    "Set below: a harder level and coach mode off. Change anything before you save." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unten eingestellt: ein höheres Niveau und der Coach-Modus aus. Ändere vor dem Sichern, was du willst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abajo pusimos un nivel más alto y el modo coach desactivado. Cambia lo que quieras antes de guardar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En dessous : un niveau plus élevé et le mode coach désactivé. Change ce que tu veux avant d’enregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下を、ひとつ上のレベル・コーチモードオフに変えておきました。保存する前ならいつでも変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아래 설정을 한 단계 높은 레벨, 코치 모드 끔으로 바꿔 뒀어요. 저장하기 전에 얼마든지 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在下方改为高一级的等级，并关闭教练模式。保存前都可以再调整。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在下方改成高一級的等級，並關閉教練模式。儲存前都可以再調整。"
+          }
+        }
+      }
+    },
+    "Set below: an easier level, a slower voice and coach mode. Change anything before you save." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unten eingestellt: ein leichteres Niveau, eine langsamere Stimme und der Coach-Modus. Ändere vor dem Sichern, was du willst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abajo pusimos un nivel más fácil, una voz más lenta y el modo coach. Cambia lo que quieras antes de guardar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En dessous : un niveau plus facile, une voix plus lente et le mode coach. Change ce que tu veux avant d’enregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下を、ひとつやさしいレベル・ゆっくりな声・コーチモードに変えておきました。保存する前ならいつでも変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아래 설정을 한 단계 쉬운 레벨, 느린 목소리, 코치 모드로 바꿔 뒀어요. 저장하기 전에 얼마든지 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在下方改为低一级的等级、更慢的语速，并开启教练模式。保存前都可以再调整。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在下方改成低一級的等級、較慢的語速，並開啟教練模式。儲存前都可以再調整。"
           }
         }
       }
@@ -90749,6 +91169,52 @@
         }
       }
     },
+    "While you think, a sentence you could say appears above the mic — swap the faded part for your own words. Calls with coach mode are practice, so they don't count toward your level." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Während du nachdenkst, erscheint über dem Mikro ein Satz, den du sagen könntest – ersetze den blassen Teil durch deine eigenen Worte. Gespräche im Coach-Modus sind Übung und zählen nicht für dein Niveau."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mientras piensas, aparece sobre el micrófono una frase que podrías decir: cambia la parte atenuada por tus propias palabras. Las conversaciones con el modo coach son práctica, así que no cuentan para tu nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pendant que tu réfléchis, une phrase que tu pourrais dire apparaît au-dessus du micro : remplace la partie estompée par tes propres mots. Les conversations en mode coach sont de l’entraînement, elles ne comptent pas pour ton niveau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "考えているあいだ、マイクの上に言ってみる文が出ます。うすい部分を自分の話に変えて言えばOKです。コーチモードの会話は練習なので、レベルの判定には入りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "생각하는 동안 마이크 위에 말해 볼 문장이 떠요. 흐린 부분만 내 이야기로 바꿔 말하면 돼요. 코치 모드 대화는 연습이라 레벨 측정에는 들어가지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你思考的时候，麦克风上方会出现一句可以说的话，把浅色的部分换成你自己的内容就行。开启教练模式的对话算作练习，不计入等级评估。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你思考的時候，麥克風上方會出現一句可以說的話，把淡色的部分換成你自己的內容就好。開啟教練模式的對話算是練習，不會計入等級評估。"
+          }
+        }
+      }
+    },
     "Who" : {
       "localizations" : {
         "de" : {
@@ -94040,6 +94506,52 @@
         }
       }
     },
+    "You picked %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast %@ gewählt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegiste %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as choisi %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだレベル：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "고른 레벨: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你选的等级：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你選的等級：%@"
+          }
+        }
+      }
+    },
     "You picked: %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -94077,6 +94589,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你選的：%@"
+          }
+        }
+      }
+    },
+    "You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast mit Beispielsätzen auf dem Bildschirm geübt. Dein Niveau wird an Gesprächen ohne Coach-Modus gemessen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practicaste con frases de ejemplo en pantalla. Tu nivel se mide con las conversaciones sin modo coach."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu t’es entraîné avec des phrases d’exemple à l’écran. Ton niveau se mesure sur les conversations sans mode coach."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例文を見ながら練習した会話です。レベルはコーチモードなしの会話で判定します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예시 문장을 보면서 연습한 대화예요. 레벨은 코치 모드 없이 한 대화로 측정해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是看着例句练习的对话。等级只用没有开启教练模式的对话来评估。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是看著範例句練習的對話。等級只會用沒開教練模式的對話來評估。"
           }
         }
       }

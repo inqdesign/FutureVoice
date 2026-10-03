@@ -2052,6 +2052,25 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
+- **A beginner is asked ONE concrete question** (2026-10-03, founder: "not
+  'tell me about yourself' — 'what's your name?', 'where do you live?'";
+  `ConversationEngine.beginnerQuestions`, A1/A2 only, last in the prompt and
+  saying it outranks the thread/open-question rules above). One question per
+  turn, answerable in a few words, no "tell me about / how was / why", one
+  subject in small steps, a short reaction that says a mistake back the right
+  way, two choices when they're stuck. B1+ prompts are byte-identical
+  (`BeginnerQuestionTests`). Measured with `scripts/beginner-probe.py`, which
+  runs the LIVE prompt (dumped by `ConversationPromptDumpTests`) with the
+  gateway's settings: A2 open questions 2–3/14 → 0/14 in en/ko/ja/de, and a
+  first call that used to answer a name with "How was your day?" now asks
+  "Do you work or study?". Re-run it before touching the conversation prompt.
+- **"How was your first call?"** (`FirstCallCheckSheet`, 2026-10-03): once,
+  after the first talk the learner spoke in — from the summary's onDismiss
+  (before the plans pitch) or from `close()` for exits with no summary
+  (closed without saving, a failed summary). Easy / Just right / Hard pre-set
+  the level, the voice speed and coach mode below (Hard: a level down, Slow,
+  coach on), the level row says the move ("A2 → A1"), and nothing applies
+  until Save. Installs with a talk history never see it.
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
