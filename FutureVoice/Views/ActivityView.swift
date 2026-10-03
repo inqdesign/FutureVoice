@@ -10,7 +10,9 @@ struct ActivityView: View {
 
     @State private var activeDays: Set<Date> = []
     @State private var displayedMonth = Date()
-    @State private var viewMode: ViewMode = .month
+    @State private var viewMode: ViewMode = .day
+    /// The month (or year) held in the middle of the period strip.
+    @State private var scrolledPeriod: Date?
     @State private var currentStreak = 0
     @State private var longestStreak = 0
     /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
@@ -34,11 +36,13 @@ struct ActivityView: View {
     @State private var cardDay: CardDay?
     private struct CardDay: Identifiable { let date: Date; var id: Date { date } }
 
+    /// How the journey under the promise is read: one day, a month, a year.
     enum ViewMode: String, CaseIterable, Identifiable {
-        case month, year
+        case day, month, year
         var id: String { rawValue }
         var label: String {
             switch self {
+            case .day: return chrome("Day")
             case .month: return chrome("Month")
             case .year: return chrome("Year")
             }
@@ -55,37 +59,216 @@ struct ActivityView: View {
 
     private let cal = Calendar.current
 
+    // MARK: Planner state
+    @ObservedObject private var planStore = StudyPlanStore.shared
+    @State private var weekStart = PlannerSnapshot.startOfWeek(Date())
+    @State private var planner: PlannerSnapshot?
+    @State private var showPlanEditor = false
+    @State private var showSayItAgainPicker = false
+    @State private var routineSheet: RoutineSheet?
+    @State private var openTalk: Session?
+    /// `PracticeStats.activeDays` — what the no-promise rule counts.
+    @State private var studiedDays: Set<Date> = []
+
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                statsBar
-                Picker("View", selection: $viewMode) {
-                    ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
+        // A journal of the learner's routine (founder, 2026-10-02). The view
+        // switch spans the top like Health's D/W/M/Y; under it the streak
+        // and the chosen day are ONE header. In the day view the page does
+        // not scroll: the day's card is pinned to the bottom and its list
+        // scrolls inside, so the card never jumps with the list's length.
+        Group {
+            if viewMode == .day {
+                VStack(spacing: 14) {
+                    modePicker.padding(.horizontal, 20)
+                    PlannerDayStrip(selectedDay: $selectedDay,
+                                    isPromise: planStore.plan.streakSince != nil,
+                                    activeDays: studiedDays, plan: planStore.plan,
+                                    streak: currentStreak)
+                    plannerSection
                 }
-                .pickerStyle(.segmented)
-                switch viewMode {
-                case .month: monthCard
-                case .year:  yearCard
+                .padding(.top, 8)
+            } else {
+                // Month and year read the same way as a day: the header,
+                // a strip of months (or years) to scroll through, and the
+                // period's calendar in a panel pinned to the bottom.
+                VStack(spacing: 14) {
+                    modePicker.padding(.horizontal, 20)
+                    JourneyHeader(title: periodTitle, streak: currentStreak,
+                                  away: canGoNext ? .past : nil,
+                                  onToday: { withAnimation(.snappy(duration: 0.35)) { scrolledPeriod = periodKey(Date()) } })
+                    CenteredStrip(items: periods, selection: $scrolledPeriod,
+                                  cellWidth: viewMode == .year ? 64 : 52) { p, selected in
+                        periodCell(p, selected: selected)
+                    }
+                    .id(viewMode)
+                    PinnedPanel {
+                        if viewMode == .month { monthCard } else { yearCard }
+                        Spacer(minLength: 0)
+                        statsBar
+                    }
                 }
-                // Always rendered when a day is selected — never toggled off,
-                // so switching days doesn't pop the card in and out and jump
-                // the scroll position.
-                if let day = selectedDay {
-                    dayDetailCard(day)
+                .padding(.top, 8)
+                .onAppear { scrolledPeriod = periodKey(displayedMonth) }
+                .onChange(of: viewMode) { _, _ in scrolledPeriod = periodKey(displayedMonth) }
+                .onChange(of: scrolledPeriod) { _, p in
+                    if let p, periodKey(displayedMonth) != p { displayedMonth = p }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 28)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Activity")
+        .navigationTitle(explain("My routine"))
         .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .onAppear(perform: load)
+        // The strips and the day list swipe sideways; the page's back swipe
+        // stays on the edge so it doesn't take those swipes.
+        .edgeOnlyBackSwipe()
+        .toolbar {
+            // The page is the routine, so its Edit is the page's own.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(explain("Edit")) {
+                    Analytics.capture("plan_edit_opened", [:])
+                    showPlanEditor = true
+                }
+            }
+        }
+        .onAppear {
+            load()
+            #if DEBUG
+            if UserDefaults.standard.string(forKey: "capture") == "activity-week-edit" { showPlanEditor = true }
+            if let m = UserDefaults.standard.string(forKey: "activityMode").flatMap(ViewMode.init(rawValue:)) { viewMode = m }
+            #endif
+            if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
+        }
         .onChange(of: cardStore.version) { _, _ in thumbs = [:]; loadCellPhotos() }
+        .fullScreenCover(isPresented: $showPlanEditor) { WeeklyPlanEditor() }
+        .navigationDestination(isPresented: Binding(get: { openTalk != nil },
+                                                    set: { if !$0 { openTalk = nil } })) {
+            if let openTalk {
+                ConversationDetailView(session: openTalk).environmentObject(appState)
+            }
+        }
+        .sheet(item: $routineSheet, onDismiss: { load(); reloadPlanner() }) { routineSheetView($0) }
+        .sheet(isPresented: $showSayItAgainPicker, onDismiss: reloadPlanner) {
+            SayItAgainPicker().environmentObject(appState)
+        }
+        .onChange(of: planStore.plan) { _, _ in reloadPlanner() }
+        .onChange(of: weekStart) { _, _ in reloadPlanner() }
+        // A day swiped or tapped into another week takes the week with it.
+        .onChange(of: selectedDay) { _, day in
+            guard let day else { return }
+            let start = PlannerSnapshot.startOfWeek(day)
+            if start != weekStart { weekStart = start }
+        }
     }
+
+    // MARK: - Planner (week)
+
+    @ViewBuilder
+    private var plannerSection: some View {
+        if let planner {
+            // The day is ONE card: its plan, what happened, and the day's
+            // share card at the foot (founder: one card per day, and the
+            // same width as the promise above).
+            PlannerDayCard(snapshot: planner, selectedDay: $selectedDay,
+                           isPromise: planStore.plan.streakSince != nil,
+                           activeDays: studiedDays,
+                           onOpen: open,
+                           onOpenTalk: { id in
+                               openTalk = sessionsByDay.values.flatMap { $0 }.first { $0.id == id }
+                                   ?? SessionStore.shared.loadAcrossLanguages().first { $0.id == id }
+                           },
+                           footer: selectedDay.map { AnyView(dayJournal(cal.startOfDay(for: $0))) })
+        } else {
+            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+        }
+    }
+
+    private var modePicker: some View {
+        Picker("View", selection: $viewMode) {
+            ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var streakLine: some View {
+        StreakLine(streak: currentStreak).font(.headline)
+    }
+
+    /// What a routine line opens — the same screens the Review tab's
+    /// Today card opens for each kind.
+    private enum RoutineSheet: Identifiable {
+        case words, expressions, review, test
+        case shadow([PracticeStats.ShadowPick])
+        var id: String {
+            switch self {
+            case .words: return "words"
+            case .expressions: return "expressions"
+            case .review: return "review"
+            case .test: return "test"
+            case .shadow: return "shadow"
+            }
+        }
+    }
+
+    private func open(_ kind: StudyPlan.Kind) {
+        switch kind {
+        case .talk: appState.pendingFreeTalk = true
+        case .sayItAgain: showSayItAgainPicker = true
+        case .words: routineSheet = .words
+        case .expressions: routineSheet = .expressions
+        case .review: routineSheet = .review
+        case .test: routineSheet = .test
+        case .shadow:
+            let picks = PracticeStats.shadowPicks(
+                sessions: SessionStore.shared.load().filter { $0.endedAt != nil },
+                attempts: appState.shadowAttempts,
+                level: appState.proficiency,
+                limit: GoalStore.shared.handSize(.shadow))
+            routineSheet = .shadow(picks)
+        }
+    }
+
+    @ViewBuilder
+    private func routineSheetView(_ sheet: RoutineSheet) -> some View {
+        switch sheet {
+        case .words: DailyWordsView().environmentObject(appState)
+        case .expressions: DailyExpressionsView().environmentObject(appState)
+        case .review: DrillSheet().environmentObject(appState)
+        case .test: WeeklyTestView().environmentObject(appState)
+        case .shadow(let picks):
+            if picks.isEmpty {
+                NavigationStack {
+                    ShadowBrowserView()
+                        .navigationTitle("Shadowing")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .environmentObject(appState)
+                }
+            } else {
+                NavigationStack {
+                    PracticeSessionView(shadowPicks: picks, includeCards: false)
+                        .environmentObject(appState)
+                }
+            }
+        }
+    }
+
+    private func reloadPlanner() {
+        planner = PlannerSnapshot.make(weekStart: weekStart, plan: planStore.plan)
+        if let days = planner?.days,
+           !(selectedDay.map { d in days.contains { cal.isDate($0, inSameDayAs: d) } } ?? false) {
+            selectedDay = days.first { cal.isDateInToday($0) } ?? days.first
+        }
+    }
+
+    /// Move a week; the selected day moves with it (same weekday), so the
+    /// strip and the day under it never disagree.
+    private func shiftWeek(_ by: Int) {
+        let from = selectedDay ?? Date()
+        selectedDay = cal.date(byAdding: .day, value: 7 * by, to: from) ?? from
+    }
+
 
     // MARK: - The day's card, inside the calendar
 
@@ -143,11 +326,10 @@ struct ActivityView: View {
         var id: String { label }
     }
 
+    /// The past's totals. The streak and the best run live in the promise
+    /// card above, by the learner's own rule — not repeated here.
     private var headlineStats: [HeadlineStat] {
-        [HeadlineStat(value: "\(currentStreak)", label: explain("day streak"), icon: "flame.fill",
-                      tint: currentStreak > 0 ? .orange : .secondary),
-         HeadlineStat(value: "\(longestStreak)", label: explain("longest"), icon: "trophy.fill"),
-         HeadlineStat(value: totalTimeString, label: explain("total"), icon: "waveform"),
+        [HeadlineStat(value: totalTimeString, label: explain("total"), icon: "waveform"),
          HeadlineStat(value: "\(activeDays.count)", label: explain("days"), icon: "calendar")]
     }
 
@@ -168,7 +350,7 @@ struct ActivityView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 4)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.tertiarySystemGroupedBackground)))
     }
 
     private var statDivider: some View {
@@ -204,8 +386,6 @@ struct ActivityView: View {
 
     private var monthCard: some View {
         VStack(spacing: 14) {
-            periodHeader
-
             HStack(spacing: 0) {
                 ForEach(weekdaySymbols, id: \.self) { s in
                     Text(s).font(.caption2).foregroundStyle(.secondary)
@@ -224,20 +404,16 @@ struct ActivityView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     // MARK: - Year view (contribution grid)
 
     private var yearCard: some View {
         VStack(spacing: 16) {
-            periodHeader
-
             // 12 mini-months, 3 across — the whole year on one screen, no
             // horizontal scroll.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3),
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14, alignment: .top), count: 3),
                       spacing: 16) {
                 ForEach(Array(monthsOfYear.enumerated()), id: \.offset) { _, month in
                     miniMonth(month)
@@ -249,9 +425,7 @@ struct ActivityView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     private func miniMonth(_ month: Date) -> some View {
@@ -269,22 +443,69 @@ struct ActivityView: View {
         }
     }
 
-    // MARK: - Period header (shared)
+    // MARK: - Period strip (shared)
 
-    private var periodHeader: some View {
-        HStack {
-            Button { shift(-1) } label: {
-                Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
+    /// The first day of the month (or year) `date` falls in — the strip's ids.
+    private func periodKey(_ date: Date) -> Date {
+        let comps = viewMode == .year ? cal.dateComponents([.year], from: date)
+                                      : cal.dateComponents([.year, .month], from: date)
+        return cal.date(from: comps) ?? date
+    }
+
+    /// Three years of months, or five years, ending now.
+    private var periods: [Date] {
+        let now = periodKey(Date())
+        let unit: Calendar.Component = viewMode == .year ? .year : .month
+        let back = viewMode == .year ? 4 : 35
+        return (-back...0).compactMap { cal.date(byAdding: unit, value: $0, to: now) }
+    }
+
+    /// One month (or year) in the strip: its name, and a circle holding the
+    /// days the promise was kept in it — the ring fills as that share of its
+    /// days so far, so a month reads like a day does.
+    private func periodCell(_ start: Date, selected: Bool) -> some View {
+        let unit: Calendar.Component = viewMode == .year ? .year : .month
+        let today = cal.startOfDay(for: Date())
+        let end = min(cal.date(byAdding: unit, value: 1, to: start) ?? start, cal.date(byAdding: .day, value: 1, to: today) ?? today)
+        var kept = 0, counted = 0
+        var d = start
+        while d < end {
+            switch PracticeStats.standing(of: d, activeDays: studiedDays, calendar: cal) {
+            case .kept: kept += 1; counted += 1
+            case .missed: counted += 1
+            case .rest: break
             }
-            Spacer()
-            Text(periodTitle).font(.headline)
-            Spacer()
-            Button { shift(1) } label: {
-                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
-            }
-            .disabled(!canGoNext)
-            .opacity(canGoNext ? 1 : 0.3)
+            d = cal.date(byAdding: .day, value: 1, to: d) ?? end
         }
+        let share = counted > 0 ? Double(kept) / Double(counted) : 0
+        let f = DateFormatter()
+        f.locale = uiLocale
+        f.setLocalizedDateFormatFromTemplate(viewMode == .year ? "yyyy" : "MMM")
+        return VStack(spacing: 6) {
+            Text(f.string(from: start))
+                .font(.caption2.weight(selected ? .semibold : .regular))
+                .foregroundStyle(selected ? Color.primary : Color.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            ZStack {
+                Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
+                if share > 0 {
+                    Circle().trim(from: 0, to: share)
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .padding(1.5)
+                }
+                Text("\(kept)")
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(kept > 0 ? Color.primary : Color.secondary)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(width: viewMode == .year ? 40 : 32, height: viewMode == .year ? 40 : 32)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(f.string(from: start)))
+        .accessibilityValue(Text(explain("Kept for \(kept) days")))
     }
 
     // MARK: - Cells
@@ -331,7 +552,7 @@ struct ActivityView: View {
                                       lineWidth: isSelected ? 2.5 : 1.5)
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { if !future { selectedDay = day } }
+                .onTapGesture { if !future { selectedDay = day; viewMode = .day } }
         } else {
             Color.clear.aspectRatio(1, contentMode: .fit)
         }
@@ -357,7 +578,7 @@ struct ActivityView: View {
                                       lineWidth: isSelected ? 1.5 : (cal.isDateInToday(date) ? 1 : 0))
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { if !future { selectedDay = day } }
+                .onTapGesture { if !future { selectedDay = day; viewMode = .day } }
         } else {
             Color.clear.aspectRatio(1, contentMode: .fit)
         }
@@ -381,12 +602,12 @@ struct ActivityView: View {
 
     // MARK: - Day detail (tap a day)
 
-    private func dayDetailCard(_ day: Date) -> some View {
-        let mins = minutesByDay[day] ?? 0
-        let daySessions = sessionsByDay[day] ?? []
-        let talks = daySessions.count
-        // Same per-kind numbers (and the same log-plus-backfill policy) as
-        // Progress's activity mix chart.
+    /// The foot of the day's card: its share card beside the day's numbers.
+    /// The day's talks are rows in the list above (tap one for its book),
+    /// so they aren't listed again here.
+    @ViewBuilder
+    private func dayJournal(_ day: Date) -> some View {
+        let talks = (sessionsByDay[day] ?? []).count
         let log = PracticeLog.shared.day(day)
         let shadowed = max(log?.shadowReps ?? 0,
                            appState.shadowAttempts.filter { cal.isDate($0.createdAt, inSameDayAs: day) }.count)
@@ -394,96 +615,29 @@ struct ActivityView: View {
                            drillCards.filter { c in
                                c.lastReviewedAt.map { cal.isDate($0, inSameDayAs: day) } ?? false
                            }.count)
-
         let study = studyMinutesByDay[day] ?? 0
-        let isEmpty = mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0 && study == 0
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 8) {
-                Text(dayTitle(day))
-                    .font(.headline)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                Spacer(minLength: 8)
-                // The day's share card — only for a day that has something
-                // on it; an empty day has nothing to put on a card. A talk
-                // closed without saving still counts: it was metered.
-                if !isEmpty {
-                    // A bare glyph, no container. The label said what the
-                    // glyph already says, and a bordered capsule drawn around
-                    // one icon has no padding that looks right at either
-                    // control size. The tap target comes from padding instead,
-                    // which keeps the glyph flush with the card's own inset;
-                    // `Label` keeps "Share card" as the accessibility name.
+        let talkSeconds = talkSecondsByDay[day] ?? 0
+        let isEmpty = talkSeconds == 0 && talks == 0 && shadowed == 0 && reviewed == 0 && study == 0
+        if !isEmpty {
+            HStack(alignment: .top, spacing: 16) {
+                cardPreviewRow(day)
+                VStack(spacing: 12) {
                     Button { cardDay = CardDay(date: day) } label: {
                         Label("Share card", systemImage: "square.and.arrow.up")
-                            .labelStyle(.iconOnly)
-                            .font(.title3)
-                            .padding(.leading, 14)
-                            .padding(.vertical, 6)
-                            .contentShape(Rectangle())
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.tint)
+                    factRow("Talk time", PracticeStats.talkClock(seconds: talkSeconds))
+                    if talks > 0 { factRow("Talks", "\(talks)") }
+                    if study > 0 { factRow("Study time", explain("\(study) min")) }
+                    if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
+                    if reviewed > 0 { factRow("Drills", "\(reviewed)") }
                 }
-            }
-            if isEmpty {
-                Text(explain("No practice this day."))
-                    .font(.subheadline).foregroundStyle(.secondary)
-            } else {
-                // The card beside its facts. The card already prints the
-                // day's minutes, so an icon row repeating them under it was
-                // the same number twice — the facts now fill the half of the
-                // row the thumbnail used to leave empty.
-                HStack(alignment: .top, spacing: 16) {
-                    cardPreviewRow(day)
-                    VStack(spacing: 12) {
-                        // Talk time leads, and is shown even at zero on a day
-                        // that has something else: it is the number the home
-                        // ring reports, and a day whose talk was closed
-                        // without saving has nothing else to name it by.
-                        factRow("Talk time",
-                                PracticeStats.talkClock(seconds: talkSecondsByDay[day] ?? 0))
-                        if talks > 0 { factRow("Talks", "\(talks)") }
-                        if study > 0 { factRow("Study time", explain("\(study) min")) }
-                        if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
-                        if reviewed > 0 { factRow("Drills", "\(reviewed)") }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight)
-                }
-                // The day's talks as tappable rows — the record links straight
-                // back to each talk's book for review.
-                if !daySessions.isEmpty {
-                    CardDivider(inset: 0)
-                    ForEach(daySessions) { session in
-                        NavigationLink {
-                            ConversationDetailView(session: session)
-                                .environmentObject(appState)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "bubble.left.and.bubble.right.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tint)
-                                    .frame(width: 24)
-                                Text(session.displayTitle)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight, alignment: .top)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     /// One fact beside the card: what it is, then how much of it. Label left,
@@ -546,7 +700,7 @@ struct ActivityView: View {
 
     private var canGoNext: Bool {
         switch viewMode {
-        case .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+        case .day, .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
         case .year:  return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .year)
         }
     }
@@ -680,15 +834,14 @@ struct ActivityView: View {
         // One rule, one implementation. This screen used to count its own
         // "days with any session", which was a third definition of streak
         // alongside PracticeStats' and the Core's — three numbers, one word.
+        studiedDays = studied
+        PromiseJudge.refresh()
         currentStreak = PracticeStats.snapshot().streakDays
-        longestStreak = longestStreak(in: studied)
-        // Land with a day already open so the detail card is present from the
-        // start (no first-tap height jump): today if active, else most recent.
-        if selectedDay == nil {
-            let today = cal.startOfDay(for: Date())
-            selectedDay = days.contains(today) ? today : days.max()
-        }
+        longestStreak = PracticeStats.longestStreak(calendar: cal)
+        // Land on today: the promise card is about today.
+        if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
         loadCellPhotos()
+        reloadPlanner()
     }
 
     /// Foreground time, never less than the talk time — `DayCardData.make`'s
@@ -717,21 +870,6 @@ struct ActivityView: View {
         return (cardStore.snapshot(for: day)?.talkMinutes ?? 0) * 60
     }
 
-    private func longestStreak(in days: Set<Date>) -> Int {
-        let sorted = days.sorted()
-        var longest = 0, run = 0
-        var prev: Date?
-        for d in sorted {
-            if let p = prev, cal.date(byAdding: .day, value: 1, to: p) == d {
-                run += 1
-            } else {
-                run = 1
-            }
-            longest = max(longest, run)
-            prev = d
-        }
-        return longest
-    }
 }
 
 private extension UIImage {

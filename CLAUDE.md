@@ -13,6 +13,7 @@ Tab order: **Talk · Watch · Review · Progress** (`RootTabView`) — do → cr
 - **Talk** (`ConversationHome`) — the speaking launcher, one tap to start the call. A List: Today status (minutes/goal, streak, talks → ActivityView), Free talk, **Scenarios** (header "+" → builder), **In the news** (`NewsTopicSection`, refresh + interests in its header). Every row tap launches `ConversationView` phone-call-mode conversation (live STT → Gemini structured turn `{reply, suggestion}` → cloned-voice TTS, auto VAD turn-taking; per-turn suggestions as inline chips). `MeTab` opens from this tab's header.
 - **Watch** (`WatchTab`) — simulate a specific situation BEFORE it happens and mine ideas (how the fluent self handles it, which expressions it uses). Three entries, all landing in `ScenarioComposerSheet`: ① a stories-style People row (tap a persona → composer scoped to them, with relationship-grounded ideas from `TopicEngine.suggestForCounterpart`, cached on the counterpart), ② **"Your own situation"** (`Mode.custom`) — describe the real upcoming thing in the composer's BOX, with material attached (no person needed; empty `Scenario.role` makes the scene infer its own counterpart), ③ **"Common situations"** (`Mode.browse`) — the drill-down chain (cafe → ordering → order came out wrong). **The two doors are now genuinely different screens, not one composer opened twice** (2026-09-26, user decision): writing lives in the box and ONLY there, and browsing is tap-tap-tap with no text field at all — a category grid, a breadcrumb to undo a step, and at the leaf the assembled sentence READ-ONLY above the CTA. The old "leaves prefill the composer, always editable" is gone: someone who chose to pick rather than write should not be handed a field, and the words are still changeable because a saved card reopens this sheet in EDIT mode, where the field is live. Attaching is the writing door's alone — the browse door shows the Material section only when the scenario already has sources to manage. **Watch** mints the `Scenario` and plays its scene in `SceneWatchView` (`ScenarioCurriculumEngine` — the same generation stocks the book Practice reviews). A saved `Scenario` is a reusable TEMPLATE: tapping it under "Your scenarios" writes a FRESH take every time (`SceneWatchView(freshTake:)` — per-run idempotency key, previous titles passed as `avoidTitles`), and the new take is `absorb`ed into the scenario's book — latest scene replaces the old, study items accumulate, mastery survives. Replaying past material is Practice's job, never Watch's. No browsing here; books live in Practice. The People row's last bubble is **Find people** (`FindPeopleSheet`) — see below.
 - **Practice** (`PracticeTab`) — the REVIEW home; everything here came out of an activity. Three layers: today's cross-cutting SRS queue (`DrillStore` Leitner boxes 0–5 + shadow picks), the **Books** shelves behind chips (**Talks · Topics · Scenarios**), and the Library dictionaries (vocabulary / expressions / shadowing). Every book has the same anatomy — one scene + words/lines to master, then archive. Watch books = `Scenario` + `ScenarioCurriculum` (`ScenarioDetailView`; scene behind its Watch button). Talk books = a finished `Session` whose material is DERIVED by `TalkCurriculum` (fluent-self pickup words + corrected lines as shadow material, mastery via `VocabStore`/shadow attempts — never persisted); their page is `ConversationDetailView` (Continue / Replay / **Say it again** (다시 말하기) — Watch books carry the same button under Talk · Watch; raw transcript + sequential audio replay behind Replay in `TalkTranscriptView`, the whole talk done again, the learner's part spoken the corrected way, behind Say it again — see below). **Either book exports** from its ⋯ menu (`BookExportMenu` → `BookExport.swift`): both types flatten into ONE `BookDocument`, rendered as an A4 PDF (annotate on an iPad, or print) or Markdown (paste into a notes app). The PDF goes through `UIMarkupTextPrintFormatter` + `UIPrintPageRenderer` because it's the only thing on iOS that flows arbitrary-length text across pages without hand-rolled CoreText pagination — which is why the document is authored as HTML. Add a field to `BookDocument` and BOTH renderers pick it up; never render a book straight to a format.
+  **The Studying page is BOOK-FIRST** (2026-10-03, user decision — `PracticeTab.studyingPage`, `BookFeedCards.swift`). Every word, expression, correction and shadow line came out of a talk or a scene, so the page is books, not four free-floating piles: the four library lists on top as one row of tiles (icon · how much was studied · name — words known/said, expressions known/said, sentence cards reviewed, shadow takes; no bars, only words have a fixed whole), then every unfinished book NEWEST FIRST by when it was made, each the shelves' own `TalkBookCard` / `ScenarioBookCard` (no whole-book bar here) with four chapter buttons under it — Words · Expressions · Shadowing · Grammar, icon over that chapter's bar, an empty chapter dimmed in place — and a tap opens THAT chapter's deck as a sheet (`DueReviewView(hand:)`, `PracticeSessionView`, `DrillView(.session)`). The old Today card (goal tiles, rows, rings) is gone; what a day asks for is the routine's. Pinning was built and dropped the same day ("pinned book" read oddly; newest-first already puts the book in hand on top), and a "most due first" sort was rejected because it reshuffles the page every time a card is cleared. The page HEADER holds the week's things as icons with a dot, never numbers: put off (card stack, orange dot when due), the week's report (calendar, dot when unread), the monthly test while open, and the weekly test as its host's face, separated at the far right. A **Finished** chip replaced the header's trophy button. **"Put off" is EVERYTHING put off** — words, expressions AND sentence cards (`DrillStore.putOffCards`), due or not, in return order, "1 of N" over all of it (`DueReviewView.putOffDeck`); `StudyDeckView` deals sentence cards too (`StudyDeckItem.sentence`). Showing only what was due made a card put off until tomorrow look lost.
 - **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages behind swipeable chip tabs, plus the activity/effort panel (14-day rep bars).
 - **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app language, not the phone's — see "UI text has ONE language" below.
   **The refresh is COALESCED and never runs in the write's own run-loop turn** (2026-09-23). `refreshBook` rebuilds every talk book (`TalkCurriculum.build`, NLTagger over the whole session) on the main actor, and a single "I know" on a word card writes three files, each asking for it — measured 30 books ≈ 515 ms in the simulator, paid between the tap and the button repainting, which is what the learner reported as the toggle stuttering. `schedule()` now runs ONE refresh 0.4 s after the last write; only the BACKGROUND edge still calls `refresh()` directly (iOS may suspend right after it). The active edge and `RootTabView.onAppear` go through `schedule()`, whose pass yields the main thread after every talk book (2026-09-28): on a cold launch both used to rebuild every book synchronously while the Talk ring drew, and the first `coreLevelLabel` loaded the CEFR list + tagger on main (~230 ms) — those two are now warmed off-main in `FutureVoiceApp.init`. Practice's talk-book pass yields per book for the same reason (first tab switch). The build itself got cheap the same day: `VocabStore.lemmas(in:)`, `offListContentWords(in:)` and `lookupKey(for:)` memoize per text + tagger language (`TextMemo`, lock-guarded, bounded), and `CarryoverDetector.normalized`, `TalkCurriculum.sentences(in:)`, `WordSplitter.count` are single-pass — a warm rebuild of 30 books is ~37 ms (`TalkCurriculumTimingTests` prints it). Don't put a tagger call back on a per-word path without going through the memo.
@@ -497,6 +498,175 @@ Nobody opens a language app because a streak asks them to; they answer a phone t
 - **A decline is not a failure.** No scold, no broken counter, and `PracticeStats`' streak is untouched by a declined or missed call; tomorrow's is written as usual.
 - Tapping is handled by `DailyCallNotificationDelegate` (installed from `AppDelegate` — the delegate MUST be set before launch finishes or a lock-screen answer is lost), which posts to `DailyCallInbox.shared`; `RootTabView` presents the call from there.
 - `interruptionLevel = .timeSensitive` is set but inert until the Time Sensitive capability is added to the App ID — harmless without the entitlement, no signing change needed today.
+
+## The study timetable (2026-10-02, branch `feat/study-planner`)
+
+The Talk header's streak chip opens Activity, and Activity now opens on a
+**Week** view: a timetable of what the learner PLANNED (dashed outlines) laid
+over what HAPPENED (filled blocks). Founder's ask: "my study planner — talk at
+this time, words at that time, per weekday, combined with my activity". Kept on
+its own branch so the founder picks the build it ships in.
+
+- **`StudyPlan` is a weekly template + per-date edits** (`Services/StudyPlan.swift`,
+  `Documents/study_plan.json`, device-local like the daily call it schedules).
+  Rest days and one-off exceptions ("just this day" on a drag) are keyed
+  `yyyy-MM-dd`. Two kinds are DERIVED, never stored, so no second copy can
+  drift: the weekly test (`WeeklyTestSettings`) and the review slot
+  (`autoReview` + time, planned days only).
+- **"Say it again" is an ordinary block** (same day, founder: "a toggle for
+  'after the talk' doesn't fit"). It was first derived — right after the
+  day's first talk, on a settings toggle — and is now placed, dragged and
+  deleted like words or shadowing. Plans saved while it was derived are
+  converted on load (`convertingLegacySayItAgain`, same slots, so nothing
+  moves on screen); a seeded plan puts one after the first talk. A
+  say-it-again block names NO talk — it recurs weekly and the talk worth
+  redoing is whichever just happened — so the talk is picked when it is
+  time: `SayItAgainPicker` (the last 14 days' talks the learner spoke in,
+  newest pre-selected, one tap to start), reached from its reminder
+  (`PlanReminder.sayItAgainCategoryId` → `DailyCallInbox.pendingSayItAgain`
+  → `RootTabView`) and from its row in Activity's day list.
+- **A talk block IS a daily-call time.** `DailyCallScheduler.fireDates` reads
+  `StudyPlan.callDates` — the old shape (today's remaining slots, else the next
+  day's first) with weekdays, rest days and exceptions honoured. The first
+  plan is SEEDED from `DailyCallStore.times` on every day, which gives exactly
+  the old rings (`StudyPlanTests.testSeededPlanRingsLikeTheOldCall`). The two
+  stay one list: the plan mirrors its distinct talk times into
+  `DailyCallStore.times`, and that setter (Me → Call, onboarding) feeds
+  `adoptCallTimes` back. At most 4 distinct talk times across the week, so the
+  mirror is exact; a move that would make a fifth is refused.
+- **Review slot on = the review reminder fires there only** (`DrillReminder`,
+  first slot with something due by then). Off = the old "when a card comes
+  due, 9–21" behaviour. Hand-placed words/expressions/shadow blocks get their
+  own local reminders (`PlanReminder`, next 7 days, rebuilt on every plan
+  change and on background; permission asked only when saving such a block).
+- **Done means the same KIND happened that day, at any time** (`PlannerDay`).
+  An 8:00 talk done at noon is done; a planner that marks it missed is the one
+  people switch off. Talk actuals come from `Session.startedAt/endedAt`; every
+  other rep gets a time from `ActivityEventLog`, written inside
+  `PracticeLog.record` (the one door every rep walks through) and at the end
+  of a say-it-again run. It only has times from this build on, kept 60 days.
+- **The week is ONE plan that repeats, so rest is set by WEEKDAY**
+  (`StudyPlan.offWeekdays`: None · Weekends · Choose, top of the editor).
+  The per-date "Days off this week" list and the whole settings sheet were
+  cut (founder: "the weekly plan isn't remade every week"). Review is an
+  ORDINARY block now, placed like any other (`convertingReviewSwitch` moves
+  an old review switch into one); the review reminder rings at review
+  blocks whenever there are any (`hasReviewBlocks`). Only the weekly test is
+  still derived (from its own settings).
+- **Activity's week is READ-ONLY; the plan is edited on its own page**
+  (same day, founder: "you're not editing the activity, you're editing the
+  weekly plan — and give it room"). "Edit weekly plan" under the grid opens
+  `WeeklyPlanEditor` full-screen: Monday–Sunday with NO dates
+  (`PlannerSnapshot.master` — next week's days as stand-ins, exceptions and
+  days off left out, because those belong to dates), 40 pt per hour, every
+  block showing its 24-hour start time, weekday header pinned above the
+  scrolling hours. Tap an empty spot to add a block there (half-hour steps);
+  tap a block to edit it; long-press and drag to move it — vertical = time
+  (15-minute steps), sideways = weekday. A dropped cell is ALREADY where it
+  was dropped (founder: the release itself is the move): that weekday is
+  split off to the new time at once (`moving(.everyWeek)`), and only then,
+  if the block also runs on other weekdays and only its time changed, a
+  dialog asks whether the rest follow — "every day it runs" moves them too
+  (`StudyPlan.following`, which merges the halves back into one block);
+  "only on <weekday>" or tapping outside leaves it as it already is. The review slot and the
+  test move their own settings. The slider opens `PlanSettingsSheet`. The
+  dated grid in Activity runs 8 pt from the screen edge (it needs every
+  point across) and has no edit mode.
+- **Activity shows ONE DAY, today first** (same day, founder: "what the
+  learner cares about is TODAY; before and after are a tap or a swipe away,
+  and each date says whether it was done"). `PlannerDayCard`: the week's
+  dates on top, each with ONE mark: a green tick when every planned block
+  was done, nothing otherwise (counts like `2/4` and a dot for future plans
+  were tried and cut as noise — done or not is the only question) — tap a date,
+  or swipe the strip for the next/previous week; below, the selected day at
+  full width, every block labelled ("Talk · Coffee with Sarah 8:02–8:14 ✓"),
+  swipe it for the next/previous day. The day is a LIST in time order,
+  drawn like a Reminders row — time · the kind's icon (the ONLY colour) ·
+  title over one detail line · a circle ticked green once it happened, grey
+  once its time passed — with plain dividers and no borders or fills (the
+  first cut drew dashed outlines and filled bars; founder: "too many
+  lines"), and a red dot + time marking now — not an hour axis,
+  which was mostly empty hours to scroll past (founder: the timeline only
+  means something while editing). Two designs died the same day: the
+  seven-column grid (coloured bars nobody could read, and past columns were
+  empty space once they were reduced to a result) and the separate day list
+  under it (the same day twice). The 7-column grid survives only as the
+  weekly plan editor, where seeing the whole week IS the job.
+- **The streak is the learner's OWN promise** (same day, founder: "the
+  more I plan, the more I have to keep — a first-time user keeps it just by
+  using the app, and when I raise my own bar the streak means something
+  else. It's a promise I kept to myself"). ONE streak number, app-wide (Home
+  chip, widget, day card, Activity), whose RULE is per learner:
+  `StudyPlan.streakSince` nil → a day counts when they studied at all
+  (`PracticeStats.activeDays`, the old rule, where everyone starts — the
+  seeded plan never sets it); set → from that day a day counts only when
+  every block planned for it was done, and a day with nothing planned is a
+  REST day that neither counts nor breaks. **The routine IS the promise,
+  from onboarding** (founder: "the routine is already set — X minutes a day,
+  chosen in onboarding"): `StudyPlan.seeded` writes talk X minutes every day
+  (`dailyGoalMinutes`) with `streakSince` = that day — at the daily call's
+  times when the call is on, otherwise ANYTIME (`Block.anytime`: no hour is
+  invented; it lasts the whole day, sits in an "Any" row above the editor's
+  grid, and reads "Anytime" in the day list). A routine with no timed talk
+  doesn't place the call — `fireDates` falls back to the call's own times.
+  Plans saved before this (`unitsVersion` < 2) that the learner never
+  touched become this onboarding promise on load
+  (`upgradingToOnboardingPromise`); the promise runs from TODAY, so the past
+  keeps the studied-days rule it was counted by. There is no switch (a
+  "Make this plan my promise" toggle lived for an hour). Emptying the
+  routine ends the promise; a hand edit after that starts it again. Each promise day is judged by the plan it HAD
+  (`PromiseLedger`, `Documents/promise_days.json`: planned/done per day,
+  today provisional, frozen once the day is over by `PromiseJudge.refresh`,
+  run from every widget refresh, on Activity load and on every plan
+  update), so raising the bar never rewrites the past; days before the
+  promise keep the studied rule, so the run carries across the switch.
+  `PracticeStats.standing` is the one per-day answer and `streak(endingAt:)`
+  the pure walk (`StudyPlanTests`). A talk block is done by MINUTES of
+  metered talk (`TalkTimeLog`, the ring's number), filled in plan order —
+  4 of 10 minutes is a 40% ring and "4 of 10 min", not a miss.
+- **The page is a JOURNAL OF MY ROUTINE** (same day, founder: "my promise
+  at the top, 'this is what I will do', and under it the journey by
+  Day/Month/Year"). Titled "My routine". Top: `RoutinePromiseCard` — "My
+  promise" with the flame streak at its right, then THE WEEK AS A PICTURE:
+  seven columns, each a stack of colour bars in the day's order, one bar per
+  thing promised (founder: "show simply what Monday holds and what the
+  weekend holds" — a progress bar per day was the wrong reading and was not
+  built), a legend naming each colour with its amount, and Edit / "Make it
+  a promise". One colour per kind (talk blue, say it again teal, review
+  green, words purple, expressions pink, shadowing yellow, test orange) —
+  two kinds sharing green read as one bar. Below: "Journey", Day | Month |
+  Year; Day is `PlannerDayCard` — ONE card per day (founder): the week
+  circles, the day's list with progress rings (a talk row opens its book),
+  and at its foot the day's journal entry (share card + numbers,
+  `dayJournal`), at the same width as the promise card. Month/Year are the
+  calendar this page always had and show no day card; tapping a date there
+  opens it in Day.
+- **Only a talk is promised in minutes** (founder: "why is everything but
+  Talk in minutes?"). Every other block is a COUNT the app keeps — words /
+  expressions judged, sentence cards, shadow lines, say-it-again runs, a
+  test — read from `PracticeLog`'s FINISHED counts (the daily goals' own
+  numbers), and filled in plan order (`PlannerDay.progress`). The stored
+  key is still `minutes`; `unitsVersion` nil marks a plan saved in minutes,
+  converted on load to each kind's default count (`convertingToCounts`).
+- Future review slots show how many items will be waiting
+  (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
+- **One block per sitting, and every block names itself** (same day, founder:
+  "it isn't clear what the bars are"). A sitting that started within 45 min
+  of a planned block of its kind is drawn as ONE filled block with a tick
+  (`PlannerDay.absorbed`), never an outline with a half-width bar over it;
+  done at another time, the plan keeps a dashed outline with a tick and the
+  filled block sits where it happened; a plan whose time passed undone is
+  grey, never red. Every block carries its kind's icon (blocks are at least
+  16 pt tall, and `stackedTops` pushes a block below the one before so a
+  10-minute talk and the say-it-again after it don't overlap), and the
+  legend lists all five kinds plus the two strokes.
+- Talk is `.blue`, not the accent: a theme's accent can be green, and then a
+  talk reads as a review. The legend says "Planned" — "Plan" is the billing
+  plan's key (요금제).
+- Captures: `-capture activity-week` / `activity-week-edit` / `plan-settings`
+  / `plan-block`. Tests: `StudyPlanTests`.
+- Not built: Talk tab's "today" list, onboarding plan step, per-block topics,
+  syncing the plan.
 
 ## The Core (100 seats, per language)
 
@@ -1468,10 +1638,12 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
 - **The week is the learner's, not the calendar's.** `WeeklyTestSchedule` is
   one weekday + time (default Saturday 10:00, in the goals sheet); every
   moment belongs to the most recent opening, so a test taken on Tuesday is
-  still "this week's", and a finished test shows its score on the row until
-  the next opening. Material window = since the last test was built, else
-  seven days. Under `minItems` (5) the row says "a talk or two first" and
-  the opening is remembered as thin so the tab doesn't rebuild on every
+  still "this week's", and a finished test shows its result until the next
+  opening. Its door is the Review page HEADER (2026-10-03): the test host's
+  face, alone at the far right, with a dot while the test is open or under
+  way — no score, no row. Material window = since the last test was built,
+  else seven days. Under `minItems` (5) the test is thin and the opening is
+  remembered as thin so the tab doesn't rebuild on every
   appearance. Settings are device-local like the daily call (two synced
   devices must not both ring); the tests themselves sync (`ArrayKind`, LWW).
 - **Write-back is a CLAIM, never a verdict** (see "USED outranks KNOWN"):

@@ -359,25 +359,79 @@ enum PracticeStats {
         activeDays(calendar: calendar).contains(calendar.startOfDay(for: day))
     }
 
+    /// How one day stands for the streak. The RULE is the learner's own
+    /// (founder, 2026-10-02: "it's a promise I kept to myself"): with no
+    /// promise made, a day counts when they studied at all; from the day they
+    /// make their plan a promise (`StudyPlan.streakSince`), a day counts only
+    /// when everything planned for it was done, and a day with nothing
+    /// planned is a rest day. Each promise day is judged by the plan it had
+    /// (`PromiseLedger`), so raising the bar never rewrites the past.
+    enum DayStanding { case kept, missed, rest }
+
+    static func standing(of day: Date, activeDays: Set<Date>,
+                         calendar: Calendar = .current) -> DayStanding {
+        let d = calendar.startOfDay(for: day)
+        if let e = PromiseLedger.shared.entry(d, calendar: calendar) {
+            return e.isRest ? .rest : (e.kept ? .kept : .missed)
+        }
+        if let since = StudyPlanStore.current.streakSince, d >= calendar.startOfDay(for: since) {
+            // A promise day not judged yet (nothing has refreshed since):
+            // not counted, not broken.
+            return .rest
+        }
+        return activeDays.contains(d) ? .kept : .missed
+    }
+
+    /// Whether the streak's rule is the learner's promise today.
+    static var isPromise: Bool { StudyPlanStore.current.streakSince != nil }
+
     private static func computeStreak(now: Date, calendar: Calendar) -> Int {
         let days = activeDays(calendar: calendar)
-        func met(_ day: Date) -> Bool { days.contains(day) }
+        return streak(endingAt: now, floor: days.min(), calendar: calendar) {
+            standing(of: $0, activeDays: days, calendar: calendar)
+        }
+    }
 
-        var streak = 0
+    /// The walk itself, pure: today counts only once it is kept (a day is
+    /// alive until it is over), rest days are stepped over, the first missed
+    /// day ends it. `floor` bounds the walk — rest days have no end.
+    static func streak(endingAt now: Date, floor: Date?, calendar: Calendar,
+                       standing: (Date) -> DayStanding) -> Int {
         var cursor = calendar.startOfDay(for: now)
-        // Today not done yet doesn't break anything — a streak is alive until
-        // the day it belongs to is over. Anchor on yesterday instead.
-        if !met(cursor) {
-            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: cursor),
-                  met(yesterday) else { return 0 }
+        if standing(cursor) != .kept {
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: cursor) else { return 0 }
             cursor = yesterday
         }
-        while met(cursor) {
-            streak += 1
+        let floor = floor.map { calendar.startOfDay(for: $0) } ?? cursor
+        var count = 0
+        while cursor >= floor {
+            switch standing(cursor) {
+            case .kept: count += 1
+            case .rest: break
+            case .missed: return count
+            }
             guard let prev = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
             cursor = prev
         }
-        return streak
+        return count
+    }
+
+    /// The longest run ever, by the same rule.
+    static func longestStreak(calendar: Calendar = .current, now: Date = Date()) -> Int {
+        let days = activeDays(calendar: calendar)
+        guard var cursor = days.min() else { return 0 }
+        let today = calendar.startOfDay(for: now)
+        var best = 0, run = 0
+        while cursor <= today {
+            switch standing(of: cursor, activeDays: days, calendar: calendar) {
+            case .kept: run += 1; best = max(best, run)
+            case .rest: break
+            case .missed: if cursor < today { run = 0 }
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return best
     }
 
     /// Per-day average overall score (mean of 4 axes) for the last 7 days,

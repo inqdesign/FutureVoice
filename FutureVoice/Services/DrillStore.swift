@@ -399,6 +399,17 @@ final class DrillStore: LanguageScopedStore {
     /// drill deck's folder chips read this to bucket graduated cards.
     static let maxBox = 5
 
+    /// Sentence cards the learner PUT OFF — graded at least once with a delay
+    /// and not retired — soonest return first. What the Review tab's
+    /// "put off" deck deals beside the snoozed words and expressions, so
+    /// everything put off is in one place (2026-10-03, user report: a
+    /// Grammar card put off until tomorrow showed up nowhere).
+    static func putOffCards() -> [DrillCard] {
+        shared.load()
+            .filter { $0.lastReviewedAt != nil && $0.box < maxBox && $0.nextReviewAt != retiredReviewDate }
+            .sorted { $0.nextReviewAt < $1.nextReviewAt }
+    }
+
     /// The top rung's "return": there isn't one. "Got it" is the learner
     /// saying they know this line, and the word and expression decks have
     /// always treated that as an END (`ReviewQueue.retire` clears the date

@@ -35,7 +35,7 @@ struct DailyWordsView: View {
         }
         .onAppear {
             guard !dealt else { return }
-            picks = Self.pick(goal: max(GoalStore.shared.wordsPerDay, 1), appState: appState)
+            picks = Self.pick(goal: GoalStore.shared.handSize(.words), appState: appState)
             dealt = true
         }
     }

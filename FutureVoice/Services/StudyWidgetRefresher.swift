@@ -40,6 +40,8 @@ enum StudyWidgetRefresher {
 
     @MainActor
     private static func refreshCheapParts() {
+        // Today's promise entry first: the widget's streak reads it.
+        PromiseJudge.refresh()
         // Mirror the app's Futureself palette so the widget's pixel surface
         // wears the same theme the user picked in-app.
         StudyWidgetSnapshotStore.themeIndex = UserDefaults.standard.integer(forKey: "futureselfTheme")

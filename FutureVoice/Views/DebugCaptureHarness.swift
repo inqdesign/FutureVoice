@@ -340,6 +340,77 @@ enum DebugCapture {
                 TalkTimeLog.add(seconds: 8 * 60, language: appState.targetLanguage)
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "plan-editor":
+            once("plan-editor-anytime") {
+                var plan = StudyPlan()
+                plan.blocks = [
+                    .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
+                    .init(kind: .sayItAgain, weekdays: [2, 4], hour: 20, minute: 30, minutes: 1),
+                    .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
+                    .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 2),
+                    // Blocks with no hour, for the editor's "any time" row.
+                    .init(kind: .expressions, weekdays: Set(2...7), hour: 0, minute: 0, minutes: 3, anytime: true),
+                    .init(kind: .words, weekdays: [2, 4, 6], hour: 0, minute: 0, minutes: 10, anytime: true),
+                    .init(kind: .review, weekdays: Set(1...7), hour: 21, minute: 0, minutes: 20),
+                ]
+                plan.offWeekdays = [1]
+                StudyPlanStore.shared.update(plan)
+            }
+            return AnyView(WeeklyPlanEditor())
+        case "routine-new":
+            // A learner who never set a call time: the onboarding routine,
+            // talk 10 minutes any time of day.
+            once("routine-new") {
+                StudyPlanStore.shared.update(StudyPlan.seeded(callTimes: [], goalMinutes: 10, callEnabled: false))
+                PromiseLedger.shared.replaceAll([:])
+            }
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "plan-block":
+            return AnyView(PlanBlockEditor(target: .new(day: Date())))
+        case "activity-week", "activity-week-edit":
+            // The study timetable: a weekday talk at 8:00, words twice a
+            // week, a review slot, and a few days of what actually happened —
+            // one talk moved to noon, one unplanned shadowing sitting.
+            once("activity-week") {
+                let cal = Calendar.current
+                let today = cal.startOfDay(for: Date())
+                func at(_ back: Int, _ h: Int, _ m: Int = 0) -> Date {
+                    cal.date(bySettingHour: h, minute: m, second: 0,
+                             of: cal.date(byAdding: .day, value: -back, to: today)!)!
+                }
+                var plan = StudyPlan()
+                plan.blocks = [
+                    .init(kind: .talk, weekdays: Set(2...6), hour: 8, minute: 0, minutes: 10),
+                    .init(kind: .sayItAgain, weekdays: Set(2...6), hour: 8, minute: 10, minutes: 1),
+                    .init(kind: .words, weekdays: [3, 5], hour: 19, minute: 30, minutes: 10),
+                ]
+                plan.blocks.append(.init(kind: .review, weekdays: Set(2...6), hour: 21, minute: 0, minutes: 20))
+                // "-capture activity-week" shows a promise kept since Monday;
+                // the plain studied-days rule is the default everywhere else.
+                plan.streakSince = cal.date(byAdding: .day, value: -4, to: today)
+                PromiseLedger.shared.replaceAll([:])
+                StudyPlanStore.shared.update(plan)
+                for (back, start, end, title) in [(3, at(3, 8, 3), at(3, 8, 15), "Weekend plans"),
+                                                  (2, at(2, 12, 20), at(2, 12, 33), "Moving apartments"),
+                                                  (1, at(1, 8, 1), at(1, 8, 12), "The interview follow-up"),
+                                                  (0, at(0, 8, 2), at(0, 8, 14), "Coffee with Sarah")] {
+                    // A fixed id per seeded talk, so a second capture run
+                    // replaces it instead of stacking a copy on the grid.
+                    var s = Self.talkDetailSession
+                    s = Session(id: UUID(uuidString: "00000000-0000-0000-0000-0000000000a\(back)")!, userId: s.userId, targetLanguage: s.targetLanguage, mode: s.mode,
+                                topic: title, startedAt: start, endedAt: end,
+                                turns: s.turns, summary: s.summary)
+                    SessionStore.shared.save(s)
+                }
+                var events: [ActivityEventLog.Event] = []
+                for minute in stride(from: 5, to: 20, by: 3) { events.append(.init(kind: .drill, at: at(3, 21, minute))) }
+                for minute in stride(from: 0, to: 12, by: 4) { events.append(.init(kind: .shadow, at: at(2, 17, minute))) }
+                for minute in stride(from: 32, to: 45, by: 4) { events.append(.init(kind: .word, at: at(2, 19, minute))) }
+                for minute in stride(from: 2, to: 18, by: 3) { events.append(.init(kind: .drill, at: at(1, 21, minute))) }
+                events.append(.init(kind: .sayItAgain, at: at(0, 8, 20)))
+                ActivityEventLog.shared.replaceAll(events)
+            }
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "activity", "activity-cards":
             // The activity calendar with today selected — the day summary
             // carries the share-card button. "-cards" opens the card grid,
@@ -905,6 +976,23 @@ enum DebugCapture {
             // The Today card carrying the weekly test row, finished state.
             once("practice-weekly") {
                 seedVocab(); seedSessions(); seedScenarios(into: appState); seedFinishedWeeklyTest()
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+        case "practice-today":
+            // The book-first Studying page: sample talks and scenes, newest
+            // first, each with its chapter buttons.
+            once("practice-today") {
+                seedVocab(); seedSessions(); seedScenarios(into: appState)
+                var plan = StudyPlan()
+                plan.blocks = [
+                    .init(kind: .review, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 4, anytime: true),
+                    .init(kind: .words, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 10, anytime: true),
+                    .init(kind: .expressions, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 3, anytime: true),
+                ]
+                StudyPlanStore.shared.update(plan)
+                for _ in 0..<6 { PracticeLog.shared.record(.word, finished: true) }
+                for _ in 0..<3 { PracticeLog.shared.record(.expression, finished: true) }
+                PracticeLog.shared.record(.drill, finished: true)
             }
             return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "practice-due":

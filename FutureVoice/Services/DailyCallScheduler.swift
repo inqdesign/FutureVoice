@@ -452,20 +452,49 @@ enum DailyCallScheduler {
     /// a person behaves: they try again later with the same thing to say.
     /// Answering cancels the rest, and the session that follows writes the
     /// next call fresh.
+    ///
+    /// The times come from the study timetable (`StudyPlan`): a talk block IS
+    /// a call. A timetable seeded from the call times, with every block on
+    /// every day, gives exactly the old answer; weekdays, rest days and
+    /// one-off moves are what it adds.
     static func fireDates(after now: Date, calendar: Calendar = .current) -> [Date] {
+        let plan = StudyPlanStore.shared.plan
+        if plan.hasTimedTalk { return plan.callDates(after: now, calendar: calendar) }
+        // A routine with no talk TIME ("talk 10 minutes, any time") doesn't
+        // place the call: it rings at the learner's call times, every day.
         let times = DailyCallStore.shared.times
         let todays = times.compactMap {
             fireDateToday(hour: $0.hour, minute: $0.minute, on: now, calendar: calendar)
         }
         let remaining = todays.filter { $0 > now }.sorted()
         if !remaining.isEmpty { return remaining }
-        // Past the last one: tomorrow's first.
         guard let first = times.first,
-              let today = fireDateToday(hour: first.hour, minute: first.minute,
-                                        on: now, calendar: calendar),
+              let today = fireDateToday(hour: first.hour, minute: first.minute, on: now, calendar: calendar),
               let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
         else { return [] }
         return [tomorrow]
+    }
+
+    /// The timetable changed: put the rings where it now says. The stored
+    /// voicemail is kept (it is still the same unheard message) but moved to
+    /// the next slot if its own time is no longer one; nothing planned in the
+    /// next two weeks takes every ring down.
+    static func rearmFromStoredPlan() {
+        guard liveCallSince == nil else { return }
+        Task {
+            let store = DailyCallStore.shared
+            guard store.isEnabled, var plan = store.load(), !plan.isSettled else { return }
+            let dates = fireDates(after: Date())
+            guard let first = dates.first else {
+                await cancelPendingRequest()
+                return
+            }
+            if !dates.contains(plan.scheduledFor) {
+                plan.scheduledFor = first
+                store.save(plan)
+            }
+            await schedule(plan, callerName: nil)
+        }
     }
 
     private static func fireDateToday(hour: Int, minute: Int,
@@ -581,6 +610,8 @@ final class DailyCallInbox: ObservableObject {
     @Published var pendingReviewItem: ItemReminder.Target?
     /// Set when the weekly test's reminder is tapped — the app opens the test.
     @Published var pendingWeeklyTest = false
+    /// A timetable say-it-again reminder was tapped: pick a talk to redo.
+    @Published var pendingSayItAgain = false
     /// Set when the week-turn notification carried the week's numbers — the
     /// app opens "Your week", whose last card is the test.
     @Published var pendingWeekRecap = false
@@ -629,6 +660,16 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
                 defer { completionHandler() }
                 guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
                 DailyCallInbox.shared.pendingReview = true
+            }
+            return
+        }
+
+        // A say-it-again block came due: ask which talk.
+        if category == PlanReminder.sayItAgainCategoryId {
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                DailyCallInbox.shared.pendingSayItAgain = true
             }
             return
         }

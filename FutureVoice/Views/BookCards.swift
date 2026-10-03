@@ -63,23 +63,49 @@ struct OriginTag: View {
     init?(session: Session, showActivity: Bool = false) {
         let source: String?
         switch session.origin {
-        case .free:     source = "Free talk"
-        case .news:     source = "News"
-        case .scenario: source = "Scenario"
-        case .none:     source = (session.topic?.isEmpty ?? true) ? "Free talk" : nil
+        case .free:     source = explain("Free talk")
+        case .news:     source = explain("News")
+        case .scenario: source = explain("Scenario")
+        case .none:     source = (session.topic?.isEmpty ?? true) ? explain("Free talk") : nil
         }
         guard showActivity || source != nil else { return nil }
-        text = Self.join(activity: showActivity ? "Talk" : nil, source: source)
+        text = Self.join(activity: showActivity ? explain("Talk") : nil, source: source)
     }
 
     /// Watch book — a scenario is a news-born topic or a built situation.
     init(scenario: Scenario, showActivity: Bool = false) {
-        let source = scenario.isTopic == true ? "News" : "Scenario"
-        text = Self.join(activity: showActivity ? "Watch" : nil, source: source)
+        let source = scenario.isTopic == true ? explain("News") : explain("Scenario")
+        text = Self.join(activity: showActivity ? explain("Watch") : nil, source: source)
     }
 
     private static func join(activity: String?, source: String?) -> String {
         [activity, source].compactMap { $0 }.joined(separator: " · ")
+    }
+}
+
+/// A book card's icon: a soft tinted circle with the glyph (or initials)
+/// in it, or — for a person with a photo on file — the photo, clipped to
+/// the same circle.
+struct BookIconDisc<Content: View>: View {
+    var photoId: UUID? = nil
+    @ViewBuilder var content: () -> Content
+    @ObservedObject private var photos = CounterpartPhotoStore.shared
+    static var size: CGFloat { 44 }
+
+    var body: some View {
+        Group {
+            if let id = photoId, let img = photos.image(for: id) {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Circle()
+                    .fill(.tint.opacity(0.14))
+                    .overlay { content() }
+            }
+        }
+        .frame(width: Self.size, height: Self.size)
+        .clipShape(Circle())
     }
 }
 
@@ -92,6 +118,9 @@ struct ScenarioBookCard: View {
     /// Prefix the source line with the activity ("Watch ·") for the mixed
     /// Studying grid, where the shelf no longer names the activity.
     var showActivity: Bool = false
+    /// The whole-book progress strip. Off on the Studying page, where each
+    /// chapter button under the card carries its own bar.
+    var showsProgress: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -116,11 +145,11 @@ struct ScenarioBookCard: View {
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
-            .padding(.bottom, 8)
-            progressStrip
+            .padding(.bottom, showsProgress ? 8 : 0)
+            if showsProgress { progressStrip }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: showsProgress ? 150 : 0, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
         .tint(Books.color(for: scenario))
@@ -134,16 +163,21 @@ struct ScenarioBookCard: View {
         return r.isEmpty ? nil : r
     }
 
-    /// Bare tinted glyph, no background disc — the same icon vocabulary as
-    /// Watch's category cards, so books and situations read as one family.
+    /// In a soft round disc (2026-10-03, user decision). A scene with a
+    /// person shows THAT person — their photo, else their initials on the
+    /// same disc; otherwise the scene's own glyph.
     @ViewBuilder
     private var avatar: some View {
         if let name = personaName {
-            Text(Books.initials(name)).font(.title3.weight(.bold)).foregroundStyle(.tint)
+            BookIconDisc(photoId: scenario.counterpartId) {
+                Text(Books.initials(name)).font(.headline.weight(.bold)).foregroundStyle(.tint)
+            }
         } else if scenario.isTopic == true {
-            Image(systemName: "newspaper.fill").font(.title2).foregroundStyle(.tint)
+            BookIconDisc { Image(systemName: "newspaper.fill").font(.title3).foregroundStyle(.tint) }
         } else {
-            Image(systemName: Books.roleIcon(for: scenario.role)).font(.title2).foregroundStyle(.tint)
+            BookIconDisc {
+                Image(systemName: Books.roleIcon(for: scenario.role)).font(.title3).foregroundStyle(.tint)
+            }
         }
     }
 
@@ -173,6 +207,9 @@ struct TalkBookCard: View {
     let snapshot: TalkCurriculum.Snapshot?
     /// Prefix the source line with "Talk ·" for the mixed Studying grid.
     var showActivity: Bool = false
+    /// The whole-book progress strip. Off on the Studying page, where each
+    /// chapter button under the card carries its own bar.
+    var showsProgress: Bool = true
 
     /// The last time this book was worked — a mastery event or the last time
     /// the talk itself was had/continued, whichever is later. Falls back to
@@ -185,7 +222,9 @@ struct TalkBookCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
-                Image(systemName: "bubble.left.and.bubble.right.fill").font(.title2).foregroundStyle(.tint)
+                BookIconDisc {
+                    Image(systemName: "bubble.left.and.bubble.right.fill").font(.title3).foregroundStyle(.tint)
+                }
                 Spacer()
                 if snapshot?.isMastered == true {
                     Image(systemName: "checkmark.seal.fill")
@@ -207,14 +246,14 @@ struct TalkBookCard: View {
                 // the most recent of a mastery event or talking/continuing it,
                 // so it keeps advancing as you study. Relative ("2 days ago")
                 // reads as recency, which is the point.
-                Text("Studied \(lastStudiedAt.formatted(.relative(presentation: .named)))")
+                Text("Studied \(lastStudiedAt.formatted(Date.RelativeFormatStyle(presentation: .named, locale: Locale(identifier: UILanguage.chromeLanguage))))")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            .padding(.bottom, 8)
-            progressStrip
+            .padding(.bottom, showsProgress ? 8 : 0)
+            if showsProgress { progressStrip }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: showsProgress ? 150 : 0, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
         .tint(Books.talksColor)

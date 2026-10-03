@@ -98,8 +98,7 @@ struct DrillView: View {
     /// falls back to the default hand.
     @MainActor
     static var sessionCap: Int {
-        let goal = GoalStore.shared.sentencesPerDay
-        return goal > 0 ? goal : defaultSessionCap
+        GoalStore.shared.target(.review) ?? defaultSessionCap
     }
     /// What the Sentences goal itself defaults to (`GoalStore`).
     static let defaultSessionCap = 20
@@ -962,7 +961,10 @@ private extension DrillView {
     }
 
     @ViewBuilder
-    func labeled<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+    // A key, not a `String`: `Text(String)` never localizes, which kept
+    // "You said / How would a fluent speaker say it? / Why" English on
+    // every sentence card in every app language.
+    func labeled<Content: View>(_ label: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption)

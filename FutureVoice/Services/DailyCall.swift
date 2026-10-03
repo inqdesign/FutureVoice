@@ -139,6 +139,9 @@ final class DailyCallStore: ObservableObject {
             let cleaned = Array(Set(newValue)).sorted().prefix(Self.maxTimes)
             let final = cleaned.isEmpty ? [CallTime(hour: 8, minute: 0)] : Array(cleaned)
             UserDefaults.standard.set(try? JSONEncoder().encode(final), forKey: Self.timesKey)
+            // The timetable's talk blocks follow (a no-op when the timetable
+            // is the one writing).
+            StudyPlanStore.shared.callTimesChanged(final)
         }
     }
 

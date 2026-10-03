@@ -164,6 +164,9 @@ struct RootTabView: View {
         // pass back through onboarding, so the age declaration comes to them.
         // Presented from onAppear rather than a computed binding so a swipe-away
         // is honoured for this run and simply asks again next launch.
+        .sheet(isPresented: $callInbox.pendingSayItAgain) {
+            SayItAgainPicker().environmentObject(appState)
+        }
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "free_talk") }
         .sheet(isPresented: $showingWelcome, onDismiss: {
