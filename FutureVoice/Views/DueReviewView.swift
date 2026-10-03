@@ -17,6 +17,10 @@ struct DueReviewView: View {
     /// was tapped, and it named this word/phrase. Opening the whole queue
     /// there would bury the thing the learner came for.
     var focus: StudyDeckItem? = nil
+    /// A book chapter's own deck (the Review tab's chapter buttons): these
+    /// items, under this title, instead of the due queue.
+    var hand: [StudyDeckItem]? = nil
+    var title: LocalizedStringKey = "Back from earlier"
 
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -30,10 +34,10 @@ struct DueReviewView: View {
                 if dealt && items.isEmpty {
                     emptyState
                 } else if dealt {
-                    StudyDeckView(title: "Review", items: items, onResolve: resolve)
+                    StudyDeckView(title: title, items: items, onResolve: resolve)
                 }
             }
-            .navigationTitle("Review")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -43,7 +47,7 @@ struct DueReviewView: View {
         }
         .onAppear {
             guard !dealt else { return }
-            items = focus.map { [$0] } ?? Self.dueDeck()
+            items = focus.map { [$0] } ?? hand ?? Self.putOffDeck()
             dealt = true
         }
     }
@@ -54,9 +58,37 @@ struct DueReviewView: View {
         ReviewQueue.dueItems(now: now)
     }
 
+    /// EVERYTHING the learner put off — words, expressions and sentence
+    /// cards, due or not — in the order it comes back (2026-10-03, user
+    /// decision: "what I put off, show me all of it", and "1 of N" counts
+    /// all of it). A put-off item is still a promise the learner made; one
+    /// whose time hasn't come is not hidden for that.
+    static func putOffDeck(now: Date = Date()) -> [StudyDeckItem] {
+        ReviewQueue.pruneRetired()
+        let store = StudyScheduleStore.shared
+        let scheduled = (store.dueItems(now: now) + store.upcoming(now: now))
+            .map { (StudyDeckItem(kind: $0.kind, text: $0.text), $0.at) }
+        let sentences = DrillStore.putOffCards().map { (StudyDeckItem.sentence($0), $0.nextReviewAt) }
+        return (scheduled + sentences).sorted { $0.1 < $1.1 }.map(\.0)
+    }
+
     /// Same rules as the daily sessions: a delay re-snoozes and counts a rep,
     /// "Got it" marks it known and retires its schedule entry.
     private func resolve(_ item: StudyDeckItem, _ bin: DrillBin) {
+        if let id = item.cardId {
+            // The sentence deck's own verdicts (`DrillView.apply`).
+            guard let card = DrillStore.shared.load().first(where: { $0.id == id }) else { return }
+            if let manual = bin.manual {
+                let at = Date().addingTimeInterval(manual.delay)
+                DrillStore.shared.snooze(card, box: manual.box, until: at)
+                Task { await ItemReminder.schedule(.sentence(card.id), text: card.targetPhrase, at: at) }
+            } else {
+                DrillStore.shared.markKnown(card)
+                ItemReminder.cancel(.sentence(card.id))
+            }
+            PracticeLog.shared.record(.drill, finished: bin.manual == nil)
+            return
+        }
         let store = VocabStore.shared
         switch (item.kind, bin.manual) {
         case (.word, .some(let manual)):
@@ -86,9 +118,9 @@ struct DueReviewView: View {
         VStack(spacing: 10) {
             Image(systemName: "checkmark.circle")
                 .font(.largeTitle).foregroundStyle(.secondary)
-            Text("Nothing due right now")
+            Text("Nothing put off")
                 .font(.headline)
-            Text(explain("Everything you set aside is still waiting for its turn. Today's goals are on the Review tab."))
+            Text(explain("Words, expressions and sentences you put off in a deck all show up here, in the order they come back."))
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

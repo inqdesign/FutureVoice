@@ -912,6 +912,23 @@ enum DebugCapture {
                 seedVocab(); seedSessions(); seedScenarios(into: appState); seedFinishedWeeklyTest()
             }
             return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+        case "practice-today":
+            // The book-first Studying page: sample talks and scenes, newest
+            // first, each with its chapter buttons.
+            once("practice-today") {
+                seedVocab(); seedSessions(); seedScenarios(into: appState)
+                var plan = StudyPlan()
+                plan.blocks = [
+                    .init(kind: .review, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 4, anytime: true),
+                    .init(kind: .words, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 10, anytime: true),
+                    .init(kind: .expressions, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 3, anytime: true),
+                ]
+                StudyPlanStore.shared.update(plan)
+                for _ in 0..<6 { PracticeLog.shared.record(.word, finished: true) }
+                for _ in 0..<3 { PracticeLog.shared.record(.expression, finished: true) }
+                PracticeLog.shared.record(.drill, finished: true)
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "practice-due":
             // The Today card with items back from an earlier snooze — the
             // non-notification entry point into the review deck.

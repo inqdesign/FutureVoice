@@ -64,10 +64,35 @@ private extension DrillBin {
 struct StudyDeckItem: Identifiable, Hashable {
     let kind: StudyScheduleStore.Kind
     let text: String
-    var id: String { kind.rawValue + "|" + text.lowercased() }
+    /// Set for a SENTENCE card (a correction — the Grammar chapter), which
+    /// lives in `DrillStore`, not the word/expression schedule. `text` is
+    /// then the fixed line and `kind` is unused. Added 2026-10-03 so the
+    /// "put off" deck can hold everything the learner put off in one place.
+    var cardId: UUID? = nil
+    var cardSaid: String = ""
+    var cardReason: String = ""
+
+    var isSentence: Bool { cardId != nil }
+    var id: String {
+        if let cardId { return "sentence|" + cardId.uuidString }
+        return kind.rawValue + "|" + text.lowercased()
+    }
 
     static func word(_ t: String) -> StudyDeckItem { .init(kind: .word, text: t) }
     static func expression(_ t: String) -> StudyDeckItem { .init(kind: .expression, text: t) }
+    static func sentence(_ c: DrillCard) -> StudyDeckItem {
+        .init(kind: .expression, text: c.targetPhrase, cardId: c.id,
+              cardSaid: c.sourcePhrase.isEmpty ? ""
+                  : DrillStore.relevantFragment(of: c.sourcePhrase, matching: c.targetPhrase),
+              cardReason: c.reason)
+    }
+}
+
+/// One line in a folder — a scheduled word/expression or a put-off sentence.
+struct StudyFolderItem: Identifiable {
+    let item: StudyDeckItem
+    let at: Date
+    var id: String { item.id }
 }
 
 struct StudyDeckView: View {
@@ -99,7 +124,7 @@ struct StudyDeckView: View {
     /// session-local tally that emptied the moment the sheet closed, so the
     /// same drag meant two different things depending on which deck you were
     /// in — and nothing on this screen ever showed the promise being kept.
-    @State private var scheduled: [DrillBin: [StudyScheduleStore.DueItem]] = [:]
+    @State private var scheduled: [DrillBin: [StudyFolderItem]] = [:]
     /// "Got it" is the one folder that can't come from the schedule: marking
     /// something known CLEARS its return time (`ReviewQueue.retire`), which is
     /// the point — a known item has no return. So this one holds what this
@@ -274,11 +299,21 @@ struct StudyDeckView: View {
         // entry; the shared queue is the one place that prunes them, so the
         // folders can't count something that's already retired.
         ReviewQueue.pruneRetired()
-        let kinds = Set(items.map(\.kind))
-        var buckets: [DrillBin: [StudyScheduleStore.DueItem]] = [:]
+        let kinds = Set(items.filter { !$0.isSentence }.map(\.kind))
+        var buckets: [DrillBin: [StudyFolderItem]] = [:]
         for item in StudyScheduleStore.shared.upcoming(now: now) where kinds.contains(item.kind) {
             let bin = DrillBin.folder(forReturnIn: item.at.timeIntervalSince(now))
-            buckets[bin, default: []].append(item)
+            buckets[bin, default: []].append(
+                StudyFolderItem(item: StudyDeckItem(kind: item.kind, text: item.text), at: item.at))
+        }
+        // A deck holding sentences lists the sentences waiting too — put
+        // off from here or from a book's Grammar chapter, same store.
+        if items.contains(where: \.isSentence) {
+            for card in DrillStore.putOffCards() where card.nextReviewAt > now {
+                let bin = DrillBin.folder(forReturnIn: card.nextReviewAt.timeIntervalSince(now))
+                buckets[bin, default: []].append(StudyFolderItem(item: .sentence(card), at: card.nextReviewAt))
+            }
+            for bin in buckets.keys { buckets[bin]?.sort { $0.at < $1.at } }
         }
         scheduled = buckets
     }
@@ -287,11 +322,16 @@ struct StudyDeckView: View {
     /// deck for this, same as the drill deck's folders. Routed through
     /// `ReviewQueue` so the promise and the notification that keeps it stay
     /// inseparable.
-    private func resnooze(_ item: StudyScheduleStore.DueItem, to bin: DrillBin) {
-        guard let manual = bin.manual else {
-            return markKnown(StudyDeckItem(kind: item.kind, text: item.text))
+    private func resnooze(_ folderItem: StudyFolderItem, to bin: DrillBin) {
+        let item = folderItem.item
+        guard let manual = bin.manual else { return markKnown(item) }
+        if let id = item.cardId {
+            if let card = DrillStore.shared.load().first(where: { $0.id == id }) {
+                DrillStore.shared.snooze(card, box: manual.box, until: Date().addingTimeInterval(manual.delay))
+            }
+        } else {
+            ReviewQueue.snooze(item.kind, item.text, for: manual.delay)
         }
-        ReviewQueue.snooze(item.kind, item.text, for: manual.delay)
         withAnimation(.snappy) { refreshFolders() }
     }
 
@@ -301,11 +341,17 @@ struct StudyDeckView: View {
     /// re-file paths beside it: the card was already counted when it was
     /// dropped, and changing your mind about it isn't a second one.
     private func markKnown(_ item: StudyDeckItem) {
-        switch item.kind {
-        case .word:       VocabStore.shared.markKnown(item.text)
-        case .expression: VocabStore.shared.setKnownExpression(item.text, true)
+        if let id = item.cardId {
+            if let card = DrillStore.shared.load().first(where: { $0.id == id }) {
+                DrillStore.shared.markKnown(card)
+            }
+        } else {
+            switch item.kind {
+            case .word:       VocabStore.shared.markKnown(item.text)
+            case .expression: VocabStore.shared.setKnownExpression(item.text, true)
+            }
+            ReviewQueue.retire(item.kind, item.text)
         }
-        ReviewQueue.retire(item.kind, item.text)
         if !finished.contains(where: { $0.id == item.id }) { finished.append(item) }
         withAnimation(.snappy) { refreshFolders() }
     }
@@ -323,6 +369,15 @@ struct StudyDeckView: View {
     /// "Got it" must not delete that evidence.
     private func bringBack(_ item: StudyDeckItem, to bin: DrillBin) {
         guard let manual = bin.manual else { return }
+        if let id = item.cardId {
+            // A retired sentence comes back by being put off again.
+            if let card = DrillStore.shared.load().first(where: { $0.id == id }) {
+                DrillStore.shared.snooze(card, box: manual.box, until: Date().addingTimeInterval(manual.delay))
+            }
+            finished.removeAll { $0.id == item.id }
+            withAnimation(.snappy) { refreshFolders() }
+            return
+        }
         let store = VocabStore.shared
         switch item.kind {
         case .word:
@@ -428,7 +483,7 @@ struct StudyDeckView: View {
                             // Bare relative phrase: it already carries its
                             // own preposition in every language, so a
                             // "Back %@" shell doubled it ("13시간 후 뒤에 다시").
-                            folderRow(item.text,
+                            folderRow(item.item.text,
                                       caption: Text(item.at,
                                                     format: .relative(presentation: .named))) {
                                 // The same four verdicts as the tray, so an item
@@ -468,12 +523,12 @@ struct StudyDeckView: View {
         ZStack {
             // Peek of the next card so the user feels there's a deck.
             if queue.count > 1 {
-                cardSurface(queue[1].text, revealed: false, showHint: false, height: height)
+                cardSurface(queue[1], revealed: false, showHint: false, height: height)
                     .scaleEffect(0.95)
                     .opacity(0.45)
                     .offset(y: 14)
             }
-            cardSurface(queue[0].text, revealed: revealed, showHint: true, height: height)
+            cardSurface(queue[0], revealed: revealed, showHint: true, height: height)
                 .scaleEffect(flyScale)
                 .opacity(flyOpacity)
                 .offset(dragOffset)
@@ -506,6 +561,12 @@ struct StudyDeckView: View {
     private func reloadEntry() async {
         entry = nil
         guard let top = queue.first else { return }
+        // A sentence carries its own back side (the fix and why).
+        if top.isSentence {
+            loadingEntry = false
+            lookupFailed = false
+            return
+        }
         loadingEntry = true
         lookupFailed = false
         // A mixed deck holds both kinds; each card must be looked up as what
@@ -528,19 +589,50 @@ struct StudyDeckView: View {
     /// Same slab as a drill card — same anatomy too: a caption-labeled
     /// section for the item, the flipped content below it, pill buttons on
     /// the revealed card, "tap to reveal" on the concealed one.
-    private func cardSurface(_ text: String, revealed: Bool, showHint: Bool,
+    private func cardSurface(_ item: StudyDeckItem, revealed: Bool, showHint: Bool,
                              height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            labeled(revealed ? "When should it come back?" : "Say it out loud — do you know it?") {
-                Text(text)
-                    .font(DrillView.targetFont(for: text))
-                    .foregroundStyle(Self.onCard)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        let text = item.text
+        return VStack(alignment: .leading, spacing: 18) {
+            if item.isSentence {
+                // The sentence deck's own anatomy (`DrillView.cardSurface`):
+                // what you said, then the fluent version, hidden until the tap.
+                if !item.cardSaid.isEmpty {
+                    labeled("You said") {
+                        Text(item.cardSaid)
+                            .font(.callout)
+                            .foregroundStyle(Self.onCardSecondary)
+                            .strikethrough(revealed)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
+                    Text(text)
+                        .font(DrillView.targetFont(for: text))
+                        .foregroundStyle(Self.onCard)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .redacted(reason: revealed ? [] : .placeholder)
+                }
+                if revealed, !item.cardReason.isEmpty {
+                    labeled("Why") {
+                        Text(item.cardReason)
+                            .font(.subheadline)
+                            .foregroundStyle(Self.onCardSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            } else {
+                labeled(revealed ? "When should it come back?" : "Say it out loud — do you know it?") {
+                    Text(text)
+                        .font(DrillView.targetFont(for: text))
+                        .foregroundStyle(Self.onCard)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-            if revealed {
-                meaningBlock
+                if revealed {
+                    meaningBlock
+                }
             }
 
             Spacer(minLength: 12)

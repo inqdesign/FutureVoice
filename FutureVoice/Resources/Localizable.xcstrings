@@ -378,6 +378,52 @@
         }
       }
     },
+    "How would a fluent speaker say it?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie würde es jemand sagen, der fließend spricht?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cómo lo diría alguien con fluidez?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment le dirait quelqu’un qui parle couramment ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な人ならどう言う？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창한 사람이라면 어떻게 말할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说得流利的人会怎么说？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "說得流利的人會怎麼說？"
+          }
+        }
+      }
+    },
     "Keep it today for day 1" : {
       "localizations" : {
         "de" : {
@@ -616,6 +662,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "休息日沒有安排，也不會中斷連續紀錄。"
+          }
+        }
+      }
+    },
+    "Nothing put off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts verschoben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada pospuesto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien de reporté"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "後回しにしたものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미뤄둔 게 없어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有推迟的内容"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有延後的項目"
           }
         }
       }
@@ -2568,6 +2660,52 @@
         }
       }
     },
+    "Why" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Por qué"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pourquoi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "理由"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이유"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原因"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原因"
+          }
+        }
+      }
+    },
     "Words to use" : {
       "localizations" : {
         "de" : {
@@ -2610,6 +2748,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要用的用語"
+          }
+        }
+      }
+    },
+    "Words, expressions and sentences you put off in a deck all show up here, in the order they come back." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter, Wendungen und Sätze, die du in einem Stapel verschiebst, landen alle hier – in der Reihenfolge, in der sie wiederkommen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las palabras, expresiones y frases que pospongas en un mazo aparecen todas aquí, en el orden en que vuelven."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les mots, expressions et phrases que tu reportes dans un paquet apparaissent tous ici, dans l’ordre où ils reviennent."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デッキで後回しにした単語・表現・文はすべてここに集まります。戻ってくる順に並びます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "덱에서 미룬 단어, 표현, 문장이 모두 여기 모여요. 다시 볼 시간이 가까운 순서대로요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在卡组中推迟的单词、表达和句子都会集中在这里，按回来的时间排列。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在卡組中延後的單字、表達和句子都會集中在這裡，依回來的時間排列。"
           }
         }
       }
@@ -31253,52 +31437,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選單、按鈕、修正、筆記，App裡讀到的一切都用這個語言。"
-          }
-        }
-      }
-    },
-    "Everything you set aside is still waiting for its turn. Today's goals are on the Review tab." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alles Zurückgestellte wartet noch auf seinen Termin. Die heutigen Ziele stehen im Tab Wiederholen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todo lo que dejaste para después sigue esperando su turno. Los objetivos de hoy están en la pestaña Repaso."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tout ce que tu as mis de côté attend encore son tour. Les objectifs du jour sont dans l’onglet Révision."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あとに回した項目は、まだ順番を待っています。今日の目標は復習タブにあります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "미뤄둔 항목들은 아직 차례를 기다리는 중이에요. 오늘 목표는 복습 탭에 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先放一边的项目还在等轮到它。今天的目标在复习页。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先放一邊的項目還在等輪到它。今天的目標在複習分頁。"
           }
         }
       }

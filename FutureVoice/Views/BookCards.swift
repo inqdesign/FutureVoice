@@ -63,19 +63,19 @@ struct OriginTag: View {
     init?(session: Session, showActivity: Bool = false) {
         let source: String?
         switch session.origin {
-        case .free:     source = "Free talk"
-        case .news:     source = "News"
-        case .scenario: source = "Scenario"
-        case .none:     source = (session.topic?.isEmpty ?? true) ? "Free talk" : nil
+        case .free:     source = explain("Free talk")
+        case .news:     source = explain("News")
+        case .scenario: source = explain("Scenario")
+        case .none:     source = (session.topic?.isEmpty ?? true) ? explain("Free talk") : nil
         }
         guard showActivity || source != nil else { return nil }
-        text = Self.join(activity: showActivity ? "Talk" : nil, source: source)
+        text = Self.join(activity: showActivity ? explain("Talk") : nil, source: source)
     }
 
     /// Watch book — a scenario is a news-born topic or a built situation.
     init(scenario: Scenario, showActivity: Bool = false) {
-        let source = scenario.isTopic == true ? "News" : "Scenario"
-        text = Self.join(activity: showActivity ? "Watch" : nil, source: source)
+        let source = scenario.isTopic == true ? explain("News") : explain("Scenario")
+        text = Self.join(activity: showActivity ? explain("Watch") : nil, source: source)
     }
 
     private static func join(activity: String?, source: String?) -> String {
@@ -92,6 +92,9 @@ struct ScenarioBookCard: View {
     /// Prefix the source line with the activity ("Watch ·") for the mixed
     /// Studying grid, where the shelf no longer names the activity.
     var showActivity: Bool = false
+    /// The whole-book progress strip. Off on the Studying page, where each
+    /// chapter button under the card carries its own bar.
+    var showsProgress: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -116,11 +119,11 @@ struct ScenarioBookCard: View {
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
-            .padding(.bottom, 8)
-            progressStrip
+            .padding(.bottom, showsProgress ? 8 : 0)
+            if showsProgress { progressStrip }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: showsProgress ? 150 : 0, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
         .tint(Books.color(for: scenario))
@@ -173,6 +176,9 @@ struct TalkBookCard: View {
     let snapshot: TalkCurriculum.Snapshot?
     /// Prefix the source line with "Talk ·" for the mixed Studying grid.
     var showActivity: Bool = false
+    /// The whole-book progress strip. Off on the Studying page, where each
+    /// chapter button under the card carries its own bar.
+    var showsProgress: Bool = true
 
     /// The last time this book was worked — a mastery event or the last time
     /// the talk itself was had/continued, whichever is later. Falls back to
@@ -206,14 +212,14 @@ struct TalkBookCard: View {
                 // the most recent of a mastery event or talking/continuing it,
                 // so it keeps advancing as you study. Relative ("2 days ago")
                 // reads as recency, which is the point.
-                Text("Studied \(lastStudiedAt.formatted(.relative(presentation: .named)))")
+                Text("Studied \(lastStudiedAt.formatted(Date.RelativeFormatStyle(presentation: .named, locale: Locale(identifier: UILanguage.chromeLanguage))))")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            .padding(.bottom, 8)
-            progressStrip
+            .padding(.bottom, showsProgress ? 8 : 0)
+            if showsProgress { progressStrip }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: showsProgress ? 150 : 0, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
         .tint(Books.talksColor)
