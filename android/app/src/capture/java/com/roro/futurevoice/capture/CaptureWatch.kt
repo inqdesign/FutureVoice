@@ -201,6 +201,23 @@ object CaptureWatch {
                 )
             }
         },
+        // Android-only (plan 2.46b): a saved scenario reopened from its card
+        // — the composer in EDIT mode: the live field, the other person, the
+        // Material list and the delete row.
+        "composer-edit" to @Composable { c: Context ->
+            var sc by remember { mutableStateOf<com.roro.futurevoice.talk.Scenario?>(null) }
+            Seeded({
+                val sid = CaptureSeed.seedSceneEndScenario(c)
+                sc = com.roro.futurevoice.data.ScenarioStore.shared(c).load(lang(c))
+                    .firstOrNull { it.id == sid }?.copy(brief = sampleBrief)
+            }) {
+                ScenarioComposer(
+                    targetLanguage = lang(c), existingCategories = emptyList(),
+                    host = ComposerHost.WATCH, editing = sc!!,
+                    onCommitted = {}, onDelete = {}, onDismiss = {},
+                )
+            }
+        },
         // Android-only (plan 2.46): the board while attached material is
         // read — one source done, the summary in, the questions being written.
         "brief-board" to @Composable { _: Context ->

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -165,11 +166,23 @@ internal fun ScenarioComposer(
      * host that passes nothing just gets the scenario saved.
      */
     onCommitted: ((Scenario) -> Unit)? = null,
+    /**
+     * When set, the sheet EDITS this saved scenario instead of minting a new
+     * one (iOS `editing:`): every field prefills from it, the commit keeps its
+     * identity (id, book, mastery, history), and a delete row appears at the
+     * bottom. Editing always uses the Form — never the box — whatever [mode].
+     */
+    editing: Scenario? = null,
+    /** Edit mode only — remove the scenario, and with it its Practice book. */
+    onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var draft by remember { mutableStateOf(prefill) }
+    /** The box is the writing door for a NEW situation only; editing keeps
+     *  the Form, where the delete row and the category crumb live. */
+    val usesBox = mode == ComposerMode.CUSTOM && editing == null
+    var draft by remember { mutableStateOf(editing?.environment ?: prefill) }
     var committing by remember { mutableStateOf(false) }
     var path by remember { mutableStateOf<List<Crumb>>(emptyList()) }
     var options by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
@@ -177,7 +190,7 @@ internal fun ScenarioComposer(
     var optionsError by remember { mutableStateOf<String?>(null) }
     /** The tidy card summary — a picked chip's short label, or the model's
      *  paraphrase of typed text. Never the raw prompt. */
-    var summary by remember { mutableStateOf("") }
+    var summary by remember { mutableStateOf(editing?.summary.orEmpty()) }
     var usedVoice by remember { mutableStateOf(false) }
     /** Raised in place of the CTA when the account can't pay for what it
      *  starts. Presented from THIS sheet, never from the host behind it: a
@@ -193,7 +206,8 @@ internal fun ScenarioComposer(
     /** The material on this situation — links and files read where they
      *  live. Bytes go to [BriefAttachmentCache] at the pick; nothing is
      *  copied. Read ONCE, before the first scene. */
-    var sources by remember { mutableStateOf<List<ScenarioBrief.Source>>(emptyList()) }
+    var sources by remember { mutableStateOf(editing?.brief?.sources.orEmpty()) }
+    var confirmingDelete by remember { mutableStateOf(false) }
     var attachError by remember { mutableStateOf<String?>(null) }
     var addingLink by remember { mutableStateOf(false) }
     /** Relationship-grounded ideas for the attached person, for the reel.
@@ -203,6 +217,15 @@ internal fun ScenarioComposer(
     var boxFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        // Editing: the person the saved scenario was built with. A legacy
+        // Watch scenario with nobody attached keeps the character whose voice
+        // it already plays in (iOS `StockPerson.by(voiceId:)`).
+        if (editing != null && person == null) {
+            val people = CounterpartStore.shared(context).load()
+            partner = editing.counterpartId?.let { id -> people.firstOrNull { it.id == id } }
+                ?: if (host == ComposerHost.WATCH)
+                    StockPerson.by(editing.voicePresetId).asCounterpart(people) else null
+        }
         // A scene needs an other person, so Watch opens on the default
         // character; Talk with nobody attached stays the fluent self.
         if (person == null && host == ComposerHost.WATCH && partner == null) {
@@ -367,9 +390,14 @@ internal fun ScenarioComposer(
                 committing = false
                 return@launch
             }
-            var categoryName = path.firstOrNull()?.label
-            var icon = path.firstOrNull()?.icon
-            var sum = summary
+            // Editing: the saved category and summary still describe the text
+            // only while the text is unchanged; a rewrite is filed afresh.
+            val textChanged = editing != null && editing.environment.trim() != text
+            var categoryName = if (editing != null) editing.category.takeUnless { textChanged }
+                else path.firstOrNull()?.label
+            var icon = if (editing != null) editing.categoryIcon.takeUnless { textChanged }
+                else path.firstOrNull()?.icon
+            var sum = if (textChanged) "" else summary
             // Typed and never categorized → tidy it up now, so the card shows
             // a clean category + summary rather than the raw prompt.
             if (categoryName == null || sum.isBlank()) {
@@ -394,7 +422,37 @@ internal fun ScenarioComposer(
                 val store = CounterpartStore.shared(context)
                 if (store.load().none { it.id == who.id }) store.save(who)
             }
-            val scenario = Scenario(
+            val scenario = if (editing != null) {
+                // Edit in place: id, curriculum, mastery and history survive —
+                // only the settings the sheet exposes change. Stored openers
+                // were written for the OLD situation text, so a text change
+                // invalidates them (they regenerate on the next talk).
+                val e = editing
+                val brief = when {
+                    sources.isEmpty() -> null
+                    // An unchanged source set keeps its reading; any change
+                    // to the set asks for a new one.
+                    e.brief != null && e.brief.sources.map { it.id } == sources.map { it.id } ->
+                        e.brief.copy(sources = sources)
+                    else -> ScenarioBrief(sources = sources)
+                }
+                e.copy(
+                    environment = text,
+                    openers = if (textChanged) null else e.openers,
+                    openerCursor = if (textChanged) null else e.openerCursor,
+                    role = if (who != null) roleLine(who)
+                        else if (e.counterpartId != null) "" else e.role,
+                    counterpartId = who?.id,
+                    // An attached person IS the voice; with nobody attached a
+                    // legacy scenario keeps the scene voice it already had.
+                    voicePresetId = if (who != null) who.voicePresetId.takeIf { it.isNotBlank() }
+                        else e.voicePresetId,
+                    category = categoryName,
+                    categoryIcon = icon,
+                    summary = sum.takeIf { it.isNotBlank() },
+                    brief = brief,
+                )
+            } else Scenario(
                 environment = text,
                 category = categoryName,
                 categoryIcon = icon,
@@ -447,7 +505,8 @@ internal fun ScenarioComposer(
                 }
                 Text(
                     when {
-                        mode == ComposerMode.CUSTOM -> stringResource(R.string.your_situation)
+                        usesBox -> stringResource(R.string.your_situation)
+                        editing != null -> stringResource(R.string.edit_scenario)
                         person != null -> stringResource(R.string.a_scene_with_lls, person.name)
                         else -> stringResource(R.string.new_scenario)
                     },
@@ -469,7 +528,7 @@ internal fun ScenarioComposer(
                 }
             }
 
-            if (mode == ComposerMode.CUSTOM) {
+            if (usesBox) {
                 // MARK: The box — the writing door.
                 Column(Modifier.weight(1f).fillMaxWidth().bottomBarInsets()) {
                     Column(
@@ -551,7 +610,38 @@ internal fun ScenarioComposer(
                 if (person != null) {
                     GroupedCard { PersonRow(person) }
                 }
-                if (path.isNotEmpty()) {
+                if (editing != null) {
+                    // MARK: Edit mode — the saved scenario, open for editing.
+                    // Its field is live (iOS `overviewSection`): someone who
+                    // reopens a saved card came to change the words. The
+                    // saved category shows above it only while the text is
+                    // still the text it was filed under.
+                    GroupedSectionHeader(stringResource(R.string.your_scenario))
+                    GroupedCard {
+                        Column(Modifier.padding(vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val cat = editing.category?.takeIf { it.isNotBlank() }
+                            if (cat != null && draft.trim() == editing.environment.trim()) {
+                                Row(Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+                                    CrumbChip(cat, editing.categoryIcon, selected = true) {}
+                                }
+                            }
+                            SpeakOrTypeField(
+                                text = draft,
+                                onText = { draft = it },
+                                usedVoice = usedVoice,
+                                onUsedVoice = { usedVoice = it },
+                                placeholder = stringResource(R.string.composer_placeholder),
+                                locale = LanguageCatalog.sttLocale(dictationLocale),
+                                plainMic = true,
+                                trailingControls = {
+                                    DictationLanguagePill(dictationLocale) { dictationLocale = it }
+                                },
+                            )
+                        }
+                    }
+                }
+                if (editing == null && path.isNotEmpty()) {
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                             .padding(top = 12.dp),
@@ -577,6 +667,8 @@ internal fun ScenarioComposer(
 
                 // MARK: Choices — the current drill level
                 when {
+                    editing != null -> Unit
+
                     path.isEmpty() && draft.isNotBlank() -> LeafSentence(draft, ctaTitle)
 
                     path.isEmpty() -> {
@@ -675,6 +767,32 @@ internal fun ScenarioComposer(
                     GroupedFooter(stringResource(
                         R.string.their_role_comes_from_the_situation_you_describe_here_you_pi_35598a))
                 }
+
+                // MARK: Material (edit mode) — the same attachments as a list,
+                // so material can be added to a situation that started life
+                // without any, or a stale posting taken off it.
+                if (editing != null && host == ComposerHost.WATCH) {
+                    MaterialSection(sources, attachActions, onRemove = { removeSource(it) })
+                }
+
+                // MARK: Delete (edit mode)
+                if (editing != null && onDelete != null) {
+                    GroupedSectionSpacer()
+                    GroupedCard {
+                        Row(
+                            Modifier.fillMaxWidth().clickable { confirmingDelete = true }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            Text(stringResource(R.string.delete_scenario),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
             }
         }
 
@@ -711,6 +829,24 @@ internal fun ScenarioComposer(
                 },
                 dismissButton = {
                     TextButton(onClick = { addingLink = false }) { Text(stringResource(R.string.cancel)) }
+                },
+            )
+        }
+
+        if (confirmingDelete) {
+            AlertDialog(
+                onDismissRequest = { confirmingDelete = false },
+                title = { Text(stringResource(R.string.delete_this_scenario)) },
+                text = { Text(stringResource(R.string.its_book_in_practice_goes_with_it_study_items_and_mastery_in_1285e6)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmingDelete = false
+                        onDelete?.invoke()
+                        onDismiss()
+                    }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmingDelete = false }) { Text(stringResource(R.string.cancel)) }
                 },
             )
         }
@@ -851,6 +987,77 @@ private fun AttachmentChip(src: ScenarioBrief.Source, onRemove: () -> Unit) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         }
     }
+}
+
+/**
+ * The attachments as a list section — edit mode's Material (iOS
+ * `materialSection`): each source with what the reading said about it, a way
+ * to take it off, and the same four ways to attach as the box's "+".
+ */
+@Composable
+private fun MaterialSection(
+    sources: List<ScenarioBrief.Source>,
+    actions: AttachActions,
+    onRemove: (ScenarioBrief.Source) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    GroupedSectionHeader(stringResource(R.string.material))
+    GroupedCard {
+        Column {
+            sources.forEach { src ->
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(briefSourceIcon(src), contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(briefChipLabel(src), style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+                        src.detail?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall,
+                                color = if (src.readOK) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    IconButton(onClick = { onRemove(src) }) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.remove),
+                            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+            Box {
+                Row(
+                    Modifier.fillMaxWidth().clickable { open = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(stringResource(R.string.attach_a_link_or_a_file),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.paste_a_link)) },
+                        leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
+                        onClick = { open = false; actions.link() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.pick_a_file)) },
+                        leadingIcon = { Icon(Icons.Filled.Description, contentDescription = null) },
+                        onClick = { open = false; actions.file() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.photo_library)) },
+                        leadingIcon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = null) },
+                        onClick = { open = false; actions.photo() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.take_a_photo)) },
+                        leadingIcon = { Icon(Icons.Filled.CameraAlt, contentDescription = null) },
+                        onClick = { open = false; actions.camera() })
+                }
+            }
+        }
+    }
+    GroupedFooter(stringResource(R.string.a_posting_a_listing_your_cv_it_s_read_once_before_the_first_3993e3))
 }
 
 /** The browse door's end: the assembled situation, read-only, above the CTA. */

@@ -33,6 +33,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +90,9 @@ internal fun WatchTabBody(
     var withPerson by remember { mutableStateOf<Counterpart?>(null) }
     var people by remember { mutableStateOf<List<Counterpart>>(emptyList()) }
     var managingPeople by remember { mutableStateOf(false) }
+    /** The saved scenario open in the composer's EDIT mode, if any. */
+    var editingScenario by remember { mutableStateOf<Scenario?>(null) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         scenarios = store.load(language)
         // Own people only. A stranger met in Find people has `remoteId` set
@@ -147,7 +152,10 @@ internal fun WatchTabBody(
                             WatchScenarioCard(sc,
                                 Modifier.weight(1f).fillMaxHeight(),
                                 person = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id } },
-                                onClick = if (enabled) ({ onWatch(sc.id) }) else null)
+                                // A saved card opens the composer in EDIT mode
+                                // (iOS `ComposerConfig(editing:)`): review or
+                                // tweak it, delete it, or Watch a fresh take.
+                                onClick = { editingScenario = sc })
                         }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
@@ -172,6 +180,23 @@ internal fun WatchTabBody(
             // Minting it plays it — the composer's CTA IS "Watch".
             onCommitted = { sc -> if (enabled) onWatch(sc.id) },
             onDismiss = { composing = null; withPerson = null },
+        )
+    }
+
+    editingScenario?.let { sc ->
+        ScenarioComposer(
+            targetLanguage = language,
+            existingCategories = scenarios.mapNotNull { it.category }.distinct(),
+            host = ComposerHost.WATCH,
+            editing = sc,
+            // Saved in place, then a FRESH take into the same book — the
+            // scene screen writes a new take whenever the scenario already
+            // has one.
+            onCommitted = { edited -> if (enabled) onWatch(edited.id) },
+            onDelete = {
+                scope.launch { store.delete(sc.id, language); StoreEvents.bump() }
+            },
+            onDismiss = { editingScenario = null },
         )
     }
 }
@@ -268,7 +293,7 @@ private fun WatchScenarioCard(
     sc: Scenario,
     modifier: Modifier = Modifier,
     person: Counterpart?,
-    onClick: (() -> Unit)?,
+    onClick: () -> Unit,
 ) {
     val personName = person?.name
     val partner = personName ?: sc.role.trim().takeIf { it.isNotEmpty() }
@@ -278,7 +303,7 @@ private fun WatchScenarioCard(
         modifier
             .clip(ContinuousShape(16.dp))
             .background(AppSurfaces.card)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
