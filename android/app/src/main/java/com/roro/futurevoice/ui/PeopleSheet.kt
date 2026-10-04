@@ -78,6 +78,8 @@ import com.roro.futurevoice.data.cast
 import com.roro.futurevoice.data.knowsLearnersLife
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.captionIn
+import com.roro.futurevoice.talk.nameIn
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import com.roro.futurevoice.ui.brand.DisplayFace
@@ -428,7 +430,7 @@ internal fun PersonEditor(
                 ) {
                     Text(stringResource(R.string.voice), style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f))
-                    Text(StockPerson.by(draft.voicePresetId.ifBlank { null }).name,
+                    Text(StockPerson.by(draft.voicePresetId.ifBlank { null }).nameIn(targetLanguage),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     FormChevron()
@@ -474,8 +476,10 @@ private fun VoicePresetPicker(
         scope.launch {
             loadingId = id
             val audio = runCatching {
+                // The voice speaking NOW — never a take an older voice of
+                // this slot made before it got a native one (iOS `b49e91b`).
                 com.roro.futurevoice.data.cachedSynthesis(context, voiceId = id, text = text,
-                    purpose = "voice_preview")
+                    purpose = "voice_preview", allowLineage = false)
             }.getOrNull()
             loadingId = null
             if (audio == null) { error = true; return@launch }
@@ -499,7 +503,10 @@ private fun VoicePresetPicker(
             header = null,
             footer = if (error) stringResource(R.string.couldn_t_play_audio)
             else stringResource(R.string.tap_to_hear_a_sample_in,
-                com.roro.futurevoice.data.LanguageCatalog.englishName(targetLanguage)),
+                com.roro.futurevoice.data.LanguageCatalog.ownName(targetLanguage,
+                    com.roro.futurevoice.data.LanguageCatalog.defaultNative().let { d ->
+                        context.getSharedPreferences("futurevoice", 0)
+                            .getString("futurevoice.nativeLanguage", null) ?: d })),
             footerIsError = error,
         ) {
             StockPerson.catalog.forEachIndexed { i, v ->
@@ -522,8 +529,8 @@ private fun VoicePresetPicker(
                         }
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(v.name, style = MaterialTheme.typography.bodyLarge)
-                        Text(v.identity.substringAfter("— ").replaceFirstChar { it.uppercase() },
+                        Text(v.nameIn(targetLanguage), style = MaterialTheme.typography.bodyLarge)
+                        Text(v.captionIn(targetLanguage),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -538,17 +545,20 @@ private fun VoicePresetPicker(
 }
 
 /** One neutral greeting per target language — phrasings that avoid
- *  speaker-gender agreement so any voice can say them (iOS `previewLine`). */
+ *  speaker-gender agreement so any voice can say them (iOS `previewLine`).
+ *  The `<break>` is ElevenLabs' pause tag: measured on the Korean line, the
+ *  period after 반가워요 gave NO pause at all. It is spoken as silence, never
+ *  read out; this line is audio only, never drawn as text. */
 private fun voicePreviewLine(code: String): String = when (code.substringBefore("-")) {
-    "es" -> "¡Hola! Qué alegría verte. ¿Empezamos?"
-    "de" -> "Hallo! Schön, dich zu sehen. Sollen wir anfangen?"
-    "fr" -> "Bonjour ! Ça me fait plaisir de te voir. On commence ?"
-    "it" -> "Ciao! Che bello vederti. Iniziamo?"
-    "pt" -> "Oi! Que bom te ver. Vamos começar?"
-    "ja" -> "こんにちは！会えてうれしいです。始めましょうか？"
-    "ko" -> "안녕하세요! 만나서 반가워요. 시작해 볼까요?"
-    "zh" -> "你好！很高兴见到你。我们开始吧？"
-    else -> "Hi! It's good to see you. Shall we get started?"
+    "es" -> "¡Hola! Qué alegría verte. <break time=\"0.5s\" /> ¿Empezamos?"
+    "de" -> "Hallo! Schön, dich zu sehen. <break time=\"0.5s\" /> Sollen wir anfangen?"
+    "fr" -> "Bonjour ! Ça me fait plaisir de te voir. <break time=\"0.5s\" /> On commence ?"
+    "it" -> "Ciao! Che bello vederti. <break time=\"0.5s\" /> Iniziamo?"
+    "pt" -> "Oi! Que bom te ver. <break time=\"0.5s\" /> Vamos começar?"
+    "ja" -> "こんにちは！会えてうれしいです。<break time=\"0.5s\" />始めましょうか？"
+    "ko" -> "안녕하세요! 만나서 반가워요. <break time=\"0.5s\" /> 시작해 볼까요?"
+    "zh" -> "你好！很高兴见到你。<break time=\"0.5s\" />我们开始吧？"
+    else -> "Hi! It's good to see you. <break time=\"0.5s\" /> Shall we get started?"
 }
 
 // MARK: - The photo control

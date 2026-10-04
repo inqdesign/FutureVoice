@@ -59,6 +59,7 @@ import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.identityIn
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.talk.UserPersona
@@ -192,7 +193,7 @@ fun WatchSceneScreen(
             val auth = AuthRepository()
             val runKey = UUID.randomUUID().toString().take(8)
             val fresh = CurriculumClient(auth).generate(
-                scenario = scenario, persona = persona, castIdentity = cast.identity,
+                scenario = scenario, persona = persona, castIdentity = cast.identityIn(targetLanguage),
                 proficiency = proficiency, targetLanguage = targetLanguage,
                 avoidTitles = listOfNotNull(scenario.curriculum?.dialogueTitle),
                 commonGround = commonGround,
