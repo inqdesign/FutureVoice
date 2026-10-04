@@ -303,4 +303,5 @@
     <plurals name="cm_came_back_stays_focus">
         <item quantity="other">%d번 다시 나왔어요. 다음 통화에서도 이어가요</item>
     </plurals>
+    <string name="no_fluency_read">다음엔 조금 더 길게 말해 보세요. 그래야 유창성을 볼 수 있어요.</string>
 </resources>

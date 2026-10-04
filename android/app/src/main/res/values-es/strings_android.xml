@@ -322,4 +322,5 @@
         <item quantity="one">Volvió a aparecer %d vez; seguirá siendo tu enfoque</item>
         <item quantity="other">Volvió a aparecer %d veces; seguirá siendo tu enfoque</item>
     </plurals>
+    <string name="no_fluency_read">La próxima vez habla un poco más y podremos medir tu fluidez.</string>
 </resources>

@@ -322,4 +322,5 @@
         <item quantity="one">Came back once — it stays your focus</item>
         <item quantity="other">Came back %d times — it stays your focus</item>
     </plurals>
+    <string name="no_fluency_read">Talk a little longer next time and you\'ll get a fluency read.</string>
 </resources>

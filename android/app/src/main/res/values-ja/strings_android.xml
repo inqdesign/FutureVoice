@@ -303,4 +303,5 @@
     <plurals name="cm_came_back_stays_focus">
         <item quantity="other">%d回くり返しました。次の通話でも続けます</item>
     </plurals>
+    <string name="no_fluency_read">次はもう少し長く話してみて。流暢さはそこから見えてきます。</string>
 </resources>

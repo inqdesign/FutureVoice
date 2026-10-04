@@ -782,6 +782,8 @@ internal fun ScoreBlock(
     }
 }
 
+private const val NO_FLUENCY_READ_NOTE = "Speak a bit more next session for a fluency read."
+
 @Composable
 private fun AxisRow(
     axis: AxisScore,
@@ -815,7 +817,11 @@ private fun AxisRow(
             modifier = Modifier.fillMaxWidth(),
             color = scoreColor(axis.score))
         if (axis.note.isNotBlank()) {
-            Text(axis.note, style = MaterialTheme.typography.bodySmall,
+            // The no-timing note is written in code, in English, and stored
+            // that way (iOS does the same) — show it in the app language.
+            val note = if (axis.note == NO_FLUENCY_READ_NOTE) stringResource(R.string.no_fluency_read)
+                else axis.note
+            Text(note, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (detailCount != null) {

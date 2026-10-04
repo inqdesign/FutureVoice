@@ -309,4 +309,5 @@
         <item quantity="one">Revenu %d fois – ça reste ton objectif</item>
         <item quantity="other">Revenu %d fois – ça reste ton objectif</item>
     </plurals>
+    <string name="no_fluency_read">Parle un peu plus la prochaine fois pour qu’on puisse mesurer ta fluidité.</string>
 </resources>

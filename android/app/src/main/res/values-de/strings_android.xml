@@ -295,4 +295,5 @@
         <item quantity="one">%d-mal wieder aufgetaucht – bleibt dein Fokus</item>
         <item quantity="other">%d-mal wieder aufgetaucht – bleibt dein Fokus</item>
     </plurals>
+    <string name="no_fluency_read">Sprich beim nächsten Mal etwas länger, dann lässt sich deine Flüssigkeit einschätzen.</string>
 </resources>

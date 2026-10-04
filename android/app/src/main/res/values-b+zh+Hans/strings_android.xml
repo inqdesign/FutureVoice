@@ -303,4 +303,5 @@
     <plurals name="cm_came_back_stays_focus">
         <item quantity="other">又出现了 %d 次，下次通话继续练</item>
     </plurals>
+    <string name="no_fluency_read">下次多说一点，就能看出流利度了。</string>
 </resources>
