@@ -44,9 +44,16 @@ struct StudyPlan: Codable, Equatable {
         /// a count has no length, so it gets a fixed one.
         func drawnMinutes(amount: Int) -> Int { isTimed ? amount : 15 }
 
-        /// Kinds the learner can place by hand. Review, say it again and the
-        /// test come from toggles and their own settings.
-        static let placeable: [Kind] = [.talk, .review, .sayItAgain, .words, .expressions, .shadow]
+        /// Kinds the learner can place by hand — whole ACTIONS (founder,
+        /// 2026-10-03: talk, review, say it again — not words or shadowing
+        /// as blocks of their own). Review counts every kind of review the
+        /// app keeps: words and expressions judged, sentence cards, shadow
+        /// lines. The test comes from its own settings.
+        static let placeable: [Kind] = [.talk, .review, .sayItAgain]
+
+        /// LEGACY kinds: plans saved with them are folded into review on
+        /// load (`foldingIntoReview`); nothing places them any more.
+        var isFoldedIntoReview: Bool { self == .words || self == .expressions || self == .shadow }
     }
 
     struct Block: Codable, Equatable, Hashable, Identifiable {
@@ -229,6 +236,14 @@ struct StudyPlan: Codable, Equatable {
         return Array(Set(all.map { DailyCallStore.CallTime(hour: $0.hour, minute: $0.minute) })).sorted()
     }
 
+    /// The weekdays a call time rings on (`Calendar.weekday`), rest weekdays
+    /// left out — what Me → Call prints beside each time.
+    func callWeekdays(at t: DailyCallStore.CallTime) -> Set<Int> {
+        let days = blocks.filter { $0.kind == .talk && !$0.isAnytime && $0.hour == t.hour && $0.minute == t.minute }
+            .reduce(into: Set<Int>()) { $0.formUnion($1.weekdays) }
+        return days.subtracting(offWeekdays ?? [])
+    }
+
     /// Whether any talk block has a set time — only then does the timetable
     /// decide when the daily call rings.
     var hasTimedTalk: Bool {
@@ -371,9 +386,21 @@ struct StudyPlan: Codable, Equatable {
     /// elsewhere (Me → Call, onboarding). A time that stays keeps its
     /// weekdays; a new time runs every day; a removed one goes.
     mutating func adoptCallTimes(_ times: [DailyCallStore.CallTime], defaultMinutes: Int) {
-        // An "anytime" talk routine isn't tied to call times; the call rings
-        // on its own list (`DailyCallScheduler.fireDates`).
-        guard hasTimedTalk else { return }
+        // An "any time" talk routine: the call needs a time, so its talks
+        // take the call's times (same minutes, same days). The routine's
+        // timed talks ARE the calls — there is no second list.
+        guard hasTimedTalk else {
+            let anytime = blocks.filter { $0.kind == .talk && $0.isAnytime }
+            guard !times.isEmpty else { return }
+            let minutes = anytime.first?.minutes ?? defaultMinutes
+            let days = anytime.first?.weekdays ?? Set(1...7)
+            blocks.removeAll { $0.kind == .talk && $0.isAnytime }
+            for t in Set(times).sorted() {
+                blocks.append(Block(kind: .talk, weekdays: days, hour: t.hour, minute: t.minute,
+                                    minutes: minutes))
+            }
+            return
+        }
         let wanted = Set(times)
         let current = Set(callTimes)
         guard wanted != current else { return }
@@ -477,6 +504,34 @@ struct StudyPlan: Codable, Equatable {
         return plan
     }
 
+    /// A plan saved while words, expressions and shadowing were blocks of
+    /// their own: each becomes a review block at the same time, keeping its
+    /// count (every one of them is now counted by review). Two review blocks
+    /// landing at the same time on the same days add up into one.
+    func foldingIntoReview() -> StudyPlan {
+        func fold(_ list: [Block]) -> [Block] {
+            guard list.contains(where: { $0.kind.isFoldedIntoReview }) else { return list }
+            var out: [Block] = []
+            for var b in list {
+                if b.kind.isFoldedIntoReview { b.kind = .review }
+                if b.kind == .review, let i = out.firstIndex(where: {
+                    $0.kind == .review && $0.weekdays == b.weekdays && $0.isAnytime == b.isAnytime
+                        && (b.isAnytime || ($0.hour == b.hour && $0.minute == b.minute))
+                }) {
+                    out[i].minutes += b.minutes
+                } else {
+                    out.append(b)
+                }
+            }
+            return out
+        }
+        var plan = self
+        plan.blocks = fold(blocks)
+        plan.exceptions = exceptions.mapValues(fold)
+        if plan != self { plan.mergeTwins() }
+        return plan
+    }
+
     /// A plan saved while say-it-again was derived: the same slots, as
     /// ordinary blocks — after each weekday's first talk, and after each
     /// one-off day's first talk — so nothing moves on screen.
@@ -524,6 +579,7 @@ final class StudyPlanStore: ObservableObject {
         if let data = try? Data(contentsOf: url),
            let decoded = try? JSONDecoder().decode(StudyPlan.self, from: data) {
             plan = decoded.convertingLegacySayItAgain().convertingToCounts().convertingReviewSwitch()
+                .foldingIntoReview()
                 .upgradingToOnboardingPromise(callEnabled: DailyCallStore.shared.isEnabled,
                                               goalMinutes: Self.goalMinutes)
             if plan != decoded { write(plan) }
@@ -572,7 +628,7 @@ final class StudyPlanStore: ObservableObject {
     ///   app seeded is never a promise; neither is an empty one.
     @discardableResult
     func update(_ new: StudyPlan, byLearner: Bool = false) -> Bool {
-        var new = new
+        var new = new.foldingIntoReview()
         if new.blocks.isEmpty {
             new.streakSince = nil
         } else if byLearner, new.streakSince == nil {
@@ -601,6 +657,18 @@ final class StudyPlanStore: ObservableObject {
             await PlanReminder.reschedule()
         }
         return true
+    }
+
+    /// The daily call was switched on. The routine's timed talks are the
+    /// calls, so a routine whose talks are all "any time" gets them placed
+    /// at the call's time (08:00 unless one was chosen) — otherwise turning
+    /// the call on would ring nothing. A routine with a timed talk already
+    /// says when to ring, and is left alone.
+    func callTurnedOn() {
+        guard !plan.hasTimedTalk else { return }
+        var new = plan
+        new.adoptCallTimes(DailyCallStore.shared.times, defaultMinutes: Self.goalMinutes)
+        update(new)
     }
 
     /// `DailyCallStore.times` was set from somewhere other than the plan.

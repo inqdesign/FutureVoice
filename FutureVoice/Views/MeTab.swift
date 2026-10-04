@@ -33,8 +33,10 @@ struct MeTab: View {
     /// store stays the source of truth — `onChange` writes back — because the
     /// scheduler runs from a notification action with no view in memory.
     @State private var dailyCallEnabled = DailyCallStore.shared.isEnabled
-    /// Working copy of `DailyCallStore.times`; written back on every edit.
-    @State private var callTimes = DailyCallStore.shared.times
+    /// The routine holds the call times (a timed talk IS a call); Me only
+    /// shows them and opens the routine to change them.
+    @ObservedObject private var planStore = StudyPlanStore.shared
+    @State private var editingRoutine = false
     /// Nil while loading or when the learner hasn't qualified — the row still
     /// shows, because a club nobody can see is a club nobody joins.
     @State private var coreMembership: CoreClubService.Membership?
@@ -331,6 +333,11 @@ struct MeTab: View {
                     Button("Done") { dismiss() }
                 }
             }
+            // Opened from the Daily call page. Attached here, at the root,
+            // not on that page's row: the routine editor writes the plan on
+            // open, Me re-renders, and a cover on a List row is torn down
+            // with the row — it opened and closed at once.
+            .fullScreenCover(isPresented: $editingRoutine) { WeeklyPlanEditor() }
             .sheet(isPresented: $showingPaywall, onDismiss: {
                 Task { account = await AccountStatus.fetch() }
             }) {
@@ -736,44 +743,37 @@ struct MeTab: View {
                     subtitle: explain("Your fluent self phones you"))
             }
             if dailyCallEnabled {
-                // One row per call. More than one a day is the difference
-                // between a reminder and a habit — the learner decides how
-                // often somebody checks in on them, up to `maxTimes`.
-                // Identity is the POSITION, not the time: CallTime's id is
-                // its hour*60+minute, so keying rows on the value tore down
-                // the row (and its open picker popover) on every wheel tick —
-                // hour, minute and AM/PM each needed a fresh open. Sorting
-                // and dedupe wait until the page closes for the same reason.
-                ForEach(callTimes.indices, id: \.self) { index in
-                    DatePicker(
-                        selection: binding(at: index),
-                        displayedComponents: .hourAndMinute
-                    ) {
-                        Label(explain("Call"), systemImage: "phone.arrow.down.left")
+                // The calls are the routine's timed talks (founder,
+                // 2026-10-03: one concept, not two lists). Shown here, changed
+                // in the routine.
+                let times = planStore.plan.callTimes
+                if times.isEmpty {
+                    Text("No talk with a set time in your routine, so nothing rings.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(times) { t in
+                    HStack {
+                        Label(String(format: "%02d:%02d", t.hour, t.minute), systemImage: "phone.arrow.down.left")
+                            .monospacedDigit()
+                        Spacer()
+                        Text(weekdaySummary(planStore.plan.callWeekdays(at: t)))
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .onDelete { offsets in
-                    // Deleting the last one would silently disable the call —
-                    // the toggle above is where that decision belongs.
-                    guard callTimes.count > offsets.count else { return }
-                    callTimes.remove(atOffsets: offsets)
-                    persistTimes()
-                }
-                if callTimes.count < DailyCallStore.maxTimes {
-                    Button {
-                        addCallTime()
-                    } label: {
-                        Label("Add a call", systemImage: "plus")
-                    }
+                Button {
+                    editingRoutine = true
+                } label: {
+                    Label("Change in my routine", systemImage: "calendar.badge.clock")
                 }
             }
         } header: {
             Text("Call")
         } footer: {
             Text(explain(dailyCallEnabled
-                ? "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you."
-                : "Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went."))
+                ? "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you."
+                : "Instead of a reminder, your fluent self phones you at your routine's talk times with a question to answer out loud. They remember how the last call went."))
         }
+
         .onChange(of: dailyCallEnabled) { _, on in
             Task { await setDailyCall(enabled: on) }
         }
@@ -1009,7 +1009,7 @@ struct MeTab: View {
     /// one-line read of the call schedule.
     private var dailyCallSummary: String {
         guard dailyCallEnabled else { return explain("Off") }
-        return callTimes
+        return planStore.plan.callTimes
             .map { String(format: "%02d:%02d", $0.hour, $0.minute) }
             .joined(separator: " · ")
     }
@@ -1034,7 +1034,6 @@ struct MeTab: View {
             .navigationBarTitleDisplayMode(.inline)
             // Editing persists un-sorted so open pickers keep their row (see
             // persistTimes); pick up the store's sorted, deduped read here.
-            .onDisappear { callTimes = DailyCallStore.shared.times }
     }
 
     private var voicePage: some View {
@@ -1267,52 +1266,16 @@ struct MeTab: View {
 }
 
 extension MeTab {
-    /// Bridges one stored `CallTime` to the `Date` a `DatePicker` needs.
-    /// Editing writes straight back through to the store so a call the learner
-    /// just moved is rescheduled even if they close Me immediately. Index-
-    /// addressed so an edit updates the row IN PLACE — resolving by value
-    /// broke the moment the value changed under the open picker.
-    func binding(at index: Int) -> Binding<Date> {
-        Binding(
-            get: {
-                guard callTimes.indices.contains(index) else { return Date() }
-                let time = callTimes[index]
-                return Calendar.current.date(bySettingHour: time.hour, minute: time.minute,
-                                             second: 0, of: Date()) ?? Date()
-            },
-            set: { newValue in
-                guard callTimes.indices.contains(index) else { return }
-                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
-                callTimes[index] = DailyCallStore.CallTime(hour: parts.hour ?? 8,
-                                                           minute: parts.minute ?? 0)
-                persistTimes()
-            })
-    }
-
-    /// A new call three hours after the last one — far enough that it reads as
-    /// a separate check-in rather than a repeat of the one just missed.
-    func addCallTime() {
-        let last = callTimes.max() ?? DailyCallStore.CallTime(hour: 8, minute: 0)
-        let proposed = (last.hour + 3) % 24
-        var candidate = DailyCallStore.CallTime(hour: proposed, minute: last.minute)
-        // Never collide: identical times dedupe in the store and the row would
-        // silently vanish.
-        while callTimes.contains(candidate) {
-            candidate = DailyCallStore.CallTime(hour: (candidate.hour + 1) % 24,
-                                                minute: candidate.minute)
-        }
-        callTimes.append(candidate)
-        persistTimes()
-    }
-
-    /// Persist WITHOUT re-reading: the store sorts and dedupes internally
-    /// (the scheduler always sees clean times), but syncing that back into
-    /// `callTimes` mid-edit reordered rows under the learner's finger and
-    /// closed the open picker. The working copy re-syncs when the page
-    /// closes (`dailyCallPage.onDisappear`).
-    func persistTimes() {
-        DailyCallStore.shared.times = callTimes
-        appState.refreshDailyCall()
+    /// "Every day", "Weekdays", "Weekends", or the days by name.
+    func weekdaySummary(_ days: Set<Int>) -> String {
+        if days == Set(1...7) { return explain("Every day") }
+        if days == Set(2...6) { return explain("Weekdays") }
+        if days == [1, 7] { return explain("Weekends") }
+        var cal = Calendar.current
+        cal.locale = Locale(identifier: LanguageCatalog.currentNative)
+        let names = cal.shortWeekdaySymbols
+        // Monday first, the way the routine draws its week.
+        return [2, 3, 4, 5, 6, 7, 1].filter(days.contains).map { names[$0 - 1] }.joined(separator: " ")
     }
 }
 

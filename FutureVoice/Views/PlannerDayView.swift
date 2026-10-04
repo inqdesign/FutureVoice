@@ -119,6 +119,10 @@ struct PlannerDayCard: View {
             return explain("About \(n) waiting")
         }
         if occ.kind == .sayItAgain { return explain("Pick a talk") }
+        // A timed talk IS the daily call; with the call off it won't ring.
+        if occ.kind == .talk, !occ.anytime, !DailyCallStore.shared.isEnabled {
+            return explain("No call")
+        }
         return nil
     }
 

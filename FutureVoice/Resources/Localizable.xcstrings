@@ -194,6 +194,98 @@
         }
       }
     },
+    "Add a block" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Block hinzufügen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir un bloque"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un bloc"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブロックを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "블럭 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加区块"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增區塊"
+          }
+        }
+      }
+    },
+    "All caught up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles erledigt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo al día"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout est à jour"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部できました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다 끝냈어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "都完成了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "都完成了"
+          }
+        }
+      }
+    },
     "%@ a min" : {
       "localizations" : {
         "de" : {
@@ -1110,6 +1202,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說完就會自動繼續"
+          }
+        }
+      }
+    },
+    "No call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Anruf"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin llamada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas d’appel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "電話なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화 안 함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不打电话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不打電話"
+          }
+        }
+      }
+    },
+    "No talk with a set time in your routine, so nothing rings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Routine hat kein Gespräch mit fester Uhrzeit, also klingelt nichts."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu rutina no tiene ninguna conversación con hora, así que no sonará nada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta routine n’a aucune conversation à heure fixe, donc rien ne sonnera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンに時間の決まったトークがないので、電話は鳴りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴에 시간이 정해진 대화가 없어서 전화가 오지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的例行计划里没有设定时间的对话，所以不会打来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的例行計畫裡沒有設定時間的對話，所以不會打來。"
           }
         }
       }
@@ -111258,6 +111442,98 @@
         }
       }
     },
+    "Any time of day: no call rings for this one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Irgendwann am Tag: Dafür klingelt kein Anruf."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A cualquier hora: esta no suena como llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N’importe quand : celle-ci ne sonne pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いつでも：このトークでは電話は鳴りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루 중 아무 때나: 이 대화는 전화가 오지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一天中任何时间：这次对话不会打来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一天中任何時間：這次對話不會打來。"
+          }
+        }
+      }
+    },
+    "Change in my routine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In meiner Routine ändern"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar en mi rutina"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier dans ma routine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンで変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 루틴에서 바꾸기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在例行计划中修改"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在例行計畫中修改"
+          }
+        }
+      }
+    },
     "Edit routine" : {
       "localizations" : {
         "de" : {
@@ -111350,6 +111626,52 @@
         }
       }
     },
+    "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Gespräch mit fester Uhrzeit in deiner Routine ist ein Anruf. Dein Telefon klingelt dann, auch lautlos. Keine Zeit? Einfach ablehnen – das zählt nicht gegen dich."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada conversación con hora en tu rutina es una llamada. Tu teléfono suena a esa hora, incluso en silencio. ¿No puedes hablar? Recházala; no pasa nada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque conversation à heure fixe de ta routine est un appel. Ton téléphone sonne à ce moment-là, même en silencieux. Pas dispo ? Refuse, ça ne compte pas contre toi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンの時間が決まったトークが、そのまま電話になります。マナーモードでも鳴ります。出られないときは拒否するだけ。何もマイナスになりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴에서 시간이 정해진 대화가 곧 전화예요. 그 시간에 무음이어도 전화가 울려요. 받기 어려우면 거절하면 돼요. 불이익은 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例行计划里有设定时间的对话就是一通电话。到时候即使静音也会响。不方便接就拒接，不会有任何影响。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例行計畫裡有設定時間的對話就是一通電話。到時候即使靜音也會響。不方便接就拒接，不會有任何影響。"
+          }
+        }
+      }
+    },
     "Extra" : {
       "localizations" : {
         "de" : {
@@ -111438,6 +111760,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說得流利的人會怎麼說？"
+          }
+        }
+      }
+    },
+    "Instead of a reminder, your fluent self phones you at your routine's talk times with a question to answer out loud. They remember how the last call went." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statt einer Erinnerung ruft dich dein fließendes Ich zu den Gesprächszeiten deiner Routine an – mit einer Frage, die du laut beantwortest. Es weiß noch, wie der letzte Anruf lief."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En vez de un recordatorio, tu yo fluido te llama a las horas de conversación de tu rutina con una pregunta para responder en voz alta. Recuerda cómo fue la última llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Au lieu d’un rappel, ton moi fluide t’appelle aux heures de conversation de ta routine avec une question à laquelle répondre à voix haute. Il se souvient du dernier appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知の代わりに、ルーティンのトークの時間に流暢な自分から電話がかかってきて、声に出して答える質問をひとつします。前回の電話のことも覚えています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알림 대신, 루틴의 대화 시간에 유창한 내가 전화를 걸어 소리 내어 답할 질문을 하나 던져요. 지난 통화가 어땠는지도 기억해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是提醒，而是在例行计划的对话时间，流利的你会打电话来，问一个要开口回答的问题。也会记得上次通话的情况。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是提醒，而是在例行計畫的對話時間，流利的你會打電話來，問一個要開口回答的問題。也會記得上次通話的情況。"
           }
         }
       }
@@ -111910,6 +112278,190 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "平日"
+          }
+        }
+      }
+    },
+    "Words, expressions and sentences from your talks show up here when it's time to review them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter, Wendungen und Sätze aus deinen Gesprächen landen hier, sobald es Zeit ist, sie zu wiederholen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las palabras, expresiones y frases de tus conversaciones aparecen aquí cuando toca repasarlas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les mots, expressions et phrases de tes conversations apparaissent ici quand il est temps de les réviser."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークで出た単語・表現・文が、復習のタイミングでここに集まります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화에서 나온 단어, 표현, 문장이 복습할 때가 되면 여기에 모여요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对话里出现的单词、表达和句子，到了该复习的时候会出现在这里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "對話裡出現的單字、表達和句子，到了該複習的時候會出現在這裡。"
+          }
+        }
+      }
+    },
+    "Words, expressions, sentence cards and shadow lines all count." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter, Wendungen, Satzkarten und Shadowing-Sätze zählen alle."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuentan las palabras, las expresiones, las tarjetas de frases y las frases de shadowing."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les mots, les expressions, les cartes de phrases et les phrases en shadowing comptent tous."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "単語・表現・文カード・シャドーイングの文がすべて数に入ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어, 표현, 문장 카드, 쉐도잉 문장이 모두 들어가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词、表达、句子卡和跟读句子都会算进去。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "單字、表達、句子卡和跟讀句子都會算進去。"
+          }
+        }
+      }
+    },
+    "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein täglicher Anruf ist aus, also klingelt es nicht. Schalte ihn unter Ich → Täglicher Anruf ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu llamada diaria está desactivada, así que esta no sonará. Actívala en Mi perfil → Llamada diaria."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton appel quotidien est désactivé, donc celle-ci ne sonnera pas. Active-le dans Mon profil → Appel quotidien."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日の電話がオフなので鳴りません。マイページ → 毎日の電話でオンにできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 전화가 꺼져 있어서 울리지 않아요. 나 → 매일 전화에서 켤 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日来电已关闭，所以不会响。可以在“我的”→“每日来电”开启。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日來電已關閉，所以不會響。可以在「我的」→「每日來電」開啟。"
+          }
+        }
+      }
+    },
+    "Your daily call rings at this time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein täglicher Anruf klingelt um diese Zeit."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu llamada diaria suena a esta hora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton appel quotidien sonne à cette heure."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この時間に毎日の電話が鳴ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 시간에 매일 전화가 와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日来电会在这个时间打来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日來電會在這個時間打來。"
           }
         }
       }

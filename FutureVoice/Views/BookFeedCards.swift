@@ -69,7 +69,7 @@ struct BookChapterButtons: View {
                     VStack(spacing: 8) {
                         Image(systemName: chapter.icon)
                             .font(.title3)
-                            .foregroundStyle(done ? AnyShapeStyle(Color.green) : AnyShapeStyle(book.tint))
+                            .foregroundStyle(.primary)
                             .frame(height: 24)
                         ProgressView(value: chapter.progress)
                             .tint(done ? .green : book.tint)
@@ -91,4 +91,15 @@ struct BookChapterButtons: View {
         .padding(.horizontal, 14)
         .padding(.bottom, 14)
     }
+}
+
+/// The four kinds of study material, one icon each — the SAME glyph on the
+/// library tiles, a book card's chapter buttons and a book page's ribbon
+/// tabs, and the same ORDER everywhere: words, expressions, grammar,
+/// shadowing (2026-10-03, user decision — each surface had its own set).
+enum StudyIcon {
+    static let words = "text.book.closed.fill"
+    static let expressions = "quote.bubble.fill"
+    static let grammar = "checkmark.bubble.fill"
+    static let shadowing = "waveform.badge.mic"
 }

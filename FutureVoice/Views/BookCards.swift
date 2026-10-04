@@ -83,7 +83,7 @@ struct OriginTag: View {
     }
 }
 
-/// A book card's icon: a soft tinted circle with the glyph (or initials)
+/// A book card's icon: a soft TINTED circle with the glyph (or initials)
 /// in it, or — for a person with a photo on file — the photo, clipped to
 /// the same circle.
 struct BookIconDisc<Content: View>: View {
@@ -129,7 +129,7 @@ struct ScenarioBookCard: View {
                 Spacer()
                 if scenario.isMastered {
                     Image(systemName: "checkmark.seal.fill")
-                        .font(.title3).foregroundStyle(.green)
+                        .font(.title3).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 8)
@@ -163,7 +163,8 @@ struct ScenarioBookCard: View {
         return r.isEmpty ? nil : r
     }
 
-    /// In a soft round disc (2026-10-03, user decision). A scene with a
+    /// In a soft round disc in the book's colour — the card's one coloured
+    /// mark besides its bars (2026-10-03, user decision). A scene with a
     /// person shows THAT person — their photo, else their initials on the
     /// same disc; otherwise the scene's own glyph.
     @ViewBuilder
@@ -190,11 +191,11 @@ struct ScenarioBookCard: View {
                     .tint(scenario.isMastered ? .green : Books.color(for: scenario))
                 Text(scenario.isMastered ? "Mastered" : "\(c.masteredCount)/\(c.totalCount) mastered")
                     .font(.caption2.monospacedDigit())
-                    .foregroundStyle(scenario.isMastered ? .green : .secondary)
+                    .foregroundStyle(.secondary)
             }
         } else {
             Label("Open to start", systemImage: "book")
-                .font(.caption2).foregroundStyle(.tint)
+                .font(.caption2).foregroundStyle(.secondary)
         }
     }
 }
@@ -228,7 +229,7 @@ struct TalkBookCard: View {
                 Spacer()
                 if snapshot?.isMastered == true {
                     Image(systemName: "checkmark.seal.fill")
-                        .font(.title3).foregroundStyle(.green)
+                        .font(.title3).foregroundStyle(.secondary)
                 }
                 // How the talk itself went — the single headline number, only
                 // once the summary has scored it.
@@ -264,18 +265,9 @@ struct TalkBookCard: View {
     private func scoreChip(_ score: Int) -> some View {
         Text("\(score)")
             .font(.caption.weight(.bold).monospacedDigit())
-            .foregroundStyle(scoreBand(score))
+            .foregroundStyle(.secondary)
             .frame(width: 30, height: 30)
-            .background(Circle().stroke(scoreBand(score).opacity(0.35), lineWidth: 2))
-    }
-
-    private func scoreBand(_ s: Int) -> Color {
-        switch s {
-        case ..<50:  return .red
-        case ..<70:  return .orange
-        case ..<85:  return .blue
-        default:     return .green
-        }
+            .background(Circle().stroke(Color(.separator), lineWidth: 2))
     }
 
     @ViewBuilder
@@ -287,7 +279,7 @@ struct TalkBookCard: View {
                         .tint(s.isMastered ? .green : Books.talksColor)
                     Text(s.isMastered ? "Mastered" : "\(s.masteredCount)/\(s.totalCount) mastered")
                         .font(.caption2.monospacedDigit())
-                        .foregroundStyle(s.isMastered ? .green : .secondary)
+                        .foregroundStyle(.secondary)
                 }
             } else {
                 // A chat that produced no material — still replayable.
@@ -296,7 +288,7 @@ struct TalkBookCard: View {
             }
         } else {
             Label("Open to review", systemImage: "book")
-                .font(.caption2).foregroundStyle(.tint)
+                .font(.caption2).foregroundStyle(.secondary)
         }
     }
 }
