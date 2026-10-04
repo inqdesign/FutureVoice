@@ -152,6 +152,10 @@ object DailyCallStore {
 
 object DailyCallScheduler {
     const val CHANNEL_ID = "daily_call"
+    /** The ring that plays its own alarm-stream sound: vibration only, or
+     *  it would ring twice when the phone is not silent. */
+    const val RING_CHANNEL_ID = "daily_call_ring"
+    const val RING_ID = 4801
     const val ANSWER_EXTRA = "dailyCallAnswer"
     private const val REQUEST = 4801
 
@@ -316,6 +320,18 @@ object DailyCallScheduler {
         })
     }
 
+    private fun ensureRingChannel(context: Context) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(RING_CHANNEL_ID) != null) return
+        nm.createNotificationChannel(NotificationChannel(
+            RING_CHANNEL_ID, "Daily call", NotificationManager.IMPORTANCE_HIGH).apply {
+            setSound(null, null)
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 800, 600, 800, 600, 800)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        })
+    }
+
     /** The ring: a call-style, full-screen, insistent notification. */
     fun ring(context: Context) {
         // An alarm armed before the voice was parked: stay silent, and don't
@@ -326,8 +342,9 @@ object DailyCallScheduler {
         // right now. Stay silent; the release settles the slot as answered.
         if (liveCallSince != null) return
         ensureChannel(context)
+        ensureRingChannel(context)
         val answer = contentIntent(context)
-        val n: Notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        fun build(channel: String): Notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.your_future_self))
             .setCategory(NotificationCompat.CATEGORY_CALL)
@@ -340,15 +357,21 @@ object DailyCallScheduler {
             .addAction(0, com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.answer), answer)
             .setContentIntent(answer)
             .build()
-        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-            .notify(REQUEST, n)
+        // Sound on the alarm stream, through silent mode; if the system won't
+        // start the service, the old channel's own ringtone sound is the ring.
+        if (!DailyCallRingService.start(context, build(RING_CHANNEL_ID))) {
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(REQUEST, build(CHANNEL_ID))
+        }
         DailyCallStore.noteRang(context)
         // The next call arms the moment this one rings.
         if (DailyCallStore.isEnabled(context)) schedule(context)
     }
 
-    fun dismissRing(context: Context) =
+    fun dismissRing(context: Context) {
+        DailyCallRingService.stop(context)
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(REQUEST)
+    }
 }
 
 /** "Not now": settle it quietly — no app, no callback question. */

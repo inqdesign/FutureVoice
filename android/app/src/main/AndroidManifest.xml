@@ -67,6 +67,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- The daily call's ring on the alarm stream (rings through silent mode). -->
+        <service
+            android:name=".data.DailyCallRingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <service
             android:name=".talk.CallForegroundService"
             android:exported="false"
