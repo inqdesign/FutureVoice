@@ -112,7 +112,7 @@ fun VoiceRevivalHost(app: AppViewModel) {
 private enum class RevivalStage { REBUILDING, FAILED, TUNE }
 
 @Composable
-private fun VoiceRevivalScreen(
+internal fun VoiceRevivalScreen(
     app: AppViewModel,
     purpose: VoiceRevival.Purpose,
     onFinish: (Boolean) -> Unit,
@@ -132,6 +132,12 @@ private fun VoiceRevivalScreen(
 
     LaunchedEffect(attempt) {
         stage = RevivalStage.REBUILDING
+        // Capture harness: no session, no network — hold the stage asked for
+        // (iOS `VoiceRevivalView` does the same for `voice-revival[-tune]`).
+        com.roro.futurevoice.capture.flags.TalkCaptureFlags.revivalStage?.let {
+            if (it == "tune") stage = RevivalStage.TUNE
+            return@LaunchedEffect
+        }
         app.reviveParkedVoice()
             .onSuccess { stage = RevivalStage.TUNE }
             .onFailure { e ->

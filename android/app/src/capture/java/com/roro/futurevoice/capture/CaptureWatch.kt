@@ -51,6 +51,7 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  *   deepen-full
  *   intro-preview
  *   profile-notes
+ *   profile-name
  *
  * A mode is either WIRED (the real Android screen over `CaptureSeed` data),
  * NOT PORTED (the Android app has no such screen or feature yet — the reason
@@ -165,6 +166,9 @@ object CaptureWatch {
         // Me → Profile on its home step: the remembered lines with their
         // rungs and evidence — one let out whole, one as its gist, two kept
         // (iOS `PersonaOnboardingView(startStep: 1)`).
+        // Me → Profile, first step: the avatar in the SAME card as the name
+        // field (iOS `PersonaOnboardingView(startStep: 0)`).
+        "profile-name" to @Composable { c: Context -> Profile(c, step = 0) },
         "profile-notes" to @Composable { c: Context ->
             var persona by remember { mutableStateOf<UserPersona?>(null) }
             Seeded({
@@ -256,6 +260,23 @@ object CaptureWatch {
 
     /** mode → why Android can't show it yet (name the master-plan item). */
     val notPorted: Map<String, String> = mapOf()
+
+    /** Me → Profile over the sample persona, opened on [step]. */
+    @Composable
+    private fun Profile(c: Context, step: Int) {
+        var persona by remember { mutableStateOf<UserPersona?>(null) }
+        Seeded({
+            CaptureSeed.once("sample-persona") { CaptureSeed.seedSamplePersona(c) }
+            persona = PersonaStore.shared(c).load()
+        }) {
+            PersonaIntakeScreen(
+                initial = persona ?: UserPersona(), targetLanguage = lang(c),
+                nativeLanguage = c.getSharedPreferences("futurevoice", 0)
+                    .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
+                onBackToSetup = {}, onFinish = {}, startStep = step,
+            )
+        }
+    }
 
     @Composable
     private fun Intake(c: Context, step: Int?) {

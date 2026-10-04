@@ -20,6 +20,7 @@ import com.roro.futurevoice.ui.AllowanceSpentSheet
 import com.roro.futurevoice.ui.CreditGuideScreen
 import com.roro.futurevoice.ui.FeedbackContext
 import com.roro.futurevoice.ui.FeedbackSheet
+import com.roro.futurevoice.ui.InviteOffer
 import com.roro.futurevoice.ui.MeScreen
 import com.roro.futurevoice.ui.PaywallScreen
 import com.roro.futurevoice.ui.PlanPageScreen
@@ -34,10 +35,13 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  *   plan
  *   plan-guide
  *   plan-trial
+ *   plan-spent
  *   paywall
  *   paywall-plans
  *   day-spent
  *   day-spent-scenes
+ *   day-spent-invite
+ *   day-spent-plus
  *   day-spent-unlimited
  *   day-spent-trial
  *   day-spent-trial-plus
@@ -45,6 +49,8 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  *   update
  *   update-required
  *   sync
+ *   sync-other-device
+ *   backup-offer
  *   feedback
  *
  * A mode is either WIRED (the real Android screen over `CaptureSeed` data),
@@ -88,6 +94,15 @@ object CaptureMe {
             MeCaptureFlags.previewReceipt = CaptureSeed.sampleTrialReceipt
             PlanPageScreen(onOpenCreditGuide = {}, onOpenInvite = {}, onBack = {})
         },
+        // iOS: the same page once the month's minutes are gone — the invite
+        // row has grown into the card, and nothing else moves.
+        "plan-spent" to { _ ->
+            MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount.copy(
+                secondsUsedPeriod = CaptureSeed.sampleLightAccount.monthlyCapSeconds ?: 9000)
+            MeCaptureFlags.previewReceipt = CaptureSeed.sampleLightReceipt
+            MeCaptureFlags.previewInvite = sampleInvite
+            PlanPageScreen(onOpenCreditGuide = {}, onOpenInvite = {}, onBack = {})
+        },
         "plan-guide" to { _ ->
             MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount
             CreditGuideScreen(onBack = {})
@@ -96,6 +111,15 @@ object CaptureMe {
         "day-spent-scenes" to { _ -> DaySpent(SpentPool.SCENES, canUpgrade = true, CaptureSeed.sampleLightAccount) },
         // iOS: the same sheet with nothing left to sell (Unlimited/Plus) —
         // same numbers, `canUpgrade: false`.
+        // iOS: the talk sheet with the invite line, which only a subscriber
+        // on a counted pool with rewards left ever sees.
+        "day-spent-invite" to { _ ->
+            DaySpent(SpentPool.TALK, canUpgrade = true, CaptureSeed.sampleLightAccount, sampleInvite)
+        },
+        // iOS: what a Plus subscriber meets today — the month's pool (300 min
+        // in iOS's sample) spent, nothing to upgrade to, no minute pack on
+        // sale, so the invite is the only free way forward.
+        "day-spent-plus" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, plusSpentAccount, sampleInvite) },
         "day-spent-unlimited" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, CaptureSeed.sampleLightAccount) },
         // iOS: a TRIAL meets the Light pool pro-rated 7/30 (35 min), dated at
         // the trial's end (+4 days, already `sampleTrialAccount.periodEnd`).
@@ -111,6 +135,10 @@ object CaptureMe {
     /** mode → why Android can't show it yet (name the master-plan item). */
     val notPorted: Map<String, String> = mapOf(
         "sync" to "Sync between devices (iOS iCloud) not ported — 2.28",
+        "sync-other-device" to "2.28 — No device sync, so no second-device hint screen " +
+            "(iOS SyncOtherDeviceHintView) — Android has nothing to turn on over there",
+        "backup-offer" to "2.28 — No iCloud-backup offer after the third talk (iOS BackupOfferSheet); " +
+            "Android has only Me's manual backup export/import",
         "credits-out" to "4.6 — No in-call out-of-credits recovery row — Android routes a turn's 402 " +
             "straight to the paywall/allowance sheet (TalkViewModel.hitWall); 4.7",
     )
@@ -164,9 +192,20 @@ object CaptureMe {
         )
     }
 
+    /** iOS `InviteOffer(code: "K3MQ9F", invitesUsed: 2)`. */
+    private val sampleInvite = InviteOffer(code = "K3MQ9F", invitesUsed = 2)
+
+    /** A Plus subscriber whose month (300 min, iOS's sample) is spent. */
+    private val plusSpentAccount: AccountStatus
+        get() = CaptureSeed.sampleLightAccount.copy(
+            planId = "plus_monthly", secondsUsedPeriod = 300 * 60, monthlyCapSeconds = 300 * 60,
+            monthlyScenesCap = 30)
+
     @Composable
-    private fun DaySpent(pool: SpentPool, canUpgrade: Boolean, account: AccountStatus) {
+    private fun DaySpent(pool: SpentPool, canUpgrade: Boolean, account: AccountStatus,
+                         invite: InviteOffer? = null) {
         MeCaptureFlags.previewAccount = account
+        MeCaptureFlags.previewInvite = invite
         OverGround {
             AllowanceSpentSheet(pool = pool, canUpgrade = canUpgrade,
                 onReview = {}, onUpgrade = {}, onDismiss = {})

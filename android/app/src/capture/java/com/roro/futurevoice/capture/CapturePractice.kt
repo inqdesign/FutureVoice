@@ -41,6 +41,8 @@ import com.roro.futurevoice.ui.Shelf
 import com.roro.futurevoice.ui.StudyDeckHost
 import com.roro.futurevoice.ui.TalkDetailScreen
 import com.roro.futurevoice.ui.VocabularyCloudScreen
+import com.roro.futurevoice.ui.WordCardSheet
+import com.roro.futurevoice.net.WordLore
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import kotlinx.coroutines.runBlocking
 
@@ -68,6 +70,8 @@ import kotlinx.coroutines.runBlocking
  *   vocab-loading
  *   wordcard-ja
  *   expr
+ *   expr-card
+ *   transcript
  *   book
  *   book-words
  *   book-lines
@@ -342,6 +346,17 @@ object CapturePractice {
         "expr" to mode({ c ->
             CaptureSeed.once("expr") { CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c, scored = true) }
         }) { LibraryScreen(kind = LibraryKind.EXPRESSIONS, language = lang(it), onBack = {}) },
+        // One phrase's card open over the expressions list (iOS `expr-card`).
+        // Offline, so the card is handed iOS's phrase-shaped stub entry: one
+        // sense with the register line, two examples, two near-variants.
+        "expr-card" to mode({ c ->
+            CaptureSeed.once("expr") { CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c, scored = true) }
+            PracticeCaptureFlags.stubWordEntry = pushBackEntry
+        }) {
+            LibraryScreen(kind = LibraryKind.EXPRESSIONS, language = lang(it), onBack = {})
+            WordCardSheet(terms = listOf("push back"), initialTerm = "push back",
+                kind = LibraryKind.EXPRESSIONS, language = lang(it), onDismiss = {})
+        },
 
         "book" to book(null),
         "book-words" to book("WORDS"),
@@ -402,6 +417,19 @@ object CapturePractice {
             TalkDetailScreen(sessionId = CaptureSeed.japaneseTalkSession.id, language = "ja",
                 level = level(c), onBack = {})
         },
+        // The English talk's transcript (iOS `TalkTranscriptView` on the
+        // talk-detail session) — corrections under the learner's lines.
+        // Android has no separate transcript destination: the talk book opens
+        // with its transcript unfolded, as `transcript-ja` does.
+        "transcript" to mode(
+            seed = {
+                PracticeCaptureFlags.talkDetailSession = CaptureSeed.talkDetailSession
+                PracticeCaptureFlags.talkDetailTranscript = true
+            },
+        ) { c ->
+            TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = "en",
+                level = level(c), onBack = {})
+        },
         "transcript-ja" to mode(
             seed = {
                 PracticeCaptureFlags.talkDetailSession = CaptureSeed.japaneseTalkSession
@@ -417,6 +445,20 @@ object CapturePractice {
             CaptureSeed.seedJapaneseWords(c)
             PracticeCaptureFlags.cloudOpenWord = "慌てる"
         }) { Cloud(it, "ja") },
+    )
+
+    /** iOS `expr-card`'s `stubWordEntry`, verbatim. */
+    private val pushBackEntry = WordLore.Entry(
+        pos = "구동사 · 일상 대화",
+        senses = listOf(WordLore.Sense(pos = "", meaning = "제안이나 결정에 반대 의견을 내다; 밀어내듯 저항하다.",
+            note = "회의나 협상에서 정중하게 반대할 때 자주 써요.")),
+        examples = listOf(
+            WordLore.Example(text = "I had to push back on the deadline — two weeks wasn't realistic.",
+                meaning = "마감에 반대 의견을 내야 했어요. 2주는 현실적이지 않았거든요."),
+            WordLore.Example(text = "Don't be afraid to push back on feedback you disagree with.",
+                meaning = "동의하지 않는 피드백에는 주저 말고 반대 의견을 내세요.")),
+        phrases = listOf(WordLore.Phrase(phrase = "raise concerns about", meaning = "~에 대해 우려를 제기하다"),
+            WordLore.Phrase(phrase = "challenge", meaning = "이의를 제기하다")),
     )
 
     /** mode → why Android can't show it yet (name the master-plan item). */

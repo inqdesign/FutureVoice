@@ -29,4 +29,8 @@ object MeCaptureFlags {
      *  (iOS seeds the same table: a capture build is never priced by a store). */
     @JvmField var previewPrices: Map<String, Long>? = null
     @JvmField var previewCurrency: String? = null
+
+    /** The invite offer the spent-pool sheet and Usage show instead of asking
+     *  the referral server (iOS `previewInvite` / `DaySpentCaptureHost(invite:)`). */
+    @JvmField var previewInvite: com.roro.futurevoice.ui.InviteOffer? = null
 }

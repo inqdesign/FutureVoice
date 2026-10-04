@@ -92,6 +92,7 @@ fun PlanPageScreen(
         com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount?.let {
             account = it
             receipt = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewReceipt
+            inviteOffer = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewInvite
             return@LaunchedEffect
         }
         val auth = AuthRepository()

@@ -58,6 +58,18 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.Futureself
 import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
+import com.roro.futurevoice.talk.GrammarFocus
+import com.roro.futurevoice.talk.GrammarFocusRecord
+import com.roro.futurevoice.talk.LearnerPattern
+import com.roro.futurevoice.talk.TurnFix
+import com.roro.futurevoice.talk.TurnSuggestion
+import com.roro.futurevoice.ui.CallSettings
+import com.roro.futurevoice.ui.CallSettingsSheet
+import com.roro.futurevoice.ui.GrammarFocusResultRow
+import com.roro.futurevoice.ui.GrammarFocusSheet
+import com.roro.futurevoice.ui.GroupedCard
+import com.roro.futurevoice.ui.GroupedSectionSpacer
+import androidx.compose.foundation.layout.statusBarsPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -88,6 +100,12 @@ import kotlinx.coroutines.withContext
  *   summary-progress-start
  *   carryover
  *   transcript-ja
+ *   call-focus
+ *   call-focus-sheet
+ *   focus-result
+ *   call-settings
+ *   voice-revival
+ *   voice-revival-tune
  *
  * A mode is either WIRED (the real Android screen over `CaptureSeed` data),
  * NOT PORTED (the Android app has no such screen or feature yet — the reason
@@ -119,6 +137,12 @@ object CaptureTalk {
         "first-call-check-hard" to { ctx -> FirstCallCheckShot(ctx, hard = true) },
         "call-feed-fade" to { ctx -> CallFeedFade(ctx) },
         "call-goal-sheet" to { ctx -> CallGoalSheet(ctx) },
+        "call-focus" to { ctx -> CallFocus(ctx, sheet = false) },
+        "call-focus-sheet" to { ctx -> CallFocus(ctx, sheet = true) },
+        "focus-result" to { ctx -> FocusResult(ctx) },
+        "call-settings" to { ctx -> CallSettingsShot(ctx) },
+        "voice-revival" to { ctx -> Revival(ctx, tune = false) },
+        "voice-revival-tune" to { ctx -> Revival(ctx, tune = true) },
         "summary-progress" to { _ -> SummaryProgress(start = false) },
         "summary-progress-start" to { _ -> SummaryProgress(start = true) },
         "carryover" to { ctx -> Carryover(ctx) },
@@ -439,6 +463,123 @@ object CaptureTalk {
             goalsUsed = setOf("commute"),
             openGoal = hectic,
         ))
+    }
+
+    private fun koNative(context: Context) = (context.getSharedPreferences("futurevoice", 0)
+        .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative()).startsWith("ko")
+
+    /** iOS `call-focus` sample: the grammar focus coach mode pins this call to. */
+    private fun sampleFocus(context: Context): GrammarFocus {
+        val ko = koNative(context)
+        return GrammarFocus(
+            pattern = LearnerPattern(mistake = "Yesterday I go to the office",
+                correction = "Yesterday I went to the office", context = "", frequency = 3),
+            label = if (ko) "과거 시제" else "Past tense",
+            tip = if (ko) "어제·지난주처럼 지난 일을 말할 때는 과거형을 써요."
+            else "Use the past form when you talk about yesterday or last week.",
+        )
+    }
+
+    /**
+     * iOS `call-focus` / `call-focus-sheet`: coach mode's grammar focus pinned
+     * above the chips, one repeat already counted, and the learner's card
+     * wearing the badge. iOS stages it from parts; here it is the real call
+     * screen over a prepared state with coach mode on. `-sheet` opens the
+     * focus sheet over it (the screen's own open flag is local state).
+     */
+    @Composable
+    private fun CallFocus(context: Context, sheet: Boolean) {
+        val ko = koNative(context)
+        val focus = sampleFocus(context)
+        val said = "I go to the office early yesterday, so I left at four."
+        val learner = user(said, 1).copy(suggestion = TurnSuggestion(
+            alternative = "I went to the office early yesterday, so I left at four.",
+            reason = if (ko) "어제 일이라 과거형이 자연스러워요." else "It happened yesterday, so the past form.",
+            fixes = listOf(TurnFix(was = "I go to the office", now = "I went to the office",
+                why = if (ko) "과거 시제" else "Past tense")),
+        ))
+        Call(context, TalkCaptureFlags.CallPreview(
+            TalkUiState(
+                phase = TalkPhase.LISTENING,
+                level = 0.3f,
+                turns = listOf(fluent("Busy day? What did you do this morning?", 0), learner),
+                grammarFocus = focus,
+                focusRepeatTurns = setOf(learner.id),
+            ),
+            goals = listOf(
+                TalkGoalItem("hectic", "hectic", isWord = true),
+                TalkGoalItem("commute", "commute", isWord = true),
+                TalkGoalItem("it slipped my mind", "it slipped my mind", isWord = false),
+            ),
+            goalsUsed = setOf("commute"),
+        ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
+        if (sheet) GrammarFocusSheet(focus, repeats = 1, onDismiss = {})
+    }
+
+    /**
+     * iOS `focus-result`: the focus line a talk's book page carries, both
+     * outcomes — one slip that came back once, one that never did. iOS stages
+     * the rows in a plain list titled "Focus"; the rows are the real ones.
+     */
+    @Composable
+    private fun FocusResult(context: Context) {
+        val ko = koNative(context)
+        Column(Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
+            .padding(horizontal = 16.dp).padding(top = 16.dp)) {
+            Text("Focus", style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+            GroupedSectionSpacer()
+            GroupedCard {
+                GrammarFocusResultRow(GrammarFocusRecord(
+                    patternKey = "a", label = if (ko) "과거 시제" else "Past tense",
+                    mistake = "Yesterday I go to the office",
+                    correction = "Yesterday I went to the office", repeats = 1),
+                    Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+            GroupedSectionSpacer()
+            GroupedCard {
+                GrammarFocusResultRow(GrammarFocusRecord(
+                    patternKey = "b", label = if (ko) "요일 전치사" else "Prepositions with days",
+                    mistake = "I have a meeting in Monday",
+                    correction = "I have a meeting on Monday", repeats = 0),
+                    Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+        }
+    }
+
+    /**
+     * iOS `call-settings`: the same real call screen as `first-call`, with the
+     * settings sheet up — the sheet's detent and the live screen behind it
+     * are the point. The screen's own open flag is local state, so the real
+     * sheet is raised over it here, on the stored settings.
+     */
+    @Composable
+    private fun CallSettingsShot(context: Context) {
+        FirstCall(context)
+        CallSettingsSheet(
+            showsTranscript = CallSettings.flag(context, CallSettings.SHOWS_TRANSCRIPT),
+            showsCorrections = CallSettings.flag(context, CallSettings.SHOWS_CORRECTIONS),
+            showsGoalChips = CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS),
+            coachMode = com.roro.futurevoice.talk.CoachMode.resolve(
+                com.roro.futurevoice.talk.CoachMode.choice(context), CefrLevel.B1.code),
+            onCoachMode = {}, onFlag = { _, _ -> }, onSpeedChange = {}, onDismiss = {},
+        )
+    }
+
+    /**
+     * iOS `voice-revival` / `-tune`: a parked voice brought back at the call
+     * tap — the rebuild, then the speed + accent page. The real screen, held
+     * on its stage (`TalkCaptureFlags.revivalStage`) so nothing is rebuilt.
+     */
+    @Composable
+    private fun Revival(context: Context, tune: Boolean) {
+        TalkCaptureFlags.revivalStage = if (tune) "tune" else "rebuilding"
+        val app = remember { com.roro.futurevoice.ui.AppViewModel(context.applicationContext) }
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background) {
+            com.roro.futurevoice.ui.VoiceRevivalScreen(app = app,
+                purpose = com.roro.futurevoice.data.VoiceRevival.Purpose.CALL, onFinish = {})
+        }
     }
 
     // MARK: - After the call

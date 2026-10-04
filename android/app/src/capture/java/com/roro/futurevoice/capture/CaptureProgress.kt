@@ -24,6 +24,15 @@ import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.TalkTimeLog
+import com.roro.futurevoice.data.StoreJson
+import com.roro.futurevoice.talk.AxisScore
+import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.SessionMode
+import com.roro.futurevoice.talk.SessionOrigin
+import com.roro.futurevoice.talk.SessionScorecard
+import com.roro.futurevoice.talk.SessionSummary
+import com.roro.futurevoice.talk.Turn
+import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.data.WeeklyReport
 import com.roro.futurevoice.data.WeeklyReportStore
 import com.roro.futurevoice.ui.ActivityScreen
@@ -40,6 +49,8 @@ import java.util.UUID
  *
  *   progress
  *   progress-grammar
+ *   progress-beginner
+ *   progress-beginner-grammar
  *   activity
  *   activity-cards
  *   activity-unsaved
@@ -64,6 +75,17 @@ object CaptureProgress {
             Seeded({ CaptureSeed.once("progress-grammar") {
                 CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c, scored = true)
             } }) { ProgressPage(c, Dim.GRAMMAR) }
+        },
+        // iOS `progress-beginner` (2026-09-24 report): short accurate
+        // sentences, no slips — used to read ≈C2. The talks carry a range of
+        // a2, so the Grammar row must show ≈A2 with the range line under it.
+        "progress-beginner" to @Composable { c: Context ->
+            Seeded({ CaptureSeed.once("progress-beginner") { seedBeginner(c) } }) { ProgressPage(c) }
+        },
+        "progress-beginner-grammar" to @Composable { c: Context ->
+            Seeded({ CaptureSeed.once("progress-beginner") { seedBeginner(c) } }) {
+                ProgressPage(c, Dim.GRAMMAR)
+            }
         },
         // The activity calendar with today selected — the day summary carries
         // the share-card button. iOS's "-cards" grid was folded back into this
@@ -136,6 +158,63 @@ object CaptureProgress {
             sessionCount = 6, targetLanguage = "en",
             summary = "Steady, confident week — your range is widening.",
             cefrLevel = "b2", generatedAt = now,
+        ), lang(c))
+    }
+
+    /** iOS `beginnerScorecard`: accurate, short, one-clause — range a2. */
+    private val beginnerScorecard = SessionScorecard(
+        vocabulary = AxisScore(60, "Everyday words, used correctly."),
+        grammar = AxisScore(96, "No slips in what you said."),
+        expressiveness = AxisScore(40, "Short answers — add a detail."),
+        fluency = AxisScore(55, "Even pace, short turns."),
+        pronunciation = null,
+        topLine = "Clear and simple — try linking two ideas.",
+        cefrLevel = "a2",
+        grammarRange = "a2",
+    )
+
+    /** iOS `progress-beginner` seed: vocab, three beginner talks (one-clause
+     *  present-tense replies, no slips, range a2) and an a2 weekly read. */
+    private suspend fun seedBeginner(c: Context) {
+        CaptureSeed.seedVocab(c)
+        val now = System.currentTimeMillis()
+        val origins = listOf(SessionOrigin.FREE, SessionOrigin.NEWS, SessionOrigin.SCENARIO)
+        val uid = StoreJson.newId()
+        for (day in 0 until 3) {
+            val ended = now - day * 86_400_000L + 3_600_000L
+            val started = ended - 600_000L
+            val turns = listOf(
+                Turn(role = TurnRole.FLUENT_SELF, transcript = "How are you today?",
+                    durationMs = 1800, timestamp = started),
+                Turn(role = TurnRole.USER, transcript = "I am fine. I am tired.",
+                    durationMs = 4_000, timestamp = started + 4_000L),
+                Turn(role = TurnRole.FLUENT_SELF, transcript = "What did you do?",
+                    durationMs = 1500, timestamp = started + 10_000L),
+                Turn(role = TurnRole.USER, transcript = "I go to work. I eat lunch. I like pasta.",
+                    durationMs = 6_000, timestamp = started + 14_000L),
+            )
+            val origin = origins[day % 3]
+            SessionStore.shared(c).save(Session(
+                id = UUID.nameUUIDFromBytes("capture:session:beginner-$day".toByteArray())
+                    .toString().uppercase(),
+                userId = uid, targetLanguage = "en", mode = SessionMode.CONVERSATION,
+                topic = when (origin) {
+                    SessionOrigin.FREE -> null
+                    SessionOrigin.NEWS -> "Four-day work week"
+                    SessionOrigin.SCENARIO -> "Job interview"
+                },
+                startedAt = started, endedAt = ended, turns = turns, origin = origin,
+                summary = SessionSummary(
+                    overallNote = "Clear and simple — try linking two ideas.",
+                    scorecard = beginnerScorecard,
+                    expressionsOffered = listOf("what surprised you most", "how did it go"))))
+        }
+        WeeklyReportStore.shared(c).save(WeeklyReport(
+            id = UUID.nameUUIDFromBytes("capture:report:beginner".toByteArray()).toString().uppercase(),
+            periodStart = now - 7 * 86_400_000L, periodEnd = now,
+            sessionCount = 3, targetLanguage = "en",
+            summary = "Short, clear sentences — start linking two ideas in one.",
+            cefrLevel = "a2", generatedAt = now,
         ), lang(c))
     }
 

@@ -83,7 +83,10 @@ fun AllowanceSpentSheet(
         // Screenshot harness only: a sample account instead of the network.
         account = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
             ?: AccountStatus.load(AuthRepository())
-        if (pool == SpentPool.TALK) account?.let { inviteOffer = InviteOffer.load(it) }
+        if (pool == SpentPool.TALK) account?.let {
+            inviteOffer = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewInvite
+                ?: InviteOffer.load(it)
+        }
     }
 
     // Same line every billing surface uses, so one date format reaches them all.
