@@ -18,7 +18,7 @@ import UIKit
 /// thing on paper and another in a notes app.
 @MainActor
 final class BookExportController: ObservableObject {
-    enum Format { case pdf, workbook, markdown }
+    enum Format { case pdf, markdown }
 
     struct SharedFile: Identifiable {
         let url: URL
@@ -52,9 +52,6 @@ final class BookExportController: ObservableObject {
                 switch format {
                 case .pdf:
                     url = try BookExportWriter.write(doc.pdfData(), name: "\(doc.filename).pdf")
-                case .workbook:
-                    url = try BookExportWriter.write(doc.workbookPDFData(),
-                                                     name: "\(doc.filename)-workbook.pdf")
                 case .markdown:
                     url = try BookExportWriter.write(Data(doc.markdown.utf8),
                                                      name: "\(doc.filename).md")
@@ -83,16 +80,9 @@ struct BookExportMenu: View {
                               native: appState.nativeLanguage,
                               target: appState.targetLanguage)
         } label: {
+            // The workbook — writing space, answers at the back, index tabs
+            // (`BookWorkbook`). It is the only PDF there is.
             Label("PDF", systemImage: "doc.richtext")
-        }
-        // The same book laid out for a pen — writing space, answers at the
-        // back, index tabs (`BookWorkbook`).
-        Button {
-            controller.export(.workbook, document: document,
-                              native: appState.nativeLanguage,
-                              target: appState.targetLanguage)
-        } label: {
-            Label("Workbook", systemImage: "pencil.and.list.clipboard")
         }
         Button {
             controller.export(.markdown, document: document,

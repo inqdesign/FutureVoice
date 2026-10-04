@@ -55,15 +55,7 @@ final class BookExportTests: XCTestCase {
             .contains("~~I want one flat white~~ → **Could I get a flat white?**"))
     }
 
-    // MARK: - HTML / PDF
-
-    func testHTMLEscapesTextThatWouldOtherwiseBreakTheMarkup() {
-        var doc = BookDocument(kind: "Talk book", title: "Tags & <brackets>")
-        doc.sections = [.init(title: "Words", entries: [.init(text: "a < b & c")])]
-        let html = doc.html
-        XCTAssertTrue(html.contains("Tags &amp; &lt;brackets&gt;"))
-        XCTAssertTrue(html.contains("a &lt; b &amp; c"))
-    }
+    // MARK: - PDF
 
     func testPDFRendersRealPages() throws {
         let data = sampleDocument().pdfData()
@@ -78,7 +70,7 @@ final class BookExportTests: XCTestCase {
     /// one — the whole reason the PDF goes through a page renderer.
     func testLongBookPaginates() throws {
         var doc = BookDocument(kind: "Talk book", title: "A long talk")
-        doc.sections = [.init(title: "Transcript", lines: (0..<160).map { i in
+        doc.sections = [.init(title: "Transcript", kind: .transcript, lines: (0..<160).map { i in
             .init(speaker: i.isMultiple(of: 2) ? "You" : "Future self",
                   text: "This is line number \(i), long enough to take a full row of the page.",
                   isUser: i.isMultiple(of: 2))

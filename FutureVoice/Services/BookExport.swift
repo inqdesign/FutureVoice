@@ -11,7 +11,8 @@ import UniformTypeIdentifiers
 /// plus dialogue blocks), which is the point: a Watch book and a Talk book
 /// have the same anatomy on screen — a scene plus material to master — so
 /// they should read the same on paper. One document model, two renderers
-/// (`markdown`, `pdfData`), and every builder feeds the same thing.
+/// (`markdown`, and `pdfData` — the workbook laid out for a pen,
+/// `BookWorkbook`), and every builder feeds the same thing.
 ///
 /// Language follows the app's split unchanged (see CLAUDE.md, "Two
 /// languages"): the material — scene lines, words, expressions, corrected
@@ -160,6 +161,29 @@ extension BookDocument {
         return doc
     }
 
+    /// The sentence of THIS talk that carried the phrase — the fluent self's
+    /// first, then the learner's. A talk-book expression has no example of
+    /// its own, and the workbook's "Copy it out" page asks for a sentence to
+    /// copy: before this the only source was the glossary, fetched from the
+    /// dictionary inside an 8 s budget, so a missed lookup printed "Copy the
+    /// sentence" over an empty line (seen 2026-10-05). The line the phrase
+    /// was actually said in is on the phone and is the better example anyway.
+    static func sentence(saying phrase: String, in session: Session) -> String {
+        let needle = CarryoverDetector.normalized(phrase)
+        guard !needle.isEmpty else { return "" }
+        let pad: (String) -> String = WordSplitter.spaced ? { " \($0) " } : { $0 }
+        let target = pad(needle)
+        let ordered = session.turns.filter { $0.role == .fluentSelf }
+            + session.turns.filter { $0.role == .user }
+        for turn in ordered {
+            for line in TalkCurriculum.sentences(in: turn.transcript)
+            where pad(CarryoverDetector.normalized(line)).contains(target) {
+                return line.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        return ""
+    }
+
     /// A Talk book: the score and the coach's note, the material the talk
     /// produced, then the whole conversation with its corrections attached —
     /// the transcript is what makes this worth reading on a bigger screen.
@@ -214,8 +238,12 @@ extension BookDocument {
             s.entries = offered.map {
                 Entry(text: $0.text,
                       note: explain("Your fluent self used this — you didn't."),
+                      example: sentence(saying: $0.text, in: session),
                       mastered: $0.masteredAt != nil)
-            } + expressions.map { Entry(text: $0.text, mastered: $0.masteredAt != nil) }
+            } + expressions.map {
+                Entry(text: $0.text, example: sentence(saying: $0.text, in: session),
+                      mastered: $0.masteredAt != nil)
+            }
             doc.sections.append(s)
         }
 
@@ -357,151 +385,7 @@ extension BookDocument {
     }
 }
 
-// MARK: - PDF
-
-extension BookDocument {
-
-    /// Print-shaped HTML: black on white, one column, generous leading —
-    /// meant to be marked up with a pencil, not to look like the app.
-    var html: String {
-        func esc(_ s: String) -> String {
-            s.replacingOccurrences(of: "&", with: "&amp;")
-                .replacingOccurrences(of: "<", with: "&lt;")
-                .replacingOccurrences(of: ">", with: "&gt;")
-        }
-
-        var body = "<header><p class=\"kind\">\(esc(kind))</p><h1>\(esc(title))</h1>"
-        let head = (subtitle.isEmpty ? [] : [subtitle]) + meta
-        if !head.isEmpty {
-            body += "<p class=\"meta\">\(esc(head.joined(separator: " · ")))</p>"
-        }
-        body += "</header>"
-
-        for section in sections where !(section.isEmpty && section.blurb.isEmpty) {
-            body += "<section><h2>\(esc(section.title))</h2>"
-            if !section.blurb.isEmpty { body += "<p class=\"blurb\">\(esc(section.blurb))</p>" }
-
-            if !section.entries.isEmpty {
-                body += "<ul>"
-                for entry in section.entries {
-                    let box = switch entry.mastered {
-                    case .some(true): "<span class=\"box done\">&#10003;</span>"
-                    case .some(false): "<span class=\"box\"></span>"
-                    case .none: "<span class=\"box none\"></span>"
-                    }
-                    body += "<li>\(box)<div class=\"item\">"
-                    if let original = entry.original, !original.isEmpty {
-                        body += "<p class=\"said\">\(esc(original))</p>"
-                    }
-                    body += "<p class=\"text\">\(esc(entry.text))</p>"
-                    if !entry.example.isEmpty { body += "<p class=\"example\">\(esc(entry.example))</p>" }
-                    if !entry.note.isEmpty { body += "<p class=\"note\">\(esc(entry.note))</p>" }
-                    body += "</div></li>"
-                }
-                body += "</ul>"
-            }
-
-            for line in section.lines {
-                body += "<div class=\"turn\(line.isUser ? " mine" : "")\">"
-                body += "<p class=\"speaker\">\(esc(line.speaker))</p>"
-                body += "<p class=\"line\">\(esc(line.text))</p>"
-                if let c = line.correction, !c.isEmpty {
-                    body += "<p class=\"fix\">\(esc(c))</p>"
-                    if !line.correctionNote.isEmpty {
-                        body += "<p class=\"note\">\(esc(line.correctionNote))</p>"
-                    }
-                }
-                for fix in line.fixes {
-                    body += "<p class=\"note\">✗ \(esc(fix))</p>"
-                }
-                body += "</div>"
-            }
-            body += "</section>"
-        }
-
-        return """
-        <!doctype html><html><head><meta charset="utf-8"><style>
-        * { -webkit-box-sizing: border-box; box-sizing: border-box; }
-        body { font: 12pt/1.55 -apple-system, "Helvetica Neue", sans-serif;
-               color: #111; margin: 0; }
-        header { border-bottom: 1.5px solid #111; padding-bottom: 10pt; margin-bottom: 18pt; }
-        .kind { font-size: 8.5pt; letter-spacing: .1em; text-transform: uppercase;
-                color: #777; margin: 0 0 4pt; }
-        h1 { font-size: 21pt; line-height: 1.2; margin: 0; font-weight: 600; }
-        .meta { font-size: 9.5pt; color: #666; margin: 6pt 0 0; }
-        section { margin-bottom: 20pt; }
-        h2 { font-size: 12.5pt; font-weight: 600; margin: 0 0 8pt;
-             padding-bottom: 3pt; border-bottom: .5px solid #ccc; }
-        .blurb { margin: 0 0 8pt; color: #333; }
-        ul { list-style: none; margin: 0; padding: 0; }
-        li { display: flex; align-items: flex-start; page-break-inside: avoid;
-             padding: 5pt 0; border-bottom: .5px solid #eee; }
-        .box { display: inline-block; width: 11pt; height: 11pt; margin: 3pt 9pt 0 0;
-               border: .8px solid #999; border-radius: 2pt; flex: 0 0 auto;
-               text-align: center; line-height: 11pt; font-size: 8.5pt; color: #111; }
-        .box.done { border-color: #111; }
-        .box.none { border: none; }
-        .item { flex: 1 1 auto; }
-        .item p { margin: 0; }
-        .text { font-weight: 600; }
-        .said { color: #888; text-decoration: line-through; }
-        .example { color: #333; font-style: italic; margin-top: 1pt !important; }
-        .note { color: #777; font-size: 10pt; margin-top: 2pt !important; }
-        .turn { page-break-inside: avoid; margin-bottom: 10pt; padding-left: 0; }
-        .turn.mine { padding-left: 24pt; }
-        .speaker { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase;
-                   color: #888; margin: 0 0 1pt; }
-        .line { margin: 0; }
-        .fix { margin: 3pt 0 0; padding-left: 8pt; border-left: 2px solid #bbb; }
-        </style></head><body>\(body)</body></html>
-        """
-    }
-
-    /// One A4 PDF with real, selectable text and real pagination.
-    ///
-    /// `UIMarkupTextPrintFormatter` is doing the layout, which is why the
-    /// document is authored as HTML: it is the only thing on iOS that flows
-    /// arbitrary-length text across pages without hand-rolling CoreText
-    /// pagination. The two `setValue(forKey:)` calls are how a page renderer
-    /// is given paper size outside an actual print job.
-    @MainActor
-    func pdfData() -> Data {
-        let formatter = UIMarkupTextPrintFormatter(markupText: html)
-        let renderer = UIPrintPageRenderer()
-        renderer.addPrintFormatter(formatter, startingAtPageAt: 0)
-
-        let paper = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)   // A4 @72dpi
-        renderer.setValue(NSValue(cgRect: paper), forKey: "paperRect")
-        renderer.setValue(NSValue(cgRect: paper.insetBy(dx: 46, dy: 56)),
-                          forKey: "printableRect")
-
-        return UIGraphicsPDFRenderer(bounds: paper).pdfData { ctx in
-            for page in 0..<max(renderer.numberOfPages, 1) {
-                ctx.beginPage()
-                renderer.drawPage(at: page, in: paper)
-            }
-        }
-    }
-}
-
 // MARK: - Share sheet payloads
-
-/// The book as a PDF. Built only when the share sheet actually asks for it —
-/// the document itself is cheap, the render isn't.
-struct BookPDFFile: Transferable {
-    let document: BookDocument
-
-    static var transferRepresentation: some TransferRepresentation {
-        // The parameter type is spelled out on purpose: without it the
-        // representation's `Item` can't be inferred from a closure that reads
-        // its own argument, and the conformance silently fails to match.
-        FileRepresentation(exportedContentType: .pdf) { (file: BookPDFFile) in
-            let doc = file.document
-            let data = await MainActor.run { doc.pdfData() }
-            return SentTransferredFile(try BookExportWriter.write(data, name: "\(doc.filename).pdf"))
-        }
-    }
-}
 
 /// The book as Markdown. `.plainText` with a `.md` name: it opens as text
 /// everywhere and renders as a document in anything that knows Markdown.

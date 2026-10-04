@@ -525,6 +525,11 @@ struct BookWorkbook {
 }
 
 extension BookDocument {
+    /// The book's one PDF. The plain reader layout it replaced was dropped
+    /// on 2026-10-05 (founder: "the old design isn't needed") — it sat
+    /// beside this as the menu's "PDF" while the workbook hid under a
+    /// second, untranslated "Workbook" row, so the redesign shipped and
+    /// nobody saw it.
     @MainActor
-    func workbookPDFData() -> Data { BookWorkbook(doc: self).pdfData() }
+    func pdfData() -> Data { BookWorkbook(doc: self).pdfData() }
 }

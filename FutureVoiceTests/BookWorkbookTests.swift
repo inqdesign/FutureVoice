@@ -126,7 +126,7 @@ final class BookWorkbookTests: XCTestCase {
 
     func testWorkbookIsARealMultiPagePDF() throws {
         for (name, doc) in [("workbook-en", Self.englishTalkBook()), ("workbook-ja", Self.japaneseWatchBook())] {
-            let data = doc.workbookPDFData()
+            let data = doc.pdfData()
             XCTAssertEqual(data.prefix(4), Data("%PDF".utf8))
             let pdf = try XCTUnwrap(CGPDFDocument(CGDataProvider(data: data as CFData)!))
             XCTAssertGreaterThan(pdf.numberOfPages, 4)
@@ -158,7 +158,6 @@ final class BookWorkbookRealSessionTests: XCTestCase {
         if let glossary = await BookGlossary.section(for: doc, native: "ko", target: doc.language) {
             doc.sections.append(glossary)
         }
-        try doc.workbookPDFData().write(to: URL(fileURLWithPath: out).appendingPathComponent("real-workbook.pdf"))
-        try doc.pdfData().write(to: URL(fileURLWithPath: out).appendingPathComponent("real-reader.pdf"))
+        try doc.pdfData().write(to: URL(fileURLWithPath: out).appendingPathComponent("real-workbook.pdf"))
     }
 }
