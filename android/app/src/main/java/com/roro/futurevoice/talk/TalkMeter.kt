@@ -147,10 +147,15 @@ class TalkMeter(
     )
 
     private suspend fun tick(seconds: Int, label: String) {
+        // The preflight second is a wall check, not talk: it fires before
+        // anyone has said a word, so it never reaches the ring or the day
+        // card — opening and closing a call read 0:01, 0:02… (iOS `9617756`).
+        // `TalkTimeLog.syncFromServer` skips its ledger row for the same reason.
+        val countsAsTalk = label != "pre"
         if (serverMetered) {
             // Already charged upstream — record them locally and stop there,
             // or the learner pays twice for one second of talking.
-            appContext?.let { TalkTimeLog.add(it, seconds, language) }
+            if (countsAsTalk) appContext?.let { TalkTimeLog.add(it, seconds, language) }
             return
         }
         val request = try {
@@ -186,7 +191,7 @@ class TalkMeter(
 
         outcome.onSuccess { res ->
             // The ring reads what the meter counted — accepted ticks only.
-            appContext?.let { TalkTimeLog.add(it, seconds, language) }
+            if (countsAsTalk) appContext?.let { TalkTimeLog.add(it, seconds, language) }
             // Subscriber: what's left of the allowance. Free account: the
             // seconds balance. Both already in seconds.
             //

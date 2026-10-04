@@ -206,9 +206,19 @@ object TalkTimeLog {
     // MARK: - Server backfill (iOS `syncFromServer`)
 
     @kotlinx.serialization.Serializable
-    private data class LedgerRow(val created_at: String, val metadata: Meta? = null) {
+    internal data class LedgerRow(
+        val created_at: String,
+        val idempotency_key: String? = null,
+        val metadata: Meta? = null,
+    ) {
         @kotlinx.serialization.Serializable
-        data class Meta(val seconds: Int? = null, val language: String? = null)
+        data class Meta(val seconds: Int? = null, val language: String? = null, val preflight: Boolean? = null)
+
+        /** The second charged as a call OPENS, before anyone speaks — a wall
+         *  check, never talk (see `TalkMeter.tick`). The gateway flags it; the
+         *  classic path's key ends in ":pre" (iOS `9617756`). */
+        val isPreflight: Boolean
+            get() = metadata?.preflight == true || idempotency_key?.endsWith(":pre") == true
     }
 
     private const val BACKFILL_DAYS = 14
@@ -235,7 +245,7 @@ object TalkTimeLog {
             }
             val since = java.time.Instant.ofEpochMilli(cal.timeInMillis).toString()
             val url = "${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/usage_ledger" +
-                "?select=created_at,metadata&user_id=eq.$uid&action=eq.talk_time" +
+                "?select=created_at,idempotency_key,metadata&user_id=eq.$uid&action=eq.talk_time" +
                 "&created_at=gte.${java.net.URLEncoder.encode(since, "UTF-8")}&limit=4000"
             val rows = runCatching {
                 val req = okhttp3.Request.Builder().url(url)
@@ -250,6 +260,7 @@ object TalkTimeLog {
 
             val server = mutableMapOf<String, Int>()
             for (r in rows) {
+                if (r.isPreflight) continue
                 val sec = r.metadata?.seconds ?: continue
                 if (sec <= 0) continue
                 val at = runCatching { java.time.OffsetDateTime.parse(r.created_at.replace(" ", "T")).toInstant().toEpochMilli() }
