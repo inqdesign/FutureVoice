@@ -413,7 +413,8 @@ struct ConversationDetailView: View {
     private var studyChapters: [ChapterEntry] {
         // Shadow = repeat the fluent self's lines. Drill = the grammar and
         // expression fixes — corrections studied as CARDS (saved, enriched,
-        // recalled), never as shadowing.
+        // recalled), never as shadowing. Order and icons are the ones every
+        // study surface uses (`StudyIcon`): words, expressions, drill, shadow.
         let hasShadow = !curriculum.shadowLines.isEmpty
         let hasDrill = drillCount > 0 || !curriculum.corrections.isEmpty
 
@@ -423,7 +424,7 @@ struct ConversationDetailView: View {
             // Mastery tracks the future self's words; a talk with only your
             // own first-time words still shows how many there are to look at.
             entries.append(ChapterEntry(chapter: .words, title: chrome("Words"),
-                                        icon: "textformat",
+                                        icon: StudyIcon.words,
                                         done: curriculum.words.filter { $0.masteredAt != nil }.count,
                                         total: curriculum.words.count,
                                         count: mineWords.count))
@@ -434,22 +435,22 @@ struct ConversationDetailView: View {
         // work the cover's progress bar never measured.
         if !curriculum.expressions.isEmpty {
             entries.append(ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
-                                        icon: "quote.opening",
+                                        icon: StudyIcon.expressions,
                                         done: curriculum.expressions.filter { $0.masteredAt != nil }.count,
                                         total: curriculum.expressions.count))
         }
-        if hasShadow {
-            entries.append(ChapterEntry(chapter: .lines, title: chrome("Shadow"),
-                                        icon: "waveform.badge.mic",
-                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
-                                        total: curriculum.shadowLines.count))
-        }
         if hasDrill {
             entries.append(ChapterEntry(chapter: .cards, title: chrome("Drill"),
-                                        icon: "rectangle.stack",
+                                        icon: StudyIcon.grammar,
                                         done: curriculum.corrections.filter { $0.masteredAt != nil }.count,
                                         total: curriculum.corrections.count,
                                         count: drillCount))
+        }
+        if hasShadow {
+            entries.append(ChapterEntry(chapter: .lines, title: chrome("Shadow"),
+                                        icon: StudyIcon.shadowing,
+                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.shadowLines.count))
         }
         return entries
     }

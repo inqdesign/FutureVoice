@@ -535,8 +535,10 @@ struct PracticeTab: View {
                                 }
                             }
                             .padding(.horizontal, 16).padding(.vertical, 9)
-                            .background(Capsule().fill(shelf == s ? (s.color ?? Color(.label)) : Color(.secondarySystemGroupedBackground)))
-                            .foregroundStyle(shelf == s ? (s.color != nil ? Color.white : Color(.systemBackground)) : Color.primary)
+                            // Neutral for every shelf (2026-10-03): the page keeps
+                            // colour for its progress bars alone.
+                            .background(Capsule().fill(shelf == s ? Color(.label) : Color(.secondarySystemGroupedBackground)))
+                            .foregroundStyle(shelf == s ? Color(.systemBackground) : Color.primary)
                         }
                         .buttonStyle(.plain)
                         .id(s)
@@ -709,6 +711,7 @@ struct PracticeTab: View {
             .accessibilityLabel(Text("Back from earlier"))
             .accessibilityValue(Text("\(putOffCount)"))
             .accessibilityIdentifier("practice.dueReview")
+            .tint(Color(.label))
 
             if let recap = weekRecapToShow {
                 Button {
@@ -720,6 +723,7 @@ struct PracticeTab: View {
                 }
                 .accessibilityLabel(Text("Your week"))
                 .accessibilityIdentifier("practice.weekRecap")
+                .tint(Color(.label))
             }
             if monthlyTestIsOpen {
                 Button { showingMonthlyTest = true } label: {
@@ -727,6 +731,7 @@ struct PracticeTab: View {
                 }
                 .accessibilityLabel(Text("Monthly test"))
                 .accessibilityIdentifier("practice.monthlyTest")
+                .tint(Color(.label))
             }
         }
         // The test on its own, at the far right — a different kind of thing
@@ -762,6 +767,7 @@ struct PracticeTab: View {
 
     private func headerIcon(_ name: String, dot: Color?) -> some View {
         Image(systemName: name)
+            .foregroundStyle(.primary)
             .overlay(alignment: .topTrailing) {
                 if let dot { headerDot(dot) }
             }
@@ -845,10 +851,10 @@ struct PracticeTab: View {
             let snap = talkSnapshots[s.id]
             if snap?.isMastered == true { return nil }
             let chapters: [BookPreview.Chapter] = snap.map { [
-                .init(kind: .words, title: "Words", icon: "text.book.closed.fill", items: $0.words),
-                .init(kind: .expressions, title: "Expressions", icon: "quote.bubble.fill", items: $0.expressions),
-                .init(kind: .shadow, title: "Shadowing", icon: "waveform.badge.mic", items: $0.shadowLines),
-                .init(kind: .grammar, title: "Grammar", icon: "checkmark.bubble.fill", items: $0.corrections),
+                .init(kind: .words, title: "Words", icon: StudyIcon.words, items: $0.words),
+                .init(kind: .expressions, title: "Expressions", icon: StudyIcon.expressions, items: $0.expressions),
+                .init(kind: .grammar, title: "Grammar", icon: StudyIcon.grammar, items: $0.corrections),
+                .init(kind: .shadow, title: "Shadowing", icon: StudyIcon.shadowing, items: $0.shadowLines),
             ] } ?? []
             let dueHere = (dueDrillBySession[s.id] ?? 0)
                 + chapters.filter { $0.kind == .words || $0.kind == .expressions }
@@ -861,10 +867,10 @@ struct PracticeTab: View {
             guard !sc.isArchived, !sc.isMastered else { return nil }
             let c = sc.curriculum
             let chapters: [BookPreview.Chapter] = c.map { [
-                .init(kind: .words, title: "Words", icon: "text.book.closed.fill", items: $0.words),
-                .init(kind: .expressions, title: "Expressions", icon: "quote.bubble.fill", items: $0.expressions),
-                .init(kind: .shadow, title: "Shadowing", icon: "waveform.badge.mic", items: $0.shadowLines),
-                .init(kind: .grammar, title: "Grammar", icon: "checkmark.bubble.fill", items: []),
+                .init(kind: .words, title: "Words", icon: StudyIcon.words, items: $0.words),
+                .init(kind: .expressions, title: "Expressions", icon: StudyIcon.expressions, items: $0.expressions),
+                .init(kind: .grammar, title: "Grammar", icon: StudyIcon.grammar, items: []),
+                .init(kind: .shadow, title: "Shadowing", icon: StudyIcon.shadowing, items: $0.shadowLines),
             ] } ?? []
             let dueHere = chapters.filter { $0.kind != .shadow }
                 .flatMap(\.items).filter { due.contains($0.text.lowercased()) }.count
@@ -915,22 +921,22 @@ struct PracticeTab: View {
     /// something up, not the way to study.
     private var libraryList: some View {
         HStack(spacing: 0) {
-            libraryTile("text.book.closed.fill", "Words", libraryStats.words) {
+            libraryTile(StudyIcon.words, "Words", libraryStats.words) {
                 WordsView().environmentObject(appState)
             }
-            libraryTile("quote.bubble.fill", "Expressions", libraryStats.expressions) {
+            libraryTile(StudyIcon.expressions, "Expressions", libraryStats.expressions) {
                 ExpressionsView()
                     .navigationTitle("Expressions")
                     .navigationBarTitleDisplayMode(.inline)
                     .environmentObject(appState)
             }
-            libraryTile("rectangle.stack", "Sentences", libraryStats.sentences) {
+            libraryTile(StudyIcon.grammar, "Sentences", libraryStats.sentences) {
                 SentencesView()
                     .navigationTitle("Sentences")
                     .navigationBarTitleDisplayMode(.inline)
                     .environmentObject(appState)
             }
-            libraryTile("waveform.badge.mic", "Shadowing", libraryStats.shadow) {
+            libraryTile(StudyIcon.shadowing, "Shadowing", libraryStats.shadow) {
                 ShadowBrowserView()
                     .navigationTitle("Shadowing")
                     .navigationBarTitleDisplayMode(.inline)
@@ -957,7 +963,7 @@ struct PracticeTab: View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(.primary)
                     .frame(height: 24)
                 Text(stat.checked.formatted(Self.appNumber))
                     .font(.title3.weight(.semibold).monospacedDigit())
@@ -1143,7 +1149,7 @@ struct PracticeTab: View {
         let label = HStack(spacing: 12) {
             Image(systemName: row.mastered ? "checkmark.seal.fill" : "archivebox")
                 .font(.body)
-                .foregroundStyle(row.mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+                .foregroundStyle(.secondary)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.title).font(.subheadline).foregroundStyle(.primary).lineLimit(1)

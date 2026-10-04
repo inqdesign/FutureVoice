@@ -207,11 +207,11 @@ struct ScenarioDetailView: View {
     private func studyChapters(_ c: ScenarioCurriculum) -> [ChapterEntry] {
         [
             ChapterEntry(chapter: .words, title: chrome("Words"),
-                         icon: "textformat", items: c.words),
+                         icon: StudyIcon.words, items: c.words),
             ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
-                         icon: "quote.opening", items: c.expressions),
+                         icon: StudyIcon.expressions, items: c.expressions),
             ChapterEntry(chapter: .shadow, title: chrome("Your lines"),
-                         icon: "waveform", items: c.shadowLines),
+                         icon: StudyIcon.shadowing, items: c.shadowLines),
         ].filter { !$0.items.isEmpty }
     }
 
