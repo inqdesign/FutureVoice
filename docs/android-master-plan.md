@@ -531,7 +531,11 @@
   끼어든 답은 `audio_start` 뒤 2.5초 안의 `interrupted`(iOS `cutInWindow`) → `Turn.talkedOver`(true일 때만 인코딩).
   예약 전화 보류는 `CallForegroundService.start/stop`이 괄호. 남은 것: 폰에서 통화 중 속도 바꾸기, 말 중간에 끊긴 답이 다시 말하기에서 한 줄로, 통화 중 예약 시각이 지나도 안 울리고 끊으면 받은 것으로 정산, 사람 상세 아이디어 탭 → Watch 작성 박스.
 - ☐ 2c.7 한 주 돌아보기 카드 덱 (`633418f`)
-- ☐ 2c.8 독일어 UI (`d3175f8`) — values-de
+- ◐ 2c.8 독일어 UI (`d3175f8`) — values-de
+  — 코드·테스트 끝(`GermanStringsTest` 2, `StringConsistencyTest`에 values-de). 카탈로그 사본에 iOS `7c12b9e`의 de 열만 얹었다(다른 언어 무변경, 731키),
+  iOS가 지운 키 중 안드로이드가 아직 쓰는 4개는 직접 번역. `strings_android.xml`은 손번역(du, „…“, " – ", 알림은 안드로이드 용어 Benachrichtigungen).
+  `UILanguage.translated`·`locales_config.xml`에 de, 앱 언어 행 이름(Deutsch, 그리고 빠져 있던 Español·Français·简体中文). 위젯은 같은 리소스라 따라온다.
+  남은 것: 폰에서 앱 언어 Deutsch로 탭·Me·위젯 확인. 다른 작업이 새로 넣는 손 문자열(코치 모드, `strings_week_recap.xml`)은 독일어가 따로 필요.
 
 ---
 

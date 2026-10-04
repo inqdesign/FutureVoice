@@ -914,6 +914,10 @@ object AppLanguageNames {
         "ko" -> "한국어"
         "ja" -> "日本語"
         "zh-Hant" -> "繁體中文"
+        "zh-Hans" -> "简体中文"
+        "es" -> "Español"
+        "fr" -> "Français"
+        "de" -> "Deutsch"
         else -> "English"
     }
 }

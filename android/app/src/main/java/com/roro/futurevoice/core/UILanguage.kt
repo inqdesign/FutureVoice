@@ -25,7 +25,7 @@ import java.util.Locale
 object UILanguage {
     /** The columns that actually exist in the catalogs. Everything else falls
      *  back to English rather than showing half a translated app. */
-    val translated = listOf("en", "ko", "ja", "zh-Hant", "zh-Hans", "es", "fr")
+    val translated = listOf("en", "ko", "ja", "zh-Hant", "zh-Hans", "es", "fr", "de")
 
     /**
      * A stored native code as a UI language. Chinese is listed BY SCRIPT:

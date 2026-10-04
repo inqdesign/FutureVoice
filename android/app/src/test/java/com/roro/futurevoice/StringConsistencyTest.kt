@@ -22,7 +22,7 @@ class StringConsistencyTest {
 
     private val languages = listOf(
         "values", "values-ko", "values-ja", "values-zh-rTW",
-        "values-es", "values-fr", "values-b+zh+Hans")
+        "values-es", "values-fr", "values-b+zh+Hans", "values-de")
 
     @Test fun theSameConceptUsesTheSameWordInEveryLanguage() {
         for (folder in languages) {
