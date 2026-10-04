@@ -1996,3 +1996,87 @@ struct WeeklyTestAnswer: Codable, Hashable {
     /// speak: the shadow match score the verdict was made from.
     var score: Int? = nil
 }
+
+// MARK: - Speech (the read-aloud tab)
+
+/// What a speech script does for its listener. The genre decides the shape the
+/// writer is asked for (an explainer builds up, a product pitch lands on why it
+/// matters, a news read is neutral), never the topic.
+enum SpeechGenre: String, Codable, CaseIterable, Identifiable {
+    case explainer, product, person, briefing, news
+    var id: String { rawValue }
+}
+
+/// A script the learner reads aloud under the prompter. MATERIAL — `title`,
+/// `body` and each key term are in the target language; `summary` and the
+/// meanings are NOTES in the native language.
+struct SpeechScript: Codable, Identifiable, Hashable {
+    let id: UUID
+    var title: String
+    var genre: SpeechGenre
+    /// What the learner asked for, as they typed it. Empty = the writer chose.
+    var topic: String
+    var body: String
+    var summary: String
+    var keyTerms: [SpeechKeyTerm]
+    /// Where the facts came from, by name. Shown under the script.
+    var sources: [String]
+    var language: String
+    var targetSeconds: Int
+    var createdAt: Date
+    /// Bundled with the app — the one script every account can practise.
+    var isBuiltIn: Bool
+}
+
+struct SpeechKeyTerm: Codable, Hashable {
+    var term: String
+    var meaning: String
+}
+
+/// One read of a script. Every number in `metrics` is computed in code from
+/// the recording and the transcript; only `coaching` is written by a model.
+struct SpeechTake: Codable, Identifiable, Hashable {
+    let id: UUID
+    var scriptId: UUID
+    var createdAt: Date
+    var durationSeconds: Double
+    /// `Documents/Speech/<file>` — the learner's own voice, always kept.
+    var audioFilename: String
+    /// The camera take with the voice muxed in, when the camera was on and
+    /// the learner kept it. Nil once deleted.
+    var videoFilename: String?
+    var transcript: String
+    var metrics: SpeechMetrics
+    var coaching: SpeechCoaching?
+}
+
+struct SpeechMetrics: Codable, Hashable {
+    /// 0–100, how much of the script was said as written.
+    var accuracy: Int
+    /// Script words (spaced languages) or syllables/characters (ko, ja) per
+    /// minute of speaking — first voice to last voice.
+    var rate: Int
+    var rateLow: Int
+    var rateHigh: Int
+    var paceScore: Int
+    /// Sentence ends where the speaker actually paused, out of all of them.
+    var pausesAtBreaks: Int
+    var breaks: Int
+    /// Silences over `SpeechAnalyzer.hesitationSeconds` inside a sentence.
+    var hesitations: Int
+    var pauseScore: Int
+    var fillers: Int
+    var fillerScore: Int
+    /// How even the voice stayed, and how much it dropped at sentence ends.
+    var steadiness: Int
+    /// Script words skipped or said differently, in script order (capped).
+    var missed: [String]
+    var overall: Int
+}
+
+/// The model's notes on a take, in the NATIVE language, anchored to the
+/// numbers it was given.
+struct SpeechCoaching: Codable, Hashable {
+    var headline: String
+    var tips: [String]
+}

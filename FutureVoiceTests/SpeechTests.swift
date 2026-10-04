@@ -1,0 +1,141 @@
+import XCTest
+@testable import FutureVoice
+
+final class SpeechAnalyzerTests: XCTestCase {
+
+    func testPaceInsideBandIsFullMarks() {
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 140, band: 120...160), 100)
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 0, band: 120...160), 0)
+        // 10% too fast → 80.
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 176, band: 120...160), 80)
+    }
+
+    func testSentenceBreaksExcludeTheLastSentence() {
+        XCTAssertEqual(SpeechAnalyzer.sentenceBreaks(in: "One. Two! Three?"), 2)
+        XCTAssertEqual(SpeechAnalyzer.sentenceBreaks(in: "Wait... what?"), 1)
+        XCTAssertEqual(SpeechAnalyzer.sentenceBreaks(in: "音は波です。耳に届きます。"), 1)
+    }
+
+    func testFillersAreCountedAndRemoved() {
+        let said = "So um sound is uh a wave"
+        XCTAssertEqual(SpeechAnalyzer.countFillers(in: said, script: "So sound is a wave.", language: "en"), 2)
+        XCTAssertEqual(SpeechAnalyzer.removingFillers(said, language: "en"), "So sound is a wave")
+        // Japanese has no spaces: substrings.
+        XCTAssertEqual(SpeechAnalyzer.countFillers(in: "えっと音はえー波です", script: "音は波です", language: "ja"), 2)
+    }
+
+    func testFillerInTheScriptIsNotTheReadersFault() {
+        XCTAssertEqual(SpeechAnalyzer.countFillers(in: "Er hat hm gesagt", script: "Er hat hm gesagt.", language: "de"), 0)
+    }
+
+    func testPerfectReadScoresHigh() {
+        let script = "Sound is a wave. It travels through the air."
+        let env = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 4, silences: [0.4],
+                                          phrases: [(-20, -21), (-20, -22)])
+        let m = SpeechAnalyzer.analyze(script: script, transcript: "Sound is a wave it travels through the air",
+                                       language: "en", envelope: env)
+        XCTAssertEqual(m.accuracy, 100)
+        XCTAssertEqual(m.breaks, 1)
+        XCTAssertEqual(m.pausesAtBreaks, 1)
+        XCTAssertEqual(m.fillers, 0)
+        XCTAssertTrue(m.missed.isEmpty)
+        // 9 words in 4 s = 135 wpm.
+        XCTAssertEqual(m.rate, 135)
+        XCTAssertGreaterThanOrEqual(m.overall, 95)
+    }
+
+    func testSkippedWordsAreListedInScriptOrder() {
+        let m = SpeechAnalyzer.analyze(script: "Sound is a wave of tiny changes in pressure.",
+                                       transcript: "Sound is a wave in pressure",
+                                       language: "en", envelope: nil)
+        XCTAssertEqual(m.missed, ["of tiny changes"])
+        XCTAssertLessThan(m.accuracy, 100)
+    }
+
+    func testStallsCostThePauseScore() {
+        let script = "One. Two. Three."
+        let calm = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 3, silences: [0.5, 0.5], phrases: [])
+        let stalled = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 6, silences: [0.5, 2.5], phrases: [])
+        let a = SpeechAnalyzer.analyze(script: script, transcript: "one two three", language: "en", envelope: calm)
+        let b = SpeechAnalyzer.analyze(script: script, transcript: "one two three", language: "en", envelope: stalled)
+        XCTAssertEqual(a.pauseScore, 100)
+        XCTAssertEqual(b.hesitations, 1)
+        XCTAssertLessThan(b.pauseScore, a.pauseScore)
+    }
+
+    func testFadingAtSentenceEndsCostsSteadiness() {
+        XCTAssertEqual(SpeechAnalyzer.steadinessScore([(-20, -21), (-21, -22)]), 100)
+        XCTAssertLessThan(SpeechAnalyzer.steadinessScore([(-20, -32), (-21, -33)]), 50)
+    }
+
+    func testEnvelopeFindsPausesBetweenPhrases() {
+        // 1 s voice, 0.5 s silence, 1 s voice, at 10 ms blocks.
+        let levels = [Float](repeating: 0.5, count: 100) + [Float](repeating: 0.001, count: 50)
+            + [Float](repeating: 0.5, count: 100)
+        let env = SpeechAnalyzer.envelope(levels: levels, blockSeconds: 0.01)
+        XCTAssertNotNil(env)
+        XCTAssertEqual(env?.silences.count, 1)
+        XCTAssertEqual(env?.silences.first ?? 0, 0.5, accuracy: 0.01)
+        XCTAssertEqual(env?.speakingSeconds ?? 0, 2.5, accuracy: 0.01)
+        XCTAssertEqual(env?.phrases.count, 2)
+    }
+
+    func testPlannedLengthFollowsTheLanguagesPace() {
+        XCTAssertEqual(SpeechLibrary.plannedUnits(seconds: 60, language: "en"), 140)
+        XCTAssertEqual(SpeechLibrary.plannedUnits(seconds: 120, language: "ko"), 570)
+        XCTAssertEqual(SpeechLibrary.units(in: "음, 소리는 파동입니다.", language: "ko"), 9)
+    }
+
+    func testEveryTargetHasABundledScript() {
+        for code in ["en", "ko", "ja", "de"] {
+            let script = SpeechLibrary.builtIn(for: code)
+            XCTAssertNotNil(script, code)
+            let seconds = SpeechLibrary.estimatedSeconds(script?.body ?? "", language: code)
+            XCTAssertTrue((45...95).contains(seconds), "\(code): \(seconds)s")
+        }
+    }
+}
+
+final class SpeechPrompterTrackTests: XCTestCase {
+
+    func testFollowsTheVoiceForward() {
+        let track = SpeechPrompterTrack(script: "Sound is a wave. It travels through the air as tiny changes in pressure.",
+                                        language: "en")
+        var cursor = 0
+        cursor = track.advance(current: cursor, heard: "sound is a")
+        XCTAssertEqual(cursor, 3)
+        cursor = track.advance(current: cursor, heard: "sound is a wave it travels through")
+        XCTAssertEqual(cursor, 7)
+    }
+
+    func testNothingNewMeansNoMove() {
+        let track = SpeechPrompterTrack(script: "Sound is a wave. It travels through the air.", language: "en")
+        XCTAssertEqual(track.advance(current: 4, heard: "hello there"), 4)
+        XCTAssertEqual(track.advance(current: 0, heard: ""), 0)
+    }
+
+    func testDoesNotJumpPastTheWindow() {
+        let filler = Array(repeating: "and then", count: 40).joined(separator: " ")
+        let track = SpeechPrompterTrack(script: "Start here. \(filler) the very distant ending words", language: "en")
+        // The end of the script matches, but it is far beyond the window.
+        XCTAssertEqual(track.advance(current: 0, heard: "the very distant ending words"), 0)
+    }
+
+    func testKoreanFollowsBySyllable() {
+        let track = SpeechPrompterTrack(script: "소리는 파동입니다. 공기의 압력이 높아졌다 낮아집니다.", language: "ko")
+        // The recognizer spaced it its own way.
+        let cursor = track.advance(current: 0, heard: "소리는파동 입니다 공기 의")
+        XCTAssertEqual(track.words[cursor - 1].text, "공기의")
+    }
+
+    func testJapaneseCutsIntoPieces() {
+        let track = SpeechPrompterTrack(script: "音は波です。空気の圧力が上がったり下がったりします。", language: "ja")
+        XCTAssertGreaterThan(track.words.count, 3)
+        XCTAssertEqual(track.words.map(\.text).joined(), "音は波です。空気の圧力が上がったり下がったりします。")
+    }
+
+    func testParagraphsSurvive() {
+        let track = SpeechPrompterTrack(script: "First paragraph.\n\nSecond one.", language: "en")
+        XCTAssertEqual(track.paragraphs.count, 2)
+    }
+}

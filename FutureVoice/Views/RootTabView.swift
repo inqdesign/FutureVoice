@@ -64,13 +64,14 @@ struct RootTabView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable {
-        case home, watch, practice, progress
+        case home, speech, watch, practice, progress
     }
 
     /// Analytics label for a tab (see `screen_viewed`).
     private static func screenName(_ tab: Tab) -> String {
         switch tab {
         case .home:     return "talk"
+        case .speech:   return "speech"
         case .watch:    return "watch"
         case .practice: return "practice"
         case .progress: return "progress"
@@ -104,6 +105,10 @@ struct RootTabView: View {
                 ConversationHome()
                     .tabItem { Label("Talk", systemImage: "waveform") }
                     .tag(Tab.home)
+
+                SpeechTab()
+                    .tabItem { Label("Speech", systemImage: "music.mic") }
+                    .tag(Tab.speech)
 
                 WatchTab()
                     .tabItem { Label("Watch", systemImage: "play.circle.fill") }
@@ -471,8 +476,9 @@ struct RootTabView: View {
             || referralInbox.pendingJoin != nil || updates.pending != nil
     }
 
-    private static func introPage(_ tab: Tab) -> PageIntro.Page {
+    private static func introPage(_ tab: Tab) -> PageIntro.Page? {
         switch tab {
+        case .speech:   return nil
         case .home:     return .talk
         case .watch:    return .watch
         case .practice: return .review
@@ -486,7 +492,10 @@ struct RootTabView: View {
         #if DEBUG
         if DebugCapture.isCapturing { return }
         #endif
-        let page = Self.introPage(selection)
+        guard let page = Self.introPage(selection) else {
+            releaseHeldWelcome()
+            return
+        }
         guard pageIntro == nil, !anotherSheetUp, PageIntroStore.isDue(page) else {
             releaseHeldWelcome()
             return

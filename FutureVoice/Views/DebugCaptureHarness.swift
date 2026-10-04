@@ -164,6 +164,46 @@ enum DebugCapture {
     }
 
     /// Idempotent per name — the resolver may evaluate more than once.
+    /// Two written scripts and one scored take on the bundled script.
+    @MainActor
+    private static func seedSpeech(_ appState: AppState) {
+        let store = SpeechStore.shared
+        store.reload()
+        let lang = appState.targetLanguage
+        let written = SpeechScript(
+            id: UUID(), title: "Marie Curie, twice a Nobel winner", genre: .person, topic: "Marie Curie",
+            body: "Marie Curie is the only person to win Nobel Prizes in two different sciences. Born in Warsaw in 1867, she moved to Paris to study, at a time when few universities admitted women.\n\nWith her husband Pierre, she discovered two new elements, polonium and radium. She coined the word radioactivity.\n\nHer notebooks are still radioactive today, and are kept in lead-lined boxes.",
+            summary: "The scientist who discovered radium, and the only person with Nobels in two sciences.",
+            keyTerms: [SpeechKeyTerm(term: "radioactivity", meaning: "Strahlung · 방사능"),
+                       SpeechKeyTerm(term: "lead-lined", meaning: "lined with lead")],
+            sources: ["Nobel Prize Outreach", "Encyclopaedia Britannica"],
+            language: lang, targetSeconds: 60, createdAt: Date().addingTimeInterval(-3600), isBuiltIn: false)
+        let news = SpeechScript(
+            id: UUID(), title: "Why the sky is blue", genre: .explainer, topic: "",
+            body: "Sunlight looks white, but it is a mix of every colour. Blue light has a short wavelength, so air molecules scatter it far more than red.",
+            summary: "", keyTerms: [], sources: ["NASA"], language: lang, targetSeconds: 30,
+            createdAt: Date().addingTimeInterval(-86400), isBuiltIn: false)
+        store.add(news)
+        store.add(written)
+        guard let builtIn = store.scripts.first(where: \.isBuiltIn) else { return }
+        let metrics = SpeechMetrics(
+            accuracy: 91, rate: 168, rateLow: 120, rateHigh: 160, paceScore: 90,
+            pausesAtBreaks: 7, breaks: 9, hesitations: 1, pauseScore: 70,
+            fillers: 3, fillerScore: 82, steadiness: 74,
+            missed: ["in a fraction of a millisecond", "rising and falling"], overall: 84)
+        let take = SpeechTake(
+            id: UUID(), scriptId: builtIn.id, createdAt: Date(), durationSeconds: 62,
+            audioFilename: "missing.wav", videoFilename: nil,
+            transcript: "Good evening. Tonight, a question most of us never um stop to ask: how do noise-cancelling headphones actually work?",
+            metrics: metrics,
+            coaching: SpeechCoaching(
+                headline: "Clear and confident opening — the middle ran a little fast.",
+                tips: ["Slow down in the third paragraph and land each sentence on a full stop.",
+                       "You skipped “in a fraction of a millisecond” — say it as one breath.",
+                       "Keep your volume up on the last word of each sentence."]))
+        store.save(take)
+    }
+
     private static func once(_ name: String, _ work: () -> Void) {
         guard !seeded.contains(name) else { return }
         seeded.insert(name)
@@ -515,6 +555,22 @@ enum DebugCapture {
                 streakDays: 7, talks: 3, reviews: 18, shadowTakes: 4,
                 topics: ["Did you read about the study on AI replacing language teachers?", "Weekend plans", "Job interview"])
             return AnyView(DayCardSheet(day: Date(), preview: sample).environmentObject(appState))
+        case "speech":
+            // The Speech tab: the bundled script plus two written ones.
+            once("speech") { seedSpeech(appState) }
+            return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-composer":
+            return AnyView(SpeechComposerSheet { _ in }.environmentObject(appState))
+        case "speech-prompter":
+            // Mid-take look: the prompter a third of the way through, mic
+            // panel below (no camera in the simulator).
+            let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
+            return AnyView(SpeechPrompterView(script: script, native: appState.nativeLanguage,
+                                              level: appState.proficiency, previewCursor: 24))
+        case "speech-result":
+            once("speech") { seedSpeech(appState) }
+            let take = SpeechStore.shared.takes.first!
+            return AnyView(NavigationStack { SpeechResultView(takeId: take.id) })
         case "plan":
             // Me → Talk time, for a Light subscriber. The receipt used to be
             // its own capture (`-capture usage`); it is this page now, so the
