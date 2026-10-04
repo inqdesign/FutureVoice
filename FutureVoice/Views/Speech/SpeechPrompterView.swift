@@ -64,8 +64,8 @@ struct SpeechPrompterView: View {
         .interactiveDismissDisabled()
     }
 
-    /// Hands the composer this screen's layout and the script drawn three
-    /// ways. Once per take, at the tap, before the countdown hides the cost.
+    /// Hands the composer this screen's layout and the script drawn for the
+    /// video. Once per take, at the tap, before the countdown hides the cost.
     private func prepareVideo() {
         preparedKey = videoKey
         guard session.cameraOn, prompterRect.width > 0 else {
@@ -88,21 +88,21 @@ struct SpeechPrompterView: View {
             card: CGRect(x: 12, y: half + 6, width: width - 24, height: half - 18),
             cardRadius: 24, background: background)
         let scale = SpeechVideoComposer.scale(for: layout)
-        func draw(_ ink: SpeechPrompterColumn.Ink) -> CGImage? {
+        func draw() -> CGImage? {
             let renderer = ImageRenderer(content:
                 SpeechPrompterColumn(track: session.track, cursor: 0, language: session.script.language,
-                                     textSize: textSize, width: prompterRect.width, ink: ink,
+                                     textSize: textSize, width: prompterRect.width, measures: false,
                                      onCurrentWord: { _ in })
                     .environment(\.colorScheme, colorScheme))
             renderer.scale = scale
             renderer.isOpaque = false
             return renderer.cgImage
         }
-        guard let unread = draw(.unread), let read = draw(.read), let accent = draw(.accent) else {
+        guard let text = draw() else {
             session.prepareVideo(layout: layout, column: nil)
             return
         }
-        session.prepareVideo(layout: layout, column: .init(unread: unread, read: read, accent: accent, scale: scale))
+        session.prepareVideo(layout: layout, column: .init(text: text, scale: scale))
     }
 
     /// Shows `text` over the controls for a moment.
@@ -417,7 +417,6 @@ struct SpeechTeleprompter: View {
     var composer: SpeechVideoComposer? = nil
 
     @StateObject private var scroller = PrompterScroller()
-    @State private var word = WordFrame()
 
     /// One line of text plus its spacing, and a little air above it.
     private var readingLine: CGFloat { textSize * 1.75 + 8 }
@@ -435,8 +434,6 @@ struct SpeechTeleprompter: View {
             SpeechPrompterColumn(track: track, cursor: cursor, language: language,
                                  textSize: textSize, width: geo.size.width,
                                  onCurrentWord: { frame in
-                                     word = frame
-                                     publish()
                                      let across = min(1, max(0, (frame.minX - 24) / lineWidth))
                                      let lineAdvance = frame.height + textSize * 0.35
                                      scroller.setTarget(frame.minY + across * lineAdvance,
@@ -465,11 +462,7 @@ struct SpeechTeleprompter: View {
 
     private func publish() {
         guard let composer else { return }
-        // Past the last word nothing is current, as on screen.
-        let current = cursor < track.words.count
-            ? CGRect(x: word.minX, y: word.minY, width: word.width, height: word.height)
-            : CGRect(x: 100_000, y: word.minY + word.height + 100_000, width: 0, height: 0)
-        composer.setPrompter(.init(offset: scroller.position - readingLine, word: current))
+        composer.setPrompter(.init(offset: scroller.position - readingLine))
     }
 }
 
@@ -556,15 +549,13 @@ struct SpeechPrompterColumn: View, Equatable {
     let language: String
     let textSize: Double
     let width: CGFloat
-    /// `.live` colours by the cursor; the others paint every word one way —
-    /// the three layers the video is drawn from.
-    var ink: Ink = .live
+    /// Reports where the current word is (the scroll follows it). Off for
+    /// the copy drawn into the video.
+    var measures: Bool = true
     let onCurrentWord: (SpeechTeleprompter.WordFrame) -> Void
 
-    enum Ink { case live, unread, read, accent }
-
     static func == (a: Self, b: Self) -> Bool {
-        a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width && a.ink == b.ink
+        a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width && a.measures == b.measures
             && a.language == b.language && a.track.words.count == b.track.words.count
     }
 
@@ -579,9 +570,14 @@ struct SpeechPrompterColumn: View, Equatable {
                     ForEach(paragraph) { word in
                         Text(word.text)
                             .font(.system(size: textSize, weight: .semibold))
-                            .foregroundStyle(color(for: word.id))
+                            // One colour for every word. Colouring the word
+                            // being read (karaoke) was tried and pulled: in
+                            // Korean especially the moving colour pulled the
+                            // eye off the line (founder, on device). A
+                            // prompter just flows; the fades do the rest.
+                            .foregroundStyle(.primary)
                             .background {
-                                if ink == .live && word.id == currentWord {
+                                if measures && word.id == currentWord {
                                     Color.clear.onGeometryChange(for: SpeechTeleprompter.WordFrame.self) { proxy in
                                         let f = proxy.frame(in: .named(Self.space))
                                         return .init(minX: f.minX, minY: f.minY, width: f.width, height: f.height)
@@ -599,17 +595,6 @@ struct SpeechPrompterColumn: View, Equatable {
         .coordinateSpace(.named(Self.space))
     }
 
-    private func color(for id: Int) -> Color {
-        switch ink {
-        case .unread: return .primary
-        case .read: return .secondary.opacity(0.55)
-        case .accent: return .accentColor
-        case .live: break
-        }
-        if id < cursor { return .secondary.opacity(0.55) }
-        if id == cursor { return .accentColor }
-        return .primary
-    }
 }
 
 /// Lays words out left to right and wraps them — SwiftUI has no flow layout,

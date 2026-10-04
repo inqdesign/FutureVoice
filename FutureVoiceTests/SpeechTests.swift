@@ -171,19 +171,14 @@ final class SpeechVideoComposerTests: XCTestCase {
             card: CGRect(x: 12, y: 363.5, width: 378, height: 339.5),
             cardRadius: 24, background: .white)
         let scale = SpeechVideoComposer.scale(for: layout)
-        func draw(_ ink: SpeechPrompterColumn.Ink) -> CGImage {
-            let r = ImageRenderer(content: SpeechPrompterColumn(track: track, cursor: 0, language: "en",
-                                                                 textSize: 28, width: 402, ink: ink,
-                                                                 onCurrentWord: { _ in }))
-            r.scale = scale
-            return r.cgImage!
-        }
-        let column = SpeechVideoComposer.Column(unread: draw(.unread), read: draw(.read),
-                                                accent: draw(.accent), scale: scale)
+        let renderer = ImageRenderer(content: SpeechPrompterColumn(track: track, cursor: 0, language: "en",
+                                                                    textSize: 28, width: 402, measures: false,
+                                                                    onCurrentWord: { _ in }))
+        renderer.scale = scale
+        let column = SpeechVideoComposer.Column(text: try XCTUnwrap(renderer.cgImage), scale: scale)
         let composer = SpeechVideoComposer()
         let cam = CIImage(color: CIColor(red: 0.6, green: 0.45, blue: 0.4)).cropped(to: CGRect(x: 0, y: 0, width: 720, height: 1280))
-        // Reading the second line: the first line above it is read.
-        let prompter = SpeechVideoComposer.Prompter(offset: 20, word: CGRect(x: 120, y: 54, width: 80, height: 34))
+        let prompter = SpeechVideoComposer.Prompter(offset: 20)
         let frame = composer.compose(
             camera: cam, layout: layout,
             column: composer.visible(column, layout: layout, prompter: prompter),

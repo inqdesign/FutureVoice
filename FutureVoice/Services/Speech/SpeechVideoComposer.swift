@@ -9,12 +9,10 @@ import UIKit
 /// screen (ReplayKit asked again every few minutes) and none of the buttons
 /// is in the picture.
 ///
-/// The script is rendered ONCE when the take starts, as three tall images of
-/// the whole column — unread, read, and the current word's colour — and each
-/// frame only crops and places them: the read part is everything above the
-/// current word's line plus its line up to the word, exactly what the screen
-/// colours. The scroll position and the current word arrive from the screen
-/// (`setPrompter`), so the video moves with the prompter the reader saw.
+/// The script is rendered ONCE, ahead of the take, as one tall image of the
+/// whole column, and each frame only crops and places it. The scroll
+/// position arrives from the screen (`setPrompter`), so the video moves with
+/// the prompter the reader saw.
 ///
 /// Frames carry their host-clock time; `Result.firstFrameHost` lines the
 /// picture up with the voice, which is stamped on the same clock.
@@ -32,11 +30,9 @@ final class SpeechVideoComposer: @unchecked Sendable {
         var bottomFade: CGFloat = 0.14
     }
 
-    /// The column rendered three ways, at `scale` pixels per point.
+    /// The column rendered at `scale` pixels per point.
     struct Column: @unchecked Sendable {
-        let unread: CGImage
-        let read: CGImage
-        let accent: CGImage
+        let text: CGImage
         let scale: CGFloat
     }
 
@@ -44,8 +40,6 @@ final class SpeechVideoComposer: @unchecked Sendable {
     struct Prompter: Sendable {
         /// Column y drawn at the top of the prompter area.
         var offset: CGFloat = 0
-        /// The current word's frame in the column.
-        var word: CGRect = .zero
     }
 
     struct Result {
@@ -179,31 +173,27 @@ final class SpeechVideoComposer: @unchecked Sendable {
     /// would send all of it to the GPU on every frame. `CGImage.cropping`
     /// shares the pixels, so this costs nothing to make.
     func visible(_ column: Column, layout: Layout,
-                 prompter: Prompter) -> (unread: CIImage, read: CIImage, accent: CIImage, scale: CGFloat, fullHeight: CGFloat) {
+                 prompter: Prompter) -> (text: CIImage, scale: CGFloat, fullHeight: CGFloat) {
         let s = column.scale
-        let fullH = CGFloat(column.unread.height)
+        let fullH = CGFloat(column.text.height)
         let top = max(0, (prompter.offset * s).rounded(.down))
         let height = min(fullH - top, (layout.prompter.height * s).rounded(.up) + 2)
-        guard height > 0 else {
-            let empty = CIImage.empty()
-            return (empty, empty, empty, s, fullH)
+        guard height > 0, let cropped = column.text.cropping(
+            to: CGRect(x: 0, y: top, width: CGFloat(column.text.width), height: height)) else {
+            return (.empty(), s, fullH)
         }
-        let rect = CGRect(x: 0, y: top, width: CGFloat(column.unread.width), height: height)
-        // CGImage space is top-left; place each crop at its bottom-left
+        // CGImage space is top-left; place the crop at its bottom-left
         // position in the full image's Core Image space.
-        let lift = CGAffineTransform(translationX: 0, y: fullH - top - height)
-        func piece(_ image: CGImage) -> CIImage {
-            guard let cropped = image.cropping(to: rect) else { return .empty() }
-            return CIImage(cgImage: cropped).transformed(by: lift)
-        }
-        return (piece(column.unread), piece(column.read), piece(column.accent), s, fullH)
+        let placed = CIImage(cgImage: cropped)
+            .transformed(by: CGAffineTransform(translationX: 0, y: fullH - top - height))
+        return (placed, s, fullH)
     }
 
     /// Core Image's origin is bottom-left; the layout's is top-left. `k` is
     /// output pixels per layout point.
     func compose(camera: CIImage,
                          layout: Layout,
-                         column: (unread: CIImage, read: CIImage, accent: CIImage, scale: CGFloat, fullHeight: CGFloat),
+                         column: (text: CIImage, scale: CGFloat, fullHeight: CGFloat),
                          prompter: Prompter) -> CIImage {
         let size = outputSize(layout)
         let k = size.width / max(1, layout.canvas.width)
@@ -214,23 +204,9 @@ final class SpeechVideoComposer: @unchecked Sendable {
         let full = CGRect(origin: .zero, size: size)
         let background = CIImage(color: CIColor(color: layout.background)).cropped(to: full)
 
-        // The script. Column images are k pixels per point, origin bottom-left.
+        // The script. The column image is k pixels per point, origin bottom-left.
         let imgH = column.fullHeight
-        let s = column.scale
-        let w = prompter.word
-        func colRect(_ r: CGRect) -> CGRect {
-            CGRect(x: r.minX * s, y: imgH - r.maxY * s, width: r.width * s, height: r.height * s)
-        }
-        let white = CIImage(color: .white)
-        let readMask = white.cropped(to: colRect(CGRect(x: 0, y: 0, width: 100_000, height: max(0, w.minY))))
-            .composited(over: white.cropped(to: colRect(CGRect(x: 0, y: w.minY, width: max(0, w.minX), height: w.height))))
-        var text = column.read.applyingFilter("CIBlendWithMask", parameters: [
-            kCIInputBackgroundImageKey: column.unread,
-            kCIInputMaskImageKey: readMask,
-        ])
-        if w.width > 0 {
-            text = column.accent.cropped(to: colRect(w)).composited(over: text)
-        }
+        var text = column.text
         // Column y = `offset` sits at the top of the prompter area.
         let area = px(layout.prompter)
         let tx = layout.prompter.minX * k
