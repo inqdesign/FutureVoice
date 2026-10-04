@@ -141,6 +141,7 @@ object CaptureRouter {
         CaptureTalk.wired, CaptureWatch.wired, CapturePractice.wired, CaptureProgress.wired,
         CaptureMe.wired, CaptureOnboarding.wired, CaptureWidgets.wired, CaptureWeeklyTest.wired,
         CaptureShadow.wired, CaptureWeekRecap.wired, CaptureRoutine.wired,
+        CaptureGuide.wired,
     )
     private val wired: Map<String, @Composable (Context) -> Unit> = areas.fold(emptyMap()) { a, b -> a + b }
     private val notPorted: Map<String, String> =

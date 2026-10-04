@@ -394,8 +394,15 @@ fun RootScreen() {
     // `ef9af00`). Once per install, and never to someone who has talked.
     var welcomeMinutes by remember { mutableStateOf<Int?>(null) }
     var startAfterWelcome by remember { mutableStateOf(false) }
-    LaunchedEffect(state.voiceId, state.setupComplete) {
+    // The welcome waits behind the Talk guide on a first launch: "this is
+    // Talk" reads before "here are your minutes" (iOS `welcomeAfterIntro`).
+    val guideRevision by com.roro.futurevoice.data.PageIntroStore.revision.collectAsStateWithLifecycle()
+    val guideUp by com.roro.futurevoice.data.PageIntroStore.showing.collectAsStateWithLifecycle()
+    LaunchedEffect(state.voiceId, state.setupComplete, guideRevision, guideUp) {
         if (state.voiceId == null || !state.setupComplete) return@LaunchedEffect
+        if (guideUp || (tab == HomeTab.TALK && BuildConfig.BUILD_TYPE != "capture" &&
+                com.roro.futurevoice.data.PageIntroStore.isDue(context,
+                    com.roro.futurevoice.data.PageIntroStore.Page.TALK))) return@LaunchedEffect
         FreeTalkWelcome.minutesToAnnounce(context)?.let { minutes ->
             FreeTalkWelcome.markShown(context)
             com.roro.futurevoice.core.Analytics.capture(
@@ -427,7 +434,7 @@ fun RootScreen() {
     WeekRecapHost(
         ready = state.setupComplete && state.voiceId != null,
         blocked = inCall || paywalled || showIntroPreview || state.levelUp != null ||
-            referralJoin != null || welcomeMinutes != null || updatePending != null,
+            referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp,
         level = state.level,
     )
 
@@ -912,6 +919,9 @@ fun RootScreen() {
             // Adding one asks for a level, which is Me's sheet — the home
             // header is not the place for a form.
             onAddLanguage = { showMe = true },
+            // A tab's first-visit guide never rises over a sheet the root owns.
+            guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
+                referralJoin != null || welcomeMinutes != null || updatePending != null,
         )
     }
     TalkMorphOverlay(inCall = inCall)
@@ -1073,9 +1083,14 @@ internal fun HomeScreen(
     onAddLanguage: () -> Unit = {},
     /** Which shelf Practice opens on — the capture harness's seam. */
     initialPracticeShelf: Shelf = Shelf.STUDYING,
+    /** A root-owned sheet is up — the tab's first-visit guide waits. */
+    guideBlocked: Boolean = false,
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
+    // "Why & how" — each tab's guide, the first time it is opened (iOS
+    // `RootTabView.offerPageIntro`).
+    PageIntroHost(tab.guidePage(), blocked = guideBlocked || showDeepen)
 
     // The finished shelf is counted for the HEADER, where iOS keeps it: one
     // number visible from every Practice shelf. A curriculum build per talk,

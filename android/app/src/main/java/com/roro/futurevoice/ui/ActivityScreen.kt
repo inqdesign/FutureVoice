@@ -189,6 +189,8 @@ fun ActivityScreen(
         SayItAgainPicker(language = language, onClose = { picking = false; StoreEvents.bump() })
         return
     }
+    // First visit: what a green day means (iOS `ActivityView.offerIntro`).
+    RoutineGuideHost(blocked = showCard)
 
     fun standing(day: Long) = PromiseStreak.standing(context, day) { dayKey(it) in activeKeys }
     val isPromise = plan.streakSince != null

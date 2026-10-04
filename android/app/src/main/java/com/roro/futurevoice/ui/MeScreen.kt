@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
@@ -251,6 +252,7 @@ fun MeScreen(
             onBack = { page = null },
         )
         MePage.SOUND -> SoundPage(onBack = { page = null })
+        MePage.GUIDE -> AppGuidePage(onBack = { page = null })
         MePage.APPEARANCE -> AppearancePage(onPicked = { theme = it }, onBack = { page = null })
         MePage.DATA -> DataPage(
             step = backupStep,
@@ -423,6 +425,15 @@ fun MeScreen(
                             stringResource(R.string.voice_consent_policy)
                         else stringResource(R.string.policy),
                         onClick = onOpenPrivacy)
+                }
+
+                // ── App guide ── every tab's "why & how", for whenever it's
+                // wanted again (iOS `AppGuideView`).
+                GroupedSectionSpacer()
+                GroupedCard {
+                    MeRow(Icons.Outlined.HelpOutline, stringResource(R.string.guide_app_guide),
+                        stringResource(R.string.guide_what_each_tab_is_for_and),
+                        onClick = { page = MePage.GUIDE })
                 }
 
                 // ── Say hello ── one tap to the person who builds this.
