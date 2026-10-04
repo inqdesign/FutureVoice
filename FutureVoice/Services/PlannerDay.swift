@@ -38,7 +38,7 @@ enum PlannerDay {
         func covers(_ planned: StudyPlan.Kind) -> Bool {
             switch (kind, planned) {
             case (.talk, .talk), (.shadow, .shadow), (.sayItAgain, .sayItAgain): return true
-            case (.review, .review), (.review, .words), (.review, .expressions): return true
+            case (.review, .review), (.review, .words), (.review, .expressions), (.review, .shadow): return true
             default: return false
             }
         }
@@ -64,8 +64,8 @@ enum PlannerDay {
         }
         func group(_ kind: ActivityEventLog.Kind) -> Actual.Kind {
             switch kind {
-            case .drill, .word, .expression: return .review
-            case .shadow: return .shadow
+            // Every kind of review is one sitting of review (2026-10-03).
+            case .drill, .word, .expression, .shadow: return .review
             case .scene: return .scene
             case .sayItAgain: return .sayItAgain
             }
@@ -108,7 +108,9 @@ enum PlannerDay {
             case .talk: return talkMinutes
             case .words: return words
             case .expressions: return expressions
-            case .review: return cards
+            // Review is every kind of review counted together: words and
+            // expressions judged, sentence cards, shadow lines.
+            case .review: return words + expressions + cards + shadow
             case .shadow: return shadow
             case .sayItAgain: return sayItAgain
             case .test: return test
@@ -184,7 +186,7 @@ enum PlannerDay {
                 talkSeen += 1
                 return talkSeen > talkPlans
             case .review:
-                return plannedKinds.isDisjoint(with: [.review, .words, .expressions])
+                return plannedKinds.isDisjoint(with: [.review, .words, .expressions, .shadow])
             case .shadow: return !plannedKinds.contains(.shadow)
             case .sayItAgain: return !plannedKinds.contains(.sayItAgain)
             case .scene: return true

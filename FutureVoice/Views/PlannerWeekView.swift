@@ -138,7 +138,7 @@ extension StudyPlan.Kind {
         switch self {
         case .talk: return explain("\(n) min")
         case .words, .expressions: return explain("\(n) items")
-        case .review: return explain("\(n) cards")
+        case .review: return explain("\(n) items")
         case .shadow: return explain("\(n) lines")
         case .sayItAgain, .test: return n == 1 ? "" : explain("\(n) times")
         }
@@ -203,7 +203,7 @@ extension PlannerDay.Actual.Kind {
 /// week in Activity — read-only, what was planned against what happened.
 /// `.master` is the weekly plan itself, Monday to Sunday with no dates
 /// (`WeeklyPlanEditor`): there a block is long-pressed and dragged — up and
-/// down for the time, sideways for the weekday, 15-minute steps — and an
+/// down for the time, sideways for the weekday, 10-minute steps — and an
 /// empty spot is tapped to add one.
 struct PlannerWeekCard: View {
     enum Mode { case record, master }
@@ -222,9 +222,22 @@ struct PlannerWeekCard: View {
     var onEdit: (StudyPlan.Occurrence, Date) -> Void = { _, _ in }
     /// `.master`: an empty spot was tapped — a new block starting then.
     var onAdd: (Date) -> Void = { _ in }
+    /// `.master`: where the block being dragged would land, nil once it is
+    /// dropped — the editor shows it at the top of the timeline.
+    var onDragTarget: (Date?) -> Void = { _ in }
+    /// `.master`: a block just added — drawn with a pulsing ring so the eye
+    /// finds where it landed.
+    var highlightBlockId: UUID? = nil
 
     @State private var dragging: String?
     @State private var dragOffset: CGSize = .zero
+    /// The snapped landing time of the drag — a step changes it, and each
+    /// change is one haptic tick.
+    @State private var dragTarget: Date?
+
+    /// A drag moves the time in steps this long (founder: 10 minutes, each
+    /// one felt).
+    static let dragStepMinutes = 10
 
     static let labelWidth: CGFloat = 16
     static let gap: CGFloat = 3
@@ -278,8 +291,33 @@ struct PlannerWeekCard: View {
                 hourLabels.frame(width: labelWidth, height: gridHeight)
                 ForEach(snapshot.days, id: \.self) { day in
                     column(day, width: colW)
+                        // A block dragged sideways leaves its column; its own
+                        // zIndex only counts inside that column, so the
+                        // columns drawn after it would cover it. The column
+                        // holding the drag goes on top of its siblings.
+                        .zIndex(holdsDrag(day) ? 1 : 0)
                 }
             }
+            #if DEBUG
+            // `-dragPreview 1`: hold Monday's first block mid-drag, two and a
+            // half columns right and an hour and a half down, for a capture
+            // (a simulator run can't long-press and drag).
+            .onAppear {
+                guard isMaster, UserDefaults.standard.bool(forKey: "dragPreview"),
+                      let monday = snapshot.days.first,
+                      let occ = (snapshot.planned[monday] ?? []).first(where: { !$0.anytime && canDrag($0) })
+                else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    // Re-read the width: the first layout pass is narrower.
+                    let w = max(10, (geo.size.width - labelWidth - gap * cols) / cols)
+                    dragging = occ.id
+                    dragOffset = CGSize(width: (w + gap) * 2.5, height: hourHeight * 1.5)
+                    let target = newStart(occ, translation: dragOffset, columnWidth: w) ?? occ.start
+                    dragTarget = target
+                    onDragTarget(target)
+                }
+            }
+            #endif
         }
         .frame(height: gridHeight)
     }
@@ -376,6 +414,11 @@ struct PlannerWeekCard: View {
         return max(16, hours * hourHeight)
     }
 
+    private func holdsDrag(_ day: Date) -> Bool {
+        guard let dragging else { return false }
+        return (snapshot.planned[day] ?? []).contains { $0.id == dragging }
+    }
+
     private func column(_ day: Date, width: CGFloat) -> some View {
         let isToday = !isMaster && cal.isDateInToday(day)
         let planned = snapshot.planned[day] ?? []
@@ -426,8 +469,10 @@ struct PlannerWeekCard: View {
         }
         .frame(width: width, height: gridHeight, alignment: .topLeading)
         // Late blocks pushed down by `stackedTops` must not spill past the
-        // last hour onto the legend.
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        // last hour onto the legend — but a block being dragged has to be
+        // able to leave its column, so the column holding it is not clipped
+        // for the length of the drag.
+        .modifier(ClipUnless(free: holdsDrag(day)))
         .contentShape(Rectangle())
         .onTapGesture(coordinateSpace: .local) { location in
             if isMaster {
@@ -529,22 +574,18 @@ struct PlannerWeekCard: View {
                 .padding(.top, h >= 30 ? 4 : 0)
                 .padding(.trailing, 2)
             }
-            .overlay(alignment: .topLeading) {
-                if isDragging {
-                    Text(dropTime(occ, translation: dragOffset, columnWidth: width))
-                        .font(.caption2.weight(.semibold))
-                        .monospacedDigit()
-                        .padding(.horizontal, 5).padding(.vertical, 2)
-                        .background(Capsule().fill(Color(.label)))
-                        .foregroundStyle(Color(.systemBackground))
-                        .fixedSize()
-                        .offset(x: width + 2, y: -2)
+            .overlay {
+                if let id = occ.blockId, id == highlightBlockId {
+                    LandedRing(color: color)
                 }
             }
             .frame(width: width - 2, height: h)
             .scaleEffect(isDragging ? 1.06 : 1)
+            // Vertically the block jumps step by step with the time it will
+            // land on, so what is seen is what is dropped; sideways it
+            // follows the finger.
             .offset(x: 1 + (isDragging ? dragOffset.width : 0),
-                    y: top + (isDragging ? dragOffset.height : 0))
+                    y: top + (isDragging ? snappedHeight(dragOffset.height) : 0))
             .zIndex(isDragging ? 10 : 0)
             .onTapGesture {
                 if isMaster, occ.blockId != nil || occ.kind == .test { onEdit(occ, day) }
@@ -557,9 +598,17 @@ struct PlannerWeekCard: View {
                         guard case .second(true, let drag) = value else { return }
                         if dragging != occ.id {
                             dragging = occ.id
+                            dragTarget = occ.start
                             HapticEngine.selection()
+                            onDragTarget(occ.start)
                         }
                         dragOffset = drag?.translation ?? .zero
+                        let target = newStart(occ, translation: dragOffset, columnWidth: width) ?? occ.start
+                        if target != dragTarget {
+                            dragTarget = target
+                            HapticEngine.selection()
+                            onDragTarget(target)
+                        }
                     }
                     .onEnded { value in
                         if case .second(true, let drag?) = value,
@@ -569,6 +618,8 @@ struct PlannerWeekCard: View {
                         }
                         dragging = nil
                         dragOffset = .zero
+                        dragTarget = nil
+                        onDragTarget(nil)
                     },
                 including: draggable ? .all : .subviews
             )
@@ -577,10 +628,17 @@ struct PlannerWeekCard: View {
             .accessibilityValue(done ? Text("Done") : Text(""))
     }
 
-    /// Where a drag would land: 15-minute steps, whole columns, never off the
+    /// The drag's vertical travel, rounded to whole steps.
+    private func snappedHeight(_ dy: CGFloat) -> CGFloat {
+        let step = CGFloat(Self.dragStepMinutes)
+        return (dy / hourHeight * 60 / step).rounded() * step / 60 * hourHeight
+    }
+
+    /// Where a drag would land: 10-minute steps, whole columns, never off the
     /// end of the target day or out of the week.
     private func newStart(_ occ: StudyPlan.Occurrence, translation: CGSize, columnWidth: CGFloat) -> Date? {
-        let minutes = Int((translation.height / hourHeight * 60 / 15).rounded()) * 15
+        let step = Self.dragStepMinutes
+        let minutes = Int((translation.height / hourHeight * 60 / CGFloat(step)).rounded()) * step
         // Moves by COLUMN, not by calendar day: a rest weekday has no
         // column, so the column to the right may be two days later.
         let steps = Int((translation.width / (columnWidth + gap)).rounded())
@@ -593,13 +651,8 @@ struct PlannerWeekCard: View {
         else { return nil }
         let dayStart = cal.startOfDay(for: shifted)
         let offset = cal.dateComponents([.minute], from: dayStart, to: shifted).minute ?? 0
-        let clamped = min(max(0, offset + minutes), 24 * 60 - max(15, occ.minutes))
+        let clamped = min(max(0, offset + minutes), 24 * 60 - max(step, occ.minutes))
         return dayStart.addingTimeInterval(TimeInterval(clamped * 60))
-    }
-
-    private func dropTime(_ occ: StudyPlan.Occurrence, translation: CGSize, columnWidth: CGFloat) -> String {
-        let target = newStart(occ, translation: translation, columnWidth: columnWidth) ?? occ.start
-        return target.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated).hour().minute())
     }
 
     /// What the colours and the two strokes mean. Without it the grid is
@@ -607,7 +660,7 @@ struct PlannerWeekCard: View {
     private var legend: some View {
         VStack(alignment: .leading, spacing: 6) {
             FlowLayout(spacing: 10) {
-                kindKey(.talk); kindKey(.review); kindKey(.shadow); kindKey(.sayItAgain); kindKey(.test)
+                kindKey(.talk); kindKey(.review); kindKey(.sayItAgain); kindKey(.test)
             }
             HStack(spacing: 12) {
                 styleKey(filled: false, Text("Planned"))
@@ -637,5 +690,35 @@ struct PlannerWeekCard: View {
                 .frame(width: 14, height: 14)
             text.font(.caption2).foregroundStyle(.secondary)
         }
+    }
+}
+
+/// The ring on a block that was just added: three soft pulses, then it stays
+/// lit until the editor clears it. Fades, never bounces.
+private struct LandedRing: View {
+    let color: Color
+    @State private var dim = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .strokeBorder(color, lineWidth: 2)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(color.opacity(0.25)))
+            .padding(-2)
+            .opacity(dim ? 0.3 : 1)
+            .allowsHitTesting(false)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.45).repeatCount(5, autoreverses: true)) { dim = true }
+            }
+    }
+}
+
+/// The column's rounded clip, lifted while it holds a dragged block. One
+/// shape either way (grown far past the screen when free), so the column
+/// keeps its identity and the drag gesture in it is not torn down.
+private struct ClipUnless: ViewModifier {
+    let free: Bool
+    func body(content: Content) -> some View {
+        content.clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .inset(by: free ? -2000 : 0))
     }
 }

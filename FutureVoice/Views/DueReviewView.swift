@@ -21,6 +21,10 @@ struct DueReviewView: View {
     /// items, under this title, instead of the due queue.
     var hand: [StudyDeckItem]? = nil
     var title: LocalizedStringKey = "Back from earlier"
+    /// What an empty deck says — the routine's Review deck is not the
+    /// put-off pile, and must not call itself that.
+    var emptyTitle: LocalizedStringKey = "Nothing put off"
+    var emptyMessage: LocalizedStringKey = "Words, expressions and sentences you put off in a deck all show up here, in the order they come back."
 
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -54,6 +58,30 @@ struct DueReviewView: View {
 
     /// Everything back from its snooze, oldest promise first — the SAME
     /// queue the reminder counted (see `ReviewQueue`).
+    /// The routine's Review block (2026-10-03): ONE deck of every kind —
+    /// what came back from a snooze, sentence cards due, then today's new
+    /// words and expressions — up to the block's count. Shadow lines count
+    /// toward the same number but are spoken, not dealt, so they live in
+    /// their own screen.
+    @MainActor
+    static func routineDeck(goal: Int, appState: AppState, now: Date = Date()) -> [StudyDeckItem] {
+        var out: [StudyDeckItem] = []
+        var seen = Set<String>()
+        func add(_ items: [StudyDeckItem]) {
+            for i in items where out.count < goal && seen.insert(i.id).inserted { out.append(i) }
+        }
+        add(ReviewQueue.dueItems(now: now))
+        add(DrillStore.shared.due(now: now).map(StudyDeckItem.sentence))
+        let left = max(0, goal - out.count)
+        guard left > 0 else { return out }
+        // Fresh words and expressions, in the daily decks' own proportion.
+        let words = DailyWordsView.pick(goal: max(1, left * 3 / 4), appState: appState, now: now)
+        let exprs = DailyExpressionsView.pick(goal: max(1, left - left * 3 / 4), appState: appState, now: now)
+        add(words.map(StudyDeckItem.word))
+        add(exprs.map(StudyDeckItem.expression))
+        return out
+    }
+
     static func dueDeck(now: Date = Date()) -> [StudyDeckItem] {
         ReviewQueue.dueItems(now: now)
     }
@@ -118,9 +146,9 @@ struct DueReviewView: View {
         VStack(spacing: 10) {
             Image(systemName: "checkmark.circle")
                 .font(.largeTitle).foregroundStyle(.secondary)
-            Text("Nothing put off")
+            Text(emptyTitle)
                 .font(.headline)
-            Text(explain("Words, expressions and sentences you put off in a deck all show up here, in the order they come back."))
+            Text(emptyMessage)
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

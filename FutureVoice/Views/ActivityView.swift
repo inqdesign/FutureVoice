@@ -98,7 +98,7 @@ struct ActivityView: View {
                                   away: canGoNext ? .past : nil,
                                   onToday: { withAnimation(.snappy(duration: 0.35)) { scrolledPeriod = periodKey(Date()) } })
                     CenteredStrip(items: periods, selection: $scrolledPeriod,
-                                  cellWidth: viewMode == .year ? 64 : 52) { p, selected in
+                                  cellWidth: 52) { p, selected in
                         periodCell(p, selected: selected)
                     }
                     .id(viewMode)
@@ -199,7 +199,8 @@ struct ActivityView: View {
     /// What a routine line opens — the same screens the Review tab's
     /// Today card opens for each kind.
     private enum RoutineSheet: Identifiable {
-        case words, expressions, review, test
+        case words, expressions, test
+        case review([StudyDeckItem])
         case shadow([PracticeStats.ShadowPick])
         var id: String {
             switch self {
@@ -218,7 +219,10 @@ struct ActivityView: View {
         case .sayItAgain: showSayItAgainPicker = true
         case .words: routineSheet = .words
         case .expressions: routineSheet = .expressions
-        case .review: routineSheet = .review
+        case .review:
+            routineSheet = .review(DueReviewView.routineDeck(
+                goal: GoalStore.shared.target(.review) ?? StudyPlan.Kind.review.defaultAmount,
+                appState: appState))
         case .test: routineSheet = .test
         case .shadow:
             let picks = PracticeStats.shadowPicks(
@@ -235,7 +239,11 @@ struct ActivityView: View {
         switch sheet {
         case .words: DailyWordsView().environmentObject(appState)
         case .expressions: DailyExpressionsView().environmentObject(appState)
-        case .review: DrillSheet().environmentObject(appState)
+        case .review(let hand):
+            DueReviewView(hand: hand, title: "Review",
+                          emptyTitle: "All caught up",
+                          emptyMessage: "Words, expressions and sentences from your talks show up here when it's time to review them.")
+                .environmentObject(appState)
         case .test: WeeklyTestView().environmentObject(appState)
         case .shadow(let picks):
             if picks.isEmpty {
@@ -501,7 +509,9 @@ struct ActivityView: View {
                     .foregroundStyle(kept > 0 ? Color.primary : Color.secondary)
                     .minimumScaleFactor(0.7)
             }
-            .frame(width: viewMode == .year ? 40 : 32, height: viewMode == .year ? 40 : 32)
+            // One size on all three strips — Day, Month and Year read as
+            // the same control.
+            .frame(width: 32, height: 32)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(f.string(from: start)))

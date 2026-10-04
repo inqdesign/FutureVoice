@@ -10,12 +10,16 @@ struct PlanBlockEditor: View {
         /// In the weekly plan: no date, only a weekday.
         case newInWeek(weekday: Int, hour: Int, minute: Int)
         case inWeek(blockId: UUID)
+        /// In the weekly plan, from the + button: this kind, on every study
+        /// day, at the kind's usual time.
+        case newOfKind(StudyPlan.Kind)
         var id: String {
             switch self {
             case .new(let d): return "new-\(d.timeIntervalSinceReferenceDate)"
             case .existing(let id, _): return id.uuidString
             case .newInWeek(let w, let h, let m): return "week-\(w)-\(h)-\(m)"
             case .inWeek(let id): return "week-" + id.uuidString
+            case .newOfKind(let k): return "kind-" + k.rawValue
             }
         }
     }
@@ -39,13 +43,13 @@ struct PlanBlockEditor: View {
     private var day: Date {
         switch target {
         case .new(let d), .existing(_, let d): return d
-        case .newInWeek, .inWeek: return cal.startOfDay(for: Date())
+        case .newInWeek, .inWeek, .newOfKind: return cal.startOfDay(for: Date())
         }
     }
     private var dayKey: String { StudyPlan.dayKey(day) }
     private var isWeekly: Bool {
         switch target {
-        case .newInWeek, .inWeek: return true
+        case .newInWeek, .inWeek, .newOfKind: return true
         default: return false
         }
     }
@@ -57,6 +61,17 @@ struct PlanBlockEditor: View {
         default: return nil
         }
     }
+
+    /// A talk in 5-minute steps; review is every kind of item counted
+    /// together, so it runs higher, in fives; a run (say it again) by one.
+    private var amountRange: ClosedRange<Int> {
+        switch kind {
+        case .talk: return 5...60
+        case .review: return 5...100
+        default: return 1...50
+        }
+    }
+    private var amountStep: Int { kind == .talk || kind == .review ? 5 : 1 }
 
     var body: some View {
         NavigationStack {
@@ -75,6 +90,16 @@ struct PlanBlockEditor: View {
                         }
                     }
                     .pickerStyle(.navigationLink)
+                } footer: {
+                    if kind == .review {
+                        Text("Words, expressions, sentence cards and shadow lines all count.")
+                    } else if kind == .talk {
+                        // The routine's timed talks are the daily call.
+                        Text(DailyCallStore.shared.isEnabled
+                             ? (anytime ? explain("Any time of day: no call rings for this one.")
+                                        : explain("Your daily call rings at this time."))
+                             : explain("Your daily call is off, so this one won't ring. Turn it on in Me → Daily call."))
+                    }
                 }
                 if !isException {
                     Section {
@@ -97,7 +122,7 @@ struct PlanBlockEditor: View {
                     }
                     // A talk is promised in minutes; everything else in the
                     // count the app actually keeps.
-                    Stepper(value: $minutes, in: kind.isTimed ? 5...60 : 1...50, step: kind.isTimed ? 5 : 1) {
+                    Stepper(value: $minutes, in: amountRange, step: amountStep) {
                         HStack {
                             Text(kind.isTimed ? explain("Length") : explain("How many"))
                             Spacer()
@@ -183,12 +208,26 @@ struct PlanBlockEditor: View {
         } else if case .newInWeek(let wd, let h, let m) = target {
             weekdays = [wd]
             time = cal.date(bySettingHour: h, minute: m, second: 0, of: day) ?? day
-            kind = .words
-            minutes = StudyPlan.Kind.words.defaultAmount
+            kind = .review
+            minutes = StudyPlan.Kind.review.defaultAmount
+        } else if case .newOfKind(let k) = target {
+            let off = store.plan.offWeekdays ?? []
+            weekdays = Set(1...7).subtracting(off)
+            // A talk in the morning (the daily call's default), say it again
+            // right after it, review in the evening.
+            let (h, m): (Int, Int) = switch k {
+            case .talk: (8, 0)
+            case .sayItAgain: (8, 15)
+            default: (20, 0)
+            }
+            time = cal.date(bySettingHour: h, minute: m, second: 0, of: day) ?? day
+            kind = k
+            minutes = k.defaultAmount
         } else {
             weekdays = [weekday]
             time = cal.date(bySettingHour: 20, minute: 0, second: 0, of: day) ?? day
-            kind = .words
+            kind = .review
+            minutes = StudyPlan.Kind.review.defaultAmount
         }
     }
 
@@ -267,6 +306,16 @@ struct WeeklyPlanEditor: View {
     @State private var pendingFollow: PendingFollow?
     @State private var refused = false
     @State private var noDay: Date?
+    /// Where the block being dragged would land — shown at the top of the
+    /// timeline while the drag lasts, then gone.
+    @State private var dragTarget: Date?
+    /// A block just added from the + button: scrolled into view.
+    @State private var focusMinute: Int?
+    /// The block the + just added, ringed on the grid, and what the top pill
+    /// says about where it went — both for a moment only.
+    @State private var landedId: UUID?
+    @State private var landedNote: String?
+    @State private var scrollRequest = 0
 
     private struct PendingFollow {
         /// The block still holding the other weekdays.
@@ -294,7 +343,14 @@ struct WeeklyPlanEditor: View {
                                             let c = cal.dateComponents([.weekday, .hour, .minute], from: start)
                                             blockEditor = .newInWeek(weekday: c.weekday ?? 2,
                                                                      hour: c.hour ?? 20, minute: c.minute ?? 0)
-                                        })
+                                        },
+                                        onDragTarget: { t in
+                                            withAnimation(.easeOut(duration: 0.15)) {
+                                                dragTarget = t
+                                                if t != nil { landedNote = nil; landedId = nil }
+                                            }
+                                        },
+                                        highlightBlockId: landedId)
                         .padding(.horizontal, 8)
                         .padding(.top, 6)
                         .padding(.bottom, 24)
@@ -304,11 +360,30 @@ struct WeeklyPlanEditor: View {
                                 .offset(y: (7 - CGFloat(snapshot.startHour)) * Self.hourHeight)
                                 .id("seven")
                         }
+                        .overlay(alignment: .topLeading) {
+                            // Scroll anchor at a block just added.
+                            if let focusMinute {
+                                Color.clear.frame(height: 1)
+                                    .offset(y: (CGFloat(focusMinute) / 60 - CGFloat(snapshot.startHour)) * Self.hourHeight)
+                                    .id("focus")
+                            }
+                        }
                     }
                 }
                 .onAppear {
                     reload()
                     DispatchQueue.main.async { proxy.scrollTo("seven", anchor: .top) }
+                    #if DEBUG
+                    // `-planAdd review`: the + menu's pick, for a capture.
+                    if let k = UserDefaults.standard.string(forKey: "planAdd").flatMap(StudyPlan.Kind.init(rawValue:)) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { addBlock(k) }
+                    }
+                    #endif
+                }
+                .onChange(of: scrollRequest) { _, _ in
+                    DispatchQueue.main.async {
+                        withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo("focus", anchor: .center) }
+                    }
                 }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -317,6 +392,11 @@ struct WeeklyPlanEditor: View {
                     weekdayHeader
                 }
             }
+            .overlay(alignment: .top) {
+                if let dragTarget { dragTimePill(dragTarget) }
+                else if let landedNote { pill(landedNote) }
+            }
+            .overlay(alignment: .bottomTrailing) { addButton }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 Text("Tap an empty spot to add. Hold a block and drag to move it.")
                     .font(.footnote)
@@ -397,6 +477,55 @@ struct WeeklyPlanEditor: View {
             }
             .onChange(of: store.plan) { _, _ in reload() }
         }
+    }
+
+    /// The time a dragged block will land on, at the top centre of the
+    /// timeline (founder: visible while dragging, gone after). Under the
+    /// finger the block itself is covered.
+    private func dragTimePill(_ t: Date) -> some View {
+        let day = t.formatted(Date.FormatStyle(locale: uiLocale).weekday(.abbreviated))
+        let c = cal.dateComponents([.hour, .minute], from: t)
+        return pill("\(day) \(String(format: "%d:%02d", c.hour ?? 0, c.minute ?? 0))")
+            .animation(.snappy(duration: 0.15), value: t)
+    }
+
+    private func pill(_ text: String) -> some View {
+        Text(text)
+            .font(.headline.monospacedDigit())
+            .contentTransition(.numericText())
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .background(Capsule().fill(Color(.label)))
+            .foregroundStyle(Color(.systemBackground))
+            .padding(.top, 8)
+            .transition(.opacity)
+            .allowsHitTesting(false)
+    }
+
+    /// The + in the corner: the three blocks a routine is made of. Picking
+    /// one puts it straight on the grid — every study day, at the first free
+    /// slot from that kind's usual time — and scrolls to it, so the next move
+    /// is a drag (founder: "the table is more direct than a sheet"); a tap on
+    /// it then edits it. Tapping an empty spot still adds at that spot.
+    private var addButton: some View {
+        Menu {
+            ForEach(StudyPlan.Kind.placeable) { k in
+                Button {
+                    addBlock(k)
+                } label: {
+                    Label(k.label, systemImage: k.symbol)
+                }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+                .background(Circle().fill(Color.accentColor))
+                .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+        }
+        .accessibilityLabel(Text(explain("Add a block")))
+        .padding(.trailing, 20)
+        .padding(.bottom, 16)
     }
 
     private enum RestChoice: Hashable { case none, weekends, custom }
@@ -605,6 +734,64 @@ struct WeeklyPlanEditor: View {
             if spans && sameDay { pendingFollow = PendingFollow(remainingId: id, newStart: newStart) }
         case .exception:
             break
+        }
+    }
+
+    private func addBlock(_ kind: StudyPlan.Kind) {
+        var plan = store.plan
+        let days = Set(1...7).subtracting(plan.offWeekdays ?? [])
+        let length = kind.drawnMinutes(amount: kind.defaultAmount)
+        // A talk in the morning (the daily call's default), say it again
+        // right after it, review in the evening.
+        let usual = switch kind {
+        case .talk: 8 * 60
+        case .sayItAgain: 8 * 60 + 15
+        default: 20 * 60
+        }
+        func isFree(_ start: Int) -> Bool {
+            guard start >= 0, start + length <= 24 * 60 else { return false }
+            return plan.blocks.allSatisfy { b in
+                b.isAnytime || b.weekdays.isDisjoint(with: days)
+                    || start + length <= b.startMinute
+                    || b.startMinute + b.kind.drawnMinutes(amount: b.minutes) <= start
+            }
+        }
+        // Later first, then earlier, in half hours.
+        let later = stride(from: usual, through: 23 * 60, by: 30)
+        let earlier = stride(from: usual - 30, through: 6 * 60, by: -30)
+        let start = (Array(later) + Array(earlier)).first(where: isFree) ?? usual
+        plan.blocks.append(StudyPlan.Block(kind: kind, weekdays: days, hour: start / 60,
+                                           minute: start % 60, minutes: kind.defaultAmount))
+        plan.mergeTwins()
+        guard store.update(plan, byLearner: true) else {
+            refused = true
+            return
+        }
+        reload()
+        focusMinute = start
+        scrollRequest += 1
+        HapticEngine.light()
+        // Ring it on the grid and say where it went (merged into a twin, the
+        // twin is the one ringed).
+        let id = store.plan.blocks.first {
+            $0.kind == kind && $0.hour == start / 60 && $0.minute == start % 60 && !$0.isAnytime
+        }?.id
+        withAnimation(.easeOut(duration: 0.2)) {
+            landedId = id
+            landedNote = "\(kind.label) · \(String(format: "%d:%02d", start / 60, start % 60))"
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            withAnimation(.easeOut(duration: 0.3)) {
+                if landedId == id { landedId = nil; landedNote = nil }
+            }
+        }
+        Analytics.capture("plan_block_saved", ["kind": kind.rawValue, "new": true, "via": "add_button"])
+        if kind != .talk {
+            Task {
+                await PlanReminder.requestPermissionIfNeeded()
+                await PlanReminder.reschedule()
+            }
         }
     }
 

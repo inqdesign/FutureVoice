@@ -95,7 +95,12 @@ final class DailyCallStore: ObservableObject {
     /// on day one is a support ticket, not a feature.
     var isEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: Self.enabledKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.enabledKey) }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.enabledKey)
+            // A call needs a time: turning it on gives an "any time" talk in
+            // the routine the call's time (see `callTurnedOn`).
+            if newValue { StudyPlanStore.shared.callTurnedOn() }
+        }
     }
 
     /// One time of day the call comes in.

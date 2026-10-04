@@ -162,6 +162,27 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(PlannerDay.done(planned: occ, totals: totals), [talks[0].id])
     }
 
+    func testWordsExpressionsAndShadowFoldIntoReview() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .words, weekdays: [2, 4], hour: 19, minute: 0, minutes: 10),
+                       .init(kind: .expressions, weekdays: [2, 4], hour: 19, minute: 0, minutes: 3),
+                       .init(kind: .shadow, weekdays: [7], hour: 11, minute: 0, minutes: 2),
+                       .init(kind: .talk, weekdays: Set(1...7), hour: 8, minute: 0, minutes: 10)]
+        let folded = plan.foldingIntoReview()
+        XCTAssertFalse(folded.blocks.contains { $0.kind.isFoldedIntoReview })
+        let review = folded.blocks.filter { $0.kind == .review }
+        XCTAssertEqual(review.count, 2)
+        XCTAssertEqual(review.first { $0.hour == 19 }?.minutes, 13)
+        XCTAssertEqual(review.first { $0.hour == 11 }?.minutes, 2)
+        XCTAssertEqual(folded.foldingIntoReview(), folded)
+    }
+
+    func testReviewCountsEveryKindOfReview() {
+        var totals = PlannerDay.Totals()
+        totals.words = 4; totals.expressions = 2; totals.cards = 5; totals.shadow = 1
+        XCTAssertEqual(totals.amount(for: .review), 12)
+    }
+
     func testOldMinutePlansBecomeCounts() {
         var plan = StudyPlan()
         plan.unitsVersion = nil
@@ -252,6 +273,20 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(review?.weekdays, [2, 4])
         XCTAssertEqual(review?.hour, 21)
         XCTAssertTrue(c.hasReviewBlocks)
+    }
+
+    func testAnAnytimeTalkTakesTheCallsTime() {
+        // Turning the call on (or picking its time) gives an "any time"
+        // routine its call: the routine's timed talks ARE the calls.
+        var plan = StudyPlan.seeded(callTimes: [], goalMinutes: 15, callEnabled: false)
+        XCTAssertFalse(plan.hasTimedTalk)
+        plan.adoptCallTimes([t(8)], defaultMinutes: 10)
+        let talks = plan.blocks.filter { $0.kind == .talk }
+        XCTAssertEqual(talks.count, 1)
+        XCTAssertEqual(talks.first?.hour, 8)
+        XCTAssertEqual(talks.first?.minutes, 15, "keeps the routine's own minutes")
+        XCTAssertEqual(talks.first?.isAnytime, false)
+        XCTAssertEqual(plan.callDates(after: at(5, 7), calendar: cal).first, at(5, 8))
     }
 
     func testOnboardingRoutineWithoutACallIsAnytime() {
