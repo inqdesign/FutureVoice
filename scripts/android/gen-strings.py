@@ -47,7 +47,7 @@ RES_QUALIFIER = {"zh-Hant": "zh-rTW", "zh-Hans": "b+zh+Hans"}
 
 # The iOS catalog's FULLY translated columns. `de` is deliberately absent —
 # it is a target language, not a native one, and its column is ~65% done.
-DEFAULT_LANGUAGES = ["en", "ko", "ja", "zh-Hant", "zh-Hans", "es", "fr"]
+DEFAULT_LANGUAGES = ["en", "ko", "ja", "zh-Hant", "zh-Hans", "es", "fr", "de"]
 
 JAVA_KEYWORDS = {
     "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class",
