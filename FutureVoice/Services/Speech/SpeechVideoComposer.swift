@@ -54,8 +54,8 @@ final class SpeechVideoComposer: @unchecked Sendable {
         let firstFrameHost: Double
     }
 
-    /// Output width in pixels. Height follows the screen's shape.
-    static let width: CGFloat = 720
+    /// Output width in pixels; the layout's canvas is 9:16, so 1080×1920.
+    static let width: CGFloat = 1080
 
     private let lock = NSLock()
     private var layout: Layout?

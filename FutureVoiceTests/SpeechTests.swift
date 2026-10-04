@@ -166,9 +166,9 @@ final class SpeechVideoComposerTests: XCTestCase {
         let script = SpeechLibrary.builtIn(for: "en")!
         let track = SpeechPrompterTrack(script: script.body, language: "en")
         let layout = SpeechVideoComposer.Layout(
-            canvas: CGSize(width: 402, height: 820),
-            prompter: CGRect(x: 0, y: 0, width: 402, height: 360),
-            card: CGRect(x: 12, y: 380, width: 378, height: 420),
+            canvas: CGSize(width: 402, height: 715),
+            prompter: CGRect(x: 0, y: 0, width: 402, height: 351.5),
+            card: CGRect(x: 12, y: 363.5, width: 378, height: 339.5),
             cardRadius: 24, background: .white)
         let scale = SpeechVideoComposer.scale(for: layout)
         func draw(_ ink: SpeechPrompterColumn.Ink) -> CGImage {
@@ -189,8 +189,9 @@ final class SpeechVideoComposerTests: XCTestCase {
                      CIImage(cgImage: column.accent), scale),
             prompter: .init(offset: 20, word: CGRect(x: 120, y: 54, width: 80, height: 34)))
         let ctx = CIContext()
-        let cg = try XCTUnwrap(ctx.createCGImage(frame, from: CGRect(x: 0, y: 0, width: 720, height: 1468)))
-        XCTAssertEqual(cg.width, 720)
+        let cg = try XCTUnwrap(ctx.createCGImage(frame, from: CGRect(x: 0, y: 0, width: 1080, height: 1920)))
+        XCTAssertEqual(cg.width, 1080)
+        XCTAssertEqual(cg.height, 1920)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("speech-frame.png")
         try XCTUnwrap(UIImage(cgImage: cg).pngData()).write(to: url)
         print("[speech-frame] \(url.path)")

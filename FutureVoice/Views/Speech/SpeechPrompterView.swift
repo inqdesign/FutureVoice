@@ -8,10 +8,8 @@ struct SpeechPrompterView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speech.textSize") private var textSize: Double = 28
     @Environment(\.colorScheme) private var colorScheme
-    /// The take screen's geometry, for drawing the same layout into the video.
-    @State private var screenSize: CGSize = .zero
+    /// The prompter's width — the video's script wraps at the same width.
     @State private var prompterRect: CGRect = .zero
-    @State private var cardRect: CGRect = .zero
     private static let screenSpace = "take-screen"
     @State private var showingScript = false
     @State private var showingTakes = false
@@ -55,15 +53,25 @@ struct SpeechPrompterView: View {
     /// Hands the composer this screen's layout and the script drawn three
     /// ways. Once per take, at the tap, before the countdown hides the cost.
     private func prepareVideo() {
-        guard session.cameraOn, screenSize.width > 0, prompterRect.width > 0, cardRect.width > 0 else {
+        guard session.cameraOn, prompterRect.width > 0 else {
             session.prepareVideo(layout: .init(canvas: .zero, prompter: .zero, card: .zero,
                                                cardRadius: 0, background: .clear), column: nil)
             return
         }
         let background = UIColor.systemBackground.resolvedColor(
             with: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light))
-        let layout = SpeechVideoComposer.Layout(canvas: screenSize, prompter: prompterRect, card: cardRect,
-                                                cardRadius: 24, background: background)
+        // The video is 9:16 whatever the phone: the take screen's layout in
+        // a standard frame, script on the top half, the camera card on the
+        // bottom. Its width is the screen's, so the script wraps exactly as
+        // the reader saw it.
+        let width = prompterRect.width
+        let height = (width * 16 / 9).rounded()
+        let half = height / 2
+        let layout = SpeechVideoComposer.Layout(
+            canvas: CGSize(width: width, height: height),
+            prompter: CGRect(x: 0, y: 0, width: width, height: half - 6),
+            card: CGRect(x: 12, y: half + 6, width: width - 24, height: half - 18),
+            cardRadius: 24, background: background)
         let scale = SpeechVideoComposer.scale(for: layout)
         func draw(_ ink: SpeechPrompterColumn.Ink) -> CGImage? {
             let renderer = ImageRenderer(content:
@@ -105,7 +113,6 @@ struct SpeechPrompterView: View {
             bottomHalf
                 .frame(maxHeight: .infinity)
         }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { screenSize = $0 }
         .coordinateSpace(.named(Self.screenSpace))
         .background(Color(.systemBackground))
         .overlay { overlay }
@@ -239,9 +246,6 @@ struct SpeechPrompterView: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.screenSpace)) } action: {
-                cardRect = $0
-            }
             .padding(.horizontal, 12)
 
             controls
