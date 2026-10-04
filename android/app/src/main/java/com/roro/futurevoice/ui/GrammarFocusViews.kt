@@ -251,7 +251,7 @@ fun CoachHintLabel(item: TalkGoalItem, used: Boolean, onTap: () -> Unit) {
 fun CoachReplyLabel(reply: com.roro.futurevoice.talk.CoachReply, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(R.string.try_saying), style = MaterialTheme.typography.labelMedium,
+        Text(reply.heading ?: stringResource(R.string.try_saying), style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(coachLine(reply.say, MaterialTheme.colorScheme.onSurface),
             style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,

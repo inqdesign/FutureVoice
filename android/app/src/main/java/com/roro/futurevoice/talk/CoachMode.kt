@@ -115,6 +115,10 @@ data class CoachReply(
     /** Native language, the same brackets translated. "" when native == target. */
     val meaning: String,
     val turnId: String,
+    /** The label above the line — "Try saying", or "You go first" when the
+     *  learner opens the call (`StarterSituation.learnerFirst`). Null = "Try
+     *  saying". Already localized. */
+    val heading: String? = null,
 ) {
     companion object {
         /**

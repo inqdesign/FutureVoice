@@ -753,7 +753,9 @@ fun TalkScreen(
                             // "Listening…" beside a bold sentence read as two
                             // voices in one shape. A fixed spot can't be scrolled
                             // away.
-                            if (coachMode) state.coachReply?.let { reply ->
+                            // "You go first" (a situation the learner opens)
+                            // shows whatever coach mode says.
+                            state.coachReply?.takeIf { coachMode || it.heading != null }?.let { reply ->
                                 CoachReplyLabel(reply, Modifier.padding(horizontal = 32.dp))
                             }
                             if (coachMode) state.coachHint?.let { hint ->

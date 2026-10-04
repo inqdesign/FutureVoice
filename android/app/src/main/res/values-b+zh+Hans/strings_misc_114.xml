@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- iOS 1.1.4 (plan 2d.7): Talk's Everyday situations, Say it again's
+     teleprompter, the day card's Save to Photos. Values copied from the
+     iOS catalog at ebf848e. -->
+<resources>
+    <string name="everyday">日常</string>
+    <string name="you_go_first">你先开口吧</string>
+    <string name="starter_meeting_title">和刚认识的人</string>
+    <string name="starter_meeting_role">刚认识的人</string>
+    <string name="starter_cafe_title">在咖啡店</string>
+    <string name="starter_cafe_role">咖啡师</string>
+    <string name="starter_restaurant_title">在餐厅</string>
+    <string name="starter_restaurant_role">服务员</string>
+    <string name="starter_street_title">在路上</string>
+    <string name="starter_street_role">路人</string>
+    <string name="starter_street_first_meaning">不好意思，请问[车站]怎么走？</string>
+    <string name="starter_shop_title">在服装店</string>
+    <string name="starter_shop_role">店员</string>
+    <string name="starter_clinic_title">打电话到诊所</string>
+    <string name="starter_clinic_role">诊所前台</string>
+    <string name="starter_hotel_title">在酒店</string>
+    <string name="starter_hotel_role">前台接待</string>
+    <string name="starter_station_title">在火车站</string>
+    <string name="starter_station_role">售票员</string>
+    <string name="starter_friend_title">和朋友</string>
+    <string name="starter_friend_role">朋友</string>
+    <string name="starter_neighbor_title">和邻居</string>
+    <string name="starter_neighbor_role">邻居</string>
+    <string name="say_again_moves_on">说完就会自动继续</string>
+    <string name="save_to_photos">存储到照片</string>
+    <string name="saved_to_photos">已存储到照片</string>
+    <string name="allow_access_to_photos">请允许访问照片</string>
+    <string name="photos_turn_on_in_settings">要存储卡片，请在设置中允许 nawana 访问照片。</string>
+</resources>

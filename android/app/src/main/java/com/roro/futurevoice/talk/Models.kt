@@ -754,6 +754,11 @@ data class Scenario(
     /** Material the learner attached, and what ONE reading of it produced
      *  (iOS `Scenario.brief`). Optional so old rows decode unchanged. */
     val brief: ScenarioBrief? = null,
+    /** Set on a scenario minted from one of Talk's ready-made situations
+     *  ([com.roro.futurevoice.data.StarterSituation] id), so the next tap on
+     *  that row reuses it and the "Your scenarios" lists leave it out (iOS
+     *  `Scenario.starterId`, `5b0587a`). Optional so old rows decode. */
+    val starterId: String? = null,
 ) {
     val cardTitle: String
         get() = summary?.trim()?.takeIf { it.isNotEmpty() } ?: environment

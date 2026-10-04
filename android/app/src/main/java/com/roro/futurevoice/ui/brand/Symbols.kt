@@ -10,6 +10,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocalMall
+import androidx.compose.material.icons.filled.Train
+import androidx.compose.material.icons.filled.Hotel
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.WavingHand
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Phone
@@ -61,6 +65,11 @@ object Symbols {
         "briefcase.fill" to Icons.Filled.Business,
         "cross.case.fill" to Icons.Filled.LocalHospital,
         "bag.fill" to Icons.Filled.LocalMall,
+        // Talk's Everyday situations (`StarterSituation`).
+        "hand.wave" to Icons.Filled.WavingHand,
+        "map" to Icons.Filled.Map,
+        "bed.double" to Icons.Filled.Hotel,
+        "tram" to Icons.Filled.Train,
     )
 
     /**

@@ -444,6 +444,31 @@ class TalkViewModel(context: Context) : ViewModel() {
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
                 ) + REALTIME_STYLE_RULES
+                // A ready-made situation the LEARNER opens (asking a stranger
+                // the way, iOS `5b0587a`): the other side waits to be spoken
+                // to, and the coach's own slot above the pill offers a first
+                // line — shown whatever coach mode says, since without it the
+                // call is a silence nobody explained. The first reply clears
+                // it like any suggestion.
+                if (config.initialOpener.isBlank()) {
+                    val starter = config.scenarioId?.let { id ->
+                        runCatching {
+                            com.roro.futurevoice.data.ScenarioStore.shared(appContext)
+                                .load(config.targetLanguage).firstOrNull { it.id == id }
+                        }.getOrNull()
+                    }.let { com.roro.futurevoice.data.StarterSituation.of(it) }
+                    val say = starter?.learnerFirstLine(config.targetLanguage)
+                    if (starter != null && say != null) {
+                        val chrome = com.roro.futurevoice.core.UILanguage.localized(appContext)
+                        val meaning = if (LanguageCatalog.sameLanguage(config.targetLanguage, config.nativeLanguage)) ""
+                            else starter.learnerFirstMeaning?.let { chrome.getString(it) }.orEmpty()
+                        _state.update { it.copy(coachReply = CoachReply(
+                            say = say, meaning = meaning, turnId = StoreJson.newId(),
+                            heading = chrome.getString(com.roro.futurevoice.R.string.you_go_first))) }
+                        connectRealtime(config, null, emptyList())
+                        return@launch
+                    }
+                }
                 // The first line, spoken by the fluent self before the learner
                 // says anything — spoken BY THE GATEWAY, not the app: two
                 // audio engines fighting over one session is how a call goes
@@ -472,7 +497,16 @@ class TalkViewModel(context: Context) : ViewModel() {
                                 FreeTalkOpeners.fallbackOpener(config.targetLanguage)
                             }
                         }
-                    } else runCatching {
+                    } else config.scenarioId?.let { id ->
+                        // A scenario with a stored pool (a ready-made
+                        // situation's written greetings, or an iOS-made
+                        // pool): rotate it — instant, no request (iOS
+                        // `nextScenarioOpener`).
+                        runCatching {
+                            com.roro.futurevoice.data.ScenarioStore.shared(appContext)
+                                .nextOpener(id, config.targetLanguage)
+                        }.getOrNull()
+                    } ?: runCatching {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
                                 config.targetLanguage, config.nativeLanguage, cast = config.cast),

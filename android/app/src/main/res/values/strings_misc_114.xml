@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- iOS 1.1.4 (plan 2d.7): Talk's Everyday situations, Say it again's
+     teleprompter, the day card's Save to Photos. Values copied from the
+     iOS catalog at ebf848e. -->
+<resources>
+    <string name="everyday">Everyday</string>
+    <string name="you_go_first">You go first</string>
+    <string name="starter_meeting_title">Meeting someone new</string>
+    <string name="starter_meeting_role">someone you just met</string>
+    <string name="starter_cafe_title">At a café</string>
+    <string name="starter_cafe_role">a barista</string>
+    <string name="starter_restaurant_title">At a restaurant</string>
+    <string name="starter_restaurant_role">a server</string>
+    <string name="starter_street_title">On the street</string>
+    <string name="starter_street_role">a passerby</string>
+    <string name="starter_street_first_meaning">Excuse me, how do I get to the [station]?</string>
+    <string name="starter_shop_title">At a clothing store</string>
+    <string name="starter_shop_role">a shop assistant</string>
+    <string name="starter_clinic_title">Calling a clinic</string>
+    <string name="starter_clinic_role">a clinic receptionist</string>
+    <string name="starter_hotel_title">At a hotel</string>
+    <string name="starter_hotel_role">a front desk clerk</string>
+    <string name="starter_station_title">At the train station</string>
+    <string name="starter_station_role">a ticket agent</string>
+    <string name="starter_friend_title">With a friend</string>
+    <string name="starter_friend_role">a friend</string>
+    <string name="starter_neighbor_title">With a neighbor</string>
+    <string name="starter_neighbor_role">a neighbor</string>
+    <string name="say_again_moves_on">Moves on when you finish</string>
+    <string name="save_to_photos">Save to Photos</string>
+    <string name="saved_to_photos">Saved to Photos</string>
+    <string name="allow_access_to_photos">Allow access to Photos</string>
+    <string name="photos_turn_on_in_settings">Turn on Photos for nawana in Settings to save the card.</string>
+</resources>

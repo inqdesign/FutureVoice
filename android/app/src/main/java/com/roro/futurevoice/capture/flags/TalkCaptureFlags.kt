@@ -41,4 +41,8 @@ object TalkCaptureFlags {
      * (iOS `DebugCapture.stubWordEntry`).
      */
     @JvmField var stubGoalEntry: WordLore.Entry? = null
+
+    /** The Discover chip Talk opens on (iOS `previewScenariosTab`, the
+     *  `home-scenarios` capture opens on Everyday). */
+    @JvmField var discoverTab: com.roro.futurevoice.ui.DiscoverTab? = null
 }

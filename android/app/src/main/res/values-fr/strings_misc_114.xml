@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- iOS 1.1.4 (plan 2d.7): Talk's Everyday situations, Say it again's
+     teleprompter, the day card's Save to Photos. Values copied from the
+     iOS catalog at ebf848e. -->
+<resources>
+    <string name="everyday">Quotidien</string>
+    <string name="you_go_first">À toi de commencer</string>
+    <string name="starter_meeting_title">Avec quelqu’un de nouveau</string>
+    <string name="starter_meeting_role">quelqu’un que tu viens de rencontrer</string>
+    <string name="starter_cafe_title">Au café</string>
+    <string name="starter_cafe_role">un barista</string>
+    <string name="starter_restaurant_title">Au restaurant</string>
+    <string name="starter_restaurant_role">un serveur</string>
+    <string name="starter_street_title">Dans la rue</string>
+    <string name="starter_street_role">un passant</string>
+    <string name="starter_street_first_meaning">Excusez-moi, comment aller à la [gare] ?</string>
+    <string name="starter_shop_title">Dans un magasin de vêtements</string>
+    <string name="starter_shop_role">un vendeur</string>
+    <string name="starter_clinic_title">Appeler le cabinet médical</string>
+    <string name="starter_clinic_role">la secrétaire médicale</string>
+    <string name="starter_hotel_title">À l’hôtel</string>
+    <string name="starter_hotel_role">le réceptionniste</string>
+    <string name="starter_station_title">À la gare</string>
+    <string name="starter_station_role">le guichetier</string>
+    <string name="starter_friend_title">Avec un ami</string>
+    <string name="starter_friend_role">un ami</string>
+    <string name="starter_neighbor_title">Avec un voisin</string>
+    <string name="starter_neighbor_role">un voisin</string>
+    <string name="say_again_moves_on">Ça continue quand tu as fini</string>
+    <string name="save_to_photos">Enregistrer dans Photos</string>
+    <string name="saved_to_photos">Enregistrée dans Photos</string>
+    <string name="allow_access_to_photos">Autorise l’accès à Photos</string>
+    <string name="photos_turn_on_in_settings">Active Photos pour nawana dans Réglages pour enregistrer la carte.</string>
+</resources>

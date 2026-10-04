@@ -141,6 +141,7 @@ import com.roro.futurevoice.data.SituationTree
 import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CheckCircle
 import com.roro.futurevoice.data.Counterpart
 import com.roro.futurevoice.data.CounterpartStore
 import androidx.compose.foundation.lazy.LazyRow
@@ -157,6 +158,7 @@ import com.roro.futurevoice.net.NewsClient
 import com.roro.futurevoice.net.TopicClient
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.ScenarioStore
+import com.roro.futurevoice.data.StarterSituation
 import com.roro.futurevoice.talk.Scenario
 import androidx.compose.material3.AlertDialog
 import com.roro.futurevoice.talk.SuggestedTopic
@@ -443,6 +445,39 @@ fun RootScreen() {
     VoiceRevivalHost(app)
 
     val morphScope = rememberCoroutineScope()
+    /** Every metered launcher from the home lands here (`mint` = an unsaved
+     *  ready-made situation, saved once the gate passes). */
+    fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?) {
+        // The paywall is asked here, at the TAP — every metered
+        // launcher (free talk, a news story, a scenario, a widget
+        // deep link) meets in this one callback, so one gate covers
+        // them all. Met only as a 402, it would arrive after the call
+        // screen was already up.
+        gate {
+            fun open() {
+                callTopic = topic; callFacts = facts; callScenarioId = scenarioId
+                // The FREE talk is the ring's own tap: its surface morphs
+                // into the call pill (iOS). Every other launcher opens flat.
+                if (topic.isEmpty() && scenarioId == null && tab == HomeTab.TALK)
+                    TalkMorph.open(morphScope) { inCall = true }
+                else inCall = true
+            }
+            // A ready-made situation (`StarterSituation`) is minted on
+            // its first tap that gets past the gate — never before it —
+            // and saved on every tap after (the row is refreshed from
+            // the catalog), BEFORE the call reads it.
+            if (mint == null) open()
+            else gateScope.launch {
+                val store = ScenarioStore.shared(context)
+                val isNew = store.load(state.targetLanguage).none { it.id == mint.id }
+                store.save(mint.copy(lastUsedAt = System.currentTimeMillis()), state.targetLanguage)
+                StoreEvents.bump()
+                if (isNew) com.roro.futurevoice.core.Analytics.capture("scenario_created",
+                    mapOf("is_topic" to false, "starter" to (mint.starterId ?: "")))
+                open()
+            }
+        }
+    }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     when {
         welcomePreview -> WelcomeScreen(onGetStarted = { welcomePreview = false })
@@ -870,21 +905,8 @@ fun RootScreen() {
 
         else -> HomeScreen(
             state = state,
-            onStartCall = { topic, facts, scenarioId ->
-                // The paywall is asked here, at the TAP — every metered
-                // launcher (free talk, a news story, a scenario, a widget
-                // deep link) meets in this one callback, so one gate covers
-                // them all. Met only as a 402, it would arrive after the call
-                // screen was already up.
-                gate {
-                    callTopic = topic; callFacts = facts; callScenarioId = scenarioId
-                    // The FREE talk is the ring's own tap: its surface morphs
-                    // into the call pill (iOS). Every other launcher opens flat.
-                    if (topic.isEmpty() && scenarioId == null && tab == HomeTab.TALK)
-                        TalkMorph.open(morphScope) { inCall = true }
-                    else inCall = true
-                }
-            },
+            onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },
+            onStartStarter = { sc -> startCall(sc.promptBlurb, emptyList(), sc.id, sc) },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
@@ -1002,7 +1024,9 @@ internal fun SignInScreen(
     }
 }
 
-private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?)
+private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?,
+                                  /** An unsaved ready-made situation, saved once the gate passes. */
+                                  val mint: Scenario? = null)
 
 /**
  * "Make it yours" — the sign-up AFTER the clone: keep a voice already in the
@@ -1056,6 +1080,8 @@ internal enum class HomeTab(val label: Int) {
 internal fun HomeScreen(
     state: AppState,
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
+    /** A ready-made situation (`StarterSituation`), saved only once the tap passes the gate. */
+    onStartStarter: (Scenario) -> Unit = {},
     onOpenMe: () -> Unit,
     onOpenPractice: () -> Unit = {},
     onOpenDeck: () -> Unit = {},
@@ -1137,7 +1163,9 @@ internal fun HomeScreen(
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) pendingLaunch?.let { onStartCall(it.topic, it.facts, it.scenarioId) }
+        if (granted) pendingLaunch?.let { p ->
+            p.mint?.let(onStartStarter) ?: onStartCall(p.topic, p.facts, p.scenarioId)
+        }
         // A refusal has to be answerable: the tap did nothing and nothing on
         // screen said why, and the only route back is the system settings.
         else micDenied = true
@@ -1162,8 +1190,8 @@ internal fun HomeScreen(
                 TextButton(onClick = { micDenied = false }) { Text(stringResource(R.string.not_now)) }
             })
     }
-    fun launch(topic: String, facts: List<String>, scenarioId: String? = null) {
-        pendingLaunch = PendingLaunch(topic, facts, scenarioId)
+    fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null) {
+        pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint)
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
@@ -1270,12 +1298,18 @@ internal fun HomeScreen(
         visited += tab
         HomeTab.entries.filter { it in visited }.forEach { t ->
           androidx.compose.runtime.key(t) {
+            val pageScroll = rememberScrollState()
+            // Capture `home-scenarios` only: Talk opens scrolled to its
+            // bottom, where the Everyday list is (iOS `defaultScrollAnchor`).
+            if (t == HomeTab.TALK && com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab != null) {
+                LaunchedEffect(pageScroll.maxValue) { pageScroll.scrollTo(pageScroll.maxValue) }
+            }
             Column(
                 Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
                     // A hidden tab stays composed but is neither measured nor
                     // placed: nothing drawn, no touches.
                     .then(if (t == tab) Modifier else Modifier.layout { _, _ -> layout(0, 0) {} })
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(pageScroll)
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
@@ -1309,6 +1343,7 @@ internal fun HomeScreen(
                             onSavePersona = onSavePersona,
                             onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
                             onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
+                            onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc) },
                             onWatch = onWatch,
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
@@ -1609,6 +1644,8 @@ private fun DiscoverSection(
     enabled: Boolean,
     onPickNews: (SuggestedTopic) -> Unit,
     onPickScenario: (Scenario) -> Unit,
+    /** A ready-made situation, possibly not saved yet (`StarterSituation`). */
+    onPickStarter: (Scenario) -> Unit = {},
     onWatch: (String) -> Unit,
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
     /** The full collection — the Watch tab, which is where they all live. */
@@ -1619,7 +1656,11 @@ private fun DiscoverSection(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var newsTab by remember { mutableStateOf(true) }
+    // News · Everyday · Scenarios (iOS `DiscoverSection.Tab`, `5b0587a`).
+    var discoverTab by remember {
+        mutableStateOf(com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab ?: DiscoverTab.NEWS)
+    }
+    val newsTab = discoverTab == DiscoverTab.NEWS
     val interests = state.persona?.interests.orEmpty()
     val language = state.targetLanguage
 
@@ -1696,8 +1737,13 @@ private fun DiscoverSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SegmentChip(stringResource(R.string.news), newsTab) { newsTab = true }
-            SegmentChip(stringResource(R.string.scenarios), !newsTab) { newsTab = false }
+            SegmentChip(stringResource(R.string.news), newsTab) { discoverTab = DiscoverTab.NEWS }
+            SegmentChip(stringResource(R.string.everyday), discoverTab == DiscoverTab.EVERYDAY) {
+                discoverTab = DiscoverTab.EVERYDAY
+            }
+            SegmentChip(stringResource(R.string.scenarios), discoverTab == DiscoverTab.SCENARIOS) {
+                discoverTab = DiscoverTab.SCENARIOS
+            }
             Spacer(Modifier.weight(1f))
             if (newsTab) {
                 // Interests FIRST, then refresh — iOS's order, and the one that
@@ -1731,7 +1777,7 @@ private fun DiscoverSection(
                             tint = MaterialTheme.colorScheme.primary)
                     }
                 }
-            } else {
+            } else if (discoverTab == DiscoverTab.SCENARIOS) {
                 IconButton(onClick = { composing = true }) {
                     Icon(Icons.Filled.Add,
                         contentDescription = stringResource(R.string.make_your_own_situation),
@@ -1787,8 +1833,36 @@ private fun DiscoverSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        } else if (discoverTab == DiscoverTab.EVERYDAY) {
+            // Ready-made situations on a chip of their own, right under the
+            // chips. A tap starts the call; one already talked through
+            // carries a check.
+            StarterSituation.all.forEach { starter ->
+                val existing = scenarios.firstOrNull { it.starterId == starter.id }
+                val title = stringResource(starter.title)
+                val role = stringResource(starter.role)
+                DiscoverRow(
+                    title = title,
+                    caption = if (starter.showsRole) stringResource(R.string.with, role) else null,
+                    icon = Symbols.icon(starter.icon),
+                    onClick = if (enabled) ({
+                        onPickStarter(starter.scenario(scenarios, language, title, role))
+                    }) else null,
+                    trailing = if (existing?.lastUsedAt != null) ({
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.done),
+                                tint = androidx.compose.ui.graphics.Color(0xFF34C759),
+                                modifier = Modifier.size(20.dp))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline)
+                        }
+                    }) else null,
+                )
+            }
         } else {
-            val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true }
+            // The learner's own situations — ready-made ones live on Everyday.
+            val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true && it.starterId == null }
             live.take(5).forEach { sc ->
                 // WHO the scene is with, not what shelf it sits on — a
                 // category told the learner nothing they didn't already see.
@@ -1840,7 +1914,7 @@ private fun DiscoverSection(
                     onClick = onAllScenarios,
                 )
             }
-            if (scenarios.none { it.archivedAt == null && it.isMeeting != true }) {
+            if (scenarios.none { it.archivedAt == null && it.isMeeting != true && it.starterId == null }) {
                 DiscoverRow(
                     title = stringResource(R.string.make_your_own_situation),
                     icon = Icons.Filled.Add,
@@ -1858,6 +1932,9 @@ private fun DiscoverSection(
         )
     }
 }
+
+/** Talk's Discover chips (iOS `DiscoverSection.Tab`). */
+enum class DiscoverTab { NEWS, EVERYDAY, SCENARIOS }
 
 /**
  * Best-effort glyph for a free-form interest category — the fallback is the

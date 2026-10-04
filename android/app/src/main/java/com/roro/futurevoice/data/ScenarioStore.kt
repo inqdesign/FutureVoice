@@ -43,6 +43,21 @@ class ScenarioStore private constructor(context: Context) {
             })
         }
 
+    /**
+     * Rotate the stored opener pool for a scenario talk (iOS
+     * `nextScenarioOpener`): the line at the cursor, the cursor moved on.
+     * Null when the scenario carries no pool — the call then writes one.
+     */
+    suspend fun nextOpener(id: String, language: String = LanguageScope.active(appContext)): String? =
+        mutex.withLock {
+            val all = loadLocked(language)
+            val s = all.firstOrNull { it.id == id } ?: return@withLock null
+            val pool = s.openers?.takeIf { it.isNotEmpty() } ?: return@withLock null
+            val cursor = (s.openerCursor ?: 0).mod(pool.size)
+            write(language, all.map { if (it.id == id) it.copy(openerCursor = (cursor + 1) % pool.size) else it })
+            pool[cursor]
+        }
+
     /** A finished book leaves the shelf but keeps everything it taught. */
     suspend fun setArchived(id: String, archived: Boolean,
                             language: String = LanguageScope.active(appContext)) = mutex.withLock {

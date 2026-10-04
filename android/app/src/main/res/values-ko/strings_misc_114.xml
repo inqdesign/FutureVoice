@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- iOS 1.1.4 (plan 2d.7): Talk's Everyday situations, Say it again's
+     teleprompter, the day card's Save to Photos. Values copied from the
+     iOS catalog at ebf848e. -->
+<resources>
+    <string name="everyday">일상</string>
+    <string name="you_go_first">먼저 말을 걸어 보세요</string>
+    <string name="starter_meeting_title">처음 만난 사람과</string>
+    <string name="starter_meeting_role">방금 만난 사람</string>
+    <string name="starter_cafe_title">카페에서</string>
+    <string name="starter_cafe_role">바리스타</string>
+    <string name="starter_restaurant_title">식당에서</string>
+    <string name="starter_restaurant_role">종업원</string>
+    <string name="starter_street_title">길에서</string>
+    <string name="starter_street_role">지나가는 사람</string>
+    <string name="starter_street_first_meaning">저기요, [역]에 어떻게 가요?</string>
+    <string name="starter_shop_title">옷 가게에서</string>
+    <string name="starter_shop_role">점원</string>
+    <string name="starter_clinic_title">병원에 전화하기</string>
+    <string name="starter_clinic_role">병원 접수 직원</string>
+    <string name="starter_hotel_title">호텔에서</string>
+    <string name="starter_hotel_role">프런트 직원</string>
+    <string name="starter_station_title">기차역에서</string>
+    <string name="starter_station_role">매표소 직원</string>
+    <string name="starter_friend_title">친구와</string>
+    <string name="starter_friend_role">친구</string>
+    <string name="starter_neighbor_title">이웃과</string>
+    <string name="starter_neighbor_role">이웃</string>
+    <string name="say_again_moves_on">말을 마치면 다음으로 넘어가요</string>
+    <string name="save_to_photos">사진첩에 저장</string>
+    <string name="saved_to_photos">사진첩에 저장했어요</string>
+    <string name="allow_access_to_photos">사진 접근을 허용해 주세요</string>
+    <string name="photos_turn_on_in_settings">카드를 저장하려면 설정에서 나와나의 사진 접근을 켜 주세요.</string>
+</resources>

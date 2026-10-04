@@ -105,6 +105,8 @@ object CaptureTalk {
         "home-plus" to { ctx -> Home(ctx, "home-plus") },
         "home-light" to { ctx -> Home(ctx, "home-light") },
         "home-light-fresh" to { ctx -> Home(ctx, "home-light-fresh") },
+        // Talk's Discover on its Everyday chip (iOS `5b0587a`).
+        "home-scenarios" to { ctx -> Home(ctx, "home-scenarios") },
         // iOS: the full RootTabView. Android's tab shell IS HomeScreen.
         "tabs" to { ctx -> Home(ctx, "tabs") },
         "first-call" to { ctx -> FirstCall(ctx) },
@@ -208,6 +210,8 @@ object CaptureTalk {
     @Composable
     private fun Home(context: Context, mode: String) {
         TalkCaptureFlags.headerAccount = headerAccount(mode)
+        TalkCaptureFlags.discoverTab =
+            if (mode == "home-scenarios") com.roro.futurevoice.ui.DiscoverTab.EVERYDAY else null
         var state by remember { mutableStateOf<AppState?>(null) }
         Seeded(work = {
             when (mode) {
