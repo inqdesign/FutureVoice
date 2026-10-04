@@ -7,6 +7,12 @@ struct SpeechPrompterView: View {
     @StateObject private var session: SpeechTakeSession
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speech.textSize") private var textSize: Double = 28
+    @Environment(\.colorScheme) private var colorScheme
+    /// The take screen's geometry, for drawing the same layout into the video.
+    @State private var screenSize: CGSize = .zero
+    @State private var prompterRect: CGRect = .zero
+    @State private var cardRect: CGRect = .zero
+    private static let screenSpace = "take-screen"
     @State private var showingScript = false
     @State private var showingTakes = false
     @ObservedObject private var store = SpeechStore.shared
@@ -46,6 +52,36 @@ struct SpeechPrompterView: View {
         .interactiveDismissDisabled()
     }
 
+    /// Hands the composer this screen's layout and the script drawn three
+    /// ways. Once per take, at the tap, before the countdown hides the cost.
+    private func prepareVideo() {
+        guard session.cameraOn, screenSize.width > 0, prompterRect.width > 0, cardRect.width > 0 else {
+            session.prepareVideo(layout: .init(canvas: .zero, prompter: .zero, card: .zero,
+                                               cardRadius: 0, background: .clear), column: nil)
+            return
+        }
+        let background = UIColor.systemBackground.resolvedColor(
+            with: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light))
+        let layout = SpeechVideoComposer.Layout(canvas: screenSize, prompter: prompterRect, card: cardRect,
+                                                cardRadius: 24, background: background)
+        let scale = SpeechVideoComposer.scale(for: layout)
+        func draw(_ ink: SpeechPrompterColumn.Ink) -> CGImage? {
+            let renderer = ImageRenderer(content:
+                SpeechPrompterColumn(track: session.track, cursor: 0, language: session.script.language,
+                                     textSize: textSize, width: prompterRect.width, ink: ink,
+                                     onCurrentWord: { _ in })
+                    .environment(\.colorScheme, colorScheme))
+            renderer.scale = scale
+            renderer.isOpaque = false
+            return renderer.cgImage
+        }
+        guard let unread = draw(.unread), let read = draw(.read), let accent = draw(.accent) else {
+            session.prepareVideo(layout: layout, column: nil)
+            return
+        }
+        session.prepareVideo(layout: layout, column: .init(unread: unread, read: read, accent: accent, scale: scale))
+    }
+
     private func close() {
         session.tearDown()
         dismiss()
@@ -59,12 +95,18 @@ struct SpeechPrompterView: View {
         // look into the camera. The controls live on the camera card.
         VStack(spacing: 0) {
             SpeechTeleprompter(track: session.track, cursor: session.cursor,
-                               language: session.script.language, textSize: textSize)
+                               language: session.script.language, textSize: textSize,
+                               composer: session.composer)
                 .frame(maxHeight: .infinity)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.screenSpace)) } action: {
+                    prompterRect = $0
+                }
             progressStrip
             bottomHalf
                 .frame(maxHeight: .infinity)
         }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { screenSize = $0 }
+        .coordinateSpace(.named(Self.screenSpace))
         .background(Color(.systemBackground))
         .overlay { overlay }
     }
@@ -197,6 +239,9 @@ struct SpeechPrompterView: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.screenSpace)) } action: {
+                cardRect = $0
+            }
             .padding(.horizontal, 12)
 
             controls
@@ -245,7 +290,14 @@ struct SpeechPrompterView: View {
             .accessibilityLabel(session.cameraOn ? Text("Turn camera off") : Text("Turn camera on"))
 
             Button {
-                Task { isRecording ? await session.stop() : await session.start() }
+                Task {
+                    if isRecording {
+                        await session.stop()
+                    } else {
+                        prepareVideo()
+                        await session.start()
+                    }
+                }
             } label: {
                 ZStack {
                     Circle().strokeBorder(cameraShowing ? Color.white : Color.secondary.opacity(0.4), lineWidth: 4).frame(width: 76, height: 76)
@@ -323,8 +375,11 @@ struct SpeechTeleprompter: View {
     let cursor: Int
     let language: String
     let textSize: Double
+    /// Told where the prompter is every frame, so the video scrolls with it.
+    var composer: SpeechVideoComposer? = nil
 
     @StateObject private var scroller = PrompterScroller()
+    @State private var word = WordFrame()
 
     /// One line of text plus its spacing, and a little air above it.
     private var readingLine: CGFloat { textSize * 1.75 + 8 }
@@ -332,6 +387,7 @@ struct SpeechTeleprompter: View {
     struct WordFrame: Equatable {
         var minX: CGFloat = 0
         var minY: CGFloat = 0
+        var width: CGFloat = 0
         var height: CGFloat = 0
     }
 
@@ -341,6 +397,8 @@ struct SpeechTeleprompter: View {
             SpeechPrompterColumn(track: track, cursor: cursor, language: language,
                                  textSize: textSize, width: geo.size.width,
                                  onCurrentWord: { frame in
+                                     word = frame
+                                     publish()
                                      let across = min(1, max(0, (frame.minX - 24) / lineWidth))
                                      let lineAdvance = frame.height + textSize * 0.35
                                      scroller.setTarget(frame.minY + across * lineAdvance,
@@ -364,6 +422,16 @@ struct SpeechTeleprompter: View {
         }
         .onAppear { scroller.start() }
         .onDisappear { scroller.stop() }
+        .onChange(of: scroller.position) { _, _ in publish() }
+    }
+
+    private func publish() {
+        guard let composer else { return }
+        // Past the last word nothing is current, as on screen.
+        let current = cursor < track.words.count
+            ? CGRect(x: word.minX, y: word.minY, width: word.width, height: word.height)
+            : CGRect(x: 100_000, y: word.minY + word.height + 100_000, width: 0, height: 0)
+        composer.setPrompter(.init(offset: scroller.position - readingLine, word: current))
     }
 }
 
@@ -450,10 +518,15 @@ struct SpeechPrompterColumn: View, Equatable {
     let language: String
     let textSize: Double
     let width: CGFloat
+    /// `.live` colours by the cursor; the others paint every word one way —
+    /// the three layers the video is drawn from.
+    var ink: Ink = .live
     let onCurrentWord: (SpeechTeleprompter.WordFrame) -> Void
 
+    enum Ink { case live, unread, read, accent }
+
     static func == (a: Self, b: Self) -> Bool {
-        a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width
+        a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width && a.ink == b.ink
             && a.language == b.language && a.track.words.count == b.track.words.count
     }
 
@@ -470,10 +543,10 @@ struct SpeechPrompterColumn: View, Equatable {
                             .font(.system(size: textSize, weight: .semibold))
                             .foregroundStyle(color(for: word.id))
                             .background {
-                                if word.id == currentWord {
+                                if ink == .live && word.id == currentWord {
                                     Color.clear.onGeometryChange(for: SpeechTeleprompter.WordFrame.self) { proxy in
                                         let f = proxy.frame(in: .named(Self.space))
-                                        return .init(minX: f.minX, minY: f.minY, height: f.height)
+                                        return .init(minX: f.minX, minY: f.minY, width: f.width, height: f.height)
                                     } action: { frame in
                                         onCurrentWord(frame)
                                     }
@@ -489,6 +562,12 @@ struct SpeechPrompterColumn: View, Equatable {
     }
 
     private func color(for id: Int) -> Color {
+        switch ink {
+        case .unread: return .primary
+        case .read: return .secondary.opacity(0.55)
+        case .accent: return .accentColor
+        case .live: break
+        }
         if id < cursor { return .secondary.opacity(0.55) }
         if id == cursor { return .accentColor }
         return .primary

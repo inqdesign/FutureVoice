@@ -154,3 +154,45 @@ final class SpeechOwnScriptTests: XCTestCase {
         XCTAssertEqual(SpeechGenre.writable.count, 5)
     }
 }
+
+import SwiftUI
+import CoreImage
+
+final class SpeechVideoComposerTests: XCTestCase {
+    /// Draws one frame from a fake camera picture and writes it out, so the
+    /// video's layout can be looked at (`[speech-frame] <path>` in the log).
+    @MainActor
+    func testComposesTheTakeScreen() throws {
+        let script = SpeechLibrary.builtIn(for: "en")!
+        let track = SpeechPrompterTrack(script: script.body, language: "en")
+        let layout = SpeechVideoComposer.Layout(
+            canvas: CGSize(width: 402, height: 820),
+            prompter: CGRect(x: 0, y: 0, width: 402, height: 360),
+            card: CGRect(x: 12, y: 380, width: 378, height: 420),
+            cardRadius: 24, background: .white)
+        let scale = SpeechVideoComposer.scale(for: layout)
+        func draw(_ ink: SpeechPrompterColumn.Ink) -> CGImage {
+            let r = ImageRenderer(content: SpeechPrompterColumn(track: track, cursor: 0, language: "en",
+                                                                 textSize: 28, width: 402, ink: ink,
+                                                                 onCurrentWord: { _ in }))
+            r.scale = scale
+            return r.cgImage!
+        }
+        let column = SpeechVideoComposer.Column(unread: draw(.unread), read: draw(.read),
+                                                accent: draw(.accent), scale: scale)
+        let composer = SpeechVideoComposer()
+        let cam = CIImage(color: CIColor(red: 0.6, green: 0.45, blue: 0.4)).cropped(to: CGRect(x: 0, y: 0, width: 720, height: 1280))
+        // Reading the second line: the first line above it is read.
+        let frame = composer.compose(
+            camera: cam, layout: layout,
+            column: (CIImage(cgImage: column.unread), CIImage(cgImage: column.read),
+                     CIImage(cgImage: column.accent), scale),
+            prompter: .init(offset: 20, word: CGRect(x: 120, y: 54, width: 80, height: 34)))
+        let ctx = CIContext()
+        let cg = try XCTUnwrap(ctx.createCGImage(frame, from: CGRect(x: 0, y: 0, width: 720, height: 1468)))
+        XCTAssertEqual(cg.width, 720)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("speech-frame.png")
+        try XCTUnwrap(UIImage(cgImage: cg).pngData()).write(to: url)
+        print("[speech-frame] \(url.path)")
+    }
+}

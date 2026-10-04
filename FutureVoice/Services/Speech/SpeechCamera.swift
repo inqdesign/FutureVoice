@@ -1,23 +1,33 @@
 @preconcurrency import AVFoundation
-import ReplayKit
 import SwiftUI
 import UIKit
 
 /// The front camera for a speech take. VIDEO ONLY, on purpose: the voice is
 /// captured by the app's own mic path (`LiveTranscriber` + `AudioRecorder`,
 /// voice processing, the worn mic wins), and an `AVCaptureSession` holding an
-/// audio input would reconfigure the shared audio session under it. The two
-/// are muxed into one movie after the take (`SpeechMediaMerger`).
+/// audio input would reconfigure the shared audio session under it.
+///
+/// Frames go to `frameHandler` (on the camera's queue), where
+/// `SpeechVideoComposer` draws the prompter over each one — the saved video
+/// is the take screen, made by the app rather than recorded off the screen,
+/// so iOS never asks to record the screen and no button is in the picture.
 @MainActor
 final class SpeechCamera: NSObject, ObservableObject {
     let session = AVCaptureSession()
     @Published private(set) var isRunning = false
     @Published private(set) var denied = false
 
-    private let output = AVCaptureMovieFileOutput()
+    private let output = AVCaptureVideoDataOutput()
     private let queue = DispatchQueue(label: "com.roro.futurevoice.speech-camera")
     private var configured = false
-    private var finished: CheckedContinuation<URL?, Never>?
+    private let handlerBox = FrameHandlerBox()
+
+    /// Called for every frame, on the camera's queue. Frames are portrait
+    /// and mirrored like the preview, stamped on the host clock.
+    nonisolated var frameHandler: (@Sendable (CMSampleBuffer) -> Void)? {
+        get { handlerBox.get() }
+        set { handlerBox.set(newValue) }
+    }
 
     func start() async {
         guard !isRunning else { return }
@@ -49,11 +59,14 @@ final class SpeechCamera: NSObject, ObservableObject {
         // The mic is ours; never let the capture session touch the audio
         // session the recognizer is running on.
         session.automaticallyConfiguresApplicationAudioSession = false
-        session.sessionPreset = .high
+        session.sessionPreset = .hd1280x720
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input), session.canAddOutput(output) else { return false }
         session.addInput(input)
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        output.alwaysDiscardsLateVideoFrames = true
+        output.setSampleBufferDelegate(self, queue: queue)
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
             if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
@@ -64,37 +77,20 @@ final class SpeechCamera: NSObject, ObservableObject {
         }
         return true
     }
+}
 
-    func startRecording() -> URL? {
-        guard isRunning, !output.isRecording else { return nil }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("speech-\(UUID().uuidString).mov")
-        output.startRecording(to: url, recordingDelegate: self)
-        return url
-    }
-
-    /// Ends the movie and returns it once it is closed on disk.
-    func stopRecording() async -> URL? {
-        guard output.isRecording else { return nil }
-        return await withCheckedContinuation { cont in
-            finished = cont
-            output.stopRecording()
-        }
+extension SpeechCamera: AVCaptureVideoDataOutputSampleBufferDelegate {
+    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
+                                   from connection: AVCaptureConnection) {
+        frameHandler?(sampleBuffer)
     }
 }
 
-extension SpeechCamera: AVCaptureFileOutputRecordingDelegate {
-    nonisolated func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL,
-                                from connections: [AVCaptureConnection], error: Error?) {
-        // A movie stopped by us reports an error with "successfully finished"
-        // set; only a file that genuinely failed is dropped.
-        let ok = error == nil
-            || ((error as NSError?)?.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool ?? false)
-        Task { @MainActor in
-            self.finished?.resume(returning: ok ? outputFileURL : nil)
-            self.finished = nil
-        }
-    }
+private final class FrameHandlerBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var handler: (@Sendable (CMSampleBuffer) -> Void)?
+    func get() -> (@Sendable (CMSampleBuffer) -> Void)? { lock.withLock { handler } }
+    func set(_ h: (@Sendable (CMSampleBuffer) -> Void)?) { lock.withLock { handler = h } }
 }
 
 /// The live preview. The one UIKit wrap on this screen — SwiftUI has no
@@ -164,108 +160,3 @@ enum SpeechMediaMerger {
     }
 }
 
-/// The whole take screen as one video — prompter on top, camera below,
-/// exactly what the reader saw — through ReplayKit's in-app CAPTURE.
-///
-/// Capture, not `startRecording`: each frame arrives with its presentation
-/// time on the HOST clock, and the take's voice start is stamped on the same
-/// clock, so picture and voice are lined up by measurement. The first build
-/// used `startRecording` and lined them up by when the start call returned —
-/// which is not when the first frame was taken — and the voice drifted off
-/// the lips (reported on device, 2026-10-04).
-///
-/// The recorder's own mic stays OFF: the voice is the app's capture (voice
-/// processing, the worn mic), muxed in afterwards. iOS asks the learner
-/// before it records ("Allow screen recording?"); a refusal falls back to
-/// the camera take.
-final class SpeechScreenRecorder: @unchecked Sendable {
-    static let shared = SpeechScreenRecorder()
-
-    struct Result {
-        let url: URL
-        /// Host-clock seconds of the first frame.
-        let firstFrameHost: Double
-    }
-
-    private let queue = DispatchQueue(label: "com.roro.futurevoice.speech-screen")
-    private var writer: AVAssetWriter?
-    private var input: AVAssetWriterInput?
-    private var firstPTS: CMTime?
-    private var url: URL?
-    private var failed = false
-
-    var isCapturing: Bool { RPScreenRecorder.shared().isRecording }
-
-    /// Starts capturing. False when it couldn't (refused, unavailable).
-    @MainActor
-    func start() async -> Bool {
-        let recorder = RPScreenRecorder.shared()
-        guard recorder.isAvailable, !recorder.isRecording else { return false }
-        recorder.isMicrophoneEnabled = false
-        recorder.isCameraEnabled = false
-        queue.sync {
-            writer = nil
-            input = nil
-            firstPTS = nil
-            failed = false
-            url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("speech-screen-\(UUID().uuidString).mov")
-        }
-        do {
-            try await recorder.startCapture { [weak self] buffer, type, error in
-                guard error == nil, type == .video, let self else { return }
-                self.queue.sync { self.append(buffer) }
-            }
-            return true
-        } catch {
-            return false
-        }
-    }
-
-    /// Runs on `queue`.
-    private func append(_ buffer: CMSampleBuffer) {
-        guard !failed, CMSampleBufferDataIsReady(buffer) else { return }
-        let pts = CMSampleBufferGetPresentationTimeStamp(buffer)
-        if writer == nil {
-            guard let url, let format = CMSampleBufferGetFormatDescription(buffer) else { failed = true; return }
-            let dims = CMVideoFormatDescriptionGetDimensions(format)
-            guard let w = try? AVAssetWriter(outputURL: url, fileType: .mov) else { failed = true; return }
-            let i = AVAssetWriterInput(mediaType: .video, outputSettings: [
-                AVVideoCodecKey: AVVideoCodecType.h264,
-                AVVideoWidthKey: Int(dims.width),
-                AVVideoHeightKey: Int(dims.height),
-            ])
-            i.expectsMediaDataInRealTime = true
-            guard w.canAdd(i) else { failed = true; return }
-            w.add(i)
-            guard w.startWriting() else { failed = true; return }
-            w.startSession(atSourceTime: pts)
-            writer = w
-            input = i
-            firstPTS = pts
-        }
-        if let input, input.isReadyForMoreMediaData {
-            input.append(buffer)
-        }
-    }
-
-    /// Stops and closes the movie; nil if nothing usable was captured.
-    @MainActor
-    func stop() async -> Result? {
-        let recorder = RPScreenRecorder.shared()
-        if recorder.isRecording { try? await recorder.stopCapture() }
-        let (w, first, u, bad): (AVAssetWriter?, CMTime?, URL?, Bool) = queue.sync {
-            input?.markAsFinished()
-            return (writer, firstPTS, url, failed)
-        }
-        guard let w, let first, let u, !bad, w.status == .writing else { return nil }
-        await w.finishWriting()
-        guard w.status == .completed else { return nil }
-        return Result(url: u, firstFrameHost: first.seconds)
-    }
-
-    @MainActor
-    func discard() {
-        Task { if let r = await stop() { try? FileManager.default.removeItem(at: r.url) } }
-    }
-}

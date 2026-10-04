@@ -55,7 +55,10 @@ final class SpeechTakeSession: ObservableObject {
     /// When the screen recording started — it begins before the countdown,
     /// so the voice's start is measured against it. Nil = not recording the
     /// screen (camera off, refused, unavailable).
-    private var capturingScreen = false
+    /// Draws the take screen into the saved video, frame by frame.
+    let composer = SpeechVideoComposer()
+    /// The screen handed the composer its layout and script images.
+    private var videoPrepared = false
     /// Host-clock seconds when the voice recording began — the same clock
     /// the screen frames are stamped on.
     private var voiceStartHost: Double?
@@ -80,6 +83,8 @@ final class SpeechTakeSession: ObservableObject {
         cameraOn = defaults.object(forKey: Self.cameraKey) as? Bool ?? true
         followVoice = defaults.object(forKey: Self.followKey) as? Bool ?? true
         speed = defaults.object(forKey: Self.speedKey) as? Double ?? 1.0
+
+        camera.frameHandler = { [composer] buffer in composer.append(buffer) }
 
         live.$transcript
             .receive(on: RunLoop.main)
@@ -118,7 +123,6 @@ final class SpeechTakeSession: ObservableObject {
         // With the camera on, the take is saved as the whole screen —
         // prompter and camera together. Started before the mic, so iOS's
         // permission alert (if it shows) never sits inside the take.
-        capturingScreen = cameraOn && camera.isRunning ? await SpeechScreenRecorder.shared.start() : false
         do {
             try live.start(locale: script.language,
                            preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
@@ -131,7 +135,6 @@ final class SpeechTakeSession: ObservableObject {
             wavURL = try recorder.prepare(quality: .sttOptimal)
         } catch {
             live.stop()
-            if capturingScreen { SpeechScreenRecorder.shared.discard(); capturingScreen = false }
             phase = .failed(explain("The microphone couldn't start. Try again."))
             return
         }
@@ -144,12 +147,21 @@ final class SpeechTakeSession: ObservableObject {
         try? recorder.beginPrepared()
         voiceStartHost = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         // Screen refused or unavailable: keep the camera's own take instead.
-        recordingVideo = !capturingScreen && cameraOn && camera.startRecording() != nil
+        recordingVideo = cameraOn && camera.isRunning && videoPrepared
+        if recordingVideo { composer.begin() }
         HapticEngine.countdownGo()
         startedAt = Date()
         lastAdvanceAt = Date()
         phase = .recording
         runTicker()
+    }
+
+    /// Called by the screen right before a take: where everything is, and
+    /// the script drawn for the video.
+    func prepareVideo(layout: SpeechVideoComposer.Layout, column: SpeechVideoComposer.Column?) {
+        guard let column else { videoPrepared = false; return }
+        composer.prepare(layout: layout, column: column)
+        videoPrepared = true
     }
 
     private var isFailed: Bool { if case .failed = phase { return true } else { return false } }
@@ -230,19 +242,13 @@ final class SpeechTakeSession: ObservableObject {
 
         // The video is finished in the background: the result never waits
         // on it.
-        let fromScreen = capturingScreen
         let fromCamera = recordingVideo
         let voiceHost = voiceStartHost
-        capturingScreen = false
         recordingVideo = false
         // (movie, seconds the picture started before the voice)
-        let videoStop: Task<(URL, Double)?, Never> = Task { [camera] in
-            if fromScreen {
-                guard let r = await SpeechScreenRecorder.shared.stop() else { return nil }
-                return (r.url, voiceHost.map { $0 - r.firstFrameHost } ?? 0)
-            }
-            if fromCamera, let url = await camera.stopRecording() { return (url, 0) }
-            return nil
+        let videoStop: Task<(URL, Double)?, Never> = Task { [composer] in
+            guard fromCamera, let r = await composer.finish() else { return nil }
+            return (r.url, voiceHost.map { $0 - r.firstFrameHost } ?? 0)
         }
 
         guard let recorded else {
@@ -304,7 +310,7 @@ final class SpeechTakeSession: ObservableObject {
         let resultMs = ms(stoppedAt)
         // Flagged BEFORE the result shows, so it opens on "Preparing your
         // video…" rather than flashing the audio player first.
-        if fromScreen || fromCamera { SpeechStore.shared.markVideoPending(id, true) }
+        if fromCamera { SpeechStore.shared.markVideoPending(id, true) }
         phase = .done(take)
 
         // Picture and voice, put together behind the result.
@@ -340,8 +346,7 @@ final class SpeechTakeSession: ObservableObject {
             "overall": metrics.overall,
             "accuracy": metrics.accuracy,
             "camera": hasVideo,
-            "screen": fromScreen,
-            "follow": followVoice,
+                        "follow": followVoice,
             "audio_grounded": audioGrounded,
             // Where the wait went: stop → result on screen, the reading part
             // of it, and the coach that follows.
@@ -386,10 +391,7 @@ final class SpeechTakeSession: ObservableObject {
             if let url { try? FileManager.default.removeItem(at: url) }
             chunkReads.forEach { $0.cancel() }
             chunkReads = []
-            if recordingVideo {
-                Task { if let v = await camera.stopRecording() { try? FileManager.default.removeItem(at: v) } }
-            }
-            if capturingScreen { SpeechScreenRecorder.shared.discard(); capturingScreen = false }
+            if recordingVideo { composer.cancel(); recordingVideo = false }
         }
         camera.stop()
     }
