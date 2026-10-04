@@ -101,8 +101,17 @@ struct ConversationView: View {
     /// level decides (`CoachMode.resolve`: on for A1/A2).
     @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
     @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
+    /// Read from UserDefaults, not from the two wrappers: the realtime
+    /// callbacks (`advanceCoach` and the rest) are closures captured when the
+    /// call opened, and in that copy of the view the wrappers kept the value
+    /// they had then — measured 2026-10-04, coach mode switched off mid-call
+    /// on build 71 and `CoachSuggester` kept running and drawing "Try saying"
+    /// for the rest of the call. The wrappers stay so the view still
+    /// re-renders (and `onChange(of: coachMode)` fires) when the sheet flips it.
     private var coachMode: Bool {
-        CoachMode.resolve(choice: coachModeChoice, levelRaw: proficiencyRaw)
+        _ = coachModeChoice
+        _ = proficiencyRaw
+        return CoachMode.isOn
     }
     /// Watched only to tell a live call when the rung moves (the sheet
     /// writes it) — see the `CallSettingsSheet` presentation.
