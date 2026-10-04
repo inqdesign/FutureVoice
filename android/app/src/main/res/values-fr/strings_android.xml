@@ -288,4 +288,25 @@
     <string name="rel_public_figure_found_footer">Les appels s’appuient sur tout ce qu’on sait publiquement de cette personne. Ce n’est pas la bonne ? Corrige le nom et relance la recherche.</string>
     <string name="rel_public_figure_nobody_footer">Aucune personnalité publique ne correspond à ce nom. Vérifie l’orthographe et relance la recherche.</string>
     <string name="rel_public_figure_look_up_footer">Lance la recherche pour savoir qui c’est, puis confirme.</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">Mode coach</string>
+    <string name="cm_coach_mode_footer">De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel.</string>
+    <string name="cm_try_using">Essaie d’utiliser</string>
+    <string name="cm_used_it">Tu l’as utilisé</string>
+    <string name="cm_this_calls_focus">Objectif de cet appel</string>
+    <string name="cm_say">Dis</string>
+    <string name="cm_focus_sheet_footer">Ton moi fluide te posera peut-être une question qui en a besoin. Réponds comme d’habitude.</string>
+    <string name="cm_didnt_come_back">Il n’est pas revenu pendant cet appel</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="one">Revenu %d fois</item>
+        <item quantity="other">Revenu %d fois</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="one">Revenu %d fois pendant cet appel</item>
+        <item quantity="other">Revenu %d fois pendant cet appel</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="one">Revenu %d fois – ça reste ton objectif</item>
+        <item quantity="other">Revenu %d fois – ça reste ton objectif</item>
+    </plurals>
 </resources>

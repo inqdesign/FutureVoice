@@ -285,4 +285,22 @@
     <string name="rel_public_figure_found_footer">通話會以這個人公開的一切為基礎。不是這個人？修改名字後再查一次。</string>
     <string name="rel_public_figure_nobody_footer">找不到這個名字的公眾人物。請確認拼寫後再查一次。</string>
     <string name="rel_public_figure_look_up_footer">先查出是誰，再確認。</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">教練模式</string>
+    <string name="cm_coach_mode_footer">流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。</string>
+    <string name="cm_try_using">試著用</string>
+    <string name="cm_used_it">用到了</string>
+    <string name="cm_this_calls_focus">本次通話重點</string>
+    <string name="cm_say">這樣說</string>
+    <string name="cm_focus_sheet_footer">流利的自己可能會問需要用到這個的問題，像平常一樣回答就好。</string>
+    <string name="cm_didnt_come_back">這次通話一次都沒再出現</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="other">又出現了 %d 次</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="other">這次通話中又出現了 %d 次</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="other">又出現了 %d 次，下次通話繼續練</item>
+    </plurals>
 </resources>

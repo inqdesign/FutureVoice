@@ -50,14 +50,14 @@ object Telemetry {
      * changed that. `speed` is the multiplier actually sent upstream,
      * `speed_picked` separates a learner who chose a rung from one who never
      * touched the default. Read per event, never registered once: both change
-     * while the app runs. Android has no coach mode yet, so `coach` is "off"
-     * until it does — then read the setting here.
+     * while the app runs. `coach` is coach mode as it resolves right now —
+     * the learner's flip, else on for A1/A2 (`CoachMode.isOn`).
      */
     fun callSettings(context: Context): Map<String, String> = mapOf(
         "speed" to "%.2f".format(java.util.Locale.US,
             com.roro.futurevoice.data.SpeechSpeed.current(context).multiplier(context)),
         "speed_picked" to if (com.roro.futurevoice.data.SpeechSpeed.picked(context)) "1" else "0",
-        "coach" to "off",
+        "coach" to if (com.roro.futurevoice.talk.CoachMode.isOn(context)) "on" else "off",
     )
 
     fun log(event: String, properties: Map<String, String> = emptyMap()) {

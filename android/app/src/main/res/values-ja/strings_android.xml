@@ -285,4 +285,22 @@
     <string name="rel_public_figure_found_footer">通話では、この人について公開されていることすべてをもとに話します。別の人なら、名前を直してもう一度検索してください。</string>
     <string name="rel_public_figure_nobody_footer">この名前の有名人は見つかりませんでした。つづりを確認して、もう一度検索してください。</string>
     <string name="rel_public_figure_look_up_footer">検索して誰なのかを確かめてください。</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">コーチモード</string>
+    <string name="cm_coach_mode_footer">流暢な自分がときどき、勉強中の単語で答えられる質問をして、いちばんよくするミスをこの通話のポイントにします。</string>
+    <string name="cm_try_using">使ってみよう</string>
+    <string name="cm_used_it">使えた</string>
+    <string name="cm_this_calls_focus">この通話のポイント</string>
+    <string name="cm_say">こう言う</string>
+    <string name="cm_focus_sheet_footer">流暢な自分がこれを使う質問をするかもしれません。いつも通りに答えれば大丈夫です。</string>
+    <string name="cm_didnt_come_back">今回の通話では一度も出ませんでした</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="other">%d回くり返しました</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="other">この通話で%d回くり返しました</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="other">%d回くり返しました。次の通話でも続けます</item>
+    </plurals>
 </resources>

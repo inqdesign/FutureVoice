@@ -285,4 +285,22 @@
     <string name="rel_public_figure_found_footer">통화에서는 이 사람에 대해 공개된 모든 걸 바탕으로 이야기해요. 다른 사람이라면 이름을 고치고 다시 찾아 주세요.</string>
     <string name="rel_public_figure_nobody_footer">이 이름으로 찾은 유명인이 없어요. 철자를 확인하고 다시 찾아 주세요.</string>
     <string name="rel_public_figure_look_up_footer">누구인지 찾아본 뒤 확인해 주세요.</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">코치 모드</string>
+    <string name="cm_coach_mode_footer">유창해진 내가 가끔 공부 중인 단어로 답할 수 있는 질문을 하고, 가장 자주 하는 실수를 통화의 초점으로 잡아 줘요.</string>
+    <string name="cm_try_using">써 볼 단어</string>
+    <string name="cm_used_it">썼어요</string>
+    <string name="cm_this_calls_focus">이번 통화 초점</string>
+    <string name="cm_say">이렇게</string>
+    <string name="cm_focus_sheet_footer">유창해진 내가 이걸 써야 하는 질문을 할 수도 있어요. 평소처럼 대답하면 돼요.</string>
+    <string name="cm_didnt_come_back">이번 통화에선 한 번도 안 나왔어요</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="other">%d번 다시 나왔어요</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="other">이번 통화에서 %d번 다시 나왔어요</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="other">%d번 다시 나왔어요. 다음 통화에서도 이어가요</item>
+    </plurals>
 </resources>

@@ -301,4 +301,25 @@
     <string name="rel_public_figure_found_footer">Las llamadas se basan en todo lo que se sabe públicamente de esta persona. ¿No es quien buscas? Corrige el nombre y vuelve a buscar.</string>
     <string name="rel_public_figure_nobody_footer">No encontramos a ninguna figura pública con ese nombre. Revisa cómo se escribe y vuelve a buscar.</string>
     <string name="rel_public_figure_look_up_footer">Busca quién es y confírmalo.</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">Modo coach</string>
+    <string name="cm_coach_mode_footer">De vez en cuando, tu yo fluido te pregunta algo que puedes responder con una palabra que estás estudiando, y el error que más cometes se vuelve el enfoque de la llamada.</string>
+    <string name="cm_try_using">Intenta usar</string>
+    <string name="cm_used_it">¡Ya la usaste!</string>
+    <string name="cm_this_calls_focus">Enfoque de esta llamada</string>
+    <string name="cm_say">Di</string>
+    <string name="cm_focus_sheet_footer">Tu yo fluido puede preguntarte algo que lo necesite. Responde como lo harías normalmente.</string>
+    <string name="cm_didnt_come_back">No volvió a aparecer en esta llamada</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="one">Volvió a aparecer %d vez</item>
+        <item quantity="other">Volvió a aparecer %d veces</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="one">Volvió a aparecer %d vez en esta llamada</item>
+        <item quantity="other">Volvió a aparecer %d veces en esta llamada</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="one">Volvió a aparecer %d vez; seguirá siendo tu enfoque</item>
+        <item quantity="other">Volvió a aparecer %d veces; seguirá siendo tu enfoque</item>
+    </plurals>
 </resources>

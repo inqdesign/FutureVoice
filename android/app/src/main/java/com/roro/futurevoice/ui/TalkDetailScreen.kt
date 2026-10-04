@@ -365,6 +365,13 @@ fun TalkDetailScreen(
                                 grammarIssueCount = grammar.size,
                                 onGrammarReview = { showingGrammarReview = true })
                         }
+                        // Coach mode's grammar focus and how this call went on it.
+                        s.grammarFocus?.let { focus ->
+                            HorizontalDivider(Modifier.padding(start = 20.dp, top = 8.dp))
+                            GroupLabel(Icons.Filled.TrackChanges, stringResource(R.string.cm_this_calls_focus))
+                            GrammarFocusResultRow(focus, Modifier.padding(horizontal = 20.dp)
+                                .padding(bottom = 8.dp))
+                        }
                         sm?.overallNote?.takeIf { it.isNotBlank() }?.let {
                             HorizontalDivider(Modifier.padding(start = 20.dp, top = 8.dp))
                             GroupLabel(Icons.Filled.Comment, stringResource(R.string.coach_s_note))

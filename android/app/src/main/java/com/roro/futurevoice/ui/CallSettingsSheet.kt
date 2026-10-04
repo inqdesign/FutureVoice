@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +63,9 @@ fun CallSettingsSheet(
     showsTranscript: Boolean,
     showsCorrections: Boolean,
     showsGoalChips: Boolean,
+    /** Coach mode as it resolves now (the learner's flip, else the level's). */
+    coachMode: Boolean,
+    onCoachMode: (Boolean) -> Unit,
     onFlag: (key: String, value: Boolean) -> Unit,
     onSpeedChange: (SpeechSpeed) -> Unit,
     onDismiss: () -> Unit,
@@ -91,6 +95,14 @@ fun CallSettingsSheet(
                 }
             }
             Footer(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
+
+            // On by default for A1/A2: it trades a little of the call's pace
+            // for being walked toward the words being studied (`CoachMode`).
+            androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
+            ToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.cm_coach_mode), coachMode) {
+                onCoachMode(it)
+            }
+            Footer(stringResource(R.string.cm_coach_mode_footer))
 
             SectionHeader(stringResource(R.string.screen))
             ToggleRow(Icons.Filled.ChatBubbleOutline, stringResource(R.string.subtitles), showsTranscript) {

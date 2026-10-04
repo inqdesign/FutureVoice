@@ -235,10 +235,21 @@ fun TalkScreen(
     var showsCorrections by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_CORRECTIONS)) }
     var showsGoalChips by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS)) }
     var showingCallSettings by remember { mutableStateOf(false) }
+    // Coach mode: the learner's flip, else on for A1/A2 (`CoachMode.resolve`).
+    var coachMode by remember {
+        mutableStateOf(com.roro.futurevoice.talk.CoachMode.resolve(
+            com.roro.futurevoice.talk.CoachMode.choice(context), level.code))
+    }
     if (showingCallSettings) {
         CallSettingsSheet(
             showsTranscript = showsTranscript, showsCorrections = showsCorrections,
             showsGoalChips = showsGoalChips,
+            coachMode = coachMode,
+            onCoachMode = {
+                com.roro.futurevoice.talk.CoachMode.setChoice(context, it)
+                coachMode = it
+                vm.setCoachMode(it)
+            },
             onFlag = { key, value ->
                 CallSettings.set(context, key, value)
                 when (key) {
@@ -317,17 +328,26 @@ fun TalkScreen(
                 .filter { it.originScenarioId == scenario.id || (it.originScenarioId == null && it.topic == scenario.environment) }
             TalkGoalPicker.pickForScenario(context, targetLanguage, scenario, previous, level)
         } else TalkGoalPicker.pick(context, targetLanguage)
+        // Coach mode steers toward the row, then toward the words a talk
+        // kept on its own, which the row leaves out.
+        vm.setCoachPool(goals + TalkGoalPicker.coachExtras(context, targetLanguage,
+            goals.map { it.key }.toSet()))
     }
     // ADDITIVE: every version of a user turn's text is checked, from the
     // recognizer's first line to the audio-grounded rewrite, and a tick is
     // never taken back. A check that disappears mid-call reads as the app
     // changing its mind about the learner.
-    LaunchedEffect(state.turns) {
-        if (goals.isEmpty()) return@LaunchedEffect
+    // A coach hint on a word outside the chip row is judged the same way;
+    // its key joins the ticks so the hint can say "Used it".
+    LaunchedEffect(state.turns, state.coachHint) {
+        val items = goals + listOfNotNull(state.coachHint).filter { h -> goals.none { it.key == h.key } }
+        if (items.isEmpty()) return@LaunchedEffect
         var next = goalsUsed
-        for (turn in state.turns) next = next + TalkGoalPicker.hits(turn, goals)
+        for (turn in state.turns) next = next + TalkGoalPicker.hits(turn, items)
         if (next != goalsUsed) goalsUsed = next
     }
+    LaunchedEffect(goalsUsed) { if (preview == null) vm.noteUsedGoals(goalsUsed) }
+    var showingFocus by remember { mutableStateOf(false) }
 
     // The newest line is always in view, as on iOS (bottom-anchored) — and
     // not only when a line is ADDED: a correction lands under the learner's
@@ -503,6 +523,17 @@ fun TalkScreen(
             // the whole point is that it is in front of the learner at the
             // moment they could spend the word.
             val ended = state.phase == TalkPhase.ENDED && state.endedSessionId != null
+            // The grammar focus sits above the chips: it is the one thing
+            // this call is about, and the chips are the things to spend.
+            val focus = state.grammarFocus
+            if (coachMode && focus != null && !ended) {
+                GrammarFocusStrip(focus.label, focus.pattern.mistake, focus.pattern.correction,
+                    repeats = state.focusRepeatTurns.size, onTap = { showingFocus = true })
+                androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
+            }
+            if (showingFocus && focus != null) {
+                GrammarFocusSheet(focus, state.focusRepeatTurns.size, onDismiss = { showingFocus = false })
+            }
             if (goals.isNotEmpty() && !ended && showsGoalChips) {
                 TalkGoalChipsRow(goals, goalsUsed, onTap = { openGoal = it })
             }
@@ -553,7 +584,9 @@ fun TalkScreen(
                     }
                     if (showsTranscript) items(state.turns, key = { it.id }) { turn ->
                         DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
-                            showsCorrections = showsCorrections)
+                            showsCorrections = showsCorrections,
+                            focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)
+                                state.grammarFocus?.label else null)
                     }
                     // The learner's turn, drawn where it will land (iOS
                     // `PartialTurnView`): the You bubble appears EMPTY the moment
@@ -569,11 +602,19 @@ fun TalkScreen(
                                 name = stringResource(R.string.you),
                                 scale = DialogueScale.CALL,
                             ) {
-                                Text(
-                                    state.partial.ifBlank { stringResource(R.string.listening) },
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
-                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        state.partial.ifBlank { stringResource(R.string.listening) },
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                                    )
+                                    // Coach mode's word for this answer, INSIDE the
+                                    // bubble it is being spoken into.
+                                    if (coachMode) state.coachHint?.let { hint ->
+                                        CoachHintLabel(hint, used = hint.key in goalsUsed,
+                                            onTap = { openGoal = hint })
+                                    }
+                                }
                             }
                         }
                     }
@@ -692,6 +733,14 @@ fun TalkScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
+                            // With subtitles off there is no listening bubble,
+                            // so the hint falls back to a line above the pill.
+                            if (coachMode && !showsTranscript) state.coachHint?.let { hint ->
+                                Box(Modifier.padding(horizontal = 24.dp)) {
+                                    CoachHintLabel(hint, used = hint.key in goalsUsed,
+                                        onTap = { openGoal = hint })
+                                }
+                            }
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             // Quiet on purpose: the one primary action here is the pill.
                             IconButton(onClick = { showingCallSettings = true },
@@ -881,7 +930,10 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                  scale: DialogueScale = DialogueScale.STANDARD,
                  otherName: String? = null,
                  selfName: String? = null,
-                 showsCorrections: Boolean = true) {
+                 showsCorrections: Boolean = true,
+                 /** The grammar focus's name when this turn's correction is
+                  *  that slip coming back (coach mode) — worn as a badge. */
+                 focusRepeatLabel: String? = null) {
     val isUser = turn.role == TurnRole.USER
     DialogueLine(
         speaker = if (isUser) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
@@ -893,7 +945,12 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
         isCurrent = isCurrent,
         accessory = {
             if (showsCorrections) turn.suggestion?.let { suggestion ->
-                SuggestionChip(suggestion, original = turn.transcript)
+                Column {
+                    focusRepeatLabel?.let {
+                        Box(Modifier.padding(top = 4.dp)) { GrammarFocusRepeatBadge(it) }
+                    }
+                    SuggestionChip(suggestion, original = turn.transcript)
+                }
             }
         },
     ) { Text(turn.transcript) }

@@ -129,6 +129,12 @@ data class Session(
     val origin: SessionOrigin? = null,
     val originScenarioId: String? = null,
     val counterpartId: String? = null,
+    /**
+     * Coach mode's grammar focus for this call and how it went (iOS
+     * `Session.grammarFocus`, `45b397e`). Null on old rows; also what the next
+     * call reads to retire a focus the learner has stopped tripping on.
+     */
+    val grammarFocus: GrammarFocusRecord? = null,
 ) {
     /** Newest-ended-first ordering key, as `SessionStore.swift` ranks. */
     val rank: Long get() = endedAt ?: startedAt
@@ -569,6 +575,22 @@ object PersonaNoteListSerializer : LenientListSerializer<PersonaNote>(PersonaNot
 object ShareCorrectionListSerializer :
     LenientListSerializer<UserPersona.ShareCorrection>(UserPersona.ShareCorrection.serializer())
 
+/**
+ * One call's grammar focus, as it was shown and as it went (iOS
+ * `GrammarFocusRecord`). `label` is coaching (native language); `mistake` /
+ * `correction` are the learner's own slip and its fix (target language).
+ */
+@Serializable
+data class GrammarFocusRecord(
+    /** [LearnerProfile.patternKey] — normalized mistake→correction. */
+    val patternKey: String,
+    val label: String,
+    val mistake: String,
+    val correction: String,
+    /** Times the same slip came back in this call, judged per correction. */
+    val repeats: Int = 0,
+)
+
 @Serializable
 data class LearnerPattern(
     val id: String = StoreJson.newId(),
@@ -669,6 +691,10 @@ data class LearnerProfile(
     }
 
     companion object {
+        /** iOS `LearnerProfile.patternKey`: normalized mistake→correction. */
+        fun patternKey(p: LearnerPattern): String =
+            p.mistake.lowercase().trim() + "→" + p.correction.lowercase().trim()
+
         const val MAX_RECURRING = 10
         const val MAX_WEAK_AREAS = 5
     }

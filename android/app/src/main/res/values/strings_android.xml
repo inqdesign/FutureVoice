@@ -301,4 +301,25 @@
     <string name="rel_public_figure_found_footer">Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.</string>
     <string name="rel_public_figure_nobody_footer">Nobody public came up for that name. Check the spelling and look up again.</string>
     <string name="rel_public_figure_look_up_footer">Look up to find who they are, then confirm.</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">Coach mode</string>
+    <string name="cm_coach_mode_footer">Now and then your future self asks something you can answer with a word you\'re studying, and the mistake you make most becomes the call\'s focus.</string>
+    <string name="cm_try_using">Try using</string>
+    <string name="cm_used_it">Used it</string>
+    <string name="cm_this_calls_focus">This call\'s focus</string>
+    <string name="cm_say">Say</string>
+    <string name="cm_focus_sheet_footer">Your future self may ask something that needs this. Just answer the way you normally would.</string>
+    <string name="cm_didnt_come_back">It didn\'t come back this call</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="one">Came back once</item>
+        <item quantity="other">Came back %d times</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="one">Came back once in this call</item>
+        <item quantity="other">Came back %d times in this call</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="one">Came back once — it stays your focus</item>
+        <item quantity="other">Came back %d times — it stays your focus</item>
+    </plurals>
 </resources>

@@ -101,6 +101,9 @@ class RealtimeTalkClient(private val context: Context) {
      *  Say-it-again (iOS keeps every line's audio in `TurnAudioStore`). */
     @Volatile var onReplyAudio: ((context: String, pcm: ByteArray, sampleRate: Int) -> Unit)? = null
     @Volatile var onReplyBegan: ((context: String) -> Unit)? = null
+    /** A fluent-self line finished (`audio_end`) — coach mode reads the
+     *  question it asked (iOS `onReplyFinished`). */
+    @Volatile var onReplyEnded: ((context: String) -> Unit)? = null
     /** Reply text as it is written. A delta prefixed with NUL is the
      *  authoritative full text, sent when the reply closes. */
     @Volatile var onReplyDelta: ((context: String, delta: String) -> Unit)? = null
@@ -271,6 +274,17 @@ class RealtimeTalkClient(private val context: Context) {
         runCatching { socket?.send("""{"type":"set","speed":$multiplier}""") }
     }
 
+    /** Coach mode's steer (iOS `setSteer`): appended to the reply's system
+     *  prompt until replaced; "" takes it off. An older gateway ignores it. */
+    fun setSteer(steer: String) {
+        if (tornDown) return
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("type", kotlinx.serialization.json.JsonPrimitive("set"))
+            put("steer", kotlinx.serialization.json.JsonPrimitive(steer))
+        }
+        runCatching { socket?.send(body.toString()) }
+    }
+
     fun hangUp() {
         if (tornDown) return
         tornDown = true
@@ -387,6 +401,7 @@ class RealtimeTalkClient(private val context: Context) {
                     replyPCM.reset()
                     onReplyAudio?.invoke(ctx, bytes, replyRate)
                 }
+                ctx?.let { onReplyEnded?.invoke(it) }
                 // Let the track drain what it holds, then hand the mic back.
                 scope.launch(audioThread) {
                     runCatching { player?.drain() }

@@ -274,4 +274,25 @@
     <string name="rel_public_figure_found_footer">Anrufe stützen sich auf alles, was öffentlich über die Person bekannt ist. Falsche Person? Korrigier den Namen und such erneut.</string>
     <string name="rel_public_figure_nobody_footer">Zu diesem Namen wurde keine bekannte Person gefunden. Prüf die Schreibweise und such erneut.</string>
     <string name="rel_public_figure_look_up_footer">Such, wer das ist, und bestätige dann.</string>
+    <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
+    <string name="cm_coach_mode">Coach-Modus</string>
+    <string name="cm_coach_mode_footer">Ab und zu stellt dir dein fließendes Ich eine Frage, die du mit einem Wort beantworten kannst, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs.</string>
+    <string name="cm_try_using">Probier mal</string>
+    <string name="cm_used_it">Verwendet</string>
+    <string name="cm_this_calls_focus">Fokus dieses Anrufs</string>
+    <string name="cm_say">Sag</string>
+    <string name="cm_focus_sheet_footer">Dein fließendes Ich stellt dir vielleicht eine Frage, bei der du das brauchst. Antworte einfach wie sonst auch.</string>
+    <string name="cm_didnt_come_back">Ist in diesem Anruf nicht mehr vorgekommen</string>
+    <plurals name="cm_came_back_times">
+        <item quantity="one">%d-mal wieder aufgetaucht</item>
+        <item quantity="other">%d-mal wieder aufgetaucht</item>
+    </plurals>
+    <plurals name="cm_came_back_in_this_call">
+        <item quantity="one">In diesem Anruf %d-mal wieder aufgetaucht</item>
+        <item quantity="other">In diesem Anruf %d-mal wieder aufgetaucht</item>
+    </plurals>
+    <plurals name="cm_came_back_stays_focus">
+        <item quantity="one">%d-mal wieder aufgetaucht – bleibt dein Fokus</item>
+        <item quantity="other">%d-mal wieder aufgetaucht – bleibt dein Fokus</item>
+    </plurals>
 </resources>

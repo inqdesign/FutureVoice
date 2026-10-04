@@ -261,6 +261,30 @@ object TalkGoalPicker {
     }
 
     /**
+     * Coach mode's extra pool (iOS `coachExtras`): notebook words a TALK kept
+     * on its own that the chip row leaves out. The row is about what the
+     * learner chose, but most notebooks fill this way, and a coach with
+     * nothing to coach is a switch that does nothing (iOS device test,
+     * 2026-09-28: eleven words on file, all auto-kept, no hint ever). These
+     * are words the fluent self taught them — fair to steer toward.
+     */
+    suspend fun coachExtras(
+        context: android.content.Context,
+        language: String,
+        excluding: Set<String>,
+        now: Long = System.currentTimeMillis(),
+    ): List<TalkGoalItem> {
+        val vocab = VocabStore.shared(context)
+        val practiced = vocab.practicedStudying(language).toSet()
+        val schedule = StudyScheduleStore.shared(context).snapshot(language)
+        return ordered(vocab.studying(language).filter { it !in practiced },
+            StudyScheduleStore.Kind.WORD, schedule, now)
+            .filter { com.roro.futurevoice.data.WordSplitter.isSingleWord(it, language) }
+            .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = true) }
+            .filter { it.key !in excluding }
+    }
+
+    /**
      * Overdue-scheduled first (earliest return first), then never-scheduled,
      * oldest save first and rotated by the day so a big notebook doesn't deal
      * the same five forever. Same ordering as the daily words deal.

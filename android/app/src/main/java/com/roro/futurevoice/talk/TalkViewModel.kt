@@ -109,6 +109,13 @@ data class TalkUiState(
     /** Set when the call ended with something said — the wrap-up's subject. */
     val endedSessionId: String? = null,
     val lastTiming: Map<String, String> = emptyMap(),
+    /** Coach mode's word for the question just asked (iOS `coachHint`) —
+     *  drawn in the learner's listening bubble while they answer. */
+    val coachHint: com.roro.futurevoice.ui.TalkGoalItem? = null,
+    /** Coach mode's grammar focus for this call, once named. */
+    val grammarFocus: GrammarFocus? = null,
+    /** Learner turns whose correction was the focus coming back. */
+    val focusRepeatTurns: Set<String> = emptySet(),
 )
 
 /**
@@ -170,6 +177,18 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private var learnerSpokeThisCall = false
 
+    // Coach mode (iOS `CoachMode.swift`). The chip row lives on the screen,
+    // so the screen hands over what may be steered toward and what has been
+    // said; the ration, the steer and the judge live here.
+    private var coachOn = false
+    private var coachPlan = CoachPlan()
+    /** The steer last sent to the gateway ("" = none). */
+    private var coachSteerSent = ""
+    /** Chip row + talk-kept notebook words, in the row's order. */
+    private var coachPool: List<com.roro.futurevoice.ui.TalkGoalItem> = emptyList()
+    private var usedGoalKeys: Set<String> = emptySet()
+    private var focusJob: Job? = null
+
     /**
      * This call's TALK time, phone-style: the seconds the meter counts — the
      * fluent self speaking, a reply being written, the learner talking. It
@@ -226,6 +245,10 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
         this.config = config
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
+        coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
+        coachPlan = CoachPlan()
+        coachSteerSent = ""
+        loadGrammarFocus(config)
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
         // The meter runs on BOTH paths; on the realtime one the gateway does
@@ -291,10 +314,12 @@ class TalkViewModel(context: Context) : ViewModel() {
         cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
         callJob?.cancel(); callJob = null
+        focusJob?.cancel(); focusJob = null
         runCatching { live.stop() }
         pcm.stop()
         mp3.stop()
-        _state.update { it.copy(phase = TalkPhase.ENDED, partial = "") }
+        logCoach()
+        _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", coachHint = null) }
         persist()
     }
 
@@ -328,6 +353,10 @@ class TalkViewModel(context: Context) : ViewModel() {
             },
             originScenarioId = cfg.scenarioId,
             counterpartId = cfg.counterpartId,
+            // Only a call the learner spoke in says anything about the focus;
+            // a silent one must not count as a clean call.
+            grammarFocus = if (learnerSpokeThisCall)
+                _state.value.grammarFocus?.record(_state.value.focusRepeatTurns.size) else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
@@ -516,6 +545,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         updateCallNotification(cfg, TalkPhase.CONNECTING)
+        // A fresh gateway session holds no steer — send it again.
+        coachSteerSent = ""
         val token = auth.accessToken()
         // A cast (Find people) speaks in its preset voice; the fluent self in
         // the learner's own clone. Ownership is enforced by the gateway.
@@ -528,6 +559,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             opener = opener,
             history = history,
         )
+        syncCoachSteer()
     }
 
     private fun wireRealtime(cfg: TalkConfig) {
@@ -554,6 +586,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             val turn = Turn(role = TurnRole.USER, transcript = said, durationMs = ms,
                 audioURL = wav?.let { keepTurnAudio(it) })
             _state.update { it.copy(turns = it.turns + turn, partial = "") }
+            // The learner's first words open the steer (nothing before them).
+            viewModelScope.launch { syncCoachSteer() }
             requestRealtimeSuggestion(turn.id, said, cfg)
         }
         realtime.onReplyAudio = { ctx, pcm, rate ->
@@ -568,7 +602,16 @@ class TalkViewModel(context: Context) : ViewModel() {
         realtime.onReplyBegan = { ctx ->
             val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
             realtimeReplyTurns[ctx] = turn.id
-            _state.update { it.copy(turns = it.turns + turn) }
+            // The hint belonged to the question just answered.
+            _state.update { it.copy(turns = it.turns + turn, coachHint = null) }
+        }
+        realtime.onReplyEnded = { ctx ->
+            realtimeReplyTurns[ctx]?.let { id ->
+                viewModelScope.launch {
+                    val text = _state.value.turns.firstOrNull { it.id == id }?.transcript.orEmpty()
+                    advanceCoach(text, id)
+                }
+            }
         }
         realtime.onReplyDelta = { ctx, delta ->
             val id = realtimeReplyTurns[ctx]
@@ -1126,6 +1169,124 @@ class TalkViewModel(context: Context) : ViewModel() {
                     transcript = upgraded ?: turn.transcript,
                 )
             })
+        }
+        suggestion?.let { checkFocusRepeat(it, userTurnId) }
+    }
+
+    // ------------------------------------------------------------------
+    // Coach mode
+
+    /** The call settings toggle (the learner's flip is saved by the sheet). */
+    fun setCoachMode(on: Boolean) {
+        if (coachOn == on) return
+        coachOn = on
+        if (on) config?.let { loadGrammarFocus(it) }
+        else _state.update { it.copy(coachHint = null) }
+        syncCoachSteer()
+    }
+
+    /** What coach mode may steer toward: the chip row, then the talk-kept
+     *  notebook words it leaves out (`TalkGoalPicker.coachExtras`). */
+    fun setCoachPool(items: List<com.roro.futurevoice.ui.TalkGoalItem>) {
+        coachPool = items
+        syncCoachSteer()
+    }
+
+    /** The screen's ticks — chips and the hint alike. */
+    fun noteUsedGoals(keys: Set<String>) {
+        if (keys == usedGoalKeys) return
+        usedGoalKeys = keys
+        syncCoachSteer()
+    }
+
+    private fun coachCandidates() =
+        coachPlan.candidates(coachPool.filter { it.key !in usedGoalKeys })
+
+    /**
+     * Put the steer on the gateway — or take it off — to match the ration.
+     * Only sent when it changes; the gateway keeps it until told otherwise.
+     * Nothing before the learner has spoken: a question built for a word or
+     * a structure is an answer to THEM, and the opener is not.
+     */
+    private fun syncCoachSteer() {
+        if (!REALTIME) return
+        val open = coachOn && learnerSpokeThisCall && coachPlan.mayHint
+        val items = if (open) coachCandidates() else emptyList()
+        val focus = if (open) _state.value.grammarFocus else null
+        val steer = if (items.isEmpty() && focus == null) "" else ConversationEngine.coachSteer(items, focus)
+        if (steer == coachSteerSent) return
+        coachSteerSent = steer
+        realtime.setSteer(steer)
+    }
+
+    /**
+     * One step per fluent-self line: if a hint may be drawn and the line
+     * asked something, ask [CoachJudge] which studied item a natural answer
+     * to THAT question uses — the hint is the question's, never the list's.
+     */
+    private fun advanceCoach(text: String, turnId: String) {
+        // The opener asks before the learner has said a word — no hint on it,
+        // and it doesn't spend the gap either.
+        if (!coachOn || !learnerSpokeThisCall) return
+        val mayHint = coachPlan.mayHint
+        coachPlan = coachPlan.replyFinished()
+        val candidates = coachCandidates()
+        if (mayHint && candidates.isNotEmpty() && CoachPlan.endsInQuestion(text)) {
+            val learnerSaid = _state.value.turns.lastOrNull { it.role == TurnRole.USER }?.transcript
+            viewModelScope.launch {
+                val item = CoachJudge.pick(text, learnerSaid, candidates, turnId) ?: return@launch
+                val st = _state.value
+                // Still the line being answered — a late verdict must never
+                // label the NEXT question.
+                if (!coachOn || st.phase == TalkPhase.ENDED ||
+                    st.turns.lastOrNull { it.role == TurnRole.FLUENT_SELF }?.id != turnId ||
+                    item.key in usedGoalKeys) return@launch
+                coachPlan = coachPlan.hintShown(item)
+                _state.update { it.copy(coachHint = item) }
+                syncCoachSteer()
+            }
+        }
+        syncCoachSteer()
+    }
+
+    /** Pick this call's grammar focus and name it. Coach mode only. */
+    private fun loadGrammarFocus(cfg: TalkConfig) {
+        if (!coachOn || _state.value.grammarFocus != null || focusJob?.isActive == true) return
+        focusJob = viewModelScope.launch {
+            val profile = ProfileStore.shared(appContext).load(cfg.targetLanguage, cfg.level.code)
+            val past = runCatching { sessions.load(cfg.targetLanguage) }.getOrDefault(emptyList())
+            val pattern = GrammarFocus.pick(profile, past) ?: return@launch
+            val focus = GrammarFocus.describe(appContext, pattern, cfg.targetLanguage, cfg.nativeLanguage)
+                ?: return@launch
+            if (!coachOn || _state.value.phase == TalkPhase.ENDED) return@launch
+            _state.update { it.copy(grammarFocus = focus) }
+            syncCoachSteer()
+        }
+    }
+
+    /** A correction landed: if it is the focus coming back, badge its card
+     *  and move the strip's count. Judged off the voice's path. */
+    private fun checkFocusRepeat(suggestion: TurnSuggestion, turnId: String) {
+        val focus = _state.value.grammarFocus ?: return
+        val fixes = suggestion.fixes?.takeIf { it.isNotEmpty() } ?: return
+        if (!coachOn) return
+        viewModelScope.launch {
+            if (!focus.isRepeat(fixes, turnId)) return@launch
+            if (_state.value.grammarFocus != focus) return@launch
+            _state.update { it.copy(focusRepeatTurns = it.focusRepeatTurns + turnId) }
+        }
+    }
+
+    /** One row per coached call — how "does it feel forced" gets measured. */
+    private fun logCoach() {
+        val st = _state.value
+        if (coachPlan.hintsShown > 0 || (st.grammarFocus != null && learnerSpokeThisCall)) {
+            com.roro.futurevoice.core.Telemetry.log("talk_coach", mapOf(
+                "hints" to coachPlan.hintsShown.toString(),
+                "used" to coachPlan.hinted.count { it in usedGoalKeys }.toString(),
+                "focus" to if (st.grammarFocus == null) "none" else "on",
+                "focus_repeats" to st.focusRepeatTurns.size.toString(),
+            ))
         }
     }
 
