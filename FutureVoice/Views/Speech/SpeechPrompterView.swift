@@ -129,7 +129,11 @@ struct SpeechPrompterView: View {
         VStack(spacing: 0) {
             SpeechTeleprompter(track: session.track, cursor: session.cursor,
                                language: session.script.language, textSize: textSize,
-                               composer: session.composer)
+                               composer: session.composer,
+                               recording: isRecording,
+                               follow: session.followVoice,
+                               speed: session.speed,
+                               voiceActive: { [session] in session.voiceActive })
                 .frame(maxHeight: .infinity)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.screenSpace)) } action: {
                     prompterRect = $0
@@ -315,16 +319,28 @@ struct SpeechPrompterView: View {
 
     private var controls: some View {
         HStack(spacing: 36) {
-            Button {
-                session.cameraOn.toggle()
-            } label: {
-                Image(systemName: session.cameraOn ? "video.fill" : "video.slash.fill")
-                    .font(.title3)
-                    .frame(width: 52, height: 52)
+            if isRecording {
+                // Drop this take: nothing saved, back to the top.
+                Button {
+                    session.cancelTake()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 52, height: 52)
+                }
+                .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
+                .accessibilityLabel(Text("Cancel this take"))
+            } else {
+                Button {
+                    session.cameraOn.toggle()
+                } label: {
+                    Image(systemName: session.cameraOn ? "video.fill" : "video.slash.fill")
+                        .font(.title3)
+                        .frame(width: 52, height: 52)
+                }
+                .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
+                .accessibilityLabel(session.cameraOn ? Text("Turn camera off") : Text("Turn camera on"))
             }
-            .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
-            .hiddenWhileRecording(isRecording)
-            .accessibilityLabel(session.cameraOn ? Text("Turn camera off") : Text("Turn camera on"))
 
             Button {
                 Task {
@@ -349,17 +365,29 @@ struct SpeechPrompterView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isRecording ? Text("Stop") : Text("Record"))
 
-            Button {
-                session.followVoice.toggle()
-                flash(session.followVoice ? explain("Follows your voice") : explain("Steady speed"))
-            } label: {
-                Image(systemName: session.followVoice ? "waveform" : "speedometer")
-                    .font(.title3)
-                    .frame(width: 52, height: 52)
+            if isRecording {
+                // Start over: this take is dropped and a new one counts in.
+                Button {
+                    Task { await session.restartTake() }
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 52, height: 52)
+                }
+                .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
+                .accessibilityLabel(Text("Record again"))
+            } else {
+                Button {
+                    session.followVoice.toggle()
+                    flash(session.followVoice ? explain("Follows your voice") : explain("Steady speed"))
+                } label: {
+                    Image(systemName: session.followVoice ? "waveform" : "speedometer")
+                        .font(.title3)
+                        .frame(width: 52, height: 52)
+                }
+                .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
+                .accessibilityLabel(session.followVoice ? Text("Scrolling follows your voice") : Text("Scrolling at a steady speed"))
             }
-            .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
-            .hiddenWhileRecording(isRecording)
-            .accessibilityLabel(session.followVoice ? Text("Scrolling follows your voice") : Text("Scrolling at a steady speed"))
         }
     }
 
@@ -415,6 +443,12 @@ struct SpeechTeleprompter: View {
     let textSize: Double
     /// Told where the prompter is every frame, so the video scrolls with it.
     var composer: SpeechVideoComposer? = nil
+    /// Moving at all: only while a take is being recorded.
+    var recording = false
+    var follow = true
+    /// The steady-speed multiplier.
+    var speed: Double = 1
+    var voiceActive: () -> Bool = { false }
 
     @StateObject private var scroller = PrompterScroller()
 
@@ -437,9 +471,16 @@ struct SpeechTeleprompter: View {
                                      let across = min(1, max(0, (frame.minX - 24) / lineWidth))
                                      let lineAdvance = frame.height + textSize * 0.35
                                      scroller.setTarget(frame.minY + across * lineAdvance,
+                                                        lineAdvance: lineAdvance,
                                                         snap: cursor == 0)
                                  })
                 .equatable()
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    // Points per word: the planned pace, in the column's
+                    // own units, is what the prompter starts at.
+                    let perWord = height / CGFloat(max(1, track.words.count))
+                    scroller.plannedPace = CGFloat(track.wordsPerSecond(language: language)) * perWord
+                }
                 // The reading line is the SECOND line from the top: as close
                 // to the lens as it gets, with the line just read still
                 // visible above it.
@@ -455,7 +496,24 @@ struct SpeechTeleprompter: View {
                     ], startPoint: .top, endPoint: .bottom)
                 )
         }
-        .onAppear { scroller.start() }
+        .onAppear {
+            scroller.inputs = { [voiceActive] in
+                (recording, follow, CGFloat(speed), voiceActive())
+            }
+            scroller.start()
+        }
+        .onChange(of: recording) { _, isRecording in
+            scroller.inputs = { [voiceActive] in (isRecording, follow, CGFloat(speed), voiceActive()) }
+            // A take that ended (or was cancelled) leaves the script where it
+            // stopped until the cursor goes back to the top.
+            if !isRecording && cursor == 0 { scroller.snapToTarget() }
+        }
+        .onChange(of: follow) { _, f in
+            scroller.inputs = { [voiceActive] in (recording, f, CGFloat(speed), voiceActive()) }
+        }
+        .onChange(of: speed) { _, sp in
+            scroller.inputs = { [voiceActive] in (recording, follow, CGFloat(sp), voiceActive()) }
+        }
         .onDisappear { scroller.stop() }
         .onChange(of: scroller.position) { _, _ in publish() }
     }
@@ -472,24 +530,34 @@ final class PrompterScroller: NSObject, ObservableObject {
     /// How far the column has risen, in its own points.
     @Published private(set) var position: CGFloat = 0
 
+    /// Read every frame: recording, following the voice, steady-speed
+    /// multiplier, and whether someone is speaking right now.
+    var inputs: () -> (recording: Bool, follow: Bool, speed: CGFloat, speaking: Bool) = { (false, true, 1, false) }
+    /// The language's ordinary reading pace, in column points per second —
+    /// where the prompter starts, and the band the reader's pace is kept in.
+    var plannedPace: CGFloat = 0
+
     private var target: CGFloat = 0
     private var lastTarget: CGFloat = 0
-    /// The reader's pace in points per second — a slow average, so words
-    /// arriving in bursts still read as one steady speed.
+    private var lineAdvance: CGFloat = 40
+    /// The reader's own pace: a LONG average, so a recognizer delivering
+    /// words in bursts (and Korean late or not at all) never shows as speed.
     private var pace: CGFloat = 0
     private var velocity: CGFloat = 0
     private var link: CADisplayLink?
     private var lastTick: CFTimeInterval = 0
 
-    /// Seconds over which the pace is averaged, and over which the speed
-    /// changes. Long on purpose: a teleprompter that speeds up and slows down
-    /// with every word is unreadable.
-    private let paceWindow: CGFloat = 2.5
-    private let speedWindow: CGFloat = 0.6
-    /// How hard the text is pulled toward the reader when it lags.
-    private let pull: CGFloat = 0.35
+    /// Seconds the reader's pace is averaged over.
+    private let paceWindow: CGFloat = 6
+    /// Seconds a change of speed takes.
+    private let speedWindow: CGFloat = 0.8
+    /// The most the text speeds up or slows down to meet the reader: a line
+    /// behind is +25%, capped at ±40%. A prompter that lurches is unreadable.
+    private let pullPerLine: CGFloat = 0.25
+    private let maxPull: CGFloat = 0.4
 
-    func setTarget(_ y: CGFloat, snap: Bool) {
+    func setTarget(_ y: CGFloat, lineAdvance: CGFloat, snap: Bool) {
+        if lineAdvance > 0 { self.lineAdvance = lineAdvance }
         // Moving the column by a fraction of a point re-rounds the layout to
         // the pixel grid, which moves the measured word by that fraction,
         // which moved the column again — an endless loop the moment the
@@ -497,12 +565,15 @@ final class PrompterScroller: NSObject, ObservableObject {
         // a point are not movement.
         guard abs(y - target) >= 1 || (snap && abs(y - position) >= 1) else { return }
         target = y
-        if snap {
-            position = y
-            lastTarget = y
-            pace = 0
-            velocity = 0
-        }
+        if snap { snapToTarget() }
+    }
+
+    /// Back onto the current word, at rest.
+    func snapToTarget() {
+        position = target
+        lastTarget = target
+        pace = 0
+        velocity = 0
     }
 
     func start() {
@@ -524,16 +595,31 @@ final class PrompterScroller: NSObject, ObservableObject {
         guard lastTick > 0 else { lastTarget = target; return }
         let dt = CGFloat(min(0.05, now - lastTick))
         guard dt > 0 else { return }
+        let (recording, follow, speed, speaking) = inputs()
+        let planned = plannedPace > 0 ? plannedPace : lineAdvance / 2
 
-        // The reader's pace: how fast the target is moving, averaged.
-        let instant = max(0, target - lastTarget) / dt
+        var wanted: CGFloat = 0
+        if !recording {
+            wanted = 0
+        } else if !follow {
+            // Steady speed: exactly that, whatever is said.
+            wanted = planned * speed
+        } else {
+            // The reader's pace, learned slowly while they speak, starting
+            // from the language's ordinary pace and kept near it.
+            if pace == 0 { pace = planned }
+            let instant = max(0, target - lastTarget) / dt
+            if speaking {
+                pace += (instant - pace) * min(1, dt / paceWindow)
+                pace = min(max(pace, planned * 0.6), planned * 1.6)
+            }
+            if speaking {
+                let linesBehind = (target - position) / max(1, lineAdvance)
+                let pull = min(max(linesBehind * pullPerLine, -maxPull), maxPull)
+                wanted = pace * (1 + pull)
+            }
+        }
         lastTarget = target
-        pace += (instant - pace) * min(1, dt / paceWindow)
-
-        let gap = target - position
-        // Their pace, plus a gentle pull toward where they are: behind, it
-        // speeds up a little; ahead, it slows down — easing, never a halt.
-        let wanted = max(0, pace + pull * gap)
         velocity += (wanted - velocity) * min(1, dt / speedWindow)
         let next = position + velocity * dt
         if abs(next - position) > 0.01 { position = next }

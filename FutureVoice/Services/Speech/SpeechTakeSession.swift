@@ -199,19 +199,12 @@ final class SpeechTakeSession: ObservableObject {
         clock = Date().timeIntervalSince(startedAt)
         if clock.rounded(.down) != elapsed { elapsed = clock.rounded(.down) }
         let wps = track.wordsPerSecond(language: script.language)
-        let voicedRecently = live.lastVoicedAt.map { Date().timeIntervalSince($0) < 0.8 } ?? false
 
+        // Steady speed: the cursor walks at the planned pace (the prompter
+        // itself moves on its own clock; this keeps the auto-stop honest).
         if !followVoice {
             position += wps * speed * 0.1
             cursor = min(track.words.count, Int(position))
-        } else if voicedRecently, Date().timeIntervalSince(lastAdvanceAt) > 3 {
-            // Following stalled while they are clearly speaking — the
-            // recognizer lost the thread (a name, a kanji it spells another
-            // way). Creep forward at reading pace so the line never freezes
-            // under them; the next match snaps it back.
-            position += wps * 0.1
-            let crept = min(track.words.count, Int(position))
-            if crept > cursor { cursor = crept }
         }
 
         // Finished: the last word is reached and they have stopped.
@@ -397,16 +390,41 @@ final class SpeechTakeSession: ObservableObject {
 
     /// Leaving mid-take: nothing is kept.
     func tearDown() {
-        ticker?.cancel()
-        if phase == .recording || isCountdown {
-            let url = recorder.stop()
-            live.stop()
-            if let url { try? FileManager.default.removeItem(at: url) }
-            chunkReads.forEach { $0.cancel() }
-            chunkReads = []
-            if recordingVideo { composer.cancel(); recordingVideo = false }
-        }
+        discardRecording()
         camera.stop()
+    }
+
+    /// Throws away the take in progress — nothing is saved or scored.
+    private func discardRecording() {
+        ticker?.cancel()
+        guard phase == .recording || isCountdown else { return }
+        let url = recorder.stop()
+        live.stop()
+        if let url { try? FileManager.default.removeItem(at: url) }
+        chunkReads.forEach { $0.cancel() }
+        chunkReads = []
+        if recordingVideo { composer.cancel(); recordingVideo = false }
+    }
+
+    /// Cancel: this take is dropped and the script is back at the top.
+    func cancelTake() {
+        discardRecording()
+        reset()
+    }
+
+    /// Again: this take is dropped and a fresh one counts in right away.
+    func restartTake() async {
+        cancelTake()
+        await start()
+    }
+
+    /// Whether a voice was heard in the last moment — the prompter keeps
+    /// flowing while someone is speaking and eases to a stop when they don't.
+    var voiceActive: Bool {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "speechdemo") { return true }
+        #endif
+        return live.lastVoicedAt.map { Date().timeIntervalSince($0) < 1.2 } ?? false
     }
 
     #if DEBUG
