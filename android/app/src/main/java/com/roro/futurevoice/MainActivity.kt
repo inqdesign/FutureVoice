@@ -75,6 +75,13 @@ class MainActivity : ComponentActivity() {
             }
         }
         AppUsageLog.begin()
+        // Settle yesterday's (and any unsettled past day's) card before the
+        // 45-day logs can prune it — iOS `freezePastDays` on `.active`. Off
+        // the main thread: it reads every enrolled language's talks.
+        val app = applicationContext
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.roro.futurevoice.data.DayCardStore.freezePastDays(app) }
+        }
         // Widgets follow the app at its edges too — a drill or a talk minute
         // doesn't bump the store revision the refresher also listens to.
         com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(this)

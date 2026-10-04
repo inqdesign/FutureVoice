@@ -181,21 +181,7 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
     // shares it, so the preview can never be a different day than the export.
     val dayCard = remember(selected, selectedSeconds, daySessions) {
         DayCardStore.resolve(context, selected) {
-            DayCardData(
-                date = selected,
-                talkMinutes = selectedSeconds / 60,
-                // Never less than the talk figure: a call in a pocket is
-                // metered but not foregrounded.
-                studyMinutes = maxOf(AppUsageLog.secondsOn(context, selected) / 60,
-                    selectedSeconds / 60),
-                streakDays = TalkTimeLog.streakDays(context, selected),
-                talks = daySessions.size,
-                reviews = PracticeLog.day(context, selected)?.drillReps ?: 0,
-                shadowTakes = PracticeLog.day(context, selected)?.shadowReps ?: 0,
-                topics = daySessions.sortedByDescending { s ->
-                    s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
-                }.mapNotNull { it.displayTitle }.distinct().take(4),
-            )
+            DayCardStore.make(context, selected, selectedSeconds, daySessions)
         }
     }
     val cardTheme = remember { FutureselfTheme.stored(context).ordinal }

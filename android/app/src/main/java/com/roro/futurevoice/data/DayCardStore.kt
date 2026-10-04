@@ -6,7 +6,10 @@ import android.graphics.BitmapFactory
 import com.roro.futurevoice.ui.brand.DayCardData
 import kotlinx.serialization.Serializable
 import java.io.File
+import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.TurnRole
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -16,7 +19,9 @@ import java.util.Locale
  * A card is FROZEN when it is made: the logs it is drawn from are pruned at
  * 45 days and the streak rule can change, so a card read live months later
  * would lose its minutes or change its streak — and a card is what that day
- * WAS. Today is never frozen by the sweep; it is still being lived.
+ * WAS. Every past day with activity is settled on foreground
+ * ([freezePastDays]), not only a day with a photo. Today is never frozen; it
+ * is still being lived.
  *
  * The photo is the place, and that is as precise as it gets: no location
  * permission, ever. Re-encoding on save drops EXIF/GPS.
@@ -97,4 +102,102 @@ object DayCardStore {
         if (isToday(day, now)) live() else snapshotIn(dir, day) ?: live()
 
     fun isToday(day: Long, now: Long = System.currentTimeMillis()): Boolean = key(day) == key(now)
+
+    // MARK: - The day read live
+
+    /**
+     * A day's card read live from the logs — the ONE builder, so the Activity
+     * summary, the share sheet and the sweep below can never settle a day
+     * three different ways. [talkSeconds] is the meter's figure for that day
+     * (the ring's number); [sessions] are that day's talks, any language.
+     */
+    fun make(context: Context, day: Long, talkSeconds: Int, sessions: List<Session>): DayCardData {
+        val practice = PracticeLog.day(context, day)
+        val talkMinutes = talkSeconds / 60
+        // Never less than the talk figure: a call in a pocket is metered but
+        // not foregrounded.
+        val studyMinutes = maxOf(AppUsageLog.secondsOn(context, day) / 60, talkMinutes)
+        return DayCardData(
+            date = day,
+            talkMinutes = talkMinutes,
+            studyMinutes = studyMinutes,
+            streakDays = TalkTimeLog.streakDays(context, day),
+            talks = sessions.size,
+            reviews = practice?.drillReps ?: 0,
+            shadowTakes = practice?.shadowReps ?: 0,
+            topics = sessions.sortedByDescending { s ->
+                s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
+            }.mapNotNull { it.displayTitle }.distinct().take(4),
+        )
+    }
+
+    // MARK: - Settling past days
+
+    /** How far back the sweep looks — the logs' own window. */
+    private const val SETTLE_DAYS = 45
+
+    /**
+     * iOS `freezePastDays`: settle every past day of the logs' window that
+     * has activity and no settled record yet, so a day without a photo keeps
+     * its minutes once the 45-day logs prune it. Run on every foreground,
+     * off the main thread. Today is never touched — it is still being lived.
+     */
+    suspend fun freezePastDays(context: Context, now: Long = System.currentTimeMillis()) {
+        val byDay = HashMap<String, MutableList<Session>>()
+        val store = SessionStore.shared(context)
+        LanguageScope.enrolled(context).forEach { lang ->
+            runCatching { store.load(lang) }.getOrDefault(emptyList()).forEach {
+                byDay.getOrPut(key(it.endedAt ?: it.startedAt)) { mutableListOf() }.add(it)
+            }
+        }
+        freezePastDaysIn(dir(context), now) { day ->
+            val talk = TalkTimeLog.secondsToday(context, day)
+            val talks = byDay[key(day)].orEmpty()
+            // An empty day is never settled, so it is asked again on every
+            // foreground: answer it without the streak walk, the one costly
+            // read in `make`.
+            if (talk < 60 && talks.isEmpty() && AppUsageLog.secondsOn(context, day) < 60) {
+                DayCardData(day, 0, 0, 0, 0)
+            } else make(context, day, talk, talks)
+        }
+    }
+
+    /**
+     * The sweep, pure over a directory so the rule is testable. Idempotent
+     * and cheap: a day already settled is skipped on its file's modification
+     * time, without decoding anything. Returns how many days it wrote.
+     */
+    internal fun freezePastDaysIn(dir: File, now: Long, make: (Long) -> DayCardData): Int {
+        val cal = Calendar.getInstance()
+        var written = 0
+        for (back in 1..SETTLE_DAYS) {
+            cal.timeInMillis = now
+            // Calendar steps, never a fixed 86 400 000: a DST day is 23 or 25 hours.
+            cal.add(Calendar.DAY_OF_YEAR, -back)
+            val day = cal.timeInMillis
+            if (!needsSettling(dir, day)) continue
+            // freezeIn holds the rest: no empty day, never a smaller record.
+            if (freezeIn(dir, make(day), now)) written++
+        }
+        return written
+    }
+
+    /**
+     * A day with no record, or one whose record was written while that day
+     * was still running (iOS builds before 2026-08-31 froze today on every
+     * open of the share sheet; a card frozen mid-day stops at whenever the
+     * learner happened to look). The rewrite stamps a time past the day's
+     * end, so each such day is re-settled once.
+     */
+    internal fun needsSettling(dir: File, day: Long): Boolean {
+        val f = File(dir, "${key(day)}.json")
+        if (!f.exists()) return true
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = day
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return f.lastModified() < cal.timeInMillis
+    }
 }
