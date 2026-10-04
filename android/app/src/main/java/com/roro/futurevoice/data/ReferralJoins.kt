@@ -70,11 +70,11 @@ object ReferralJoins {
     }
 
     private fun body(c: Context, j: Join): String = when {
-        j.minutesEarned == 0 && j.friendsJoined == 1 -> c.getString(R.string.a_friend_joined_with_your_code_b4caa9)
-        j.minutesEarned == 0 -> c.getString(R.string.lld_friends_joined_with_your_code_636994, j.friendsJoined)
-        j.friendName != null -> c.getString(R.string.joined_with_your_code_lld_minutes_are_yours, j.friendName, j.minutesEarned)
-        j.friendsJoined == 1 -> c.getString(R.string.a_friend_joined_with_your_code_lld_minutes_are_yours, j.minutesEarned)
-        else -> c.getString(R.string.lld_friends_joined_with_your_code_lld_minutes_are_yours, j.friendsJoined, j.minutesEarned)
+        j.minutesEarned == 0 && j.friendsJoined == 1 -> com.roro.futurevoice.core.UILanguage.localized(c).getString(R.string.a_friend_joined_with_your_code_b4caa9)
+        j.minutesEarned == 0 -> com.roro.futurevoice.core.UILanguage.localized(c).getString(R.string.lld_friends_joined_with_your_code_636994, j.friendsJoined)
+        j.friendName != null -> com.roro.futurevoice.core.UILanguage.localized(c).getString(R.string.joined_with_your_code_lld_minutes_are_yours, j.friendName, j.minutesEarned)
+        j.friendsJoined == 1 -> com.roro.futurevoice.core.UILanguage.localized(c).getString(R.string.a_friend_joined_with_your_code_lld_minutes_are_yours, j.minutesEarned)
+        else -> com.roro.futurevoice.core.UILanguage.localized(c).getString(R.string.lld_friends_joined_with_your_code_lld_minutes_are_yours, j.friendsJoined, j.minutesEarned)
     }
 
     /** Quiet by construction: no sound. The daily call is the habit anchor

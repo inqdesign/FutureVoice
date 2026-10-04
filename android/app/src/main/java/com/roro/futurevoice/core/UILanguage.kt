@@ -89,6 +89,15 @@ object UILanguage {
         return base.createConfigurationContext(config)
     }
 
+    /**
+     * [base] resolving strings in the app language, with no side effects —
+     * for text built OUTSIDE an Activity (notifications, receivers, the call
+     * service). Those contexts carry the DEVICE locale, so a notification
+     * read "Pause / End" in English to a learner who picked Korean
+     * (measured on an A34, 2026-10-04).
+     */
+    fun localized(base: Context): Context = contextFor(base, current(base))
+
     /** The same context, resolving strings in the learner's language. */
     fun wrap(base: Context): Context {
         val tag = current(base) ?: return base

@@ -67,7 +67,7 @@ object CoreArrivals {
             it.kind == "seated" && it.first_time && it.user_id?.lowercase() != me
         }
         rows.lastOrNull { it.kind == "club_full" }?.let {
-            post(context, context.getString(R.string.the_core_is_full_all_lld_seats_taken, it.club_size),
+            post(context, com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.the_core_is_full_all_lld_seats_taken, it.club_size),
                 "core.full")
         }
         if (arrivals.isEmpty()) return
@@ -83,9 +83,9 @@ object CoreArrivals {
         val one = arrivals.first()
         val name = displayName(token, one.user_id)
         val body = if (name != null) {
-            context.getString(R.string.joined_the_core_lld_seats_taken, name, one.club_size)
+            com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.joined_the_core_lld_seats_taken, name, one.club_size)
         } else {
-            context.getString(R.string.someone_joined_the_core_lld_seats_taken, one.club_size)
+            com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.someone_joined_the_core_lld_seats_taken, one.club_size)
         }
         post(context, body, "core.arrival.${one.id}")
     }
@@ -125,7 +125,7 @@ object CoreArrivals {
         runCatching {
             nm.notify(id.hashCode(), NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(context.getString(R.string.the_core))
+                .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.the_core))
                 .setContentText(body)
                 .setContentIntent(open)
                 .setSilent(true)

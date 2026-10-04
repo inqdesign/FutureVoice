@@ -112,7 +112,7 @@ object ReviewQueue {
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return
         nm.createNotificationChannel(NotificationChannel(
             CHANNEL_ID,
-            context.getString(R.string.review_reminders),
+            com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.review_reminders),
             // DEFAULT, not HIGH: the daily call is the habit anchor and must
             // not be competed with by a word coming back.
             NotificationManager.IMPORTANCE_DEFAULT))
@@ -128,7 +128,7 @@ object ReviewQueue {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n: Notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_recent_history)
-            .setContentTitle(context.getString(R.string.back_for_review))
+            .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.back_for_review))
             .setContentText(trimmed(text))
             .setAutoCancel(true)
             .setContentIntent(open)

@@ -36,7 +36,8 @@ import com.roro.futurevoice.R
 class CallForegroundService : Service() {
 
     companion object {
-        const val CHANNEL_ID = "live_call"
+        const val CHANNEL_ID = "live_call_v2"
+        private const val OLD_CHANNEL_ID = "live_call"
         private const val NOTIFICATION_ID = 4802
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_HINT = "hint"
@@ -61,12 +62,31 @@ class CallForegroundService : Service() {
 
         fun ensureChannel(context: Context) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            // The first channel was IMPORTANCE_LOW, and Android files a low
+            // notification as "silent": hidden on the lock screen by default
+            // and out of view on Samsung's shade — so a locked phone had no
+            // way to hang up (iOS `CallNowPlaying`, plan 6.6; measured on an
+            // A34 2026-10-04). DEFAULT puts it on the lock screen; the sound
+            // and vibration are switched off on the channel itself, so it
+            // still never makes a noise over the call it describes. A
+            // channel's importance can't be raised after creation, hence the
+            // new id; the old channel is removed.
+            nm.deleteNotificationChannel(OLD_CHANNEL_ID)
             if (nm.getNotificationChannel(CHANNEL_ID) != null) return
-            // Low importance: this is a status, not an alert. It must never
-            // make a sound over the call it describes.
             nm.createNotificationChannel(NotificationChannel(
-                CHANNEL_ID, context.getString(R.string.talk), NotificationManager.IMPORTANCE_LOW))
+                CHANNEL_ID, context.getString(R.string.talk), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            })
         }
+    }
+
+    // The call notification's own words (Pause / End, the default title)
+    // must be the app language, not the device's.
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(com.roro.futurevoice.core.UILanguage.localized(newBase))
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

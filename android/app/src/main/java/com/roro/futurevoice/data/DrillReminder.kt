@@ -101,11 +101,11 @@ object DrillReminder {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         // Counts everything waiting at fire time, not just the snooze that
         // triggered it — so the body says "waiting", not "you asked for this".
-        val body = if (count == 1) context.getString(R.string.s_1_word_phrase_or_line_is_waiting)
-        else context.getString(R.string.lld_words_phrases_and_lines_are_waiting, count)
+        val body = if (count == 1) com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.s_1_word_phrase_or_line_is_waiting)
+        else com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.lld_words_phrases_and_lines_are_waiting, count)
         val n = NotificationCompat.Builder(context, ReviewQueue.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_recent_history)
-            .setContentTitle(context.getString(R.string.ready_to_review))
+            .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.ready_to_review))
             .setContentText(body).setAutoCancel(true).setContentIntent(open).build()
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .notify(NOTIFICATION_ID, n)

@@ -75,8 +75,8 @@ object TrialReminder {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(context, ReviewQueue.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(context.getString(R.string.your_free_trial_ends_soon))
-            .setContentText(context.getString(R.string.trial_becomes_paid_play, LEAD_DAYS))
+            .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.your_free_trial_ends_soon))
+            .setContentText(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.trial_becomes_paid_play, LEAD_DAYS))
             .setAutoCancel(true).setContentIntent(open).build()
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION_ID, n)
     }
