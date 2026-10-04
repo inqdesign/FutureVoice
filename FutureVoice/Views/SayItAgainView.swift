@@ -169,6 +169,9 @@ struct SayItAgainView: View {
     /// WORD, not from the mic opening, which is where `ShadowDrillView`
     /// measures from because its countdown puts the two at the same moment.
     private static let readMsPerWord = 380
+    /// The only thing that ends a take on a learner still talking: a room
+    /// that never falls quiet. Far past any line a turn can be.
+    private static let maxReadSeconds: TimeInterval = 60
     /// Reading pace for a fluent-self line whose recording didn't survive.
     /// Only ever sizes a pause; the line is already on screen.
     private static let silentReadMsPerWord = 380
@@ -654,14 +657,22 @@ struct SayItAgainView: View {
         let lineMs = max(1200, WordSplitter.count(text) * Self.readMsPerWord)
         let began = Date()
         let earliest = began.addingTimeInterval(Double(lineMs) / 1000)
-        let hardStop = began.addingTimeInterval(
-            Double(ShadowDrillView.attemptCutoffMs(targetMs: lineMs)) / 1000)
+        // Only silence ends a take. The line's length used to be a hard
+        // stop too (`attemptCutoffMs`, ~1.5x the estimate), and a whole turn
+        // read for the first time runs past 380 ms a word easily, so the take
+        // was cut mid-sentence while the learner was still reading. Now a
+        // take that is still voiced keeps going, the way a call's listening
+        // ceiling does, up to `maxReadSeconds` — a room that never goes quiet
+        // must still end.
+        let hardStop = began.addingTimeInterval(Self.maxReadSeconds)
         while !Task.isCancelled, !skipRequested, Date() < hardStop {
             // "Quiet" is the shadow surface's 1.5 s, not a call's 0.6 s: a
             // mid-sentence breath runs up to 1.5 s, and someone reading a
             // line for the first time breathes more than a talker does.
-            if Date() >= earliest, let voiced = live.lastVoicedAt,
-               Date().timeIntervalSince(voiced) >= ShadowDrillView.stillSpeakingSeconds { break }
+            let quiet = live.lastVoicedAt.map {
+                Date().timeIntervalSince($0) >= ShadowDrillView.stillSpeakingSeconds
+            } ?? true
+            if Date() >= earliest, quiet { break }
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
         return !skipRequested
