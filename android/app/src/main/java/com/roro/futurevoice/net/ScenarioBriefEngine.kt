@@ -17,8 +17,10 @@ import java.time.LocalDate
 /**
  * ONE Gemini call turns a situation's attached material into a
  * [ScenarioBrief] (iOS `ScenarioBriefEngine`, `59c6481`). Links are read by
- * the model itself (`url_context`), with web search filling what a page won't
- * give up; files ride inline. The call streams so the board on the scene can
+ * the PHONE first ([ScenarioLinkReader], iOS `c06a5cf`) and their text rides
+ * in the message; only a link the phone could not read goes to the model's
+ * own `url_context`, with web search filling what a page won't give up;
+ * files ride inline. The call streams so the board on the scene can
  * tick as each section lands — the wrap-up board's rule: nothing is shown
  * before the model has actually written it.
  *
@@ -73,10 +75,23 @@ object ScenarioBriefEngine {
         val files = ArrayList<GeminiClient.InlineFile>()
         val fileLines = ArrayList<String>()
         val linkLines = ArrayList<String>()
+        val pageTexts = ArrayList<String>()
+        var unfetchedLinks = 0
         var total = 0
         sources.forEachIndexed { i, src ->
             when (src.kind) {
-                ScenarioBrief.Kind.LINK -> linkLines += "- source ${i + 1} (link): ${src.label}"
+                // The phone reads the page first (iOS `c06a5cf`); only a page
+                // it could not read goes to the model's URL tool.
+                ScenarioBrief.Kind.LINK -> {
+                    val text = ScenarioLinkReader.text(src.label)
+                    if (text != null) {
+                        linkLines += "- source ${i + 1} (link, its page text is given below — do not open it): ${src.label}"
+                        pageTexts += "=== source ${i + 1} — page text of ${src.label} ===\n$text\n=== end of source ${i + 1} ==="
+                    } else {
+                        linkLines += "- source ${i + 1} (link): ${src.label}"
+                        unfetchedLinks += 1
+                    }
+                }
                 ScenarioBrief.Kind.FILE, ScenarioBrief.Kind.IMAGE -> {
                     var got = BriefAttachmentCache.take(src.id)
                     if (got == null) src.androidUri?.let { uri ->
@@ -98,7 +113,9 @@ object ScenarioBriefEngine {
             }
         }
 
-        val hasLinks = linkLines.isNotEmpty()
+        // Tools are for the links the phone could not read; a page whose text
+        // is already in the message needs no fetcher.
+        val hasLinks = unfetchedLinks > 0
         val user = ArrayList<String>()
         user += "situation (the learner's own words): ${scenario.environment}"
         if (persona != null && persona.isMinimallyComplete) {
@@ -113,9 +130,16 @@ object ScenarioBriefEngine {
         user += fileLines + linkLines
         if (hasLinks) {
             user += ""
-            user += "Open every link above with the URL tool and read it. If a page cannot be opened, " +
+            user += "Open every link above that has no page text below with the URL tool and read it. If a page cannot be opened, " +
                 "search the web for what it names (the company and the position, the listing) " +
                 "and say in that source's `detail` that you read coverage instead of the page."
+        }
+        if (pageTexts.isNotEmpty()) {
+            user += ""
+            user += "The page text below was fetched from the link as a browser sees it, menus and all. " +
+                "Read the posting or listing in it and ignore the site's navigation, ads and " +
+                "\"similar\" listings."
+            user += pageTexts
         }
         user += ""
         user += "Today is ${LocalDate.now()}."
