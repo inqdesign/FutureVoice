@@ -222,7 +222,8 @@ fun PracticeBody(
                         }
                     },
                     testRows = { WeeklyTestRows(language, level) },
-                    onEditGoals = { editingGoals = true },
+                    // What a day asks for is the routine's (iOS `e1b3501`).
+                    onEditGoals = { RoutineNav.editorOpen.value = true },
                 )
                 if (editingGoals) {
                     StudyGoalsSheet(onDismiss = {

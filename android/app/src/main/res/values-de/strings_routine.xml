@@ -71,6 +71,7 @@
     <string name="routine_every_day">Jeden Tag</string>
     <string name="routine_weekdays">Werktags</string>
     <string name="routine_choose">Wählen</string>
+    <string name="routine_weekends">Wochenende</string>
     <string name="routine_allow_notifications">Erlaube Mitteilungen, damit deine Routine dich erinnern kann</string>
     <string name="routine_notifications_off">Mitteilungen sind aus, deshalb kann dich deine Routine nicht erinnern. Schalte sie in den Einstellungen ein</string>
     <string name="routine_no_talks_yet">Noch kein Gespräch zum Nochmal-Sagen. Führ zuerst ein Gespräch.</string>

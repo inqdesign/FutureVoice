@@ -251,6 +251,8 @@ fun RootScreen() {
     var deckSessionId by remember { mutableStateOf<String?>(null) }
     var focusStudyItem by remember { mutableStateOf<StudyDeckItem?>(null) }
     var showActivity by remember { mutableStateOf(false) }
+    val routineEditorOpen by RoutineNav.editorOpen.collectAsStateWithLifecycle()
+    val sayAgainPending by com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.collectAsStateWithLifecycle()
     var showAssessment by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
     val paywalled by BillingGate.showPaywall.collectAsStateWithLifecycle()
@@ -609,10 +611,24 @@ fun RootScreen() {
             onBack = { showAssessment = false },
         )
 
+        // A routine reminder's "say it again": which talk (iOS `SayItAgainPicker`).
+        sayAgainPending -> SayItAgainPicker(
+            language = state.targetLanguage,
+            onClose = { com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.value = false },
+        )
+
+        // The routine editor opened from somewhere other than the routine page
+        // (the Review tab's Today card — iOS `e1b3501`).
+        routineEditorOpen -> WeeklyPlanEditor(onClose = { RoutineNav.editorOpen.value = false })
+
         showActivity -> ActivityScreen(
             language = state.targetLanguage,
             onOpenTalk = { showActivity = false; detailSessionId = it },
             onBack = { showActivity = false },
+            // Every routine line is a door to that kind of practice.
+            onStartTalk = { showActivity = false; DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk },
+            onOpenReview = { showActivity = false; showDueReview = true },
+            onOpenTest = { showActivity = false; tab = HomeTab.PRACTICE },
         )
 
         // Everything snoozed whose time has come, both kinds together — the
@@ -1874,7 +1890,15 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var days by remember { mutableStateOf(0) }
-    LaunchedEffect(revision) { days = TalkTimeLog.streakDays(context) }
+    // Alive by one thing only (iOS `21df988`): the flame is grey until
+    // today's promise is kept, then it lights up.
+    var keptToday by remember { mutableStateOf(false) }
+    LaunchedEffect(revision) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            days = TalkTimeLog.streakDays(context)
+            keptToday = TalkTimeLog.keptToday(context)
+        }
+    }
     // A capsule, and tappable: the streak is a claim about a history, so it
     // opens the record rather than asking to be taken on trust.
     Row(
@@ -1886,15 +1910,16 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        val lit = days > 0 || keptToday
         Icon(
-            if (days > 0) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
+            if (lit) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
             contentDescription = null,
-            // iOS: `flame.fill` in .orange — a streak is fire, not the accent.
-            tint = if (days > 0) androidx.compose.ui.graphics.Color(0xFFFF9500)
+            // iOS: `flame.fill`, orange only once today is kept.
+            tint = if (keptToday) androidx.compose.ui.graphics.Color(0xFFFF9500)
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(14.dp))
         Text(
-            if (days > 0) stringResource(R.string.lld_day_streak_94de2a, days)
+            if (lit) stringResource(R.string.lld_day_streak_94de2a, maxOf(days, 1))
             else stringResource(R.string.activity),
             style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))

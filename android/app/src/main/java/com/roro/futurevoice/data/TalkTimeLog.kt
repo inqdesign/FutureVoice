@@ -107,6 +107,18 @@ object TalkTimeLog {
         }
     }
 
+    /**
+     * Every day key (`yyyy-MM-dd`) that counts as STUDIED over the last
+     * [days] days, read in one pass — what a page drawing many days at once
+     * (the routine's strips and calendars) asks instead of [studied] per day.
+     */
+    fun activeDayKeys(context: Context, days: Int, now: Long = System.currentTimeMillis()): Set<String> {
+        val out = HashSet<String>(spokenDays(context))
+        load(context).forEach { (k, v) -> if (v > 0) out += k.substringBefore(SEPARATOR) }
+        PracticeLog.recent(context, days, now).forEach { (k, d) -> if (d.didSomething) out += k }
+        return out
+    }
+
     /** Is TODAY already kept, by the same rule as [streakDays]? What lights
      *  the Talk header's flame (iOS `21df988`). */
     fun keptToday(context: Context, now: Long = System.currentTimeMillis()): Boolean {

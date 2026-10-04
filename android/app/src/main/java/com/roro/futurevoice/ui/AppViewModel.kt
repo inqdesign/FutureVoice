@@ -508,6 +508,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         LanguageScope.setActive(appContext, target)
         LanguageScope.enroll(appContext, target)
         LanguageScope.setLevel(appContext, target, level.code)
+        // The first routine is what setup just said: talk X minutes a day.
+        com.roro.futurevoice.data.StudyPlanStore.seedFromOnboarding(appContext)
         _state.update {
             it.also { com.roro.futurevoice.core.Analytics.capture("setup_completed") }.copy(setupComplete = true, nativeLanguage = native,
                 targetLanguage = target, level = level,

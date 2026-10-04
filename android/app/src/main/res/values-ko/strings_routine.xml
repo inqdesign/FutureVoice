@@ -71,6 +71,7 @@
     <string name="routine_every_day">매일</string>
     <string name="routine_weekdays">평일</string>
     <string name="routine_choose">직접</string>
+    <string name="routine_weekends">주말</string>
     <string name="routine_allow_notifications">루틴 알림을 받으려면 알림을 허용해 주세요</string>
     <string name="routine_notifications_off">알림이 꺼져 있어서 루틴 알림이 울리지 않아요. 설정에서 켜 주세요</string>
     <string name="routine_no_talks_yet">다시 말할 대화가 아직 없어요. 먼저 대화를 해보세요.</string>

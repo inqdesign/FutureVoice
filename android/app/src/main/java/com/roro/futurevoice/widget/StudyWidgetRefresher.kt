@@ -64,6 +64,9 @@ object StudyWidgetRefresher {
     }
 
     suspend fun refresh(context: Context) {
+        // Today's promise standing follows the day as it moves (iOS does this
+        // here too), so the streak the widget prints is today's.
+        runCatching { com.roro.futurevoice.data.PromiseJudge.refresh(context) }
         val language = LanguageScope.active(context)
         val vocab = VocabStore.shared(context)
 

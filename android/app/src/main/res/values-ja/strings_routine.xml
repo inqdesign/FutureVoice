@@ -71,6 +71,7 @@
     <string name="routine_every_day">毎日</string>
     <string name="routine_weekdays">平日</string>
     <string name="routine_choose">選ぶ</string>
+    <string name="routine_weekends">週末</string>
     <string name="routine_allow_notifications">ルーティンのリマインダーを受け取るには通知を許可してください</string>
     <string name="routine_notifications_off">通知がオフなので、ルーティンのリマインダーが届きません。設定でオンにしてください</string>
     <string name="routine_no_talks_yet">まだもう一度話せるトークがありません。まずトークしてみましょう。</string>

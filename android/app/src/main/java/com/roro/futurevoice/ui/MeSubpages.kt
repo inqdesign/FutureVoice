@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PhoneCallback
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -47,6 +48,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -141,52 +144,31 @@ fun DailyCallPage(
                 trailing = { com.roro.futurevoice.ui.brand.IosSwitch(checked = enabled, onCheckedChange = onEnabledChange) },
                 onClick = { onEnabledChange(!enabled) })
             if (enabled) {
-                // One row per call; the position is its identity, so editing a
-                // time never reorders the list under the learner's finger.
-                times.forEachIndexed { index, m ->
+                // The routine's timed talks ARE the calls (iOS 1.1.4): the
+                // times are read from it, and changed there.
+                val plan by com.roro.futurevoice.data.StudyPlanStore.plan.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { com.roro.futurevoice.data.StudyPlanStore.current(context) }
+                val callTimes = plan.callTimes
+                if (callTimes.isEmpty()) {
                     GroupedRowDivider()
-                    MeRow(Icons.Filled.Schedule, stringResource(R.string.call),
+                    Text(stringResource(R.string.routine_no_timed_talk),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+                }
+                callTimes.forEach { m ->
+                    GroupedRowDivider()
+                    MeRow(Icons.Filled.Schedule, "%02d:%02d".format(m / 60, m % 60),
                         kind = MeRowKind.PLAIN,
                         trailing = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("%02d:%02d".format(m / 60, m % 60),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier
-                                        .clip(ContinuousShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                                        .clickable {
-                                            android.app.TimePickerDialog(context, { _, h, min ->
-                                                val v = h * 60 + min
-                                                if (v !in times) onTimesChange(
-                                                    times.toMutableList().also { it[index] = v })
-                                            }, m / 60, m % 60,
-                                                android.text.format.DateFormat.is24HourFormat(context)).show()
-                                        }
-                                        .padding(horizontal = 10.dp, vertical = 5.dp))
-                                // Deleting the last one would silently turn the
-                                // call off — the switch is where that is decided.
-                                if (times.size > 1) {
-                                    IconButton(onClick = { onTimesChange(times - m) },
-                                        modifier = Modifier.size(36.dp)) {
-                                        Icon(Icons.Filled.RemoveCircle, contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(20.dp))
-                                    }
-                                }
-                            }
+                            Text(routineWeekdaySummary(plan.callWeekdays(m)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         })
                 }
-                if (times.size < DailyCallStore.MAX_TIMES) {
-                    GroupedRowDivider()
-                    MeRow(Icons.Filled.Add, stringResource(R.string.add_a_call),
-                        kind = MeRowKind.ACTION, onClick = {
-                            // Three hours after the last — a separate check-in,
-                            // never a collision (identical times dedupe away).
-                            var c = ((times.maxOrNull() ?: (8 * 60)) + 180) % (24 * 60)
-                            while (c in times) c = (c + 60) % (24 * 60)
-                            onTimesChange(times + c)
-                        })
-                }
+                GroupedRowDivider()
+                MeRow(Icons.Filled.CalendarMonth, stringResource(R.string.routine_change_in_routine),
+                    kind = MeRowKind.ACTION, onClick = { RoutineNav.editorOpen.value = true })
                 // Without the exact-alarm grant the call still rings, just
                 // inside a window — say so rather than letting 08:00 become
                 // 08:06 unexplained. The route is a system page.
@@ -458,4 +440,19 @@ fun backupStepLabel(step: BackupService.Step): String = when (step) {
     BackupService.Step.Decoding -> stringResource(R.string.decoding)
     is BackupService.Step.Writing ->
         stringResource(R.string.restoring_lld_of_lld, step.done, step.total)
+}
+
+/** "Every day", "Weekdays", "Weekends", or the days by name, Monday first —
+ *  the way the routine draws its week (iOS `weekdaySummary`). */
+@Composable
+private fun routineWeekdaySummary(days: Set<Int>): String = when (days) {
+    (1..7).toSet() -> stringResource(R.string.routine_every_day)
+    (2..6).toSet() -> stringResource(R.string.routine_weekdays)
+    setOf(1, 7) -> stringResource(R.string.routine_weekends)
+    else -> {
+        val fmt = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
+        listOf(2, 3, 4, 5, 6, 7, 1).filter { it in days }.joinToString(" ") { wd ->
+            fmt.format(java.util.Calendar.getInstance().apply { set(java.util.Calendar.DAY_OF_WEEK, wd) }.time)
+        }
+    }
 }

@@ -71,6 +71,7 @@
     <string name="routine_every_day">Todos los días</string>
     <string name="routine_weekdays">Entre semana</string>
     <string name="routine_choose">Elegir</string>
+    <string name="routine_weekends">Fines de semana</string>
     <string name="routine_allow_notifications">Permite las notificaciones para que tu rutina pueda recordártelo</string>
     <string name="routine_notifications_off">Las notificaciones están desactivadas, así que tu rutina no puede recordártelo. Actívalas en Ajustes</string>
     <string name="routine_no_talks_yet">Aún no hay conversaciones para volver a decir. Primero ten una conversación.</string>

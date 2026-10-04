@@ -71,6 +71,7 @@
     <string name="routine_every_day">每天</string>
     <string name="routine_weekdays">平日</string>
     <string name="routine_choose">自選</string>
+    <string name="routine_weekends">週末</string>
     <string name="routine_allow_notifications">允許通知，作息才能提醒你</string>
     <string name="routine_notifications_off">通知已關閉，作息無法提醒你。請到設定開啟</string>
     <string name="routine_no_talks_yet">還沒有可以重說的對話。先來一次對話吧。</string>

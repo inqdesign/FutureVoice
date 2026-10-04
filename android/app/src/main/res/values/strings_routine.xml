@@ -71,6 +71,7 @@
     <string name="routine_every_day">Every day</string>
     <string name="routine_weekdays">Weekdays</string>
     <string name="routine_choose">Choose</string>
+    <string name="routine_weekends">Weekends</string>
     <string name="routine_allow_notifications">Allow notifications so your routine can remind you</string>
     <string name="routine_notifications_off">Notifications are off, so your routine can\'t remind you. Turn them on in Settings</string>
     <string name="routine_no_talks_yet">No talks to say again yet. Have a talk first.</string>
