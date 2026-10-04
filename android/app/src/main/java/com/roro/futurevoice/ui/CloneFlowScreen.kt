@@ -286,7 +286,7 @@ fun CloneFlowScreen(
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
                 error = when {
                     e is VoiceCloneClient.VoiceLimitReached ->
-                        "Our voice shelf is full right now — please try again in a bit."
+                        context.getString(R.string.voice_shelf_full)
                     e is EdgeError -> e.message
                     else -> e.message ?: e::class.java.simpleName
                 }

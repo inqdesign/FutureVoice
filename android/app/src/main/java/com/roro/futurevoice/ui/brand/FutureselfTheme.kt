@@ -9,9 +9,14 @@ import androidx.compose.ui.graphics.Color
  * Futureself.swift). Ordinal is what the shader and the stored preference
  * use, so the order is FROZEN — append, never reorder.
  */
-enum class FutureselfTheme(val label: String) {
-    BLUE("Blue"), MONO("Mono"), EMERALD("Emerald"),
-    AMBER("Amber"), CORAL("Coral"), AQUA("Aqua");
+enum class FutureselfTheme(@androidx.annotation.StringRes private val labelRes: Int) {
+    BLUE(com.roro.futurevoice.R.string.theme_blue), MONO(com.roro.futurevoice.R.string.theme_mono),
+    EMERALD(com.roro.futurevoice.R.string.theme_emerald), AMBER(com.roro.futurevoice.R.string.theme_amber),
+    CORAL(com.roro.futurevoice.R.string.theme_coral), AQUA(com.roro.futurevoice.R.string.theme_aqua);
+
+    /** The palette's name in the app language (only ever drawn; the stored
+     *  preference is the ordinal). */
+    val label: String @Composable get() = androidx.compose.ui.res.stringResource(labelRes)
 
     /**
      * Chrome that must match the shader surface (the call button's outline).

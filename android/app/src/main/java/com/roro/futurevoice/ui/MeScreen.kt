@@ -581,7 +581,7 @@ fun MeScreen(
             title = { Text(stringResource(R.string.couldnt_delete_account)) },
             text = { Text(msg) },
             confirmButton = {
-                TextButton(onClick = { deleteError = null }) { Text("OK") }
+                TextButton(onClick = { deleteError = null }) { Text(stringResource(R.string.ok)) }
             },
         )
     }
@@ -592,7 +592,7 @@ fun MeScreen(
             title = { Text(stringResource(R.string.practice_data)) },
             text = { Text(msg) },
             confirmButton = {
-                TextButton(onClick = { backupResult = null }) { Text("OK") }
+                TextButton(onClick = { backupResult = null }) { Text(stringResource(R.string.ok)) }
             },
         )
     }

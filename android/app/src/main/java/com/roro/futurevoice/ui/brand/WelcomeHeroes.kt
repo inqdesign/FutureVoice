@@ -109,7 +109,8 @@ fun FutureselfHero(modifier: Modifier = Modifier) {
     ) {
         Box(Modifier.fillMaxWidth().height(96.dp)) {
             if (showing) {
-                DialogueLine(speaker = DialogueSpeaker.OTHER, name = "Future self") {
+                DialogueLine(speaker = DialogueSpeaker.OTHER,
+                    name = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.future_self)) {
                     Text(lines[line])
                 }
             }
@@ -136,25 +137,28 @@ fun FutureselfHero(modifier: Modifier = Modifier) {
     }
 }
 
-private data class HeroRow(val icon: ImageVector, val title: String, val caption: String)
+/** [title] is sample MATERIAL (English, as on iOS); the caption is chrome —
+ *  a resource, with [captionArg] for "with %s". */
+private data class HeroRow(val icon: ImageVector, val title: String, val caption: Int,
+                           val captionArg: String? = null)
 
 /** 2 · And what there is to talk about — the Discover section, mirrored. */
 @Composable
 fun HomeHero(modifier: Modifier = Modifier) {
     val news = remember {
         listOf(
-            HeroRow(Icons.Filled.Memory, "Did you hear about OpenAI's model hacking a company?", "AI / Tech"),
-            HeroRow(Icons.Filled.TrendingUp, "Germany weighs a four-day work week", "Business"),
-            HeroRow(Icons.Filled.Flight, "The slow-travel comeback", "Travel"),
-            HeroRow(Icons.Filled.DirectionsRun, "Why everyone suddenly runs a half marathon", "Sports"),
+            HeroRow(Icons.Filled.Memory, "Did you hear about OpenAI's model hacking a company?", com.roro.futurevoice.R.string.welcome_ai_tech),
+            HeroRow(Icons.Filled.TrendingUp, "Germany weighs a four-day work week", com.roro.futurevoice.R.string.welcome_business),
+            HeroRow(Icons.Filled.Flight, "The slow-travel comeback", com.roro.futurevoice.R.string.travel_22fb76),
+            HeroRow(Icons.Filled.DirectionsRun, "Why everyone suddenly runs a half marathon", com.roro.futurevoice.R.string.welcome_sports),
         )
     }
     val scenarios = remember {
         listOf(
-            HeroRow(Icons.Filled.LocalCafe, "Ordering at a busy café", "with Sofia"),
-            HeroRow(Icons.Filled.Schedule, "Asking your boss for Friday off", "with Mina"),
-            HeroRow(Icons.Filled.MedicalServices, "Describing a cough that won't go", "with Dr. Park"),
-            HeroRow(Icons.Filled.Home, "The kitchen tap has been dripping all week", "with Alex"),
+            HeroRow(Icons.Filled.LocalCafe, "Ordering at a busy café", com.roro.futurevoice.R.string.with, "Sofia"),
+            HeroRow(Icons.Filled.Schedule, "Asking your boss for Friday off", com.roro.futurevoice.R.string.with, "Mina"),
+            HeroRow(Icons.Filled.MedicalServices, "Describing a cough that won't go", com.roro.futurevoice.R.string.with, "Dr. Park"),
+            HeroRow(Icons.Filled.Home, "The kitchen tap has been dripping all week", com.roro.futurevoice.R.string.with, "Alex"),
         )
     }
     var onScenarios by remember { mutableStateOf(false) }
@@ -171,7 +175,10 @@ fun HomeHero(modifier: Modifier = Modifier) {
         Column(Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             (if (onScenarios) scenarios else news).forEach { r ->
-                DiscoverRow(title = r.title, caption = r.caption, icon = r.icon,
+                DiscoverRow(title = r.title,
+                    caption = r.captionArg?.let { androidx.compose.ui.res.stringResource(r.caption, it) }
+                        ?: androidx.compose.ui.res.stringResource(r.caption),
+                    icon = r.icon,
                     accent = if (onScenarios) Books.scenarios else Books.topics)
             }
         }
@@ -188,19 +195,21 @@ fun BookHero(modifier: Modifier = Modifier) {
         // the whole hero and push the words panel off the screen.
         BookCard(
             title = "Asking the landlord for the deposit back",
-            origin = "Scenario", accent = Books.scenarios,
-            detail = "12 of 19 mastered", progress = 12f / 19f,
+            origin = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.scenario), accent = Books.scenarios,
+            detail = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.lld_of_lld_mastered, 12, 19), progress = 12f / 19f,
             modifier = Modifier.height(150.dp),
         )
         HeroPanel {
             Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.words_d26d55), style = MaterialTheme.typography.titleSmall)
-            listOf("deposit" to "the money held during a tenancy",
-                "wear and tear" to "normal damage from regular use",
-                "deducted" to "taken off the total").forEach { (w, note) ->
+            // The words are MATERIAL (English sample, as on iOS); their glosses
+            // are coaching, so they read in the app language.
+            listOf("deposit" to com.roro.futurevoice.R.string.welcome_gloss_deposit,
+                "wear and tear" to com.roro.futurevoice.R.string.welcome_gloss_wear_and_tear,
+                "deducted" to com.roro.futurevoice.R.string.welcome_gloss_deducted).forEach { (w, note) ->
                 Column(Modifier.padding(vertical = 4.dp)) {
                     Text(w, style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium)
-                    Text(note, style = MaterialTheme.typography.bodySmall,
+                    Text(androidx.compose.ui.res.stringResource(note), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -274,8 +283,9 @@ fun LevelHero(modifier: Modifier = Modifier) {
                 MaterialTheme.typography.displayMedium),
                 color = MaterialTheme.colorScheme.primary)
             Text(
-                if (reassessed) "Clear, detailed talk on many topics, including some abstract ones."
-                else "Familiar topics fluently enough to get by, and tell a simple story.",
+                androidx.compose.ui.res.stringResource(
+                    if (reassessed) com.roro.futurevoice.R.string.clear_detailed_talk_on_many_topics_including_some_abstract_o_933630
+                    else com.roro.futurevoice.R.string.familiar_topics_fluently_enough_to_get_by_and_tell_a_simple_fa6cea),
                 style = MaterialTheme.typography.bodyMedium)
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Row(Modifier.fillMaxWidth()) {
@@ -290,9 +300,10 @@ fun LevelHero(modifier: Modifier = Modifier) {
         }
         HeroPanel {
             Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.across_skills), style = MaterialTheme.typography.titleSmall)
-            listOf("Vocabulary" to level, "Fluency" to "≈B1", "Grammar" to "≈B2").forEach { (k, v) ->
+            listOf(com.roro.futurevoice.R.string.vocabulary to level, com.roro.futurevoice.R.string.fluency to "≈B1",
+                com.roro.futurevoice.R.string.grammar to "≈B2").forEach { (k, v) ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                    Text(k, style = MaterialTheme.typography.bodyMedium,
+                    Text(androidx.compose.ui.res.stringResource(k), style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f))
                     Text(v, style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
