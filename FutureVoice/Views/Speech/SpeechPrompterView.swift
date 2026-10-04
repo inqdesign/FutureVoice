@@ -327,6 +327,12 @@ final class PrompterScroller: NSObject, ObservableObject {
     private let pull: CGFloat = 0.35
 
     func setTarget(_ y: CGFloat, snap: Bool) {
+        // Moving the column by a fraction of a point re-rounds the layout to
+        // the pixel grid, which moves the measured word by that fraction,
+        // which moved the column again — an endless loop the moment the
+        // prompter opened (measured: 0.067 pt back and forth). Changes under
+        // a point are not movement.
+        guard abs(y - target) >= 1 || (snap && abs(y - position) >= 1) else { return }
         target = y
         if snap {
             position = y

@@ -567,6 +567,11 @@ enum DebugCapture {
             let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
             return AnyView(SpeechPrompterView(script: script, native: appState.nativeLanguage,
                                               level: appState.proficiency, previewCursor: 24))
+        case "speech-open":
+            // The prompter exactly as Practice opens it: cursor 0, ready.
+            let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
+            return AnyView(SpeechPrompterView(script: script, native: appState.nativeLanguage,
+                                              level: appState.proficiency))
         case "speech-result":
             once("speech") { seedSpeech(appState) }
             let take = SpeechStore.shared.takes.first!
