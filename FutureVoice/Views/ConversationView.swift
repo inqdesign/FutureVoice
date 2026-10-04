@@ -1646,6 +1646,25 @@ struct ConversationView: View {
         return turns.isEmpty ? "Start phone-call mode" : "Resume phone-call mode"
     }
 
+    /// Where a scenario call takes place and who the other side is, for the
+    /// "try saying" coach — "What can I get you?" only has one natural
+    /// answer once it knows it is a café. nil on every other call.
+    private var coachSituation: String? {
+        guard let sid = sessionScenarioId,
+              let s = appState.scenarios.first(where: { $0.id == sid }) else { return nil }
+        let role = s.role.trimmingCharacters(in: .whitespaces)
+        return role.isEmpty ? s.environment : "\(s.environment) — talking with \(role)"
+    }
+
+    /// The example first line when this call's situation is one the learner
+    /// opens (`StarterSituation.learnerFirst`); nil for every other call.
+    private var learnerOpensLine: (say: String, meaning: String)? {
+        guard let sid = sessionScenarioId,
+              let starter = StarterSituation.of(appState.scenarios.first { $0.id == sid }),
+              let say = starter.learnerFirstLine(language: appState.targetLanguage) else { return nil }
+        return (say, starter.learnerFirstMeaning ?? "")
+    }
+
     /// With the pill glyph-free while on call, this line is the ONE place
     /// that says tapping hangs up — every in-call state must name it.
     private var micHint: String {
@@ -2399,6 +2418,20 @@ struct ConversationView: View {
                         language: language, personaName: personaName,
                         proficiency: proficiency)
                 }
+            } else if let line = learnerOpensLine {
+                // A starter the LEARNER opens (asking a stranger the way):
+                // the other side waits to be spoken to, and the coach's own
+                // slot above the pill offers a first line — shown whatever
+                // coach mode says, since without it the call is a silence
+                // nobody explained. The first reply clears it like any
+                // suggestion.
+                coachReply = CoachReply(
+                    say: line.say,
+                    meaning: LanguageCatalog.sameLanguage(appState.targetLanguage,
+                                                          appState.nativeLanguage) ? "" : line.meaning,
+                    turnId: UUID(), heading: explain("You go first"))
+                await startRealtimeCall(opener: nil)
+                return
             } else if let sid = sessionScenarioId,
                       let stored = appState.nextScenarioOpener(for: sid) {
                 // Scenario talk with a stored opener pool: rotate — instant
@@ -3466,6 +3499,7 @@ struct ConversationView: View {
             guard let result = await CoachSuggester.suggest(
                     line: text, learnerSaid: learnerSaid,
                     earlier: learnerSaid == nil ? nil : earlier,
+                    situation: coachSituation,
                     candidates: candidates,
                     target: appState.targetLanguage, native: appState.nativeLanguage,
                     level: appState.proficiency, turnId: turnId),

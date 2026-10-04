@@ -92,6 +92,9 @@ struct ConversationHome: View {
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .contentMargins(.bottom, 24, for: .scrollContent)
+            #if DEBUG
+            .defaultScrollAnchor(DebugCapture.previewScenariosTab ? .bottom : nil)
+            #endif
             // No navigation title: the hero's time-of-day question IS the
             // greeting (a large title above it doubled the greeting). The
             // inline bar carries just the chips: language · streak · account.
@@ -424,6 +427,12 @@ struct ConversationHome: View {
     /// paywall opens INSTEAD of the call screen and not on top of one.
     private func runScenario(_ s: Scenario) {
         BillingGate.start(orShow: $showingPaywall) {
+            // A ready-made situation (`StarterSituation`) is minted on its
+            // first tap that gets past the gate — never before it.
+            // Saved every time: the row is refreshed from the catalog.
+            if s.starterId != nil || !appState.scenarios.contains(where: { $0.id == s.id }) {
+                appState.saveScenario(s)
+            }
             appState.markScenarioUsed(id: s.id)
             callLaunch = CallLaunch(topic: s.displayTitle, blurb: s.promptBlurb, isNews: false,
                                     origin: .scenario, scenarioId: s.id)
@@ -1119,7 +1128,7 @@ struct TalkScenariosListView: View {
     @State private var showingBuilder = false
 
     private var scenarios: [Scenario] {
-        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene }
+        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene && $0.starterId == nil }
             .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
 

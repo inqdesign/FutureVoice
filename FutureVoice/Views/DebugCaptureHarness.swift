@@ -16,6 +16,10 @@ enum DebugCapture {
     /// screenshot ("reading" / "done"), since a capture run has no mic.
     static var sayItAgainStage: String?
 
+    /// True while capturing `home-scenarios`: Talk's discover block opens on
+    /// its Everyday chip (the ready-made situations).
+    static var previewScenariosTab = false
+
     /// True while capturing the Shadow screen: ShadowDrillView then synthesizes
     /// evenly-spaced karaoke timings locally and skips the voice-clone/network
     /// path, so the timeline renders offline for the screenshot.
@@ -863,6 +867,10 @@ enum DebugCapture {
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
                 .environmentObject(appState))
+        case "home-scenarios":
+            once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
+            previewScenariosTab = true
+            return AnyView(ConversationHome())
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())

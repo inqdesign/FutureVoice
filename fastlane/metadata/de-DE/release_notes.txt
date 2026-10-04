@@ -3,8 +3,11 @@ Neu
 • Grammatik-Fokus: Such dir einen Fehler aus, den du oft machst, und behalte ihn das ganze Gespräch über im Blick. Kommt er wieder vor, siehst du es sofort. Bei A1 und A2 standardmäßig an.
 • Wenn du deine Stimme zum ersten Mal hörst, kannst du dir vier Akzente direkt anhören und einen auswählen.
 • Du kannst jetzt auch die Sprache lernen, in der du die App nutzt.
+• Im Tab „Sprechen“ gibt es jetzt „Alltag“: typische Situationen wie Café, Restaurant, Bekleidungsgeschäft oder Anruf in der Arztpraxis – mit einem Tipp starten.
 
 Behoben
+• Die Begrüßung am Anfang eines Gesprächs brach ab, wenn ein Bluetooth-Gerät in der Nähe war.
+• „Sag zum Beispiel“-Vorschläge klingen jetzt so, wie Muttersprachler wirklich reden.
 • Dein fließendes Ich atmet zwischen den Sätzen und klingt natürlicher.
 • Du kannst die Sprechgeschwindigkeit auch während eines Gesprächs ändern.
 • Ein geplanter Anruf konnte während eines laufenden Gesprächs klingeln und es abbrechen.

@@ -3,8 +3,11 @@ New
 • Grammar focus: pick one mistake you keep making and keep it in mind for the whole call. You'll see it right away if it comes up again. On by default at A1 and A2.
 • When you first meet your voice, you can hear and choose from four accents right there.
 • You can now learn the language you use the app in.
+• Talk has a new Everyday tab: everyday situations like a café, a restaurant, a clothing store or calling a clinic, one tap to start.
 
 Fixed
+• The greeting at the start of a call could cut off when a Bluetooth device was nearby.
+• "Try saying" suggestions now sound the way native speakers actually talk.
 • Your future self now breathes between sentences and sounds more natural.
 • You can change the speaking speed during a call.
 • A scheduled call could ring during a call you were already on and cut it off.

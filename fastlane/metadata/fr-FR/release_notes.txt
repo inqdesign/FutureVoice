@@ -3,8 +3,11 @@ Nouveautés
 • Focus grammaire : choisis une erreur que tu refais souvent et garde-la en tête pendant tout l’appel. Si elle revient, tu le vois tout de suite. Activé par défaut en A1 et A2.
 • Quand tu découvres ta voix, tu peux écouter et choisir parmi quatre accents sur place.
 • Tu peux maintenant apprendre la langue dans laquelle tu utilises l’app.
+• Parler a un nouvel onglet Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
 
 Corrections
+• Le salut au début d’un appel pouvait être coupé quand un appareil Bluetooth était à proximité.
+• Les suggestions de phrases sonnent maintenant comme on parle vraiment.
 • Ton moi fluide respire entre les phrases et parle plus naturellement.
 • Tu peux changer la vitesse de la voix pendant un appel.
 • Un appel programmé pouvait sonner pendant un appel en cours et le couper.

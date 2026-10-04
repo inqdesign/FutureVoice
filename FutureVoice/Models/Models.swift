@@ -1574,6 +1574,10 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// files themselves are never copied — see `ScenarioBrief`. Optional so
     /// scenarios saved before this decode unchanged.
     var brief: ScenarioBrief? = nil
+    /// Set on a scenario minted from one of Talk's ready-made situations
+    /// (`StarterSituation.id`), so the next tap on that row reuses it and the
+    /// "Your scenarios" lists leave it out. Optional so old rows decode.
+    var starterId: String? = nil
 
     /// Rows minted before the flag existed carry only the category, so read
     /// both — otherwise the meetings already on disk stay in the list this

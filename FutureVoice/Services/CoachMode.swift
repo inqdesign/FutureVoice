@@ -148,6 +148,10 @@ struct CoachReply: Equatable {
     /// Native language, the same brackets translated.
     let meaning: String
     let turnId: UUID
+    /// The label above the line — "Try saying", or "You go first" when the
+    /// learner opens the call (`StarterSituation.learnerFirst`).
+    /// nil = "Try saying". Already localized.
+    var heading: String? = nil
 }
 
 @MainActor
@@ -161,12 +165,14 @@ enum CoachSuggester {
     static func suggest(line: String,
                         learnerSaid: String?,
                         earlier: String?,
+                        situation: String? = nil,
                         candidates: [TalkGoalItem],
                         target: String,
                         native: String,
                         level: CEFRLevel,
                         turnId: UUID) async -> (reply: CoachReply, item: TalkGoalItem?)? {
         var content = ""
+        if let situation, !situation.isEmpty { content += "Situation: \(situation)\n" }
         if let earlier, !earlier.isEmpty { content += "Earlier they said: \"\(earlier)\"\n" }
         if let learnerSaid, !learnerSaid.isEmpty { content += "The learner said: \"\(learnerSaid)\"\n" }
         content += "Now the other speaker says: \"\(line)\""
@@ -176,8 +182,13 @@ enum CoachSuggester {
         let payload: Payload? = try? await GeminiClient.background.sendJSON(
             system: system(target: target, native: native, level: level),
             messages: [GeminiClient.Message(role: .user, content: content)],
-            model: .flashLite31,
-            maxTokens: 300,
+            // The default model, not flash-lite (2026-10-04): the line is
+            // what the learner is about to SAY, and flash-lite wrote "I will
+            // have a coffee please" and "I'm going to London, please" under
+            // a prompt that forbids both; 3.6 Flash didn't, at the same
+            // ~1–1.8 s. Its thinking needs room, or the JSON comes back cut.
+            model: .flash36,
+            maxTokens: 1000,
             purpose: "coach",
             idempotencyKey: "coach-reply:\(turnId.uuidString)",
             requestTimeout: 8,
@@ -208,14 +219,26 @@ enum CoachSuggester {
         return """
         A \(level.rawValue.uppercased()) learner of \(targetName) is on a spoken call. \
         The other speaker has just said the line below. Write ONE short thing \
-        the learner could say back next — an easy, natural answer the way a \
-        real person would reply, not a textbook sentence.
+        the learner could say back next — exactly what a native speaker would \
+        actually say out loud in that moment, kept easy. Never a textbook \
+        sentence: if a native would not say it that way, it is wrong however \
+        simple it is.
+
+        - SPOKEN, not written: contractions where speech has them ("I'll", \
+          "I'm", "don't"), the everyday phrasing people really use in that \
+          place ("Can I get a latte?", "I'll have the pasta", "Just looking, \
+          thanks"), never a stiff full form ("I will have a coffee please").
+          When a situation is given, answer as a real customer, guest or \
+          caller there would. One answer, one idea — not "just looking" AND \
+          a request — and "please" only on a request, never on a statement \
+          ("I'm going to London, please").
 
         - "say": in \(targetName) ONLY — always, even when the line contains \
           names or words in another language. 3–10 words, one sentence (two \
           very short ones at most). \(scale.vocabulary)
         - Where the answer depends on something only the learner knows (their \
-          name, a time, a place, what they did, what they like), put a \
+          name, a time, a place, what they did, what they like, which drink \
+          or dish or item they want), put a \
           plausible EXAMPLE in square brackets — "I usually get up at [7]." — \
           which the learner swaps for their own. It is shown faded as a \
           placeholder, so it is never a claim about them. One or two \

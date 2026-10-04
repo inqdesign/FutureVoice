@@ -512,7 +512,9 @@ struct CoachReplyLabel: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text("Try saying")
+            Group {
+                if let heading = reply.heading { Text(heading) } else { Text("Try saying") }
+            }
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Self.text(reply.say, color: .primary)

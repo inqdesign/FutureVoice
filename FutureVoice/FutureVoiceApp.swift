@@ -1039,7 +1039,7 @@ final class AppState: ObservableObject {
         let isNew = !scenarios.contains { $0.id == s.id }
         ScenarioStore.shared.save(s)
         scenarios = ScenarioStore.shared.load()
-        if isNew { Analytics.capture("scenario_created", ["is_topic": s.isTopic == true]) }
+        if isNew { Analytics.capture("scenario_created", ["is_topic": s.isTopic == true, "starter": s.starterId ?? ""]) }
     }
 
     /// Rotate the stored opener pool for a scenario talk. nil when no pool

@@ -28,6 +28,7 @@ struct DiscoverSection: View {
 
     enum Tab: String, CaseIterable {
         case news = "News"
+        case everyday = "Everyday"
         case scenarios = "Scenarios"
 
         /// Chrome, so it follows the TARGET language. The raw value stays an
@@ -35,6 +36,7 @@ struct DiscoverSection: View {
         var label: String {
             switch self {
             case .news:      return chrome("News")
+            case .everyday:  return chrome("Everyday")
             case .scenarios: return chrome("Scenarios")
             }
         }
@@ -45,7 +47,7 @@ struct DiscoverSection: View {
     /// News-born topic books stay out of here — they belong to the news
     /// taxonomy, not the scenario rail.
     private var scenarios: [Scenario] {
-        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene }
+        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene && $0.starterId == nil }
             .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
 
@@ -54,12 +56,18 @@ struct DiscoverSection: View {
             header
             switch tab {
             case .news:      newsContent
+            case .everyday:  startersContent
             case .scenarios: scenariosContent
             }
         }
         .sheet(isPresented: $showingInterests, onDismiss: reloadNewsForInterests) {
             InterestsEditorSheet()
                 .environmentObject(appState)
+        }
+        .onAppear {
+            #if DEBUG
+            if DebugCapture.previewScenariosTab { tab = .everyday }
+            #endif
         }
         .task {
             // Stories come from the shared platform pool (cheap read), so
@@ -110,7 +118,7 @@ struct DiscoverSection: View {
                     .disabled(loadingNews)
                     .accessibilityLabel("Refresh stories")
                 }
-            } else {
+            } else if tab == .scenarios {
                 Button(action: onBuildScenario) {
                     Image(systemName: "plus")
                 }
@@ -140,7 +148,7 @@ struct DiscoverSection: View {
 
     /// One list card — leading icon in a tinted circle, title + caption,
     /// chevron. The shared row anatomy for news stories and scenarios.
-    private func listCard(title: String, caption: String?,
+    private func listCard(title: String, caption: String?, done: Bool = false,
                           @ViewBuilder icon: () -> some View) -> some View {
         HStack(spacing: 12) {
             ZStack {
@@ -164,6 +172,11 @@ struct DiscoverSection: View {
                 }
             }
             Spacer(minLength: 8)
+            if done {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .accessibilityLabel("Done")
+            }
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.tertiary)
@@ -251,6 +264,38 @@ struct DiscoverSection: View {
             }
             .padding(.horizontal, 20)
         } else {
+            ownScenarios
+        }
+    }
+
+    /// The Everyday chip: ready-made challenges (`StarterSituation`) on a
+    /// chip of their own, so they sit right under the chips instead of below
+    /// the learner's own list. A tap starts the call; one already talked
+    /// through carries a check.
+    private var startersContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            list {
+                ForEach(StarterSituation.all) { starter in
+                    let existing = appState.scenarios.first { $0.starterId == starter.id }
+                    Button {
+                        onPickScenario(starter.scenario(in: appState.scenarios,
+                                                        language: appState.targetLanguage))
+                    } label: {
+                        listCard(title: starter.title,
+                                 caption: starter.showsRole ? chrome("with \(starter.role)") : nil,
+                                 done: existing?.lastUsedAt != nil) {
+                            Image(systemName: starter.icon)
+                                .font(.subheadline)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var ownScenarios: some View {
+        Group {
             list {
                 ForEach(scenarios.prefix(5)) { s in
                     let name = personaName(s)

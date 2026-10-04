@@ -3,8 +3,11 @@ Novedades
 • Enfoque gramatical: elige un error que repites y tenlo presente durante toda la llamada. Si vuelve a salir, lo verás al momento. Activado por defecto en A1 y A2.
 • Al conocer tu voz por primera vez, puedes escuchar y elegir entre cuatro acentos ahí mismo.
 • Ahora puedes aprender el mismo idioma en el que usas la app.
+• Hablar tiene una nueva pestaña Día a día: situaciones cotidianas como una cafetería, un restaurante, una tienda de ropa o llamar a la clínica, con un solo toque.
 
 Correcciones
+• El saludo al empezar una llamada podía cortarse si había un dispositivo Bluetooth cerca.
+• Las sugerencias de qué decir ahora suenan como habla de verdad un nativo.
 • Tu yo fluido respira entre frases y suena más natural.
 • Puedes cambiar la velocidad de voz durante una llamada.
 • Una llamada programada podía sonar en plena llamada y cortarla.
