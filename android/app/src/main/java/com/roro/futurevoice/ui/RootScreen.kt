@@ -1604,9 +1604,12 @@ private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLev
                 accent = if (s.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
                 detail = formatter.format(Instant.ofEpochMilli(s.rank).atZone(ZoneId.systemDefault())) +
                     " · " + stringResource(R.string.lld_turns, s.turns.count { it.role == TurnRole.USER }) +
-                    (s.summary?.scorecard?.let { " · ${it.overall}" } ?: ""),
+                    // A practice (coach mode) call has no score to list
+                    // (iOS HistorySheet / TalkBookCard): it says what it was.
+                    (if (s.isPractice) " · " + stringResource(R.string.practice_call)
+                     else s.summary?.scorecard?.let { " · ${it.overall}" } ?: ""),
                 onClick = { onOpen(s.id) },
-                trailing = s.summary?.scorecard?.overall?.let { score ->
+                trailing = s.summary?.scorecard?.overall?.takeIf { !s.isPractice }?.let { score ->
                     @Composable {
                         Text("$score", style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary)
