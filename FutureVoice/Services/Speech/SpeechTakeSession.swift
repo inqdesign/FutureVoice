@@ -126,9 +126,15 @@ final class SpeechTakeSession: ObservableObject {
         position = 0
         elapsed = 0
         clock = 0
-        // With the camera on, the take is saved as the whole screen —
-        // prompter and camera together. Started before the mic, so iOS's
-        // permission alert (if it shows) never sits inside the take.
+        // "3" goes up FIRST and the mic is set up while it shows: the setup
+        // (recognizer + voice processing + recorder session) holds the main
+        // thread for a beat, and running it before the count meant a blank
+        // pause after the tap. The wait before "2" shrinks by what the setup
+        // took, so the count is as long as ever.
+        let countStartedAt = Date()
+        phase = .countdown(3)
+        HapticEngine.countdownTick()
+        try? await Task.sleep(for: .milliseconds(30))   // let "3" draw first
         do {
             try live.start(locale: script.language,
                            preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
@@ -144,7 +150,10 @@ final class SpeechTakeSession: ObservableObject {
             phase = .failed(explain("The microphone couldn't start. Try again."))
             return
         }
-        for n in [3, 2, 1] {
+        let setupTook = Date().timeIntervalSince(countStartedAt)
+        try? await Task.sleep(for: .seconds(max(0, 0.7 - setupTook)))
+        for n in [2, 1] {
+            guard case .countdown = phase else { return }
             phase = .countdown(n)
             HapticEngine.countdownTick()
             try? await Task.sleep(nanoseconds: 700_000_000)

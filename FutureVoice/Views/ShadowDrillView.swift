@@ -1230,6 +1230,18 @@ struct ShadowDrillView: View {
         resetResult()
         prevTranscript = ""
 
+        // "3" goes up FIRST, and the mic is set up while it shows. The setup
+        // below (recognizer + voice processing + recorder session) holds the
+        // main thread for a noticeable beat, and it used to run before the
+        // count began — a blank pause after the tap before anything moved.
+        // The pause before "2" shrinks by whatever the setup took, so the
+        // count is as long as ever.
+        let countStartedAt = Date()
+        phase = .countdown
+        countdownValue = 3
+        HapticEngine.countdownTick()
+        try? await Task.sleep(for: .milliseconds(30))   // let "3" draw first
+
         // Start mic recognition BEFORE the countdown — no playback. Playing
         // the target audio through the speaker bleeds into the mic, which
         // inflates the score and falsely advances the karaoke highlight.
@@ -1300,8 +1312,10 @@ struct ShadowDrillView: View {
         // "1" (which made the exact start moment hard to catch). The mic is
         // already hot, so speaking right on (or slightly before) the beat is
         // fully captured.
-        phase = .countdown
-        for n in [3, 2, 1] {
+        let setupTook = Date().timeIntervalSince(countStartedAt)
+        try? await Task.sleep(for: .seconds(max(0, 0.7 - setupTook)))
+        for n in [2, 1] {
+            guard phase == .countdown else { return }
             countdownValue = n
             HapticEngine.countdownTick()
             try? await Task.sleep(nanoseconds: 700_000_000)
