@@ -253,6 +253,10 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         // Refused before the network with the error every surface already
         // answers with its paywall; the revival happens at a launcher's tap.
         if (com.roro.futurevoice.data.VoiceParking.isParked(voiceId)) throw EdgeError.InsufficientCredits
+        // A preset slot speaks in the target language's own voice (see
+        // `VoicePreset.speaking`); the idempotency key below follows the voice
+        // that actually speaks.
+        val voiceId = com.roro.futurevoice.talk.VoicePreset.speaking(voiceId)
         val body = TtsBody(
             voice_id = voiceId,
             text = text,

@@ -439,9 +439,13 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // The text still goes up — as HISTORY, so the gateway records
                 // what was said and stays silent. No protocol change: a miss
                 // is a null and the gateway speaks it exactly as before.
+                // A stranger's opener must be the voice the gateway will
+                // answer in — never a take cached before their slot got a
+                // native voice (iOS `b49e91b`).
                 val cached = opener.takeIf { it.isNotBlank() }?.let {
                     com.roro.futurevoice.data.PhraseAudioStore.shared(appContext)
-                        .data(it, activeVoiceId)
+                        .data(it, activeVoiceId, allowLineage = !VoicePreset.isRevoiced(
+                            activeVoiceId, config.targetLanguage))
                 }
                 // NOT appended here on the gateway path: it speaks the opener
                 // as a reply with its own context, and audio_start/reply_delta
@@ -516,7 +520,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         // the learner's own clone. Ownership is enforced by the gateway.
         realtime.connect(
             token = token,
-            voiceId = cfg.castVoiceId ?: cfg.voiceId,
+            // A preset slot speaks in the target language's own voice.
+            voiceId = VoicePreset.speaking(cfg.castVoiceId ?: cfg.voiceId, cfg.targetLanguage),
             language = cfg.targetLanguage,
             system = realtimeSystem,
             opener = opener,

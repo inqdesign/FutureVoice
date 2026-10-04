@@ -39,10 +39,15 @@ object PathIdeas {
             lines += ""
             lines += "COUNTERPART (the scene is WITH this person):"
             lines += "- name: ${c.name}"
-            if (c.relationship.isNotEmpty()) lines += "- relationship: ${c.relationship}"
-            if (c.howWeMet.isNotEmpty()) lines += "- how they met: ${c.howWeMet}"
-            if (c.background.isNotEmpty()) lines += "- shared context: ${c.background}"
-            if (c.commonTopics.isNotEmpty()) lines += "- common topics: ${c.commonTopics}"
+            if (c.isPublicFigure == true) {
+                val who = c.publicIdentity?.takeIf { it.isNotEmpty() } ?: c.name
+                lines += "- who: $who, the real public figure — draw on everything publicly known about them"
+            } else {
+                if (c.relationship.isNotEmpty()) lines += "- relationship: ${c.relationship}"
+                if (c.howWeMet.isNotEmpty()) lines += "- how they met: ${c.howWeMet}"
+                if (c.background.isNotEmpty()) lines += "- shared context: ${c.background}"
+                if (c.commonTopics.isNotEmpty()) lines += "- common topics: ${c.commonTopics}"
+            }
         }
         return GeminiClient(AuthRepository()).sendJson(
             system = system,

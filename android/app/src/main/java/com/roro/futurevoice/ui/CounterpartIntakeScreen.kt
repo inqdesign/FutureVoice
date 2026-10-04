@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.Counterpart
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.SpeechRegister
+import com.roro.futurevoice.data.defaultRegisters
 import com.roro.futurevoice.talk.CounterpartParser
 import com.roro.futurevoice.talk.PublicFigureLookup
 import com.roro.futurevoice.ui.brand.ContinuousShape
@@ -100,12 +103,32 @@ fun CounterpartIntakeScreen(
     val standIn = remember { com.roro.futurevoice.capture.flags.WatchCaptureFlags.intakeStep
         ?.let { Step.entries.getOrNull(it) } }
     var step by remember { mutableStateOf(standIn ?: Step.WHO) }
-    androidx.activity.compose.BackHandler {
-        if (step == Step.WHO) onCancel() else step = Step.entries[step.ordinal - 1]
-    }
     var name by remember { mutableStateOf(if (standIn != null) "Boram" else "") }
     var kind by remember { mutableStateOf(if (standIn != null) RelationshipKind.FELLOW_PARENT else null) }
     var kindDetail by remember { mutableStateOf("") }
+    // How the two of them talk (iOS `ede039e`): prefilled from the
+    // relationship chip so the card reads as a confirmation, until the
+    // learner touches it.
+    var myRegister by remember { mutableStateOf(SpeechRegister.POLITE) }
+    var theirRegister by remember { mutableStateOf(SpeechRegister.POLITE) }
+    var speechTouched by remember { mutableStateOf(false) }
+    var iCallThem by remember { mutableStateOf("") }
+    var theyCallMe by remember { mutableStateOf("") }
+    LaunchedEffect(kind) {
+        if (!speechTouched) {
+            val (mine, theirs) = defaultRegisters(kind?.label)
+            myRegister = mine; theirRegister = theirs
+        }
+    }
+    // A public figure is name → "Public figure" → done: the model knows the
+    // rest, so nothing else is asked (iOS `steps`).
+    val steps = if (kind == RelationshipKind.PUBLIC_FIGURE) listOf(Step.WHO, Step.RELATIONSHIP)
+        else Step.entries
+    val stepIndex = steps.indexOf(step).coerceAtLeast(0)
+    val isLast = stepIndex == steps.lastIndex
+    androidx.activity.compose.BackHandler {
+        if (step == Step.WHO) onCancel() else step = steps[(stepIndex - 1).coerceAtLeast(0)]
+    }
     val answers = remember { mutableStateListOf("", "", "") }
     val chips = remember { mutableStateListOf<Set<String>>(emptySet(), emptySet(), emptySet()) }
     var interests by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -124,10 +147,42 @@ fun CounterpartIntakeScreen(
         else -> true
     }
 
+    /** What the speech card settled, onto the draft the form opens with. Only
+     *  what the learner actually saw: a skipped card leaves the person on its
+     *  cast's default (polite, never corrected). */
+    fun applySpeech(draft: Counterpart): Counterpart {
+        val withKind = draft.copy(relationshipKind = kind?.label)
+        if (Step.SPEECH !in steps) return withKind
+        return withKind.copy(myRegister = myRegister, theirRegister = theirRegister,
+            iCallThem = iCallThem.trim(), theyCallMe = theyCallMe.trim())
+    }
+
     fun parseAndContinue() {
         scope.launch {
             parsing = true; error = null
             val k = kind ?: RelationshipKind.OTHER
+            // A public figure: the model already knows the person, so the
+            // only question is WHICH one — look that up and hand the form an
+            // identity to confirm. Not found still opens the form, where the
+            // name can be fixed and looked up again.
+            if (k == RelationshipKind.PUBLIC_FIGURE) {
+                try {
+                    val identity = PublicFigureLookup.identify(name.trim(), nativeLanguage)
+                    onDraft(Counterpart(
+                        name = name.trim(),
+                        relationship = kindDetail.ifBlank { k.label },
+                        relationshipKind = k.label,
+                        isPublicFigure = true,
+                        publicIdentity = identity,
+                        factsRefreshedAt = System.currentTimeMillis(),
+                    ), photo)
+                } catch (e: Exception) {
+                    error = "Couldn't look them up: ${e.message.orEmpty()}"
+                } finally {
+                    parsing = false
+                }
+                return@launch
+            }
             val kindLabel = listOf(k.label, kindDetail).filter { it.isNotBlank() }.joinToString(" — ")
             val styleLine = (styleTraits.joinToString(", ") +
                 if (styleNotes.isBlank()) "" else ". $styleNotes").trim()
@@ -146,15 +201,6 @@ fun CounterpartIntakeScreen(
             val relationshipFallback = kindDetail.ifBlank { k.label }
             try {
                 val draft = when {
-                    // A public figure is looked up whatever was said: the
-                    // profile comes from coverage, not from the cards.
-                    k == RelationshipKind.PUBLIC_FIGURE -> PublicFigureLookup.lookUp(
-                        Counterpart(name = name.trim(), relationship = kindDetail,
-                            howWeMet = sections.drop(2).joinToString("\n\n"),
-                            commonTopics = interests.joinToString(", "),
-                            conversationStyle = styleLine,
-                            isPublicFigure = true),
-                        nativeLanguage, targetLanguage)
                     // Nothing to extract — skip the model, straight to the form.
                     answers.all { it.isBlank() } && chips.all { it.isEmpty() } -> Counterpart(
                         name = name.trim(), relationship = relationshipFallback,
@@ -165,8 +211,8 @@ fun CounterpartIntakeScreen(
                 // The relationship card was required, so there always is one —
                 // but the parser won't invent, and an empty relationship leaves
                 // the form's Save greyed out.
-                onDraft(draft.copy(
-                    relationship = draft.relationship.ifBlank { relationshipFallback }), photo)
+                onDraft(applySpeech(draft.copy(
+                    relationship = draft.relationship.ifBlank { relationshipFallback })), photo)
             } catch (e: Exception) {
                 error = "Couldn't parse: ${e.message.orEmpty()}"
             } finally {
@@ -183,7 +229,7 @@ fun CounterpartIntakeScreen(
         SheetHeader(title,
             leading = { IosGlassTextButton(stringResource(R.string.cancel), onClick = onCancel) },
             modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp))
-        IntakeProgress((step.ordinal + 1f) / Step.entries.size,
+        IntakeProgress((stepIndex + 1f) / steps.size,
             Modifier.padding(horizontal = 20.dp).padding(top = 8.dp))
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
@@ -228,9 +274,42 @@ fun CounterpartIntakeScreen(
                         InlineField(kindDetail, { kindDetail = it }, "More precisely? — e.g. College roommate")
                     }
                     if (kind == RelationshipKind.PUBLIC_FIGURE) {
-                        Text("A public figure's profile is filled from public coverage — where they're from, what they're known for, how they talk in interviews. Their voice is a preset, never their real one.",
+                        Text(stringResource(R.string.rel_public_figure_we_find_you_confirm),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                // How the learner and this person speak to each other. The
+                // profile cards say who the person IS; nothing said how the
+                // two of them TALK, so a best friend was voiced in polite
+                // speech. Both directions: Korean and Japanese let them differ.
+                Step.SPEECH -> {
+                    val who = name.trim()
+                    IntakeStepHeader(
+                        if (who.isEmpty()) stringResource(R.string.rel_how_do_you_two_talk)
+                        else stringResource(R.string.rel_how_do_you_and_s_talk, who),
+                        stringResource(R.string.rel_calls_and_scenes_change_later))
+                    Column(Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill())
+                        .padding(14.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                        RegisterSegmentedRow(stringResource(R.string.rel_you_talk_to_them), myRegister,
+                            targetLanguage, nativeLanguage) { speechTouched = true; myRegister = it }
+                        RegisterSegmentedRow(
+                            if (who.isEmpty()) stringResource(R.string.rel_they_talk_to_you)
+                            else stringResource(R.string.rel_s_talks_to_you, who),
+                            theirRegister, targetLanguage, nativeLanguage,
+                        ) { speechTouched = true; theirRegister = it }
+                    }
+                    Column(Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill())) {
+                        Box(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                            InlineField(iCallThem, { iCallThem = it },
+                                stringResource(R.string.rel_what_you_call_them_optional))
+                        }
+                        androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 14.dp),
+                            thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        Box(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                            InlineField(theyCallMe, { theyCallMe = it },
+                                stringResource(R.string.rel_what_they_call_you_optional))
+                        }
                     }
                 }
                 Step.NARRATIVE1, Step.NARRATIVE2, Step.NARRATIVE3 -> {
@@ -276,19 +355,19 @@ fun CounterpartIntakeScreen(
         }
         IntakeBottomBar(
             backVisible = step != Step.WHO,
-            nextTitle = stringResource(if (step == Step.STYLE) R.string.continue_ else R.string.next),
+            nextTitle = stringResource(if (isLast) R.string.continue_ else R.string.next),
             nextEnabled = canAdvance,
             working = parsing,
-            onBack = { step = Step.entries[step.ordinal - 1] },
+            onBack = { step = steps[(stepIndex - 1).coerceAtLeast(0)] },
             onNext = {
-                if (step == Step.STYLE) parseAndContinue()
-                else step = Step.entries[step.ordinal + 1]
+                if (isLast) parseAndContinue()
+                else step = steps[stepIndex + 1]
             },
         )
     }
 }
 
-private enum class Step { WHO, RELATIONSHIP, NARRATIVE1, NARRATIVE2, NARRATIVE3, INTERESTS, STYLE }
+private enum class Step { WHO, RELATIONSHIP, SPEECH, NARRATIVE1, NARRATIVE2, NARRATIVE3, INTERESTS, STYLE }
 
 // MARK: - The shared intake pieces (iOS `GuidedIntake.swift`)
 
@@ -562,10 +641,7 @@ private enum class RelationshipKind(val label: String, val cards: List<Narrative
         NarrativeCard("What else should I know about them?", REAL, listOf("Strict but fair", "Encouraging", "Patient", "Talks fast", "Recent school events", "I want to ask more questions")))),
     /** Someone not in the learner's life — its own kind, not "Other": the
      *  profile is the public record, not the learner's guess. */
-    PUBLIC_FIGURE("Public figure", listOf(
-        NarrativeCard("Why this person?", TAP_OR_TALK, listOf("Fan for years", "Their music", "Their films or shows", "Their sport", "Their interviews", "They're why I'm learning this language")),
-        NarrativeCard("Where would you meet them?", "The scene is built around this moment.", listOf("Fan meeting", "An interview", "Backstage", "At the airport", "By chance, in a cafe", "A signing event")),
-        NarrativeCard("What would you want to say to them?", "Say it in your own language — the fluent self says it in theirs.", listOf("Thank them", "Tell them what their work meant to me", "Ask about their work", "Ask for advice", "Just say hello properly", "A question I've always had")))),
+    PUBLIC_FIGURE("Public figure", emptyList()),
     OTHER("Other", listOf(
         NarrativeCard("How do you know each other?", TAP_OR_TALK, listOf("Through friends", "From work", "From a hobby", "From the neighborhood", "Online", "Met recently")),
         NarrativeCard("What's their life like?", "", listOf("Works full-time", "Studying", "Raising kids", "Lives nearby", "Lives abroad", "Busy lately")),

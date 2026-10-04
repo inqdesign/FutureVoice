@@ -60,7 +60,34 @@ class PhraseAudioStore private constructor(context: Context) {
             .putString(LINEAGE_KEY, updated.joinToString("\n")).apply()
     }
 
-    private fun file(voiceId: String, text: String): File {
+    /** The file for the voice that actually SPEAKS this id — a preset slot
+     *  resolves to the target language's own voice (`VoicePreset.speaking`). */
+    private fun file(voiceId: String, text: String): File =
+        rawFile(com.roro.futurevoice.talk.VoicePreset.speaking(voiceId), text)
+
+    /**
+     * Keys to try, in order: the voice that actually speaks first, then the
+     * learner's older clones (only when the asked-for voice IS their own).
+     *
+     * A preset SLOT resolves to the target language's own voice (iOS
+     * `b49e91b`), and new lines are saved under that voice. Lines made before
+     * then were saved under the slot id in the old English voice; they stay
+     * reachable as the fallback — produced audio is never orphaned, and a
+     * scene already watched replays as it was instead of re-billing.
+     * `allowLineage = false` turns this off too, for anything that must be
+     * heard in the voice speaking NOW (a preview, a call's opener).
+     */
+    private fun candidates(voiceId: String, allowLineage: Boolean, text: String): List<File> {
+        val speaking = com.roro.futurevoice.talk.VoicePreset.speaking(voiceId)
+        if (!allowLineage) return listOf(rawFile(speaking, text))
+        if (speaking != voiceId) return listOf(rawFile(speaking, text), rawFile(voiceId, text))
+        val lineage = ownVoiceLineage
+        if (voiceId !in lineage) return listOf(rawFile(voiceId, text))
+        return listOf(rawFile(voiceId, text)) + lineage.filter { it != voiceId }.map { rawFile(it, text) }
+    }
+
+    /** The key for exactly this voice id, with no preset resolution. */
+    private fun rawFile(voiceId: String, text: String): File {
         val key = MessageDigest.getInstance("SHA-256")
             // The speed rung is part of the line: the same words at another
             // speed are another take. The default's tag is empty, so every
@@ -72,15 +99,8 @@ class PhraseAudioStore private constructor(context: Context) {
 
     /** Cached audio for this line, or null. A line synthesized under an
      *  EARLIER clone of the learner's own voice still counts as a hit. */
-    fun data(text: String, voiceId: String): ByteArray? {
-        file(voiceId, text).takeIf { it.exists() }?.let { return it.readBytes() }
-        if (voiceId !in ownVoiceLineage) return null
-        for (past in ownVoiceLineage) {
-            if (past == voiceId) continue
-            file(past, text).takeIf { it.exists() }?.let { return it.readBytes() }
-        }
-        return null
-    }
+    fun data(text: String, voiceId: String, allowLineage: Boolean = true): ByteArray? =
+        existingFile(text, voiceId, allowLineage)?.readBytes()
 
     fun save(data: ByteArray, text: String, voiceId: String) {
         if (data.isEmpty()) return
@@ -89,12 +109,8 @@ class PhraseAudioStore private constructor(context: Context) {
 
     /** The audio file that answers for this line (own clone lineage
      *  included), or null — the timings beside it describe THAT take. */
-    private fun existingFile(text: String, voiceId: String): File? {
-        file(voiceId, text).takeIf { it.exists() }?.let { return it }
-        if (voiceId !in ownVoiceLineage) return null
-        return ownVoiceLineage.asSequence().filter { it != voiceId }
-            .map { file(it, text) }.firstOrNull { it.exists() }
-    }
+    private fun existingFile(text: String, voiceId: String, allowLineage: Boolean = true): File? =
+        candidates(voiceId, allowLineage, text).firstOrNull { it.exists() }
 
     /**
      * The word timings saved with this line's audio — ElevenLabs' measured

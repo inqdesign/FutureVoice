@@ -107,6 +107,7 @@ import com.roro.futurevoice.talk.PathIdeas
 import com.roro.futurevoice.talk.PathIdeasContent
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.identityIn
 import com.roro.futurevoice.talk.SuggestedTopic
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.Symbols
@@ -1101,7 +1102,8 @@ private fun roleLine(who: Counterpart?): String {
 
 private fun partnerCaptionOf(p: Counterpart): String {
     val rid = p.remoteId
-    if (rid != null && rid.startsWith("builtin:")) return StockPerson.by(p.voicePresetId).identity
+    if (rid != null && rid.startsWith("builtin:"))
+        return StockPerson.by(p.voicePresetId).identityIn(com.roro.futurevoice.talk.VoicePreset.activeLanguage())
     if (rid == null) return p.relationship
     return p.location
 }
@@ -1383,14 +1385,19 @@ private fun PickerRow(
  *  disk when there is one, so picking the same character twice is one row. */
 private fun StockPerson.asCounterpart(existing: List<Counterpart>): Counterpart {
     val rid = "builtin:$voiceId"
-    existing.firstOrNull { it.remoteId == rid }?.let { return it }
-    return Counterpart(
+    // Named for the language being practised (시안 in Korean, Paige in
+    // English) — one row serves every target language (iOS `b49e91b`).
+    val language = com.roro.futurevoice.talk.VoicePreset.activeLanguage()
+    existing.firstOrNull { it.remoteId == rid }?.let {
+        return com.roro.futurevoice.talk.VoicePreset.localized(it, language)
+    }
+    return com.roro.futurevoice.talk.VoicePreset.localized(Counterpart(
         name = name,
         intro = identity,
         voicePresetId = voiceId,
         remoteId = rid,
         personaKind = "character",
-    )
+    ), language)
 }
 
 /** A pool persona as an ordinary person. Their voice is never a clone — the

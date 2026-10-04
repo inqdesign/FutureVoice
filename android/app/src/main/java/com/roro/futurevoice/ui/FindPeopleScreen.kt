@@ -72,6 +72,7 @@ import com.roro.futurevoice.net.CoreClubClient
 import com.roro.futurevoice.net.PublicPersonaClient
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.identityIn
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.CoreSeal
 import kotlinx.coroutines.async
@@ -583,7 +584,7 @@ private fun FindPersonCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         RadioButton(selected = voiceId == v.voiceId, onClick = null)
-                        Text(v.identity, style = MaterialTheme.typography.bodyMedium)
+                        Text(v.identityIn(language), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }

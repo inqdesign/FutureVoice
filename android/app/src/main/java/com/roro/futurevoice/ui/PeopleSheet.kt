@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Button
@@ -73,6 +73,9 @@ import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.data.Counterpart
 import com.roro.futurevoice.data.CounterpartPhotoStore
 import com.roro.futurevoice.data.CounterpartStore
+import com.roro.futurevoice.data.CounterpartCast
+import com.roro.futurevoice.data.cast
+import com.roro.futurevoice.data.knowsLearnersLife
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.StockPerson
 import com.roro.futurevoice.ui.brand.AppSurfaces
@@ -312,28 +315,28 @@ internal fun PersonEditor(
             }
 
             if (draft.isPublicFigure == true) {
-                val at = draft.factsRefreshedAt
+                // The whole profile of a public figure: WHO it is, for the
+                // learner to confirm. The model knows the rest (iOS `ede039e`).
+                val found = !draft.publicIdentity.isNullOrBlank()
                 FormSection(
-                    header = stringResource(R.string.public_info),
+                    header = stringResource(R.string.rel_who_they_are),
                     footer = when {
                         lookupError != null -> lookupError!!
-                        at != null -> stringResource(
-                            R.string.looked_up_only_public_facts_nothing_private_nothing_invented_0a1d96,
-                            java.time.format.DateTimeFormatter.ofPattern("MMM d")
-                                .format(java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())))
-                        else -> stringResource(R.string.fills_the_fields_below_from_public_coverage)
+                        found -> stringResource(R.string.rel_public_figure_found_footer)
+                        draft.factsRefreshedAt != null -> stringResource(R.string.rel_public_figure_nobody_footer)
+                        else -> stringResource(R.string.rel_public_figure_look_up_footer)
                     },
                     footerIsError = lookupError != null,
                 ) {
-                    draft.publicIdentity?.takeIf { it.isNotBlank() }?.let { who ->
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp)) {
-                            Text(stringResource(R.string.who), style = MaterialTheme.typography.bodyLarge)
-                            Spacer(Modifier.width(12.dp))
-                            Text(who, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                        }
-                        FormDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp)) {
+                        Text(stringResource(R.string.who), style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.width(12.dp))
+                        val shown = draft.publicIdentity?.takeIf { it.isNotBlank() }
+                            ?: if (draft.factsRefreshedAt != null) stringResource(R.string.rel_not_found) else ""
+                        Text(shown, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                     }
+                    FormDivider()
                     val enabled = !lookingUp && draft.name.isNotBlank()
                     Row(
                         Modifier.fillMaxWidth()
@@ -341,9 +344,11 @@ internal fun PersonEditor(
                                 lookingUp = true; lookupError = null
                                 scope.launch {
                                     runCatching {
-                                        com.roro.futurevoice.talk.PublicFigureLookup.lookUp(draft, nativeLanguage, targetLanguage)
-                                    }.onSuccess { draft = it }
-                                        .onFailure { lookupError = it.message }
+                                        com.roro.futurevoice.talk.PublicFigureLookup.identify(draft.name.trim(), nativeLanguage)
+                                    }.onSuccess {
+                                        draft = draft.copy(publicIdentity = it,
+                                            factsRefreshedAt = System.currentTimeMillis())
+                                    }.onFailure { lookupError = it.message }
                                     lookingUp = false
                                 }
                             }
@@ -352,33 +357,67 @@ internal fun PersonEditor(
                     ) {
                         val tint = if (enabled) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                        Icon(Icons.Filled.Refresh, contentDescription = null, tint = tint,
+                        Icon(Icons.Filled.Search, contentDescription = null, tint = tint,
                             modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.refresh_public_info), color = tint,
+                        Text(stringResource(R.string.rel_look_up_again), color = tint,
                             style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         if (lookingUp) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     }
                 }
+            } else {
+                FormSection(stringResource(R.string.about_them)) {
+                    FormTextRow(draft.location, { draft = draft.copy(location = it) },
+                        stringResource(R.string.where_they_live_what_they_do), maxLines = 4)
+                }
+                FormSection(stringResource(R.string.your_history_together)) {
+                    FormTextRow(draft.howWeMet, { draft = draft.copy(howWeMet = it) },
+                        stringResource(R.string.how_you_met_and_how_long), maxLines = 3)
+                    FormDivider()
+                    FormTextRow(draft.background, { draft = draft.copy(background = it) },
+                        stringResource(R.string.shared_context_memories_inside_jokes), minLines = 2, maxLines = 8)
+                }
+                FormSection(stringResource(R.string.how_they_talk)) {
+                    FormTextRow(draft.conversationStyle, { draft = draft.copy(conversationStyle = it) },
+                        stringResource(R.string.style_e_g_direct_loves_jokes_formal_careful), maxLines = 3)
+                    FormDivider()
+                    FormTextRow(draft.commonTopics, { draft = draft.copy(commonTopics = it) },
+                        stringResource(R.string.what_you_usually_talk_about), maxLines = 3)
+                }
             }
-
-            FormSection(stringResource(R.string.about_them)) {
-                FormTextRow(draft.location, { draft = draft.copy(location = it) },
-                    stringResource(R.string.where_they_live_what_they_do), maxLines = 4)
-            }
-            FormSection(stringResource(R.string.your_history_together)) {
-                FormTextRow(draft.howWeMet, { draft = draft.copy(howWeMet = it) },
-                    stringResource(R.string.how_you_met_and_how_long), maxLines = 3)
+            // How the two of them talk, both directions (iOS `ede039e`). Calls
+            // and scenes speak this way; "Automatic" leaves it to the
+            // relationship, as every person made before this did.
+            val ownPerson = draft.cast == CounterpartCast.OWN_PERSON
+            FormSection(
+                header = stringResource(R.string.rel_how_you_two_talk),
+                footer = stringResource(if (ownPerson) R.string.rel_calls_and_scenes_knows_your_life
+                    else R.string.rel_calls_and_scenes),
+            ) {
+                RegisterMenuRow(stringResource(R.string.rel_you_talk_to_them), draft.myRegister,
+                    targetLanguage) { draft = draft.copy(myRegister = it) }
                 FormDivider()
-                FormTextRow(draft.background, { draft = draft.copy(background = it) },
-                    stringResource(R.string.shared_context_memories_inside_jokes), minLines = 2, maxLines = 8)
-            }
-            FormSection(stringResource(R.string.how_they_talk)) {
-                FormTextRow(draft.conversationStyle, { draft = draft.copy(conversationStyle = it) },
-                    stringResource(R.string.style_e_g_direct_loves_jokes_formal_careful), maxLines = 3)
+                RegisterMenuRow(stringResource(R.string.rel_they_talk_to_you), draft.theirRegister,
+                    targetLanguage) { draft = draft.copy(theirRegister = it) }
                 FormDivider()
-                FormTextRow(draft.commonTopics, { draft = draft.copy(commonTopics = it) },
-                    stringResource(R.string.what_you_usually_talk_about), maxLines = 3)
+                FormTextRow(draft.iCallThem, { draft = draft.copy(iCallThem = it) },
+                    stringResource(R.string.rel_what_you_call_them))
+                FormDivider()
+                FormTextRow(draft.theyCallMe, { draft = draft.copy(theyCallMe = it) },
+                    stringResource(R.string.rel_what_they_call_you))
+                if (ownPerson) {
+                    FormDivider()
+                    Row(
+                        Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
+                            .padding(start = 16.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.rel_knows_your_life), style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f))
+                        IosSwitch(checked = draft.knowsLearnersLife,
+                            onCheckedChange = { draft = draft.copy(knowsMyLife = it) })
+                    }
+                }
             }
             // Never a clone — the person on the other end is someone else.
             FormSection(stringResource(R.string.voice)) {
@@ -395,10 +434,12 @@ internal fun PersonEditor(
                     FormChevron()
                 }
             }
-            FormSection(stringResource(R.string.anything_else)) {
-                FormTextRow(draft.freeNotes, { draft = draft.copy(freeNotes = it) },
-                    stringResource(R.string.free_notes_quirks_recent_events_anything_that_helps),
-                    minLines = 2, maxLines = 6)
+            if (draft.isPublicFigure != true) {
+                FormSection(stringResource(R.string.anything_else)) {
+                    FormTextRow(draft.freeNotes, { draft = draft.copy(freeNotes = it) },
+                        stringResource(R.string.free_notes_quirks_recent_events_anything_that_helps),
+                        minLines = 2, maxLines = 6)
+                }
             }
         }
     }

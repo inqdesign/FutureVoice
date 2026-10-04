@@ -109,7 +109,12 @@ class CounterpartStore private constructor(context: Context) {
     private val file: File get() = File(appContext.filesDir, "counterparts.json")
 
     /** Newest-touched first — the order the stories row reads in. */
-    suspend fun load(): List<Counterpart> = mutex.withLock { read() }
+    /** Built-in people take the active language's name
+     *  (`VoicePreset.localized`) — one row serves every target language. */
+    suspend fun load(): List<Counterpart> = mutex.withLock {
+        val language = LanguageScope.active(appContext)
+        read().map { com.roro.futurevoice.talk.VoicePreset.localized(it, language) }
+    }
 
     private fun read(): List<Counterpart> {
         val f = file

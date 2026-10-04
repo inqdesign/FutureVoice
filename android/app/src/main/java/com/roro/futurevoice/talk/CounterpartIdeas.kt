@@ -44,6 +44,13 @@ object CounterpartIdeas {
         lines += "COUNTERPART persona:"
         lines += "(the user's own note about this person, in their native language — CONTEXT ONLY: never quote it back, and never let its language change the language you write in)"
         lines += "- name: ${c.name}"
+        if (c.isPublicFigure == true) {
+            // Identity only — the model knows the person; a stored summary
+            // narrows every idea to the one fact in it (iOS `ede039e`).
+            val who = c.publicIdentity?.takeIf { it.isNotEmpty() } ?: c.name
+            lines += "- who: $who, the real public figure — draw on everything publicly known about them"
+            return lines.joinToString("\n")
+        }
         if (c.relationship.isNotEmpty()) lines += "- relationship: ${c.relationship}"
         if (c.location.isNotEmpty()) lines += "- about them: ${c.location}"
         if (c.howWeMet.isNotEmpty()) lines += "- how they met: ${c.howWeMet}"

@@ -20,9 +20,12 @@ suspend fun cachedSynthesis(
     purpose: String? = null,
     sceneKey: String? = null,
     idempotencyKey: String? = null,
+    /** False for anything that must be heard in the voice speaking NOW (a
+     *  voice preview): no fallback to a take an older voice made. */
+    allowLineage: Boolean = true,
 ): ByteArray {
     val store = PhraseAudioStore.shared(context)
-    store.data(text, voiceId)?.let { return it }
+    store.data(text, voiceId, allowLineage)?.let { return it }
     val audio = ElevenLabsClient(AuthRepository()).synthesize(
         voiceId = voiceId, text = text, modelId = modelId,
         idempotencyKey = idempotencyKey, purpose = purpose, sceneKey = sceneKey)

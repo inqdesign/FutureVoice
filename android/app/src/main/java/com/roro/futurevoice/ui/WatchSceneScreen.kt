@@ -177,8 +177,16 @@ fun WatchSceneScreen(
         val withPerson = scenario.counterpartId?.let { id ->
             com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }
         }?.takeIf { it.remoteId?.startsWith("builtin:") != true }
+        // Plus who a public figure is and how the two address each other
+        // (iOS `ede039e`), which rides in the same verbatim block.
         val commonGround = withPerson?.let {
-            com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(it))
+            listOf(
+                // A public figure's old profile fields are never read: the
+                // identity is the whole person.
+                if (it.isPublicFigure == true) ""
+                else com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(it)),
+                com.roro.futurevoice.talk.ConversationCharacter.sceneCounterpartLines(it, targetLanguage),
+            ).filter { b -> b.isNotBlank() }.joinToString("\n\n")
         } ?: ""
         try {
             val auth = AuthRepository()

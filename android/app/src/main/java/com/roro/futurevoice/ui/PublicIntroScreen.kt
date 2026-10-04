@@ -49,6 +49,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.net.PublicPersonaClient
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.identityIn
 import com.roro.futurevoice.talk.UserPersona
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import kotlinx.coroutines.launch
@@ -201,7 +202,7 @@ fun PublicIntroScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         RadioButton(selected = voiceId == v.voiceId, onClick = null)
-                        Text(v.identity, style = MaterialTheme.typography.bodyMedium)
+                        Text(v.identityIn(targetLanguage), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }

@@ -49,6 +49,7 @@ import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.CounterpartIdeas
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.nameIn
 import kotlinx.coroutines.launch
 
 /**
@@ -133,7 +134,8 @@ fun CounterpartDetailScreen(
                     Column {
                         Text(c.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         if (c.relationship.isNotEmpty()) Text(c.relationship, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.voiced_by_0ed8e5, StockPerson.by(c.voicePresetId).name),
+                        Text(stringResource(R.string.voiced_by_0ed8e5, StockPerson.by(c.voicePresetId).nameIn(
+                            com.roro.futurevoice.talk.VoicePreset.activeLanguage())),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                     }
                 }
