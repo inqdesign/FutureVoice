@@ -284,6 +284,15 @@ final class SpeechTakeSession: ObservableObject {
         cameraOn = false
         elapsed = 21
         phase = .recording
+        // `-speechdemo 1`: words arrive in bursts the way the recognizer
+        // delivers them, to watch the prompter's motion without a mic.
+        guard UserDefaults.standard.bool(forKey: "speechdemo") else { return }
+        Task { [weak self] in
+            while let self, self.cursor < self.track.words.count {
+                try? await Task.sleep(nanoseconds: UInt64.random(in: 600_000_000...1_400_000_000))
+                self.cursor += Int.random(in: 1...4)
+            }
+        }
     }
     #endif
 

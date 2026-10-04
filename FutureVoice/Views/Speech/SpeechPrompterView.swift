@@ -249,74 +249,174 @@ struct SpeechPrompterView: View {
     }
 }
 
-/// The rolling script. Read words fade back, the word being read is
-/// emphasised, and the LINE being read sits a third of the way down: the
-/// text moves up one line at a time as the reader reaches the next line,
-/// like a teleprompter — never a paragraph at a time.
+/// The rolling script. A TELEPROMPTER: the text flows up at a steady speed,
+/// every frame, and the reader's voice only changes that SPEED — never jumps
+/// the text to where they are (2026-10-04: a word-by-word and then a
+/// line-by-line version both read as jumping, because they were).
 ///
-/// Not a ScrollView + `scrollTo`: the words live inside a custom layout, and
-/// `scrollTo` resolved their ids to the paragraph around them, so the text
-/// jumped by whole paragraphs. The current word's own line position is
-/// measured instead, and the whole column is offset by it.
+/// `PrompterScroller` runs the motion on the display clock. The voice gives
+/// it a target (the current word's place, interpolated across its line), and
+/// the speed is the reader's own pace — a slow average of how fast that
+/// target has been moving — plus a gentle pull toward the target. When the
+/// reader stops, the average decays and the text eases to a stop; it never
+/// runs ahead of them.
 struct SpeechTeleprompter: View {
     let track: SpeechPrompterTrack
     let cursor: Int
     let language: String
     let textSize: Double
 
-    /// Top of the line holding the current word, in the column's own space.
-    @State private var lineY: CGFloat = 0
+    @StateObject private var scroller = PrompterScroller()
 
-    private var currentWord: Int { min(cursor, max(0, track.words.count - 1)) }
+    struct WordFrame: Equatable {
+        var minX: CGFloat = 0
+        var minY: CGFloat = 0
+        var height: CGFloat = 0
+    }
 
     var body: some View {
         GeometryReader { geo in
-            VStack(alignment: .leading, spacing: textSize * 0.9) {
-                ForEach(Array(track.paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                    SpeechWordWrap(spacing: LanguageCatalog.writesSpaces(language) ? textSize * 0.28 : 0,
-                                   lineSpacing: textSize * 0.35) {
-                        ForEach(paragraph) { word in
-                            Text(word.text)
-                                .font(.system(size: textSize, weight: .semibold))
-                                .foregroundStyle(color(for: word.id))
-                                .background {
-                                    if word.id == currentWord {
-                                        Color.clear.onGeometryChange(for: CGFloat.self) { proxy in
-                                            proxy.frame(in: .named(Self.space)).minY
-                                        } action: { y in
-                                            // Rounding wobble is not a new line.
-                                            if abs(y - lineY) > 1 { lineY = y }
-                                        }
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-            .frame(width: geo.size.width, alignment: .leading)
-            .coordinateSpace(.named(Self.space))
-            // The animation is scoped to the offset ALONE. Applied to the
-            // column, it animated every word's frame too, the measurement
-            // above read the in-between frames, and each reading started a
-            // new animation — a loop that pinned the main thread.
-            .animation(.easeInOut(duration: 0.4)) { view in
-                view.offset(y: geo.size.height * 0.3 - lineY)
-            }
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-            .clipped()
-            .mask(
-                LinearGradient(stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: .black, location: 0.14),
-                    .init(color: .black, location: 0.86),
-                    .init(color: .clear, location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-            )
+            let lineWidth = max(1, geo.size.width - 48)
+            SpeechPrompterColumn(track: track, cursor: cursor, language: language,
+                                 textSize: textSize, width: geo.size.width,
+                                 onCurrentWord: { frame in
+                                     let across = min(1, max(0, (frame.minX - 24) / lineWidth))
+                                     let lineAdvance = frame.height + textSize * 0.35
+                                     scroller.setTarget(frame.minY + across * lineAdvance,
+                                                        snap: cursor == 0)
+                                 })
+                .equatable()
+                .offset(y: geo.size.height * 0.3 - scroller.position)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                .clipped()
+                .mask(
+                    LinearGradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.14),
+                        .init(color: .black, location: 0.86),
+                        .init(color: .clear, location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                )
+        }
+        .onAppear { scroller.start() }
+        .onDisappear { scroller.stop() }
+    }
+}
+
+/// Moves the prompter on the display clock. Pure motion, no layout.
+@MainActor
+final class PrompterScroller: NSObject, ObservableObject {
+    /// How far the column has risen, in its own points.
+    @Published private(set) var position: CGFloat = 0
+
+    private var target: CGFloat = 0
+    private var lastTarget: CGFloat = 0
+    /// The reader's pace in points per second — a slow average, so words
+    /// arriving in bursts still read as one steady speed.
+    private var pace: CGFloat = 0
+    private var velocity: CGFloat = 0
+    private var link: CADisplayLink?
+    private var lastTick: CFTimeInterval = 0
+
+    /// Seconds over which the pace is averaged, and over which the speed
+    /// changes. Long on purpose: a teleprompter that speeds up and slows down
+    /// with every word is unreadable.
+    private let paceWindow: CGFloat = 2.5
+    private let speedWindow: CGFloat = 0.6
+    /// How hard the text is pulled toward the reader when it lags.
+    private let pull: CGFloat = 0.35
+
+    func setTarget(_ y: CGFloat, snap: Bool) {
+        target = y
+        if snap {
+            position = y
+            lastTarget = y
+            pace = 0
+            velocity = 0
         }
     }
 
+    func start() {
+        guard link == nil else { return }
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+        lastTick = 0
+    }
+
+    func stop() {
+        link?.invalidate()
+        link = nil
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        let now = link.timestamp
+        defer { lastTick = now }
+        guard lastTick > 0 else { lastTarget = target; return }
+        let dt = CGFloat(min(0.05, now - lastTick))
+        guard dt > 0 else { return }
+
+        // The reader's pace: how fast the target is moving, averaged.
+        let instant = max(0, target - lastTarget) / dt
+        lastTarget = target
+        pace += (instant - pace) * min(1, dt / paceWindow)
+
+        let gap = target - position
+        // Their pace, plus a gentle pull toward where they are: behind, it
+        // speeds up a little; ahead, it slows down — easing, never a halt.
+        let wanted = max(0, pace + pull * gap)
+        velocity += (wanted - velocity) * min(1, dt / speedWindow)
+        let next = position + velocity * dt
+        if abs(next - position) > 0.01 { position = next }
+    }
+}
+
+/// The words themselves. Its own view with plain inputs, so the offset
+/// moving every frame never re-evaluates four hundred `Text`s — only a new
+/// cursor or a new size does.
+struct SpeechPrompterColumn: View, Equatable {
+    let track: SpeechPrompterTrack
+    let cursor: Int
+    let language: String
+    let textSize: Double
+    let width: CGFloat
+    let onCurrentWord: (SpeechTeleprompter.WordFrame) -> Void
+
+    static func == (a: Self, b: Self) -> Bool {
+        a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width
+            && a.language == b.language && a.track.words.count == b.track.words.count
+    }
+
     private static let space = "prompter-column"
+    private var currentWord: Int { min(cursor, max(0, track.words.count - 1)) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: textSize * 0.9) {
+            ForEach(Array(track.paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                SpeechWordWrap(spacing: LanguageCatalog.writesSpaces(language) ? textSize * 0.28 : 0,
+                               lineSpacing: textSize * 0.35) {
+                    ForEach(paragraph) { word in
+                        Text(word.text)
+                            .font(.system(size: textSize, weight: .semibold))
+                            .foregroundStyle(color(for: word.id))
+                            .background {
+                                if word.id == currentWord {
+                                    Color.clear.onGeometryChange(for: SpeechTeleprompter.WordFrame.self) { proxy in
+                                        let f = proxy.frame(in: .named(Self.space))
+                                        return .init(minX: f.minX, minY: f.minY, height: f.height)
+                                    } action: { frame in
+                                        onCurrentWord(frame)
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        .frame(width: width, alignment: .leading)
+        .coordinateSpace(.named(Self.space))
+    }
 
     private func color(for id: Int) -> Color {
         if id < cursor { return .secondary.opacity(0.55) }
