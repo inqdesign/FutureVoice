@@ -112,6 +112,9 @@ object CaptureTalk {
         "call-meter" to { ctx -> CallMeter(ctx, minutes = 7) },
         "call-meter-low" to { ctx -> CallMeter(ctx, minutes = 2) },
         "call-goals" to { ctx -> CallGoals(ctx) },
+        "call-coach" to { ctx -> CallCoach(ctx) },
+        "first-call-check" to { ctx -> FirstCallCheckShot(ctx, hard = false) },
+        "first-call-check-hard" to { ctx -> FirstCallCheckShot(ctx, hard = true) },
         "call-feed-fade" to { ctx -> CallFeedFade(ctx) },
         "call-goal-sheet" to { ctx -> CallGoalSheet(ctx) },
         "summary-progress" to { _ -> SummaryProgress(start = false) },
@@ -346,6 +349,51 @@ object CaptureTalk {
             ),
             goalsUsed = setOf("commute"),
         ), topic = "Job interview")
+    }
+
+    /**
+     * iOS `call-coach` (`6e9eb92`): coach mode's "try saying" above the pill,
+     * the listening bubble plain.
+     */
+    @Composable
+    private fun CallCoach(context: Context) {
+        val ko = (context.getSharedPreferences("futurevoice", 0)
+            .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative()).startsWith("ko")
+        Call(context, TalkCaptureFlags.CallPreview(
+            TalkUiState(
+                phase = TalkPhase.LISTENING,
+                level = 0.35f,
+                turns = listOf(
+                    user("Not yet, but I want to go there next week.", 0),
+                    fluent("Oh, nice! Next week will be here before you know it. Do you have a specific place in mind?", 1),
+                ),
+                coachReply = com.roro.futurevoice.talk.CoachReply(
+                    say = "Yes, I want to try [the one in Sinjeon].",
+                    meaning = if (ko) "응, [신전떡볶이] 먹어보고 싶어." else "",
+                    turnId = "capture-turn-1"),
+            ),
+            goals = listOf(
+                TalkGoalItem("total", "total", isWord = true),
+                TalkGoalItem("battery", "battery", isWord = true),
+                TalkGoalItem("next", "next", isWord = true),
+            ),
+            goalsUsed = setOf("next"),
+        ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
+    }
+
+    /** iOS `first-call-check[-hard]`: the after-first-call sheet, on A2. */
+    @Composable
+    private fun FirstCallCheckShot(context: Context, hard: Boolean) {
+        var state by remember { mutableStateOf<AppState?>(null) }
+        Seeded(work = { state = appState(context) }) {
+            state?.let { s ->
+                com.roro.futurevoice.ui.FirstCallCheckSheet(
+                    targetLanguage = s.targetLanguage,
+                    currentLevel = com.roro.futurevoice.data.CefrLevel.A2,
+                    initialFeeling = if (hard) com.roro.futurevoice.ui.FirstCallCheck.Feeling.HARD else null,
+                    onDismiss = {})
+            }
+        }
     }
 
     /**

@@ -197,7 +197,9 @@ fun ProgressBody(language: String, nativeLanguage: String,
         val reports = WeeklyReportStore.shared(context).load(language)
         report = reports.firstOrNull()
         levelReport = reports.firstOrNull { it.cefrLevel != null }
-        unlock = WeeklyReportEngine.unlockState(talks.filter { it.endedAt != null }, report)
+        // Practice (coach mode) calls are out of the evidence pool: a
+        // practice call must never move the learner's level (iOS `6e9eb92`).
+        unlock = WeeklyReportEngine.unlockState(talks.filter { it.endedAt != null && !it.isPractice }, report)
         // Studied, then SAID — the loop closing, which is the one number that
         // proves the app worked. The detector already writes it onto every
         // summary; it had simply never been read back.
@@ -535,7 +537,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
                 generating = true
                 scope.launch {
                     runCatching {
-                        WeeklyReportEngine.generate(context, talks.filter { it.endedAt != null },
+                        WeeklyReportEngine.generate(context, talks.filter { it.endedAt != null && !it.isPractice },
                             report, language, nativeLanguage)
                     }.getOrNull()?.let {
                         WeeklyReportStore.shared(context).save(it, language)
@@ -549,7 +551,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
                         // still wins until the next assessment.
                         it.cefrLevel?.let { measured -> onMeasuredLevel(measured) }
                         unlock = WeeklyReportEngine.unlockState(
-                            talks.filter { s -> s.endedAt != null }, it)
+                            talks.filter { s -> s.endedAt != null && !s.isPractice }, it)
                         val fresh = WeeklyReportStore.shared(context).load(language)
                         val bands = VocabStore.shared(context).usedWordsByLevel(language)
                         val seen = talks

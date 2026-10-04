@@ -348,7 +348,8 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         // WHEN it was last worked, said as recency — it keeps advancing as
         // the book is studied, which a fixed date does not.
         detail = stringResource(R.string.studied, Recency.label(t.endedAt ?: t.startedAt)),
-        score = t.summary?.scorecard?.overall,
+        // A practice (coach mode) call has no score to headline.
+        score = t.summary?.scorecard?.overall?.takeIf { !t.isPractice },
         // The book's mastery strip, as iOS's TalkBookCard carries it.
         progress = progress?.takeIf { it.second > 0 }?.let { it.first / it.second.toFloat() },
         progressLabel = progress?.takeIf { it.second > 0 }

@@ -210,9 +210,12 @@ sealed class GrammarCeiling {
 object ProgressMath {
 
     /** Only a talk with a scorecard, still on the shelf, counts as evidence:
-     *  archiving one is the learner saying it should stop counting. */
+     *  archiving one is the learner saying it should stop counting. A
+     *  practice (coach mode) call is out the same way — the learner was
+     *  reading a suggested answer, which measures nothing (iOS `6e9eb92`). */
     fun scoredSessions(sessions: List<Session>): List<Session> =
-        sessions.filter { it.endedAt != null && it.archivedAt == null && it.summary?.scorecard != null }
+        sessions.filter { it.endedAt != null && it.archivedAt == null && !it.isPractice &&
+            it.summary?.scorecard != null }
             .sortedByDescending { it.rank }
 
     fun compute(

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
+     first-call check. Values copied from the iOS catalog at ebf848e. -->
+<resources>
+    <string name="practice_call">練習對話</string>
+    <string name="practice_call_note">這是看著範例句練習的對話。等級只會用沒開教練模式的對話來評估。</string>
+    <string name="fcc_title">第一次對話感覺如何？</string>
+    <string name="fcc_you_picked">你選的等級：%1$s</string>
+    <string name="fcc_easy">很簡單</string>
+    <string name="fcc_just_right">剛剛好</string>
+    <string name="fcc_hard">很難</string>
+    <string name="fcc_your_level">我的程度</string>
+    <string name="fcc_speed_footer">從下次對話開始，未來的你會用這個速度說話。</string>
+    <string name="fcc_coach_footer">你思考的時候，麥克風上方會出現一句可以說的話，把淡色的部分換成你自己的內容就好。開啟教練模式的對話算是練習，不會計入等級評估。</string>
+    <string name="fcc_set_hard">已在下方改成低一級的等級、較慢的語速，並開啟教練模式。儲存前都可以再調整。</string>
+    <string name="fcc_set_easy">已在下方改成高一級的等級，並關閉教練模式。儲存前都可以再調整。</string>
+    <string name="fcc_set_right">太好了！維持原樣，或在下方調整。</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
+     first-call check. Values copied from the iOS catalog at ebf848e. -->
+<resources>
+    <string name="practice_call">Übungsgespräch</string>
+    <string name="practice_call_note">Du hast mit Beispielsätzen auf dem Bildschirm geübt. Dein Niveau wird an Gesprächen ohne Coach-Modus gemessen.</string>
+    <string name="fcc_title">Wie war dein erstes Gespräch?</string>
+    <string name="fcc_you_picked">Du hast %1$s gewählt.</string>
+    <string name="fcc_easy">Leicht</string>
+    <string name="fcc_just_right">Genau richtig</string>
+    <string name="fcc_hard">Schwer</string>
+    <string name="fcc_your_level">Dein Niveau</string>
+    <string name="fcc_speed_footer">Ab dem nächsten Gespräch spricht dein fließendes Ich in diesem Tempo.</string>
+    <string name="fcc_coach_footer">Während du nachdenkst, erscheint über dem Mikro ein Satz, den du sagen könntest – ersetze den blassen Teil durch deine eigenen Worte. Gespräche im Coach-Modus sind Übung und zählen nicht für dein Niveau.</string>
+    <string name="fcc_set_hard">Unten eingestellt: ein leichteres Niveau, eine langsamere Stimme und der Coach-Modus. Ändere vor dem Sichern, was du willst.</string>
+    <string name="fcc_set_easy">Unten eingestellt: ein höheres Niveau und der Coach-Modus aus. Ändere vor dem Sichern, was du willst.</string>
+    <string name="fcc_set_right">Super – lass es so oder pass es unten an.</string>
+</resources>

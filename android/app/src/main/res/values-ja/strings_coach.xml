@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
+     first-call check. Values copied from the iOS catalog at ebf848e. -->
+<resources>
+    <string name="practice_call">練習の会話</string>
+    <string name="practice_call_note">例文を見ながら練習した会話です。レベルはコーチモードなしの会話で判定します。</string>
+    <string name="fcc_title">初めての会話はどうでしたか？</string>
+    <string name="fcc_you_picked">選んだレベル：%1$s</string>
+    <string name="fcc_easy">簡単だった</string>
+    <string name="fcc_just_right">ちょうどよかった</string>
+    <string name="fcc_hard">難しかった</string>
+    <string name="fcc_your_level">自分のレベル</string>
+    <string name="fcc_speed_footer">次の会話から、未来の自分がこの速さで話します。</string>
+    <string name="fcc_coach_footer">考えているあいだ、マイクの上に言ってみる文が出ます。うすい部分を自分の話に変えて言えばOKです。コーチモードの会話は練習なので、レベルの判定には入りません。</string>
+    <string name="fcc_set_hard">下を、ひとつやさしいレベル・ゆっくりな声・コーチモードに変えておきました。保存する前ならいつでも変えられます。</string>
+    <string name="fcc_set_easy">下を、ひとつ上のレベル・コーチモードオフに変えておきました。保存する前ならいつでも変えられます。</string>
+    <string name="fcc_set_right">よかったです！このままでも、下で変えてもOKです。</string>
+</resources>

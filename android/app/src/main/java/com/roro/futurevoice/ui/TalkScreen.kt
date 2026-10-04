@@ -188,7 +188,7 @@ fun TalkScreen(
      * before the call would answer about a different account. A lookup that
      * fails never holds the exit — the learner leaves.
      */
-    fun pitchThenLeave() {
+    fun pitchCore() {
         val spentThisCall = state.wall == TalkWall.OUT_OF_MINUTES
         feedbackScope.launch {
             fun log(decision: String) {
@@ -212,6 +212,28 @@ fun TalkScreen(
             }
             leave()
         }
+    }
+    /**
+     * "How was your first call?" (iOS `FirstCallCheckSheet`, `eaaf3af`) —
+     * once, after the first talk the learner spoke in, and BEFORE the plans
+     * pitch: its dismissal (Save or Later) continues the exit.
+     */
+    var firstCallCheck by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun pitchThenLeave() {
+        if (firstCallCheck != null) return
+        feedbackScope.launch {
+            val spoke = state.turns.any { it.role == TurnRole.USER }
+            if (preview == null && FirstCallCheck.shouldShow(appContext, spoke)) {
+                FirstCallCheck.markShown(appContext)
+                firstCallCheck = { pitchCore() }
+                return@launch
+            }
+            pitchCore()
+        }
+    }
+    firstCallCheck?.let { next ->
+        FirstCallCheckSheet(targetLanguage = targetLanguage, currentLevel = level,
+            onDismiss = { firstCallCheck = null; next() })
     }
     feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null; onExit() }) }
     androidx.activity.compose.BackHandler {
@@ -600,19 +622,11 @@ fun TalkScreen(
                                 name = stringResource(R.string.you),
                                 scale = DialogueScale.CALL,
                             ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(
-                                        state.partial.ifBlank { stringResource(R.string.listening) },
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
-                                    )
-                                    // Coach mode's word for this answer, INSIDE the
-                                    // bubble it is being spoken into.
-                                    if (coachMode) state.coachHint?.let { hint ->
-                                        CoachHintLabel(hint, used = hint.key in goalsUsed,
-                                            onTap = { openGoal = hint })
-                                    }
-                                }
+                                Text(
+                                    state.partial.ifBlank { stringResource(R.string.listening) },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                                )
                             }
                         }
                     }
@@ -731,9 +745,18 @@ fun TalkScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            // With subtitles off there is no listening bubble,
-                            // so the hint falls back to a line above the pill.
-                            if (coachMode && !showsTranscript) state.coachHint?.let { hint ->
+                            // Coach mode's help sits HERE, right above the pill,
+                            // and never in the learner's listening bubble (iOS
+                            // `6e9eb92`, device test): the suggestion lands a beat
+                            // after the bubble is drawn, the bubble grew under the
+                            // bar with nothing scrolling it back into view, and
+                            // "Listening…" beside a bold sentence read as two
+                            // voices in one shape. A fixed spot can't be scrolled
+                            // away.
+                            if (coachMode) state.coachReply?.let { reply ->
+                                CoachReplyLabel(reply, Modifier.padding(horizontal = 32.dp))
+                            }
+                            if (coachMode) state.coachHint?.let { hint ->
                                 Box(Modifier.padding(horizontal = 24.dp)) {
                                     CoachHintLabel(hint, used = hint.key in goalsUsed,
                                         onTap = { openGoal = hint })

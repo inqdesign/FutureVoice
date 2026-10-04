@@ -210,7 +210,13 @@ object ConversationEngine {
         - Reply in $languageName only.
         - Never correct the user mid-conversation. Corrections happen elsewhere.
         - Speak mostly AT their level (${level.code.uppercase()}), but let a slightly-above-level word or turn of phrase slip in naturally now and then — that small stretch is where they grow. Never two levels up.
-        """.trimIndent()
+        """.trimIndent() +
+            // How the fluent self ASKS a beginner (iOS `beginnerQuestions`,
+            // `eaaf3af`): last on purpose — it says it outranks the
+            // follow-a-thread and don't-always-ask rules above. Empty at B1+,
+            // so those prompts are byte for byte what they were. Appended
+            // AFTER trimIndent: its lines start at column 0.
+            CoachPrompts.beginnerQuestions(level)
     }
 
     /**

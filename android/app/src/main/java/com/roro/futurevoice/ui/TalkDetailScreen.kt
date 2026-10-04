@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -348,7 +349,17 @@ fun TalkDetailScreen(
                                 }
                             })
                         }
-                        sm?.scorecard?.let { card ->
+                        if (s.isPractice) {
+                            // A practice call is never scored on the page: the
+                            // answers were read off coach mode's suggestions
+                            // (`Session.coached`, iOS `practiceBlock`).
+                            HorizontalDivider(Modifier.padding(start = 20.dp))
+                            GroupLabel(Icons.Outlined.Lightbulb, stringResource(R.string.practice_call))
+                            Text(stringResource(R.string.practice_call_note),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp))
+                        } else sm?.scorecard?.let { card ->
                             HorizontalDivider(Modifier.padding(start = 20.dp))
                             ScoreBlock(
                                 card = card,

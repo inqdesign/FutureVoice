@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
+     first-call check. Values copied from the iOS catalog at ebf848e. -->
+<resources>
+    <!-- "Practice call" -->
+    <string name="practice_call">Practice call</string>
+    <!-- "You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level." -->
+    <string name="practice_call_note">You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level.</string>
+    <!-- "How was your first call?" -->
+    <string name="fcc_title">How was your first call?</string>
+    <!-- "You picked %@." -->
+    <string name="fcc_you_picked">You picked %1$s.</string>
+    <!-- "Easy" -->
+    <string name="fcc_easy">Easy</string>
+    <!-- "Just right" -->
+    <string name="fcc_just_right">Just right</string>
+    <!-- "Hard" -->
+    <string name="fcc_hard">Hard</string>
+    <!-- "Your level" -->
+    <string name="fcc_your_level">Your level</string>
+    <!-- "How fast your future self talks, from the next call." -->
+    <string name="fcc_speed_footer">How fast your future self talks, from the next call.</string>
+    <!-- "While you think, a sentence you could say appears above the mic — swap the faded part for your own words. Calls with coach mode are practice, so they don't count toward your level." -->
+    <string name="fcc_coach_footer">While you think, a sentence you could say appears above the mic — swap the faded part for your own words. Calls with coach mode are practice, so they don\'t count toward your level.</string>
+    <!-- "Set below: an easier level, a slower voice and coach mode. Change anything before you save." -->
+    <string name="fcc_set_hard">Set below: an easier level, a slower voice and coach mode. Change anything before you save.</string>
+    <!-- "Set below: a harder level and coach mode off. Change anything before you save." -->
+    <string name="fcc_set_easy">Set below: a harder level and coach mode off. Change anything before you save.</string>
+    <!-- "Great — keep it as it is, or adjust below." -->
+    <string name="fcc_set_right">Great — keep it as it is, or adjust below.</string>
+</resources>

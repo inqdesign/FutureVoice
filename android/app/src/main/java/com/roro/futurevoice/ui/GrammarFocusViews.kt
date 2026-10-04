@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.talk.GrammarFocus
@@ -238,3 +239,39 @@ fun CoachHintLabel(item: TalkGoalItem, used: Boolean, onTap: () -> Unit) {
         Text(item.text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
+
+/**
+ * Coach mode's "try saying" (iOS `CoachReplyLabel`): one easy answer to the
+ * line just spoken, its blanks the learner's to fill, and what it means in
+ * their own language. Centred above the pill, like the hint line under it; no
+ * icon — the label says what it is, and the sentence is what the eye should
+ * land on.
+ */
+@Composable
+fun CoachReplyLabel(reply: com.roro.futurevoice.talk.CoachReply, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.try_saying), style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(coachLine(reply.say, MaterialTheme.colorScheme.onSurface),
+            style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        if (reply.meaning.isNotEmpty()) {
+            Text(coachLine(reply.meaning, MaterialTheme.colorScheme.onSurfaceVariant),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+    }
+}
+
+/** The bracketed example faded and underlined (iOS `.tertiaryLabel`). */
+@Composable
+private fun coachLine(line: String, color: androidx.compose.ui.graphics.Color) =
+    androidx.compose.ui.text.buildAnnotatedString {
+        val faded = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+        for ((text, example) in com.roro.futurevoice.talk.CoachReply.segments(line)) {
+            withStyle(if (example) androidx.compose.ui.text.SpanStyle(color = faded,
+                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+            else androidx.compose.ui.text.SpanStyle(color = color)) { append(text) }
+        }
+    }

@@ -135,7 +135,20 @@ data class Session(
      * call reads to retire a focus the learner has stopped tripping on.
      */
     val grammarFocus: GrammarFocusRecord? = null,
+    /**
+     * The call ran with coach mode on at some point — a PRACTICE call (iOS
+     * `Session.coached`, `6e9eb92`). The learner was answering with a
+     * suggested sentence in front of them, so nothing said in it is evidence
+     * of their level: it is left out of the weekly assessment, its unlock
+     * gate and every Progress measurement, and what they said is credited as
+     * practice, never as "used in a talk". Minutes, streak, corrections →
+     * cards and the book all stand. Null on old rows (same key as iOS).
+     */
+    val coached: Boolean? = null,
 ) {
+    /** See [coached]. */
+    val isPractice: Boolean get() = coached == true
+
     /** Newest-ended-first ordering key, as `SessionStore.swift` ranks. */
     val rank: Long get() = endedAt ?: startedAt
 

@@ -229,9 +229,16 @@ object SessionSummarizer {
         val claimedWords = vocab.unconfirmedKnownWords(language)
         val claimedExpressions = vocab.unconfirmedKnownExpressions(language)
 
+        // A practice call (coach mode, `Session.coached`, iOS `6e9eb92`)
+        // credits NOTHING as used: the learner answered with a suggested
+        // sentence in front of them, and "used in a talk" is the strongest
+        // state an item has — it takes a word out of the notebook and retires
+        // a card. What they said there counts as practice instead (one
+        // expression rep per studied item said, below).
+        val practice = session.isPractice
         // Words into the long-term pool; merge with the previous summary's
         // list so a resumed talk can't erase "words you used first".
-        val freshWords = vocab.ingest(session.id, userTexts, language)
+        val freshWords = if (practice) emptyList() else vocab.ingest(session.id, userTexts, language)
         report { it.copy(words = freshWords.size + verifiedUsed.size, offered = computed.expressionsOffered.size,
             corrections = computed.grammarIssues.size) }
         // The words the talk TAUGHT go into the notebook by themselves. They
@@ -248,8 +255,10 @@ object SessionSummarizer {
 
         val priorWords = session.summary?.newWordsUsed.orEmpty()
         // Expressions: seed pre-tracking sessions, then count this batch.
-        vocab.notePriorExpressions(session.id, priorUsed, language)
-        vocab.ingestExpressions(session.id, verifiedUsed, language)
+        if (!practice) {
+            vocab.notePriorExpressions(session.id, priorUsed, language)
+            vocab.ingestExpressions(session.id, verifiedUsed, language)
+        }
 
         // Carryovers run against the cards as they stood BEFORE this
         // session's own corrections are ingested below.
@@ -268,6 +277,13 @@ object SessionSummarizer {
             carryovers = carryovers,
         )
         report { it.copy(carryovers = carryovers.size) }
+        // Practice: each studied item said is a rep, not a graduation. Only on
+        // the first analysis — a regenerate must not count twice.
+        if (practice && session.summary == null) {
+            repeat(carryovers.size) {
+                com.roro.futurevoice.data.PracticeLog.record(context, com.roro.futurevoice.data.PracticeLog.Kind.EXPRESSION)
+            }
+        }
 
         // A free talk takes the generated title so lists don't fill with "Conversation".
         val generatedTitle = payload["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
@@ -320,9 +336,11 @@ object SessionSummarizer {
         // New cards have return times; something has to ring for them.
         com.roro.futurevoice.data.DrillReminder.reschedule(context)
         report { it.copy(cards = minted.size) }
-        drills.markUsedInConversation(
-            carryovers.filter { it.source == Carryover.Source.DRILL_CARD }.mapNotNull { it.sourceId },
-            language)
+        if (!practice) {
+            drills.markUsedInConversation(
+                carryovers.filter { it.source == Carryover.Source.DRILL_CARD }.mapNotNull { it.sourceId },
+                language)
+        }
 
         // Grow the long-term profile — the next conversation's prompt reads it.
         val speakingSeconds = turns.filter { it.role == TurnRole.USER }

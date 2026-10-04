@@ -265,7 +265,7 @@ private fun ChoiceRow(title: String, subtitle: String, selected: Boolean, onPick
 }
 
 @Composable
-private fun levelBlurb(level: CefrLevel): String = stringResource(when (level) {
+internal fun levelBlurb(level: CefrLevel): String = stringResource(when (level) {
     CefrLevel.A1 -> R.string.just_starting_a_few_words_and_set_phrases
     CefrLevel.A2 -> R.string.basic_simple_everyday_exchanges
     CefrLevel.B1 -> R.string.conversational_i_get_by_on_familiar_topics

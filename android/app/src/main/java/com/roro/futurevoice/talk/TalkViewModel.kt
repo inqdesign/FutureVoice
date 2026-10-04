@@ -110,8 +110,11 @@ data class TalkUiState(
     val endedSessionId: String? = null,
     val lastTiming: Map<String, String> = emptyMap(),
     /** Coach mode's word for the question just asked (iOS `coachHint`) —
-     *  drawn in the learner's listening bubble while they answer. */
+     *  drawn above the pill, under the "try saying" line, while they answer. */
     val coachHint: com.roro.futurevoice.ui.TalkGoalItem? = null,
+    /** Coach mode's "try saying" for the line just spoken (iOS `coachReply`,
+     *  `CoachSuggester`) — every line, the opener included. */
+    val coachReply: CoachReply? = null,
     /** Coach mode's grammar focus for this call, once named. */
     val grammarFocus: GrammarFocus? = null,
     /** Learner turns whose correction was the focus coming back. */
@@ -188,6 +191,13 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var coachPool: List<com.roro.futurevoice.ui.TalkGoalItem> = emptyList()
     private var usedGoalKeys: Set<String> = emptySet()
     private var focusJob: Job? = null
+    /** Coach mode was on at some point in this call — the whole call is then
+     *  a practice call (`Session.coached`). */
+    private var coachWasOn = false
+    /** Where a scenario call takes place and who the other side is, for the
+     *  "try saying" — "What can I get you?" only has one natural answer once
+     *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
+    private var coachSituation: String? = null
 
     /**
      * This call's TALK time, phone-style: the seconds the meter counts — the
@@ -246,8 +256,21 @@ class TalkViewModel(context: Context) : ViewModel() {
         this.config = config
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
+        coachWasOn = coachOn
         coachPlan = CoachPlan()
         coachSteerSent = ""
+        coachSituation = null
+        config.scenarioId?.let { id ->
+            viewModelScope.launch {
+                coachSituation = runCatching {
+                    com.roro.futurevoice.data.ScenarioStore.shared(appContext)
+                        .load(config.targetLanguage).firstOrNull { it.id == id }
+                }.getOrNull()?.let { sc ->
+                    val role = sc.role.trim()
+                    if (role.isEmpty()) sc.environment else "${sc.environment} — talking with $role"
+                }
+            }
+        }
         loadGrammarFocus(config)
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
@@ -319,7 +342,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         pcm.stop()
         mp3.stop()
         logCoach()
-        _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", coachHint = null) }
+        _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", coachHint = null, coachReply = null) }
         persist()
     }
 
@@ -357,6 +380,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             // a silent one must not count as a clean call.
             grammarFocus = if (learnerSpokeThisCall)
                 _state.value.grammarFocus?.record(_state.value.focusRepeatTurns.size) else null,
+            // Coach mode on at any point makes the whole call practice.
+            coached = if (coachWasOn) true else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
@@ -602,8 +627,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         realtime.onReplyBegan = { ctx ->
             val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
             realtimeReplyTurns[ctx] = turn.id
-            // The hint belonged to the question just answered.
-            _state.update { it.copy(turns = it.turns + turn, coachHint = null) }
+            // The hint and the suggestion belonged to the line just answered.
+            _state.update { it.copy(turns = it.turns + turn, coachHint = null, coachReply = null) }
         }
         realtime.onReplyEnded = { ctx ->
             realtimeReplyTurns[ctx]?.let { id ->
@@ -779,6 +804,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                 lastActivityAt = System.currentTimeMillis()
                 _state.update { if (it.phase == TalkPhase.ENDED || it.phase == TalkPhase.IDLE) it
                     else it.copy(phase = TalkPhase.LISTENING) }
+                // The first answer of a call is the hardest one — the opener
+                // gets its "try saying" like every line.
+                advanceCoach(text, turn.id)
             }
         }
     }
@@ -1180,8 +1208,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun setCoachMode(on: Boolean) {
         if (coachOn == on) return
         coachOn = on
-        if (on) config?.let { loadGrammarFocus(it) }
-        else _state.update { it.copy(coachHint = null) }
+        if (on) { coachWasOn = true; config?.let { loadGrammarFocus(it) } }
+        else _state.update { it.copy(coachHint = null, coachReply = null) }
         syncCoachSteer()
     }
 
@@ -1220,33 +1248,45 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     /**
-     * One step per fluent-self line: if a hint may be drawn and the line
-     * asked something, ask [CoachJudge] which studied item a natural answer
-     * to THAT question uses — the hint is the question's, never the list's.
+     * One step per fluent-self line (iOS `advanceCoach(afterReply:)`): ask
+     * [CoachSuggester] for something the learner could say back, every line,
+     * the opener included. When a word hint may be drawn (the ration, and
+     * only once the learner has spoken) the studied items ride along, and an
+     * answer that naturally uses one names it — that is the word hint now.
+     * Then re-set the steer for the next line.
      */
     private fun advanceCoach(text: String, turnId: String) {
-        // The opener asks before the learner has said a word — no hint on it,
-        // and it doesn't spend the gap either.
-        if (!coachOn || !learnerSpokeThisCall) return
-        val mayHint = coachPlan.mayHint
-        coachPlan = coachPlan.replyFinished()
-        val candidates = coachCandidates()
-        if (mayHint && candidates.isNotEmpty() && CoachPlan.endsInQuestion(text)) {
-            val learnerSaid = _state.value.turns.lastOrNull { it.role == TurnRole.USER }?.transcript
-            viewModelScope.launch {
-                val item = CoachJudge.pick(text, learnerSaid, candidates, turnId) ?: return@launch
-                val st = _state.value
-                // Still the line being answered — a late verdict must never
-                // label the NEXT question.
-                if (!coachOn || st.phase == TalkPhase.ENDED ||
-                    st.turns.lastOrNull { it.role == TurnRole.FLUENT_SELF }?.id != turnId ||
-                    item.key in usedGoalKeys) return@launch
-                coachPlan = coachPlan.hintShown(item)
-                _state.update { it.copy(coachHint = item) }
-                syncCoachSteer()
-            }
+        val cfg = config ?: return
+        if (!coachOn || text.isBlank()) return
+        var candidates = emptyList<com.roro.futurevoice.ui.TalkGoalItem>()
+        if (learnerSpokeThisCall) {
+            val mayHint = coachPlan.mayHint
+            coachPlan = coachPlan.replyFinished()
+            if (mayHint && CoachPlan.endsInQuestion(text)) candidates = coachCandidates()
         }
-        syncCoachSteer()
+        val turns = _state.value.turns
+        val learnerSaid = turns.lastOrNull { it.role == TurnRole.USER }?.transcript
+        val earlier = turns.lastOrNull { it.role == TurnRole.FLUENT_SELF && it.id != turnId }?.transcript
+        viewModelScope.launch {
+            val result = CoachSuggester.suggest(
+                line = text, learnerSaid = learnerSaid,
+                earlier = if (learnerSaid == null) null else earlier,
+                situation = coachSituation,
+                candidates = candidates,
+                target = cfg.targetLanguage, native = cfg.nativeLanguage,
+                level = cfg.level, turnId = turnId,
+            ) ?: return@launch
+            val st = _state.value
+            // Still the line being answered — a late suggestion must never
+            // sit under the NEXT one.
+            if (!coachOn || st.phase == TalkPhase.ENDED ||
+                st.turns.lastOrNull { it.role == TurnRole.FLUENT_SELF }?.id != turnId) return@launch
+            val item = result.second?.takeIf { it.key !in usedGoalKeys }
+            if (item != null) coachPlan = coachPlan.hintShown(item)
+            _state.update { it.copy(coachReply = result.first, coachHint = item ?: it.coachHint) }
+            if (item != null) syncCoachSteer()
+        }
+        if (learnerSpokeThisCall) syncCoachSteer()
     }
 
     /** Pick this call's grammar focus and name it. Coach mode only. */

@@ -3,29 +3,33 @@ package com.roro.futurevoice.talk
 import android.content.Context
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
+import com.roro.futurevoice.data.TextScript
 import com.roro.futurevoice.net.GeminiClient
 import com.roro.futurevoice.ui.TalkGoalItem
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 
 /**
- * Coach mode (iOS `CoachMode.swift`, `ede039e` + `45b397e`): the call's
+ * Coach mode (iOS `CoachMode.swift`, `ede039e` + `45b397e`, 1.1.4 `6e9eb92`): the call's
  * listening moment, used.
  *
  * The learner already studies words; the call is the only place they can be
  * spent, and the chip row above the transcript only waits for that to happen
  * by chance. Coach mode makes it happen on purpose — the fluent self may ask
  * something whose natural answer uses a word the learner is studying, and
- * while they think about their answer their own "Listening…" bubble says
- * "Try using · *profound*". It ticks the moment they do, by the same
- * matcher the chips use.
+ * while they think about their answer the line above the pill says "Try
+ * using · *profound*" (under the "try saying" sentence). It ticks the moment
+ * they do, by the same matcher the chips use.
  *
  * **The hint comes FROM the question, never from a list.** The steer hands
  * the model the whole CANDIDATE list as permission, and after each line
- * [CoachJudge] reads the question that was ACTUALLY asked and returns the
- * candidate a natural answer would use — or nothing, the ordinary answer.
- * [CoachPlan] rations it in code.
+ * [CoachSuggester] writes an answer to the line that was ACTUALLY said and
+ * only names a candidate when that answer naturally uses one — nothing, the
+ * ordinary case, draws no word hint (the suggestion itself is drawn every
+ * line; it replaced `CoachJudge`, iOS `6e9eb92`). [CoachPlan] rations the
+ * word hint in code.
  *
  * ON by default for A1/A2, off above: a beginner is who the steered call is
  * for, and a switch buried in Call settings is one they never find. The
@@ -80,7 +84,7 @@ data class CoachPlan(
     /** A fluent-self line has finished. */
     fun replyFinished(): CoachPlan = copy(repliesSinceHint = repliesSinceHint + 1)
 
-    /** The judge matched a question to [item] and it is on screen. */
+    /** The suggestion named [item] and its hint is on screen. */
     fun hintShown(item: TalkGoalItem): CoachPlan =
         copy(hintsShown = hintsShown + 1, hinted = hinted + item.key, repliesSinceHint = 0)
 
@@ -98,56 +102,122 @@ data class CoachPlan(
 }
 
 /**
- * Reads the question the fluent self just asked and names the studied item a
- * natural answer to it would use. Free (`purpose: "coach"`, flash-lite), off
- * the voice's path — it runs while the learner is already thinking.
+ * Coach mode's answer for EVERY line (iOS `CoachReply`, `6e9eb92`): one short
+ * thing the learner could say back, at their level, with an example in
+ * brackets where only they know the answer ("I usually get up at [7].") and
+ * its meaning in their own language. The empty hand, not the question, is
+ * what stops a beginner talking.
  */
-object CoachJudge {
-    @Serializable
-    private data class Verdict(val word: String? = null)
+data class CoachReply(
+    /** Target language. "[7]" is an example the learner swaps for their own
+     *  words — drawn faded (`CoachReplyLabel`). */
+    val say: String,
+    /** Native language, the same brackets translated. "" when native == target. */
+    val meaning: String,
+    val turnId: String,
+) {
+    companion object {
+        /**
+         * "[7]" is a placeholder for the learner's own words: drawn faded and
+         * underlined, brackets dropped, the rest of the line as is. Pairs of
+         * (text, isExample), in order; an unclosed "[" is plain text.
+         */
+        fun segments(line: String): List<Pair<String, Boolean>> {
+            val out = ArrayList<Pair<String, Boolean>>()
+            var rest = line
+            while (true) {
+                val open = rest.indexOf('[')
+                val close = if (open < 0) -1 else rest.indexOf(']', open)
+                if (open < 0 || close < 0) break
+                if (open > 0) out += rest.substring(0, open) to false
+                out += rest.substring(open + 1, close) to true
+                rest = rest.substring(close + 1)
+            }
+            if (rest.isNotEmpty()) out += rest to false
+            return out
+        }
+    }
+}
 
-    suspend fun pick(
-        question: String,
-        learnerSaid: String?,
-        candidates: List<TalkGoalItem>,
-        key: String,
-    ): TalkGoalItem? {
-        if (candidates.isEmpty()) return null
-        val list = candidates.joinToString("\n") { "- ${it.text}" }
+/**
+ * Writes the "try saying" for the line just spoken (iOS `CoachSuggester`,
+ * which replaced `CoachJudge` 2026-10-01). One call per fluent-self line, the
+ * opener included; when studied items ride along and the answer naturally
+ * uses one, it names it — that is the word hint now (one call, not two).
+ *
+ * The DEFAULT model, not flash-lite (iOS `5b0587a`): the line is what the
+ * learner is about to SAY, and flash-lite wrote "I will have a coffee please"
+ * under a prompt that forbids it; 3.6 Flash didn't, at the same ~1–1.8 s.
+ * Free (`purpose: "coach"`), off the voice's path.
+ */
+object CoachSuggester {
+    @Serializable
+    internal data class Payload(val say: String? = null, val meaning: String? = null, val word: String? = null)
+
+    /** iOS builds the user message the same way, line by line. */
+    internal fun content(line: String, learnerSaid: String?, earlier: String?, situation: String?,
+                         candidates: List<TalkGoalItem>): String {
         var content = ""
-        if (!learnerSaid.isNullOrEmpty()) content += "The learner had said: \"$learnerSaid\"\n"
-        content += "They were then asked: \"$question\"\n\nStudied items:\n$list"
-        val verdict = withTimeoutOrNull(8_000) {
+        if (!situation.isNullOrEmpty()) content += "Situation: $situation\n"
+        if (!earlier.isNullOrEmpty()) content += "Earlier they said: \"$earlier\"\n"
+        if (!learnerSaid.isNullOrEmpty()) content += "The learner said: \"$learnerSaid\"\n"
+        content += "Now the other speaker says: \"$line\""
+        if (candidates.isNotEmpty()) {
+            content += "\n\nStudied items:\n" + candidates.joinToString("\n") { "- ${it.text}" }
+        }
+        return content
+    }
+
+    /**
+     * The guards, apart from the network so they can be tested. A line can
+     * carry another script — the learner's name in Hangul on an English call
+     * — and the model followed it and wrote the whole suggestion in Korean;
+     * a suggestion they can't say in the call's language is no suggestion.
+     * A learner whose own language IS the call's would read the same
+     * sentence twice, so the meaning goes.
+     */
+    internal fun accept(payload: Payload?, candidates: List<TalkGoalItem>, target: String, native: String,
+                        turnId: String): Pair<CoachReply, TalkGoalItem?>? {
+        val say = payload?.say?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (!TextScript.isInTargetScript(say, target)) return null
+        val meaning = if (LanguageCatalog.sameLanguage(target, native)) "" else payload.meaning?.trim().orEmpty()
+        val item = payload.word?.trim()?.takeIf { it.isNotEmpty() }?.let { word ->
+            val wanted = CarryoverDetector.normalized(word)
+            candidates.firstOrNull { it.key == wanted || CarryoverDetector.normalized(it.text) == wanted }
+        }
+        return CoachReply(say, meaning, turnId) to item
+    }
+
+    suspend fun suggest(
+        line: String,
+        learnerSaid: String?,
+        earlier: String?,
+        situation: String? = null,
+        candidates: List<TalkGoalItem>,
+        target: String,
+        native: String,
+        level: CefrLevel,
+        turnId: String,
+    ): Pair<CoachReply, TalkGoalItem?>? {
+        val payload = withTimeoutOrNull(8_000) {
             runCatching {
                 GeminiClient(AuthRepository()).sendJson(
-                    system = SYSTEM,
-                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, content)),
-                    serializer = Verdict.serializer(),
-                    model = GeminiClient.Model.FLASH_LITE_31,
-                    maxTokens = 200,
+                    system = CoachPrompts.suggesterSystem(
+                        LanguageCatalog.englishName(target), LanguageCatalog.englishName(native), level),
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
+                        content(line, learnerSaid, earlier, situation, candidates))),
+                    serializer = Payload.serializer(),
+                    model = GeminiClient.Model.FLASH_36,
+                    // Its thinking needs room, or the JSON comes back cut.
+                    maxTokens = 1000,
                     purpose = "coach",
-                    idempotencyKey = "coach:$key",
+                    idempotencyKey = "coach-reply:$turnId",
                     fastThinking = true,
                 )
             }.getOrNull()
         }
-        val word = verdict?.word?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        val wanted = CarryoverDetector.normalized(word)
-        return candidates.firstOrNull { it.key == wanted || CarryoverDetector.normalized(it.text) == wanted }
+        return accept(payload, candidates, target, native, turnId)
     }
-
-    private const val SYSTEM =
-        "A language learner is on a spoken call and has just been asked a " +
-        "question. They are studying the items listed. Decide whether a " +
-        "natural, honest answer to THAT question would use one of those items.\n\n" +
-        "Return {\"word\": \"<the item exactly as listed>\"} only when the fit is " +
-        "obvious: the item would carry what the answer MEANS — the thing the " +
-        "question is about — in its usual sense. A reaction word that could " +
-        "end any answer (\"awesome\", \"sure\") or a small word that could appear " +
-        "in any sentence does not count. If the learner would have to force " +
-        "it in, if the line asks nothing, or if nothing fits, return " +
-        "{\"word\": null}. null is the usual answer. Never return a word that " +
-        "is not listed."
 }
 
 /**
