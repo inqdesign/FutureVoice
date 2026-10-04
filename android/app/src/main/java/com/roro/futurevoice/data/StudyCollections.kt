@@ -55,7 +55,7 @@ object StudyCollections {
         val fromScenes = ScenarioStore.shared(context).load(language)
             .filter { it.archivedAt == null }
             .sumOf { scenario ->
-                scenario.curriculum?.shadowLines?.count { it.id !in practised } ?: 0
+                scenario.curriculum?.shadowLines?.count { it.masteredAt == null && it.id !in practised } ?: 0
             }
         return fromTalks + fromScenes
     }

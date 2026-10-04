@@ -212,12 +212,9 @@ fun ProgressBody(language: String, nativeLanguage: String,
         val books = ScenarioStore.shared(context).load(language)
             .filter { it.archivedAt == null }
         material = books.sumOf { b ->
-            b.curriculum?.let { c ->
-                c.words.count { it.masteredAt != null } +
-                    c.expressions.count { it.masteredAt != null }
-            } ?: 0
+            b.curriculum?.masteredCount ?: 0
         } to books.sumOf { b ->
-            b.curriculum?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
+            b.curriculum?.totalCount ?: 0
         }
         streak = TalkTimeLog.streakDays(context)
         val bands = VocabStore.shared(context).usedWordsByLevel(language)

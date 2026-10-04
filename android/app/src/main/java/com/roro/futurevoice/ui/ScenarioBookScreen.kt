@@ -58,7 +58,7 @@ import com.roro.futurevoice.talk.ScenarioCurriculum
  * to master. Mastery is DETERMINISTIC and never LLM-judged, riding the
  * app's existing tracking (iOS rule): a word is mastered when it's in the
  * vocab pool, an expression on real evidence (used or "I know it"), a
- * shadow line by a scored attempt (arrives with ShadowAttemptStore).
+ * shadow line by a whole-line take at the bar (`ScenarioMastery`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,18 +79,24 @@ fun ScenarioBookScreen(
     var scenario by remember { mutableStateOf<Scenario?>(null) }
     var wordMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
     var exprMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var shadowMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
     var chapter by remember { mutableStateOf(
         Chapter.entries.firstOrNull { it.name == com.roro.futurevoice.capture.flags.PracticeCaptureFlags.bookChapter } ?: Chapter.SCENE) }
     LaunchedEffect(scenarioId, revision) {
         val sc = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.bookScenario?.takeIf { it.id == scenarioId }
             ?: ScenarioStore.shared(context).load(language).firstOrNull { it.id == scenarioId }
+                ?.let { com.roro.futurevoice.data.ScenarioMastery.refresh(context, it, language) }
         scenario = sc
         val vocab = VocabStore.shared(context)
         val cur = sc?.curriculum
         wordMastered = cur?.words.orEmpty()
-            .filter { vocab.isKnownWord(it.text, language) }.map { it.id }.toSet()
+            .filter { it.masteredAt != null || vocab.isKnownWord(it.text, language) }.map { it.id }.toSet()
         exprMastered = cur?.expressions.orEmpty()
-            .filter { vocab.hasUsedExpression(it.text, language) }.map { it.id }.toSet()
+            .filter { it.masteredAt != null || vocab.hasUsedExpression(it.text, language) }.map { it.id }.toSet()
+        // A shadow line is mastered by a whole-line take at the bar —
+        // written onto the item by `ScenarioMastery.refresh` just above.
+        shadowMastered = cur?.shadowLines.orEmpty()
+            .filter { it.masteredAt != null }.map { it.id }.toSet()
     }
     // "Read again" on the brief — the same board the scene shows while it
     // reads, drawn in place of the section until the new reading lands.
@@ -186,7 +192,8 @@ fun ScenarioBookScreen(
                 stringResource(R.string.expressions),
                 done = exprMastered.size, total = cur.expressions.size),
             BookmarkTab(Chapter.SHADOW, StudyIcon.shadowing,
-                stringResource(R.string.shadowing), count = cur.shadowLines.size),
+                stringResource(R.string.shadowing),
+                done = shadowMastered.size, total = cur.shadowLines.size),
         )
         BookmarkedPage(
             tabs = tabs, selection = chapter, onSelect = { chapter = it },
@@ -229,7 +236,11 @@ fun ScenarioBookScreen(
                         Row(Modifier.fillMaxWidth().clickable { onShadow(line.text) }
                             .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Circle, contentDescription = null,
+                            if (line.id in shadowMastered) Icon(Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp))
+                            else Icon(Icons.Outlined.Circle, contentDescription = null,
                                 tint = MaterialTheme.colorScheme.outlineVariant,
                                 modifier = Modifier.size(18.dp))
                             Text(line.text, style = MaterialTheme.typography.bodyLarge,

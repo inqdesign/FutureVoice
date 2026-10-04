@@ -141,6 +141,11 @@ fun PracticeBody(
     var chapterDeck by remember { mutableStateOf<Pair<String, List<StudyDeckItem>>?>(null) }
 
     LaunchedEffect(language, revision) {
+        // The shelves first: their pass writes each scene book's mastery
+        // (`ScenarioMastery`), which the scenario cards below then read.
+        data = withContext(Dispatchers.Default) {
+            runCatching { loadReviewShelves(context, language, level) }.getOrNull()
+        }
         val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
         scenarios = allScenarios.filter { it.archivedAt == null }.sortedByDescending { it.createdAt }
         archivedScenarios = allScenarios.filter { it.archivedAt != null }
@@ -151,9 +156,6 @@ fun PracticeBody(
         counterparts = runCatching {
             com.roro.futurevoice.data.CounterpartStore.shared(context).load().associate { it.id to it.name }
         }.getOrDefault(emptyMap())
-        data = withContext(Dispatchers.Default) {
-            runCatching { loadReviewShelves(context, language, level) }.getOrNull()
-        }
     }
     val talkProgress = data?.talkProgress.orEmpty()
 
@@ -390,13 +392,9 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
                          onDelete: ((String) -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
     val cur = sc.curriculum
-    // Words and expressions — the items this platform masters on a scene
-    // (`scenarioFinished`), so the strip can reach its end.
-    val total = cur?.let { it.words.size + it.expressions.size } ?: 0
-    val done = cur?.let {
-        it.words.count { w -> w.masteredAt != null } +
-            it.expressions.count { e -> e.masteredAt != null }
-    } ?: 0
+    // All three chapters — words, expressions, shadow lines (`ScenarioMastery`).
+    val total = cur?.totalCount ?: 0
+    val done = cur?.masteredCount ?: 0
     // A scene with a person shows THAT person — their photo, else their
     // initials on the same disc (iOS `21dd1ac`).
     val photo = if (personaName != null) rememberPersonPhoto(sc.counterpartId) else null

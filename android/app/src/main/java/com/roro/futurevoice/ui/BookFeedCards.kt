@@ -38,6 +38,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.ExpressionCatalog
+import com.roro.futurevoice.data.ScenarioMastery
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.ShadowAttemptStore
@@ -122,20 +123,21 @@ data class ReviewShelfData(
     val stats: LibraryStats = LibraryStats(),
 )
 
-/** A scene book is finished when its words and expressions are (Android's
- *  rule — scene shadow lines carry no mastery on this platform yet). */
-internal fun scenarioFinished(sc: Scenario): Boolean {
-    val c = sc.curriculum ?: return false
-    val items = c.words + c.expressions
-    return items.isNotEmpty() && items.all { it.masteredAt != null }
-}
+/** A scene book is finished when ALL its chapters are — words, expressions
+ *  and the Shadow chapter's lines (iOS `refreshScenarioMastery`, ported as
+ *  [com.roro.futurevoice.data.ScenarioMastery]). */
+internal fun scenarioFinished(sc: Scenario): Boolean = sc.curriculum?.isMastered == true
 
 suspend fun loadReviewShelves(context: Context, language: String, level: CefrLevel): ReviewShelfData {
     val vocab = VocabStore.shared(context)
     val attempts = ShadowAttemptStore.shared(context).load(language)
     val cards = DrillStore.shared(context).load(language)
     val allTalks = SessionStore.shared(context).load(language).filter { it.summary != null }
+    val talksForMastery = SessionStore.shared(context).load(language)
+    // Mastery is written onto the scene book before the shelves read it —
+    // a take or a talk since the last look may have finished a chapter.
     val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
+        .map { sc -> ScenarioMastery.refresh(context, sc, language, talksForMastery, attempts) }
 
     val snapshots = allTalks.associate { s ->
         s.id to runCatching { TalkCurriculum.build(s, level, language, vocab, attempts, cards) }.getOrNull()
@@ -177,7 +179,7 @@ suspend fun loadReviewShelves(context: Context, language: String, level: CefrLev
         talkBook(s) to (snapshots[s.id]?.lastStudiedAt ?: s.endedAt ?: s.startedAt)
     } + allScenarios.filter(::scenarioFinished).map { sc ->
         val c = sc.curriculum!!
-        sceneBook(sc) to ((c.words + c.expressions).mapNotNull { it.masteredAt }.maxOrNull() ?: sc.createdAt)
+        sceneBook(sc) to (c.allItems.mapNotNull { it.masteredAt }.maxOrNull() ?: sc.createdAt)
     }).sortedByDescending { it.second }.map { it.first }
 
     val core = CoreVocabulary

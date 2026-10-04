@@ -35,6 +35,15 @@ class ScenarioStore private constructor(context: Context) {
             write(language, listOf(scenario) + loadLocked(language).filterNot { it.id == scenario.id })
         }
 
+    /** Rewrite a scenario IN PLACE — for bookkeeping (mastery) that is not a
+     *  use, so the recency-ordered lists must not move. No-op if it's gone. */
+    suspend fun replace(scenario: Scenario, language: String = LanguageScope.active(appContext)) =
+        mutex.withLock {
+            val all = loadLocked(language)
+            if (all.none { it.id == scenario.id }) return@withLock
+            write(language, all.map { if (it.id == scenario.id) scenario else it })
+        }
+
     /** A tap on a saved scenario is a use — the list stays recency-ordered. */
     suspend fun touch(id: String, language: String = LanguageScope.active(appContext)) =
         mutex.withLock {

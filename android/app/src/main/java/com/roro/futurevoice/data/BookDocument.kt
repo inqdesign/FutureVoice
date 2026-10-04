@@ -275,10 +275,9 @@ data class BookDocument(
 
             val c = scenario.curriculum
             if (c != null) {
-                val total = c.words.size + c.expressions.size + c.shadowLines.size
+                val total = c.totalCount
                 if (total > 0) {
-                    val done = c.words.count { it.masteredAt != null } +
-                        c.expressions.count { it.masteredAt != null }
+                    val done = c.masteredCount
                     meta.add("${context.getString(R.string.mastered)} $done/$total")
                 }
             }

@@ -804,6 +804,13 @@ data class ScenarioCurriculum(
         val masteredAt: Long? = null,
     )
 
+    /** Everything the book asks to master — its three chapters (iOS: a
+     *  Watch book is words · expressions · shadow lines, all of them counted). */
+    val allItems: List<Item> get() = words + expressions + shadowLines
+    val totalCount: Int get() = allItems.size
+    val masteredCount: Int get() = allItems.count { it.masteredAt != null }
+    val isMastered: Boolean get() = totalCount > 0 && masteredCount == totalCount
+
     /** Fold a fresh take in: scene replaces, study items accumulate (iOS `absorb`). */
     fun absorb(fresh: ScenarioCurriculum): ScenarioCurriculum {
         fun merged(old: List<Item>, new: List<Item>): List<Item> {
