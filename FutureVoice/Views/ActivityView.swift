@@ -69,6 +69,8 @@ struct ActivityView: View {
     @State private var openTalk: Session?
     /// `PracticeStats.activeDays` — what the no-promise rule counts.
     @State private var studiedDays: Set<Date> = []
+    /// My routine's guide, raised once on the first visit (`PageIntro.routine`).
+    @State private var showIntro = false
 
 
     var body: some View {
@@ -140,6 +142,14 @@ struct ActivityView: View {
             if let m = UserDefaults.standard.string(forKey: "activityMode").flatMap(ViewMode.init(rawValue:)) { viewMode = m }
             #endif
             if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
+            offerIntro()
+        }
+        .sheet(isPresented: $showIntro) {
+            PageIntroSheet(page: .routine)
+                .onAppear {
+                    PageIntroStore.markSeen(.routine)
+                    Analytics.capture("page_intro_shown", ["page": PageIntro.Page.routine.rawValue])
+                }
         }
         .onChange(of: cardStore.version) { _, _ in thumbs = [:]; loadCellPhotos() }
         .fullScreenCover(isPresented: $showPlanEditor) { WeeklyPlanEditor() }
@@ -160,6 +170,22 @@ struct ActivityView: View {
             guard let day else { return }
             let start = PlannerSnapshot.startOfWeek(day)
             if start != weekStart { weekStart = start }
+        }
+    }
+
+    /// The first visit explains the page's marks — a green day is a rule
+    /// (every block of that day's routine done), not something anyone can
+    /// read off the colour. A beat late, so the page is seen arriving first.
+    private func offerIntro() {
+        #if DEBUG
+        if DebugCapture.isCapturing { return }
+        #endif
+        guard PageIntroStore.isDue(.routine) else { return }
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard PageIntroStore.isDue(.routine), routineSheet == nil, cardDay == nil,
+                  !showPlanEditor else { return }
+            showIntro = true
         }
     }
 

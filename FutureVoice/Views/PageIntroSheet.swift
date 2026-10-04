@@ -21,8 +21,15 @@ import SwiftUI
 enum PageIntro {
     enum Page: String, Identifiable, CaseIterable {
         case talk, watch, review, progress
+        /// Not a tab: My routine, reached from the Talk header's streak.
+        /// Its marks (a green day, a grey ring, a bare number) carry a rule
+        /// nobody can guess, so it explains itself on the first visit.
+        case routine
         var id: String { rawValue }
     }
+
+    /// The four tabs, in tab order — what `RootTabView` raises guides for.
+    static let tabs: [Page] = [.talk, .watch, .review, .progress]
 
     static func symbol(_ page: Page) -> String {
         switch page {
@@ -30,6 +37,7 @@ enum PageIntro {
         case .watch:    return "play.circle.fill"
         case .review:   return "book.fill"
         case .progress: return "chart.bar.fill"
+        case .routine:  return "flame.fill"
         }
     }
 
@@ -39,6 +47,7 @@ enum PageIntro {
         case .watch:    return explain("Watch")
         case .review:   return explain("Review")
         case .progress: return explain("Progress")
+        case .routine:  return explain("My routine")
         }
     }
 
@@ -50,6 +59,7 @@ enum PageIntro {
         case .watch:    return explain("In a new situation, you don't know what to say")
         case .review:   return explain("What you learn today is gone in a few days")
         case .progress: return explain("Am I actually getting better?")
+        case .routine:  return explain("Studying every day is easy to plan and hard to keep")
         }
     }
 
@@ -85,7 +95,10 @@ enum PageIntroStore {
         guard !defaults.bool(forKey: preparedKey) else { return }
         defaults.set(true, forKey: preparedKey)
         if !SessionStore.shared.loadAcrossLanguages().isEmpty {
-            PageIntro.Page.allCases.forEach(markSeen)
+            // Tabs only: My routine's guide came later than the page, and
+            // what it explains (which days are green) is exactly what
+            // people who already use the page were asking.
+            PageIntro.tabs.forEach(markSeen)
         }
     }
 
@@ -185,7 +198,7 @@ struct PageIntroSheet: View {
         case .talk:  return 6
         case .watch: return 5
         case .review: return 4
-        default:     return 3
+        default:     return 3   // progress, routine
         }
     }
     private var isLast: Bool { step == stepCount - 1 }
@@ -489,6 +502,44 @@ struct PageIntroSheet: View {
                           title: explain("It moves as you talk"),
                           detail: explain("Every call measures again, and when you move up a level, you'll hear about it.")),
                 ])
+
+        // MARK: My routine
+        case (.routine, 0):
+            IntroWhyPage(
+                hero: .symbol("flame.fill"),
+                eyebrow: explain("My routine"),
+                problem: PageIntro.problem(.routine),
+                detail: explain("A plan in your head slips the first busy day, and it's hard to tell whether this week went better than last."),
+                answer: explain("Set your week here once: what you'll do, and when. Each day then shows whether you kept it, and the days you keep in a row become your streak."),
+                answerHeading: "Here's how this page helps")
+        case (.routine, 1):
+            IntroScreenPage(
+                title: explain("What the day circles mean"),
+                subtitle: explain("Each date along the top shows whether you kept that day's routine."),
+                callouts: [
+                    .init(title: explain("Green: you kept it"),
+                          detail: explain("You did everything your routine had for that day. Your streak grows by one.")),
+                    .init(title: explain("Grey ring: something was left"),
+                          detail: explain("Part of that day's routine wasn't done. Your streak starts again from the next day you keep.")),
+                    .init(title: explain("Just the number: a rest day"),
+                          detail: explain("Nothing was planned that day, so it neither adds to your streak nor breaks it.")),
+                    .init(title: explain("Today fills as you go"),
+                          detail: explain("Finish today's last block and the ring closes and turns green. Today lasts until midnight, so it never breaks your streak early.")),
+                ],
+                note: explain("If your routine is empty, every day you studied turns green.")) { RoutineDaysMock() }
+        case (.routine, _):
+            IntroScreenPage(
+                title: explain("When a block counts as done"),
+                subtitle: explain("Under the dates is the chosen day's routine, one row per block."),
+                callouts: [
+                    .init(title: explain("Talk counts in minutes"),
+                          detail: explain("A 10-minute talk block is done once you've talked for 10 minutes that day. After 4 minutes the ring is 40% full.")),
+                    .init(title: explain("Everything else counts by number"),
+                          detail: explain("Words, expressions, sentence cards and shadowing are done when you've finished as many as the block asks for.")),
+                    .init(title: explain("Any time that day"),
+                          detail: explain("The times are a plan, not a deadline. An 8:00 talk done at noon still counts.")),
+                ],
+                note: explain("Change your routine with Edit at the top right. Past days are judged by the routine they had, so raising the bar never turns an old green day grey.")) { RoutineDayListMock() }
         }
     }
 }
@@ -503,6 +554,8 @@ private struct IntroWhyPage: View {
     let problem: String
     let detail: String
     let answer: String
+    /// The answer box's heading. My routine is a page, not a tab.
+    var answerHeading: LocalizedStringKey = "Here's how this tab helps"
 
     var body: some View {
         ScrollView {
@@ -534,7 +587,7 @@ private struct IntroWhyPage: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Label("Here's how this tab helps", systemImage: "lightbulb.fill")
+                Label(answerHeading, systemImage: "lightbulb.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.tint)
                 Text(answer)
@@ -1680,5 +1733,141 @@ private struct CastMock: View {
         .padding(.vertical, 8)
         .frame(width: 150)
         .background(mockCard, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+// MARK: - My routine
+
+/// The day strip: a week of circles in each of their states, under the
+/// streak. Mirrors `PlannerDayStrip.circleFace`.
+private struct RoutineDaysMock: View {
+    private enum Mark { case kept, missed, rest, today(Double) }
+    private let days: [(Int, Mark)] = [
+        (12, .kept), (13, .missed), (14, .kept), (15, .rest),
+        (16, .kept), (17, .kept), (18, .today(0.55)),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                TextBar(width: 110, height: 10)
+                Spacer()
+                Label {
+                    Text(verbatim: "3")
+                } icon: {
+                    Image(systemName: "flame.fill").foregroundStyle(.orange)
+                }
+                .font(.footnote.weight(.bold))
+            }
+            HStack(spacing: 0) {
+                ForEach(days, id: \.0) { day, mark in
+                    VStack(spacing: 7) {
+                        TextBar(width: 9, height: 5)
+                        circle(day, mark)
+                            .frame(width: 32, height: 32)
+                            .modifier(MarkCallout(number: number(for: day)))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.top, 10)
+        }
+        .padding(.horizontal, 4)
+    }
+
+    /// One example of each state is numbered, the rest are plain.
+    private func number(for day: Int) -> Int? {
+        switch day {
+        case 14: return 1
+        case 13: return 2
+        case 15: return 3
+        case 18: return 4
+        default: return nil
+        }
+    }
+
+    @ViewBuilder
+    private func circle(_ day: Int, _ mark: Mark) -> some View {
+        let n = Text(verbatim: "\(day)").font(.footnote.weight(.semibold)).monospacedDigit()
+        ZStack {
+            switch mark {
+            case .kept:
+                Circle().fill(Color.green)
+                n.foregroundStyle(.white)
+            case .missed:
+                Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
+                n.foregroundStyle(.secondary)
+            case .rest:
+                n.foregroundStyle(.tertiary)
+            case .today(let p):
+                Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
+                Circle().trim(from: 0, to: p)
+                    .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .padding(1.5)
+                n.foregroundStyle(.primary)
+            }
+        }
+    }
+
+    private struct MarkCallout: ViewModifier {
+        let number: Int?
+        func body(content: Content) -> some View {
+            if let number { content.callout(number, corner: 16) } else { content }
+        }
+    }
+}
+
+/// The chosen day's list: a talk part-way, words part-way, and a block done
+/// at another time. Mirrors `PlannerDayCard.rowLayout`.
+private struct RoutineDayListMock: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            row(time: "8:00", symbol: "phone.fill", tint: .blue, title: 60,
+                amount: "4/10", progress: 0.4)
+                .callout(1)
+            row(time: "12:30", symbol: "textformat", tint: .purple, title: 48,
+                amount: "12/20", progress: 0.6)
+                .callout(2)
+            row(time: "19:00", symbol: "waveform", tint: .yellow, title: 72,
+                amount: "✓ 12:04", progress: 1)
+                .callout(3)
+        }
+    }
+
+    private func row(time: String, symbol: String, tint: Color, title: CGFloat,
+                     amount: String, progress: Double) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(tint.opacity(0.14)))
+            VStack(alignment: .leading, spacing: 5) {
+                TextBar(width: title, height: 8)
+                Text(verbatim: "\(time) · \(amount)")
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            ZStack {
+                if progress >= 1 {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.green)
+                } else {
+                    Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
+                    Circle().trim(from: 0, to: progress)
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .padding(1)
+                }
+            }
+            .frame(width: 22, height: 22)
+        }
+        .padding(10)
+        .background(mockCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
