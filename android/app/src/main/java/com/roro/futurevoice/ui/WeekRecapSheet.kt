@@ -1,6 +1,15 @@
 package com.roro.futurevoice.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -93,7 +102,9 @@ import com.roro.futurevoice.core.UILanguage
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.DeepLinkInbox
 import com.roro.futurevoice.data.LanguageScope
+import com.roro.futurevoice.data.WeekInProgress
 import com.roro.futurevoice.data.WeekRecap
+import com.roro.futurevoice.data.WeekRecapBuilder
 import com.roro.futurevoice.data.WeekRecapInbox
 import com.roro.futurevoice.data.WeekRecapStore
 import com.roro.futurevoice.data.WeeklyTestInbox
@@ -255,7 +266,7 @@ fun WeekRecapDeck(
                         RecapCard.GRAMMAR -> GrammarCard(current, pending)
                         RecapCard.WORDS -> WordsCard(current, pending)
                         RecapCard.COACH -> CoachCard(current, pending)
-                        RecapCard.TEST -> TestCard(testState)
+                        RecapCard.TEST -> { TestCard(testState); ReminderOffer() }
                     }
                 }
             }
@@ -734,6 +745,50 @@ private fun TestCard(state: WeeklyTestSchedule.State) {
     })
 }
 
+/**
+ * The deck slides up by itself only when the app is opened; the notice is
+ * what reaches someone who doesn't. Offered here, once the learner has seen
+ * what the notice would bring — never as a cold permission prompt (iOS
+ * `reminderOffer`). Only while the reminder is off and the phone could still
+ * ring: a refusal the system won't ask about again leaves the offer gone.
+ */
+@Composable
+private fun ReminderOffer() {
+    val context = LocalContext.current
+    fun canAsk(): Boolean =
+        NotificationManagerCompat.from(context).areNotificationsEnabled() ||
+            (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context,
+                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+    var offer by remember { mutableStateOf(!WeeklyTestSettings.reminderOn(context) && canAsk()) }
+    var justOn by remember { mutableStateOf(false) }
+    fun settle(granted: Boolean) {
+        val on = granted && NotificationManagerCompat.from(context).areNotificationsEnabled()
+        WeeklyTestSettings.setReminderOn(context, on)     // re-arms the alarm
+        justOn = on
+        offer = false
+        Analytics.capture("week_recap_reminder", mapOf("on" to on))
+    }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), ::settle)
+    when {
+        justOn -> Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Secondary(stringResource(R.string.wr_next_week_arrives,
+                weekReadyDate(WeeklyTestSettings.schedule(context).nextOpening(), weekLocale(context))))
+        }
+        offer -> OutlinedButton(onClick = {
+            val needsAsk = Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context,
+                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            if (needsAsk) permission.launch(Manifest.permission.POST_NOTIFICATIONS) else settle(true)
+        }) {
+            Icon(Icons.Filled.NotificationsNone, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.wr_tell_me_next_week))
+        }
+    }
+}
+
 // MARK: - Helpers
 
 private fun weekday(at: Long, locale: Locale): String =
@@ -747,47 +802,56 @@ private fun dateRange(r: WeekRecap, locale: Locale): String {
     val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd")
     val f = java.time.format.DateTimeFormatter.ofPattern(pattern, locale)
     val zone = ZoneId.systemDefault()
-    return "${f.format(Instant.ofEpochMilli(r.start).atZone(zone))} – ${f.format(Instant.ofEpochMilli(r.end - 1).atZone(zone))}"
+    // Seven days, as in the archive.
+    return "${f.format(Instant.ofEpochMilli(r.start).atZone(zone))} – ${f.format(Instant.ofEpochMilli(r.end - 86_400_000L).atZone(zone))}"
 }
 
 // MARK: - Practice row
 
 /**
- * The week behind, as a row on the Today card — the same deck that slides up
- * when the week turns, reachable until the next one does (iOS
- * `weekRecapRow`). Drawn only for a week that had something in it.
+ * "Your week" on the Today card (iOS `weekRecapRow`, 2026-10-03): the week IN
+ * PROGRESS ("ready Sat, Oct 10") — its deck arrives when it closes — and a tap
+ * opens the archive of every closed week behind it. Drawn once the week has
+ * something in it, or there is a past week to look back on.
  */
 @Composable
 fun WeekRecapRow(level: CefrLevel, reloadKey: Any?) {
     val context = LocalContext.current
-    var recap by remember { mutableStateOf<WeekRecap?>(null) }
-    var open by remember { mutableStateOf<WeekRecap?>(null) }
-    LaunchedEffect(reloadKey) { recap = WeekRecapStore.lastWeek(context) }
-    val r = recap ?: return
-    if (!r.hasActivity) return
-    Row(Modifier.fillMaxWidth().clickable { open = r }.padding(horizontal = 14.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(Icons.Filled.ViewAgenda, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp))
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.wr_your_week), style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium)
-            Text(pluralStringResource(R.plurals.wr_days_min_of_talk, r.daysActive, r.daysActive, r.talkMinutes),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+    var week by remember { mutableStateOf<WeekInProgress?>(null) }
+    var hasPastWeeks by remember { mutableStateOf(false) }
+    var showing by remember { mutableStateOf(false) }
+    var reload by remember { mutableStateOf(0) }
+    val asked by WeekRecapInbox.archive.collectAsStateWithLifecycle()
+    LaunchedEffect(reloadKey, reload) {
+        WeekRecapStore.lastWeek(context)        // freezes the closed week
+        week = WeekRecapBuilder.thisWeek(context)
+        hasPastWeeks = WeekRecapStore.archive(context).isNotEmpty()
     }
-    open?.let { shown ->
-        // The frozen copy may have gained its coach since the row loaded.
-        var fresh by remember(shown.end) { mutableStateOf<WeekRecap?>(null) }
-        LaunchedEffect(shown.end) { fresh = WeekRecapStore.recap(context, shown.end) ?: shown }
-        fresh?.let {
-            WeekRecapSheet(it, level) { action ->
-                open = null
-                recap = null
-                action?.let(::performWeekRecapAction)
+    // A notice tapped for a week already seen lands here.
+    LaunchedEffect(asked) {
+        if (asked) { WeekRecapInbox.archive.value = false; showing = true }
+    }
+    val w = week
+    if (w != null && (w.hasActivity || hasPastWeeks)) {
+        Row(Modifier.fillMaxWidth().clickable { showing = true }.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Filled.ViewAgenda, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.wr_your_week), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.wr_week_in_progress_ready, weekReadyDate(w.readyAt, weekLocale(context))),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+        }
+    }
+    if (showing) {
+        WeekRecapArchiveSheet(level) { action ->
+            showing = false
+            reload++
+            action?.let(::performWeekRecapAction)
         }
     }
 }
@@ -798,7 +862,8 @@ fun WeekRecapRow(level: CefrLevel, reloadKey: Any?) {
  * Raises the closed week's cards — softly, a beat after the app is up, and
  * never over a call or another sheet (iOS `RootTabView.offerWeekRecap`).
  * Unasked it appears once per week and only for a week that had something in
- * it; from the notification it always appears (the learner asked).
+ * it. The notice shares that one showing: tapped after the deck was seen, it
+ * opens the archive instead.
  */
 @Composable
 fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel) {
@@ -820,6 +885,14 @@ fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel) {
         WeekRecapInbox.asked.value = false
         delay(if (wasAsked) 400 else 1_200)
         val recap = WeekRecapStore.lastWeek(context)
+        // The notice and the automatic slide-up share ONE showing: a notice
+        // tapped after the deck was already seen opens the archive on
+        // Practice, not the same deck again (iOS `offerWeekRecap`).
+        if (wasAsked && WeekRecapStore.wasShown(context, recap)) {
+            WeekRecapInbox.archive.value = true
+            DeepLinkInbox.pending.value = DeepLinkInbox.Destination.PRACTICE
+            return@LaunchedEffect
+        }
         if (!wasAsked && (!recap.hasActivity || WeekRecapStore.wasShown(context, recap))) return@LaunchedEffect
         if (showing != null || stillBlocked) return@LaunchedEffect
         showing = recap

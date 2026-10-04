@@ -359,6 +359,9 @@ fun RootScreen() {
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
+    var weeklyRhythmOnboarded by remember {
+        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.WEEKLY_RHYTHM))
+    }
     var onboardingPaywallSeen by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.PAYWALL))
     }
@@ -794,6 +797,12 @@ fun RootScreen() {
             onGoogleSignIn = app::signInWithGoogle,
             onAppleSignIn = app::signIn,
         )
+
+        // The week's rhythm before the day's: when the week is looked back on
+        // and tested, then (next screen) when the daily call rings. Gated on
+        // the daily call too, so an existing install never sees it.
+        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded ->
+            WeeklyRhythmOnboardingScreen(context) { weeklyRhythmOnboarded = true }
 
         // The clone's first real job, introduced right after it exists — so
         // it reads as a promise rather than a permissions request.

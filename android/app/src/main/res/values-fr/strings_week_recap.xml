@@ -99,4 +99,28 @@
         <item quantity="one">"Dernier test : %1$d/%2$d. Tu retrouveras cette semaine %3$d question ratée."</item>
         <item quantity="other">"Dernier test : %1$d/%2$d. Tu retrouveras cette semaine %3$d questions ratées."</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"En cours"</string>
+    <string name="wr_past_weeks">"Semaines passées"</string>
+    <string name="wr_first_week_arrives">"Les cartes de ta première semaine arrivent quand elle se termine."</string>
+    <string name="wr_new_badge">"Nouveau"</string>
+    <string name="wr_ready_on">"Prêt le %1$s"</string>
+    <string name="wr_week_in_progress_ready">"Semaine en cours · prête le %1$s"</string>
+    <string name="wr_tell_me_next_week">"Préviens-moi quand la semaine prochaine est prête"</string>
+    <string name="wr_next_week_arrives">"La prochaine arrive le %1$s"</string>
+    <string name="wt_fix_the_sentence">"Corrige la phrase"</string>
+    <string name="wt_write_correct_sentence">"Écris-la sous forme de phrase correcte."</string>
+    <string name="wt_some_words_traps">"Certains mots sont des pièges : tu n’as pas à tous les utiliser."</string>
+    <string name="wt_trap_words">"Mots pièges : ce que tu as dit avant la correction"</string>
+    <string name="wt_mistake_you_keep_making">"Une erreur qui revient"</string>
+    <string name="wt_better_word">"Un meilleur mot"</string>
+    <string name="wt_more_natural_than">"Plus naturel que « %1$s » ?"</string>
+    <string name="wt_tip">"Astuce"</string>
+    <string name="wrh_title">"Une fois par semaine, on fait le point"</string>
+    <string name="wrh_body">"Le jour que tu choisis, je te prépare ta semaine : ce que tu as dit, les mots que tu as appris, le chemin parcouru. Puis un petit test, fait uniquement à partir de tes conversations."</string>
+    <string name="wrh_footnote">"Choisis un moment où tu as souvent dix minutes au calme."</string>
+    <string name="wrh_remind">"Préviens-moi quand c’est prêt"</string>
+    <string name="wrh_cta">"C’est parti"</string>
 </resources>

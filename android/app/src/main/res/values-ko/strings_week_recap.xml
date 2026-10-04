@@ -88,4 +88,28 @@
     <plurals name="wr_last_test_missed">
         <item quantity="other">"지난 테스트 %1$d/%2$d. 틀린 %3$d문제는 이번 주에 다시 나와요."</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"진행 중"</string>
+    <string name="wr_past_weeks">"지난 돌아보기"</string>
+    <string name="wr_first_week_arrives">"한 주가 끝나면 첫 카드가 도착해요."</string>
+    <string name="wr_new_badge">"새로 도착"</string>
+    <string name="wr_ready_on">"%1$s에 정리돼요"</string>
+    <string name="wr_week_in_progress_ready">"이번 주 진행 중 · %1$s에 정리돼요"</string>
+    <string name="wr_tell_me_next_week">"다음 주 돌아보기도 알려 주세요"</string>
+    <string name="wr_next_week_arrives">"다음 돌아보기는 %1$s에 도착해요"</string>
+    <string name="wt_fix_the_sentence">"문장 고치기"</string>
+    <string name="wt_write_correct_sentence">"맞는 문장으로 만들어 봐요."</string>
+    <string name="wt_some_words_traps">"함정 단어도 있어요. 모든 단어를 다 쓰지 않아도 돼요."</string>
+    <string name="wt_trap_words">"함정 단어 · 고치기 전에 쓴 말"</string>
+    <string name="wt_mistake_you_keep_making">"자주 틀리는 문법"</string>
+    <string name="wt_better_word">"더 나은 표현"</string>
+    <string name="wt_more_natural_than">"“%1$s” 대신 더 자연스러운 말은?"</string>
+    <string name="wt_tip">"팁"</string>
+    <string name="wrh_title">"일주일에 한 번, 같이 돌아보자"</string>
+    <string name="wrh_body">"네가 고른 날, 한 주를 정리해 줄게. 무슨 말을 했는지, 어떤 단어를 얻었는지, 얼마나 늘었는지. 그리고 네 대화로만 만든 짧은 테스트도."</string>
+    <string name="wrh_footnote">"보통 10분쯤 조용히 낼 수 있는 때로 골라 줘."</string>
+    <string name="wrh_remind">"준비되면 알려 주세요"</string>
+    <string name="wrh_cta">"이렇게 할게요"</string>
 </resources>

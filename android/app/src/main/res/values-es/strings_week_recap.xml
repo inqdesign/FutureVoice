@@ -99,4 +99,28 @@
         <item quantity="one">"Último test: %1$d/%2$d. Esta semana repites %3$d pregunta fallada."</item>
         <item quantity="other">"Último test: %1$d/%2$d. Esta semana repites %3$d preguntas falladas."</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"En curso"</string>
+    <string name="wr_past_weeks">"Semanas anteriores"</string>
+    <string name="wr_first_week_arrives">"Las tarjetas de tu primera semana llegan cuando termina."</string>
+    <string name="wr_new_badge">"Nuevo"</string>
+    <string name="wr_ready_on">"Listo el %1$s"</string>
+    <string name="wr_week_in_progress_ready">"Semana en curso · lista el %1$s"</string>
+    <string name="wr_tell_me_next_week">"Avísame cuando esté lista la próxima semana"</string>
+    <string name="wr_next_week_arrives">"La próxima llega el %1$s"</string>
+    <string name="wt_fix_the_sentence">"Corrige la frase"</string>
+    <string name="wt_write_correct_sentence">"Escríbela como una frase correcta."</string>
+    <string name="wt_some_words_traps">"Hay palabras trampa: no tienes que usarlas todas."</string>
+    <string name="wt_trap_words">"Palabras trampa: lo que dijiste antes de corregirlo"</string>
+    <string name="wt_mistake_you_keep_making">"Un error que repites"</string>
+    <string name="wt_better_word">"Una palabra mejor"</string>
+    <string name="wt_more_natural_than">"¿Algo más natural que «%1$s»?"</string>
+    <string name="wt_tip">"Consejo"</string>
+    <string name="wrh_title">"Una vez a la semana, miramos atrás"</string>
+    <string name="wrh_body">"El día que elijas, te armo un resumen de tu semana: lo que dijiste, las palabras que aprendiste, cuánto avanzaste. Y luego un test corto, hecho solo con tus propias conversaciones."</string>
+    <string name="wrh_footnote">"Elige un momento en que sueles tener diez minutos tranquilos."</string>
+    <string name="wrh_remind">"Avísame cuando esté listo"</string>
+    <string name="wrh_cta">"Listo"</string>
 </resources>

@@ -52,6 +52,8 @@ import com.roro.futurevoice.data.DailyCallStore
 object OnboardingFlags {
     private const val PREFS = "futurevoice"
     const val DAILY_CALL = "futurevoice.dailyCall.onboarded"
+    /** The "once a week" step (test day + time), new installs only. */
+    const val WEEKLY_RHYTHM = "futurevoice.weeklyRhythm.onboarded"
     const val PAYWALL = "futurevoice.onboardingPaywall.seen"
 
     fun seen(c: Context, key: String) =
@@ -90,11 +92,18 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
             mapOf("enabled" to enable, "hour" to time.hour))
         DailyCallStore.set(context, enable, time.hour, time.minute)
         OnboardingFlags.markSeen(context, OnboardingFlags.DAILY_CALL)
+        // The weekly step before this one may have asked for its notice: arm
+        // it, or switch the wish off if notifications can't post.
+        com.roro.futurevoice.data.WeeklyTestReminder.settleAfterPermission(context)
         onDone()
     }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) finish(enable = true) else denied = true }
+    // Skipping the call still owes the weekly notice its one permission ask.
+    val skipPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { finish(enable = false) }
 
     Column(
         // A full-screen step of its own: the app draws edge to edge, so this
@@ -139,7 +148,13 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
         }
         // Skipping still sets the flag: a screen you cannot get past is a
         // wall, and this one is an offer.
-        TextButton(onClick = { finish(enable = false) }) {
+        TextButton(onClick = {
+            if (com.roro.futurevoice.data.WeeklyTestSettings.reminderOn(context) &&
+                Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
+                    android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                skipPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            } else finish(enable = false)
+        }) {
             Text(stringResource(R.string.not_now))
         }
     }

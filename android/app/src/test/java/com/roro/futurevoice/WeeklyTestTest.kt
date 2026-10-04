@@ -3,6 +3,7 @@ package com.roro.futurevoice
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.data.TextScript
+import com.roro.futurevoice.data.WeekRecap
 import com.roro.futurevoice.data.WeeklyTest
 import com.roro.futurevoice.data.WeeklyTestAnswer
 import com.roro.futurevoice.data.WeeklyTestEngine
@@ -13,6 +14,7 @@ import com.roro.futurevoice.data.WeeklyTestStore
 import com.roro.futurevoice.data.WordClass
 import com.roro.futurevoice.data.WordSplitter
 import com.roro.futurevoice.talk.DrillCard
+import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.SessionSummary
 import com.roro.futurevoice.talk.Turn
@@ -191,6 +193,12 @@ class WeeklyTestTest {
             TurnRole.FLUENT_SELF to "Give yourself a day off. You can always catch up on the unpacking later.",
             TurnRole.USER to "I have to unpack the kitchen first, it's a chore.",
             TurnRole.FLUENT_SELF to "Kitchens are the worst part. Let me walk you through how I did mine.",
+            // The week report's quotes, so grammar and upgrade find the lines.
+            TurnRole.USER to "Yesterday I went to the flat and the landlord says it's fine.",
+            TurnRole.FLUENT_SELF to "That's a relief. Did you sign anything yet?",
+            TurnRole.USER to "Not yet. I was very tired after the move.",
+            TurnRole.FLUENT_SELF to "Fair enough. And the flat itself?",
+            TurnRole.USER to "The flat is good for the price.",
         )
         val turns = lines.map { (r, t) -> Turn(role = r, transcript = t) }
         val session = Session(userId = "u", targetLanguage = "en", startedAt = ended - 900_000, endedAt = ended,
@@ -210,8 +218,24 @@ class WeeklyTestTest {
             recorded = listOf("thrilling", "soothing", "spare", "errand", "hobby"), cards = cards,
             libraryExpressions = listOf("give it a go", "on the fly"),
             hasAudio = { it.role == TurnRole.FLUENT_SELF },
+            graded = { band -> if (band == CefrLevel.B2) listOf("decent", "weary", "drained", "fatigued",
+                "awful", "amazing", "brilliant") else emptyList() },
+            bookWords = { listOf("chore" to false, "exhausting" to false) },
+            coach = coach,
         )
     }
+
+    private val coach = WeekRecap.Coach(
+        headline = "Stories in the present tense",
+        grammar = listOf(WeekRecap.Coach.Pattern("Past tense drops out halfway through a story",
+            listOf(WeekRecap.Coach.Pair("the landlord says it's fine", "the landlord said it was fine")),
+            "Once a story starts in the past, every verb stays there.")),
+        upgrades = listOf(
+            WeekRecap.Coach.Upgrade("very tired", 5, "exhausted", "I was very tired after the move.",
+                "I was exhausted after the move.", "One word does the work of two."),
+            WeekRecap.Coach.Upgrade("good", 9, "decent", "The flat is good for the price.",
+                "The flat is decent for the price.", "Good, not great.")),
+    )
 
     @Test fun aWeekBuildsEveryKindFromItsOwnMaterial() = runBlocking {
         val now = System.currentTimeMillis()
@@ -233,6 +257,17 @@ class WeeklyTestTest {
                 WeeklyTestItem.Kind.LISTEN -> assertEquals(
                     WordSplitter.words(i.answer, "en").sorted(), i.options.sorted())
                 WeeklyTestItem.Kind.SPEAK -> assertTrue(WordSplitter.count(i.answer, "en") in 4..16)
+                WeeklyTestItem.Kind.GRAMMAR -> {
+                    assertEquals("Past tense drops out halfway through a story", i.rule)
+                    assertEquals("Yesterday I went to the flat and the landlord said it was fine.", i.answer)
+                    assertEquals("the landlord says it's fine", i.focus)
+                }
+                WeeklyTestItem.Kind.UPGRADE -> {
+                    assertEquals(WeeklyTestEngine.CHOICE_COUNT, i.options.size)
+                    assertEquals(1, i.options.count { WeeklyTestEngine.isCorrect(i, it) })
+                    assertNotNull(i.focus)
+                    assertTrue(i.prompt.contains(i.focus!!))
+                }
             }
         }
         // A gap's blank is the phrase, and its decoys aren't in the sentence.
@@ -473,5 +508,95 @@ class WeeklyTestTest {
         assertEquals(listOf(CefrLevel.B1, CefrLevel.A2, CefrLevel.B2), WeeklyTestEngine.decoyBands(CefrLevel.B1))
         assertEquals(listOf(CefrLevel.A1, CefrLevel.A2), WeeklyTestEngine.decoyBands(CefrLevel.A1))
         assertEquals(listOf(CefrLevel.C2, CefrLevel.C1), WeeklyTestEngine.decoyBands(CefrLevel.C2))
+    }
+
+    // ── iOS 1.1.4: words from the books, the report's two kinds, trap tiles
+
+    /** Meaning items come from the week's book Words chapters only — never the
+     *  notebook — and unmastered words lead (iOS `36342dd`). */
+    @Test fun meaningItemsComeFromTheBooksUnmasteredFirst() = runBlocking {
+        val now = System.currentTimeMillis()
+        val m = week(now)
+        val books = WeeklyTestEngine.Material(m.sessions, studying = listOf("house", "chore"),
+            usedRecently = listOf("house"), recorded = m.recorded, cards = emptyList(),
+            libraryExpressions = emptyList(), hasAudio = { false },
+            bookWords = { listOf("exhausting" to true, "chore" to false, "appreciate" to false) })
+        val glosses = mapOf("chore" to "a tedious task", "exhausting" to "making you very tired",
+            "appreciate" to "to be grateful", "house" to "a building to live in")
+        val test = WeeklyTestEngine.build(books, null, "en", CefrLevel.B1, now) { glosses[it] }
+        val words = test!!.items.filter { it.kind == WeeklyTestItem.Kind.MEANING }.map { it.answer }
+        assertFalse("house" in words)
+        assertEquals(setOf("chore", "appreciate", "exhausting"), words.toSet())
+        val noBooks = WeeklyTestEngine.Material(m.sessions, studying = listOf("chore", "exhausting"),
+            usedRecently = emptyList(), recorded = m.recorded, cards = m.cards,
+            libraryExpressions = m.libraryExpressions, hasAudio = m.hasAudio)
+        val plain = WeeklyTestEngine.build(noBooks, null, "en", CefrLevel.B1, now) { glosses[it] }
+        assertTrue(plain!!.items.none { it.kind == WeeklyTestItem.Kind.MEANING })
+    }
+
+    /** With no report, the profile's recurring mistakes stand in, named in
+     *  the learner's language; a mistake not found in this week's lines is
+     *  never asked. */
+    @Test fun grammarFallsBackToRecurringMistakes() = runBlocking {
+        val now = System.currentTimeMillis()
+        val m = week(now)
+        val fallback = WeeklyTestEngine.Material(m.sessions, m.studying, m.usedRecently, m.recorded, m.cards,
+            m.libraryExpressions, m.hasAudio, bookWords = m.bookWords,
+            mistakes = listOf(
+                LearnerPattern(mistake = "I was very tired", correction = "I was so tired", context = ""),
+                LearnerPattern(mistake = "since two years", correction = "for two years", context = "")),
+            describeMistake = { p -> if (p.mistake.startsWith("I was")) "intensifiers" to "Use so." else null })
+        val test = WeeklyTestEngine.build(fallback, null, "en", CefrLevel.B1, now) { null }
+        val grammar = test!!.items.filter { it.kind == WeeklyTestItem.Kind.GRAMMAR }
+        assertEquals(1, grammar.size)
+        assertEquals("intensifiers", grammar[0].rule)
+        assertEquals("I was so tired after the move.", grammar[0].answer)
+        assertEquals("Use so.", grammar[0].note)
+        assertTrue(test.items.none { it.kind == WeeklyTestItem.Kind.UPGRADE })
+    }
+
+    /** A grammar item's tiles are the fixed line plus the learner's replaced
+     *  words; those are the traps the screen names (iOS `cf5b08d`). */
+    @Test fun decoyTilesAreTheTilesTheAnswerDoesNotUse() {
+        val rng = WeeklyTestRandom("00000000-0000-0000-0000-000000000077")
+        val answer = "I ended up carrying most of the boxes myself."
+        val tiles = WeeklyTestEngine.buildTiles(answer, "I end up carrying most boxes myself.", "en", rng)
+        val built = item(WeeklyTestItem.Kind.BUILD, answer, tiles, prompt = "I end up carrying most boxes myself.")
+        assertEquals(listOf("end"), WeeklyTestEngine.decoyTiles(built, "en").map(WeeklyTestEngine::tileKey))
+        // A repeated word is a multiset: the answer's two "the"s use two tiles.
+        val twice = item(WeeklyTestItem.Kind.BUILD, "the cat and the dog",
+            listOf("dog", "the", "and", "a", "the", "cat"))
+        assertEquals(listOf("a"), WeeklyTestEngine.decoyTiles(twice, "en"))
+        val dictation = item(WeeklyTestItem.Kind.LISTEN, "Give yourself a day off.",
+            WeeklyTestEngine.dictationTiles("Give yourself a day off.", "en", rng))
+        assertTrue(WeeklyTestEngine.decoyTiles(dictation, "en").isEmpty())
+    }
+
+    /** The report's kinds are judged like the rest: in the test's language,
+     *  and a missed grammar item comes back with its rule and fresh tiles. */
+    @Test fun reportKindsValidateAndRetake() {
+        val g = WeeklyTestItem(kind = WeeklyTestItem.Kind.GRAMMAR, prompt = "the landlord says it's fine",
+            answer = "the landlord said it was fine", options = listOf("the", "landlord", "said", "it",
+                "was", "fine", "says"), rule = "Past tense", focus = "says")
+        assertTrue(WeeklyTestEngine.isValid(g, "en"))
+        assertFalse(WeeklyTestEngine.isValid(g, "ko"))
+        val u = WeeklyTestItem(kind = WeeklyTestItem.Kind.UPGRADE, prompt = "어제는 정말 아주 피곤했어.",
+            answer = "exhausted", options = listOf("exhausted", "decent", "weary", "drained"), focus = "아주")
+        assertFalse(WeeklyTestEngine.isValid(u, "en"))
+        val now = System.currentTimeMillis()
+        val last = WeeklyTest(targetLanguage = "en", periodStart = now - 7 * 86_400_000L, periodEnd = now,
+            createdAt = now, finishedAt = now, items = listOf(g),
+            answers = listOf(WeeklyTestAnswer(g.id, "", false, now)))
+        val paper = WeeklyTestEngine.retryPaper(last)!!
+        assertEquals("Past tense", paper.items[0].rule)
+        assertEquals("says", paper.items[0].focus)
+        assertEquals(WordSplitter.words(g.answer, "en").map(WeeklyTestEngine::tileKey).sorted(),
+            (paper.items[0].options - WeeklyTestEngine.decoyTiles(paper.items[0], "en").toSet())
+                .map(WeeklyTestEngine::tileKey).sorted())
+    }
+
+    @Test fun foldedRangeIgnoresCaseAndDiacritics() {
+        assertEquals(7 until 13, WeeklyTestEngine.foldedRange("Es ist über gut", "UBER g"))
+        assertNull(WeeklyTestEngine.foldedRange("nothing here", "landlord"))
     }
 }

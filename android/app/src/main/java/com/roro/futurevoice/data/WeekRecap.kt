@@ -133,11 +133,35 @@ data class WeekRecap(
     val hasActivity: Boolean get() = daysActive > 0 || talkSeconds > 0
 }
 
+/** The week still running — not a recap yet, only how far it has got. Its
+ *  deck is built at [readyAt], when the week is over (iOS `WeekInProgress`). */
+data class WeekInProgress(
+    val start: Long,
+    val readyAt: Long,
+    val daysActive: Int,
+    val talkSeconds: Int,
+) {
+    val talkMinutes: Int get() = talkSeconds / 60
+    val hasActivity: Boolean get() = daysActive > 0 || talkSeconds > 0
+}
+
 // MARK: - Build
 
 object WeekRecapBuilder {
     private const val DAY_MS = 86_400_000L
     private const val WEEK_MS = 7 * DAY_MS
+
+    /** The week still running: from the most recent opening to the next.
+     *  Counted the way the closed week's notice counts it, so the row that
+     *  says "so far" and the deck that arrives at `readyAt` agree. */
+    fun thisWeek(context: Context, now: Long = System.currentTimeMillis(),
+                 zone: ZoneId = ZoneId.systemDefault()): WeekInProgress {
+        val schedule = WeeklyTestSettings.schedule(context)
+        val start = schedule.currentOpening(now, zone)
+        val readyAt = schedule.nextOpening(now, zone)
+        val active = days(start, zone).count { it <= now && TalkTimeLog.studied(context, it) }
+        return WeekInProgress(start, readyAt, active, talkSeconds(context, start, now, zone))
+    }
 
     /** The week that the most recent opening closed. */
     fun lastWeek(context: Context, now: Long = System.currentTimeMillis(),
@@ -399,6 +423,39 @@ object WeekRecapStore {
     suspend fun recap(c: Context, endingAt: Long): WeekRecap? =
         load(c).firstOrNull { kotlin.math.abs(it.end - endingAt) < 1000 }
 
+    /**
+     * Two week ends closer than this are the SAME week (iOS
+     * `sameWeekTolerance`). A week's end is an absolute moment computed from
+     * the test schedule in the phone's time zone, so moving the test day, or
+     * flying between Seoul and Berlin, yields an end a few hours or days off
+     * the one already frozen and seen — and an exact match called that a new
+     * week and slid the same deck up again. Real weeks are 7 days apart
+     * (±1 h of DST).
+     */
+    const val SAME_WEEK_TOLERANCE_MS = 6 * 86_400_000L
+
+    private suspend fun recapNear(c: Context, end: Long): WeekRecap? =
+        load(c).firstOrNull { kotlin.math.abs(it.end - end) < SAME_WEEK_TOLERANCE_MS }
+
+    /** Every closed week that had something in it, newest first, one per
+     *  week — the archive the Practice row opens. */
+    suspend fun archive(c: Context): List<WeekRecap> = archive(load(c))
+
+    /** [archive]'s rule over a list already sorted newest first. */
+    fun archive(sorted: List<WeekRecap>): List<WeekRecap> {
+        val kept = ArrayList<WeekRecap>()
+        for (recap in sorted) {
+            if (!recap.hasActivity) continue
+            if (kept.any { kotlin.math.abs(it.end - recap.end) < SAME_WEEK_TOLERANCE_MS }) continue
+            kept += recap
+        }
+        return kept
+    }
+
+    /** Seen: a week ending before the newest seen end plus the tolerance. */
+    fun isSeen(seenEnd: Long, end: Long): Boolean =
+        seenEnd > 0 && end < seenEnd + SAME_WEEK_TOLERANCE_MS
+
     suspend fun save(c: Context, recap: WeekRecap) {
         val all = load(c).filterNot { kotlin.math.abs(it.end - recap.end) < 1000 } + recap
         write(c, all)
@@ -407,15 +464,20 @@ object WeekRecapStore {
     /** The last week's recap — frozen on first ask, since the week is over. */
     suspend fun lastWeek(c: Context, now: Long = System.currentTimeMillis()): WeekRecap {
         val (start, end) = WeekRecapBuilder.lastWeek(c, now)
-        recap(c, end)?.let { return it }
+        recapNear(c, end)?.let { return it }
         return WeekRecapBuilder.build(c, start, end).also { save(c, it) }
     }
 
+    /** Seen, or a week within [SAME_WEEK_TOLERANCE_MS] of the newest one seen. */
     fun wasShown(c: Context, recap: WeekRecap): Boolean =
-        p(c).getLong(SEEN_KEY, Long.MIN_VALUE) >= recap.end
+        isSeen(p(c).getLong(SEEN_KEY, 0L), recap.end)
 
+    /** Also clears the week's notice from the shade: once the deck has been
+     *  seen, a notice still sitting there is a second door to the same deck,
+     *  and tapping it later was how a learner met it twice. */
     fun markShown(c: Context, recap: WeekRecap) {
-        p(c).edit().putLong(SEEN_KEY, maxOf(p(c).getLong(SEEN_KEY, Long.MIN_VALUE), recap.end)).apply()
+        p(c).edit().putLong(SEEN_KEY, maxOf(p(c).getLong(SEEN_KEY, 0L), recap.end)).apply()
+        WeeklyTestReminder.clearDelivered(c)
     }
 
     fun resetShown(c: Context) { p(c).edit().remove(SEEN_KEY).apply() }
@@ -444,4 +506,8 @@ object WeekRecapInbox {
     val debug = MutableStateFlow<WeekRecap?>(null)
     /** Developer: run the unasked offer again ("slide up again"). */
     val reoffer = MutableStateFlow(0)
+    /** A week's notice tapped after its deck was already seen: the Practice
+     *  tab opens the archive, never the same deck again (iOS
+     *  `PracticeRoute.weekArchive`). */
+    val archive = MutableStateFlow(false)
 }

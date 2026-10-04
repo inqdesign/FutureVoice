@@ -100,4 +100,28 @@
         <item quantity="one">"Last test %1$d/%2$d. The %3$d you missed comes back this week."</item>
         <item quantity="other">"Last test %1$d/%2$d. The %3$d you missed come back this week."</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"In progress"</string>
+    <string name="wr_past_weeks">"Past weeks"</string>
+    <string name="wr_first_week_arrives">"Your first week's cards arrive when it closes."</string>
+    <string name="wr_new_badge">"New"</string>
+    <string name="wr_ready_on">"Ready %1$s"</string>
+    <string name="wr_week_in_progress_ready">"This week in progress · ready %1$s"</string>
+    <string name="wr_tell_me_next_week">"Tell me when next week's is ready"</string>
+    <string name="wr_next_week_arrives">"Next week's arrives %1$s"</string>
+    <string name="wt_fix_the_sentence">"Fix the sentence"</string>
+    <string name="wt_write_correct_sentence">"Write it as a correct sentence."</string>
+    <string name="wt_some_words_traps">"Some words are traps — you don't have to use them all."</string>
+    <string name="wt_trap_words">"Trap words — what you said before the fix"</string>
+    <string name="wt_mistake_you_keep_making">"A mistake you keep making"</string>
+    <string name="wt_better_word">"A better word"</string>
+    <string name="wt_more_natural_than">"A more natural choice than “%1$s”?"</string>
+    <string name="wt_tip">"Tip"</string>
+    <string name="wrh_title">"Once a week, let's look back"</string>
+    <string name="wrh_body">"On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks."</string>
+    <string name="wrh_footnote">"Pick a time you usually have ten quiet minutes."</string>
+    <string name="wrh_remind">"Tell me when it's ready"</string>
+    <string name="wrh_cta">"Set my week"</string>
 </resources>

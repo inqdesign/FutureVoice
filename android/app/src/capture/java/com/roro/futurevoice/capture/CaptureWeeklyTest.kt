@@ -20,6 +20,7 @@ import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.VocabStore
+import com.roro.futurevoice.data.WeekRecapStore
 import com.roro.futurevoice.data.WeeklyTest
 import com.roro.futurevoice.data.WeeklyTestAnswer
 import com.roro.futurevoice.data.WeeklyTestItem
@@ -46,6 +47,7 @@ import java.util.UUID
  *   weekly-test, weekly-test-word, weekly-test-gap, weekly-test-build,
  *   weekly-test-listen, weekly-test-speak, weekly-test-word-right,
  *   weekly-test-gap-wrong, weekly-test-build-wrong, weekly-test-build-right,
+ *   weekly-test-grammar[-right|-wrong], weekly-test-upgrade[-right|-wrong],
  *   weekly-test-result, practice-weekly, monthly-test, practice-monthly
  *
  * The material is one seeded week (iOS `seedWeeklyTestWeek`): notebook words,
@@ -87,6 +89,13 @@ object CaptureWeeklyTest {
             TurnRole.FLUENT_SELF to "Give yourself a day off. You can always catch up on the unpacking later.",
             TurnRole.USER to "I have to unpack the kitchen first, it's a chore.",
             TurnRole.FLUENT_SELF to "Kitchens are the worst part. Let me walk you through how I did mine.",
+            // The week report's quotes (`CaptureWeekRecap.sample`), so the
+            // grammar and upgrade items find the learner's own lines.
+            TurnRole.USER to "Yesterday I went to the flat and the landlord says it's fine.",
+            TurnRole.FLUENT_SELF to "That's a relief. Did you sign anything yet?",
+            TurnRole.USER to "Not yet. I was very tired after the move.",
+            TurnRole.FLUENT_SELF to "Fair enough. And the flat itself?",
+            TurnRole.USER to "The flat is good for the price.",
         )
         val audioDir = File(c.filesDir, "turn-audio").apply { mkdirs() }
         val ringtone = c.resources.openRawResource(R.raw.ringtone).use { it.readBytes() }
@@ -117,6 +126,9 @@ object CaptureWeeklyTest {
         val vocab = VocabStore.shared(c)
         vocab.addStudying("chore", language)
         vocab.addStudying("exhausting", language)
+        // The closed week's report, coach written, so the paper never waits on
+        // the network for its grammar and upgrade items.
+        WeekRecapStore.save(c, CaptureWeekRecap.sample(c))
     }
 
     private fun sampleItems(weeksBack: Int = 0): List<WeeklyTestItem> = listOf(
@@ -223,6 +235,12 @@ object CaptureWeeklyTest {
         "weekly-test-gap-wrong" to test(WeeklyTestItem.Kind.GAP, false),
         "weekly-test-build-wrong" to test(WeeklyTestItem.Kind.BUILD, false),
         "weekly-test-build-right" to test(WeeklyTestItem.Kind.BUILD, true),
+        "weekly-test-grammar" to test(WeeklyTestItem.Kind.GRAMMAR, null),
+        "weekly-test-grammar-right" to test(WeeklyTestItem.Kind.GRAMMAR, true),
+        "weekly-test-grammar-wrong" to test(WeeklyTestItem.Kind.GRAMMAR, false),
+        "weekly-test-upgrade" to test(WeeklyTestItem.Kind.UPGRADE, null),
+        "weekly-test-upgrade-right" to test(WeeklyTestItem.Kind.UPGRADE, true),
+        "weekly-test-upgrade-wrong" to test(WeeklyTestItem.Kind.UPGRADE, false),
         "weekly-test-result" to mode({ c -> CaptureSeed.once("weekly-test-result") { seedFinished(c) } }) { c ->
             WeeklyTestScreen(language = lang(c), level = level(c), onClose = {})
         },

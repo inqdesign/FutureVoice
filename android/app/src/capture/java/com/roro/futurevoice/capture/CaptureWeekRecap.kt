@@ -12,7 +12,20 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.WeekRecap
 import com.roro.futurevoice.data.WeekRecapBuilder
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+import com.roro.futurevoice.capture.flags.PracticeCaptureFlags
+import com.roro.futurevoice.data.WeekRecapStore
+import com.roro.futurevoice.ui.PracticeBody
+import com.roro.futurevoice.ui.Shelf
+import com.roro.futurevoice.ui.WeekRecapArchiveSheet
 import com.roro.futurevoice.ui.WeekRecapDeck
+import com.roro.futurevoice.ui.WeeklyRhythmOnboardingScreen
+import kotlinx.coroutines.runBlocking
 import com.roro.futurevoice.ui.brand.AppSurfaces
 
 /**
@@ -110,8 +123,58 @@ object CaptureWeekRecap {
         }
     }
 
+    /** "Your week" from Practice (iOS `seedWeekArchive`): last week unseen
+     *  ("New") and the week before it, seen. */
+    private suspend fun seedArchive(c: Context) {
+        for (r in WeekRecapStore.load(c)) WeekRecapStore.remove(c, r.end)
+        WeekRecapStore.resetShown(c)
+        val last = sample(c)
+        val older = WeekRecap(
+            start = last.start - 7 * DAY, end = last.end - 7 * DAY,
+            activeDays = listOf(true, false, true, false, false, true, false), streak = 1,
+            talkSeconds = 28 * 60, previousTalkSeconds = 0, talks = emptyList(),
+            usedCount = 1, used = emptyList(), cardsCleared = 5, wordsKnown = 3, expressionsKnown = 1,
+            shadowTakes = 4, shadowAverage = 74, scenes = 1, nowYours = emptyList(), sentencesGot = emptyList(),
+            newExpressionCount = 0, newExpressions = emptyList(), newCards = 2,
+            stumbles = emptyList(), shakyLines = emptyList())
+        WeekRecapStore.save(c, older)
+        WeekRecapStore.markShown(c, older)
+        WeekRecapStore.save(c, last)
+    }
+
+    private fun level(c: Context) = CefrLevel.from(LanguageScope.level(c, LanguageScope.active(c), "b1"))
+
+    private fun archive(practice: Boolean): @Composable (Context) -> Unit = { c ->
+        remember {
+            PracticeCaptureFlags.offlineLookups = true
+            runBlocking {
+                CaptureSeed.once(if (practice) "practice-week" else "week-archive") { seedArchive(c) }
+                if (practice) CaptureSeed.once("practice-week-content") {
+                    CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c); CaptureSeed.seedScenarios(c)
+                }
+            }
+            true
+        }
+        if (practice) {
+            Column(Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
+                PracticeBody(language = LanguageScope.active(c), level = level(c), onOpenDeck = {},
+                    onOpenWords = {}, onOpenExpressions = {}, onOpenScenarioBook = {}, onOpenTalk = {},
+                    initialShelf = Shelf.STUDYING)
+            }
+        } else {
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+                WeekRecapArchiveSheet(level(c)) {}
+            }
+        }
+    }
+
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
         "week-recap" to deck(::sample),
         "week-recap-quiet" to deck(::quiet),
+        "week-archive" to archive(practice = false),
+        "practice-week" to archive(practice = true),
+        // iOS `-onboardingPreview weekly`: onboarding's "once a week" step.
+        "onboarding-weekly" to { c -> WeeklyRhythmOnboardingScreen(c) {} },
     )
 }

@@ -91,4 +91,28 @@
     <plurals name="wr_last_test_missed">
         <item quantity="other">"Letzter Test: %1$d/%2$d. Die verpassten Fragen (%3$d) kommen diese Woche wieder."</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"Läuft"</string>
+    <string name="wr_past_weeks">"Vergangene Wochen"</string>
+    <string name="wr_first_week_arrives">"Die Karten deiner ersten Woche kommen, wenn sie endet."</string>
+    <string name="wr_new_badge">"Neu"</string>
+    <string name="wr_ready_on">"Fertig am %1$s"</string>
+    <string name="wr_week_in_progress_ready">"Woche läuft · fertig am %1$s"</string>
+    <string name="wr_tell_me_next_week">"Sag mir Bescheid, wenn die nächste Woche fertig ist"</string>
+    <string name="wr_next_week_arrives">"Die nächste kommt am %1$s"</string>
+    <string name="wt_fix_the_sentence">"Satz korrigieren"</string>
+    <string name="wt_write_correct_sentence">"Bilde daraus einen korrekten Satz."</string>
+    <string name="wt_some_words_traps">"Manche Wörter sind Fallen – du musst nicht alle verwenden."</string>
+    <string name="wt_trap_words">"Fallenwörter – was du vor der Korrektur gesagt hast"</string>
+    <string name="wt_mistake_you_keep_making">"Ein Fehler, der sich wiederholt"</string>
+    <string name="wt_better_word">"Ein besseres Wort"</string>
+    <string name="wt_more_natural_than">"Natürlicher als „%1$s“?"</string>
+    <string name="wt_tip">"Tipp"</string>
+    <string name="wrh_title">"Einmal pro Woche schauen wir zurück"</string>
+    <string name="wrh_body">"An dem Tag, den du wählst, fasse ich deine Woche zusammen: was du gesagt hast, welche Wörter du gelernt hast, wie weit du gekommen bist. Dann ein kurzer Test – nur aus deinen eigenen Gesprächen."</string>
+    <string name="wrh_footnote">"Such dir eine Zeit aus, zu der du meist zehn ruhige Minuten hast."</string>
+    <string name="wrh_remind">"Sag mir Bescheid, wenn es so weit ist"</string>
+    <string name="wrh_cta">"So machen wir’s"</string>
 </resources>

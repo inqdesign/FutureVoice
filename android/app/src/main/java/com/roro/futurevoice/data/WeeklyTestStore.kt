@@ -313,6 +313,25 @@ object WeeklyTestReminder {
             .build()
         runCatching { nm.notify(REQUEST_CODE, n) }
     }
+
+    /** Takes the week's notice out of the shade (iOS `markShown`'s
+     *  `removeDeliveredNotifications`). */
+    fun clearDelivered(c: Context) {
+        val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        runCatching { nm.cancel(REQUEST_CODE) }
+    }
+
+    /**
+     * After a permission prompt someone else raised (onboarding's daily-call
+     * step): arm the reminder if notifications may post, and switch the wish
+     * OFF if not, so the goals sheet's toggle never claims a notice that
+     * can't ring (iOS `settleAfterPermission`).
+     */
+    fun settleAfterPermission(c: Context) {
+        if (!WeeklyTestSettings.reminderOn(c)) return
+        if (NotificationManagerCompat.from(c).areNotificationsEnabled()) reschedule(c)
+        else WeeklyTestSettings.setReminderOn(c, false)
+    }
 }
 
 class WeeklyTestReminderReceiver : BroadcastReceiver() {

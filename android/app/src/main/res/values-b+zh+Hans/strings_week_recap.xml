@@ -88,4 +88,28 @@
     <plurals name="wr_last_test_missed">
         <item quantity="other">"上次测验%1$d/%2$d。答错的%3$d题这周会再出现。"</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"进行中"</string>
+    <string name="wr_past_weeks">"过去几周"</string>
+    <string name="wr_first_week_arrives">"一周结束后，第一份卡片就会送达。"</string>
+    <string name="wr_new_badge">"新"</string>
+    <string name="wr_ready_on">"%1$s 整理好"</string>
+    <string name="wr_week_in_progress_ready">"本周进行中 · %1$s 整理好"</string>
+    <string name="wr_tell_me_next_week">"下周的整理好时提醒我"</string>
+    <string name="wr_next_week_arrives">"下一份 %1$s 送达"</string>
+    <string name="wt_fix_the_sentence">"改正句子"</string>
+    <string name="wt_write_correct_sentence">"拼出正确的句子。"</string>
+    <string name="wt_some_words_traps">"有些是陷阱单词，不用全部用上。"</string>
+    <string name="wt_trap_words">"陷阱单词 · 你修正前说的"</string>
+    <string name="wt_mistake_you_keep_making">"常犯的语法错误"</string>
+    <string name="wt_better_word">"更好的说法"</string>
+    <string name="wt_more_natural_than">"比“%1$s”更自然的说法是？"</string>
+    <string name="wt_tip">"小提示"</string>
+    <string name="wrh_title">"每周一次，我们一起回顾"</string>
+    <string name="wrh_body">"在你选的那天，我会帮你整理这一周：你说了什么、学到哪些词、进步了多少。然后是一份小测验，只用你自己的对话出题。"</string>
+    <string name="wrh_footnote">"选一个你通常能安静十分钟的时间。"</string>
+    <string name="wrh_remind">"准备好时通知我"</string>
+    <string name="wrh_cta">"就这样设置"</string>
 </resources>

@@ -36,6 +36,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowCircleUp
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EventAvailable
@@ -297,7 +299,7 @@ fun WeeklyTestScreen(
         val opening = WeeklyTestSettings.schedule(context).currentOpening()
         val native = context.getSharedPreferences("futurevoice", 0)
             .getString("futurevoice.nativeLanguage", null) ?: "en"
-        val material = WeeklyTestEngine.gather(context, language)
+        val material = WeeklyTestEngine.gather(context, language, level, native)
         var test = WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level) { word ->
             WeeklyTestCaptureFlags.glosses?.let { return@build it[word] }
             PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
@@ -322,7 +324,8 @@ fun WeeklyTestScreen(
         val right = WeeklyTestCaptureFlags.answer
         val item = current
         if (right != null && item != null) {
-            if (item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN) {
+            if (item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN ||
+                item.kind == WeeklyTestItem.Kind.GRAMMAR) {
                 val answer = WordSplitter.words(item.answer, language).map(WeeklyTestEngine::tileKey)
                 val order = ArrayList<Int>()
                 for (key in answer) {
@@ -617,13 +620,13 @@ fun WeeklyTestScreen(
                                 canHear = PhraseAudioStore.shared(context).ownVoiceLineage.isNotEmpty(),
                                 onPlay = { playListen(item) }, onHear = { hearLine(item) })
                             when (item.kind) {
-                                WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.GAP ->
+                                WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.GAP, WeeklyTestItem.Kind.UPGRADE ->
                                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         item.options.forEach { option ->
                                             OptionButton(option, item, chosen, outcome) { choose(option, item) }
                                         }
                                     }
-                                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.LISTEN ->
+                                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.LISTEN, WeeklyTestItem.Kind.GRAMMAR ->
                                     BuildArea(item, ph.test.targetLanguage, laid, cursor, outcome,
                                         onLay = ::lay, onTapPlaced = ::tapPlaced,
                                         onTapEnd = { if (outcome == null) cursor = laid.size })
@@ -674,6 +677,8 @@ private fun kindIcon(kind: WeeklyTestItem.Kind): ImageVector = when (kind) {
     WeeklyTestItem.Kind.BUILD -> Icons.Filled.ViewAgenda
     WeeklyTestItem.Kind.LISTEN -> Icons.Filled.Hearing
     WeeklyTestItem.Kind.SPEAK -> Icons.Filled.RecordVoiceOver
+    WeeklyTestItem.Kind.GRAMMAR -> Icons.Filled.Autorenew
+    WeeklyTestItem.Kind.UPGRADE -> Icons.Filled.ArrowCircleUp
 }
 
 @Composable
@@ -681,9 +686,13 @@ private fun Caption(kind: WeeklyTestItem.Kind) {
     val label = stringResource(when (kind) {
         WeeklyTestItem.Kind.MEANING -> R.string.which_word_means_this
         WeeklyTestItem.Kind.GAP -> R.string.fill_the_blank
-        WeeklyTestItem.Kind.BUILD -> R.string.say_it_the_fluent_way
+        // "Fix the sentence" (iOS `cf5b08d`): the old "say it the fluent
+        // way" collided with the Say it again feature.
+        WeeklyTestItem.Kind.BUILD -> R.string.wt_fix_the_sentence
         WeeklyTestItem.Kind.LISTEN -> R.string.listen_and_build_it
         WeeklyTestItem.Kind.SPEAK -> R.string.say_it_out_loud
+        WeeklyTestItem.Kind.GRAMMAR -> R.string.wt_mistake_you_keep_making
+        WeeklyTestItem.Kind.UPGRADE -> R.string.wt_better_word
     })
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(kindIcon(kind), contentDescription = null, modifier = Modifier.size(18.dp),
@@ -722,6 +731,41 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
             Text("“${item.prompt}”", style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        WeeklyTestItem.Kind.GRAMMAR -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item.rule?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(marked(item.prompt, item.focus), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        WeeklyTestItem.Kind.UPGRADE -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(marked(item.prompt, item.focus), style = MaterialTheme.typography.titleMedium)
+            }
+            item.focus?.let {
+                Text(stringResource(R.string.wt_more_natural_than, it), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold)
+            }
+            // Once answered: the same line with the better word, and why.
+            if (outcome != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    item.example?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                            color = RIGHT_GREEN)
+                    }
+                    item.note?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
         WeeklyTestItem.Kind.LISTEN -> Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), Alignment.Center) {
             FilledIconButton(onClick = onPlay, modifier = Modifier.size(76.dp)) {
                 Icon(if (playing) Icons.Filled.VolumeUp else Icons.Filled.PlayArrow,
@@ -743,6 +787,21 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
             }
         }
     }
+}
+
+/** “[text]” with the first occurrence of [focus] bold and underlined — the
+ *  word or span the item is about. */
+private fun marked(text: String, focus: String?) = buildAnnotatedString {
+    append("“")
+    val range = focus?.let { WeeklyTestEngine.foldedRange(text, it) }
+    if (range == null) append(text) else {
+        append(text.substring(0, range.first))
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline)) {
+            append(text.substring(range.first, range.last + 1))
+        }
+        append(text.substring(range.last + 1))
+    }
+    append("”")
 }
 
 @Composable
@@ -782,11 +841,26 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
     // Graded and wrong: which tiles were actually misplaced.
     val check = if (outcome == false)
         WeeklyTestEngine.tileCheck(laid.map { item.options[it] }, item.answer, language) else null
+    // A fix item may carry decoys (the words the correction replaced), so some
+    // tiles are meant to be left over — said up front, or a leftover tile
+    // reads as a mistake or a bug (iOS `cf5b08d`).
+    val fixes = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.GRAMMAR
+    val decoys = if (fixes) WeeklyTestEngine.decoyTiles(item, language) else emptyList()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (fixes && outcome == null) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(R.string.wt_write_correct_sentence), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold)
+                if (decoys.isNotEmpty()) {
+                    Text(stringResource(R.string.wt_some_words_traps), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         Box(Modifier.fillMaxWidth().heightIn(min = 56.dp)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, ContinuousShape(14.dp))
             .clickable(onClick = onTapEnd).padding(12.dp)) {
-            if (laid.isEmpty()) {
+            if (laid.isEmpty() && item.kind == WeeklyTestItem.Kind.LISTEN) {
                 Text(stringResource(R.string.tap_the_words_in_order), style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(8.dp))
             }
@@ -812,6 +886,21 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
         if (outcome == null && laid.isNotEmpty()) {
             Text(stringResource(R.string.tap_a_placed_word_to_add_after_it_tap_it_again_to_take_it_ou_d26a64),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        }
+        // Once graded, the leftover traps are named for what they are: the
+        // learner's own words from before the fix.
+        if (outcome != null && decoys.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.wt_trap_words), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Right: the leftover tiles above ARE the traps. Wrong: the
+                // leftovers may mix in answer words, so the traps are spelled out.
+                if (outcome == false) {
+                    Text(decoys.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+                        textDecoration = TextDecoration.LineThrough,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
         if (outcome == false) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -840,7 +929,8 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
                 val note = item.note
                 if (!note.isNullOrBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.why_it_was_corrected), style = MaterialTheme.typography.labelMedium,
+                        Text(stringResource(if (item.kind == WeeklyTestItem.Kind.GRAMMAR) R.string.wt_tip
+                            else R.string.why_it_was_corrected), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(note, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -942,7 +1032,8 @@ private fun SpeakArea(phase: SpeakPhase, outcome: Boolean?, transcript: String?,
 @Composable
 private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, canCheck: Boolean,
                       onCheck: () -> Unit, onContinue: () -> Unit) {
-    val tiles = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN
+    val tiles = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN ||
+        item.kind == WeeklyTestItem.Kind.GRAMMAR
     if (outcome == null && !tiles) return
     Column(Modifier.fillMaxWidth().background(AppSurfaces.ground).bottomBarInsets()) {
         HorizontalDivider()
@@ -1054,9 +1145,10 @@ private fun WeeklyTestResult(test: WeeklyTest, isRetry: Boolean, language: Strin
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(item.answer, style = MaterialTheme.typography.bodyLarge)
-                                if ((item.kind == WeeklyTestItem.Kind.MEANING || item.kind == WeeklyTestItem.Kind.BUILD) &&
+                                if (item.kind in setOf(WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.BUILD,
+                                        WeeklyTestItem.Kind.GRAMMAR, WeeklyTestItem.Kind.UPGRADE) &&
                                     item.prompt.isNotEmpty()) {
-                                    Text(if (item.kind == WeeklyTestItem.Kind.BUILD)
+                                    Text(if (item.kind != WeeklyTestItem.Kind.MEANING)
                                         stringResource(R.string.you_said_b35fdb, item.prompt) else item.prompt,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)

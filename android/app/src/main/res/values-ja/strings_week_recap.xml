@@ -88,4 +88,28 @@
     <plurals name="wr_last_test_missed">
         <item quantity="other">"前回のテスト %1$d/%2$d。間違えた%3$d問は今週また出ます。"</item>
     </plurals>
+    <!-- 2d.4 (iOS e9da8fc · 9617756 · cf5b08d): the week's archive, the deck's
+         notice offer, the weekly test's grammar/upgrade kinds and trap words,
+         and onboarding's "once a week" step. -->
+    <string name="wr_in_progress">"進行中"</string>
+    <string name="wr_past_weeks">"これまでの週"</string>
+    <string name="wr_first_week_arrives">"1週間が終わると、最初のカードが届きます。"</string>
+    <string name="wr_new_badge">"新着"</string>
+    <string name="wr_ready_on">"%1$sにまとまります"</string>
+    <string name="wr_week_in_progress_ready">"今週は進行中 · %1$sにまとまります"</string>
+    <string name="wr_tell_me_next_week">"来週の振り返りも知らせて"</string>
+    <string name="wr_next_week_arrives">"次の振り返りは%1$sに届きます"</string>
+    <string name="wt_fix_the_sentence">"文を直す"</string>
+    <string name="wt_write_correct_sentence">"正しい文に組み立てましょう。"</string>
+    <string name="wt_some_words_traps">"ひっかけの単語もあります。全部使わなくて大丈夫です。"</string>
+    <string name="wt_trap_words">"ひっかけの単語 · 直す前に言ったこと"</string>
+    <string name="wt_mistake_you_keep_making">"よく間違える文法"</string>
+    <string name="wt_better_word">"もっといい言い方"</string>
+    <string name="wt_more_natural_than">"「%1$s」より自然な言い方は？"</string>
+    <string name="wt_tip">"ヒント"</string>
+    <string name="wrh_title">"週に一度、一緒にふりかえろう"</string>
+    <string name="wrh_body">"選んだ日に、1週間をまとめておくね。何を話したか、どんな言葉を覚えたか、どれだけ伸びたか。それから、自分の会話だけで作った短いテストも。"</string>
+    <string name="wrh_footnote">"いつも10分くらい落ち着ける時間を選んでね。"</string>
+    <string name="wrh_remind">"できたら知らせてもらう"</string>
+    <string name="wrh_cta">"これで決める"</string>
 </resources>
