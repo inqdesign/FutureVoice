@@ -250,56 +250,73 @@ struct SpeechPrompterView: View {
 }
 
 /// The rolling script. Read words fade back, the word being read is
-/// emphasised, and the reading line stays a third of the way down so the
-/// next words are always in view.
+/// emphasised, and the LINE being read sits a third of the way down: the
+/// text moves up one line at a time as the reader reaches the next line,
+/// like a teleprompter — never a paragraph at a time.
+///
+/// Not a ScrollView + `scrollTo`: the words live inside a custom layout, and
+/// `scrollTo` resolved their ids to the paragraph around them, so the text
+/// jumped by whole paragraphs. The current word's own line position is
+/// measured instead, and the whole column is offset by it.
 struct SpeechTeleprompter: View {
     let track: SpeechPrompterTrack
     let cursor: Int
     let language: String
     let textSize: Double
 
+    /// Top of the line holding the current word, in the column's own space.
+    @State private var lineY: CGFloat = 0
+
+    private var currentWord: Int { min(cursor, max(0, track.words.count - 1)) }
+
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: textSize * 0.9) {
-                    ForEach(Array(track.paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                        SpeechWordWrap(spacing: LanguageCatalog.writesSpaces(language) ? textSize * 0.28 : 0,
-                                       lineSpacing: textSize * 0.35) {
-                            ForEach(paragraph) { word in
-                                Text(word.text)
-                                    .font(.system(size: textSize, weight: .semibold))
-                                    .foregroundStyle(color(for: word.id))
-                                    .id(word.id)
-                            }
+        GeometryReader { geo in
+            VStack(alignment: .leading, spacing: textSize * 0.9) {
+                ForEach(Array(track.paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                    SpeechWordWrap(spacing: LanguageCatalog.writesSpaces(language) ? textSize * 0.28 : 0,
+                                   lineSpacing: textSize * 0.35) {
+                        ForEach(paragraph) { word in
+                            Text(word.text)
+                                .font(.system(size: textSize, weight: .semibold))
+                                .foregroundStyle(color(for: word.id))
+                                .background {
+                                    if word.id == currentWord {
+                                        Color.clear.onGeometryChange(for: CGFloat.self) { proxy in
+                                            proxy.frame(in: .named(Self.space)).minY
+                                        } action: { y in
+                                            // Rounding wobble is not a new line.
+                                            if abs(y - lineY) > 1 { lineY = y }
+                                        }
+                                    }
+                                }
                         }
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 40)
-                .padding(.bottom, 240)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .scrollDisabled(false)
+            .padding(.horizontal, 24)
+            .frame(width: geo.size.width, alignment: .leading)
+            .coordinateSpace(.named(Self.space))
+            // The animation is scoped to the offset ALONE. Applied to the
+            // column, it animated every word's frame too, the measurement
+            // above read the in-between frames, and each reading started a
+            // new animation — a loop that pinned the main thread.
+            .animation(.easeInOut(duration: 0.4)) { view in
+                view.offset(y: geo.size.height * 0.3 - lineY)
+            }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .clipped()
             .mask(
                 LinearGradient(stops: [
                     .init(color: .clear, location: 0),
-                    .init(color: .black, location: 0.12),
-                    .init(color: .black, location: 0.88),
+                    .init(color: .black, location: 0.14),
+                    .init(color: .black, location: 0.86),
                     .init(color: .clear, location: 1),
                 ], startPoint: .top, endPoint: .bottom)
             )
-            .onChange(of: cursor) { _, new in
-                guard !track.words.isEmpty else { return }
-                let target = min(new, track.words.count - 1)
-                withAnimation(.easeInOut(duration: 0.45)) {
-                    proxy.scrollTo(target, anchor: UnitPoint(x: 0, y: 0.3))
-                }
-            }
-            .onAppear {
-                if cursor > 0 { proxy.scrollTo(min(cursor, track.words.count - 1), anchor: UnitPoint(x: 0, y: 0.3)) }
-            }
         }
     }
+
+    private static let space = "prompter-column"
 
     private func color(for id: Int) -> Color {
         if id < cursor { return .secondary.opacity(0.55) }
