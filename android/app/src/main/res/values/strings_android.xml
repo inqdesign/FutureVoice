@@ -562,6 +562,8 @@
     <string name="paywall_a_month">a month</string>
     <string name="paywall_per_min">%s a min</string>
     <string name="paywall_change_to">Change to %s</string>
+    <!-- A plan billed by the App Store or the web can't be changed with a Play purchase (that would be a second subscription). -->
+    <string name="paywall_change_where_subscribed">Change it where you subscribed</string>
     <string name="paywall_subscribe_yearly">Subscribe to %s · yearly</string>
     <string name="paywall_subscribe_monthly">Subscribe to %s · monthly</string>
     <string name="spent_move_to_tier">Move to %s</string>

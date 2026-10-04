@@ -562,6 +562,7 @@
     <string name="paywall_a_month">al mes</string>
     <string name="paywall_per_min">%s por min</string>
     <string name="paywall_change_to">Cambiar a %s</string>
+    <string name="paywall_change_where_subscribed">Cámbialo donde te suscribiste</string>
     <string name="paywall_subscribe_yearly">Suscribirme a %s anual</string>
     <string name="paywall_subscribe_monthly">Suscribirme a %s mensual</string>
     <string name="spent_move_to_tier">Cambiar a %s</string>

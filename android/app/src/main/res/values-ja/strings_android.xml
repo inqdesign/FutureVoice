@@ -543,6 +543,7 @@
     <string name="paywall_a_month">月額</string>
     <string name="paywall_per_min">1分あたり%s</string>
     <string name="paywall_change_to">%sに変更</string>
+    <string name="paywall_change_where_subscribed">登録した場所で変更してください</string>
     <string name="paywall_subscribe_yearly">%sを年額で登録</string>
     <string name="paywall_subscribe_monthly">%sを月額で登録</string>
     <string name="spent_move_to_tier">%sに変更</string>

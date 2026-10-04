@@ -535,6 +535,7 @@
     <string name="paywall_a_month">pro Monat</string>
     <string name="paywall_per_min">%s pro Min.</string>
     <string name="paywall_change_to">Zu %s wechseln</string>
+    <string name="paywall_change_where_subscribed">Dort ändern, wo du abonniert hast</string>
     <string name="paywall_subscribe_yearly">%s jährlich abonnieren</string>
     <string name="paywall_subscribe_monthly">%s monatlich abonnieren</string>
     <string name="spent_move_to_tier">Zu %s wechseln</string>

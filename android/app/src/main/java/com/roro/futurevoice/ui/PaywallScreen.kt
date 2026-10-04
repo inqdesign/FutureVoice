@@ -73,6 +73,7 @@ import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.BillingService
+import com.roro.futurevoice.data.PlanChange
 import com.roro.futurevoice.data.renewalLabel
 import com.roro.futurevoice.data.ConsentStore
 import com.roro.futurevoice.ui.brand.AppSurfaces
@@ -144,6 +145,9 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     val asked = remember { preselectTier ?: BillingGate.paywallTier.value }
     var tier by remember { mutableStateOf(asked ?: "plus") }
     var account by remember { mutableStateOf<AccountStatus?>(null) }
+    /** Which store bills the held plan (`user_subscriptions.source`) — what
+     *  decides whether "Change to X" may be a Play change flow at all. */
+    var subscriptionSource by remember { mutableStateOf<String?>(null) }
     var step by remember {
         mutableStateOf(if (previewPlans != null) PaywallStep.PLANS else PaywallStep.RESOLVING)
     }
@@ -153,6 +157,11 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
         if (previewPlans == null) billing.refresh()
         val loaded = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
             ?: if (previewPlans != null) AccountStatus() else AccountStatus.load(AuthRepository())
+        if (previewPlans == null && loaded.isEntitled) {
+            subscriptionSource = runCatching {
+                com.roro.futurevoice.data.SubscriptionReceipt.load(AuthRepository()).source
+            }.getOrNull()
+        }
         account = loaded
         // Open on the plan they hold, so a subscriber starts by seeing their
         // own state rather than a pitch for something else.
@@ -219,6 +228,8 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
 
     val currentPlanId = if (isSubscriber) account?.planId else null
     val selectionIsCurrent = currentPlanId == "${tier}_$period"
+    val route = PlanChange.route(isSubscriber, subscriptionSource, currentPlanId, tier, period)
+    val elsewhere = route as? PlanChange.Route.ManageElsewhere
     // Buying needs a PRICED plan; the rows can render without one.
     val chosen = offers.firstOrNull { it.plan.tier == tier && it.plan.period == period }
     val tierName = stringResource(AccountStatus.tierNameRes(tier))
@@ -253,7 +264,12 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                     // A subscriber can't buy what they already have — the
                     // only real action on their own plan is Play's screen.
                     selectionIsCurrent -> stringResource(R.string.manage_subscription)
-                    isSubscriber -> stringResource(R.string.paywall_change_to, tierName)
+                    // Billed by the App Store / the web: changed there, never
+                    // by a Play purchase on top of it (a second subscription).
+                    elsewhere?.source == "apple" -> stringResource(R.string.manage_in_the_app_store)
+                    elsewhere != null -> stringResource(R.string.paywall_change_where_subscribed)
+                    isSubscriber && route is PlanChange.Route.PlayChange ->
+                        stringResource(R.string.paywall_change_to, tierName)
                     // A plan Play attaches no free phase to must not be sold
                     // as a trial, whatever the funnel promised.
                     showsTrial && chosen != null && trialDaysOf(chosen.details) > 0 ->
@@ -261,7 +277,8 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                     period == "annual" -> stringResource(R.string.paywall_subscribe_yearly, tierName)
                     else -> stringResource(R.string.paywall_subscribe_monthly, tierName)
                 },
-                canBuy = selectionIsCurrent || chosen != null,
+                canBuy = selectionIsCurrent || elsewhere?.source == "apple" ||
+                    (elsewhere == null && chosen != null),
                 onCode = { redeemOpen = true },
                 onPrimary = {
                     when (step) {
@@ -270,9 +287,14 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                         PaywallStep.TIMELINE -> step = PaywallStep.PLANS
                         PaywallStep.PLANS -> {
                             val activity = context as? Activity
-                            when {
-                                selectionIsCurrent -> uri.openUri(PLAY_SUBSCRIPTIONS_URL)
-                                activity != null && chosen != null ->
+                            when (route) {
+                                PlanChange.Route.ManageCurrent -> uri.openUri(PLAY_SUBSCRIPTIONS_URL)
+                                is PlanChange.Route.ManageElsewhere ->
+                                    if (route.source == "apple") uri.openUri(APP_STORE_SUBSCRIPTIONS_URL)
+                                is PlanChange.Route.PlayChange -> if (activity != null && chosen != null)
+                                    billing.changePlan(activity, chosen, currentPlanId, route.replacement,
+                                        onNoPurchase = { uri.openUri(PLAY_SUBSCRIPTIONS_URL) })
+                                PlanChange.Route.NewPurchase -> if (activity != null && chosen != null)
                                     billing.purchase(activity, chosen)
                             }
                         }
@@ -512,6 +534,7 @@ private fun TimelineRow(icon: ImageVector, title: String, caption: String, shows
 /** Play's subscription management page — changing or cancelling a live plan
  *  happens there, never in-app (iOS opens Apple's own). */
 private const val PLAY_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions"
+private const val APP_STORE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/subscriptions"
 
 /**
  * The tier most people actually bought — a FACT the row can state, which is

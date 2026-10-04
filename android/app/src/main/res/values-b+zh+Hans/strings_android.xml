@@ -543,6 +543,7 @@
     <string name="paywall_a_month">每月</string>
     <string name="paywall_per_min">每分钟 %s</string>
     <string name="paywall_change_to">换成%s</string>
+    <string name="paywall_change_where_subscribed">请在订阅的地方更改</string>
     <string name="paywall_subscribe_yearly">订阅 %s 年付方案</string>
     <string name="paywall_subscribe_monthly">订阅 %s 月付方案</string>
     <string name="spent_move_to_tier">换成%s</string>

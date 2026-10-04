@@ -12,6 +12,7 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.net.Edge
 import kotlinx.coroutines.CoroutineScope
@@ -196,6 +197,69 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
             .setObfuscatedAccountId(userId)
             .build()
         client.launchBillingFlow(activity, params)
+    }
+
+    /**
+     * Move an existing PLAY subscriber to [offer] — never a second purchase
+     * ([PlanChange] says why, and which [replacement] matches Apple).
+     *
+     * The old purchase token is read from Play itself (`queryPurchasesAsync`),
+     * not from our row: it is the token THIS Google account holds, and Play
+     * refuses a change that names any other. Preference goes to the purchase
+     * whose product is the held plan's; with exactly one live subscription it
+     * is that one. When the device holds none (a different Google account on
+     * this phone, or Play unreachable) [onNoPurchase] runs — the caller opens
+     * Play's subscriptions page rather than starting a fresh purchase, which
+     * is the duplicate this path exists to prevent.
+     */
+    fun changePlan(
+        activity: Activity,
+        offer: Offer,
+        currentPlanId: String?,
+        replacement: PlanChange.Replacement,
+        onNoPurchase: () -> Unit,
+    ) {
+        val userId = auth.userId ?: return
+        val offerToken = offer.details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        if (!client.isReady) { onNoPurchase(); return }
+        val heldProduct = _plans.value.firstOrNull { it.id == currentPlanId }?.google_product_id
+        client.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS).build()
+        ) { result, purchases ->
+            val live = if (result.responseCode == BillingClient.BillingResponseCode.OK)
+                purchases.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+            else emptyList()
+            val old = live.firstOrNull { heldProduct != null && heldProduct in it.products }
+                ?: live.singleOrNull()
+            scope.launch {
+                if (old == null) { onNoPurchase(); return@launch }
+                // A deferred downgrade has no trial phase to promise.
+                pendingTrialDays = 0
+                val mode = when (replacement) {
+                    PlanChange.Replacement.CHARGE_PRORATED_PRICE ->
+                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.CHARGE_PRORATED_PRICE
+                    PlanChange.Replacement.DEFERRED ->
+                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.DEFERRED
+                }
+                val params = BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(listOf(
+                        BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(offer.details)
+                            .setOfferToken(offerToken)
+                            .build()))
+                    .setSubscriptionUpdateParams(
+                        BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                            .setOldPurchaseToken(old.purchaseToken)
+                            .setSubscriptionReplacementMode(mode)
+                            .build())
+                    // Same account mapping as a purchase: the new token's
+                    // notification must land on the same user row.
+                    .setObfuscatedAccountId(userId)
+                    .build()
+                client.launchBillingFlow(activity, params)
+            }
+        }
     }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
