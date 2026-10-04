@@ -536,4 +536,21 @@
     <string name="welcome_gloss_deposit">l’argent retenu pendant la location</string>
     <string name="welcome_gloss_wear_and_tear">l’usure normale due à l’usage</string>
     <string name="welcome_gloss_deducted">retiré du total</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">Max</string>
+    <string name="paywall_keep_talking">Continue à parler</string>
+    <string name="paywall_pick_how_much">Choisis combien tu veux parler chaque mois.</string>
+    <string name="paywall_shared_unlimited">Ton carnet de révision, le shadowing, les mots, les réécoutes et les exercices sont illimités dans toutes les formules.</string>
+    <string name="paywall_tutor_call">Un cours de 10 minutes au téléphone chaque jour de semaine, c’est environ 200 minutes par mois. Ici, les minutes ne comptent que pendant que la conversation avance ; les pauses sont gratuites.</string>
+    <string name="paywall_most_chosen">Le plus choisi</string>
+    <string name="paywall_plus_scenes">+ %d scènes</string>
+    <string name="paywall_monthly_only">Mensuel uniquement</string>
+    <string name="paywall_a_year">par an</string>
+    <string name="paywall_a_month">par mois</string>
+    <string name="paywall_per_min">%s la minute</string>
+    <string name="paywall_change_to">Passer à %s</string>
+    <string name="paywall_subscribe_yearly">S’abonner à %s annuel</string>
+    <string name="paywall_subscribe_monthly">S’abonner à %s mensuel</string>
+    <string name="spent_move_to_tier">Passer à %s</string>
+    <string name="spent_review_or_move_to_tier">Révise ce que ce mois t’a laissé, ou passe à %s pour continuer maintenant.</string>
 </resources>

@@ -530,4 +530,21 @@
     <string name="welcome_gloss_deposit">賃貸の間、預けておくお金</string>
     <string name="welcome_gloss_wear_and_tear">普通に使ってできる傷み</string>
     <string name="welcome_gloss_deducted">合計から差し引かれた</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">マックス</string>
+    <string name="paywall_keep_talking">会話を続けましょう</string>
+    <string name="paywall_pick_how_much">毎月どれくらい話すか選んでください。</string>
+    <string name="paywall_shared_unlimited">復習ブック、シャドーイング、単語学習、会話の再生、ドリル復習はどのプランでも無制限です。</string>
+    <string name="paywall_tutor_call">平日に毎日10分の電話レッスンなら、月に約200分です。ここでは会話が続いている間だけ時間が減り、沈黙の時間は数えません。</string>
+    <string name="paywall_most_chosen">いちばん人気</string>
+    <string name="paywall_plus_scenes">+ シーン練習%d回</string>
+    <string name="paywall_monthly_only">月額のみ</string>
+    <string name="paywall_a_year">年額</string>
+    <string name="paywall_a_month">月額</string>
+    <string name="paywall_per_min">1分あたり%s</string>
+    <string name="paywall_change_to">%sに変更</string>
+    <string name="paywall_subscribe_yearly">%sを年額で登録</string>
+    <string name="paywall_subscribe_monthly">%sを月額で登録</string>
+    <string name="spent_move_to_tier">%sに変更</string>
+    <string name="spent_review_or_move_to_tier">今月出てきたものを復習するか、今すぐもっと話したいなら%sに変えましょう。</string>
 </resources>

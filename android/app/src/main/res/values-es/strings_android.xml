@@ -549,4 +549,21 @@
     <string name="welcome_gloss_deposit">el dinero que se deja durante el alquiler</string>
     <string name="welcome_gloss_wear_and_tear">el desgaste normal por el uso</string>
     <string name="welcome_gloss_deducted">descontado del total</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">Max</string>
+    <string name="paywall_keep_talking">Sigue hablando</string>
+    <string name="paywall_pick_how_much">Elige cuánto quieres hablar cada mes.</string>
+    <string name="paywall_shared_unlimited">Tu cuaderno de repaso, el shadowing, las palabras, las repeticiones y los ejercicios son ilimitados en todos los planes.</string>
+    <string name="paywall_tutor_call">Una clase de 10 minutos por teléfono cada día laborable son unos 200 minutos al mes. Aquí los minutos solo cuentan mientras la conversación sigue: las pausas son gratis.</string>
+    <string name="paywall_most_chosen">El más elegido</string>
+    <string name="paywall_plus_scenes">+ %d escenas</string>
+    <string name="paywall_monthly_only">Solo mensual</string>
+    <string name="paywall_a_year">al año</string>
+    <string name="paywall_a_month">al mes</string>
+    <string name="paywall_per_min">%s por min</string>
+    <string name="paywall_change_to">Cambiar a %s</string>
+    <string name="paywall_subscribe_yearly">Suscribirme a %s anual</string>
+    <string name="paywall_subscribe_monthly">Suscribirme a %s mensual</string>
+    <string name="spent_move_to_tier">Cambiar a %s</string>
+    <string name="spent_review_or_move_to_tier">Repasa lo que te dejó este mes, o pásate a %s para seguir ahora.</string>
 </resources>

@@ -530,4 +530,21 @@
     <string name="welcome_gloss_deposit">임대 기간 동안 맡겨 두는 돈</string>
     <string name="welcome_gloss_wear_and_tear">평소 사용으로 생기는 자연스러운 손상</string>
     <string name="welcome_gloss_deducted">총액에서 빠진</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">맥스</string>
+    <string name="paywall_keep_talking">계속 이야기해요</string>
+    <string name="paywall_pick_how_much">한 달에 얼마나 이야기할지 골라요.</string>
+    <string name="paywall_shared_unlimited">개인화된 복습교재, 섀도잉, 단어학습, 대화 재생, 드릴 복습은 모든 요금제에서 무제한이에요.</string>
+    <string name="paywall_tutor_call">평일마다 10분씩 하는 전화 수업은 한 달에 약 200분이에요. 여기서는 대화가 오가는 동안만 시간이 줄고, 말이 멈춘 동안은 세지 않아요.</string>
+    <string name="paywall_most_chosen">가장 많이 선택</string>
+    <string name="paywall_plus_scenes">+ 상황연습 %d개</string>
+    <string name="paywall_monthly_only">월간만 있어요</string>
+    <string name="paywall_a_year">1년</string>
+    <string name="paywall_a_month">한 달</string>
+    <string name="paywall_per_min">분당 %s</string>
+    <string name="paywall_change_to">%s로 바꾸기</string>
+    <string name="paywall_subscribe_yearly">연간 %s 구독하기</string>
+    <string name="paywall_subscribe_monthly">월간 %s 구독하기</string>
+    <string name="spent_move_to_tier">%s로 바꾸기</string>
+    <string name="spent_review_or_move_to_tier">이번 달에 나온 것들을 복습하거나, 지금 더 얘기하고 싶으면 %s로 바꿔요.</string>
 </resources>

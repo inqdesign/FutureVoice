@@ -530,4 +530,21 @@
     <string name="welcome_gloss_deposit">租屋期間押著的錢</string>
     <string name="welcome_gloss_wear_and_tear">正常使用造成的損耗</string>
     <string name="welcome_gloss_deducted">從總額扣掉</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">Max</string>
+    <string name="paywall_keep_talking">繼續聊下去</string>
+    <string name="paywall_pick_how_much">選擇每個月想聊多久。</string>
+    <string name="paywall_shared_unlimited">複習書、跟讀、單字、對話重播和練習在每個方案都無限使用。</string>
+    <string name="paywall_tutor_call">每個平日上 10 分鐘電話課，一個月大約 200 分鐘。在這裡，只有對話進行時才計時，停頓不算。</string>
+    <string name="paywall_most_chosen">最多人選</string>
+    <string name="paywall_plus_scenes">+ 情境練習 %d 次</string>
+    <string name="paywall_monthly_only">僅限月繳</string>
+    <string name="paywall_a_year">每年</string>
+    <string name="paywall_a_month">每月</string>
+    <string name="paywall_per_min">每分鐘 %s</string>
+    <string name="paywall_change_to">換成%s</string>
+    <string name="paywall_subscribe_yearly">訂閱 %s 年繳方案</string>
+    <string name="paywall_subscribe_monthly">訂閱 %s 月繳方案</string>
+    <string name="spent_move_to_tier">換成%s</string>
+    <string name="spent_review_or_move_to_tier">複習這個月留下的內容，或是換成%s，現在就繼續聊。</string>
 </resources>

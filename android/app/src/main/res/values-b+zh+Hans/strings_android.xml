@@ -530,4 +530,21 @@
     <string name="welcome_gloss_deposit">租房期间押着的钱</string>
     <string name="welcome_gloss_wear_and_tear">正常使用造成的损耗</string>
     <string name="welcome_gloss_deducted">从总额扣掉</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">Max</string>
+    <string name="paywall_keep_talking">继续聊下去</string>
+    <string name="paywall_pick_how_much">选择每个月想聊多久。</string>
+    <string name="paywall_shared_unlimited">复习书、跟读、单词、对话重播和练习在每个方案都无限使用。</string>
+    <string name="paywall_tutor_call">每个工作日上 10 分钟电话课，一个月大约 200 分钟。在这里，只有对话进行时才计时，停顿不算。</string>
+    <string name="paywall_most_chosen">最多人选</string>
+    <string name="paywall_plus_scenes">+ 情境练习 %d 次</string>
+    <string name="paywall_monthly_only">仅限月付</string>
+    <string name="paywall_a_year">每年</string>
+    <string name="paywall_a_month">每月</string>
+    <string name="paywall_per_min">每分钟 %s</string>
+    <string name="paywall_change_to">换成%s</string>
+    <string name="paywall_subscribe_yearly">订阅 %s 年付方案</string>
+    <string name="paywall_subscribe_monthly">订阅 %s 月付方案</string>
+    <string name="spent_move_to_tier">换成%s</string>
+    <string name="spent_review_or_move_to_tier">复习这个月留下的内容，或是换成%s，现在就继续聊。</string>
 </resources>

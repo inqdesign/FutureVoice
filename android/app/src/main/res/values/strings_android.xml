@@ -549,4 +549,21 @@
     <string name="welcome_gloss_deposit">the money held during a tenancy</string>
     <string name="welcome_gloss_wear_and_tear">normal damage from regular use</string>
     <string name="welcome_gloss_deducted">taken off the total</string>
+    <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
+    <string name="plan_tier_max">Max</string>
+    <string name="paywall_keep_talking">Keep talking</string>
+    <string name="paywall_pick_how_much">Pick how much you want to talk each month.</string>
+    <string name="paywall_shared_unlimited">Review book, shadowing, words, replays and drills are unlimited on every plan.</string>
+    <string name="paywall_tutor_call">A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.</string>
+    <string name="paywall_most_chosen">Most chosen</string>
+    <string name="paywall_plus_scenes">+ %d scenes</string>
+    <string name="paywall_monthly_only">Monthly only</string>
+    <string name="paywall_a_year">a year</string>
+    <string name="paywall_a_month">a month</string>
+    <string name="paywall_per_min">%s a min</string>
+    <string name="paywall_change_to">Change to %s</string>
+    <string name="paywall_subscribe_yearly">Subscribe to %s · yearly</string>
+    <string name="paywall_subscribe_monthly">Subscribe to %s · monthly</string>
+    <string name="spent_move_to_tier">Move to %s</string>
+    <string name="spent_review_or_move_to_tier">Review what this month left you, or move to %s to keep going now.</string>
 </resources>

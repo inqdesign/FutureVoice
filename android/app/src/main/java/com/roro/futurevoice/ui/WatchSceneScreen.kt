@@ -405,7 +405,7 @@ fun WatchSceneScreen(
         // 402 body carries no tier, and on Plus the upgrade half must be
         // absent rather than disabled.
         var canUpgrade by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) { canUpgrade = AccountStatus.load(AuthRepository()).isLightPlan }
+        LaunchedEffect(Unit) { canUpgrade = AccountStatus.load(AuthRepository()).upgradeTier != null }
         AllowanceSpentSheet(
             pool = pool,
             canUpgrade = canUpgrade,
