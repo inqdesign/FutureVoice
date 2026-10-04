@@ -33,9 +33,10 @@ final class SpeechTakeSession: ObservableObject {
             Task { cameraOn ? await camera.start() : camera.stop() }
         }
     }
-    @Published var followVoice: Bool {
-        didSet { UserDefaults.standard.set(followVoice, forKey: Self.followKey) }
-    }
+    /// Every take starts following the voice; switching to a steady speed
+    /// lasts for this visit only (a remembered switch kept reopening the
+    /// prompter in the mode the reader had forgotten choosing).
+    @Published var followVoice = true
     /// Fixed-speed multiplier (0.7…1.3), only read when not following.
     @Published var speed: Double {
         didSet { UserDefaults.standard.set(speed, forKey: Self.speedKey) }
@@ -45,7 +46,6 @@ final class SpeechTakeSession: ObservableObject {
     let level = SpeechLevel()
 
     private static let cameraKey = "speech.cameraOn"
-    private static let followKey = "speech.followVoice"
     private static let speedKey = "speech.speed"
 
     private let live = LiveTranscriber()
@@ -87,7 +87,6 @@ final class SpeechTakeSession: ObservableObject {
         self.track = SpeechPrompterTrack(script: script.body, language: script.language)
         let defaults = UserDefaults.standard
         cameraOn = defaults.object(forKey: Self.cameraKey) as? Bool ?? true
-        followVoice = defaults.object(forKey: Self.followKey) as? Bool ?? true
         speed = defaults.object(forKey: Self.speedKey) as? Double ?? 1.0
 
         camera.frameHandler = { [composer] buffer in composer.append(buffer) }

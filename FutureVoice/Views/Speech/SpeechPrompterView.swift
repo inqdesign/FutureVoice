@@ -291,6 +291,17 @@ struct SpeechPrompterView: View {
             }
             .padding(.bottom, 20)
         }
+        // The count-in sits on the camera card, where the reader is looking
+        // to get ready, not over the script.
+        .overlay {
+            if case .countdown(let n) = session.phase {
+                Text("\(n)")
+                    .font(.system(size: 96, weight: .bold, design: .rounded))
+                    .foregroundStyle(cameraShowing ? Color.white : Color.primary)
+                    .shadow(color: .black.opacity(cameraShowing ? 0.35 : 0), radius: 8)
+                    .transition(.opacity)
+            }
+        }
         .overlay(alignment: .top) {
             topBar
                 .padding(.horizontal, 12)
@@ -393,12 +404,6 @@ struct SpeechPrompterView: View {
 
     @ViewBuilder private var overlay: some View {
         switch session.phase {
-        case .countdown(let n):
-            Text("\(n)")
-                .font(.system(size: 96, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .shadow(radius: 8)
-                .transition(.opacity)
         case .analyzing:
             VStack(spacing: 12) {
                 ProgressView()
