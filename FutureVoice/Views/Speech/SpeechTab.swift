@@ -35,8 +35,11 @@ struct SpeechTab: View {
                 }
             }
             .navigationTitle("Speech")
+            // Same header as Watch and Progress: the title inline-large on
+            // the toolbar row, the tab's one action at its trailing edge.
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if canWrite {
                         Menu {
                             Button { composing = true } label: {
