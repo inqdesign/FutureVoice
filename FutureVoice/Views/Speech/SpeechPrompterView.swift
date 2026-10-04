@@ -12,6 +12,8 @@ struct SpeechPrompterView: View {
     @State private var prompterRect: CGRect = .zero
     private static let screenSpace = "take-screen"
     @State private var showingScript = false
+    /// A word or two said over the controls when a mode flips.
+    @State private var toast: String?
     @State private var showingTakes = false
     @ObservedObject private var store = SpeechStore.shared
 
@@ -88,6 +90,16 @@ struct SpeechPrompterView: View {
             return
         }
         session.prepareVideo(layout: layout, column: .init(unread: unread, read: read, accent: accent, scale: scale))
+    }
+
+    /// Shows `text` over the controls for a moment.
+    private func flash(_ text: String) {
+        withAnimation(.easeOut(duration: 0.15)) { toast = text }
+        Task {
+            try? await Task.sleep(for: .seconds(1.3))
+            guard toast == text else { return }
+            withAnimation(.easeIn(duration: 0.3)) { toast = nil }
+        }
     }
 
     private func close() {
@@ -248,8 +260,19 @@ struct SpeechPrompterView: View {
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .padding(.horizontal, 12)
 
-            controls
-                .padding(.bottom, 20)
+            VStack(spacing: 14) {
+                if let toast {
+                    Text(toast)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.55), in: Capsule())
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                }
+                controls
+            }
+            .padding(.bottom, 20)
         }
         .overlay(alignment: .top) {
             topBar
@@ -318,6 +341,7 @@ struct SpeechPrompterView: View {
 
             Button {
                 session.followVoice.toggle()
+                flash(session.followVoice ? explain("Follows your voice") : explain("Steady speed"))
             } label: {
                 Image(systemName: session.followVoice ? "waveform" : "speedometer")
                     .font(.title3)
