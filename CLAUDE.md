@@ -1103,9 +1103,15 @@ beside Replay (다시 듣기) the pair says listen-again / speak-again.
   with the line and the take ends when they go quiet — but the earliest it may
   end is measured from their FIRST WORD, not from the mic opening, because
   reading a line you have never seen takes a beat (`ShadowDrillView` measures
-  from the go beat, which its 3-2-1 makes the same moment). Silence for
-  `firstVoiceSeconds` (8) moves the conversation along rather than holding it:
-  a silent take is `heardNothing`, which is not a 0 and is never saved.
+  from the go beat, which its 3-2-1 makes the same moment). **A line nobody
+  has started WAITS** (2026-10-05, founder): an 8 s give-up used to play the
+  next answer over a learner who had looked away; now only Skip or Close
+  moves past it. Once they have spoken, only silence ends the take — the
+  line-length ceiling that used to cut a slow first read mid-sentence is
+  gone too (a 60 s guard remains for a room that never goes quiet). A take
+  that still comes back empty is `heardNothing`, not a 0, never saved.
+  Connected Bluetooth earphones that aren't worn take the mic and hear
+  nothing (worn mic wins) — that reads as this screen ignoring you.
 - **A run is ONE analytics event, not twenty.** `AudioPlayer` skips
   `audio_played` for `unreportedPlaybackSources` — the live call's per-turn
   auto-play and now a say-it-again run, which reports itself once as

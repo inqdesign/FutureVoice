@@ -161,10 +161,6 @@ struct SayItAgainView: View {
         var score: Int? { if case .scored(let s) = outcome { return s } else { return nil } }
     }
 
-    /// How long the prompter waits for the learner to START before letting
-    /// the conversation move on. Generous: a line you have never read takes
-    /// a beat, and the run's whole promise is that it doesn't stop.
-    private static let firstVoiceSeconds: TimeInterval = 8
     /// Earliest a read can end, per word — measured from the learner's FIRST
     /// WORD, not from the mic opening, which is where `ShadowDrillView`
     /// measures from because its countdown puts the two at the same moment.
@@ -646,13 +642,15 @@ struct SayItAgainView: View {
     /// True once the learner actually said something. Waits for their FIRST
     /// word, then for the line's own length, then for silence.
     private func waitForReadToEnd(text: String) async -> Bool {
-        let firstVoiceDeadline = Date().addingTimeInterval(Self.firstVoiceSeconds)
-        while !Task.isCancelled, !skipRequested,
-              live.lastVoicedAt == nil, Date() < firstVoiceDeadline {
+        // The line WAITS for them (2026-10-05, founder: "it keeps moving on
+        // when I haven't said anything"). It used to give up after 8 s and
+        // play the next answer, so a learner who looked away came back to a
+        // conversation that had gone on without them. Only Skip (or Close)
+        // moves past a line nobody has started to say.
+        while !Task.isCancelled, !skipRequested, live.lastVoicedAt == nil {
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
         guard !Task.isCancelled, !skipRequested else { return false }
-        guard live.lastVoicedAt != nil else { return false }
 
         let lineMs = max(1200, WordSplitter.count(text) * Self.readMsPerWord)
         let began = Date()
