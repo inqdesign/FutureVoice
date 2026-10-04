@@ -120,11 +120,32 @@ object SessionSummarizer {
             try {
                 runCatching {
                     summarize(appContext, session, nativeLanguage, level) { publish(session.id, it) }
-                }.onFailure { Log.w(TAG, "summary failed for ${session.id}: ${it.message}") }
+                }.onFailure { e ->
+                    Log.w(TAG, "summary failed for ${session.id}: ${e.message}")
+                    if (e is kotlinx.coroutines.CancellationException) return@onFailure
+                    // A failed summary costs the talk its ENTIRE review yield,
+                    // so it gets the per-turn failure's visibility (iOS
+                    // `talk_summary_error`) — with the HTTP status and the
+                    // body's start, or a 429, a 503 and the gateway's own
+                    // refusal all read the same (iOS `cd31a1a`).
+                    com.roro.futurevoice.core.Telemetry.log("talk_summary_error", mapOf(
+                        "error" to e::class.java.simpleName,
+                        "detail" to failureDetail(e),
+                        "turns" to session.turns.size.toString(),
+                        "out_of_credits" to if (e is com.roro.futurevoice.net.EdgeError.InsufficientCredits) "1" else "0",
+                    ))
+                }
             } finally {
                 _inFlight.update { it - session.id }
             }
         }
+    }
+
+    /** What a failure says beyond its class: `http 503 «…»` for an HTTP
+     *  refusal, else the message — both cut to fit a telemetry row. */
+    internal fun failureDetail(e: Throwable): String = when (e) {
+        is com.roro.futurevoice.net.EdgeError.Http -> "http ${e.status} «${e.body.take(160)}»"
+        else -> (e.message ?: "").take(240)
     }
 
     suspend fun summarize(
