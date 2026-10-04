@@ -554,6 +554,11 @@
     <string name="paywall_subscribe_monthly">S’abonner à %s mensuel</string>
     <string name="spent_move_to_tier">Passer à %s</string>
     <string name="spent_review_or_move_to_tier">Révise ce que ce mois t’a laissé, ou passe à %s pour continuer maintenant.</string>
+    <string name="topup_buy_minutes">Acheter %d minutes</string>
+    <string name="topup_one_time_no_expiry">achat unique · sans expiration</string>
+    <string name="topup_with_or_without_plan">Disponible avec ou sans formule</string>
+    <string name="topup_once">une fois</string>
+    <string name="spent_add_minutes_move_or_review">Ajoute des minutes pour continuer, passe à %s, ou révise ce que ce mois t’a laissé.</string>
     <!-- Book workbook PDF (iOS ab56652) -->
     <string name="workbook">Cahier d’exercices</string>
     <string name="workbook_cover_and_write">Cache et écris</string>

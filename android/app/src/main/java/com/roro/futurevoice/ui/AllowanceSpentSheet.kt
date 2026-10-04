@@ -35,6 +35,7 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
+import com.roro.futurevoice.data.TopUpOffer
 import com.roro.futurevoice.data.renewalLabel
 
 /** Which pool ran out. They read differently and offer different things. */
@@ -55,7 +56,9 @@ private val DoneGreen = Color(0xFF34C759)
  * So the sheet says the month's talking is done, names the size of what was
  * spent, says when it comes back, and offers the next thing to do.
  *
- * When a bigger plan is on sale the upgrade LEADS — Light → Plus, Plus → Max
+ * A talk-minute pack leads on a spent TALK pool once it has a price — it is
+ * the literal answer to "I want to keep talking" ([TopUpOffer]); then, when a
+ * bigger plan is on sale, the upgrade — Light → Plus, Plus → Max
  * (`AccountStatus.upgradeTier`) — because it is the answer to "I want to keep
  * talking"; review stays one tap away and free either way. At the top the
  * upgrade half is ABSENT rather than disabled — there is nothing left to offer
@@ -107,6 +110,11 @@ fun AllowanceSpentSheet(
         BillingGate.paywallTier.value = upgradeTier
         onUpgrade()
     }
+    // Asked for on the account alone; LEADS only once Play has priced it
+    // (iOS `packOffered` / `packLeads`).
+    val packOffered = TopUpOffer.onSpentSheet(account, pool == SpentPool.TALK)
+    var packOnSale by remember { mutableStateOf(false) }
+    val packLeads = TopUpOffer.leads(packOffered, packOnSale)
 
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
@@ -143,9 +151,18 @@ fun AllowanceSpentSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center)
                     // What to do about it — the whole reason this isn't an alert.
+                    // Names the pack only when the pack button is THERE — a
+                    // line that says "add minutes" over a sheet with no such
+                    // button is the wrong promise the lead rule exists for.
                     Text(
-                        if (canUpgrade) stringResource(R.string.spent_review_or_move_to_tier, upgradeName)
-                        else stringResource(R.string.review_stays_free_and_always_did),
+                        when {
+                            packLeads && canUpgrade ->
+                                stringResource(R.string.spent_add_minutes_move_or_review, upgradeName)
+                            packLeads -> stringResource(
+                                R.string.add_minutes_to_keep_going_now_or_review_what_this_month_left_044ece)
+                            canUpgrade -> stringResource(R.string.spent_review_or_move_to_tier, upgradeName)
+                            else -> stringResource(R.string.review_stays_free_and_always_did)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center)
@@ -177,14 +194,27 @@ fun AllowanceSpentSheet(
                 Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // Order is the recommendation.
+                // Order is the recommendation: the pack, the plan move,
+                // review. Exactly one of them is prominent — the first one
+                // actually drawn.
+                if (packOffered) {
+                    TalkTopUpButton(onAvailability = { packOnSale = it }, onPurchased = onDismiss)
+                }
                 if (canUpgrade) {
-                    Button(onClick = upgrade, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.spent_move_to_tier, upgradeName))
+                    if (packLeads) {
+                        FilledTonalButton(onClick = upgrade, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.spent_move_to_tier, upgradeName))
+                        }
+                    } else {
+                        Button(onClick = upgrade, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.spent_move_to_tier, upgradeName))
+                        }
                     }
-                    // Tonal, not outlined: iOS's `.bordered` is a filled
-                    // capsule, and an outline here reads as the weaker of two
-                    // choices rather than the free one.
+                }
+                // Tonal, not outlined: iOS's `.bordered` is a filled capsule,
+                // and an outline here reads as the weaker of two choices
+                // rather than the free one.
+                if (packLeads || canUpgrade) {
                     FilledTonalButton(onClick = onReview, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.go_to_practice))
                     }

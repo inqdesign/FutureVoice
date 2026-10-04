@@ -540,6 +540,11 @@
     <string name="paywall_subscribe_monthly">%s monatlich abonnieren</string>
     <string name="spent_move_to_tier">Zu %s wechseln</string>
     <string name="spent_review_or_move_to_tier">Wiederhole, was dir dieser Monat gebracht hat, oder wechsel zu %s, um jetzt weiterzumachen.</string>
+    <string name="topup_buy_minutes">%d Minuten kaufen</string>
+    <string name="topup_one_time_no_expiry">einmalig · ohne Ablauf</string>
+    <string name="topup_with_or_without_plan">Mit oder ohne Abo erhältlich</string>
+    <string name="topup_once">einmalig</string>
+    <string name="spent_add_minutes_move_or_review">Füge Minuten hinzu und sprich gleich weiter, wechsle zu %s oder wiederhole, was dir dieser Monat gebracht hat.</string>
     <!-- Book workbook PDF (iOS ab56652) -->
     <string name="workbook">Arbeitsheft</string>
     <string name="workbook_cover_and_write">Abdecken und schreiben</string>

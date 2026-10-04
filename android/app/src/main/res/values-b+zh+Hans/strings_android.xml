@@ -548,6 +548,11 @@
     <string name="paywall_subscribe_monthly">订阅 %s 月付方案</string>
     <string name="spent_move_to_tier">换成%s</string>
     <string name="spent_review_or_move_to_tier">复习这个月留下的内容，或是换成%s，现在就继续聊。</string>
+    <string name="topup_buy_minutes">购买 %d 分钟</string>
+    <string name="topup_one_time_no_expiry">单次购买 · 无期限</string>
+    <string name="topup_with_or_without_plan">不论是否订阅都能购买</string>
+    <string name="topup_once">一次</string>
+    <string name="spent_add_minutes_move_or_review">加购分钟现在继续、换成 %s，或复习这个月留下的内容。</string>
     <!-- Book workbook PDF (iOS ab56652) -->
     <string name="workbook">练习册</string>
     <string name="workbook_cover_and_write">遮住再写</string>

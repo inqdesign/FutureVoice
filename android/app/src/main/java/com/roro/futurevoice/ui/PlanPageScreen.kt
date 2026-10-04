@@ -87,7 +87,9 @@ fun PlanPageScreen(
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var inviteOffer by remember { mutableStateOf<InviteOffer?>(null) }
     var receipt by remember { mutableStateOf<SubscriptionReceipt?>(null) }
-    LaunchedEffect(Unit) {
+    /** Bumped when a pack lands, so the balance is read again. */
+    var reload by remember { mutableStateOf(0) }
+    LaunchedEffect(reload) {
         // Screenshot harness only: a sample account instead of the network.
         com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount?.let {
             account = it
@@ -133,8 +135,9 @@ fun PlanPageScreen(
                 if (a?.isEntitled == true) R.string.this_month else R.string.left_to_spend))
             GroupedCard {
                 ValueRow(Icons.Filled.Bolt, stringResource(R.string.talk_time), talkValue(a))
-                // Invite minutes are time ON TOP of the pool, so they are
-                // their own row and never folded into the figure above —
+                // Extra minutes — invite minutes and packs bought, one balance
+                // (iOS relabel, 2026-09-26) — are time ON TOP of the pool, so
+                // they are their own row and never folded into the figure above —
                 // added in, the fraction would stop adding up. Only where
                 // there is a pool for them to sit on top of: an uncapped plan
                 // cannot run out, so nothing is waiting to be topped up, and
@@ -142,8 +145,25 @@ fun PlanPageScreen(
                 // balance as its talk time.
                 if (a != null && a.isEntitled && !uncapped && a.secondsBalance >= 60) {
                     GroupedRowDivider()
-                    ValueRow(Icons.Filled.Redeem, stringResource(R.string.invite_minutes),
-                        stringResource(R.string.lld_min_7c4bb6, a.secondsBalance / 60))
+                    ValueRow(Icons.Filled.Redeem, stringResource(R.string.extra_minutes),
+                        stringResource(R.string.lld_min_7c4bb6, a.secondsBalance / 60),
+                        subtitle = stringResource(
+                            R.string.invite_minutes_and_packs_you_bought_spent_before_the_month_s_4ed917))
+                }
+                // Minutes at a time, for a month that ran short. Subscribers
+                // only (a free account is offered the plans, which carry the
+                // pack too); never in a trial, whose pool converts on its own
+                // date. Draws nothing until Play has priced it.
+                if (com.roro.futurevoice.data.TopUpOffer.onUsage(a)) {
+                    var packShown by remember { mutableStateOf(false) }
+                    if (packShown) GroupedRowDivider()
+                    TalkTopUpButton(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        prominent = false,
+                        onAvailability = { packShown = it },
+                        // The balance row above must show what just landed.
+                        onPurchased = { reload++ },
+                    )
                 }
                 // Scenes are capped on EVERY tier — a scene plays itself, so a
                 // count is the only limit there is. A real limit is never
@@ -361,7 +381,7 @@ private fun storeManageTitle(source: String?): Int = when (source) {
 }
 
 @Composable
-private fun ValueRow(icon: ImageVector, title: String, value: String) {
+private fun ValueRow(icon: ImageVector, title: String, value: String, subtitle: String? = null) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -369,7 +389,15 @@ private fun ValueRow(icon: ImageVector, title: String, value: String) {
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary)
-        Text(title, Modifier.weight(1f))
+        if (subtitle == null) {
+            Text(title, Modifier.weight(1f))
+        } else {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title)
+                Text(subtitle, style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Text(value, style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

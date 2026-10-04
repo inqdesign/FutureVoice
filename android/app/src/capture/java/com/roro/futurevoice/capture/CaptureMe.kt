@@ -38,10 +38,12 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  *   plan-spent
  *   paywall
  *   paywall-plans
+ *   paywall-ladder-pack
  *   day-spent
  *   day-spent-scenes
  *   day-spent-invite
  *   day-spent-plus
+ *   day-spent-pack   (Android only — the pack priced, leading)
  *   day-spent-unlimited
  *   day-spent-trial
  *   day-spent-trial-plus
@@ -70,18 +72,14 @@ object CaptureMe {
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
         "paywall" to { _ -> PaywallScreen(onDismiss = {}) },
         "paywall-plans" to { _ ->
-            MeCaptureFlags.previewPlans = samplePlans
-            // iOS seeds the storefront a reviewer of the capture would be in:
-            // won for a Korean app language, dollars otherwise.
-            val korean = java.util.Locale.getDefault().language == "ko"
-            MeCaptureFlags.previewCurrency = if (korean) "KRW" else "USD"
-            // Micros, as Play states them.
-            MeCaptureFlags.previewPrices = if (korean)
-                mapOf("light_monthly" to 15_000_000_000L, "plus_monthly" to 29_000_000_000L,
-                    "max_monthly" to 58_000_000_000L)
-            else mapOf("light_monthly" to 9_990_000L, "plus_monthly" to 24_990_000L,
-                "max_monthly" to 49_990_000L)
+            seedLadder()
             PaywallScreen(onDismiss = {})
+        },
+        // iOS: the ladder with the one-time pack's rung picked — the CTA
+        // reads "Buy 50 minutes".
+        "paywall-ladder-pack" to { _ ->
+            seedLadder()
+            PaywallScreen(onDismiss = {}, preselectTier = "pack")
         },
         "me" to { context -> Me(context) },
         "plan" to { _ ->
@@ -120,6 +118,13 @@ object CaptureMe {
         // in iOS's sample) spent, nothing to upgrade to, no minute pack on
         // sale, so the invite is the only free way forward.
         "day-spent-plus" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, plusSpentAccount, sampleInvite) },
+        // Android only: the Plus sheet once the pack HAS a price — the pack
+        // takes the lead slot, review steps back to tonal, and the line above
+        // names the pack (iOS shows this state only with a live ASC price).
+        "day-spent-pack" to { _ ->
+            seedPack()
+            DaySpent(SpentPool.TALK, canUpgrade = false, plusSpentAccount, sampleInvite)
+        },
         "day-spent-unlimited" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, CaptureSeed.sampleLightAccount) },
         // iOS: a TRIAL meets the Light pool pro-rated 7/30 (35 min), dated at
         // the trial's end (+4 days, already `sampleTrialAccount.periodEnd`).
@@ -142,6 +147,32 @@ object CaptureMe {
         "credits-out" to "4.6 — No in-call out-of-credits recovery row — Android routes a turn's 402 " +
             "straight to the paywall/allowance sheet (TalkViewModel.hitWall); 4.7",
     )
+
+    /** iOS seeds the storefront a reviewer of the capture would be in: won
+     *  for a Korean app language, dollars otherwise. Micros, as Play states them. */
+    private fun seedLadder() {
+        MeCaptureFlags.previewPlans = samplePlans
+        val korean = java.util.Locale.getDefault().language == "ko"
+        MeCaptureFlags.previewCurrency = if (korean) "KRW" else "USD"
+        MeCaptureFlags.previewPrices = if (korean)
+            mapOf("light_monthly" to 15_000_000_000L, "plus_monthly" to 29_000_000_000L,
+                "max_monthly" to 58_000_000_000L)
+        else mapOf("light_monthly" to 9_990_000L, "plus_monthly" to 24_990_000L,
+            "max_monthly" to 49_990_000L)
+        seedPack()
+    }
+
+    /** The 50-minute pack as `20261002110000_fifty_minute_pack` sells it:
+     *  ₩5,900 / $4.99 (iOS `PaywallView.packPrice` seeds the same). */
+    private fun seedPack() {
+        val korean = java.util.Locale.getDefault().language == "ko"
+        val (micros, currency) = if (korean) 5_900_000_000L to "KRW" else 4_990_000L to "USD"
+        val formatted = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.getDefault()).apply {
+            this.currency = java.util.Currency.getInstance(currency)
+        }.format(micros / 1_000_000.0)
+        MeCaptureFlags.previewPack = BillingService.Pack(productId = "talk_50", seconds = 3000,
+            formattedPrice = formatted, priceMicros = micros, currency = currency)
+    }
 
     /** The trial as the spent sheet meets it: 35 of the Light pool's minutes. */
     private val trialAccount: AccountStatus

@@ -548,6 +548,11 @@
     <string name="paywall_subscribe_monthly">%sを月額で登録</string>
     <string name="spent_move_to_tier">%sに変更</string>
     <string name="spent_review_or_move_to_tier">今月出てきたものを復習するか、今すぐもっと話したいなら%sに変えましょう。</string>
+    <string name="topup_buy_minutes">%d分を購入</string>
+    <string name="topup_one_time_no_expiry">1回のみ · 期限なし</string>
+    <string name="topup_with_or_without_plan">プランの有無に関係なく購入できます</string>
+    <string name="topup_once">1回</string>
+    <string name="spent_add_minutes_move_or_review">追加時間で今すぐ続けるか、%sに変えるか、今月の学びを復習しましょう。</string>
     <!-- Book workbook PDF (iOS ab56652) -->
     <string name="workbook">ワークブック</string>
     <string name="workbook_cover_and_write">隠して書く</string>

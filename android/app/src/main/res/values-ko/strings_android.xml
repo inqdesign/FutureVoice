@@ -548,6 +548,11 @@
     <string name="paywall_subscribe_monthly">월간 %s 구독하기</string>
     <string name="spent_move_to_tier">%s로 바꾸기</string>
     <string name="spent_review_or_move_to_tier">이번 달에 나온 것들을 복습하거나, 지금 더 얘기하고 싶으면 %s로 바꿔요.</string>
+    <string name="topup_buy_minutes">%d분 구매</string>
+    <string name="topup_one_time_no_expiry">한 번 결제 · 기한 없음</string>
+    <string name="topup_with_or_without_plan">구독과 상관없이 구매 가능</string>
+    <string name="topup_once">1회</string>
+    <string name="spent_add_minutes_move_or_review">시간을 추가해 지금 이어가거나, %s로 바꾸거나, 이달에 남긴 걸 복습해요.</string>
     <!-- Book workbook PDF (iOS ab56652) -->
     <string name="workbook">워크북</string>
     <string name="workbook_cover_and_write">가리고 쓰기</string>

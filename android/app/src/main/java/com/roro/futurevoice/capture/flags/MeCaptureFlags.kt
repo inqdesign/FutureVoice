@@ -33,4 +33,8 @@ object MeCaptureFlags {
     /** The invite offer the spent-pool sheet and Usage show instead of asking
      *  the referral server (iOS `previewInvite` / `DaySpentCaptureHost(invite:)`). */
     @JvmField var previewInvite: com.roro.futurevoice.ui.InviteOffer? = null
+
+    /** The talk-minute pack with a seeded price, so the sheet, Usage and the
+     *  paywall can draw it without Play (iOS seeds `Pack(… product: nil)`). */
+    @JvmField var previewPack: BillingService.Pack? = null
 }

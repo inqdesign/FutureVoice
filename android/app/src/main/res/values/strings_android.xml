@@ -568,6 +568,12 @@
     <string name="paywall_subscribe_monthly">Subscribe to %s · monthly</string>
     <string name="spent_move_to_tier">Move to %s</string>
     <string name="spent_review_or_move_to_tier">Review what this month left you, or move to %s to keep going now.</string>
+    <!-- Talk-minute pack (iOS TalkTopUpButton / PaywallView pack row, plan 4.0) -->
+    <string name="topup_buy_minutes">Buy %d minutes</string>
+    <string name="topup_one_time_no_expiry">one time · no expiry</string>
+    <string name="topup_with_or_without_plan">Available with or without a plan</string>
+    <string name="topup_once">once</string>
+    <string name="spent_add_minutes_move_or_review">Add minutes to keep going now, move to %s, or review what this month left you.</string>
     <!-- Book workbook PDF (iOS ab56652) -->
     <string name="workbook">Workbook</string>
     <string name="workbook_cover_and_write">Cover and write</string>

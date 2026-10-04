@@ -93,6 +93,7 @@ object CaptureRouter {
         "me",
         "monthly-test",
         "paywall",
+        "paywall-ladder-pack",
         "paywall-plans",
         "people",
         "plan",

@@ -67,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.roro.futurevoice.data.TopUpOffer
 import com.android.billingclient.api.ProductDetails
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AccountStatus
@@ -120,10 +121,11 @@ private val SavingsGreen = Color(0xFF34C759)
  * not fetched at all), in [AccountStatus.TIER_ORDER]. Prices come from Play
  * only; with none the rows still render from the catalog and the CTA waits.
  *
- * The one-time minute pack iOS puts under the ladder is NOT drawn here: a
- * Play consumable needs a server that verifies its token and lands the
- * minutes (`google-topup`, master plan 4.0), and a pack that takes money and
- * grants nothing is worse than no pack.
+ * The one-time minute pack sits under the ladder in its own group ("Extra
+ * minutes", iOS 2026-10-02): a different kind of purchase from the plans,
+ * bought before one or on top of one. Selecting it turns the CTA into "Buy N
+ * minutes"; the minutes land through `google-topup` before Play's purchase
+ * is consumed (master plan 4.0). Drawn only with a live Play price.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,6 +153,8 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     var step by remember {
         mutableStateOf(if (previewPlans != null) PaywallStep.PLANS else PaywallStep.RESOLVING)
     }
+    val pack = rememberTalkPack()
+    val packState by billing.packState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         BillingGate.paywallTier.value = null
@@ -219,13 +223,20 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     // Max was picked on the monthly side and has no yearly row: the selection
     // moves to the biggest tier that has one.
     LaunchedEffect(period, plans) {
-        if (plans.isNotEmpty() && plans.none { it.tier == tier && it.period == period }) {
+        if (tier != PACK && plans.isNotEmpty() && plans.none { it.tier == tier && it.period == period }) {
             plans.filter { it.period == period }
                 .maxByOrNull { AccountStatus.TIER_ORDER.indexOf(it.tier) }
                 ?.let { tier = it.tier }
         }
     }
 
+    val showsPack = TopUpOffer.onPaywall(account, pack?.formattedPrice != null)
+    // Opened on the pack (a capture, or a stale pick) with no pack to show:
+    // the selection falls back to the plan most people choose.
+    LaunchedEffect(settled, showsPack, pack) {
+        if (settled && tier == PACK && !showsPack) tier = MOST_CHOSEN_TIER
+    }
+    val packPicked = tier == PACK
     val currentPlanId = if (isSubscriber) account?.planId else null
     val selectionIsCurrent = currentPlanId == "${tier}_$period"
     val route = PlanChange.route(isSubscriber, subscriptionSource, currentPlanId, tier, period)
@@ -261,6 +272,7 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                 step = step,
                 trialDays = trialDays,
                 plansTitle = when {
+                    packPicked -> stringResource(R.string.topup_buy_minutes, pack?.minutes ?: 50)
                     // A subscriber can't buy what they already have — the
                     // only real action on their own plan is Play's screen.
                     selectionIsCurrent -> stringResource(R.string.manage_subscription)
@@ -277,7 +289,9 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                     period == "annual" -> stringResource(R.string.paywall_subscribe_yearly, tierName)
                     else -> stringResource(R.string.paywall_subscribe_monthly, tierName)
                 },
-                canBuy = selectionIsCurrent || elsewhere?.source == "apple" ||
+                canBuy = if (packPicked)
+                    pack?.details != null && packState != BillingService.PackState.Purchasing
+                else selectionIsCurrent || elsewhere?.source == "apple" ||
                     (elsewhere == null && chosen != null),
                 onCode = { redeemOpen = true },
                 onPrimary = {
@@ -287,7 +301,9 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                         PaywallStep.TIMELINE -> step = PaywallStep.PLANS
                         PaywallStep.PLANS -> {
                             val activity = context as? Activity
-                            when (route) {
+                            if (packPicked) {
+                                activity?.let { billing.buyPack(it) }
+                            } else when (route) {
                                 PlanChange.Route.ManageCurrent -> uri.openUri(PLAY_SUBSCRIPTIONS_URL)
                                 is PlanChange.Route.ManageElsewhere ->
                                     if (route.source == "apple") uri.openUri(APP_STORE_SUBSCRIPTIONS_URL)
@@ -329,10 +345,35 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                     onTier = { tier = it },
                     account = account,
                     currentPlanId = currentPlanId,
-                    showUnpriced = settled && chosen == null && !selectionIsCurrent,
+                    showUnpriced = settled && chosen == null && !selectionIsCurrent && !packPicked,
+                    pack = pack.takeIf { showsPack },
                 )
             }
         }
+    }
+    // The pack is on the account: say so, then the paywall's job is done.
+    (packState as? BillingService.PackState.Purchased)?.let { done ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { billing.resetPackState(); onDismiss() },
+            title = { Text(stringResource(R.string.lld_minutes_added, done.minutes)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { billing.resetPackState(); onDismiss() }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+        )
+    }
+    (packState as? BillingService.PackState.Failed)?.let { failed ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { billing.resetPackState() },
+            title = { Text(stringResource(R.string.purchase_failed)) },
+            text = { Text(stringResource(failed.message)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { billing.resetPackState() }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+        )
     }
     if (redeemOpen) RedeemCodeDialog(
         onDismiss = { redeemOpen = false },
@@ -545,6 +586,9 @@ private const val APP_STORE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/
  */
 private const val MOST_CHOSEN_TIER = "plus"
 
+/** The ladder's selection key for the one-time pack — never a plan tier. */
+private const val PACK = "pack"
+
 /** A store price kept as a NUMBER, so the ladder can divide it. */
 private data class LadderPrice(val formatted: String, val micros: Long, val currency: String)
 
@@ -591,6 +635,8 @@ private fun PlansStep(
     currentPlanId: String?,
     /** Play answered and has no price for the selection. */
     showUnpriced: Boolean,
+    /** The one-time pack, when it is offered here (priced, not uncapped). */
+    pack: BillingService.Pack? = null,
 ) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     // Every tier the catalog sells, smallest first. A tier with no row in the
@@ -656,6 +702,18 @@ private fun PlansStep(
                     isCurrent = currentPlanId == "${t}_$period",
                     onSelect = { onTier(t) },
                 )
+            }
+        }
+
+        if (pack != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.extra_minutes),
+                    Modifier.padding(start = 4.dp),
+                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.fillMaxWidth().background(AppSurfaces.card, ContinuousShape(14.dp))) {
+                    PackRow(pack, selected = tier == PACK, onSelect = { onTier(PACK) })
+                }
             }
         }
 
@@ -800,6 +858,65 @@ private fun LadderRow(
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold, color = SavingsGreen)
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The pack's rung: its minutes, that it is bought once and never expires,
+ * that no plan is needed — and its price per minute, the same comparison the
+ * plans carry (priced above Light per minute on purpose).
+ */
+@Composable
+private fun PackRow(pack: BillingService.Pack, selected: Boolean, onSelect: () -> Unit) {
+    val accent = MaterialTheme.colorScheme.primary
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val fill by androidx.compose.animation.animateColorAsState(
+        if (selected) accent.copy(alpha = 0.10f) else Color.Transparent,
+        androidx.compose.animation.core.tween(280), label = "packFill")
+    val edge by androidx.compose.animation.animateColorAsState(
+        if (selected) accent else Color.Transparent,
+        androidx.compose.animation.core.tween(280), label = "packEdge")
+    Row(
+        Modifier.fillMaxWidth()
+            .background(fill, ContinuousShape(14.dp))
+            .border(2.dp, edge, ContinuousShape(14.dp))
+            .clickable(onClick = onSelect)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
+            Icon(
+                if (selected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                contentDescription = null,
+                tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            )
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(stringResource(R.string.min, grouped(pack.minutes)),
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                maxLines = 1)
+            Text(stringResource(R.string.topup_one_time_no_expiry),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.topup_with_or_without_plan),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        pack.formattedPrice?.let { formatted ->
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(formatted, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.topup_once), style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (pack.priceMicros > 0 && pack.currency.isNotEmpty()) {
+                    Text(perMinuteLabel(LadderPrice(formatted, pack.priceMicros, pack.currency),
+                        pack.minutes, locale),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold, color = SavingsGreen)
                 }
             }
         }
