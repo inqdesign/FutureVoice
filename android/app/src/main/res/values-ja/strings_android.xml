@@ -255,4 +255,7 @@
     <string name="start_the_call">通話を始める</string>
     <string name="accent_original">そのまま</string>
     <string name="person_idea_tap_footer">タップすると、%sとのシーンを作れます。</string>
+    <string name="accent_american">米国</string>
+    <string name="accent_british">英国</string>
+    <string name="accent_australian">豪州</string>
 </resources>

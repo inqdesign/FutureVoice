@@ -255,4 +255,7 @@
     <string name="start_the_call">開始通話</string>
     <string name="accent_original">原聲</string>
     <string name="person_idea_tap_footer">點一下，就能做成和%s的情境。</string>
+    <string name="accent_american">美式</string>
+    <string name="accent_british">英式</string>
+    <string name="accent_australian">澳式</string>
 </resources>

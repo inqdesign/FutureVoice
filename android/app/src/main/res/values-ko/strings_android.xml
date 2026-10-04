@@ -255,4 +255,7 @@
     <string name="start_the_call">통화 시작</string>
     <string name="accent_original">그대로</string>
     <string name="person_idea_tap_footer">하나를 누르면 그 상황으로 바로 만들 수 있어요.</string>
+    <string name="accent_american">미국식</string>
+    <string name="accent_british">영국식</string>
+    <string name="accent_australian">호주식</string>
 </resources>

@@ -255,7 +255,7 @@ private fun VoiceRevivalScreen(
                                 }
                                 options.forEach { o ->
                                     AccentPill(
-                                        label = o.label,
+                                        label = accentLabel(o),
                                         selected = state.voiceAccentId == o.id,
                                         loading = false, enabled = !removingAccent,
                                         modifier = Modifier.weight(1f),
@@ -292,6 +292,7 @@ private fun VoiceRevivalScreen(
                 // Leaving without applying leaves the learner on the rebuilt,
                 // un-accented clone — the app has to know which voice it holds.
                 onCloneRebuilt = { id -> app.adoptRemixedVoice(id, "") },
+                initialAccent = it,
                 onDismiss = { accentToPick = null },
             )
         }
@@ -299,7 +300,7 @@ private fun VoiceRevivalScreen(
 }
 
 @Composable
-private fun AccentPill(
+internal fun AccentPill(
     label: String,
     selected: Boolean,
     loading: Boolean,

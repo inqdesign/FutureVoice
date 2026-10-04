@@ -258,4 +258,7 @@
     <string name="start_the_call">Lancer l’appel</string>
     <string name="accent_original">Original</string>
     <string name="person_idea_tap_footer">Touche-en une pour en faire une situation avec %s.</string>
+    <string name="accent_american">Américain</string>
+    <string name="accent_british">Anglais</string>
+    <string name="accent_australian">Australien</string>
 </resources>

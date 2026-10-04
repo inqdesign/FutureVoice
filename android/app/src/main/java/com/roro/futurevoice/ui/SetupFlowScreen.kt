@@ -91,12 +91,31 @@ private fun SetupFlowBody(
 ) {
     var step by remember { mutableIntStateOf(0) }
     var native by remember { mutableStateOf(initialNative) }
-    var target by remember { mutableStateOf(initialTarget) }
+    // Practice targets on offer — ALL of them. The language picked on the
+    // first step is the APP language, and learning the language the app is
+    // set to is immersion, which Me → App language has always allowed;
+    // filtering it made the result depend on the order things were set in
+    // (iOS `ae2a0c5`). Only the PRE-selection avoids it.
+    val targetChoices = LanguageCatalog.selectableTargets.map { it.code }
+    fun defaultTarget(nativeCode: String): String =
+        targetChoices.firstOrNull { !LanguageCatalog.sameLanguage(it, nativeCode) } ?: "en"
+    var target by remember {
+        mutableStateOf(if (LanguageCatalog.sameLanguage(initialTarget, initialNative))
+            defaultTarget(initialNative) else initialTarget)
+    }
+    /** Set once the learner taps a target — from then on a match with the app
+     *  language is their choice, not a default to move. */
+    var targetPickedByHand by remember { mutableStateOf(false) }
     var level by remember { mutableStateOf(initialLevel) }
     var goal by remember { mutableIntStateOf(10) }
 
-    val targetChoices = LanguageCatalog.selectableTargets.map { it.code }.filter { it != native }
-    fun resolveCollision() { if (target == native) target = targetChoices.firstOrNull() ?: "en" }
+    /** Leaving the language step: move a pre-selection that now matches the
+     *  app language. Leaving the target step with it is the learner's own
+     *  choice and stands. */
+    fun resolveCollision() {
+        if (step == 0 && !targetPickedByHand && LanguageCatalog.sameLanguage(target, native))
+            target = defaultTarget(native)
+    }
 
     Scaffold(
         topBar = {
@@ -167,7 +186,10 @@ private fun SetupFlowBody(
                 1 -> ChoiceList(targetChoices, selected = target,
                     title = { LanguageCatalog.endonym(it) },
                     subtitle = { LanguageCatalog.ownName(it, native) },
-                    footer = stringResource(R.string.your_fluent_self_speaks_this_language_in_your_own_voice_you_0a47cf)) { target = it }
+                    footer = stringResource(R.string.your_fluent_self_speaks_this_language_in_your_own_voice_you_0a47cf)) {
+                    target = it
+                    targetPickedByHand = true
+                }
                 2 -> ChoiceList(CefrLevel.entries.toList(), selected = level,
                     title = { LanguageCatalog.levelLabel(it, target) },
                     subtitle = { levelBlurb(it) }) { level = it }

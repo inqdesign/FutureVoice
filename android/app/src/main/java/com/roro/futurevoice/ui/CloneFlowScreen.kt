@@ -151,7 +151,7 @@ fun CloneFlowScreen(
     val nativeScript = remember(nativeLanguage) {
         VoiceCloneScript.handAuthored(nativeLanguage)
             // Same language on both sides means there is nothing to choose.
-            ?.takeIf { nativeLanguage.take(2) != targetLanguage.take(2) }
+            ?.takeIf { !com.roro.futurevoice.data.LanguageCatalog.sameLanguage(nativeLanguage, targetLanguage) }
     }
     val scriptLanguage = if (readInNative && nativeScript != null) nativeLanguage else targetLanguage
     val recorder = remember { WavRecorder() }
@@ -166,6 +166,14 @@ fun CloneFlowScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var greeting by remember { mutableStateOf<ByteArray?>(null) }
     var clonedVoiceId by remember { mutableStateOf<String?>(null) }
+    /** The accent the clone on screen was remixed with — null is the voice
+     *  as recorded. A fresh clone is always un-accented, which is the point
+     *  of showing it: a re-record visibly falls back to "Original". */
+    var accentId by remember { mutableStateOf<String?>(null) }
+    /** The accent whose takes the picker sheet opens on. */
+    var accentToPick by remember { mutableStateOf<com.roro.futurevoice.data.VoiceAccent?>(null) }
+    /** "Original" is rebuilding the clone from the saved recording. */
+    var removingAccent by remember { mutableStateOf(false) }
     val listenPlayer = remember { MediaPlayer() }
     val mp3 = remember { Mp3Player(context.cacheDir, source = "greeting") }
 
@@ -204,6 +212,34 @@ fun CloneFlowScreen(
         act = CloneAct.REVIEW
     }
 
+    /**
+     * Another voice became the one on screen — a remixed take was applied,
+     * the sheet rebuilt the plain clone to remix from, or "Original" rebuilt
+     * it. The outgoing clone is deleted upstream (a slot we pay for), and the
+     * greeting is re-made in the new voice. It is replayed only when [greet]:
+     * the voice itself changed, so this is a first hearing of a different
+     * clone — but never while the take picker is still busy.
+     */
+    fun adoptVoice(newId: String, accent: String?, greet: Boolean) {
+        val old = clonedVoiceId
+        clonedVoiceId = newId
+        accentId = accent?.takeIf { it.isNotEmpty() }
+        if (old != null && old != newId) scope.launch {
+            runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
+        }
+        greeting = null
+        scope.launch {
+            greeting = runCatching {
+                ElevenLabsClient(AuthRepository()).synthesize(
+                    voiceId = newId,
+                    text = VoiceCloneScript.greeting(targetLanguage),
+                    purpose = "greeting",
+                )
+            }.getOrNull()
+            if (greet) greeting?.let { mp3.play(it) }
+        }
+    }
+
     fun performClone() {
         act = CloneAct.UPLOADING
         error = null
@@ -222,6 +258,7 @@ fun CloneFlowScreen(
                     removeBackgroundNoise = (snr ?: 0f) < 22f,
                 )
                 clonedVoiceId = voiceId
+                accentId = null
                 // Before sign-up the voice is on the reclaim clock; a signed-in
                 // clone is not.
                 if (signedIn) com.roro.futurevoice.data.VoiceReclaim.clear(context)
@@ -617,11 +654,87 @@ fun CloneFlowScreen(
                     // replays. It speaks `paceSample`, sized so the three rungs
                     // are told apart. Takes are lazy — nothing is made until a
                     // pill is tapped, and the first tap fetches the other two.
-                    SpeedAudition(
-                        voiceId = clonedVoiceId,
-                        line = VoiceCloneScript.paceSample(targetLanguage),
-                        player = mp3,
-                    )
+                    // Keyed on the voice: an accent applied below is a new
+                    // voice, and the takes already heard belong to the old one.
+                    androidx.compose.runtime.key(clonedVoiceId) {
+                        SpeedAudition(
+                            voiceId = clonedVoiceId,
+                            line = VoiceCloneScript.paceSample(targetLanguage),
+                            player = mp3,
+                        )
+                    }
+
+                    // The accent, as four pills on the screen itself — never
+                    // behind a button (iOS `ce34464`). A clone recorded in the
+                    // native language, left on whatever accent the model
+                    // guessed, came out sounding Indian; and a re-record
+                    // silently dropped a picked accent. Here the selected pill
+                    // IS the live voice's accent. "Original" (never "No
+                    // accent" — iOS `6754be8`) is the voice as recorded.
+                    val accentOptions = remember(targetLanguage) {
+                        com.roro.futurevoice.data.VoiceAccentCatalog.options(targetLanguage)
+                    }
+                    if (accentOptions.isNotEmpty()) {
+                        Column(Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(stringResource(R.string.accent),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val sample = VoiceComparison.sampleFile(context.filesDir)
+                                AccentPill(
+                                    label = stringResource(R.string.accent_original),
+                                    selected = accentId == null, loading = removingAccent,
+                                    enabled = !removingAccent && (accentId == null || sample.exists()),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    // One of four equal choices, so no
+                                    // confirmation — any other brings an
+                                    // accent back.
+                                    if (accentId == null || removingAccent) return@AccentPill
+                                    mp3.stop()
+                                    removingAccent = true
+                                    com.roro.futurevoice.core.Analytics.capture(
+                                        "voice_accent_removed", mapOf("from" to "meet"))
+                                    scope.launch {
+                                        runCatching {
+                                            VoiceCloneClient(AuthRepository()).cloneVoice(
+                                                name = "Future Self",
+                                                sample = sample,
+                                                removeBackgroundNoise = false,
+                                            )
+                                        }.onSuccess { adoptVoice(it, null, greet = true) }
+                                            .onFailure { e -> error = e.message }
+                                        removingAccent = false
+                                    }
+                                }
+                                accentOptions.forEach { o ->
+                                    AccentPill(
+                                        label = accentLabel(o),
+                                        selected = accentId == o.id,
+                                        loading = false, enabled = !removingAccent,
+                                        modifier = Modifier.weight(1f),
+                                    ) { mp3.stop(); accentToPick = o }
+                                }
+                            }
+                        }
+                    }
+                    val picking = accentToPick
+                    val pickVoice = clonedVoiceId
+                    if (picking != null && pickVoice != null) {
+                        VoiceAccentSheet(
+                            voiceId = pickVoice,
+                            targetLanguage = targetLanguage,
+                            appliedAccentId = accentId,
+                            onApplied = { id, accent -> adoptVoice(id, accent, greet = true) },
+                            // Leaving without applying leaves the learner on
+                            // the rebuilt, un-accented clone.
+                            onCloneRebuilt = { id -> adoptVoice(id, null, greet = false) },
+                            initialAccent = picking,
+                            onDismiss = { accentToPick = null },
+                        )
+                    }
 
                     // Two exits, one button. With an account behind the
                     // session this is onboarding's last tap; on an anonymous
@@ -629,6 +742,12 @@ fun CloneFlowScreen(
                     // a voice they have HEARD rather than a promise.
                     Button(
                         onClick = {
+                            // The accent goes with the voice (same key as
+                            // iOS); the app reads it when the voice lands.
+                            context.getSharedPreferences("futurevoice", 0).edit().apply {
+                                accentId?.let { putString("futurevoice.voiceAccentId", it) }
+                                    ?: remove("futurevoice.voiceAccentId")
+                            }.apply()
                             if (signedIn) clonedVoiceId?.let(onCloned)
                             else act = CloneAct.ACCOUNT
                         },

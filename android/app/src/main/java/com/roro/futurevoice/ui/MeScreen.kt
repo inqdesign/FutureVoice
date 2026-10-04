@@ -658,11 +658,13 @@ private fun AddLanguageSheet(
     onAdd: (String, CefrLevel) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // Shippable targets, minus their own native language and anything they
-    // are already learning.
-    val choices = remember(nativeLanguage, enrolled) {
+    // Shippable targets not already enrolled. The app language is NOT
+    // excluded — it is the same value as the native language, and Me → App
+    // language already lets the two coincide (immersion). Excluding it meant
+    // a Japanese-UI learner could never add Japanese (iOS `ae2a0c5`).
+    val choices = remember(enrolled) {
         LanguageCatalog.selectableTargets.map { it.code }
-            .filter { it != nativeLanguage && it !in enrolled }
+            .filter { it !in enrolled }
     }
     var code by remember { mutableStateOf<String?>(null) }
     var level by remember { mutableStateOf(CefrLevel.A2) }

@@ -522,7 +522,10 @@
 - ☐ 2c.2 코치 모드(이렇게 말해 봐·단어 힌트·연습 통화) (`ede039e` 이후 코치 커밋들) + 문법 초점 (`45b397e`)
 - ◐ 2c.3 견고함: JSON 따옴표 복구 (`55aa93a`), 비ASCII 멱등 키 해시 (`6a9e866`), 이벤트 공통 속성 speed·speed_picked·coach (`74585bf`) — 코드·JVM 테스트(`GeminiJsonRepairTest`) 완료, `net/GeminiJson.kt`가 모델 JSON 디코딩 9곳·멱등 키 헤더 5곳, coach는 코치 모드가 생길 때까지 "off"; 남은 것: 폰에서 한글 이름 계정의 인사말 풀 생성·client_events/PostHog 행에 speed 확인
 - ◐ 2c.4 인사말: 풀을 언어·페르소나별로 (`58d6802`), 문장별 합성 0.42초 간격(오프너·보이스메일, `9f81572`), selfWarmth 오프너·보이스메일 + 풀 키 v2 (`a212c70`) — 앱 쪽 완료(`FreeTalkOpeners` 언어별 저장·옛 파일 이전·실패 텔레메트리, `talk/PacedSpeech.kt` + `PacedSpeechTest`, 풀 프롬프트 selfWarmth·키 v2). 보이스메일은 안드로이드에선 대본이 서버(`voicemail-script`)에서 쓰이고 음성은 게이트웨이가 말하므로(이미 문장별) 앱 몫 없음 — selfWarmth는 공용 엣지 함수 수정이 필요해 보류. 남은 것: 폰에서 두 문장 인사말의 0.42초 쉼 귀 확인
-- ☐ 2c.5 목소리: 프리셋은 자리, 한국어·일본어는 그 언어 목소리·이름 (`b49e91b`), 만나기 화면 억양 네 알약 (`ce34464` `6754be8`), 앱 언어도 배울 수 있게 (`ae2a0c5`)
+- ◐ 2c.5 목소리: 프리셋은 자리, 한국어·일본어는 그 언어 목소리·이름 (`b49e91b`), 만나기 화면 억양 네 알약 (`ce34464` `6754be8`), 앱 언어도 배울 수 있게 (`ae2a0c5`)
+  — 코드·테스트 끝(`VoicePresetSlotTest` 7). 자리 → 목소리는 `talk/VoicePreset.kt`, 갈아끼우는 곳은 `ElevenLabsClient.buildRequest`·게이트웨이 `start`·`PhraseAudioStore` 키(옛 자리 키는 조회 폴백, 미리듣기·통화 첫 인사는 폴백 없음).
+  기본 인물 이름은 `CounterpartStore.load`에서 학습 언어로(시안·민준·한별·준호 / 美咲·翔太·陽菜·健太). 만나기 화면 억양은 그대로·미국·영국·호주 알약, 억양 알약은 시트를 테이크 생성 중으로 연다.
+  "뜻" 버튼은 안드로이드 통화·책에 아직 없어서 숨길 것 없음. 남은 것: 폰에서 한국어로 Watch 장면·낯선 사람 통화·목소리 미리듣기가 한국어 목소리인지, 옛 장면 다시 보기가 옛 오디오로 재생되는지, 만나기 화면 억양 알약(그대로 재복제·억양 적용 뒤 인사 다시), 앱 언어와 같은 언어 학습 추가.
 - ◐ 2c.6 통화·복습: 통화 중 속도 인라인 (`6f416de`), 끼어든 답 합치기 + 통화 중 예약 전화 보류 (`0b2c14f`), 사람 상세 아이디어 → 작성 박스 (`19b7882`)
   — 코드·테스트 끝(`SayItAgainScriptTest` 끼어든 답 7 + 인코딩 1, `DailyCallHoldTest` 3). 속도는 시트 안 세 행(분할 버튼이던 것), 바뀌면 `vm.setSpeed` → 게이트웨이 `set`.
   끼어든 답은 `audio_start` 뒤 2.5초 안의 `interrupted`(iOS `cutInWindow`) → `Turn.talkedOver`(true일 때만 인코딩).

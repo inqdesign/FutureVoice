@@ -389,7 +389,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         // A fresh recording replaces whatever was parked or dropped.
         com.roro.futurevoice.data.VoiceParking.set(null)
         com.roro.futurevoice.data.VoiceParking.markDropped(null)
-        _state.update { it.copy(voiceId = voiceId) }
+        // The clone flow writes the accent it ended on (the meet act's pills);
+        // a fresh recording with none picked is the voice as recorded.
+        _state.update { it.copy(voiceId = voiceId, voiceAccentId = prefs.getString(ACCENT_KEY, null)) }
     }
 
     /** Last time the server was asked whether this phone's voice is parked. */
@@ -601,6 +603,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 it.copy(
                     restoringVoice = false,
                     voiceId = voiceId,
+                    // An anonymous onboarding that picked an accent on the
+                    // meet act lands here after the sign-up.
+                    voiceAccentId = prefs.getString(ACCENT_KEY, null),
                     targetLanguage = if (localSetup) it.targetLanguage
                         else profile?.targetLanguage ?: it.targetLanguage,
                     nativeLanguage = if (localSetup) it.nativeLanguage

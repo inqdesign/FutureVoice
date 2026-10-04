@@ -27,6 +27,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +73,13 @@ fun VoiceAccentSheet(
      * audio made with it), so they are told even when nothing is applied.
      */
     onCloneRebuilt: (voiceId: String) -> Unit = {},
+    /**
+     * Opened from an accent pill (the meet act, the revival screen): start
+     * making this accent's takes at once, so the tap that picked the accent
+     * is the one that asked (iOS `ce34464`). Listening and choosing stay the
+     * learner's.
+     */
+    initialAccent: VoiceAccent? = null,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -91,6 +99,39 @@ fun VoiceAccentSheet(
     var error by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(Unit) { onDispose { runCatching { player.stop() } } }
+
+    fun generate(chosen: VoiceAccent) {
+        generating = true; error = null
+        Analytics.capture("voice_accent_previews_requested", mapOf("accent" to chosen.id))
+        scope.launch {
+            runCatching {
+                // Takes always come from the UN-ACCENTED
+                // clone. A second pick used to remix the live
+                // voice — i.e. the previous remix — so the
+                // learners who tried hardest to find
+                // themselves drifted furthest (iOS `84795b6`).
+                // The phone's own recording is the way back.
+                if (appliedAccentId != null) {
+                    rebuiltFromSample(context)?.let { fresh ->
+                        sourceVoiceId = fresh
+                        onCloneRebuilt(fresh)
+                    }
+                }
+                client.previews(sourceVoiceId, chosen.prompt,
+                    VoiceAccentCatalog.sampleText(targetLanguage))
+            }.onSuccess { previews = it }
+                .onFailure {
+                    error = context.getString(R.string.couldnt_make_the_takes_try_again)
+                }
+            generating = false
+        }
+    }
+
+    LaunchedEffect(initialAccent) {
+        initialAccent?.let { first ->
+            if (options.any { it.id == first.id }) { accent = first; generate(first) }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = { if (!saving && !generating) onDismiss() }) {
         Column(
@@ -115,7 +156,8 @@ fun VoiceAccentSheet(
                             accent = o; previews = emptyList(); picked = null; error = null
                         },
                         label = {
-                            Text(if (o.id == appliedAccentId) "${o.label} ✓" else o.label)
+                            val label = accentLabel(o)
+                            Text(if (o.id == appliedAccentId) "$label ✓" else label)
                         },
                     )
                 }
@@ -124,32 +166,7 @@ fun VoiceAccentSheet(
             val chosen = accent
             if (chosen != null && previews.isEmpty()) {
                 Button(
-                    onClick = {
-                        generating = true; error = null
-                        Analytics.capture("voice_accent_previews_requested", mapOf("accent" to chosen.id))
-                        scope.launch {
-                            runCatching {
-                                // Takes always come from the UN-ACCENTED
-                                // clone. A second pick used to remix the live
-                                // voice — i.e. the previous remix — so the
-                                // learners who tried hardest to find
-                                // themselves drifted furthest (iOS `84795b6`).
-                                // The phone's own recording is the way back.
-                                if (appliedAccentId != null) {
-                                    rebuiltFromSample(context)?.let { fresh ->
-                                        sourceVoiceId = fresh
-                                        onCloneRebuilt(fresh)
-                                    }
-                                }
-                                client.previews(sourceVoiceId, chosen.prompt,
-                                    VoiceAccentCatalog.sampleText(targetLanguage))
-                            }.onSuccess { previews = it }
-                                .onFailure {
-                                    error = context.getString(R.string.couldnt_make_the_takes_try_again)
-                                }
-                            generating = false
-                        }
-                    },
+                    onClick = { generate(chosen) },
                     enabled = !generating,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -256,4 +273,15 @@ private suspend fun rebuiltFromSample(context: android.content.Context): String?
             removeBackgroundNoise = false,
         )
     }.getOrNull()
+}
+
+/** An accent's label in the app language (iOS uses the catalog keys
+ *  "American" / "British" / "Australian", shortened per language so four
+ *  pills fit one row: ja 米国, de USA, fr Anglais — iOS `6754be8`). */
+@Composable
+internal fun accentLabel(accent: VoiceAccent): String = when (accent.id) {
+    "en-US" -> stringResource(R.string.accent_american)
+    "en-GB" -> stringResource(R.string.accent_british)
+    "en-AU" -> stringResource(R.string.accent_australian)
+    else -> accent.label
 }

@@ -271,4 +271,7 @@
     <string name="start_the_call">Start the call</string>
     <string name="accent_original">Original</string>
     <string name="person_idea_tap_footer">Tap one to make it a situation with %s.</string>
+    <string name="accent_american">American</string>
+    <string name="accent_british">British</string>
+    <string name="accent_australian">Australian</string>
 </resources>
