@@ -51,8 +51,10 @@ struct SpeechPrompterView: View {
     // MARK: - Screen
 
     private var prompterScreen: some View {
+        // No header row: every point above the camera is prompter, so the
+        // line being read sits right under the lens and the reader's eyes
+        // look into the camera. The controls live on the camera card.
         VStack(spacing: 0) {
-            topBar
             SpeechTeleprompter(track: session.track, cursor: session.cursor,
                                language: session.script.language, textSize: textSize)
                 .frame(maxHeight: .infinity)
@@ -84,10 +86,9 @@ struct SpeechPrompterView: View {
                     .font(.subheadline.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.red)
                     .labelStyle(.titleAndIcon)
-            } else {
-                Text(session.script.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(.regularMaterial, in: Capsule())
             }
             Spacer()
 
@@ -118,8 +119,7 @@ struct SpeechPrompterView: View {
             .disabled(isRecording)
             .accessibilityLabel(Text("Prompter settings"))
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
     }
 
     /// How far through the script, as a thin bar — the one number a reader
@@ -146,6 +146,11 @@ struct SpeechPrompterView: View {
 
             controls
                 .padding(.bottom, 20)
+        }
+        .overlay(alignment: .top) {
+            topBar
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
         }
         .padding(.bottom, 8)
     }
@@ -268,6 +273,9 @@ struct SpeechTeleprompter: View {
 
     @StateObject private var scroller = PrompterScroller()
 
+    /// One line of text plus its spacing, and a little air above it.
+    private var readingLine: CGFloat { textSize * 1.75 + 8 }
+
     struct WordFrame: Equatable {
         var minX: CGFloat = 0
         var minY: CGFloat = 0
@@ -286,13 +294,16 @@ struct SpeechTeleprompter: View {
                                                         snap: cursor == 0)
                                  })
                 .equatable()
-                .offset(y: geo.size.height * 0.3 - scroller.position)
+                // The reading line is the SECOND line from the top: as close
+                // to the lens as it gets, with the line just read still
+                // visible above it.
+                .offset(y: readingLine - scroller.position)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
                 .clipped()
                 .mask(
                     LinearGradient(stops: [
                         .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.14),
+                        .init(color: .black, location: 0.05),
                         .init(color: .black, location: 0.86),
                         .init(color: .clear, location: 1),
                     ], startPoint: .top, endPoint: .bottom)
