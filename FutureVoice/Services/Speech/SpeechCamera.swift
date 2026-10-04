@@ -122,9 +122,10 @@ struct SpeechCameraPreview: UIViewRepresentable {
 /// within a few milliseconds of each other; that offset is below what an eye
 /// reads as out of sync, so they are laid on at zero.
 enum SpeechMediaMerger {
-    /// - Parameter videoLeadIn: seconds of the video before the voice
-    ///   started (the screen recording begins before the countdown); cut off
-    ///   so picture and voice start together.
+    /// - Parameter videoLeadIn: seconds the picture started BEFORE the voice
+    ///   (the screen capture begins before the countdown) — cut from the
+    ///   picture. Negative = the voice started first — cut from the voice.
+    ///   Either way they start together.
     static func merge(video: URL, audio: URL, to output: URL, videoLeadIn: Double = 0) async -> Bool {
         let composition = AVMutableComposition()
         let videoAsset = AVURLAsset(url: video)
@@ -137,12 +138,13 @@ enum SpeechMediaMerger {
               let cv = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
               let ca = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
         else { return false }
-        let lead = CMTime(seconds: max(0, videoLeadIn), preferredTimescale: 600)
-        let duration = CMTimeMinimum(CMTimeSubtract(vDuration, lead), aDuration)
+        let vLead = CMTime(seconds: max(0, videoLeadIn), preferredTimescale: 600)
+        let aLead = CMTime(seconds: max(0, -videoLeadIn), preferredTimescale: 600)
+        let duration = CMTimeMinimum(CMTimeSubtract(vDuration, vLead), CMTimeSubtract(aDuration, aLead))
         guard duration.seconds > 0.5 else { return false }
         do {
-            try cv.insertTimeRange(CMTimeRange(start: lead, duration: duration), of: vTrack, at: .zero)
-            try ca.insertTimeRange(CMTimeRange(start: .zero, duration: duration), of: aTrack, at: .zero)
+            try cv.insertTimeRange(CMTimeRange(start: vLead, duration: duration), of: vTrack, at: .zero)
+            try ca.insertTimeRange(CMTimeRange(start: aLead, duration: duration), of: aTrack, at: .zero)
         } catch { return false }
         cv.preferredTransform = transform
         // Passthrough first: the picture is already encoded, so it is copied,
@@ -163,44 +165,107 @@ enum SpeechMediaMerger {
 }
 
 /// The whole take screen as one video — prompter on top, camera below,
-/// exactly what the reader saw — through ReplayKit's in-app recording.
-/// The screen recorder's own mic stays OFF: the voice is the app's capture
-/// (voice processing, the worn mic), muxed in afterwards like the camera.
-/// iOS asks the learner once before it records ("Allow screen recording?")
-/// and again after a few minutes; a refusal falls back to the camera take.
-@MainActor
-enum SpeechScreenRecorder {
-    static var isRecording: Bool { RPScreenRecorder.shared().isRecording }
+/// exactly what the reader saw — through ReplayKit's in-app CAPTURE.
+///
+/// Capture, not `startRecording`: each frame arrives with its presentation
+/// time on the HOST clock, and the take's voice start is stamped on the same
+/// clock, so picture and voice are lined up by measurement. The first build
+/// used `startRecording` and lined them up by when the start call returned —
+/// which is not when the first frame was taken — and the voice drifted off
+/// the lips (reported on device, 2026-10-04).
+///
+/// The recorder's own mic stays OFF: the voice is the app's capture (voice
+/// processing, the worn mic), muxed in afterwards. iOS asks the learner
+/// before it records ("Allow screen recording?"); a refusal falls back to
+/// the camera take.
+final class SpeechScreenRecorder: @unchecked Sendable {
+    static let shared = SpeechScreenRecorder()
 
-    /// Starts recording. Returns when it actually started, or nil.
-    static func start() async -> Date? {
+    struct Result {
+        let url: URL
+        /// Host-clock seconds of the first frame.
+        let firstFrameHost: Double
+    }
+
+    private let queue = DispatchQueue(label: "com.roro.futurevoice.speech-screen")
+    private var writer: AVAssetWriter?
+    private var input: AVAssetWriterInput?
+    private var firstPTS: CMTime?
+    private var url: URL?
+    private var failed = false
+
+    var isCapturing: Bool { RPScreenRecorder.shared().isRecording }
+
+    /// Starts capturing. False when it couldn't (refused, unavailable).
+    @MainActor
+    func start() async -> Bool {
         let recorder = RPScreenRecorder.shared()
-        guard recorder.isAvailable, !recorder.isRecording else { return nil }
+        guard recorder.isAvailable, !recorder.isRecording else { return false }
         recorder.isMicrophoneEnabled = false
         recorder.isCameraEnabled = false
+        queue.sync {
+            writer = nil
+            input = nil
+            firstPTS = nil
+            failed = false
+            url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("speech-screen-\(UUID().uuidString).mov")
+        }
         do {
-            try await recorder.startRecording()
-            return Date()
+            try await recorder.startCapture { [weak self] buffer, type, error in
+                guard error == nil, type == .video, let self else { return }
+                self.queue.sync { self.append(buffer) }
+            }
+            return true
         } catch {
-            return nil
+            return false
         }
     }
 
-    /// Stops and writes the movie; nil if nothing was recorded.
-    static func stop() async -> URL? {
+    /// Runs on `queue`.
+    private func append(_ buffer: CMSampleBuffer) {
+        guard !failed, CMSampleBufferDataIsReady(buffer) else { return }
+        let pts = CMSampleBufferGetPresentationTimeStamp(buffer)
+        if writer == nil {
+            guard let url, let format = CMSampleBufferGetFormatDescription(buffer) else { failed = true; return }
+            let dims = CMVideoFormatDescriptionGetDimensions(format)
+            guard let w = try? AVAssetWriter(outputURL: url, fileType: .mov) else { failed = true; return }
+            let i = AVAssetWriterInput(mediaType: .video, outputSettings: [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: Int(dims.width),
+                AVVideoHeightKey: Int(dims.height),
+            ])
+            i.expectsMediaDataInRealTime = true
+            guard w.canAdd(i) else { failed = true; return }
+            w.add(i)
+            guard w.startWriting() else { failed = true; return }
+            w.startSession(atSourceTime: pts)
+            writer = w
+            input = i
+            firstPTS = pts
+        }
+        if let input, input.isReadyForMoreMediaData {
+            input.append(buffer)
+        }
+    }
+
+    /// Stops and closes the movie; nil if nothing usable was captured.
+    @MainActor
+    func stop() async -> Result? {
         let recorder = RPScreenRecorder.shared()
-        guard recorder.isRecording else { return nil }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("speech-screen-\(UUID().uuidString).mp4")
-        do {
-            try await recorder.stopRecording(withOutput: url)
-            return FileManager.default.fileExists(atPath: url.path) ? url : nil
-        } catch {
-            return nil
+        if recorder.isRecording { try? await recorder.stopCapture() }
+        let (w, first, u, bad): (AVAssetWriter?, CMTime?, URL?, Bool) = queue.sync {
+            input?.markAsFinished()
+            return (writer, firstPTS, url, failed)
         }
+        guard let w, let first, let u, !bad, w.status == .writing else { return nil }
+        await w.finishWriting()
+        guard w.status == .completed else { return nil }
+        return Result(url: u, firstFrameHost: first.seconds)
     }
 
-    static func discard() {
-        Task { if let url = await stop() { try? FileManager.default.removeItem(at: url) } }
+    @MainActor
+    func discard() {
+        Task { if let r = await stop() { try? FileManager.default.removeItem(at: r.url) } }
     }
 }

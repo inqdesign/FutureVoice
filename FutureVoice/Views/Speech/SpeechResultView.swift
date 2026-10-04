@@ -13,6 +13,9 @@ struct SpeechResultView: View {
     @ObservedObject private var store = SpeechStore.shared
     @StateObject private var audio = AudioPlayer()
     @State private var player: AVPlayer?
+    /// The video's own width ÷ height, read from the file, so the player is
+    /// exactly the picture's shape — no black bars.
+    @State private var videoAspect: CGFloat?
     @State private var savedToPhotos = false
     @State private var photoError: String?
     @State private var confirmDeleteVideo = false
@@ -142,9 +145,9 @@ struct SpeechResultView: View {
         if let video = take.videoFilename {
             Section {
                 VideoPlayer(player: player)
-                    // A screen take is phone-shaped, a camera take 3:4; the
-                    // player letterboxes either inside a fixed height.
-                    .frame(height: 480)
+                    .aspectRatio(videoAspect ?? 9 / 19.5, contentMode: .fit)
+                    .frame(maxHeight: 520)
+                    .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
                     .onAppear {
@@ -152,6 +155,9 @@ struct SpeechResultView: View {
                             preparePlayback()
                             player = AVPlayer(url: SpeechStore.mediaURL(video))
                         }
+                    }
+                    .task(id: video) {
+                        videoAspect = await Self.aspect(of: SpeechStore.mediaURL(video))
                     }
                 Button {
                     saveToPhotos(SpeechStore.mediaURL(video))
@@ -202,6 +208,15 @@ struct SpeechResultView: View {
                 }
             }
         }
+    }
+
+    private static func aspect(of url: URL) async -> CGFloat? {
+        guard let track = try? await AVURLAsset(url: url).loadTracks(withMediaType: .video).first,
+              let size = try? await track.load(.naturalSize),
+              let transform = try? await track.load(.preferredTransform) else { return nil }
+        let shown = size.applying(transform)
+        let w = abs(shown.width), h = abs(shown.height)
+        return h > 0 ? w / h : nil
     }
 
     private func preparePlayback() {

@@ -92,17 +92,8 @@ struct SpeechPrompterView: View {
             }
             .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .accessibilityLabel(Text("Close"))
+            .hiddenWhileRecording(isRecording)
 
-            Spacer()
-            if isRecording {
-                Label(SpeechFormat.duration(session.elapsed), systemImage: "record.circle")
-                    .font(.subheadline.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.red)
-                    .labelStyle(.titleAndIcon)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(.regularMaterial, in: Capsule())
-            }
             Spacer()
 
             HStack(spacing: 8) {
@@ -145,6 +136,20 @@ struct SpeechPrompterView: View {
             .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .disabled(isRecording)
             .accessibilityLabel(Text("Prompter settings"))
+            }
+            .hiddenWhileRecording(isRecording)
+        }
+        // The recording chip sits at the true horizontal centre, whatever
+        // widths the corner groups have.
+        .overlay {
+            if isRecording {
+                Label(SpeechFormat.duration(session.elapsed), systemImage: "record.circle")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.red)
+                    .labelStyle(.titleAndIcon)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(.regularMaterial, in: Capsule())
             }
         }
         .padding(.horizontal, 12)
@@ -236,7 +241,7 @@ struct SpeechPrompterView: View {
                     .frame(width: 52, height: 52)
             }
             .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
-            .disabled(isRecording)
+            .hiddenWhileRecording(isRecording)
             .accessibilityLabel(session.cameraOn ? Text("Turn camera off") : Text("Turn camera on"))
 
             Button {
@@ -263,7 +268,7 @@ struct SpeechPrompterView: View {
                     .frame(width: 52, height: 52)
             }
             .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
-            .disabled(isRecording)
+            .hiddenWhileRecording(isRecording)
             .accessibilityLabel(session.followVoice ? Text("Scrolling follows your voice") : Text("Scrolling at a steady speed"))
         }
     }
@@ -552,10 +557,18 @@ struct SpeechChromeButtonStyle: ButtonStyle {
                 .contentShape(Circle())
             Group {
                 if onCamera {
+                    // DARK glass: plain glass picks up a bright picture (a
+                    // lit wall, a white shirt) and the white glyph vanished
+                    // into it (reported on device). A dark tint keeps the
+                    // glyph readable on any background.
                     if #available(iOS 26.0, *) {
-                        label.glassEffect(.regular.interactive(), in: Circle())
+                        label
+                            .glassEffect(.regular.tint(.black.opacity(0.4)).interactive(), in: Circle())
+                            .environment(\.colorScheme, .dark)
                     } else {
-                        label.background(.ultraThinMaterial, in: Circle())
+                        label
+                            .background(Color.black.opacity(0.3), in: Circle())
+                            .background(.ultraThinMaterial, in: Circle())
                             .environment(\.colorScheme, .dark)
                     }
                 } else {
@@ -565,5 +578,16 @@ struct SpeechChromeButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
         }
+    }
+}
+
+private extension View {
+    /// Out of sight and out of reach while a take is being recorded — the
+    /// space is kept, so nothing else moves when it goes.
+    func hiddenWhileRecording(_ recording: Bool) -> some View {
+        opacity(recording ? 0 : 1)
+            .allowsHitTesting(!recording)
+            .accessibilityHidden(recording)
+            .animation(.easeOut(duration: 0.2), value: recording)
     }
 }
