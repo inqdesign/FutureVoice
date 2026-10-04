@@ -6,6 +6,13 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -250,7 +257,6 @@ fun SayItAgainScreen(
      *  from the finished screen doesn't wind the history back. */
     var promptStep by remember { mutableStateOf<SayItAgainScript.Step?>(null) }
     var oneOffRetry by remember { mutableStateOf(false) }
-    var endReadingNow by remember { mutableStateOf(false) }
     var skipRequested by remember { mutableStateOf(false) }
     var micError by remember { mutableStateOf<String?>(null) }
     /** A finished run whose event hasn't been sent yet (it waits for the
@@ -337,19 +343,19 @@ fun SayItAgainScreen(
     suspend fun waitForReadToEnd(text: String): Boolean {
         val firstDeadline = System.currentTimeMillis() + FIRST_VOICE_MS
         var voiced = false
-        while (!skipRequested && !endReadingNow && System.currentTimeMillis() < firstDeadline) {
+        while (!skipRequested && System.currentTimeMillis() < firstDeadline) {
             if (recorder.level >= VOICED_LEVEL) { voiced = true; break }
             delay(100)
         }
         if (skipRequested) return false
-        if (!voiced && !endReadingNow) return false
+        if (!voiced) return false
 
         val lineMs = maxOf(1_200, WordSplitter.count(text, language) * READ_MS_PER_WORD)
         val began = System.currentTimeMillis()
         val earliest = began + lineMs
         val hardStop = began + attemptCutoffMs(lineMs)
         var lastVoiced = began
-        while (!skipRequested && !endReadingNow && System.currentTimeMillis() < hardStop) {
+        while (!skipRequested && System.currentTimeMillis() < hardStop) {
             val now = System.currentTimeMillis()
             if (recorder.level >= VOICED_LEVEL) lastVoiced = now
             if (now >= earliest && now - lastVoiced >= STILL_SPEAKING_MS) break
@@ -397,7 +403,6 @@ fun SayItAgainScreen(
     suspend fun readStep(step: SayItAgainScript.Step) {
         phase = SayPhase.READING
         promptStep = step
-        endReadingNow = false
         skipRequested = false
         takes.remove(step.id)
         scoreJobs.remove(step.id)?.cancel()
@@ -562,8 +567,7 @@ fun SayItAgainScreen(
                         SayPhase.INTRO -> IntroPanel(spokenCount) { withMic { start(0) } }
                         SayPhase.LISTENING -> ListeningPanel(source.otherName) { skipRequested = true }
                         SayPhase.READING -> ReadingPanel(promptStep,
-                            onSkip = { skipRequested = true },
-                            onDone = { endReadingNow = true })
+                            onSkip = { skipRequested = true })
                         SayPhase.FINISHED -> FinishedPanel(
                             readCount = readCount, spokenCount = spokenCount, average = averageScore,
                             onRunAgain = { withMic {
@@ -749,38 +753,87 @@ private fun ListeningPanel(otherName: String, onSkip: () -> Unit) {
     }
 }
 
+/**
+ * The teleprompter (iOS `5b24d43`). A card washed in the learner's own
+ * Futureself colour with the line in a deep shade of the same hue
+ * (tone-on-tone), so it reads as a script held up in front of them rather
+ * than one more row of the transcript above it. There is no "done" button:
+ * the take ends on its own when they go quiet (`waitForReadToEnd`), the same
+ * way a call turn does, so a button would only ask them to confirm what the
+ * mic already knows. Skip stays, small, for a line they don't want to say.
+ */
 @Composable
-private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit, onDone: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically,
+private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
+    val context = LocalContext.current
+    val theme = com.roro.futurevoice.ui.brand.FutureselfTheme.live.value
+        ?: com.roro.futurevoice.ui.brand.FutureselfTheme.stored(context)
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val tint = theme.tint()
+    val ink = promptInk(tint, dark)
+    val mono = theme == com.roro.futurevoice.ui.brand.FutureselfTheme.MONO
+    // Mono's light accent is near-black charcoal, so the colours' 14% wash
+    // comes out a muddy mid-grey there; it gets a paper-light 5% instead.
+    val wash = if (mono && !dark) 0.05f else 0.14f
+    // Mono's accent IS its ink, so the fixed words — drawn in the accent —
+    // would vanish into the line; there the rest of the line steps back.
+    val lineInk = if (mono) ink.copy(alpha = 0.55f) else ink
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(shape)
+            .background(tint.copy(alpha = wash))
+            .border(1.dp, tint.copy(alpha = wash * 2), shape)
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Filled.Mic, contentDescription = null, modifier = Modifier.size(16.dp),
-                tint = Color(0xFFFF3B30))
+            Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF3B30)))
             Text(stringResource(if (step?.isCorrected == true) R.string.say_it_the_fixed_way
                 else R.string.say_your_line),
-                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                color = ink.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.skip),
+                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                color = ink.copy(alpha = 0.7f),
+                modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onSkip)
+                    .padding(horizontal = 4.dp, vertical = 2.dp))
         }
         if (step != null) {
             Text(if (step.isCorrected) highlightedCorrection(step.text, step.said)
                 else buildAnnotatedString { append(step.text) },
-                style = MaterialTheme.typography.headlineSmall)
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.1f),
+                fontWeight = FontWeight.SemiBold, color = lineInk,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth())
             if (step.note.isNotBlank()) {
                 Text(step.note, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    color = ink.copy(alpha = 0.7f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onSkip, contentPadding = PaddingValues(vertical = 12.dp,
-                horizontal = 18.dp)) { Text(stringResource(R.string.skip)) }
-            Button(onClick = onDone, modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(vertical = 12.dp)) {
-                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.done_reading))
-            }
+        // Says how the take ends, since nothing on the card does it.
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(14.dp),
+                tint = ink.copy(alpha = 0.5f))
+            Text(stringResource(R.string.say_again_moves_on), style = MaterialTheme.typography.labelMedium,
+                color = ink.copy(alpha = 0.5f))
         }
     }
+}
+
+/** The palette's hue deep enough to READ on its own wash (iOS
+ *  `FutureselfTheme.ink`): light mode pulls the accent toward black, dark
+ *  mode toward white, so text keeps its contrast on every palette, Amber
+ *  included, whose raw accent is too pale to read on its own wash. */
+private fun promptInk(tint: Color, dark: Boolean): Color {
+    val toward = if (dark) 1f else 0f
+    val k = if (dark) 0.55f else 0.5f
+    return Color(red = tint.red + (toward - tint.red) * k, green = tint.green + (toward - tint.green) * k,
+        blue = tint.blue + (toward - tint.blue) * k, alpha = 1f)
 }
 
 @Composable
