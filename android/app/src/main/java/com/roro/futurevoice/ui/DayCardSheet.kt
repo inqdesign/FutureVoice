@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -107,6 +110,52 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
 
     val layer = rememberGraphicsLayer()
 
+    /** The card as the share sheet ships it: the layer captures at the
+     *  SCREEN's density, but a feed picture goes out at the frame the feed
+     *  wants — 1080×1350 (4:5) / 1080×1080 — whatever phone made it. */
+    suspend fun renderCard(): Bitmap {
+        val raw = layer.toImageBitmap().asAndroidBitmap()
+        val targetW = 360 * DayCardFormat.EXPORT_SCALE
+        val targetH = format.height * DayCardFormat.EXPORT_SCALE
+        return if (raw.width == targetW) raw
+        else Bitmap.createScaledBitmap(raw, targetW, targetH, true)
+    }
+
+    // Where "Save to Photos" stands for the card as it is drawn NOW; any
+    // change to the card puts it back to idle, since that is a new picture.
+    var saveState by remember { mutableStateOf(SaveState.IDLE) }
+    var photosDenied by remember { mutableStateOf(false) }
+    LaunchedEffect(format, headline, photo) { saveState = SaveState.IDLE }
+    fun save() {
+        saveState = SaveState.SAVING
+        scope.launch {
+            val ok = runCatching { saveToGallery(context, renderCard()) }.getOrDefault(false)
+            saveState = if (ok) SaveState.SAVED else SaveState.IDLE
+        }
+    }
+    // Android 8–9 only: writing to the shared gallery needs the old storage
+    // permission there; 10+ inserts through MediaStore with none.
+    val storagePermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) save() else photosDenied = true }
+    if (photosDenied) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { photosDenied = false },
+            title = { Text(stringResource(R.string.allow_access_to_photos)) },
+            text = { Text(stringResource(R.string.photos_turn_on_in_settings)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    photosDenied = false
+                    context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.fromParts("package", context.packageName, null))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text(stringResource(R.string.open_settings)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { photosDenied = false }) { Text(stringResource(R.string.cancel)) }
+            })
+    }
+
     // Fully expanded: the card is 450dp tall and a half-height sheet cut it
     // off, so the learner saw a black slab with no footer and no date.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -143,6 +192,29 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
                 FilterChip(format == DayCardFormat.SQUARE,
                     onClick = { format = DayCardFormat.SQUARE },
                     label = { Text(stringResource(R.string.square)) })
+            }
+            // The card straight into the gallery (iOS `704cc4a`). The share
+            // sheet's own "save" is easy to miss among the apps, and keeping
+            // the day is the commonest thing to do with it.
+            OutlinedButton(
+                onClick = {
+                    val needsPermission = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q &&
+                        androidx.core.content.ContextCompat.checkSelfPermission(context,
+                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                        android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (needsPermission) storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    else save()
+                },
+                enabled = saveState == SaveState.IDLE,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                androidx.compose.material3.Icon(
+                    if (saveState == SaveState.SAVED) androidx.compose.material.icons.Icons.Filled.Check
+                    else androidx.compose.material.icons.Icons.Filled.Download,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp).size(18.dp))
+                Text(stringResource(if (saveState == SaveState.SAVED) R.string.saved_to_photos
+                    else R.string.save_to_photos))
             }
             // Headline — the day's talks to pick from, or write your own.
             if (data.topics.size > 1) {
@@ -194,15 +266,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
             Button(
                 onClick = {
                     scope.launch {
-                        val raw = layer.toImageBitmap().asAndroidBitmap()
-                        // The layer captures at the SCREEN's density; the card
-                        // is a feed picture, so it ships at the frame the feed
-                        // wants — 1080×1350 (4:5) / 1080×1080 — whatever phone
-                        // made it.
-                        val targetW = 360 * DayCardFormat.EXPORT_SCALE
-                        val targetH = format.height * DayCardFormat.EXPORT_SCALE
-                        val bmp = if (raw.width == targetW) raw
-                        else Bitmap.createScaledBitmap(raw, targetW, targetH, true)
+                        val bmp = renderCard()
                         val file = withContext(Dispatchers.IO) {
                             val dir = File(context.cacheDir, "share").apply { mkdirs() }
                             File(dir, "daycard.png").also { f ->
@@ -225,3 +289,41 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
         }
     }
 }
+
+private enum class SaveState { IDLE, SAVING, SAVED }
+
+/**
+ * The PNG into the shared gallery (Pictures/nawana) — the same bytes the
+ * share sheet hands out. API 29+ goes through MediaStore with no permission
+ * and holds the row PENDING until the bytes are written, so the gallery
+ * never shows a half-written picture.
+ */
+private suspend fun saveToGallery(context: android.content.Context, bmp: Bitmap): Boolean =
+    withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME,
+                "nawana-day-${System.currentTimeMillis()}.png")
+            put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                put(android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+                    android.os.Environment.DIRECTORY_PICTURES + "/nawana")
+                put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+        val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            ?: return@withContext false
+        val written = runCatching {
+            resolver.openOutputStream(uri)?.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) } ?: false
+        }.getOrDefault(false)
+        if (!written) {
+            resolver.delete(uri, null, null)
+            return@withContext false
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            resolver.update(uri, android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
+            }, null, null)
+        }
+        true
+    }

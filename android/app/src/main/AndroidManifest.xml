@@ -4,6 +4,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The day card's "Save to Photos" (iOS `704cc4a`): API 29+ inserts
+         through MediaStore with no permission; only Android 8–9 need this. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <!-- A live call holds the mic and a socket; without a foreground service
          Android 14+ takes both the moment the screen locks. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
