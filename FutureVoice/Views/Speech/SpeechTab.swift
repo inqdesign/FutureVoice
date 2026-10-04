@@ -7,7 +7,13 @@ struct SpeechTab: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = SpeechStore.shared
     @ObservedObject private var gate = BillingGate.shared
-    @State private var path: [UUID] = []
+    /// The script whose prompter is open. Tapping a script opens it straight
+    /// away — picking one IS starting to practise it.
+    @State private var practicing: SpeechScript?
+    /// A script just written or added, opened once its sheet has gone (a
+    /// cover raised while a sheet is still dismissing never appears).
+    @State private var openAfterSheet: SpeechScript?
+    @State private var editing: SpeechScript?
     @State private var composing = false
     @State private var addingOwn = false
     @State private var showingUpsell = false
@@ -18,12 +24,31 @@ struct SpeechTab: View {
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             List {
                 Section {
                     ForEach(store.scripts) { script in
-                        NavigationLink(value: script.id) {
+                        Button {
+                            practicing = script
+                        } label: {
                             SpeechScriptRow(script: script, best: store.best(for: script.id))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            if !script.isBuiltIn {
+                                Button(role: .destructive) {
+                                    store.deleteScript(id: script.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            if script.genre == .own {
+                                Button { editing = script } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.accentColor)
+                            }
                         }
                     }
                 } header: {
@@ -65,9 +90,6 @@ struct SpeechTab: View {
                     }
                 }
             }
-            .navigationDestination(for: UUID.self) { id in
-                SpeechScriptDetailView(scriptId: id)
-            }
         }
         .onAppear {
             store.reloadIfLanguageChanged()
@@ -75,22 +97,31 @@ struct SpeechTab: View {
             BillingGate.shared.warm()
         }
         .onChange(of: appState.targetLanguage) { _, _ in
-            path = []
             store.reload()
         }
-        .sheet(isPresented: $composing) {
+        .sheet(isPresented: $composing, onDismiss: openPending) {
             SpeechComposerSheet { script in
                 store.add(script)
-                path = [script.id]
+                openAfterSheet = script
             }
             .environmentObject(appState)
         }
-        .sheet(isPresented: $addingOwn) {
+        .sheet(isPresented: $addingOwn, onDismiss: openPending) {
             SpeechOwnScriptSheet(existing: nil) { script in
                 store.add(script)
-                path = [script.id]
+                openAfterSheet = script
             }
             .environmentObject(appState)
+        }
+        .sheet(item: $editing) { script in
+            SpeechOwnScriptSheet(existing: script) { updated in
+                store.add(updated)
+            }
+            .environmentObject(appState)
+        }
+        .fullScreenCover(item: $practicing) { script in
+            SpeechPrompterView(script: script, native: appState.nativeLanguage,
+                               level: appState.proficiency)
         }
         // Any script beyond the bundled one is Plus and up. The tap is
         // answered with what the feature is FIRST, never a bare paywall; the
@@ -103,6 +134,12 @@ struct SpeechTab: View {
             Button("Write with AI") { composing = true }
             Button("Add my own script") { addingOwn = true }
         }
+    }
+
+    private func openPending() {
+        guard let script = openAfterSheet else { return }
+        openAfterSheet = nil
+        practicing = script
     }
 }
 
@@ -149,140 +186,110 @@ enum SpeechScoreColor {
     }
 }
 
-// MARK: - Detail
+// MARK: - The whole script
 
-struct SpeechScriptDetailView: View {
-    let scriptId: UUID
-    @EnvironmentObject private var appState: AppState
-    @ObservedObject private var store = SpeechStore.shared
+/// The full text with its notes, opened from the prompter's script button —
+/// to read it through before a take, or to look something up.
+struct SpeechScriptSheet: View {
+    let script: SpeechScript
     @Environment(\.dismiss) private var dismiss
-    @State private var practicing = false
-    @State private var confirmDelete = false
-    @State private var editing = false
 
     var body: some View {
-        if let script = store.script(id: scriptId) {
-            content(script)
-        } else {
-            ContentUnavailableView("Script not found", systemImage: "doc.text")
-        }
-    }
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(script.title)
+                            .font(.title2.weight(.semibold))
+                        if !script.summary.isEmpty {
+                            Text(script.summary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(script.body)
+                            .font(.body)
+                            .lineSpacing(4)
+                            .padding(.top, 4)
+                            .textSelection(.enabled)
+                    }
+                    .padding(.vertical, 6)
+                } footer: {
+                    HStack(spacing: 6) {
+                        Label(script.genre.title, systemImage: script.genre.symbol)
+                        Text("·")
+                        Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
+                    }
+                }
 
-    private func content(_ script: SpeechScript) -> some View {
-        let takes = store.takes(for: script.id)
-        return List {
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(script.title)
-                        .font(.title2.weight(.semibold))
-                    if !script.summary.isEmpty {
-                        Text(script.summary)
-                            .font(.subheadline)
+                if !script.keyTerms.isEmpty {
+                    Section("Key terms") {
+                        ForEach(script.keyTerms, id: \.self) { term in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(term.term).font(.body.weight(.medium))
+                                if !term.meaning.isEmpty {
+                                    Text(term.meaning).font(.footnote).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !script.sources.isEmpty {
+                    Section("Sources") {
+                        Text(script.sources.joined(separator: " · "))
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
-                    Text(script.body)
-                        .font(.body)
-                        .lineSpacing(4)
-                        .padding(.top, 4)
-                        .textSelection(.enabled)
-                }
-                .padding(.vertical, 6)
-            } footer: {
-                HStack(spacing: 6) {
-                    Label(script.genre.title, systemImage: script.genre.symbol)
-                    Text("·")
-                    Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
                 }
             }
+            .navigationTitle("Script")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
 
-            if !script.keyTerms.isEmpty {
-                Section("Key terms") {
-                    ForEach(script.keyTerms, id: \.self) { term in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(term.term).font(.body.weight(.medium))
-                            if !term.meaning.isEmpty {
-                                Text(term.meaning).font(.footnote).foregroundStyle(.secondary)
+// MARK: - Takes
+
+/// Every take of one script, newest first, each opening its result.
+struct SpeechTakesSheet: View {
+    let scriptId: UUID
+    @ObservedObject private var store = SpeechStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let takes = store.takes(for: scriptId)
+        NavigationStack {
+            Group {
+                if takes.isEmpty {
+                    ContentUnavailableView("No takes yet", systemImage: "record.circle",
+                                           description: Text("Your recordings of this script will be here."))
+                } else {
+                    List {
+                        ForEach(takes) { take in
+                            NavigationLink {
+                                SpeechResultView(takeId: take.id)
+                            } label: {
+                                SpeechTakeRow(take: take)
                             }
                         }
-                    }
-                }
-            }
-
-            if !script.sources.isEmpty {
-                Section {
-                    Text(script.sources.joined(separator: " · "))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text("Sources")
-                }
-            }
-
-            if !takes.isEmpty {
-                Section("Takes") {
-                    ForEach(takes) { take in
-                        NavigationLink {
-                            SpeechResultView(takeId: take.id)
-                        } label: {
-                            SpeechTakeRow(take: take)
+                        .onDelete { offsets in
+                            for i in offsets { store.deleteTake(id: takes[i].id) }
                         }
                     }
-                    .onDelete { offsets in
-                        for i in offsets { store.deleteTake(id: takes[i].id) }
-                    }
                 }
             }
-        }
-        .navigationTitle(script.genre.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) {
-            Button {
-                practicing = true
-            } label: {
-                Label("Practice", systemImage: "record.circle")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .background(.bar)
-        }
-        .toolbar {
-            if !script.isBuiltIn {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        if script.genre == .own {
-                            Button { editing = true } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                        }
-                        Button(role: .destructive) { confirmDelete = true } label: {
-                            Label("Delete script", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
+            .navigationTitle("Takes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
-        }
-        .confirmationDialog("Delete this script and its takes?", isPresented: $confirmDelete,
-                            titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                store.deleteScript(id: script.id)
-                dismiss()
-            }
-        }
-        .sheet(isPresented: $editing) {
-            SpeechOwnScriptSheet(existing: script) { updated in
-                store.add(updated)
-            }
-            .environmentObject(appState)
-        }
-        .fullScreenCover(isPresented: $practicing) {
-            SpeechPrompterView(script: script, native: appState.nativeLanguage,
-                               level: appState.proficiency)
         }
     }
 }

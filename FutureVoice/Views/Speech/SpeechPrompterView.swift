@@ -7,6 +7,9 @@ struct SpeechPrompterView: View {
     @StateObject private var session: SpeechTakeSession
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speech.textSize") private var textSize: Double = 28
+    @State private var showingScript = false
+    @State private var showingTakes = false
+    @ObservedObject private var store = SpeechStore.shared
 
     init(script: SpeechScript, native: String, level: CEFRLevel, previewCursor: Int? = nil) {
         let session = SpeechTakeSession(script: script, native: native, level: level)
@@ -92,6 +95,21 @@ struct SpeechPrompterView: View {
             }
             Spacer()
 
+            HStack(spacing: 8) {
+                cornerButton("doc.text", label: Text("Whole script")) { showingScript = true }
+                cornerButton("clock.arrow.circlepath", label: Text("Takes")) { showingTakes = true }
+                    .overlay(alignment: .topTrailing) {
+                        let count = store.takes(for: session.script.id).count
+                        if count > 0 && !isRecording {
+                            Text("\(count)")
+                                .font(.caption2.weight(.bold).monospacedDigit())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.accentColor, in: Capsule())
+                                .offset(x: 4, y: -4)
+                        }
+                    }
             Menu {
                 Picker("Scrolling", selection: $session.followVoice) {
                     Label("Follow my voice", systemImage: "waveform").tag(true)
@@ -118,8 +136,23 @@ struct SpeechPrompterView: View {
             .buttonBorderShape(.circle)
             .disabled(isRecording)
             .accessibilityLabel(Text("Prompter settings"))
+            }
         }
         .padding(.horizontal, 12)
+        .sheet(isPresented: $showingScript) { SpeechScriptSheet(script: session.script) }
+        .sheet(isPresented: $showingTakes) { SpeechTakesSheet(scriptId: session.script.id) }
+    }
+
+    private func cornerButton(_ symbol: String, label: Text, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.body.weight(.semibold))
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .disabled(isRecording)
+        .accessibilityLabel(label)
     }
 
     /// How far through the script, as a thin bar — the one number a reader

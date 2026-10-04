@@ -87,6 +87,10 @@ final class SpeechTakeSession: ObservableObject {
     }
 
     func appear() async {
+        #if DEBUG
+        // A capture run shoots the screen, not a camera prompt.
+        if DebugCapture.isCapturing { return }
+        #endif
         if cameraOn { await camera.start() }
     }
 
