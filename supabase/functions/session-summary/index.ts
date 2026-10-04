@@ -81,6 +81,16 @@ Deno.serve(async (req) => {
   const metricsJSON = typeof body.metrics === "string"
     ? body.metrics : JSON.stringify(body.metrics ?? {})
   const stream = body.stream === true
+  // When the talk was (a rescued summary runs days later), the learner's
+  // UTC offset for calendar days, and the relationship register exception
+  // the client builds from the person's settings. All optional: an older
+  // build sends none and gets today's date in UTC and no exception line.
+  const talkDate = typeof body.talk_date === "string" && !isNaN(Date.parse(body.talk_date))
+    ? new Date(body.talk_date) : undefined
+  const utcOffsetMinutes = typeof body.utc_offset_minutes === "number"
+    ? Math.max(-14 * 60, Math.min(14 * 60, Math.round(body.utc_offset_minutes))) : 0
+  const relationshipRegisterLine = typeof body.relationship_register_line === "string"
+    ? body.relationship_register_line.slice(0, 600) : ""
 
   const rec = await recordFreeUsage({
     supabase, userId: user.id, action: "gemini_summary", purpose: "summary",
@@ -95,6 +105,7 @@ Deno.serve(async (req) => {
   const system = summarySystemPrompt({
     targetLanguage, nativeLanguage, profile: body.profile ?? {},
     knownAboutUser, rememberedNotes, shareCorrections, expressionBudget,
+    talkDate, utcOffsetMinutes, relationshipRegisterLine,
   })
   // Same user message SessionSummarizer.swift builds.
   const userMessage = `transcript:\n${transcript}\n\nmetrics:\n${metricsJSON}`

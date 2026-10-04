@@ -183,7 +183,7 @@ def ts_template(s: str) -> str:
 # If any of these Swift bodies change at a newer ref, the TS twin below is
 # stale: re-port it, then update the fingerprint.
 PINNED = {
-    (ENGINE, "age"): "769c7356b6ee",
+    (ENGINE, "age"): "9fa7dc53394b",
     (CATALOG, "englishName"): "d10d7ab844b5",
     (CATALOG, "writesSpaces"): "337b88e9cabd",
     (CATALOG, "base"): "3e2d40bfa431",
@@ -208,6 +208,10 @@ INTERP = {
     "expressionBudget": "${expressionBudget}",
     "registerGuard(targetLanguage)": "${registerGuard(opts.targetLanguage)}",
     "unspacedExpressionNote(targetLanguage)": "${unspacedExpressionNote(opts.targetLanguage)}",
+    "PromptClock.dayLine(talkDate ?? now)": "${dayLine(opts.talkDate ?? now, utcOffset)}",
+    # Built by the client (it holds the person's registers; Android
+    # `relationshipRegisterLine`) and inserted as is — "" for everyone else.
+    "relationshipRegisterLine(targetLanguage, counterpart: counterpart)": "${opts.relationshipRegisterLine ?? \"\"}",
     norm('knownAboutUser.isEmpty ? "(nothing yet)" : knownAboutUser.map { "- \\($0)" }'
          '.joined(separator: "\\n")'): "${knownBlock}",
     norm('rememberedNotes.isEmpty ? "(nothing yet)" : rememberedNotes.enumerated().map { '
@@ -311,14 +315,32 @@ export function writesSpaces(code: string): boolean {{
   return !["ja", "zh"].includes(base(code))
 }}
 
-/** `ConversationEngine.age(of:at:)` — coarse, elapsed-seconds based (iOS 1.1.1). */
-export function age(learnedAt: Date, now: Date = new Date()): string {{
-  const days = Math.max(0, Math.floor((now.getTime() - learnedAt.getTime()) / 86_400_000))
+/** Whole calendar days in the learner's zone (`PromptClock.calendarDays`):
+ *  a line heard at 23:00 is "yesterday" at 08:00. The server has no zone of
+ *  its own, so the client sends its UTC offset in minutes. */
+export function calendarDays(from: Date, to: Date, utcOffsetMinutes = 0): number {{
+  const day = (d: Date) => Math.floor((d.getTime() + utcOffsetMinutes * 60_000) / 86_400_000)
+  return Math.max(0, day(to) - day(from))
+}}
+
+/** `ConversationEngine.age(of:at:)` — calendar days (iOS 1.1.4). */
+export function age(learnedAt: Date, now: Date = new Date(), utcOffsetMinutes = 0): string {{
+  const days = calendarDays(learnedAt, now, utcOffsetMinutes)
   if (days === 0) return "today"
   if (days === 1) return "yesterday"
   if (days < 14) return `${{days}} days ago`
   if (days < 60) return `${{Math.floor(days / 7)}} weeks ago`
   return `${{Math.floor(days / 30)}} months ago`
+}}
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August",
+  "September", "October", "November", "December"]
+
+/** `PromptClock.dayLine` — "Monday, 28 September 2026", in the learner's zone. */
+export function dayLine(at: Date, utcOffsetMinutes = 0): string {{
+  const d = new Date(at.getTime() + utcOffsetMinutes * 60_000)
+  return `${{WEEKDAYS[d.getUTCDay()]}}, ${{d.getUTCDate()}} ${{MONTHS[d.getUTCMonth()]}} ${{d.getUTCFullYear()}}`
 }}
 
 /** `ConversationEngine.expressionBudget(fluentTurns:)`. */
@@ -379,12 +401,19 @@ export function summarySystemPrompt(opts: {{
   shareCorrections?: ShareCorrection[]
   expressionBudget?: number
   now?: Date
+  /** When the talk happened (a rescued summary runs days later). */
+  talkDate?: Date
+  /** The learner's UTC offset in minutes, for calendar days. */
+  utcOffsetMinutes?: number
+  /** The client-built relationship register exception ("" when none). */
+  relationshipRegisterLine?: string
 }}): string {{
   const languageName = englishName(opts.targetLanguage)
   const nativeName = englishName(opts.nativeLanguage)
   const contract = coachingContract(opts.targetLanguage, opts.nativeLanguage)
   const profileJSON = JSON.stringify(opts.profile ?? {{}})
   const now = opts.now ?? new Date()
+  const utcOffset = opts.utcOffsetMinutes ?? 0
   const known = opts.knownAboutUser ?? []
   const notes = opts.rememberedNotes ?? []
   const corrections = opts.shareCorrections ?? []
@@ -392,7 +421,7 @@ export function summarySystemPrompt(opts: {{
   // Hand-ported list blocks (pinned to the Swift expressions by the generator).
   const knownBlock = known.length === 0 ? "(nothing yet)" : known.map((k) => `- ${{k}}`).join("\\n")
   const rememberedBlock = notes.length === 0 ? "(nothing yet)"
-    : notes.map((n, i) => `${{i + 1}}. (${{age(n.learnedAt, now)}}, ${{n.kind}}) ${{n.text}}`).join("\\n")
+    : notes.map((n, i) => `${{i + 1}}. (${{age(n.learnedAt, now, utcOffset)}}, ${{n.kind}}) ${{n.text}}`).join("\\n")
   const correctionsBlock = corrections.length === 0 ? "(no corrections yet)"
     : corrections.map((c) => `- ${{c.from}} → ${{c.to}}: ${{c.text}}`).join("\\n")
   return `{summary}`

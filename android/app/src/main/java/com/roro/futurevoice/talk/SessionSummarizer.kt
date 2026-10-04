@@ -179,6 +179,9 @@ object SessionSummarizer {
             persona = persona,
             rememberedNotes = rememberedNotes,
             metrics = metrics.promptJson(),
+            relationshipRegisterLine = session.counterpartId?.let { id ->
+                com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }
+            }.let { ConversationCharacter.relationshipRegisterLine(session.targetLanguage, it) },
         )
         // Stable key: a retry re-runs the SAME logical request for free as
         // long as the transcript hasn't grown (iOS: "summary:<id>:<turns>").
@@ -410,6 +413,8 @@ object SessionSummarizer {
         persona: UserPersona?,
         rememberedNotes: List<PersonaNote>,
         metrics: JsonObject,
+        relationshipRegisterLine: String = "",
+        utcOffsetMinutes: Int = java.util.TimeZone.getDefault().getOffset(session.startedAt) / 60_000,
     ): SessionSummaryClient.RequestBody = SessionSummaryClient.RequestBody(
         target_language = session.targetLanguage,
         native_language = nativeLanguage,
@@ -427,6 +432,13 @@ object SessionSummarizer {
         expression_budget = expressionBudget(session.turns.count { it.role == TurnRole.FLUENT_SELF }),
         transcript = formatTranscript(session.turns),
         metrics = metrics,
+        // The talk's own date, dated by its last line (iOS: the summary is
+        // told the TALK's date — a rescued summary runs days later).
+        talk_date = java.time.Instant.ofEpochMilli(
+            session.turns.maxOfOrNull { it.timestamp } ?: session.endedAt ?: session.startedAt)
+            .truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString(),
+        utc_offset_minutes = utcOffsetMinutes,
+        relationship_register_line = relationshipRegisterLine,
     )
 
     /** `ConversationEngine.formatTranscript` — role-labelled lines. */

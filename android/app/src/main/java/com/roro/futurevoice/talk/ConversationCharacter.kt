@@ -210,8 +210,13 @@ object ConversationCharacter {
      * the person in a language that marks it, so every prompt without one —
      * the future-self call, a stranger, an unset person — is byte-identical.
      */
-    fun relationshipRegisterLine(targetLanguage: String, cast: ConversationEngine.Cast?): String {
-        val p = cast?.person ?: return ""
+    fun relationshipRegisterLine(targetLanguage: String, cast: ConversationEngine.Cast?): String =
+        relationshipRegisterLine(targetLanguage, cast?.person)
+
+    /** The same line from the person alone — the summary request builds it
+     *  from the saved talk's `counterpartId` (iOS passes `counterpart:`). */
+    fun relationshipRegisterLine(targetLanguage: String, person: com.roro.futurevoice.data.Counterpart?): String {
+        val p = person ?: return ""
         val mine = p.myRegister ?: return ""
         if (!SpeechRegister.hasForms(targetLanguage)) return ""
         val form = mine.promptDescription(targetLanguage)

@@ -43,6 +43,12 @@ class SessionSummaryClient(private val auth: AuthRepository) {
         val transcript: String,
         val metrics: JsonObject,
         val stream: Boolean = true,
+        /** The talk's date (ISO-8601) and the learner's UTC offset — the
+         *  prompt names the talk's local day and counts calendar days. */
+        val talk_date: String? = null,
+        val utc_offset_minutes: Int = 0,
+        /** The relationship register exception built from the person ("" = none). */
+        val relationship_register_line: String = "",
     )
 
     /** One remembered line: `kind` "fact"|"now", `learned_at` ISO-8601 (the server writes its age). */
