@@ -465,7 +465,7 @@ struct PageIntroSheet: View {
                     .init(title: explain("Weekly test"),
                           detail: explain("Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open.")),
                 ],
-                note: explain("What you get wrong comes back in next week's test, and at the start of each month a monthly test gathers that month's misses. The test day is Saturday at 10:00 unless you change it.")) { ReviewWeekMock() }
+                note: explain("What you get wrong comes back in the next weeks' tests until you get it right. The test day is Saturday at 10:00 unless you change it.")) { ReviewWeekMock() }
 
         // MARK: Progress
         case (.progress, 0):

@@ -48,8 +48,6 @@ struct PracticeTab: View {
     @State private var hasUnseenWeek = false
     @State private var weekRecapAction: WeekRecapSheet.Action?
     @State private var weeklyTestState: WeeklyTestSchedule.State = .ready
-    @State private var showingMonthlyTest = false
-    @State private var monthlyTestState: WeeklyTestSchedule.MonthlyState = .none
     /// A per-item callback was tapped — open exactly this card. Word/phrase
     /// items ride in a one-card review deck; a sentence opens its drill card.
     @State private var focusedReviewItem: StudyDeckItem?
@@ -333,13 +331,6 @@ struct PracticeTab: View {
                 }
             }) {
                 WeekRecapArchiveView { weekRecapAction = $0 }
-                    .environmentObject(appState)
-            }
-            .sheet(isPresented: $showingMonthlyTest, onDismiss: {
-                reload()
-                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
-            }) {
-                WeeklyTestView(kind: .monthly)
                     .environmentObject(appState)
             }
             .sheet(item: $shadowSession, onDismiss: reload) { session in
@@ -672,13 +663,6 @@ struct PracticeTab: View {
 
     // MARK: - The week (header)
 
-    private var monthlyTestIsOpen: Bool {
-        switch monthlyTestState {
-        case .ready, .inProgress: return true
-        case .none, .done: return false
-        }
-    }
-
     /// The week in progress and every closed week behind it — one door to
     /// the archive. Dot while a closed week hasn't been opened yet.
     private var showsWeekArchive: Bool {
@@ -734,14 +718,6 @@ struct PracticeTab: View {
                 }
                 .accessibilityLabel(Text("Your week"))
                 .accessibilityIdentifier("practice.weekRecap")
-                .tint(Color(.label))
-            }
-            if monthlyTestIsOpen {
-                Button { showingMonthlyTest = true } label: {
-                    headerIcon("calendar.badge.checkmark", dot: .accentColor)
-                }
-                .accessibilityLabel(Text("Monthly test"))
-                .accessibilityIdentifier("practice.monthlyTest")
                 .tint(Color(.label))
             }
         }
@@ -1211,7 +1187,6 @@ struct PracticeTab: View {
         let tests = WeeklyTestStore.shared.load()
         weeklyTestState = WeeklyTestSettings.shared.schedule.state(
             tests: tests, settings: WeeklyTestSettings.shared)
-        monthlyTestState = WeeklyTestSettings.shared.schedule.monthlyState(tests: tests)
         _ = WeekRecapStore.shared.lastWeek()   // freezes the closed week
         thisWeek = WeekRecapBuilder.thisWeek()
         let pastWeeks = WeekRecapStore.shared.archive()

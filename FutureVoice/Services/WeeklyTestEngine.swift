@@ -19,9 +19,11 @@ import Foundation
 ///   upgrade  ← the week report's leaned-on words — the learner's line with
 ///              the word marked, pick the better one
 ///
-/// Last week's wrong answers come back as this week's first items
-/// (`maxRetake`), and once a month every wrong answer of the month is dealt
-/// again as the monthly paper (`buildMonthly`).
+/// The last few weeks' wrong answers come back in this week's paper
+/// (`maxRetake`, from `retakeWeeks` tests) until they are answered right.
+/// There is ONE test: a separate monthly paper gathered the same misses
+/// and was removed on 2026-10-05 (founder: "don't keep a weekly and a
+/// monthly test apart").
 ///
 /// Every grade is computed in code — the only model call is the dictionary
 /// lookup that writes a word's meaning, which is free and cached. No LLM
@@ -47,10 +49,13 @@ enum WeeklyTestEngine {
     /// when the deck hasn't been opened yet. The writing carries on past it
     /// (and lands in the report); the paper just goes without.
     static let coachWait: TimeInterval = 25
-    /// Wrong answers of the previous test dealt again this week.
-    static let maxRetake = 3
-    /// The monthly paper's ceiling.
-    static let maxMonthly = 20
+    /// Wrong answers of recent tests dealt again this week.
+    static let maxRetake = 5
+    /// How many finished weekly papers the retakes are drawn from — about a
+    /// month, which is what the monthly paper used to gather.
+    static let retakeWeeks = 4
+    /// Ceiling for a paper of one test's own misses (`retryPaper`).
+    static let maxRetry = 20
     /// A spoken line passes at the shadow browser's own retry bar.
     static let speakPassScore = PracticeStats.retryThreshold
     /// Below this the week has too little in it to be a test — the tab says
@@ -82,9 +87,10 @@ enum WeeklyTestEngine {
     /// Builds this week's test, or nil when the window holds fewer than
     /// `minItems` gradable things. Reads the active language's stores.
     /// `lastTest` is the latest WEEKLY paper (`WeeklyTestStore.latestWeekly`);
-    /// a monthly one is ignored for the window and for retakes.
+    /// `recentTests` the finished weekly papers the retakes come from.
     static func build(
         lastTest: WeeklyTest?,
+        recentTests: [WeeklyTest] = [],
         appState: AppState,
         now: Date = Date()
     ) async -> WeeklyTest? {
@@ -122,11 +128,16 @@ enum WeeklyTestEngine {
         let coach = await weekCoach(appState: appState, now: now)
         items += await grammarItems(coach: coach, userTurns: userTurns, appState: appState, now: now, rng: &rng)
         items += upgradeItems(coach: coach, userTurns: userTurns, appState: appState, rng: &rng)
-        // What last week got wrong is asked again first — the test is a
+        // What recent weeks got wrong is asked again — the test is a
         // review, and a miss is the most certain material there is.
-        if let last = lastTest, last.isFinished, !last.isMonthly {
+        let sources = (recentTests + [lastTest].compactMap { $0 })
+            .filter { $0.isFinished && !$0.isMonthly }
+        var unique: [UUID: WeeklyTest] = [:]
+        for t in sources { unique[t.id] = t }
+        let recent = unique.values.sorted { $0.createdAt > $1.createdAt }.prefix(retakeWeeks)
+        if !recent.isEmpty {
             let fresh = Set(items.map { itemKey($0) })
-            items += retakes(from: [last], limit: maxRetake, excluding: fresh,
+            items += retakes(from: Array(recent), limit: maxRetake, excluding: fresh,
                              language: appState.targetLanguage, rng: &rng)
         }
 
@@ -146,36 +157,18 @@ enum WeeklyTestEngine {
                           periodStart: start, periodEnd: end, createdAt: now, items: items)
     }
 
-    // MARK: - Monthly
-
-    /// The monthly paper: every item the given weekly tests got wrong, each
-    /// asked once, choices reshuffled. nil under `minItems` — a month with
-    /// little wrong in it has nothing to sit.
-    static func buildMonthly(from tests: [WeeklyTest], targetLanguage: String,
-                             now: Date = Date()) -> WeeklyTest? {
-        let id = UUID()
-        var rng = WeeklyTestRandom(seed: id)
-        var items = retakes(from: tests, limit: maxMonthly, excluding: [],
-                            language: targetLanguage, rng: &rng)
-        guard items.count >= minItems else { return nil }
-        items.shuffle(using: &rng)
-        if let first = items.first, first.kind == .listen || first.kind == .speak,
-           let swap = items.firstIndex(where: { $0.kind != .listen && $0.kind != .speak }) {
-            items.swapAt(0, swap)
-        }
-        let start = tests.compactMap(\.finishedAt).min() ?? now
-        return WeeklyTest(id: id, targetLanguage: targetLanguage, kind: .monthly,
-                          periodStart: start, periodEnd: now, createdAt: now, items: items)
-    }
-
     /// Wrong answers of `tests`, newest test first, one per distinct answer,
-    /// as fresh items with their choices reshuffled.
-    private static func retakes(from tests: [WeeklyTest], limit: Int, excluding: Set<String>,
+    /// as fresh items with their choices reshuffled. A miss that a NEWER test
+    /// asked again is that test's to report: answered right there, it is
+    /// done and never comes back; wrong again, the newer miss is the one dealt.
+    static func retakes(from tests: [WeeklyTest], limit: Int, excluding: Set<String>,
                                 language: String, rng: inout WeeklyTestRandom) -> [WeeklyTestItem] {
         var out: [WeeklyTestItem] = []
         var seen = excluding
         for test in tests.sorted(by: { $0.createdAt > $1.createdAt }) {
             let wrong = Set(test.answers.filter { !$0.correct }.map(\.itemId))
+            let asked = Set(test.items.map { itemKey($0) })
+            defer { seen.formUnion(asked) }
             for item in test.items where wrong.contains(item.id) && isValid(item, language: language) {
                 guard out.count < limit else { return out }
                 let key = itemKey(item)
@@ -202,7 +195,7 @@ enum WeeklyTestEngine {
     /// place, never saved. nil when nothing was missed.
     static func retryPaper(from test: WeeklyTest) -> WeeklyTest? {
         var rng = WeeklyTestRandom(seed: UUID())
-        let items = retakes(from: [test], limit: maxMonthly, excluding: [],
+        let items = retakes(from: [test], limit: maxRetry, excluding: [],
                             language: test.targetLanguage, rng: &rng)
         guard !items.isEmpty else { return nil }
         var paper = WeeklyTest(id: UUID(), targetLanguage: test.targetLanguage, kind: test.kind,

@@ -98657,6 +98657,52 @@
         }
       }
     },
+    "What you get wrong comes back in the next weeks' tests until you get it right. The test day is Saturday at 10:00 unless you change it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du falsch hast, kommt in den Tests der nächsten Wochen wieder, bis du es richtig hast. Der Testtag ist Samstag um 10:00, wenn du ihn nicht änderst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que fallas vuelve en las pruebas de las semanas siguientes hasta que lo aciertes. La prueba se abre los sábados a las 10:00 salvo que lo cambies."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce que tu rates revient dans les tests des semaines suivantes jusqu’à ce que tu le réussisses. Le test ouvre le samedi à 10:00 sauf si tu le changes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間違えた問題は、正解するまで次の週からのテストにまた出ます。テストは、変えなければ土曜の午前10時に開きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "틀린 문제는 맞힐 때까지 다음 주 테스트들에 다시 나와요. 테스트는 따로 바꾸지 않으면 토요일 오전 10시에 열려요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "答错的题会在接下来几周的测验里再出现，直到你答对为止。测验时间默认是周六 10:00，可以修改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "答錯的題目會在接下來幾週的測驗再出現，直到你答對為止。沒改的話，測驗在每週六上午 10:00 開放。"
+          }
+        }
+      }
+    },
     "What you learn today is gone in a few days" : {
       "localizations" : {
         "de" : {

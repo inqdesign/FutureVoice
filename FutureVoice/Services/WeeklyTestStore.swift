@@ -198,51 +198,6 @@ struct WeeklyTestSchedule: Equatable {
         if settings.isThin(opening: opening) { return .thin(next: next) }
         return .ready
     }
-
-    // MARK: Monthly
-
-    /// The monthly paper's state. It opens with the FIRST weekly opening of
-    /// each calendar month and collects the wrong answers of every weekly
-    /// test finished since the previous month's first opening — the month
-    /// that just ended, in the learner's own week rhythm.
-    enum MonthlyState: Equatable {
-        /// Nothing to collect (no month behind us, or too little wrong in it).
-        case none
-        /// Wrong answers are waiting; tap builds the paper from `sources`.
-        case ready(sources: [WeeklyTest])
-        case inProgress(WeeklyTest)
-        case done(WeeklyTest)
-    }
-
-    /// The first opening in the calendar month that `currentOpening` falls in.
-    func monthOpening(now: Date = Date(), calendar: Calendar = .current) -> Date {
-        var opening = currentOpening(now: now, calendar: calendar)
-        let month = calendar.dateComponents([.year, .month], from: opening)
-        while true {
-            let previous = opening.addingTimeInterval(-7 * 86_400)
-            guard calendar.dateComponents([.year, .month], from: previous) == month else { return opening }
-            opening = previous
-        }
-    }
-
-    func monthlyState(tests: [WeeklyTest], now: Date = Date(), calendar: Calendar = .current) -> MonthlyState {
-        let opening = monthOpening(now: now, calendar: calendar)
-        if let test = tests.first(where: { $0.isMonthly && $0.createdAt >= opening }) {
-            return test.isFinished ? .done(test) : .inProgress(test)
-        }
-        // The month behind this opening: from the previous month's first
-        // opening up to this one.
-        let previousOpening = monthOpening(now: opening.addingTimeInterval(-1), calendar: calendar)
-        let sources = tests.filter { test in
-            guard !test.isMonthly, let finished = test.finishedAt else { return false }
-            return finished >= previousOpening && finished < opening
-        }
-        let wrong = Set(sources.flatMap { test in
-            let missed = Set(test.answers.filter { !$0.correct }.map(\.itemId))
-            return test.items.filter { missed.contains($0.id) }.map(WeeklyTestEngine.itemKey)
-        })
-        return wrong.count >= WeeklyTestEngine.minItems ? .ready(sources: sources) : .none
-    }
 }
 
 // MARK: - Reminder

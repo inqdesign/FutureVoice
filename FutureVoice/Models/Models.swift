@@ -1906,8 +1906,8 @@ struct DrillCardEnrichment: Codable, Hashable {
 /// item. Frozen once built (`items`), so a test read later still asks what
 /// it asked; the answers accumulate as the learner plays.
 struct WeeklyTest: Codable, Identifiable, Equatable {
-    /// A weekly paper from the week's material, or the monthly paper made of
-    /// every item the month's weekly tests got wrong.
+    /// `monthly` survives only so papers saved before 2026-10-05 still
+    /// decode — there is one test now, and every reader skips a monthly one.
     enum Kind: String, Codable { case weekly, monthly }
 
     let id: UUID

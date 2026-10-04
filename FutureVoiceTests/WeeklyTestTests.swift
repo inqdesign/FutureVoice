@@ -198,9 +198,10 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertEqual(WeeklyTestStore.weekStreak(tests: [], schedule: schedule, now: now), 0)
     }
 
-    /// The monthly paper is every distinct wrong answer of its sources, and
-    /// nothing under the minimum.
-    func testMonthlyCollectsDistinctMisses() {
+    /// The weekly paper's retakes span the last few weeks (it absorbed the
+    /// monthly paper): every distinct miss once, newest first — and a miss a
+    /// newer test asked again and got RIGHT never comes back.
+    func testRetakesSpanRecentWeeksUntilAnsweredRight() {
         func finished(_ items: [WeeklyTestItem], wrong: Set<Int>, daysAgo: Double) -> WeeklyTest {
             let at = Date().addingTimeInterval(-daysAgo * 86_400)
             var t = WeeklyTest(id: UUID(), targetLanguage: "en", periodStart: at, periodEnd: at,
@@ -218,34 +219,21 @@ final class WeeklyTestTests: XCTestCase {
         let c = item(.build, answer: "I really like it", options: ["I", "like", "really", "it", "very"],
                      prompt: "I very like it")
         let d = item(.speak, answer: "Give yourself a day off.")
-        let e = item(.listen, answer: "Kitchens are the worst part.", options: ["Kitchens are the worst part.", "x", "y"])
         // The paper is judged in ITS language, whatever the active one is.
         UserDefaults.standard.set("de", forKey: LanguageCatalog.targetLanguageDefaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey) }
         let week1 = finished([a, b, c], wrong: [0, 1, 2], daysAgo: 14)
-        let week2 = finished([item(.meaning, answer: "Chore", options: a.options), d, e], wrong: [0, 1, 2], daysAgo: 7)
-        let monthly = WeeklyTestEngine.buildMonthly(from: [week1, week2], targetLanguage: "en")
-        XCTAssertNotNil(monthly)
-        XCTAssertEqual(monthly?.kind, .monthly)
-        // "chore" and "Chore" are one item.
-        XCTAssertEqual(monthly?.items.count, 5)
-        XCTAssertTrue(monthly?.items.allSatisfy { $0.isRetake == true } ?? false)
-        XCTAssertNil(WeeklyTestEngine.buildMonthly(from: [week1], targetLanguage: "en"))
+        // Week 2 asked "chore" again and got it right, and missed d.
+        let week2 = finished([item(.meaning, answer: "Chore", options: a.options), d], wrong: [1], daysAgo: 7)
+        var rng = WeeklyTestRandom(seed: UUID())
+        let items = WeeklyTestEngine.retakes(from: [week1, week2], limit: WeeklyTestEngine.maxRetake,
+                                             excluding: [], language: "en", rng: &rng)
+        XCTAssertEqual(Set(items.map(\.answer)), ["Give yourself a day off.", "end up", "I really like it"])
+        XCTAssertEqual(items.first?.answer, "Give yourself a day off.")
+        XCTAssertTrue(items.allSatisfy { $0.isRetake == true })
     }
 
-    /// The month opens on the first weekly opening of the calendar month.
-    func testMonthOpeningIsTheFirstOpeningOfTheMonth() {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let schedule = WeeklyTestSchedule(weekday: 7, hour: 10, minute: 0)
-        // Wed 2026-09-23 → current opening Sat 19 → first Saturday of September is the 5th.
-        let now = cal.date(from: DateComponents(year: 2026, month: 9, day: 23, hour: 12))!
-        let opening = schedule.monthOpening(now: now, calendar: cal)
-        XCTAssertEqual(cal.dateComponents([.month, .day], from: opening).day, 5)
-        XCTAssertEqual(cal.dateComponents([.month, .day], from: opening).month, 9)
-    }
-
-    /// A monthly paper built minutes before the weekly must not become the
+    /// A monthly paper saved before 2026-10-05 must not become the
     /// weekly's window anchor — the week's material would shrink to those
     /// minutes and the week read as thin. The window starts at the last
     /// WEEKLY paper, and so does the store's pick.
@@ -268,49 +256,6 @@ final class WeeklyTestTests: XCTestCase {
         let fromMonthly = WeeklyTestEngine.window(lastTest: monthly, now: now)
         XCTAssertEqual(fromMonthly.start.timeIntervalSince1970,
                        now.addingTimeInterval(-WeeklyTestEngine.defaultWindow).timeIntervalSince1970, accuracy: 1)
-    }
-
-    /// The monthly row: nothing before a month has passed, ready once five
-    /// distinct misses sit in last month's finished weeklies, and a paper in
-    /// progress or done owns the state until the next month's opening.
-    func testMonthlyStateFollowsLastMonthsMisses() {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let schedule = WeeklyTestSchedule(weekday: 7, hour: 10, minute: 0)
-        // Thu 2026-10-08 → current opening Sat Oct 3 = October's first
-        // opening; last month = Sat Sep 5 ..< Sat Oct 3.
-        let now = cal.date(from: DateComponents(year: 2026, month: 10, day: 8, hour: 12))!
-        let sep = cal.date(from: DateComponents(year: 2026, month: 9, day: 12, hour: 11))!
-        let aug = cal.date(from: DateComponents(year: 2026, month: 8, day: 29, hour: 11))!
-        func paper(finishedAt: Date, wrong: Int, kind: WeeklyTest.Kind? = nil) -> WeeklyTest {
-            var items: [WeeklyTestItem] = []
-            for i in 0..<6 { items.append(item(.meaning, answer: "w\(i)")) }
-            var t = WeeklyTest(id: UUID(), targetLanguage: "en", kind: kind,
-                               periodStart: finishedAt, periodEnd: finishedAt, createdAt: finishedAt, items: items)
-            for (i, it) in items.enumerated() {
-                t.answers.append(WeeklyTestAnswer(itemId: it.id, given: "", correct: i >= wrong, at: finishedAt))
-            }
-            t.finishedAt = finishedAt
-            return t
-        }
-        XCTAssertEqual(schedule.monthlyState(tests: [], now: now, calendar: cal), .none)
-        // Four misses in September: under minItems.
-        XCTAssertEqual(schedule.monthlyState(tests: [paper(finishedAt: sep, wrong: 4)], now: now, calendar: cal), .none)
-        // Five misses, but in August — the month before last.
-        XCTAssertEqual(schedule.monthlyState(tests: [paper(finishedAt: aug, wrong: 5)], now: now, calendar: cal), .none)
-        let septemberPaper = paper(finishedAt: sep, wrong: 5)
-        guard case let .ready(sources) = schedule.monthlyState(tests: [septemberPaper], now: now, calendar: cal) else {
-            return XCTFail("five September misses should open the monthly")
-        }
-        XCTAssertEqual(sources.map(\.id), [septemberPaper.id])
-        // A monthly built this month owns the state; a finished one is done.
-        var monthly = paper(finishedAt: now.addingTimeInterval(-3600), wrong: 0, kind: .monthly)
-        monthly.finishedAt = nil
-        XCTAssertEqual(schedule.monthlyState(tests: [monthly, septemberPaper], now: now, calendar: cal), .inProgress(monthly))
-        monthly.finishedAt = now
-        XCTAssertEqual(schedule.monthlyState(tests: [monthly, septemberPaper], now: now, calendar: cal), .done(monthly))
-        // The weekly state and streak never see the monthly paper.
-        XCTAssertEqual(WeeklyTestStore.weekStreak(tests: [monthly], schedule: schedule, now: now), 0)
     }
 
     /// The next unanswered item, and none once every one is answered.

@@ -12,9 +12,6 @@ import SwiftUI
 /// where it stopped; a finished test writes itself into the review loop
 /// once (`WeeklyTestEngine.apply`).
 struct WeeklyTestView: View {
-    /// `.weekly` (the default) or the month's paper of wrong answers.
-    var kind: WeeklyTest.Kind = .weekly
-
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var settings = WeeklyTestSettings.shared
     @Environment(\.dismiss) private var dismiss
@@ -102,7 +99,7 @@ struct WeeklyTestView: View {
                     WeeklyTestResultView(test: test, isRetry: retry != nil, onRetry: { startRetry(from: test) })
                 }
             }
-            .navigationTitle(kind == .monthly ? Text("Monthly test") : Text("Weekly test"))
+            .navigationTitle(Text("Weekly test"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -123,26 +120,18 @@ struct WeeklyTestView: View {
 
     @ViewBuilder
     private var thinState: some View {
-        if kind == .monthly {
+        VStack(spacing: 16) {
             ContentUnavailableView {
-                Label("Nothing to collect yet", systemImage: "calendar.badge.checkmark")
+                Label("A talk or two first", systemImage: "calendar.badge.clock")
             } description: {
-                Text(explain("A month's missed items land here. Finish a few weekly tests first."))
+                Text(explain("The test is made from your week's talks. After the next one, it writes itself."))
             }
-        } else {
-            VStack(spacing: 16) {
-                ContentUnavailableView {
-                    Label("A talk or two first", systemImage: "calendar.badge.clock")
-                } description: {
-                    Text(explain("The test is made from your week's talks. After the next one, it writes itself."))
-                }
-                Button {
-                    Task { await buildNew() }
-                } label: {
-                    Text("Try again")
-                }
-                .buttonStyle(.bordered)
+            Button {
+                Task { await buildNew() }
+            } label: {
+                Text("Try again")
             }
+            .buttonStyle(.bordered)
         }
     }
 
@@ -779,27 +768,6 @@ struct WeeklyTestView: View {
 
     private func start() async {
         let tests = WeeklyTestStore.shared.load()
-        if kind == .monthly {
-            switch settings.schedule.monthlyState(tests: tests) {
-            case let .inProgress(test):
-                if let cleaned = WeeklyTestEngine.pruned(test) {
-                    WeeklyTestStore.shared.save(cleaned); resume(cleaned)
-                } else { resume(test) }
-            case let .done(test): phase = .result(test)
-            case let .ready(sources):
-                guard var test = WeeklyTestEngine.buildMonthly(from: sources,
-                                                               targetLanguage: appState.targetLanguage) else {
-                    phase = .thin
-                    return
-                }
-                test.startedAt = Date()
-                WeeklyTestStore.shared.save(test)
-                Analytics.capture("monthly_test_started", ["items": test.total])
-                resume(test)
-            case .none: phase = .thin
-            }
-            return
-        }
         #if DEBUG
         // A capture run asks for a specific kind: always deal a fresh paper.
         if DebugCapture.weeklyTestKind != nil { await buildNew(); return }
@@ -826,6 +794,7 @@ struct WeeklyTestView: View {
         let tests = WeeklyTestStore.shared.load()
         let opening = settings.schedule.currentOpening()
         guard var test = await WeeklyTestEngine.build(lastTest: WeeklyTestStore.latestWeekly(tests),
+                                                      recentTests: tests,
                                                       appState: appState) else {
             settings.markThin(opening: opening)
             phase = .thin
@@ -974,7 +943,7 @@ struct WeeklyTestView: View {
         if t.appliedAt == nil {
             WeeklyTestEngine.apply(t)
             t.appliedAt = Date()
-            Analytics.capture(t.isMonthly ? "monthly_test_finished" : "weekly_test_finished", [
+            Analytics.capture("weekly_test_finished", [
                 "score": t.score, "total": t.total, "best_streak": t.bestStreak,
             ])
             SoundEffects.play(.done)

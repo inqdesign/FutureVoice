@@ -938,16 +938,6 @@ enum DebugCapture {
         case "practice-watch":
             once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
-        case "monthly-test":
-            // The month's paper: two finished weekly tests with misses, dated
-            // into the month behind the current month's first opening.
-            once("monthly-test") { seedWeeklyTestWeek(); seedMonthOfMisses() }
-            return AnyView(WeeklyTestView(kind: .monthly).environmentObject(appState))
-        case "practice-monthly":
-            once("practice-monthly") {
-                seedVocab(); seedSessions(); seedScenarios(into: appState); seedMonthOfMisses()
-            }
-            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "weekly-test", "weekly-test-word", "weekly-test-gap", "weekly-test-build", "weekly-test-listen",
              "weekly-test-speak",
              "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right",
@@ -1865,42 +1855,6 @@ enum DebugCapture {
         // The closed week's report, coach written, so the paper never waits
         // on the network for its grammar and upgrade items.
         WeekRecapStore.shared.save(sampleWeekRecap)
-    }
-
-    /// Two finished weekly tests, each with misses, inside the month that
-    /// the monthly paper collects from.
-    static func seedMonthOfMisses() {
-        WeeklyTestStore.shared.removeAll()
-        let schedule = WeeklyTestSettings.shared.schedule
-        let opening = schedule.monthOpening()
-        for weeksBack in [1, 2] {
-            let at = opening.addingTimeInterval(Double(-weeksBack) * 7 * 86_400 + 3_600)
-            let items: [WeeklyTestItem] = [
-                .init(id: UUID(), kind: .meaning, prompt: "Making you feel very tired.",
-                      answer: "exhausting", options: ["thrilling", "exhausting", "soothing", "spare"]),
-                .init(id: UUID(), kind: .gap, prompt: "Honestly, next time I'd ______ doing it alone.",
-                      answer: "push back on", options: ["end up", "push back on", "catch up on", "walk you through"]),
-                .init(id: UUID(), kind: .build, prompt: "I end up carrying most boxes myself.",
-                      answer: "I ended up carrying most of the boxes myself.",
-                      options: ["most", "I", "myself.", "ended", "the", "up", "boxes", "carrying", "of", "end"]),
-                .init(id: UUID(), kind: .meaning, prompt: weeksBack == 1 ? "A task you have to do regularly and find tedious." : "In a careless or lazy way.",
-                      answer: weeksBack == 1 ? "chore" : "slackly",
-                      options: weeksBack == 1 ? ["chore", "errand", "hobby", "shift"] : ["slackly", "briskly", "neatly", "gladly"]),
-                .init(id: UUID(), kind: .speak, prompt: "", answer: "Give yourself a day off.", options: []),
-            ]
-            var test = WeeklyTest(id: UUID(), targetLanguage: "en",
-                                  periodStart: at.addingTimeInterval(-7 * 86_400), periodEnd: at,
-                                  createdAt: at, items: items)
-            test.startedAt = at
-            for (i, item) in items.enumerated() {
-                let ok = i == 1 && weeksBack == 2
-                test.answers.append(WeeklyTestAnswer(itemId: item.id, given: ok ? item.answer : "",
-                                                     correct: ok, at: at.addingTimeInterval(Double(i) * 30)))
-            }
-            test.finishedAt = at.addingTimeInterval(600)
-            test.appliedAt = test.finishedAt
-            WeeklyTestStore.shared.save(test)
-        }
     }
 
     /// A finished test on file for this week, so the result page and the
