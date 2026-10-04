@@ -40,6 +40,12 @@ let metaCases = [
     "using articles correctly", "I went to the bank yesterday", "subject-verb agreement",
     "Remember to use the past tense", "It depends on the weather", "using 'a', 'the', 'in', 'on'",
     "Try to use more vocabulary", "I'd rather stay in tonight", "", "  ",
+    // The coaching-language names for the same categories (iOS 2026-09-23):
+    // a meta-rule written in Korean, Japanese or German slipped past the
+    // English list. Plus real sentences in those languages that must pass.
+    "조사를 올바르게 쓰기", "과거 시제 연습", "문법에 주의하기", "어제 친구랑 영화 봤어",
+    "助詞を正しく使う", "時制に気をつける", "昨日は映画を見た",
+    "Grammatik üben", "Ich war gestern im Kino",
 ]
 out["is_drillable"] = metaCases.map { ["phrase": $0, "result": DrillStore.isDrillable($0)] }
 out["carryover_normalized"] = [
@@ -189,6 +195,15 @@ let shadowCases: [[String: String]] = [
     ["target": "It slipped my mind completely", "learner": "it slipped completely", "language": "en"],
     ["target": "Nice to meet you", "learner": "", "language": "en"],
     ["target": "오늘 날씨가 좋네요", "learner": "오늘 날씨 좋네요", "language": "ko"],
+    // iOS ShadowEngineTests, one row per test.
+    ["target": "hello world how are you", "learner": "hello world how are you", "language": "en"],
+    ["target": "Hello, world!", "learner": "hello world", "language": "en"],
+    ["target": "hello world", "learner": "", "language": "en"],
+    ["target": "I went to the bank", "learner": "I go to the bank", "language": "en"],
+    ["target": "I\u{2019}m building it, don\u{2019}t worry", "learner": "I'm building it, don't worry", "language": "en"],
+    ["target": "I\u{2019}m building it", "learner": "I am building it", "language": "en"],
+    ["target": "the weather is nice today", "learner": "the weather nice today actually", "language": "en"],
+    ["target": "alpha beta gamma delta", "learner": "alpha xx yy zz", "language": "en"],
 ]
 out["shadow_analyze"] = shadowCases.map { c -> [String: Any] in
     let a = ShadowEngine.analyze(target: c["target"]!, learner: c["learner"]!, language: c["language"]!)

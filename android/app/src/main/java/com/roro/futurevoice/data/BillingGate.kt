@@ -51,20 +51,37 @@ object BillingGate {
         purpose: VoiceRevival.Purpose = VoiceRevival.Purpose.CALL,
         action: () -> Unit,
     ): Boolean {
-        // A cached YES is answered instantly — that is the common case and the
-        // one the primary button must never wait on.
-        if (cached?.needsSubscription == false) return proceed(purpose, action)
-
-        // A "no" is never given from cache, and it is never given from a
-        // FAILURE either: if the account can't be read right now, the primary
-        // button must not die silently — run the action, and let the metered
-        // call's own 402 raise the wall if there is one.
-        val fresh = runCatching { AccountStatus.load(auth) }.getOrNull()
-        if (fresh == null) return proceed(purpose, action)
-        cached = fresh
-        if (!fresh.needsSubscription) return proceed(purpose, action)
+        val (go, fresh) = decide(cached, signedIn = auth.userId != null) {
+            runCatching { AccountStatus.load(auth) }.getOrNull()
+        }
+        if (fresh != null) cached = fresh
+        if (go) return proceed(purpose, action)
         showPaywall.value = true
         return false
+    }
+
+    /**
+     * The gate's answer, pure (plan 5.13, iOS `BillingGate.blocks`): true =
+     * go. [load] is consulted only when the answer could be NO.
+     *
+     * - A cached YES is answered instantly — the common case, and the one
+     *   the primary button must never wait on.
+     * - A "no" is never given from cache: a refusal always re-reads first.
+     * - Nor from a FAILURE: if the account can't be read, run the action and
+     *   let the metered call's own 402 raise the wall if there is one.
+     * - Nor for someone we couldn't identify. No session is "couldn't ask",
+     *   NOT "no plan": `AccountStatus.load` answers a signed-out read with
+     *   its empty snapshot, which reads as an account holding nothing and
+     *   paywalled the tap (found by 5.13; iOS returns nil there).
+     */
+    internal suspend fun decide(
+        cached: AccountStatus?, signedIn: Boolean,
+        load: suspend () -> AccountStatus?,
+    ): Pair<Boolean, AccountStatus?> {
+        if (cached?.needsSubscription == false) return true to null
+        if (!signedIn) return true to null
+        val fresh = load() ?: return true to null
+        return !fresh.needsSubscription to fresh
     }
 
     private suspend fun proceed(purpose: VoiceRevival.Purpose, action: () -> Unit): Boolean {

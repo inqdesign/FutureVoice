@@ -613,21 +613,21 @@
 
 각 규칙에 Swift 기준 입력·정답 쌍을 걸고 안드로이드에서 초록으로 만든다.
 
-- ☐ 5.1 연속 (빌드 54: 공부했거나 말한 날, 모든 언어, 오늘/어제 기준)
+- ☑ 5.1 연속 (빌드 54: 공부했거나 말한 날, 모든 언어, 오늘/어제 기준) — `StreakRuleTest`(하루 판정 + 걸음 `TalkTimeLog.streakWalk`: 오늘/어제 기준, 빈틈, 서머타임 밤). 격차 고침: iOS는 '말한 통화의 날'(세션 학습자 줄)도 세는데 안드로이드는 45일 보관 미터만 봐서 말하기만 하는 학습자의 연속이 45일에서 멈췄다 → `TalkTimeLog.noteSpokenDays`(SessionStore가 읽고 쓸 때 날짜를 접어 둠)
 - ☑ 5.2 복습 간격과 폴더 (0·1·3·7·14·30, 은퇴, 곧/내일/나중에) — `DrillRetireTest`(은퇴) + `StudyScheduleRuleTest`(iOS `StudyReminderPolicyTests` 그대로, 폴더 창 경계 12h/48h)
 - ☑ 5.3 교정 필터 (`saysTheSameThing`, 축약형 표) — `CorrectionGuardTest`, iOS `CorrectionGuardTests` 그대로 4묶음 통과
-- ☐ 5.4 교정 강조 diff (`highlightedCorrection`)
-- ☐ 5.5 섀도잉 매치 점수
+- ☑ 5.4 교정 강조 diff (`highlightedCorrection`) — `CorrectionHighlightTest`(축약형 무강조, 실제 고친 단어만, 구두점 제외, 한국어 어절, 일본어 くさ[かっ]た). 격차 고침: 일본어를 공백으로 잘라 줄 전체가 한 토큰으로 칠해졌다 → `SpokenWords.changedRanges`(띄어쓰기 없는 언어는 글자 LCS) + `ui/CorrectionHighlight.kt` 하나로 통화 카드·교재·다시 말하기 세 곳
+- ☑ 5.5 섀도잉 매치 점수 — `ShadowScoreVectorTest`, 진짜 `ShadowEngine` 골든 벡터에 iOS `ShadowEngineTests` 6개(완벽 100·대소문자/구두점·빈 답 0·치환 89·둥근 아포스트로피·삽입/삭제·√곡선 50) 행 추가, 첫 실행에 통과
 - ☑ 5.6 복습한 걸 통화에서 썼는지 (`CarryoverDetector`) — `CarryoverDetectorTest` 16개(iOS 케이스, 오탐 막는 쪽 위주) 첫 실행에 통과
-- ☐ 5.7 주울 단어 (`pickupCandidates`, 목록 밖 단어)
-- ☐ 5.8 책 스냅샷과 마스터리 (`TalkCurriculum`)
-- ☐ 5.9 통화 시간 표기 (하루 mm:ss, 기간 분)
-- ☐ 5.10 과금되는 순간 (`isBillableMoment`)
-- ☐ 5.11 레벨 밴드와 성장 탭 계산
-- ☐ 5.12 하루 카드 얼리기 (오늘은 안 얼림)
-- ☐ 5.13 결제 게이트 판단 ("아니오"는 캐시로 답하지 않음)
-- ☐ 5.14 메타 규칙 카드 거르기 (`looksLikeMetaRule`)
-- ☐ 5.15 이름 부르기 (`LearnerAddress`)
+- ☑ 5.7 주울 단어 (`pickupCandidates`, 목록 밖 단어) — `PickupOrderTest`(여러 턴 목록 밖 → 등급 쉬운 순 → 한 번 말한 것, 학습자 단어 제외, 상한 없음) + 기존 `OffListWordsTest`. 순서를 `VocabStore.orderPickups`로 빼서 자산 풀 없이 시험
+- ☑ 5.8 책 스냅샷과 마스터리 (`TalkCurriculum`) — 기존 `TalkCurriculumTest`(iOS `TalkCurriculumCompletionTests`: 네 챕터 다 세기, 낮은 테이크·꼭대기 상자) + `TalkCurriculumShadowPicksTest`(iOS `TalkCurriculumShadowPicksTests` 4개: 인사·작별보다 가운데, 제안 표현 우선, 의례뿐인 통화, 대체 경로), 첫 실행에 통과
+- ☑ 5.9 통화 시간 표기 (하루 mm:ss, 기간 분) — `TalkTimeDisplayTest`(`TalkTime.clock` 00:40·12:34·음수 00:00, 1분 미만만 초)
+- ☑ 5.10 과금되는 순간 (`isBillableMoment`) — `BillableMomentTest`(첫 발화 전 0, 게이트웨이 상태, 일시정지, 로컬 세 증인 6초·1.5초). 판정을 `TalkMeter.isBillable(Moment)`로 빼서 `TalkViewModel`이 그대로 씀, 동작 변화 없음
+- ☑ 5.11 레벨 밴드와 성장 탭 계산 — `GrammarBandTest`(iOS `GrammarBandTests` 범위×정확도) + `LevelBandsTest`(유창성 반열림·+20 보정·표 끝, 표현, 문법 점수 대체, 실수 밀도 표, 어휘 기준선 15·오르는 막대), 첫 실행에 통과
+- ☑ 5.12 하루 카드 얼리기 (오늘은 안 얼림) — `DayCardFreezeTest`(오늘 거부, 오늘은 스냅샷 있어도 라이브, 지난날 스냅샷 우선). 격차 고침: iOS의 두 가드 — 빈 날은 카드 아님, 정산된 날을 더 작은 분으로 덮지 않음 — 가 없었다. 남은 격차: iOS `freezePastDays`(지난 45일 자동 정산)가 없어서 안드로이드는 사진을 고른 날만 얼린다 — 45일이 지나면 사진 없는 날의 분이 사라짐
+- ☑ 5.13 결제 게이트 판단 ("아니오"는 캐시로 답하지 않음) — `BillingGateTest`(캐시 예는 즉시, 아니오는 다시 읽음, 실패는 통과). 격차 고침 둘: ① 로그인 안 된 읽기를 '플랜 없음'으로 봐서 탭에 페이월이 떴다(iOS는 '못 물어봄' → 통과), ② `needsSubscription`이 `<= 0`이었다 — iOS는 1분 미만(`MINIMUM_CALL_SECONDS` 60, 서버 바닥과 같음). 남은 격차: iOS `blocksScene`/`freeScenesSpent`(무료 계정의 장면 수 게이트)가 안드로이드에 없음; 캐시된 예의 60초 백그라운드 갱신도 없음
+- ☑ 5.14 메타 규칙 카드 거르기 (`looksLikeMetaRule`) — 골든 벡터 `is_drillable`에 한·일·독 문장 9개 추가(`SummaryIngestionVectorTest`). 격차 고침: 안드로이드 금지어가 영어뿐이라 '조사를 올바르게 쓰기'·'時制に気をつける'·'Grammatik üben' 같은 규칙이 카드가 됐다 → iOS 목록 그대로
+- ☑ 5.15 이름 부르기 (`LearnerAddress`) — `LearnerAddressTest`(아/야, 한글 이름만, 한국어 화면만, 빈 이름 null). 격차 고침: 앱 언어를 따로 안 고르면(기기 언어를 따름) 한국어 폰에서도 맨 이름이었다 → 기기 언어로 대체(iOS `chromeLanguage` 기본값)
 
 ## 6단계 · 실기기 체크리스트
 

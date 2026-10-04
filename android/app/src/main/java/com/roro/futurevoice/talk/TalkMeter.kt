@@ -228,6 +228,62 @@ class TalkMeter(
          */
         const val VOICE_GRACE_SECONDS = 6.0
 
+        /** What the call screen knows about this second (plan 5.10). */
+        data class Moment(
+            /** The learner has spoken IN THIS CALL (realtime: the gateway is
+             *  already hearing words of their first answer). */
+            val learnerSpoke: Boolean,
+            val phase: TalkPhase,
+            /** Realtime path: the gateway's state; null on the local path. */
+            val realtime: RealtimeTalkClient.State? = null,
+            val realtimeLevel: Float = 0f,
+            /** A turn's audio is playing (local path). */
+            val audioPlaying: Boolean = false,
+            /** Local path, the three witnesses: ms since a voiced frame, ms
+             *  since the recognizer last changed its words, voiced seconds
+             *  this turn. */
+            val voicedAgoMs: Long? = null,
+            val heardAgoMs: Long? = null,
+            val voicedSeconds: Double = 0.0,
+        )
+
+        const val MIN_VOICED_SECONDS_PER_TURN = 1.5
+
+        /**
+         * iOS `ConversationView.isBillableMoment`, pure: nothing counts until
+         * the learner has said something in this call (the opener speaks
+         * whether or not it is answered); after that, a second counts when
+         * the fluent self is speaking, a reply is being written, or the
+         * learner is demonstrably talking — never a quiet open screen.
+         */
+        fun isBillable(m: Moment): Boolean {
+            if (!m.learnerSpoke) return false
+            if (m.phase == TalkPhase.PAUSED || m.phase == TalkPhase.ENDED) return false
+            m.realtime?.let { st ->
+                return when (st) {
+                    RealtimeTalkClient.State.SPEAKING,
+                    RealtimeTalkClient.State.HEARING,
+                    RealtimeTalkClient.State.THINKING -> true
+                    RealtimeTalkClient.State.LISTENING -> m.realtimeLevel > 0.25f
+                    else -> false
+                }
+            }
+            if (m.phase == TalkPhase.THINKING || m.phase == TalkPhase.SPEAKING || m.audioPlaying) return true
+            return someoneIsTalking(m)
+        }
+
+        /** Three witnesses, all required: recent voiced energy, the recognizer
+         *  still making words of it, and enough voiced time this turn to be a
+         *  person rather than a clatter (iOS `someoneIsTalkingHere`). */
+        fun someoneIsTalking(m: Moment): Boolean {
+            val grace = (VOICE_GRACE_SECONDS * 1000).toLong()
+            val voiced = m.voicedAgoMs ?: return false
+            if (voiced >= grace) return false
+            val heard = m.heardAgoMs ?: return false
+            if (heard >= grace) return false
+            return m.voicedSeconds >= MIN_VOICED_SECONDS_PER_TURN
+        }
+
         /**
          * Poll cadence, and the ceiling on what one poll may contribute. The
          * clamp matters because a suspended app resumes with a huge gap on the

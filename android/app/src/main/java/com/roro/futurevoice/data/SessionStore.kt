@@ -53,6 +53,7 @@ class SessionStore private constructor(context: Context) {
         list.add(session)
         list.sortByDescending { it.rank }
         write(session.targetLanguage, list)
+        TalkTimeLog.noteSpokenDays(appContext, listOf(session))
     }
 
     suspend fun delete(id: String, language: String = LanguageScope.active(appContext)) = mutex.withLock {
@@ -84,6 +85,7 @@ class SessionStore private constructor(context: Context) {
         }
         cache = loaded
         cachedLanguage = language
+        TalkTimeLog.noteSpokenDays(appContext, loaded)
         return loaded
     }
 

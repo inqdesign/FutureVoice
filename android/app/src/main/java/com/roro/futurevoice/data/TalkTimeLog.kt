@@ -97,7 +97,17 @@ object TalkTimeLog {
      * toward the bar.
      */
     fun streakDays(context: Context, now: Long = System.currentTimeMillis()): Int {
-        val cal = Calendar.getInstance()
+        val spoken = spokenDays(context)
+        return streakWalk(now) { at -> studied(context, at, spoken) }
+    }
+
+    /**
+     * The walk itself, pure so the rule is testable (plan 5.1): anchor on
+     * today if [active], else on yesterday, else 0; then count back while
+     * [active] holds.
+     */
+    internal fun streakWalk(now: Long, cal: Calendar = Calendar.getInstance(),
+                            active: (Long) -> Boolean): Int {
         fun startOfDay(at: Long): Long {
             cal.timeInMillis = at
             cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
@@ -111,7 +121,6 @@ object TalkTimeLog {
             cal.add(Calendar.DAY_OF_YEAR, -1)
             return cal.timeInMillis
         }
-        fun active(at: Long): Boolean = studied(context, at)
         var cursor = startOfDay(now)
         if (!active(cursor)) {
             cursor = dayBefore(cursor)
@@ -122,14 +131,46 @@ object TalkTimeLog {
         return count
     }
 
+    // MARK: - Days a talk was spoken in
+
+    private const val SPOKEN_KEY = "futurevoice.spokenDays"
+
+    /**
+     * Every local day a learner line was said in a saved talk, any language
+     * (iOS `PracticeStats.activeDays` walks `SessionStore.loadAcrossLanguages`
+     * for exactly this). The meter's log keeps 45 days, so without it a
+     * learner who only TALKS had a streak capped at 45 — found by 5.1.
+     * Sessions load suspended, and the streak is read from places that
+     * can't wait, so [SessionStore] folds the days in here as it reads and
+     * writes. A union: a deleted talk's day stays lit, which errs toward
+     * the learner.
+     */
+    fun noteSpokenDays(context: Context, sessions: List<com.roro.futurevoice.talk.Session>) {
+        val days = sessions.flatMap { s ->
+            s.turns.filter { it.role == com.roro.futurevoice.talk.TurnRole.USER }.map { dayKey(it.timestamp) }
+        }.toSet()
+        if (days.isEmpty()) return
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val have = prefs.getStringSet(SPOKEN_KEY, null) ?: emptySet()
+        if (have.containsAll(days)) return
+        prefs.edit().putStringSet(SPOKEN_KEY, HashSet(have + days)).apply()
+    }
+
+    private fun spokenDays(context: Context): Set<String> =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet(SPOKEN_KEY, null) ?: emptySet()
+
     /**
      * Does this day count toward the Home streak? The ONE predicate
      * [streakDays] counts with, public so the widget's "done today" face is
      * decided by the same rule as the number beside it (iOS
      * `PracticeStats.studied`).
      */
-    fun studied(context: Context, at: Long = System.currentTimeMillis()): Boolean {
+    fun studied(context: Context, at: Long = System.currentTimeMillis()): Boolean =
+        studied(context, at, spokenDays(context))
+
+    private fun studied(context: Context, at: Long, spoken: Set<String>): Boolean {
         val prefix = dayKey(at)
+        if (prefix in spoken) return true
         val talked = load(context).entries.any { (k, v) ->
             v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
         }

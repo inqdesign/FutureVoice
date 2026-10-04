@@ -113,4 +113,75 @@ object SpokenWords {
         // A token with no words in it is punctuation — never highlighted.
         return tokens.indices.map { changed[it] && hasWord[it] }
     }
+
+    /**
+     * The highlight as CHARACTER ranges of [alternative] — what every
+     * correction surface paints (iOS `highlightedCorrection`). A spaced
+     * language folds [changedTokens] onto its tokens and the single spaces
+     * between them; an unspaced one (Japanese) is diffed and painted by
+     * CHARACTER, because its segments are cut differently on each side of a
+     * fix (面倒|くさかっ|た against 面倒|くさい|でし|た) and no segment-level
+     * answer can say "かっ" changed and "くさ" didn't. Until 5.4 Android
+     * split Japanese on spaces, so a whole line lit up as one token.
+     *
+     * The display text is [displayText]: tokens re-joined by one space for a
+     * spaced language (what the screens always drew), the line itself for
+     * an unspaced one.
+     */
+    fun changedRanges(alternative: String, original: String, language: String): List<IntRange> {
+        if (!com.roro.futurevoice.data.WordSplitter.spaced(language)) {
+            return changedCharacters(alternative, original).let(::runs)
+        }
+        val tokens = alternative.split(" ").filter { it.isNotEmpty() }
+        val flags = changedTokens(alternative, original)
+        val out = ArrayList<IntRange>()
+        var at = 0
+        tokens.forEachIndexed { i, token ->
+            if (flags.getOrElse(i) { false }) out.add(at until at + token.length)
+            at += token.length + 1
+        }
+        return out
+    }
+
+    fun displayText(alternative: String, language: String): String =
+        if (com.roro.futurevoice.data.WordSplitter.spaced(language))
+            alternative.split(" ").filter { it.isNotEmpty() }.joinToString(" ")
+        else alternative
+
+    /**
+     * iOS `highlightedCharacters`: an LCS over the letters of both lines
+     * (punctuation is the transcriber's, so it never takes part), then every
+     * letter of the alternative the learner didn't say is marked — くさ[かっ]た.
+     */
+    fun changedCharacters(alternative: String, original: String): BooleanArray {
+        val aIdx = alternative.indices.filter { alternative[it].isLetterOrDigit() }
+        val a = aIdx.map { alternative[it] }
+        val o = original.filter { it.isLetterOrDigit() }
+        val m = a.size; val n = o.length
+        val dp = Array(m + 1) { IntArray(n + 1) }
+        for (i in m - 1 downTo 0) for (j in n - 1 downTo 0) {
+            dp[i][j] = if (a[i] == o[j]) dp[i + 1][j + 1] + 1 else maxOf(dp[i + 1][j], dp[i][j + 1])
+        }
+        val changed = BooleanArray(alternative.length)
+        var i = 0; var j = 0
+        while (i < m) {
+            when {
+                j < n && a[i] == o[j] -> { i++; j++ }
+                j < n && dp[i + 1][j] < dp[i][j + 1] -> j++
+                else -> { changed[aIdx[i]] = true; i++ }
+            }
+        }
+        return changed
+    }
+
+    private fun runs(flags: BooleanArray): List<IntRange> {
+        val out = ArrayList<IntRange>()
+        var start = -1
+        for (k in flags.indices) {
+            if (flags[k] && start < 0) start = k
+            if (!flags[k] && start >= 0) { out.add(start until k); start = -1 }
+        }
+        if (start >= 0) out.add(start until flags.size)
+        return out
+    }
 }

@@ -33,6 +33,41 @@ class VocabStore private constructor(context: Context) {
             }
 
         /**
+         * The order a talk's pickup words are offered in — pure, so the rule
+         * is testable without the asset pool (plan 5.7, iOS
+         * `VocabStore.pickupCandidates`):
+         *
+         *  1. off-list words the fluent self came back to across SEVERAL
+         *     turns — what the call was about, which no graded list can see —
+         *     most turns first, then alphabetically;
+         *  2. graded words at or above [minRank], easiest first, then
+         *     alphabetically;
+         *  3. off-list words said once, alphabetically.
+         *
+         * Nothing is capped: a cap has to decide which ones die, and with most
+         * said once there is nothing to decide it by. [excluded] (the
+         * learner's own words in that talk, their name) never appears.
+         */
+        fun orderPickups(lemmas: Set<String>, offList: Map<String, Int>, minRank: Int?,
+                         excluded: Set<String>, rankOf: (String) -> Int?): List<String> {
+            val graded = lemmas
+                .mapNotNull { w ->
+                    if (w in excluded) return@mapNotNull null
+                    val rank = rankOf(w) ?: return@mapNotNull null
+                    if (minRank != null && rank < minRank) null else w to rank
+                }
+                .sortedWith(compareBy({ it.second }, { it.first }))
+                .map { it.first }
+                .distinct()
+            val rest = offList.filterKeys { it !in excluded && it !in graded }
+            val recurring = rest.filterValues { it > 1 }.entries
+                .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .map { it.key }
+            val saidOnce = rest.filterValues { it == 1 }.keys.sorted()
+            return recurring + graded + saidOnce
+        }
+
+        /**
          * Content words in [texts] the graded pool doesn't carry, with how many
          * of those turns each appeared in.
          *
@@ -645,34 +680,13 @@ class VocabStore private constructor(context: Context) {
         // them by it, often at the head of a sentence where the capital-letter
         // name rule can't see it — "toi" was kept as a word to study.
         val excludingLemmas = excludingLemmas + learnerNameTokens()
-        val graded = VocabLemmas.lemmas(fluentTexts, language)
-            .mapNotNull { w ->
-                if (w in excludingLemmas) return@mapNotNull null
-                val rank = CoreVocabulary.levelRank(CoreVocabulary.level(w, language) ?: return@mapNotNull null)
-                if (minRank != null && rank < minRank) null else w to rank
-            }
-            .sortedWith(compareBy({ it.second }, { it.first }))
-            .map { it.first }
-            .distinct()
-
-        // Words the graded pool doesn't carry. The pool is ~8k content words,
-        // so an ordinary noun like "chore" isn't in it — and being absent
-        // used to mean being invisible, even when the whole call was about
-        // the word.
-        //
-        // They are NOT capped: a cap has to decide which ones die, and with
-        // most said once there is nothing to decide it by. What orders them
-        // is evidence, in two grades — a word the fluent self came back to
-        // across several TURNS is what the call was about and leads outright;
-        // a word said once is a weaker claim than a curated level match, so
-        // those fill whatever the graded words left.
-        val offList = offListContentWords(fluentTexts, language)
-            .filterKeys { it !in excludingLemmas && it !in graded }
-        val recurring = offList.filterValues { it > 1 }.entries
-            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-            .map { it.key }
-        val saidOnce = offList.filterValues { it == 1 }.keys.sorted()
-        return recurring + graded + saidOnce
+        return orderPickups(
+            lemmas = VocabLemmas.lemmas(fluentTexts, language),
+            offList = offListContentWords(fluentTexts, language),
+            minRank = minRank,
+            excluded = excludingLemmas,
+            rankOf = { w -> CoreVocabulary.level(w, language)?.let(CoreVocabulary::levelRank) },
+        )
     }
 
 

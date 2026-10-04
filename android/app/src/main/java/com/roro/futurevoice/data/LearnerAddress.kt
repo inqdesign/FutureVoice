@@ -15,10 +15,19 @@ import com.roro.futurevoice.core.UILanguage
 object LearnerAddress {
     /** The name ready for a "%s, …" line, or null when there is none — callers
      *  fall back to the nameless line rather than printing a stray comma. */
-    fun vocative(context: Context, rawName: String?): String? {
+    fun vocative(context: Context, rawName: String?): String? =
+        // No app language picked means the app follows the device (iOS
+        // `UILanguage.chromeLanguage` defaults to it), so a Korean phone
+        // still gets 보람아 — Android read a missing choice as "not Korean"
+        // until 5.15.
+        vocative(rawName, UILanguage.current(context) ?: java.util.Locale.getDefault().language)
+
+    /** The rule itself, pure (plan 5.15). [chromeLanguage] is the language
+     *  the app's own screens are in. */
+    fun vocative(rawName: String?, chromeLanguage: String): String? {
         val name = rawName?.trim().orEmpty()
         if (name.isEmpty()) return null
-        if (UILanguage.current(context)?.startsWith("ko") != true) return name
+        if (!chromeLanguage.startsWith("ko")) return name
         val last = name.last().code
         if (last !in 0xAC00..0xD7A3) return name
         // Hangul syllable block: the final-consonant index is the remainder

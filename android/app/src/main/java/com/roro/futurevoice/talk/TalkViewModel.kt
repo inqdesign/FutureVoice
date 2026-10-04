@@ -1319,53 +1319,32 @@ class TalkViewModel(context: Context) : ViewModel() {
         learnerSpokeThisCall = true
     }
 
-    private fun isBillableMoment(): Boolean {
-        // The opener speaks whether or not it is answered. A call that was
-        // opened, listened to and left behind is not a minute of theirs.
-        if (!learnerSpokeThisCall) return false
-        return somethingIsHappening()
-    }
+    private fun isBillableMoment(): Boolean =
+        TalkMeter.isBillable(moment(learnerSpoke = learnerSpokeThisCall))
 
     /** Someone is speaking, being answered or being heard — billing's
      *  predicate without its "not before the first turn" gate. */
     private fun somethingIsHappening(): Boolean {
-        val phase = _state.value.phase
-        if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return false
-        if (REALTIME) {
-            // Same rule, read off the gateway's state rather than a local VAD.
-            return when (realtime.state) {
-                RealtimeTalkClient.State.SPEAKING,
-                RealtimeTalkClient.State.HEARING,
-                RealtimeTalkClient.State.THINKING -> true
-                RealtimeTalkClient.State.LISTENING -> realtime.level > 0.25f
-                else -> false
-            }
-        }
-        val billable = phase == TalkPhase.THINKING || phase == TalkPhase.SPEAKING ||
-            pcm.isPlaying || mp3.isPlaying || someoneIsTalkingHere()
-        if (BuildConfig.DEBUG) {
+        val billable = TalkMeter.isBillable(moment(learnerSpoke = true))
+        if (BuildConfig.DEBUG && !REALTIME) {
             val now = System.currentTimeMillis()
-            Log.d(TAG, "billable=$billable phase=$phase pcm=${pcm.isPlaying} mp3=${mp3.isPlaying} " +
+            Log.d(TAG, "billable=$billable phase=${_state.value.phase} pcm=${pcm.isPlaying} mp3=${mp3.isPlaying} " +
                 "voicedAgo=${live.lastVoicedAtMs?.let { now - it }} heardAgo=${lastTranscriptChangeAt?.let { now - it }} " +
                 "voicedSec=${"%.1f".format(live.fluencyStats().speakingSeconds)} level=${"%.2f".format(live.level)}")
         }
         return billable
     }
 
-    /**
-     * Three witnesses, all required: recent voiced energy, the recognizer
-     * still making words of it, and enough voiced time this turn to be a
-     * person rather than a clatter. Energy alone is permanently true in a
-     * café, which is why one witness isn't enough (iOS, 2026-08-18).
-     */
-    private fun someoneIsTalkingHere(): Boolean {
+    private fun moment(learnerSpoke: Boolean): TalkMeter.Companion.Moment {
         val now = System.currentTimeMillis()
-        val graceMs = TalkMeter.VOICE_GRACE_SECONDS * 1000
-        val voiced = live.lastVoicedAtMs ?: return false
-        if (now - voiced >= graceMs) return false
-        val heard = lastTranscriptChangeAt ?: return false
-        if (now - heard >= graceMs) return false
-        return live.fluencyStats().speakingSeconds >= MIN_VOICED_SECONDS_PER_TURN
+        val phase = _state.value.phase
+        if (REALTIME) return TalkMeter.Companion.Moment(learnerSpoke, phase,
+            realtime = realtime.state, realtimeLevel = realtime.level)
+        return TalkMeter.Companion.Moment(learnerSpoke, phase,
+            audioPlaying = pcm.isPlaying || mp3.isPlaying,
+            voicedAgoMs = live.lastVoicedAtMs?.let { now - it },
+            heardAgoMs = lastTranscriptChangeAt?.let { now - it },
+            voicedSeconds = live.fluencyStats().speakingSeconds)
     }
 
     /**
@@ -1414,7 +1393,6 @@ class TalkViewModel(context: Context) : ViewModel() {
         const val REALTIME = true
         private const val TAG = "TalkViewModel"
         /** Voiced seconds this turn before a segment counts as a person talking. */
-        private const val MIN_VOICED_SECONDS_PER_TURN = 1.5
 
         /**
          * How long a call may hear nothing at all before it puts itself down.

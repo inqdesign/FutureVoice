@@ -64,7 +64,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.roro.futurevoice.R
@@ -824,16 +823,9 @@ private fun FinishedPanel(
 @Composable
 private fun highlightedCorrection(text: String, said: String) = run {
     val tint = MaterialTheme.colorScheme.primary
-    remember(text, said, tint) {
-        val changed = SpokenWords.changedTokens(text, said)
-        buildAnnotatedString {
-            text.split(" ").filter { it.isNotEmpty() }.forEachIndexed { i, token ->
-                if (i > 0) append(" ")
-                if (changed.getOrElse(i) { false }) {
-                    withStyle(SpanStyle(color = tint, fontWeight = FontWeight.SemiBold)) { append(token) }
-                } else append(token)
-            }
-        }
+    val language = com.roro.futurevoice.data.LanguageScope.active(LocalContext.current)
+    remember(text, said, tint, language) {
+        correctionLine(text, said, language, SpanStyle(color = tint, fontWeight = FontWeight.SemiBold))
     }
 }
 

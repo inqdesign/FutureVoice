@@ -21,9 +21,7 @@ import androidx.compose.material3.AlertDialog
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.material3.CircularProgressIndicator
 import com.roro.futurevoice.data.MicPreference
@@ -1047,19 +1045,11 @@ private fun SuggestionChip(suggestion: com.roro.futurevoice.talk.TurnSuggestion,
         mutableStateOf(com.roro.futurevoice.net.Translator.cachedExplanation(
             context, original, suggestion.alternative, nativeLanguage))
     }
-    val changed = remember(suggestion.alternative, original) {
-        com.roro.futurevoice.talk.SpokenWords.changedTokens(suggestion.alternative, original)
-    }
     val tint = MaterialTheme.colorScheme.primary
-    val line = remember(suggestion.alternative, original) {
-        buildAnnotatedString {
-            suggestion.alternative.split(" ").filter { it.isNotEmpty() }.forEachIndexed { i, token ->
-                if (i > 0) append(" ")
-                if (changed.getOrElse(i) { false }) {
-                    withStyle(SpanStyle(color = tint, fontWeight = FontWeight.SemiBold)) { append(token) }
-                } else append(token)
-            }
-        }
+    val language = remember { com.roro.futurevoice.data.LanguageScope.active(context) }
+    val line = remember(suggestion.alternative, original, tint) {
+        correctionLine(suggestion.alternative, original, language,
+            SpanStyle(color = tint, fontWeight = FontWeight.SemiBold))
     }
     Column(Modifier.fillMaxWidth().padding(top = 4.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)) {

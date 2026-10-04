@@ -63,8 +63,14 @@ data class AccountStatus(
      * period's usage is stale often enough to refuse a call the server would
      * allow.
      */
+    /**
+     * "Nothing left" is under a MINUTE, not zero (iOS 2026-09-20, user's
+     * rule): a pool of seconds buys a greeting and a wall, which is not a
+     * call, and the server closes such a pool on the call's opening tick.
+     * This is the same floor one step earlier. Was `<= 0` until 5.13.
+     */
     val needsSubscription: Boolean
-        get() = !isEntitled && secondsBalance <= 0 && !unlimited
+        get() = !isEntitled && secondsBalance < MINIMUM_CALL_SECONDS && !unlimited
 
     /** Entitled on Light — the only tier with anything left to sell them. */
     val isLightPlan: Boolean
@@ -74,6 +80,10 @@ data class AccountStatus(
         get() = isEntitled && planId?.startsWith("plus") == true
 
     companion object {
+        /** The shortest pool that can carry a conversation. Mirrors the
+         *  server's floor in `consume_metered_seconds`; keep the two the same. */
+        const val MINIMUM_CALL_SECONDS = 60
+
         @Serializable
         private data class TrialRow(val trial_ends_at: String? = null)
 

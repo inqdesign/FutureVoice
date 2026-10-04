@@ -32,7 +32,6 @@ object DayCardStore {
     private fun dir(context: Context) = File(context.filesDir, "daycards").apply { mkdirs() }
     private fun key(day: Long) = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(day))
     private fun photoFile(context: Context, day: Long) = File(dir(context), "${key(day)}.jpg")
-    private fun snapshotFile(context: Context, day: Long) = File(dir(context), "${key(day)}.json")
 
     fun photo(context: Context, day: Long): Bitmap? {
         val f = photoFile(context, day)
@@ -48,8 +47,10 @@ object DayCardStore {
 
     fun removePhoto(context: Context, day: Long) { photoFile(context, day).delete() }
 
-    fun snapshot(context: Context, day: Long): DayCardData? {
-        val f = snapshotFile(context, day)
+    fun snapshot(context: Context, day: Long): DayCardData? = snapshotIn(dir(context), day)
+
+    internal fun snapshotIn(dir: File, day: Long): DayCardData? {
+        val f = File(dir, "${key(day)}.json")
         if (!f.exists()) return null
         return runCatching {
             val fr = StoreJson.json.decodeFromString(Frozen.serializer(), f.readText())
@@ -66,11 +67,21 @@ object DayCardStore {
      * Nothing a snapshot protects against — pruned logs, a changed streak
      * rule — can reach today, so there was never anything to buy.
      */
-    fun freeze(context: Context, data: DayCardData) {
-        if (isToday(data.date)) return
-        snapshotFile(context, data.date).writeText(StoreJson.json.encodeToString(
+    fun freeze(context: Context, data: DayCardData) = freezeIn(dir(context), data)
+
+    /**
+     * Two more guards iOS `freeze` / `freezePastDays` hold (found by 5.12):
+     * a day with nothing in it is not a card, and a settled day is never
+     * walked BACKWARDS — a re-settle reads logs that may since have been
+     * pruned, and a record is not improved by a smaller one.
+     */
+    internal fun freezeIn(dir: File, data: DayCardData, now: Long = System.currentTimeMillis()): Boolean {
+        if (isToday(data.date, now) || !data.hasActivity) return false
+        snapshotIn(dir, data.date)?.let { if (it.talkMinutes > data.talkMinutes) return false }
+        File(dir, "${key(data.date)}.json").writeText(StoreJson.json.encodeToString(
             Frozen.serializer(), Frozen(data.talkMinutes, data.studyMinutes, data.streakDays,
                 data.talks, data.reviews, data.shadowTakes, data.topics)))
+        return true
     }
 
     /**
@@ -79,7 +90,11 @@ object DayCardStore {
      * ignored rather than trusted.
      */
     fun resolve(context: Context, day: Long, live: () -> DayCardData): DayCardData =
-        if (isToday(day)) live() else snapshot(context, day) ?: live()
+        resolveIn(dir(context), day, live = live)
 
-    fun isToday(day: Long): Boolean = key(day) == key(System.currentTimeMillis())
+    internal fun resolveIn(dir: File, day: Long, now: Long = System.currentTimeMillis(),
+                           live: () -> DayCardData): DayCardData =
+        if (isToday(day, now)) live() else snapshotIn(dir, day) ?: live()
+
+    fun isToday(day: Long, now: Long = System.currentTimeMillis()): Boolean = key(day) == key(now)
 }

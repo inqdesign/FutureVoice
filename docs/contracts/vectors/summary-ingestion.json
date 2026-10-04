@@ -257,6 +257,42 @@
     {
       "phrase" : "  ",
       "result" : false
+    },
+    {
+      "phrase" : "조사를 올바르게 쓰기",
+      "result" : false
+    },
+    {
+      "phrase" : "과거 시제 연습",
+      "result" : false
+    },
+    {
+      "phrase" : "문법에 주의하기",
+      "result" : false
+    },
+    {
+      "phrase" : "어제 친구랑 영화 봤어",
+      "result" : true
+    },
+    {
+      "phrase" : "助詞を正しく使う",
+      "result" : false
+    },
+    {
+      "phrase" : "時制に気をつける",
+      "result" : false
+    },
+    {
+      "phrase" : "昨日は映画を見た",
+      "result" : true
+    },
+    {
+      "phrase" : "Grammatik üben",
+      "result" : false
+    },
+    {
+      "phrase" : "Ich war gestern im Kino",
+      "result" : true
     }
   ],
   "japanese" : [
@@ -815,6 +851,129 @@
       "score" : 94,
       "target" : "오늘 날씨가 좋네요",
       "targetTokens" : 8
+    },
+    {
+      "language" : "en",
+      "learner" : "hello world how are you",
+      "learnerTokens" : 5,
+      "matches" : 5,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "hello world how are you",
+      "targetTokens" : 5
+    },
+    {
+      "language" : "en",
+      "learner" : "hello world",
+      "learnerTokens" : 2,
+      "matches" : 2,
+      "ops" : [
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "Hello, world!",
+      "targetTokens" : 2
+    },
+    {
+      "language" : "en",
+      "learner" : "",
+      "learnerTokens" : 0,
+      "matches" : 0,
+      "ops" : [
+        "del",
+        "del"
+      ],
+      "score" : 0,
+      "target" : "hello world",
+      "targetTokens" : 2
+    },
+    {
+      "language" : "en",
+      "learner" : "I go to the bank",
+      "learnerTokens" : 5,
+      "matches" : 4,
+      "ops" : [
+        "match",
+        "sub",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 89,
+      "target" : "I went to the bank",
+      "targetTokens" : 5
+    },
+    {
+      "language" : "en",
+      "learner" : "I'm building it, don't worry",
+      "learnerTokens" : 7,
+      "matches" : 7,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "I’m building it, don’t worry",
+      "targetTokens" : 7
+    },
+    {
+      "language" : "en",
+      "learner" : "I am building it",
+      "learnerTokens" : 4,
+      "matches" : 4,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "I’m building it",
+      "targetTokens" : 4
+    },
+    {
+      "language" : "en",
+      "learner" : "the weather nice today actually",
+      "learnerTokens" : 5,
+      "matches" : 4,
+      "ops" : [
+        "match",
+        "match",
+        "del",
+        "match",
+        "match",
+        "ins"
+      ],
+      "score" : 89,
+      "target" : "the weather is nice today",
+      "targetTokens" : 5
+    },
+    {
+      "language" : "en",
+      "learner" : "alpha xx yy zz",
+      "learnerTokens" : 4,
+      "matches" : 1,
+      "ops" : [
+        "match",
+        "sub",
+        "sub",
+        "sub"
+      ],
+      "score" : 50,
+      "target" : "alpha beta gamma delta",
+      "targetTokens" : 4
     }
   ]
 }

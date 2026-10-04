@@ -180,6 +180,11 @@ object DrillIngest {
     fun isDrillable(targetPhrase: String): Boolean = !looksLikeMetaRule(targetPhrase)
 
     private val BANNED_SUBSTRINGS = listOf(
+        // Korean / Japanese / German names for the same categories (iOS
+        // 2026-09-23). The list below is English, and a meta-rule written in
+        // the coaching language slipped past it — found by the 5.14 vectors.
+        "문법", "조사를", "시제", "관사", "올바르게", "정확하게",
+        "文法", "助詞", "時制", "正しく", "grammatik",
         "correctly", "properly", "appropriately", "subject-verb", "agreement", "tense",
         "article", "preposition", "vocabulary", "register", "grammar", "pronunciation",
         "fluency", "expand your", "instead of using", "remember to", "make sure to",

@@ -510,20 +510,14 @@ fun TalkDetailScreen(
                                             textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    val changed = remember(item.text, original) {
-                                        com.roro.futurevoice.talk.SpokenWords.changedTokens(item.text, original)
-                                    }
                                     val accent = MaterialTheme.colorScheme.primary
-                                    Text(androidx.compose.ui.text.buildAnnotatedString {
-                                        item.text.split(" ").filter { it.isNotEmpty() }.forEachIndexed { i, tok ->
-                                            if (i > 0) append(" ")
-                                            if (original.isNotBlank() && changed.getOrElse(i) { false }) {
-                                                pushStyle(androidx.compose.ui.text.SpanStyle(color = accent,
-                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
-                                                append(tok); pop()
-                                            } else append(tok)
-                                        }
-                                    }, style = MaterialTheme.typography.bodyMedium)
+                                    val line = remember(item.text, original, accent) {
+                                        if (original.isBlank()) androidx.compose.ui.text.AnnotatedString(item.text)
+                                        else correctionLine(item.text, original, language,
+                                            androidx.compose.ui.text.SpanStyle(color = accent,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                                    }
+                                    Text(line, style = MaterialTheme.typography.bodyMedium)
                                     if (item.note.isNotBlank()) {
                                         Text(item.note, style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
