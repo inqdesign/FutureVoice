@@ -284,6 +284,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var routePollTask: Task<Void, Never>?
     private var pollRebuildStrikes = 0
     private var pollMismatchTicks = 0
+    /// The current build was offered an HFP mic and the session refused it
+    /// (`HFP refused — falling back to speaker`). That device is still in
+    /// `availableInputs`, so without this the poll read "Bluetooth available,
+    /// built on the speaker" as an attach and rebuilt into the same refusal —
+    /// four seconds into every call, i.e. mid-greeting (device log
+    /// 2026-10-04: every call's first line cut at ~3 s). Cleared once the
+    /// device leaves the list, so a later real attach is still noticed.
+    private var hfpRefusedAtBuild = false
     /// Tap buffers since the CURRENT engine build — written on the audio
     /// thread, read by the per-build tap watchdog. The original mic watchdog
     /// guards only the call's FIRST build; a REBUILD can also come up with a
@@ -842,6 +850,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// — the slow half of `startAudio`, built off the main thread.
     struct PreparedAudio: @unchecked Sendable {
         let engine: AVAudioEngine
+        /// An HFP mic was offered and the session refused it — see
+        /// `hfpRefusedAtBuild`.
+        var hfpRefused = false
     }
 
     /// `prepared` is the call's first build, made by `prepareAudio` on a
@@ -849,7 +860,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// inline, as it always has.
     private func startAudio(prepared: PreparedAudio? = nil) throws {
         // Fresh graph every time — see the `engine` declaration.
-        engine = try (prepared ?? Self.prepareAudio()).engine
+        let built = try prepared ?? Self.prepareAudio()
+        engine = built.engine
+        hfpRefusedAtBuild = built.hfpRefused
         player = AVAudioPlayerNode()
         let session = AVAudioSession.sharedInstance()
         let input = engine.inputNode
@@ -952,6 +965,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         if carPlay { AudioSessionRouting.preferCarMic(session) }
         var bluetoothMic = carPlay
             ? nil : session.availableInputs?.first { $0.portType == .bluetoothHFP }
+        var hfpRefused = false
         if let mic = bluetoothMic {
             try? session.setPreferredInput(mic)
             if session.currentRoute.inputs.first?.portType != .bluetoothHFP {
@@ -973,6 +987,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 // treat the earphone as absent so the speaker branch below
                 // pins `.defaultToSpeaker`.
                 Self.step("audio: HFP refused — falling back to speaker")
+                hfpRefused = true
                 bluetoothMic = nil
                 AudioSessionRouting.preferBuiltInMic(session)
             }
@@ -1037,7 +1052,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let probeFormat = input.outputFormat(forBus: 0)
         Self.step("audio: session sr=\(session.sampleRate) inCh=\(session.inputNumberOfChannels) "
             + "inputAvail=\(session.isInputAvailable) probe=\(probeFormat.sampleRate)/\(probeFormat.channelCount)")
-        return PreparedAudio(engine: engine)
+        return PreparedAudio(engine: engine, hfpRefused: hfpRefused)
     }
 
     /// The fast half: player, tap, start — on the main thread, where the
@@ -1301,10 +1316,21 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private func startRoutePoll() {
         guard routePollTask == nil else { return }
         routePollTask = Task { @MainActor [weak self] in
+            var lastPlayed = -1
+            var lastBytes = -1
             while true {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled, let self, !self.isTornDown else { return }
                 guard self.engineRunning, !self.isRebuildingAudio else { continue }
+                // Same rule as the tap watchdog: never tear the stack down
+                // while a line is in the air — a rebuild drops the rest of
+                // it. The check waits for the silence after the line.
+                let inAir = self.playedBuffers != lastPlayed
+                    || self.replyBytesReceived != lastBytes
+                    || self.openerIsAudible || self.state == .speaking
+                lastPlayed = self.playedBuffers
+                lastBytes = self.replyBytesReceived
+                guard !inAir else { continue }
                 let session = AVAudioSession.sharedInstance()
                 // With CarPlay up an earphone is not WANTED, so its presence
                 // is no reason to rebuild — and a call built on HFP when the
@@ -1312,6 +1338,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 let btAvailable = !AudioSessionRouting.isCarPlayConnected(session)
                     && (session.availableInputs?.contains { $0.portType == .bluetoothHFP } ?? false)
                 let builtOnBT = self.builtOutput == AVAudioSession.Port.bluetoothHFP.rawValue
+                if !btAvailable { self.hfpRefusedAtBuild = false }
+                // Listed but already refused by this build: not an attach.
+                guard !(btAvailable && !builtOnBT && self.hfpRefusedAtBuild) else {
+                    self.pollMismatchTicks = 0
+                    continue
+                }
                 guard btAvailable != builtOnBT else {
                     self.pollRebuildStrikes = 0
                     self.pollMismatchTicks = 0
