@@ -1948,6 +1948,13 @@ struct WeeklyTestItem: Codable, Identifiable, Hashable {
         case listen
         /// A fluent-self line to say out loud, scored like a shadow take.
         case speak
+        /// A grammar point the week's report found going wrong in more than
+        /// one sentence: its rule is shown with one of the learner's lines,
+        /// and the line is rebuilt the right way from tiles.
+        case grammar
+        /// A word the learner leans on (the report's "upgrades"): their line
+        /// with it marked, pick the better word.
+        case upgrade
     }
     let id: UUID
     let kind: Kind
@@ -1968,6 +1975,13 @@ struct WeeklyTestItem: Codable, Identifiable, Hashable {
     var note: String? = nil
     /// True when the item came back from an earlier test's wrong answers.
     var isRetake: Bool? = nil
+    /// grammar: the rule in the learner's language.
+    var rule: String? = nil
+    /// grammar: the span that was wrong · upgrade: the leaned-on word —
+    /// marked inside `prompt`.
+    var focus: String? = nil
+    /// upgrade: the learner's line with the better word in it.
+    var example: String? = nil
 }
 
 struct WeeklyTestAnswer: Codable, Hashable {

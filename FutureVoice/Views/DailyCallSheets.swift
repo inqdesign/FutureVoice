@@ -117,6 +117,7 @@ struct DailyCallOnboardingView: View {
         permissionDenied = false
         Task {
             let granted = await DailyCallScheduler.requestPermission()
+            await WeeklyTestReminder.settleAfterPermission()
             guard granted else {
                 working = false
                 permissionDenied = true
@@ -152,6 +153,8 @@ struct DailyCallOnboardingView: View {
         DailyCallStore.shared.isEnabled = false
         Task {
             await PushTokens.ensurePermission()
+            // The weekly step before this one may have asked for its notice.
+            await WeeklyTestReminder.settleAfterPermission()
             onboarded = true
         }
     }

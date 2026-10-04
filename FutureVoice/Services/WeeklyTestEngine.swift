@@ -13,6 +13,11 @@ import Foundation
 ///              rebuilt from tiles — dictation, not a pick from three
 ///   speak    ← the fluent self's lines, said out loud and scored like a
 ///              shadow take (`ShadowTranscriber` + `ShadowEngine`)
+///   grammar  ← the week report's recurring grammar points (`WeekRecap.Coach`),
+///              else the profile's recurring mistakes — rule + one of the
+///              learner's own lines, rebuilt right from tiles
+///   upgrade  ← the week report's leaned-on words — the learner's line with
+///              the word marked, pick the better one
 ///
 /// Last week's wrong answers come back as this week's first items
 /// (`maxRetake`), and once a month every wrong answer of the month is dealt
@@ -36,6 +41,12 @@ enum WeeklyTestEngine {
     static let maxBuild = 3
     static let maxListen = 2
     static let maxSpeak = 2
+    static let maxGrammar = 2
+    static let maxUpgrade = 2
+    /// How long a paper waits for the week report's coach to be written
+    /// when the deck hasn't been opened yet. The writing carries on past it
+    /// (and lands in the report); the paper just goes without.
+    static let coachWait: TimeInterval = 25
     /// Wrong answers of the previous test dealt again this week.
     static let maxRetake = 3
     /// The monthly paper's ceiling.
@@ -106,6 +117,11 @@ enum WeeklyTestEngine {
         items += speakItems(fluentTurns: fluentTurns, sessions: windowSessions,
                             excluding: Set(listens.map { CarryoverDetector.normalized($0.answer) }),
                             rng: &rng)
+        // What the week's report found: grammar that keeps going wrong and
+        // words leaned on too often (user, 2026-10-03).
+        let coach = await weekCoach(appState: appState, now: now)
+        items += await grammarItems(coach: coach, userTurns: userTurns, appState: appState, now: now, rng: &rng)
+        items += upgradeItems(coach: coach, userTurns: userTurns, appState: appState, rng: &rng)
         // What last week got wrong is asked again first — the test is a
         // review, and a miss is the most certain material there is.
         if let last = lastTest, last.isFinished, !last.isMonthly {
@@ -169,13 +185,14 @@ enum WeeklyTestEngine {
                 // item picks up today's decoy rule instead of its old tiles.
                 let options: [String]
                 switch item.kind {
-                case .build: options = buildTiles(target: item.answer, source: item.prompt, rng: &rng)
+                case .build, .grammar: options = buildTiles(target: item.answer, source: item.prompt, rng: &rng)
                 case .listen: options = dictationTiles(for: item.answer, rng: &rng)
                 default: options = item.options.shuffled(using: &rng)
                 }
                 out.append(WeeklyTestItem(id: UUID(), kind: item.kind, prompt: item.prompt, answer: item.answer,
                                           options: options, sessionId: item.sessionId, turnId: item.turnId,
-                                          cardId: item.cardId, note: item.note, isRetake: true))
+                                          cardId: item.cardId, note: item.note, isRetake: true,
+                                          rule: item.rule, focus: item.focus, example: item.example))
             }
         }
         return out
@@ -204,7 +221,9 @@ enum WeeklyTestEngine {
         func ok(_ text: String) -> Bool { isInTargetScript(text, language: language) }
         guard ok(item.answer) else { return false }
         switch item.kind {
-        case .build:
+        case .build, .grammar:
+            return ok(item.prompt) && item.options.allSatisfy(ok)
+        case .upgrade:
             return ok(item.prompt) && item.options.allSatisfy(ok)
         case .gap:
             return ok(item.prompt.replacingOccurrences(of: blankMark, with: "")) && item.options.allSatisfy(ok)
@@ -573,6 +592,144 @@ enum WeeklyTestEngine {
         return tiles
     }
 
+    // MARK: report (grammar · upgrade)
+
+    /// The closed week's report coach. Written here when the deck hasn't
+    /// been opened yet — saved into the report, so the deck shows the same
+    /// read and it is paid for once — but the paper waits at most
+    /// `coachWait` for it.
+    private static func weekCoach(appState: AppState, now: Date) async -> WeekRecap.Coach? {
+        let recap = WeekRecapStore.shared.lastWeek(now: now)
+        if let coach = recap.coach { return coach }
+        guard recap.hasActivity else { return nil }
+        final class Box { var done = false; var coach: WeekRecap.Coach? }
+        let box = Box()
+        let target = appState.targetLanguage, level = appState.proficiency
+        Task { @MainActor in
+            defer { box.done = true }
+            guard let written = try? await WeekRecapCoach.write(for: recap, targetLanguage: target,
+                                                                level: level) else { return }
+            // The deck may have written it meanwhile; keep the first.
+            var latest = WeekRecapStore.shared.recap(endingAt: recap.end) ?? recap
+            if latest.coach == nil {
+                latest.coach = written
+                WeekRecapStore.shared.save(latest)
+            }
+            box.coach = latest.coach
+        }
+        let deadline = Date().addingTimeInterval(coachWait)
+        while !box.done, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        return box.coach
+    }
+
+    /// The first sentence of the window's learner lines that QUOTES `span`
+    /// (the report's quotes were checked against every language's lines; this
+    /// keeps them to the active one), with the span's range in it.
+    private static func learnerSentence(
+        quoting span: String, in userTurns: [(session: Session, turn: Turn)], maxWords: Int
+    ) -> (sentence: String, range: Range<String.Index>, session: Session, turn: Turn)? {
+        let needle = span.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return nil }
+        for entry in userTurns {
+            for sentence in TalkCurriculum.sentences(in: entry.turn.transcript) {
+                guard let range = sentence.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) else { continue }
+                let n = WordSplitter.count(sentence)
+                guard n >= 3, n <= maxWords, isInTargetScript(sentence) else { continue }
+                return (sentence, range, entry.session, entry.turn)
+            }
+        }
+        return nil
+    }
+
+    /// One item per recurring grammar point: the rule, one of the learner's
+    /// own lines with the mistake in it, rebuilt right from tiles (the wrong
+    /// words ride along as decoys — `buildTiles`). The report's points come
+    /// first; when it has none (or none found this week's lines) the
+    /// profile's recurring mistakes stand in, named by `GrammarFocus`.
+    private static func grammarItems(
+        coach: WeekRecap.Coach?, userTurns: [(session: Session, turn: Turn)],
+        appState: AppState, now: Date, rng: inout WeeklyTestRandom
+    ) async -> [WeeklyTestItem] {
+        let maxWords = WordSplitter.spaced ? 12 : 18
+        var out: [WeeklyTestItem] = []
+        var seen = Set<String>()
+        func make(rule: String, tip: String, was: String, now fixed: String) -> WeeklyTestItem? {
+            guard let hit = learnerSentence(quoting: was, in: userTurns, maxWords: maxWords) else { return nil }
+            let answer = hit.sentence.replacingCharacters(in: hit.range, with: fixed)
+            guard isInTargetScript(answer),
+                  CarryoverDetector.normalized(answer) != CarryoverDetector.normalized(hit.sentence),
+                  seen.insert(CarryoverDetector.normalized(answer)).inserted else { return nil }
+            return WeeklyTestItem(id: UUID(), kind: .grammar, prompt: hit.sentence, answer: answer,
+                                  options: buildTiles(target: answer, source: hit.sentence, rng: &rng),
+                                  sessionId: hit.session.id, turnId: hit.turn.id,
+                                  note: tip.isEmpty ? nil : tip, rule: rule, focus: was)
+        }
+        for pattern in coach?.grammar ?? [] {
+            guard out.count < maxGrammar else { break }
+            for example in pattern.examples.shuffled(using: &rng) {
+                if let item = make(rule: pattern.rule, tip: pattern.tip, was: example.was, now: example.now) {
+                    out.append(item); break
+                }
+            }
+        }
+        guard out.count < maxGrammar else { return out }
+        let fresh = now.addingTimeInterval(-Double(GrammarFocus.freshDays) * 86_400)
+        let patterns = appState.learnerProfile.recurringMistakes
+            .filter { $0.frequency >= GrammarFocus.minFrequency && $0.lastSeenAt >= fresh }
+        for pattern in patterns {
+            guard out.count < maxGrammar else { break }
+            guard learnerSentence(quoting: pattern.mistake, in: userTurns, maxWords: maxWords) != nil,
+                  let named = await GrammarFocus.describe(pattern, target: appState.targetLanguage,
+                                                          native: appState.nativeLanguage),
+                  let item = make(rule: named.label, tip: named.tip, was: pattern.mistake, now: pattern.correction)
+            else { continue }
+            out.append(item)
+        }
+        return out
+    }
+
+    /// One item per leaned-on word: the learner's line with it marked, and
+    /// the report's better word among three that don't belong — the week's
+    /// other better words first, then graded words of the same class one
+    /// band above the learner (the band the report reaches for).
+    private static func upgradeItems(
+        coach: WeekRecap.Coach?, userTurns: [(session: Session, turn: Turn)],
+        appState: AppState, rng: inout WeeklyTestRandom
+    ) -> [WeeklyTestItem] {
+        guard let upgrades = coach?.upgrades, !upgrades.isEmpty else { return [] }
+        let language = appState.targetLanguage
+        let all = CEFRLevel.allCases
+        let level = appState.proficiency
+        let oneUp = all.firstIndex(of: level).map { all[min($0 + 1, all.count - 1)] } ?? level
+        var graded: [String] = []
+        for band in decoyBands(around: oneUp) {
+            graded += CoreVocabulary.entries.filter { $0.level == band }.map(\.word).shuffled(using: &rng)
+        }
+        var out: [WeeklyTestItem] = []
+        for u in upgrades.shuffled(using: &rng) {
+            guard out.count < maxUpgrade else { break }
+            guard isInTargetScript(u.better), isInTargetScript(u.instead),
+                  let hit = learnerSentence(quoting: u.instead, in: userTurns,
+                                            maxWords: WordSplitter.spaced ? 25 : 35) else { continue }
+            let taken = Set(([u.better, u.instead] + WordSplitter.words(hit.sentence)).map { $0.lowercased() })
+            func fits(_ w: String) -> Bool { !taken.contains(w.lowercased()) && isInTargetScript(w) }
+            let week = upgrades.map(\.better).filter(fits).shuffled(using: &rng)
+            let sameClass = graded.lazy.filter(fits)
+                .filter { WordClass.sameClass(u.better, $0, language: language) }.prefix(30)
+            let decoys = dedupe(week + Array(sameClass).shuffled(using: &rng) + graded.filter(fits),
+                                key: { $0.lowercased() }).prefix(choiceCount - 1)
+            guard decoys.count == choiceCount - 1 else { continue }
+            out.append(WeeklyTestItem(id: UUID(), kind: .upgrade, prompt: hit.sentence, answer: u.better,
+                                      options: ([u.better] + decoys).shuffled(using: &rng),
+                                      sessionId: hit.session.id, turnId: hit.turn.id,
+                                      note: u.note.isEmpty ? nil : u.note, focus: u.instead,
+                                      example: u.rewritten.isEmpty ? nil : u.rewritten))
+        }
+        return out
+    }
+
     // MARK: listen
 
     private static func listenItems(
@@ -721,6 +878,8 @@ enum WeeklyTestEngine {
     ///   gap      right → the phrase waits 3 days · wrong → bookmarked, due now
     ///   build    right → one Leitner rung up · wrong → one rung down
     ///   listen   nothing to write; recognition is not production
+    ///   grammar  nothing to write; its corrections already carry cards
+    ///   upgrade  wrong → the better word in the notebook, due now
     static func apply(_ test: WeeklyTest, now: Date = Date()) {
         let vocab = VocabStore.shared
         let cards = Dictionary(uniqueKeysWithValues: DrillStore.shared.load().map { ($0.id, $0) })
@@ -755,9 +914,23 @@ enum WeeklyTestEngine {
                 if answer.correct { DrillStore.shared.markCorrect(card, at: now) }
                 else { DrillStore.shared.markIncorrect(card, at: now) }
                 PracticeLog.shared.record(.drill)
-            case .listen, .speak:
+            case .upgrade:
+                // Missed: the better word goes in the notebook, due now. Right
+                // is a recognition, not a use — nothing to claim.
+                guard !answer.correct else { continue }
+                let better = item.answer
+                if WordSplitter.count(better) > 1 {
+                    if !vocab.isStudyingExpression(better) { vocab.setStudyingExpression(better, true) }
+                    ReviewQueue.retire(.expression, better)
+                } else {
+                    vocab.addStudying(better)
+                    ReviewQueue.retire(.word, better)
+                }
+            case .listen, .speak, .grammar:
                 // Recognition writes nothing; a spoken line is already on
                 // file as a shadow attempt, saved by the screen that heard it.
+                // A grammar point has no card of its own — the corrections it
+                // was found in already have theirs.
                 break
             }
         }

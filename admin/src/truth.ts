@@ -43,6 +43,11 @@ export interface Truth {
     total: number;
   } | null;
   fx: { USD: number; KRW: number; asOf: string; source: "frankfurter" | "fallback" };
+  /** Custom-voice capacity on the account (same subscription call). Every
+   *  learner's clone takes one slot out of `limit` for the WHOLE account, and
+   *  each (re)clone or remix spends one of the month's add/edits. null fields
+   *  = the response didn't carry them. */
+  voices: { used: number | null; limit: number | null; addEdits: number | null; maxAddEdits: number | null };
   error?: string;
 }
 
@@ -86,6 +91,10 @@ async function fx(): Promise<Truth["fx"]> {
     fxHeld = { at: Date.now(), value: { ...FX_FALLBACK, source: "fallback" } };
   }
   return fxHeld.value;
+}
+
+function numOrNull(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
 async function eleven(path: string, key: string): Promise<any> {
@@ -185,6 +194,12 @@ export async function elevenTruth(
     tierCredits: t.credits,
     windowStart,
     days, models, ledger, fx: rates,
+    voices: {
+      used: numOrNull(sub.voice_slots_used),
+      limit: numOrNull(sub.voice_limit),
+      addEdits: numOrNull(sub.voice_add_edit_counter),
+      maxAddEdits: numOrNull(sub.max_voice_add_edits),
+    },
   };
   held = { at: Date.now(), key: windowStart, value };
   return value;

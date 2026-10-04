@@ -942,7 +942,9 @@ enum DebugCapture {
             return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "weekly-test", "weekly-test-word", "weekly-test-gap", "weekly-test-build", "weekly-test-listen",
              "weekly-test-speak",
-             "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right":
+             "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right",
+             "weekly-test-grammar", "weekly-test-grammar-right", "weekly-test-grammar-wrong",
+             "weekly-test-upgrade", "weekly-test-upgrade-right", "weekly-test-upgrade-wrong":
             // The test sheet, opened on a chosen item kind. Material is the
             // seeded week; the dictionary is stubbed so a meaning item can be
             // built offline.
@@ -954,6 +956,8 @@ enum DebugCapture {
                 case "weekly-test-build", "weekly-test-build-wrong", "weekly-test-build-right": .build
                 case "weekly-test-listen": .listen
                 case "weekly-test-speak": .speak
+                case "weekly-test-grammar", "weekly-test-grammar-right", "weekly-test-grammar-wrong": .grammar
+                case "weekly-test-upgrade", "weekly-test-upgrade-right", "weekly-test-upgrade-wrong": .upgrade
                 default: nil
             }
             weeklyTestAnswer = name.hasSuffix("-right") ? true : (name.hasSuffix("-wrong") ? false : nil)
@@ -1798,6 +1802,13 @@ enum DebugCapture {
             (.fluentSelf, "Give yourself a day off. You can always catch up on the unpacking later."),
             (.user, "I have to unpack the kitchen first, it's a chore."),
             (.fluentSelf, "Kitchens are the worst part. Let me walk you through how I did mine."),
+            // The week report's quotes (`sampleWeekRecap`), so the grammar
+            // and upgrade items find the learner's own lines.
+            (.user, "Yesterday I went to the flat and the landlord says it's fine."),
+            (.fluentSelf, "That's a relief. Did you sign anything yet?"),
+            (.user, "Not yet. I was very tired after the move."),
+            (.fluentSelf, "Fair enough. And the flat itself?"),
+            (.user, "The flat is good for the price."),
         ]
         var turns: [Turn] = []
         for (i, line) in lines.enumerated() {
@@ -1843,6 +1854,9 @@ enum DebugCapture {
             sourceSessionId: session.id, sourceTurnId: turns[5].id))
         VocabStore.shared.addStudying("chore")
         VocabStore.shared.addStudying("exhausting")
+        // The closed week's report, coach written, so the paper never waits
+        // on the network for its grammar and upgrade items.
+        WeekRecapStore.shared.save(sampleWeekRecap)
     }
 
     /// Two finished weekly tests, each with misses, inside the month that
@@ -2640,6 +2654,7 @@ private struct PageIntroCaptureHost: View {
             case .watch:    WatchTab()
             case .review:   PracticeTab()
             case .progress: ProgressTab()
+            case .routine:  NavigationStack { ActivityView() }
             }
         }
         .sheet(isPresented: $showing) { PageIntroSheet(page: page, initialStep: step) }

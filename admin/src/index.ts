@@ -166,7 +166,94 @@ async function fetchData(env: Env) {
     if (offers[u.id]) u.offer = offers[u.id];
     if (langs[u.id]) { u.native = langs[u.id].native; u.target = langs[u.id].target; }
   }
+  // ElevenLabs voice slots (2026-10-04): the account's own count beside who
+  // holds them in voice_clones. Optional — a failure leaves the card empty.
+  (data as any).voiceSlots = await voiceSlots(env, truth?.voices ?? null,
+    new Set((data.users as { id: string; anonymous?: boolean }[]).filter((u) => u.anonymous).map((u) => u.id)),
+    new Set((data.users as { id: string }[]).map((u) => u.id)),
+  ).catch((e) => {
+    console.log(`voiceSlots: ${(e as Error).message}`);
+    return null;
+  });
   return data;
+}
+
+/** Who is holding the account's custom-voice slots.
+ *
+ *  ElevenLabs Pro holds 160 custom voices for the WHOLE account, and every
+ *  learner's clone is one (CLAUDE.md "A voice nobody pays for is PARKED").
+ *  ElevenLabs says how many are used; voice_clones says whose they are. An
+ *  active, unparked row holds a slot; a parked row doesn't (deleted upstream,
+ *  rebuilt on demand). The gap between the two counts is voices ElevenLabs
+ *  has that no live row points at — the founder's own, an accent remix whose
+ *  source was never deleted, a deletion that failed. Buckets follow
+ *  `voice_owner_is_entitled`: trialing/active/grace or admin-unlimited is
+ *  never parked; everyone else is a parking candidate after 7 idle days. */
+async function voiceSlots(
+  env: Env,
+  el: { used: number | null; limit: number | null; addEdits: number | null; maxAddEdits: number | null } | null,
+  anonymous: Set<string>,
+  known: Set<string>,
+) {
+  const get = async (q: string) => {
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${q}`, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: "0-9999",
+      },
+    });
+    if (!r.ok) throw new Error(`${q.split("?")[0]} ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return await r.json() as Record<string, unknown>[];
+  };
+  const now = new Date().toISOString();
+  const [clones, subs, unlimited, notices] = await Promise.all([
+    get("voice_clones?select=user_id,parked_at,created_at&is_active=eq.true"),
+    get("user_subscriptions?select=user_id,status&status=in.(trialing,active,grace)"),
+    get("user_credits?select=user_id&unlimited=eq.true"),
+    // Parking is announced two days ahead; a row whose date is still ahead
+    // is a voice that leaves unless its owner opens the app.
+    get(`voice_park_notices?select=user_id,park_after&park_after=gt.${encodeURIComponent(now)}`)
+      .catch(() => [] as Record<string, unknown>[]),
+  ]);
+  const subOf = new Map<string, string>();
+  for (const s of subs) {
+    const id = String(s.user_id), st = String(s.status);
+    // An account can hold two rows; a paying one outranks a trial.
+    if (subOf.get(id) !== "active" && subOf.get(id) !== "grace") subOf.set(id, st);
+  }
+  const unl = new Set(unlimited.map((x) => String(x.user_id)));
+  const warned = new Set(notices.map((x) => String(x.user_id)));
+
+  const b = { paid: 0, trial: 0, unlimited: 0, anonymous: 0, free: 0, warned: 0 };
+  let parked = 0, newest: string | null = null;
+  const week = Date.now() - 7 * 86_400_000;
+  let clonedThisWeek = 0;
+  for (const c of clones) {
+    const id = String(c.user_id);
+    if (c.parked_at) { parked++; continue; }
+    const at = String(c.created_at ?? "");
+    if (at && (!newest || at > newest)) newest = at;
+    if (at && Date.parse(at) >= week) clonedThisWeek++;
+    const st = subOf.get(id);
+    if (st === "active" || st === "grace") b.paid++;
+    else if (st === "trialing") b.trial++;
+    else if (unl.has(id)) b.unlimited++;
+    else if (anonymous.has(id) || !known.has(id)) b.anonymous++;
+    else { b.free++; if (warned.has(id)) b.warned++; }
+  }
+  const held = b.paid + b.trial + b.unlimited + b.anonymous + b.free;
+  return {
+    elUsed: el?.used ?? null,
+    elLimit: el?.limit ?? null,
+    addEdits: el?.addEdits ?? null,
+    maxAddEdits: el?.maxAddEdits ?? null,
+    held, parked, clonedThisWeek, newest,
+    buckets: b,
+    // Voices on ElevenLabs no live row accounts for (negative = rows whose
+    // voice ElevenLabs no longer has, which is its own problem).
+    untracked: el?.used != null ? el.used - held : null,
+  };
 }
 
 /** Every usage_ledger row of the last 24 h, thin, oldest first — the 라이브

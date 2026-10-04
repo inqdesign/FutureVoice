@@ -278,6 +278,21 @@ enum WeeklyTestReminder {
                                                     trigger: trigger))
     }
 
+    /// After a permission prompt someone else raised (onboarding's daily-call
+    /// step): arm the reminder if iOS said yes, and switch the wish OFF if it
+    /// said no, so the goals sheet's toggle never claims a notice that can't
+    /// ring.
+    static func settleAfterPermission() async {
+        let settings = WeeklyTestSettings.shared
+        guard settings.reminderOn else { return }
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        if status == .authorized || status == .provisional {
+            await reschedule()
+        } else {
+            settings.reminderOn = false
+        }
+    }
+
     /// What the notice says, from the week in progress — the numbers are
     /// every one written in the app, so at fire time they are the week's.
     static func makeContent(now: Date = Date()) -> UNMutableNotificationContent {

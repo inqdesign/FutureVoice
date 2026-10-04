@@ -114,12 +114,21 @@ enum TalkTimeLog {
 
         struct LedgerRow: Decodable {
             let created_at: String
+            let idempotency_key: String?
             let metadata: Metadata?
-            struct Metadata: Decodable { let seconds: Int?; let language: String? }
+            struct Metadata: Decodable {
+                let seconds: Int?; let language: String?; let preflight: Bool?
+            }
+            /// The second charged as a call OPENS, before anyone speaks — a
+            /// wall check, never talk (see `TalkMeter.tick`). The gateway
+            /// flags it; the classic path's key ends in ":pre".
+            var isPreflight: Bool {
+                metadata?.preflight == true || (idempotency_key?.hasSuffix(":pre") ?? false)
+            }
         }
         guard let rows: [LedgerRow] = try? await SupabaseProvider.shared
             .from("usage_ledger")
-            .select("created_at,metadata")
+            .select("created_at,idempotency_key,metadata")
             .eq("user_id", value: session.user.id.uuidString)
             .eq("action", value: "talk_time")
             .gte("created_at", value: ISO8601DateFormatter().string(from: start))
@@ -131,7 +140,8 @@ enum TalkTimeLog {
 
         var serverByDay: [String: Int] = [:]
         for row in rows {
-            guard let seconds = row.metadata?.seconds, seconds > 0,
+            guard !row.isPreflight,
+                  let seconds = row.metadata?.seconds, seconds > 0,
                   let at = parseTimestamp(row.created_at) else { continue }
             // Ticks from a build that predates language reporting land under
             // the bare day key, exactly where this log used to put them.

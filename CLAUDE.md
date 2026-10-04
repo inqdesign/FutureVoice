@@ -1626,6 +1626,24 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
   are the free, cached dictionary lookup that writes a gloss and the
   audio-grounded read of a take; no LLM ever decides whether an answer was
   right.
+- **Two kinds come from the week's REPORT** (2026-10-03, user request):
+  `grammar` (a recurring grammar point from `WeekRecap.Coach.grammar` —
+  its rule over one of the learner's own lines that carries the mistake,
+  rebuilt right from tiles, the wrong words as decoys; when the report has
+  none, the profile's `recurringMistakes` named by `GrammarFocus.describe`)
+  and `upgrade` (a leaned-on word from `Coach.upgrades`, marked in the
+  learner's line — pick the better word; decoys are the week's other better
+  words, then same-class graded words one band up; a miss bookmarks it).
+  Every quoted span must be found again in the ACTIVE language's lines of
+  the window. The coach is written lazily when the deck opens, so
+  `weekCoach` writes it at build time if missing (saved into the report,
+  paid once) and waits at most `coachWait` (25 s). Captures:
+  `-capture weekly-test-{grammar,upgrade}[-right|-wrong]`.
+- **Word items come from the week's talk BOOKS only** (2026-10-03): the
+  Words chapter (`TalkCurriculum.build(...).words`) — the fluent self's
+  words at or above the level, minus what the learner said — unmastered
+  first. The notebook and "words used this week" fed it before, which put
+  "house" in a B2 learner's test.
 - **Misses come back.** Last week's wrong answers are dealt again first this
   week (`maxRetake` 3, badge "Again"), and the **monthly test** collects every
   distinct wrong answer of the month's weekly tests (`buildMonthly`, cap

@@ -930,6 +930,16 @@
         }
       }
     },
+    "Change your routine with Edit at the top right. Past days are judged by the routine they had, so raising the bar never turns an old green day grey." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴은 오른쪽 위 편집에서 바꿔요. 지난날은 그때의 루틴으로 판정하니까, 기준을 올려도 이미 초록인 날은 그대로예요."
+          }
+        }
+      }
+    },
     "Keep talking" : {
       "localizations" : {
         "de" : {
@@ -11378,6 +11388,16 @@
     "A" : {
       "shouldTranslate" : false
     },
+    "A 10-minute talk block is done once you've talked for 10 minutes that day. After 4 minutes the ring is 40% full." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10분짜리 대화는 그날 10분을 통화하면 끝나요. 4분이면 링이 40%까지 차요."
+          }
+        }
+      }
+    },
     "A badge next to your name where you meet people." : {
       "localizations" : {
         "de" : {
@@ -11420,6 +11440,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在認識人的地方，名字旁邊會多一個徽章。"
+          }
+        }
+      }
+    },
+    "A better word" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein besseres Wort"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una palabra mejor"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un meilleur mot"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もっといい言い方"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 나은 표현"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更好的说法"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更好的說法"
           }
         }
       }
@@ -12383,6 +12449,52 @@
         }
       }
     },
+    "A mistake you keep making" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Fehler, der sich wiederholt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un error que repites"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une erreur qui revient"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく間違える文法"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자주 틀리는 문법"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常犯的语法错误"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常犯的文法錯誤"
+          }
+        }
+      }
+    },
     "A month's missed items land here. Finish a few weekly tests first." : {
       "localizations" : {
         "de" : {
@@ -12425,6 +12537,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "一個月答錯的題目會集中在這裡。先完成幾次每週測驗吧。"
+          }
+        }
+      }
+    },
+    "A more natural choice than “%@”?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Natürlicher als „%@“?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Algo más natural que «%@»?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus naturel que « %@ » ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」より自然な言い方は？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” 대신 더 자연스러운 말은?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "比“%@”更自然的说法是？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "比「%@」更自然的說法是？"
           }
         }
       }
@@ -12593,6 +12751,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "통화에서 들은 표현, 고쳐 받은 문장도 다시 보지 않으면 금방 사라져요. 그렇다고 단어장을 직접 만들 시간은 없죠."
+          }
+        }
+      }
+    },
+    "A plan in your head slips the first busy day, and it's hard to tell whether this week went better than last." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "머릿속에만 있는 계획은 바쁜 날 하루면 흐트러지고, 이번 주가 지난주보다 나았는지도 알기 어려워요."
           }
         }
       }
@@ -28800,6 +28968,16 @@
         }
       }
     },
+    "Each date along the top shows whether you kept that day's routine." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "위쪽 날짜마다 그날 루틴을 지켰는지가 보여요."
+          }
+        }
+      }
+    },
     "Each filled cell is a member, in the colour they chose." : {
       "localizations" : {
         "de" : {
@@ -31028,6 +31206,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全部"
+          }
+        }
+      }
+    },
+    "Everything else counts by number" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나머지는 개수로 세요"
           }
         }
       }
@@ -34000,6 +34188,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先完成一次對話，再回來跟讀流利的自己說過的任何一句。"
+          }
+        }
+      }
+    },
+    "Finish today's last block and the ring closes and turns green. Today lasts until midnight, so it never breaks your streak early." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 할 일을 다 끝내면 링이 닫히면서 초록이 돼요. 오늘은 자정까지라서 그 전에 연속 기록이 끊기지 않아요."
           }
         }
       }
@@ -37208,6 +37406,26 @@
         }
       }
     },
+    "Green: you kept it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초록: 지킨 날"
+          }
+        }
+      }
+    },
+    "Grey ring: something was left" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회색 테두리: 못 한 게 남은 날"
+          }
+        }
+      }
+    },
     "Grounded in your profile — name, city, work, family, interests." : {
       "localizations" : {
         "de" : {
@@ -38126,6 +38344,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "여기서는 이미 유창해진 나에게 전화를 걸어요. 내 목소리를 닮은 목소리라 틀려도 창피할 사람이 없고, 언제든 걸 수 있어요."
+          }
+        }
+      }
+    },
+    "Here's how this page helps" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 페이지가 도와주는 것"
           }
         }
       }
@@ -40836,6 +41064,16 @@
         }
       }
     },
+    "If your routine is empty, every day you studied turns green." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴이 비어 있으면 공부한 날은 모두 초록이에요."
+          }
+        }
+      }
+    },
     "Import practice data" : {
       "localizations" : {
         "de" : {
@@ -43184,6 +43422,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "只說大概"
+          }
+        }
+      }
+    },
+    "Just the number: a rest day" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "숫자만: 쉬는 날"
           }
         }
       }
@@ -54815,6 +55063,16 @@
         }
       }
     },
+    "Nothing was planned that day, so it neither adds to your streak nor breaks it." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날은 잡힌 계획이 없었어요. 연속 기록이 늘지도, 끊기지도 않아요."
+          }
+        }
+      }
+    },
     "Nothing yet" : {
       "localizations" : {
         "de" : {
@@ -55186,6 +55444,52 @@
         }
       }
     },
+    "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An dem Tag, den du wählst, fasse ich deine Woche zusammen: was du gesagt hast, welche Wörter du gelernt hast, wie weit du gekommen bist. Dann ein kurzer Test – nur aus deinen eigenen Gesprächen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El día que elijas, te armo un resumen de tu semana: lo que dijiste, las palabras que aprendiste, cuánto avanzaste. Y luego un test corto, hecho solo con tus propias conversaciones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le jour que tu choisis, je te prépare ta semaine : ce que tu as dit, les mots que tu as appris, le chemin parcouru. Puis un petit test, fait uniquement à partir de tes conversations."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだ日に、1週間をまとめておくね。何を話したか、どんな言葉を覚えたか、どれだけ伸びたか。それから、自分の会話だけで作った短いテストも。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네가 고른 날, 한 주를 정리해 줄게. 무슨 말을 했는지, 어떤 단어를 얻었는지, 얼마나 늘었는지. 그리고 네 대화로만 만든 짧은 테스트도."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在你选的那天，我会帮你整理这一周：你说了什么、学到哪些词、进步了多少。然后是一份小测验，只用你自己的对话出题。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在你選的那天，我會幫你整理這一週：你說了什麼、學到哪些詞、進步了多少。然後是一份小測驗，只用你自己的對話出題。"
+          }
+        }
+      }
+    },
     "Once a day, your fluent self phones you with one question to answer out loud. It rings even on silent, and it remembers how the last call went." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -55239,6 +55543,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "일주일에 한 번, 그 주에 내가 한 대화로만 만든 테스트가 열려요. 단어 뜻 고르기, 빈칸에 들어갈 표현, 고친 문장 다시 맞추기, 듣고 받아쓰기, 소리 내어 말하기, 주간 리포트에 나온 문법까지요. 점이 보이면 테스트가 열려 있다는 뜻이에요."
+          }
+        }
+      }
+    },
+    "Once a week, let's look back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal pro Woche schauen wir zurück"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una vez a la semana, miramos atrás"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une fois par semaine, on fait le point"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "週に一度、一緒にふりかえろう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일에 한 번, 같이 돌아보자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每周一次，我们一起回顾"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每週一次，我們一起回顧"
           }
         }
       }
@@ -57155,6 +57505,16 @@
         }
       }
     },
+    "Part of that day's routine wasn't done. Your streak starts again from the next day you keep." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 루틴 중 못 한 게 있어요. 연속 기록은 다음에 지킨 날부터 다시 세요."
+          }
+        }
+      }
+    },
     "Past attempts" : {
       "localizations" : {
         "de" : {
@@ -58427,6 +58787,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "到了設定的時間，流利的自己會打電話來。沒接到的話，會有一則帶著問題的語音留言等你。"
+          }
+        }
+      }
+    },
+    "Pick a time you usually have ten quiet minutes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Such dir eine Zeit aus, zu der du meist zehn ruhige Minuten hast."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige un momento en que sueles tener diez minutos tranquilos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis un moment où tu as souvent dix minutes au calme."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いつも10分くらい落ち着ける時間を選んでね。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보통 10분쯤 조용히 낼 수 있는 때로 골라 줘."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选一个你通常能安静十分钟的时间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選一個你通常能安靜個十分鐘的時間。"
           }
         }
       }
@@ -69453,6 +69859,52 @@
         }
       }
     },
+    "Set my week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So machen wir’s"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est parti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これで決める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이렇게 할게요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就这样设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就這樣設定"
+          }
+        }
+      }
+    },
     "Set the call up the way that works for you, even mid-call." : {
       "localizations" : {
         "ko" : {
@@ -69505,6 +69957,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立個人檔案"
+          }
+        }
+      }
+    },
+    "Set your week here once: what you'll do, and when. Each day then shows whether you kept it, and the days you keep in a row become your streak." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기서 한 주를 한 번만 정해 두세요. 무엇을 언제 할지요. 그러면 날마다 지켰는지가 표시되고, 연달아 지킨 날이 연속 기록이 돼요."
           }
         }
       }
@@ -74513,6 +74975,16 @@
         }
       }
     },
+    "Studying every day is easy to plan and hard to keep" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 공부하자는 계획, 세우긴 쉬운데 지키긴 어려워요"
+          }
+        }
+      }
+    },
     "Studying this expression" : {
       "localizations" : {
         "de" : {
@@ -75856,6 +76328,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通話複習本"
+          }
+        }
+      }
+    },
+    "Talk counts in minutes" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화는 분으로 세요"
           }
         }
       }
@@ -78354,6 +78836,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "多說一點關於自己"
+          }
+        }
+      }
+    },
+    "Tell me when it's ready" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag mir Bescheid, wenn es so weit ist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avísame cuando esté listo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préviens-moi quand c’est prêt"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "できたら知らせてもらう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "준비되면 알려 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备好时通知我"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備好時通知我"
           }
         }
       }
@@ -81782,6 +82310,16 @@
         }
       }
     },
+    "The times are a plan, not a deadline. An 8:00 talk done at noon still counts." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시간은 계획일 뿐 마감이 아니에요. 8시 대화를 12시에 해도 한 걸로 쳐요."
+          }
+        }
+      }
+    },
     "The trial's scenes are used up." : {
       "localizations" : {
         "de" : {
@@ -83902,6 +84440,52 @@
         }
       }
     },
+    "Tip" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipp"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consejo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Astuce"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヒント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팁"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小提示"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小提醒"
+          }
+        }
+      }
+    },
     "To reach %@" : {
       "localizations" : {
         "de" : {
@@ -84042,6 +84626,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天"
+          }
+        }
+      }
+    },
+    "Today fills as you go" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 할수록 차올라요"
           }
         }
       }
@@ -85785,6 +86379,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "모든 대사 아래에 있어요. 그 자리에서 따라 말해 보거나 내 표현에 저장해요."
+          }
+        }
+      }
+    },
+    "Under the dates is the chosen day's routine, one row per block." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "날짜 아래에는 고른 날의 루틴이 한 줄씩 있어요."
           }
         }
       }
@@ -90124,6 +90728,16 @@
         }
       }
     },
+    "What the day circles mean" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "날짜 동그라미 읽는 법"
+          }
+        }
+      }
+    },
     "What they call you" : {
       "localizations" : {
         "de" : {
@@ -91702,6 +92316,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "平常用哪種語言？"
+          }
+        }
+      }
+    },
+    "When a block counts as done" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언제 한 걸로 치나요"
           }
         }
       }
@@ -95661,6 +96285,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "언제 다시 볼지는 내가 정해요."
+          }
+        }
+      }
+    },
+    "You did everything your routine had for that day. Your streak grows by one." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 루틴에 있던 걸 전부 했어요. 연속 기록이 하루 늘어요."
           }
         }
       }
@@ -105318,6 +105952,16 @@
         }
       }
     },
+    "Words, expressions, sentence cards and shadowing are done when you've finished as many as the block asks for." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어, 표현, 문장 카드, 섀도잉은 정해 둔 개수만큼 끝내면 돼요."
+          }
+        }
+      }
+    },
     "%@ · %lld lines" : {
       "localizations" : {
         "de" : {
@@ -105877,6 +106521,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "一天中隨時"
+          }
+        }
+      }
+    },
+    "Any time that day" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 안에만 하면 돼요"
           }
         }
       }

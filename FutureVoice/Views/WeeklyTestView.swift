@@ -202,6 +202,8 @@ struct WeeklyTestView: View {
             case .build:   Label("Fix the sentence", systemImage: "rectangle.stack")
             case .listen:  Label("Listen and build it", systemImage: "ear")
             case .speak:   Label("Say it out loud", systemImage: "waveform.badge.mic")
+            case .grammar: Label("A mistake you keep making", systemImage: "arrow.triangle.2.circlepath")
+            case .upgrade: Label("A better word", systemImage: "arrow.up.circle")
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -230,6 +232,57 @@ struct WeeklyTestView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+        case .grammar:
+            VStack(alignment: .leading, spacing: 12) {
+                if let rule = item.rule, !rule.isEmpty {
+                    Text(rule)
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("You said")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    (Text("\u{201C}") + marked(item.prompt, focus: item.focus) + Text("\u{201D}"))
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        case .upgrade:
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("You said")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    (Text("\u{201C}") + marked(item.prompt, focus: item.focus) + Text("\u{201D}"))
+                        .font(.title3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let focus = item.focus {
+                    Text("A more natural choice than \u{201C}\(focus)\u{201D}?")
+                        .font(.subheadline.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // Once answered: the same line with the better word, and why.
+                if outcome != nil {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let example = item.example, !example.isEmpty {
+                            Text(example)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.green)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let note = item.note, !note.isEmpty {
+                            Text(note)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .transition(.opacity)
+                }
             }
         case .listen:
             HStack {
@@ -271,6 +324,18 @@ struct WeeklyTestView: View {
         }
     }
 
+    /// `text` with the first occurrence of `focus` bold and underlined — the
+    /// word or span the item is about.
+    private func marked(_ text: String, focus: String?) -> Text {
+        guard let focus, !focus.isEmpty,
+              let range = text.range(of: focus, options: [.caseInsensitive, .diacriticInsensitive]) else {
+            return Text(text)
+        }
+        return Text(text[..<range.lowerBound])
+            + Text(text[range]).bold().underline()
+            + Text(text[range.upperBound...])
+    }
+
     /// The gap sentence with the blank filled by the chosen phrase once one
     /// is picked, so the learner reads their answer in place.
     private func gapSentence(_ item: WeeklyTestItem) -> Text {
@@ -291,13 +356,13 @@ struct WeeklyTestView: View {
     @ViewBuilder
     private func answerArea(_ item: WeeklyTestItem) -> some View {
         switch item.kind {
-        case .meaning, .gap:
+        case .meaning, .gap, .upgrade:
             VStack(spacing: 10) {
                 ForEach(Array(item.options.enumerated()), id: \.offset) { index, option in
                     optionButton(option, index: index, item: item)
                 }
             }
-        case .build, .listen:
+        case .build, .listen, .grammar:
             buildArea(item)
         case .speak:
             speakArea(item)
@@ -486,9 +551,10 @@ struct WeeklyTestView: View {
         // A build item may carry decoys (the words the correction replaced),
         // so some tiles are meant to be left over — said up front, or a
         // leftover tile reads as a mistake or a bug (user, 2026-10-03).
-        let decoys = item.kind == .build ? WeeklyTestEngine.decoyTiles(of: item) : []
+        let fixes = item.kind == .build || item.kind == .grammar
+        let decoys = fixes ? WeeklyTestEngine.decoyTiles(of: item) : []
         return VStack(alignment: .leading, spacing: 16) {
-            if item.kind == .build, outcome == nil {
+            if fixes, outcome == nil {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Write it as a correct sentence.")
                         .font(.subheadline.weight(.semibold))
@@ -584,7 +650,7 @@ struct WeeklyTestView: View {
                     // on the order just laid.
                     if let note = item.note, !note.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Why it was corrected")
+                            (item.kind == .grammar ? Text("Tip") : Text("Why it was corrected"))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             Text(note)
@@ -669,7 +735,7 @@ struct WeeklyTestView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(outcome ? "Right" : "Not this time")
                             .font(.subheadline.weight(.semibold))
-                        if !outcome, item.kind != .build, item.kind != .listen {
+                        if !outcome, item.kind != .build, item.kind != .listen, item.kind != .grammar {
                             Text(item.answer)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -691,7 +757,7 @@ struct WeeklyTestView: View {
                 .controlSize(.large)
                 .tint(outcome ? .green : .accentColor)
                 .accessibilityIdentifier("weeklyTest.continue")
-            } else if item.kind == .build || item.kind == .listen {
+            } else if item.kind == .build || item.kind == .listen || item.kind == .grammar {
                 Button {
                     checkBuild(item, test: test)
                 } label: {
@@ -779,7 +845,7 @@ struct WeeklyTestView: View {
         #if DEBUG
         if let right = DebugCapture.weeklyTestAnswer, let item = current {
             streak = 2   // so the flame is in the shot too
-            if item.kind == .build {
+            if item.kind == .build || item.kind == .grammar {
                 let answer = WordSplitter.words(item.answer).map(WeeklyTestEngine.tileKey)
                 var order = answer.compactMap { key in
                     item.options.indices.first { WeeklyTestEngine.tileKey(item.options[$0]) == key && !laid.contains($0) }
@@ -1063,9 +1129,9 @@ struct WeeklyTestResultView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(item.answer)
                                     .fixedSize(horizontal: false, vertical: true)
-                                if item.kind == .meaning || item.kind == .build, !item.prompt.isEmpty {
+                                if [.meaning, .build, .grammar, .upgrade].contains(item.kind), !item.prompt.isEmpty {
                                     // Two `Text`s, not a String ternary — a String never localizes.
-                                    (item.kind == .build ? Text("You said: \(item.prompt)") : Text(item.prompt))
+                                    (item.kind == .meaning ? Text(item.prompt) : Text("You said: \(item.prompt)"))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -1113,6 +1179,8 @@ struct WeeklyTestResultView: View {
         case .build:   Image(systemName: "rectangle.stack")
         case .listen:  Image(systemName: "ear")
         case .speak:   Image(systemName: "waveform.badge.mic")
+        case .grammar: Image(systemName: "arrow.triangle.2.circlepath")
+        case .upgrade: Image(systemName: "arrow.up.circle")
         }
     }
 }

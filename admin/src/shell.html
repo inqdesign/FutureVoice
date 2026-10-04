@@ -688,6 +688,18 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <div id="econMissing" class="empty" hidden></div>
 </section>
 
+<section data-tab="money" hidden id="slotSec">
+  <h2>ElevenLabs 목소리 슬롯 <span class="eurnote" id="slotAsOf"></span></h2>
+  <p class="sub">커스텀 보이스 슬롯은 <b>계정 전체</b>가 나눠 써요 — 학습자 클론 하나가 한 칸. 보관(park)된 목소리는 ElevenLabs에서 지워져 칸을 안 차지하고,
+  다시 쓸 때 폰의 녹음으로 새로 만들어요(그때 월 추가·수정 횟수를 하나 씀). 구독·체험·관리자 무제한은 보관되지 않아요.</p>
+  <div class="tiles" id="slotTiles"></div>
+  <div class="card" style="margin-top:12px">
+    <div class="alloc" id="slotStack" style="height:24px"></div>
+    <div class="legend" id="slotLegend" style="margin-top:8px"></div>
+  </div>
+  <div id="slotMissing" class="empty" hidden></div>
+</section>
+
 <section data-tab="money" hidden id="econCatsSec">
   <h2>크레딧은 어디로 갔나</h2>
   <p class="sub">출시일부터 ElevenLabs가 센 크레딧을 활동별로 나눈 것. 통화 TTS는 ElevenLabs의 turbo 합계에서
@@ -3109,6 +3121,49 @@ function renderEcon(){
     + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
 }
 
+/* ---- 목소리 슬롯 ----------------------------------------------------------
+ * DATA.voiceSlots (index.ts voiceSlots): ElevenLabs' own used/limit beside
+ * who holds each slot in voice_clones. Account facts, so the dev toggle is
+ * ignored like the rest of this tab. */
+const SLOT_PARTS = [
+  ['paid','구독 중','var(--s1)'], ['trial','체험 중','var(--s2)'], ['unlimited','관리자·무제한','#4a3aa7'],
+  ['free','무료·만료 (보관 대상)','var(--warn)'], ['anonymous','가입 전 (익명)','#9aa3b2'], ['untracked','DB에 없는 보이스','#c3c2b7'],
+];
+function renderSlots(){
+  const v = DATA.voiceSlots;
+  const sec = document.getElementById('slotSec'), miss = document.getElementById('slotMissing');
+  if(!v){ document.getElementById('slotTiles').innerHTML=''; document.getElementById('slotStack').innerHTML='';
+    document.getElementById('slotLegend').innerHTML=''; miss.hidden=false;
+    miss.textContent='슬롯 집계를 못 읽었어요 (Worker 로그의 voiceSlots).'; return; }
+  miss.hidden = true;
+  const used = v.elUsed, limit = v.elLimit;
+  const left = used!=null && limit!=null ? limit-used : null;
+  const pct = used!=null && limit ? used/limit : null;
+  document.getElementById('slotAsOf').textContent = used==null ? 'ElevenLabs 키 없음 — DB 숫자만' : '';
+  const b = v.buckets;
+  const t = [
+    {k:'사용 중 슬롯', v: used==null ? num(v.held) : `${num(used)} / ${num(limit)}`,
+      d: used==null ? 'DB 기준 (보관 안 된 활성 클론)' : `${Math.round(pct*100)}% · ${num(left)}칸 남음`,
+      alert: pct!=null && pct>=0.9, good: pct!=null && pct<0.7},
+    {k:'보관(park)됨', v:num(v.parked), d:'슬롯 밖 · 쓸 때 재생성'},
+    {k:'곧 보관', v:num(b.warned), d:'예고 푸시 나감 · 앱을 열면 유지'},
+    {k:'최근 7일 새 클론', v:num(v.clonedThisWeek), d: v.newest ? '마지막 '+ago(v.newest)+' · '+fmtTs(v.newest) : '—'},
+    {k:'이번 달 추가·수정', v: v.addEdits==null ? '—' : `${num(v.addEdits)} / ${num(v.maxAddEdits)}`,
+      d:'클론·재생성·리믹스마다 1', alert: v.addEdits!=null && v.maxAddEdits && v.addEdits/v.maxAddEdits>=0.9},
+  ];
+  document.getElementById('slotTiles').innerHTML = t.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  const val = k => k==='untracked' ? Math.max(0, v.untracked||0) : (b[k]||0);
+  const total = Math.max(limit || 0, v.held + Math.max(0, v.untracked||0)) || 1;
+  const parts = SLOT_PARTS.filter(([k])=>val(k)>0);
+  document.getElementById('slotStack').innerHTML = parts.map(([k,l,c]) =>
+    `<div style="width:${(val(k)/total*100).toFixed(2)}%;background:${c}" data-tip="${esc(l)} · ${num(val(k))}"></div>`).join('');
+  document.getElementById('slotLegend').innerHTML = parts.map(([k,l,c]) =>
+    `<span><span class="swatch" style="background:${c}"></span> ${esc(l)} ${num(val(k))}</span>`).join('')
+    + (left!=null ? `<span><span class="swatch" style="background:var(--chip)"></span> 빈 칸 ${num(left)}</span>` : '')
+    + (v.untracked!=null && v.untracked<0 ? `<span style="color:var(--crit)">DB 행 ${num(-v.untracked)}개가 ElevenLabs에 없음</span>` : '');
+}
+
 function renderEconCats(){
   const e = ECON(); if(!e) return;
   const total = e.cats.reduce((a,c)=>a+c.credits,0) || 1;
@@ -3398,7 +3453,7 @@ function render(){
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
-  renderEcon(); renderEconCats(); renderEconDaily(); renderEconPlans(); renderPnl();
+  renderEcon(); renderSlots(); renderEconCats(); renderEconDaily(); renderEconPlans(); renderPnl();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a
  *  redraw can never disagree with it. */

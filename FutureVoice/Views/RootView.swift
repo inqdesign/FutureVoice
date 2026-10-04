@@ -6,8 +6,9 @@ import SwiftUI
 /// straight into the first call. The auth gate is non-bypassable — without a
 /// Supabase session we can't proxy ElevenLabs/Gemini calls.
 ///
-/// Two short steps trail the clone, each shown once and each setting its own
-/// flag on every exit: the daily call (the clone's first job) and the plans
+/// Three short steps trail the clone, each shown once and each setting its own
+/// flag on every exit: the week (`WeeklyRhythmOnboardingView` — test day and
+/// time), the daily call (the clone's first job) and the plans
 /// (`OnboardingPaywallView`, skipped silently for anyone with nothing to buy).
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
@@ -22,6 +23,9 @@ struct RootView: View {
     /// `DailyCallOnboardingView` on BOTH exits (enabled or skipped), so
     /// declining it doesn't turn the screen into a wall.
     @AppStorage("futurevoice.dailyCall.onboarded") private var dailyCallOnboarded = false
+    /// Whether the weekly step (test day + time) has been shown. New installs
+    /// only — it is asked only while the daily call hasn't been onboarded yet.
+    @AppStorage("futurevoice.weeklyRhythm.onboarded") private var weeklyRhythmOnboarded = false
     /// Whether the plans have been offered once, at the end of onboarding.
     /// Set by `OnboardingPaywallView` on every exit — including the silent
     /// one it takes for an account that has nothing to buy.
@@ -194,6 +198,12 @@ struct RootView: View {
             // letting it through would hand someone an app whose data dies with
             // the install. The view reopens on its sign-up step.
             VoiceCloneOnboardingView()
+        } else if !dailyCallOnboarded && !weeklyRhythmOnboarded {
+            // The week's rhythm before the day's: when the week is looked back
+            // on and tested, then (next screen) when the daily call rings.
+            // Gated on the daily call too, so an existing install — which
+            // already has a test day — never sees it.
+            WeeklyRhythmOnboardingView()
         } else if !dailyCallOnboarded {
             // AFTER the clone, because the daily call is the clone's first
             // real job — they've just heard themselves speak fluently, so
@@ -233,13 +243,15 @@ struct RootView: View {
     /// Screenshot harness. Launch with `-onboardingPreview <screen>` to jump
     /// straight to one onboarding view, bypassing the auth gate — lets the
     /// simulator capture each first-run screen without an Apple sign-in.
-    /// Screens: welcome · setup · voice · persona.
+    /// Screens: welcome · setup · voice · persona · weekly · dailycall.
     private static var onboardingPreview: AnyView? {
         switch UserDefaults.standard.string(forKey: "onboardingPreview") {
         case "welcome":      return AnyView(WelcomeView())
         case "setup":        return AnyView(SetupFlowView())
         case "voice":        return AnyView(VoiceCloneOnboardingView())
         case "persona":      return AnyView(PersonaIntakeView())
+        case "weekly":       return AnyView(WeeklyRhythmOnboardingView())
+        case "dailycall":    return AnyView(DailyCallOnboardingView())
         default:             return nil
         }
     }

@@ -54,6 +54,10 @@ struct ScenarioDetailView: View {
 
     /// Which bookmark tab to open the book on — nil opens on the intro.
     var initialChapter: Chapter? = nil
+    /// Set when the book is the WRAP-UP of a scene just watched (a sheet
+    /// over `SceneWatchView`), the way a talk's book opens over its call:
+    /// the toolbar is a single Done that closes the book AND the scene.
+    var onDone: (() -> Void)? = nil
     @State private var selectedChapter: Chapter?
 
     /// Always read live from appState so saves (mastery, archive) reflect
@@ -770,7 +774,19 @@ struct ScenarioDetailView: View {
 
     // MARK: - Toolbar
 
+    @ToolbarContentBuilder
     private var toolbarMenu: some ToolbarContent {
+        if let onDone {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") { onDone() }
+                    .fontWeight(.semibold)
+            }
+        } else {
+            bookMenu
+        }
+    }
+
+    private var bookMenu: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 if let s = scenario {

@@ -25,6 +25,7 @@ final class SceneFeed: ObservableObject {
 /// just-minted scenario) it generates once and plays.
 struct SceneWatchView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
     let scenarioId: UUID
     /// True when opened from a saved-scenario card: generate a new take even
     /// though the book already has a scene.
@@ -57,7 +58,9 @@ struct SceneWatchView: View {
         _awaitingFresh = State(initialValue: freshTake)
     }
 
-    /// Pushed when the scene ends and the viewer takes the study handoff.
+    /// Raised when the scene ends and the viewer takes the study handoff.
+    /// A SHEET over the scene, like a talk's book over its call — pushed, it
+    /// stacked a back button on a back button and closing took two taps.
     @State private var studyPresented = false
 
     private var scenario: Scenario? {
@@ -98,9 +101,14 @@ struct SceneWatchView: View {
             }
         }
         .task { await ensureCurriculum() }
-        .navigationDestination(isPresented: $studyPresented) {
-            ScenarioDetailView(scenarioId: scenarioId)
-                .environmentObject(appState)
+        // However the book goes away — Done or a swipe — the scene goes
+        // with it, back to Watch: the same single exit a talk has.
+        .sheet(isPresented: $studyPresented, onDismiss: { dismiss() }) {
+            NavigationStack {
+                ScenarioDetailView(scenarioId: scenarioId,
+                                   onDone: { studyPresented = false })
+                    .environmentObject(appState)
+            }
         }
     }
 

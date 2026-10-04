@@ -154,10 +154,17 @@ final class TalkMeter: ObservableObject {
     }
 
     private func tick(seconds: Int, label: String) async {
+        // The preflight second is a wall check, not talk: it fires before
+        // anyone has said a word, so it never reaches the ring or the day
+        // card — opening and closing a call read 0:01, 0:02… (2026-10-04).
+        // `TalkTimeLog.syncFromServer` skips its ledger row for the same reason.
+        let countsAsTalk = label != "pre"
         if serverMetered {
             // The gateway already charged these seconds; record them locally
             // so the ring and the day card read the same day the receipt does.
-            TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+            if countsAsTalk {
+                TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+            }
             return
         }
         do {
@@ -173,7 +180,9 @@ final class TalkMeter: ObservableObject {
             // Accepted → these seconds were metered, so they're what the
             // home ring counts too (TalkTimeLog). Deriving the ring from
             // session spans instead made it disagree with the receipt.
-            TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+            if countsAsTalk {
+                TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+            }
             // Subscriber: what's left of the allowance. Free user: the
             // seconds balance. Both already in seconds.
             //
