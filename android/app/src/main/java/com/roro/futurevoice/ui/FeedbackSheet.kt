@@ -157,6 +157,36 @@ fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
     var sending by remember { mutableStateOf(false) }
     var sendError by remember { mutableStateOf<String?>(null) }
     var sent by remember { mutableStateOf(false) }
+    // Whether this sheet ever delivered, and the last send error — for the
+    // dismissed row (iOS `9a6f4dc`).
+    var delivered by remember { mutableStateOf(false) }
+    var lastSendError by remember { mutableStateOf<String?>(null) }
+
+    // Shown → sent | dismissed, one row each (iOS `9a6f4dc`). Until then the
+    // table held only what was SENT, so a learner who saw the sheet and
+    // closed it was indistinguishable from one who was never asked.
+    fun report(event: String, extra: Map<String, String> = emptyMap()) {
+        val props = mapOf("context" to context.raw) + extra
+        com.roro.futurevoice.core.Telemetry.log(event, props)
+        com.roro.futurevoice.core.Analytics.capture(event, props)
+    }
+    val latestText by androidx.compose.runtime.rememberUpdatedState(text)
+    val latestRated by androidx.compose.runtime.rememberUpdatedState(appRating > 0 || callRating > 0)
+    val latestDelivered by androidx.compose.runtime.rememberUpdatedState(delivered)
+    val latestError by androidx.compose.runtime.rememberUpdatedState(lastSendError)
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        report("feedback_sheet_shown")
+        onDispose {
+            // What a closed sheet had in it: a learner who rated and then left
+            // is a different answer from one who never touched it, and a
+            // failed send that was then abandoned is a bug, not a choice.
+            if (!latestDelivered) report("feedback_dismissed", buildMap {
+                put("rated", if (latestRated) "1" else "0")
+                put("typed", if (latestText.isBlank()) "0" else "1")
+                latestError?.let { put("send_error", it.take(200)) }
+            })
+        }
+    }
 
     // A score on its own is a complete answer, and so is a sentence on its
     // own. Demanding both is how a form gets neither.
@@ -192,8 +222,18 @@ fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
                     sending = true; sendError = null
                     scope.launch {
                         runCatching { send(context, text.trim(), appRating, callRating) }
-                            .onSuccess { sent = true }
-                            .onFailure { sendError = app.getString(R.string.feedback_couldnt_send, it.message ?: "") }
+                            .onSuccess {
+                                delivered = true
+                                sent = true
+                                report("feedback_sent", mapOf(
+                                    "app_rating" to appRating.toString(),
+                                    "call_rating" to callRating.toString(),
+                                    "typed" to if (text.isBlank()) "0" else "1"))
+                            }
+                            .onFailure {
+                                lastSendError = it.message ?: it::class.java.simpleName
+                                sendError = app.getString(R.string.feedback_couldnt_send, it.message ?: "")
+                            }
                         sending = false
                     }
                 }, enabled = !sending && canSend, modifier = Modifier.weight(1f)) {
