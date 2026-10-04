@@ -435,7 +435,8 @@ fun TalkGoalSheet(
         loading = false
     }
 
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+    androidx.compose.material3.ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         androidx.compose.foundation.layout.Column(
             Modifier.fillMaxWidth()
                 .bottomBarInsets()

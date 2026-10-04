@@ -1288,7 +1288,8 @@ private fun PartnerPickerSheet(
         pool.filter { it.isRealUser }.map { it.asCounterpart(existing) }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = AppSurfaces.ground) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss, containerColor = AppSurfaces.ground) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .verticalScroll(rememberScrollState())

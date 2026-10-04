@@ -133,7 +133,8 @@ fun VoiceAccentSheet(
         }
     }
 
-    ModalBottomSheet(onDismissRequest = { if (!saving && !generating) onDismiss() }) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { if (!saving && !generating) onDismiss() }) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .verticalScroll(rememberScrollState())

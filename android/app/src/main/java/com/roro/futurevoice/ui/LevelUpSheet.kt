@@ -79,7 +79,8 @@ fun LevelUpSheet(from: CefrLevel, to: CefrLevel, onDismiss: () -> Unit) {
     )
     val green = Color(0xFF34C759)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .padding(horizontal = 24.dp).padding(bottom = 32.dp, top = 8.dp),

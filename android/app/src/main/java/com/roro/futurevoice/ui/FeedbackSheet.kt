@@ -171,7 +171,8 @@ fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
         )
         return
     }
-    ModalBottomSheet(onDismissRequest = { if (!sending) onDismiss() }) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { if (!sending) onDismiss() }) {
         Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(context.title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

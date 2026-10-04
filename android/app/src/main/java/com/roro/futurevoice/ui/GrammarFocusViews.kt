@@ -136,7 +136,8 @@ fun GrammarFocusPair(mistake: String, correction: String, maxLines: Int = 1) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GrammarFocusSheet(focus: GrammarFocus, repeats: Int, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

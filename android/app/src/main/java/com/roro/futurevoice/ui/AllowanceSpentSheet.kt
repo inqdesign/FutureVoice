@@ -94,7 +94,8 @@ fun AllowanceSpentSheet(
     }
     val renewsOn = account?.renewalLabel(locale).orEmpty()
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 20.dp),

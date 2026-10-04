@@ -256,10 +256,10 @@ object CapturePractice {
     @Composable
     private fun Scorecard() {
         // The iOS route draws the same harness page around `ScorecardView`.
-        Scaffold(topBar = { TopAppBar(title = { Text("Scorecard") }) }) { padding ->
+        Scaffold(topBar = { TopAppBar(title = { Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.scorecard)) }) }) { padding ->
             Column(Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
                 .verticalScroll(rememberScrollState()).padding(vertical = 14.dp)) {
-                Text("Last talk", style = MaterialTheme.typography.labelMedium,
+                Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.last_talk), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp))
                 val card = CaptureSeed.sampleScorecard

@@ -36,7 +36,8 @@ fun LevelInfoSheet(level: CefrLevel, onDismiss: () -> Unit) {
         Triple("B1 · B2", listOf(CefrLevel.B1, CefrLevel.B2), R.string.everyday_words_plus_the_common_idioms_and_phrasal_verbs_subo_b2b74a),
         Triple("C1 · C2", listOf(CefrLevel.C1, CefrLevel.C2), R.string.the_full_range_idiom_precise_nuance_register_shifts_asides_a_e48bdb),
     )
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Header(stringResource(R.string.how_your_future_self_talks))

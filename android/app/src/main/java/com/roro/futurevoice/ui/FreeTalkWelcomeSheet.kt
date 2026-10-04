@@ -54,7 +54,8 @@ fun FreeTalkWelcomeSheet(minutes: Int, onStart: () -> Unit, onDismiss: () -> Uni
     var revealed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { revealed = true }
     val reveal by animateFloatAsState(if (revealed) 1f else 0f, tween(500), label = "reveal")
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .padding(horizontal = 24.dp).padding(top = 12.dp, bottom = 28.dp),

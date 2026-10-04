@@ -65,7 +65,8 @@ fun StudyGoalsSheet(onDismiss: () -> Unit) {
         GoalStore.save(context, next)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets().verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 32.dp),

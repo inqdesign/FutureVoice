@@ -111,7 +111,8 @@ fun PeopleSheet(onDismiss: () -> Unit) {
     suspend fun reload() { people = store.load().filter { it.remoteId == null } }
     LaunchedEffect(Unit) { reload() }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = AppSurfaces.ground,
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss, containerColor = AppSurfaces.ground,
         dragHandle = null) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 16.dp).padding(bottom = 32.dp)

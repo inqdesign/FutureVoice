@@ -249,7 +249,7 @@ fun CounterpartIntakeScreen(
                         PersonPhotoControl(image = photo?.asImageBitmap(), name = name, size = 96.dp,
                             onImage = { photo = it },
                             onRemove = if (photo == null) null else ({ photo = null }))
-                        Text("A photo is optional. Without one, their initials stand in.",
+                        Text(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.a_photo_is_optional_without_one_their_initials_stand_in),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

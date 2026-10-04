@@ -144,7 +144,8 @@ fun VoiceComparisonSheet(voiceId: String, targetLanguage: String, onRerecord: ()
         AlertDialog(onDismissRequest = { error = null }, title = { Text(stringResource(R.string.couldn_t_play_the_comparison)) },
             text = { Text(it) }, confirmButton = { TextButton(onClick = { error = null }) { Text(stringResource(R.string.ok)) } })
     }
-    ModalBottomSheet(onDismissRequest = { stopAll(); onDismiss() }) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { stopAll(); onDismiss() }) {
         Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.same_words_both_voices), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)

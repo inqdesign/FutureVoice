@@ -905,7 +905,8 @@ private fun GrammarReviewSheet(
     issues: List<GrammarIssue>,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .padding(horizontal = 20.dp).padding(bottom = 28.dp),

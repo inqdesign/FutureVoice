@@ -875,7 +875,8 @@ private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CoreClubSheet(p: CoreClubClient.Progress?, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .padding(horizontal = 20.dp).padding(bottom = 32.dp)

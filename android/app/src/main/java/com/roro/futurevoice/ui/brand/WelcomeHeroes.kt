@@ -165,8 +165,8 @@ fun HomeHero(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SegmentChip("News", !onScenarios) { onScenarios = false }
-            SegmentChip("Scenarios", onScenarios) { onScenarios = true }
+            SegmentChip(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.news), !onScenarios) { onScenarios = false }
+            SegmentChip(androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.scenarios), onScenarios) { onScenarios = true }
         }
         Column(Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
