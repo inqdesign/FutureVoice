@@ -16,12 +16,16 @@ class BillingGateTest {
     private val paid = AccountStatus(subscriptionStatus = "active")
     private val nothing = AccountStatus()
 
-    private fun decide(cached: AccountStatus?, signedIn: Boolean = true,
+    private fun decide(cached: AccountStatus?, signedIn: Boolean = true, scene: Boolean = false,
                        fresh: AccountStatus?): Pair<Boolean, Int> = runBlocking {
         var loads = 0
-        val (go, _) = BillingGate.decide(cached, signedIn) { loads++; fresh }
+        val (go, _) = BillingGate.decide(cached, signedIn, scene) { loads++; fresh }
         go to loads
     }
+
+    /** A free account with a minute or more to talk on, two scenes had. */
+    private val freeScenesGone = AccountStatus(secondsBalance = 600, freeScenesUsed = 2, freeScenesCap = 2)
+    private val freeSceneLeft = freeScenesGone.copy(freeScenesUsed = 1)
 
     @Test fun aCachedYesNeverWaitsOnTheNetwork() {
         assertEquals(true to 0, decide(paid, fresh = nothing))
@@ -50,5 +54,42 @@ class BillingGateTest {
         assertFalse(AccountStatus(subscriptionStatus = "trialing").needsSubscription)
         assertFalse(AccountStatus(unlimited = true).needsSubscription)
         assertTrue(AccountStatus(subscriptionStatus = "expired").needsSubscription)
+    }
+
+    /** iOS `blocksScene`: a free account that has had its scenes is sent to
+     *  the plans at the tap — before a scene is written for nothing. */
+    @Test fun aFreeAccountsSpentScenesStopTheSceneTap() {
+        assertEquals(false to 1, decide(freeScenesGone, scene = true, fresh = freeScenesGone))
+        assertEquals(true to 0, decide(freeSceneLeft, scene = true, fresh = freeScenesGone))
+        // A purchase since: the cached no is read again and lets it through.
+        assertEquals(true to 1, decide(freeScenesGone, scene = true, fresh = paid))
+    }
+
+    /** It can still TALK off its balance — the call tap is untouched. */
+    @Test fun spentFreeScenesDoNotStopACall() {
+        assertEquals(true to 0, decide(freeScenesGone, fresh = nothing))
+    }
+
+    @Test fun onlyAFreeAccountHasFreeScenesToSpend() {
+        assertTrue(freeScenesGone.freeScenesSpent)
+        assertFalse(freeSceneLeft.freeScenesSpent)
+        assertFalse(freeScenesGone.copy(subscriptionStatus = "active").freeScenesSpent)
+        assertFalse(freeScenesGone.copy(unlimited = true).freeScenesSpent)
+        // A server from before the field says nothing — never a refusal.
+        assertFalse(freeScenesGone.copy(freeScenesCap = null).freeScenesSpent)
+    }
+
+    /** iOS `refreshIfStale`: a cached yes is re-read BEHIND the tap after
+     *  60 s; a fresh one is not, and a cached no never is (it is re-read in
+     *  front of the tap). */
+    @Test fun aStaleCachedYesIsRefreshedBehindTheTap() {
+        val t = 1_000_000L
+        assertFalse(BillingGate.refreshBehind(paid, false, t, t + 59_999))
+        assertTrue(BillingGate.refreshBehind(paid, false, t, t + 60_000))
+        assertTrue(BillingGate.refreshBehind(paid, false, null, t))
+        assertFalse(BillingGate.refreshBehind(nothing, false, t, t + 120_000))
+        assertFalse(BillingGate.refreshBehind(null, false, null, t))
+        assertFalse(BillingGate.refreshBehind(freeScenesGone, true, t, t + 120_000))
+        assertTrue(BillingGate.refreshBehind(freeScenesGone, false, t, t + 120_000))
     }
 }

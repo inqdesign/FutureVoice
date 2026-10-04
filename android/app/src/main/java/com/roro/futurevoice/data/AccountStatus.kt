@@ -35,6 +35,12 @@ data class AccountStatus(
     val monthlyCapSeconds: Int? = null,
     val scenesUsedPeriod: Int = 0,
     val monthlyScenesCap: Int? = null,
+    /** A FREE account's scenes, ever (`scene_allowance.free_used`) — the
+     *  server counts distinct scenes across the account's whole life. */
+    val freeScenesUsed: Int = 0,
+    /** How many scenes a free account gets (2); null = no free count (an
+     *  entitled or admin account, or a server from before the field). */
+    val freeScenesCap: Int? = null,
     /** When this billing period ends, `yyyy-MM-dd` from `talk_allowance`. */
     val periodEnd: String? = null,
     /** The plan is set to STOP at [periodEnd] rather than renew. A date on a
@@ -79,6 +85,14 @@ data class AccountStatus(
     val isPlusPlan: Boolean
         get() = isEntitled && planId?.startsWith("plus") == true
 
+    /** A free account that has had its scenes — the next one is the plans
+     *  (iOS `freeScenesSpent`). It can still talk off its balance. */
+    val freeScenesSpent: Boolean
+        get() {
+            val cap = freeScenesCap ?: return false
+            return !isEntitled && !unlimited && freeScenesUsed >= cap
+        }
+
     companion object {
         /** The shortest pool that can carry a conversation. Mirrors the
          *  server's floor in `consume_metered_seconds`; keep the two the same. */
@@ -102,6 +116,8 @@ data class AccountStatus(
             val used: Int = 0,
             val cap: Int? = null,
             val period_end: String? = null,
+            val free_used: Int? = null,
+            val free_cap: Int? = null,
         )
 
         /**
@@ -137,7 +153,8 @@ data class AccountStatus(
                     periodEnd = it.period_end)
             }
             rpc(auth, "scene_allowance")?.let {
-                out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap)
+                out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap,
+                    freeScenesUsed = it.free_used ?: 0, freeScenesCap = it.free_cap)
             }
             out
         }
