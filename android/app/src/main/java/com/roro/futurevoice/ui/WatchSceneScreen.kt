@@ -3,8 +3,8 @@ package com.roro.futurevoice.ui
 import androidx.compose.material.icons.filled.MenuBook
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
+import com.roro.futurevoice.ui.brand.IosButton as Button
+import com.roro.futurevoice.ui.brand.IosOutlinedButton as OutlinedButton
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch

@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material3.Button
+import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -300,7 +300,8 @@ private fun PaywallBottomBar(
                     // Held rather than hidden: the bar keeps its height while
                     // Play answers, so the screen doesn't jump under the thumb.
                     enabled = !resolving && (step != PaywallStep.PLANS || canBuy),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                    // iOS paywall CTA: 58 pt (gallery).
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp)
                         .alpha(if (resolving) 0f else 1f),
                 ) {
                     Text(

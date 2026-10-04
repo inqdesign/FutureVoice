@@ -52,7 +52,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem

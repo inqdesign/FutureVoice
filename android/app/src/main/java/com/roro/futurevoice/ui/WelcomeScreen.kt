@@ -8,12 +8,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
+import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -109,8 +110,11 @@ fun WelcomeScreen(
                     else MaterialTheme.colorScheme.outlineVariant))
             }
         }
-        Button(onClick = onGetStarted, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.get_started))
+        // iOS WelcomeView: a 40 pt label inside a large prominent button —
+        // 70 pt on the gallery, the tallest CTA in the app.
+        Button(onClick = onGetStarted, modifier = Modifier.fillMaxWidth().heightIn(min = 70.dp)) {
+            Text(stringResource(R.string.get_started), style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         }
         // Under the primary button, as on iOS: the two ways in that aren't
         // "start fresh". Absent rather than dead when the host has no path.

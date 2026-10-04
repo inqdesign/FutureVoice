@@ -107,7 +107,7 @@ fun IosSegmented(
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    height: androidx.compose.ui.unit.Dp = 34.dp,
+    height: androidx.compose.ui.unit.Dp = 32.dp,  // iOS segmented track, gallery-measured
 ) {
     val scheme = MaterialTheme.colorScheme
     val dark = isDark()
