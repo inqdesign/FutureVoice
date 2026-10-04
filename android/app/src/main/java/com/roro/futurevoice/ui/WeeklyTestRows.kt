@@ -87,6 +87,8 @@ fun WeeklyTestRows(language: String, level: CefrLevel) {
         is WeeklyTestSchedule.State.Thin ->
             stringResource(R.string.a_talk_or_two_first_next, weekday(w.next, TextStyle.SHORT)) to null
     }
+    // The week behind, as cards — reachable until the next one turns.
+    WeekRecapRow(level, reloadKey = settingsRevision to reload)
     TestRow(Icons.Filled.Checklist, stringResource(R.string.weekly_test), weeklySubtitle, weeklyTrailing) {
         open = false
     }

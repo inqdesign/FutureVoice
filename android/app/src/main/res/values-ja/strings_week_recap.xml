@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your week" (iOS WeekRecapSheet, 633418f). Android-only names: the
+     catalog pin predates these keys. Values copied from the iOS catalog at
+     7c12b9e; iOS ^[…](inflect: true) became <plurals>. -->
+<resources>
+    <string name="wr_talk_line_day_min">"%1$s · %2$d分"</string>
+    <string name="wr_min_more_than_week_before">"前の週より%d分多く話しました"</string>
+    <string name="wr_plus_more">"ほか%d個"</string>
+    <string name="wr_few_days_in">"何日か続きました。リズムが生まれつつあります。"</string>
+    <string name="wr_test_ready_body">"数分で終わります。先週出会った単語、表現、直した文から作りました。"</string>
+    <string name="wr_new_week_start_small">"新しい週の始まりです。軽く始めましょう。"</string>
+    <string name="wr_quiet_week">"ひと休みの1週間"</string>
+    <string name="wr_and_more">"ほか%d回"</string>
+    <string name="wr_average">"平均%d点"</string>
+    <string name="wr_continue_test">"テストの続きをする"</string>
+    <string name="wr_coach_failed">"いまは1週間を読み込めませんでした。"</string>
+    <string name="wr_test_done">"完了 %1$d/%2$d"</string>
+    <string name="wr_every_day">"毎日続きました。もう習慣ですね。"</string>
+    <string name="wr_from_coach">"コーチからひと言"</string>
+    <string name="wr_grammar_title">"くり返しつまずく文法"</string>
+    <string name="wr_how_you_speak">"話し方のくせ"</string>
+    <string name="wr_quiet_body">"そんな週もあります。トーク1回で、また始められます。"</string>
+    <string name="wr_last_week">"先週"</string>
+    <string name="wr_shaky_lines">"シャドーイングで、まだしっくりこなかった文です。"</string>
+    <string name="wr_min">"分"</string>
+    <string name="wr_most_of_week">"ほぼ毎日。リズムができてきました。"</string>
+    <string name="wr_new_from_fluent">"流暢な自分が使った新しい表現"</string>
+    <string name="wr_no_grammar">"今週は、くり返し間違えた文法はありませんでした。"</string>
+    <string name="wr_no_word">"今週は、ひとつの言葉に頼りすぎることはありませんでした。"</string>
+    <string name="wr_test_thin">"まだテストを作れるほど集まっていません。トーク1、2回で準備できます。"</string>
+    <string name="wr_of_7_days">"/ 7日"</string>
+    <string name="wr_one_talk_plan">"トーク1回、数分で十分です。"</string>
+    <string name="wr_reading">"1週間を読み込んでいます…"</string>
+    <string name="wr_say_in_next_talk">"次のトークで「%s」と言ってみましょう。"</string>
+    <string name="wr_see_results">"結果を見る"</string>
+    <string name="wr_shadow_once_more">"「%s」をもう一度シャドーイングしましょう。"</string>
+    <string name="wr_start_test">"今週のテストを始める"</string>
+    <string name="wr_same_fix_back">"同じところを何度も直されました。あと一度見れば、自分のものです。"</string>
+    <string name="wr_same_point">"文は違っても、つまずく場所は同じでした。"</string>
+    <string name="wr_week_before_min">"その前の週：%d分"</string>
+    <string name="wr_waiting_in_expressions">"表現リストに入れてあります。"</string>
+    <string name="wr_things_fluent_said">"流暢な自分は使って、自分ではまだ言っていない表現です。"</string>
+    <string name="wr_this_week">"今週やること"</string>
+    <string name="wr_this_weeks_test">"今週のテスト"</string>
+    <string name="wr_try_in_next_talk">"次のトークで「%s」を使ってみましょう。"</string>
+    <string name="wr_where_stuck">"つまずいたところ"</string>
+    <string name="wr_became_yours_body">"今週、自分のものになった単語と表現です。"</string>
+    <string name="wr_words_level_up">"ワンランク上の言葉"</string>
+    <string name="wr_words_leaned_on">"よく頼っていた言葉と、次に使ってみたい言葉です。"</string>
+    <string name="wr_showed_up">"ちゃんと取り組みました。それがいちばん大事です。"</string>
+    <string name="wr_studied_then_said">"勉強したことを、本物のトークで自分の口から言えました。"</string>
+    <string name="wr_test_in_progress">"%2$d問中%1$d問まで進んでいます。続きからどうぞ。"</string>
+    <string name="wr_your_week">"1週間のふりかえり"</string>
+    <string name="wr_your_week_is_ready">"1週間のふりかえりが届きました"</string>
+    <plurals name="wr_days_min_of_talk">
+        <item quantity="other">"%1$d日 · トーク%2$d分"</item>
+    </plurals>
+    <plurals name="wr_notif_body_talk">
+        <item quantity="other">"%2$d日で%1$d分話しました。1週間をふりかえって、テストにも挑戦しましょう。"</item>
+    </plurals>
+    <plurals name="wr_notif_body_days">
+        <item quantity="other">"%d日取り組みました。1週間をふりかえって、テストにも挑戦しましょう。"</item>
+    </plurals>
+    <plurals name="wr_min_of_talk_talks">
+        <item quantity="other">"トーク%1$d分 · %2$d回"</item>
+    </plurals>
+    <plurals name="wr_new_phrases">
+        <item quantity="other">"流暢な自分から新しい表現%d個"</item>
+    </plurals>
+    <plurals name="wr_new_cards">
+        <item quantity="other">"直された文から復習カードが%d枚できました"</item>
+    </plurals>
+    <plurals name="wr_scenes_watched">
+        <item quantity="other">"シーンを%d本見ました"</item>
+    </plurals>
+    <plurals name="wr_sentences_got">
+        <item quantity="other">"身についた文 %d件"</item>
+    </plurals>
+    <plurals name="wr_shadow_takes">
+        <item quantity="other">"シャドーイング%d回"</item>
+    </plurals>
+    <plurals name="wr_things_said">
+        <item quantity="other">"学んだことを%d個、自分で口にしました"</item>
+    </plurals>
+    <plurals name="wr_became_yours">
+        <item quantity="other">"単語・表現が%d個、自分のものになりました"</item>
+    </plurals>
+    <plurals name="wr_last_test_missed">
+        <item quantity="other">"前回のテスト %1$d/%2$d。間違えた%3$d問は今週また出ます。"</item>
+    </plurals>
+</resources>

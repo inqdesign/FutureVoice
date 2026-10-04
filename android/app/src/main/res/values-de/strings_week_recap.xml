@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your week" (iOS WeekRecapSheet, 633418f). Android-only names: the
+     catalog pin predates these keys. Values copied from the iOS catalog at
+     7c12b9e; iOS ^[…](inflect: true) became <plurals>. -->
+<resources>
+    <string name="wr_talk_line_day_min">"%1$s · %2$d Min."</string>
+    <string name="wr_min_more_than_week_before">"%d Min. mehr als in der Woche davor"</string>
+    <string name="wr_plus_more">"+%d weitere"</string>
+    <string name="wr_few_days_in">"Ein paar Tage. Der Rhythmus kommt."</string>
+    <string name="wr_test_ready_body">"Ein paar Minuten, gemacht aus deiner Woche: Wörter, Wendungen, korrigierte Sätze."</string>
+    <string name="wr_new_week_start_small">"Eine neue Woche beginnt. Fang klein an."</string>
+    <string name="wr_quiet_week">"Eine ruhige Woche"</string>
+    <string name="wr_and_more">"und %d weitere"</string>
+    <string name="wr_average">"Schnitt %d"</string>
+    <string name="wr_continue_test">"Test fortsetzen"</string>
+    <string name="wr_coach_failed">"Deine Woche konnte gerade nicht gelesen werden."</string>
+    <string name="wr_test_done">"Fertig: %1$d/%2$d."</string>
+    <string name="wr_every_day">"Jeden einzelnen Tag. Das ist jetzt Gewohnheit."</string>
+    <string name="wr_from_coach">"Von deinem Coach"</string>
+    <string name="wr_grammar_title">"Grammatik, die immer wieder hakt"</string>
+    <string name="wr_how_you_speak">"Wie du sprichst"</string>
+    <string name="wr_quiet_body">"Kommt vor. Ein Gespräch reicht, um wieder reinzukommen."</string>
+    <string name="wr_last_week">"Letzte Woche"</string>
+    <string name="wr_shaky_lines">"Sätze, die beim Nachsprechen noch nicht ganz saßen."</string>
+    <string name="wr_min">"Min."</string>
+    <string name="wr_most_of_week">"Fast die ganze Woche. Da ist ein Rhythmus."</string>
+    <string name="wr_new_from_fluent">"Neu von deinem fließenden Ich"</string>
+    <string name="wr_no_grammar">"Diese Woche kam kein Grammatikfehler wieder."</string>
+    <string name="wr_no_word">"Diese Woche musste kein Wort zu viel tragen."</string>
+    <string name="wr_test_thin">"Für einen Test reicht es noch nicht. Ein, zwei Gespräche, dann ist er da."</string>
+    <string name="wr_of_7_days">"von 7 Tagen"</string>
+    <string name="wr_one_talk_plan">"Ein Gespräch, ein paar Minuten. Mehr braucht es nicht."</string>
+    <string name="wr_reading">"Deine Woche wird gelesen …"</string>
+    <string name="wr_say_in_next_talk">"Sag „%s“ in deinem nächsten Gespräch."</string>
+    <string name="wr_see_results">"Ergebnis ansehen"</string>
+    <string name="wr_shadow_once_more">"Sprich „%s“ noch einmal nach."</string>
+    <string name="wr_start_test">"Test starten"</string>
+    <string name="wr_same_fix_back">"Dieselbe Korrektur kam immer wieder. Noch ein Blick, dann sitzt sie."</string>
+    <string name="wr_same_point">"Andere Sätze, dieselbe Stelle."</string>
+    <string name="wr_week_before_min">"Woche davor: %d Min."</string>
+    <string name="wr_waiting_in_expressions">"Sie warten in deinen Wendungen."</string>
+    <string name="wr_things_fluent_said">"Was dein fließendes Ich gesagt hat und du noch nicht."</string>
+    <string name="wr_this_week">"Diese Woche"</string>
+    <string name="wr_this_weeks_test">"Test dieser Woche"</string>
+    <string name="wr_try_in_next_talk">"Probier „%s“ in deinem nächsten Gespräch aus."</string>
+    <string name="wr_where_stuck">"Wo es gehakt hat"</string>
+    <string name="wr_became_yours_body">"Wörter und Wendungen, die diese Woche deine geworden sind."</string>
+    <string name="wr_words_level_up">"Wörter für die nächste Stufe"</string>
+    <string name="wr_words_leaned_on">"Wörter, auf die du dich gestützt hast, und eins für den nächsten Schritt."</string>
+    <string name="wr_showed_up">"Du warst da. Darauf kommt es an."</string>
+    <string name="wr_studied_then_said">"Das hast du gelernt – und dann selbst in einem echten Gespräch gesagt."</string>
+    <string name="wr_test_in_progress">"Du bist bei %1$d von %2$d. Mach da weiter, wo du warst."</string>
+    <string name="wr_your_week">"Deine Woche"</string>
+    <string name="wr_your_week_is_ready">"Deine Woche im Rückblick"</string>
+    <plurals name="wr_days_min_of_talk">
+        <item quantity="other">"%1$d/7 Tage · %2$d Min. gesprochen"</item>
+    </plurals>
+    <plurals name="wr_notif_body_talk">
+        <item quantity="other">"%1$d Min. gesprochen, an %2$d von 7 Tagen dabei. Schau zurück, dann mach den Test."</item>
+    </plurals>
+    <plurals name="wr_notif_body_days">
+        <item quantity="other">"An %d von 7 Tagen dabei. Schau zurück, dann mach den Test."</item>
+    </plurals>
+    <plurals name="wr_min_of_talk_talks">
+        <item quantity="one">"%1$d Min. gesprochen · %2$d Gespräch"</item>
+        <item quantity="other">"%1$d Min. gesprochen · %2$d Gespräche"</item>
+    </plurals>
+    <plurals name="wr_new_phrases">
+        <item quantity="other">"Neue Wendungen von deinem fließenden Ich: %d"</item>
+    </plurals>
+    <plurals name="wr_new_cards">
+        <item quantity="other">"Neue Lernkarten aus deinen Korrekturen: %d"</item>
+    </plurals>
+    <plurals name="wr_scenes_watched">
+        <item quantity="one">"%d Szene angesehen"</item>
+        <item quantity="other">"%d Szenen angesehen"</item>
+    </plurals>
+    <plurals name="wr_sentences_got">
+        <item quantity="other">"Sätze, die sitzen: %d"</item>
+    </plurals>
+    <plurals name="wr_shadow_takes">
+        <item quantity="one">"%d Nachsprech-Aufnahme"</item>
+        <item quantity="other">"%d Nachsprech-Aufnahmen"</item>
+    </plurals>
+    <plurals name="wr_things_said">
+        <item quantity="other">"Selbst gesagt, was du gelernt hast: %d"</item>
+    </plurals>
+    <plurals name="wr_became_yours">
+        <item quantity="other">"Wörter und Wendungen, die jetzt dir gehören: %d"</item>
+    </plurals>
+    <plurals name="wr_last_test_missed">
+        <item quantity="other">"Letzter Test: %1$d/%2$d. Die verpassten Fragen (%3$d) kommen diese Woche wieder."</item>
+    </plurals>
+</resources>

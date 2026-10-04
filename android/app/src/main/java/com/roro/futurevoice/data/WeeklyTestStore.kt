@@ -250,8 +250,9 @@ object WeeklyTestSettings {
 
 /**
  * One alarm at the next opening; firing posts the notification and arms the
- * one after (iOS `WeeklyTestReminder`'s repeating trigger). The test itself
- * needs no notification to exist — this only says the week has turned.
+ * one after. Since 2026-09-30 it is the "Your week" notice too: iOS writes the
+ * body when the app leaves the foreground, Android when the alarm fires —
+ * either way it carries the closed week's real numbers.
  */
 object WeeklyTestReminder {
     const val CHANNEL_ID = "weekly_test"
@@ -270,7 +271,15 @@ object WeeklyTestReminder {
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(c))
     }
 
-    fun notifyReady(c: Context) {
+    /**
+     * The week has turned: "Your week" is ready and the test opens (iOS
+     * `WeeklyTestReminder.makeContent`, 2026-09-30). The body carries the week
+     * that just CLOSED — counted here, at fire time, from the logs the app
+     * keeps — and a tap opens its cards. A week with nothing in it gets the
+     * plain test notice and lands on the test. [forceRecap]: the developer
+     * button, which always exercises the recap path.
+     */
+    fun notifyReady(c: Context, now: Long = System.currentTimeMillis(), forceRecap: Boolean = false) {
         val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         // Chrome speaks the app language, not the phone's.
         val res = UILanguage.contextFor(c, UILanguage.current(c))
@@ -278,14 +287,27 @@ object WeeklyTestReminder {
             nm.createNotificationChannel(NotificationChannel(CHANNEL_ID,
                 res.getString(R.string.weekly_test), NotificationManager.IMPORTANCE_DEFAULT))
         }
+        val (start, end) = WeekRecapBuilder.lastWeek(c, now)
+        val talkSeconds = WeekRecapBuilder.talkSeconds(c, start, end)
+        val active = WeekRecapBuilder.days(start).count { TalkTimeLog.studied(c, it) }
+        val recap = active > 0 || forceRecap
+        val title = if (recap) res.getString(R.string.wr_your_week_is_ready)
+            else res.getString(R.string.your_weekly_test_is_ready)
+        val body = when {
+            !recap -> res.getString(R.string.a_few_minutes_made_from_this_week_s_talks)
+            talkSeconds >= 60 -> res.resources.getQuantityString(R.plurals.wr_notif_body_talk, active, talkSeconds / 60, active)
+            else -> res.resources.getQuantityString(R.plurals.wr_notif_body_days, active, active)
+        }
+        val link = if (recap) "futurevoice://weekrecap" else "futurevoice://weeklytest"
         val open = PendingIntent.getActivity(c, REQUEST_CODE,
-            Intent(Intent.ACTION_VIEW, Uri.parse("futurevoice://weeklytest"), c, MainActivity::class.java)
+            Intent(Intent.ACTION_VIEW, Uri.parse(link), c, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(c, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
-            .setContentTitle(res.getString(R.string.your_weekly_test_is_ready))
-            .setContentText(res.getString(R.string.a_few_minutes_made_from_this_week_s_talks))
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(open)
             .build()

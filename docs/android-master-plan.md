@@ -530,7 +530,7 @@
   — 코드·테스트 끝(`SayItAgainScriptTest` 끼어든 답 7 + 인코딩 1, `DailyCallHoldTest` 3). 속도는 시트 안 세 행(분할 버튼이던 것), 바뀌면 `vm.setSpeed` → 게이트웨이 `set`.
   끼어든 답은 `audio_start` 뒤 2.5초 안의 `interrupted`(iOS `cutInWindow`) → `Turn.talkedOver`(true일 때만 인코딩).
   예약 전화 보류는 `CallForegroundService.start/stop`이 괄호. 남은 것: 폰에서 통화 중 속도 바꾸기, 말 중간에 끊긴 답이 다시 말하기에서 한 줄로, 통화 중 예약 시각이 지나도 안 울리고 끊으면 받은 것으로 정산, 사람 상세 아이디어 탭 → Watch 작성 박스.
-- ☐ 2c.7 한 주 돌아보기 카드 덱 (`633418f`)
+- ◐ 2c.7 한 주 돌아보기 카드 덱 (`633418f`) — 덱·코치(week-recap, 검증 규칙)·주간 알림 대체·Practice 행·자동 올라옴·개발자 버튼·캡처 week-recap(-quiet). 폰 확인 전
 - ◐ 2c.8 독일어 UI (`d3175f8`) — values-de
   — 코드·테스트 끝(`GermanStringsTest` 2, `StringConsistencyTest`에 values-de). 카탈로그 사본에 iOS `7c12b9e`의 de 열만 얹었다(다른 언어 무변경, 731키),
   iOS가 지운 키 중 안드로이드가 아직 쓰는 4개는 직접 번역. `strings_android.xml`은 손번역(du, „…“, " – ", 알림은 안드로이드 용어 Benachrichtigungen).

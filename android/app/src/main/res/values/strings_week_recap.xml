@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your week" (iOS WeekRecapSheet, 633418f). Android-only names: the
+     catalog pin predates these keys. Values copied from the iOS catalog at
+     7c12b9e; iOS ^[…](inflect: true) became <plurals>. -->
+<resources>
+    <string name="wr_talk_line_day_min">"%1$s · %2$d min"</string>
+    <string name="wr_min_more_than_week_before">"%d min more than the week before"</string>
+    <string name="wr_plus_more">"+%d more"</string>
+    <string name="wr_few_days_in">"A few days in. The rhythm is starting."</string>
+    <string name="wr_test_ready_body">"A few minutes, made from your own week: the words, the phrases, the corrections."</string>
+    <string name="wr_new_week_start_small">"A new week starts now. Start small."</string>
+    <string name="wr_quiet_week">"A quiet week"</string>
+    <string name="wr_and_more">"and %d more"</string>
+    <string name="wr_average">"average %d"</string>
+    <string name="wr_continue_test">"Continue the test"</string>
+    <string name="wr_coach_failed">"Couldn't read your week just now."</string>
+    <string name="wr_test_done">"Done: %1$d/%2$d."</string>
+    <string name="wr_every_day">"Every single day. That's a habit now."</string>
+    <string name="wr_from_coach">"From your coach"</string>
+    <string name="wr_grammar_title">"Grammar that keeps slipping"</string>
+    <string name="wr_how_you_speak">"How you speak"</string>
+    <string name="wr_quiet_body">"It happens. One talk is enough to start again."</string>
+    <string name="wr_last_week">"Last week"</string>
+    <string name="wr_shaky_lines">"Lines that didn't quite land when you shadowed them."</string>
+    <string name="wr_min">"min"</string>
+    <string name="wr_most_of_week">"Most of the week. That's a rhythm."</string>
+    <string name="wr_new_from_fluent">"New from your fluent self"</string>
+    <string name="wr_no_grammar">"No grammar point kept coming back this week."</string>
+    <string name="wr_no_word">"No word carried too much of the load this week."</string>
+    <string name="wr_test_thin">"Not enough from this week yet for a test. A talk or two, and it's ready."</string>
+    <string name="wr_of_7_days">"of 7 days"</string>
+    <string name="wr_one_talk_plan">"One talk, a few minutes. That's the whole plan."</string>
+    <string name="wr_reading">"Reading your week…"</string>
+    <string name="wr_say_in_next_talk">"Say “%s” in your next talk."</string>
+    <string name="wr_see_results">"See the results"</string>
+    <string name="wr_shadow_once_more">"Shadow “%s” once more."</string>
+    <string name="wr_start_test">"Start this week's test"</string>
+    <string name="wr_same_fix_back">"The same fix kept coming back. One more look and it's yours."</string>
+    <string name="wr_same_point">"The same point, in different sentences."</string>
+    <string name="wr_week_before_min">"The week before: %d min"</string>
+    <string name="wr_waiting_in_expressions">"They're waiting in your expressions."</string>
+    <string name="wr_things_fluent_said">"Things your fluent self said that you haven't said yet."</string>
+    <string name="wr_this_week">"This week"</string>
+    <string name="wr_this_weeks_test">"This week's test"</string>
+    <string name="wr_try_in_next_talk">"Try “%s” in your next talk."</string>
+    <string name="wr_where_stuck">"Where you got stuck"</string>
+    <string name="wr_became_yours_body">"Words and phrases that became yours this week."</string>
+    <string name="wr_words_level_up">"Words to level up"</string>
+    <string name="wr_words_leaned_on">"Words you leaned on, and one to reach for next."</string>
+    <string name="wr_showed_up">"You showed up. That's the part that counts."</string>
+    <string name="wr_studied_then_said">"You studied these, then said them yourself in a real talk."</string>
+    <string name="wr_test_in_progress">"You're %1$d of %2$d in. Pick up where you left off."</string>
+    <string name="wr_your_week">"Your week"</string>
+    <string name="wr_your_week_is_ready">"Your week is ready"</string>
+    <plurals name="wr_days_min_of_talk">
+        <item quantity="one">"%1$d day · %2$d min of talk"</item>
+        <item quantity="other">"%1$d days · %2$d min of talk"</item>
+    </plurals>
+    <plurals name="wr_notif_body_talk">
+        <item quantity="one">"%1$d min of talk over %2$d day. See how it went, then take the test."</item>
+        <item quantity="other">"%1$d min of talk over %2$d days. See how it went, then take the test."</item>
+    </plurals>
+    <plurals name="wr_notif_body_days">
+        <item quantity="one">"You showed up %d day. See how it went, then take the test."</item>
+        <item quantity="other">"You showed up %d days. See how it went, then take the test."</item>
+    </plurals>
+    <plurals name="wr_min_of_talk_talks">
+        <item quantity="one">"%1$d min of talk · %2$d talk"</item>
+        <item quantity="other">"%1$d min of talk · %2$d talks"</item>
+    </plurals>
+    <plurals name="wr_new_phrases">
+        <item quantity="one">"%d new phrase from your fluent self"</item>
+        <item quantity="other">"%d new phrases from your fluent self"</item>
+    </plurals>
+    <plurals name="wr_new_cards">
+        <item quantity="one">"%d new review card from your corrections"</item>
+        <item quantity="other">"%d new review cards from your corrections"</item>
+    </plurals>
+    <plurals name="wr_scenes_watched">
+        <item quantity="one">"%d scene watched"</item>
+        <item quantity="other">"%d scenes watched"</item>
+    </plurals>
+    <plurals name="wr_sentences_got">
+        <item quantity="one">"%d sentence you got down"</item>
+        <item quantity="other">"%d sentences you got down"</item>
+    </plurals>
+    <plurals name="wr_shadow_takes">
+        <item quantity="one">"%d shadowing take"</item>
+        <item quantity="other">"%d shadowing takes"</item>
+    </plurals>
+    <plurals name="wr_things_said">
+        <item quantity="one">"%d thing you studied, said out loud"</item>
+        <item quantity="other">"%d things you studied, said out loud"</item>
+    </plurals>
+    <plurals name="wr_became_yours">
+        <item quantity="one">"%d word or phrase became yours"</item>
+        <item quantity="other">"%d words or phrases became yours"</item>
+    </plurals>
+    <plurals name="wr_last_test_missed">
+        <item quantity="one">"Last test %1$d/%2$d. The %3$d you missed comes back this week."</item>
+        <item quantity="other">"Last test %1$d/%2$d. The %3$d you missed come back this week."</item>
+    </plurals>
+</resources>

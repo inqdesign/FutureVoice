@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your week" (iOS WeekRecapSheet, 633418f). Android-only names: the
+     catalog pin predates these keys. Values copied from the iOS catalog at
+     7c12b9e; iOS ^[…](inflect: true) became <plurals>. -->
+<resources>
+    <string name="wr_talk_line_day_min">"%1$s · %2$d분"</string>
+    <string name="wr_min_more_than_week_before">"지난주보다 %d분 더 했어요"</string>
+    <string name="wr_plus_more">"외 %d개"</string>
+    <string name="wr_few_days_in">"며칠씩 이어졌어요. 리듬이 잡히는 중이에요."</string>
+    <string name="wr_test_ready_body">"몇 분이면 끝나요. 지난 한 주에 만난 단어, 표현, 고친 문장으로 만들었어요."</string>
+    <string name="wr_new_week_start_small">"새 주가 시작됐어요. 가볍게 시작해요."</string>
+    <string name="wr_quiet_week">"쉬어 간 한 주"</string>
+    <string name="wr_and_more">"그 밖에 %d번 더"</string>
+    <string name="wr_average">"평균 %d점"</string>
+    <string name="wr_continue_test">"테스트 이어서 풀기"</string>
+    <string name="wr_coach_failed">"지금은 한 주를 읽어오지 못했어요."</string>
+    <string name="wr_test_done">"다 풀었어요 %1$d/%2$d"</string>
+    <string name="wr_every_day">"하루도 안 빠졌어요. 이제 습관이에요."</string>
+    <string name="wr_from_coach">"코치의 한마디"</string>
+    <string name="wr_grammar_title">"자꾸 틀리는 문법"</string>
+    <string name="wr_how_you_speak">"말하는 습관"</string>
+    <string name="wr_quiet_body">"그런 주도 있어요. 대화 한 번이면 다시 시작이에요."</string>
+    <string name="wr_last_week">"지난주"</string>
+    <string name="wr_shaky_lines">"섀도잉할 때 아직 입에 덜 붙은 문장이에요."</string>
+    <string name="wr_min">"분"</string>
+    <string name="wr_most_of_week">"거의 매일 했어요. 리듬이 생겼어요."</string>
+    <string name="wr_new_from_fluent">"유창해진 내가 쓴 새 표현"</string>
+    <string name="wr_no_grammar">"이번 주엔 반복해서 틀린 문법이 없었어요."</string>
+    <string name="wr_no_word">"이번 주엔 한 단어에만 기대지 않았어요."</string>
+    <string name="wr_test_thin">"아직 테스트를 만들 만큼 모이지 않았어요. 대화 한두 번이면 돼요."</string>
+    <string name="wr_of_7_days">"/ 7일"</string>
+    <string name="wr_one_talk_plan">"대화 한 번, 몇 분이면 충분해요."</string>
+    <string name="wr_reading">"한 주를 살펴보는 중이에요…"</string>
+    <string name="wr_say_in_next_talk">"다음 대화에서 “%s”, 꼭 한번 말해봐요."</string>
+    <string name="wr_see_results">"결과 보기"</string>
+    <string name="wr_shadow_once_more">"“%s”, 한 번 더 섀도잉해봐요."</string>
+    <string name="wr_start_test">"이번 주 테스트 풀기"</string>
+    <string name="wr_same_fix_back">"같은 부분을 계속 고쳤어요. 한 번만 더 보면 내 것이 돼요."</string>
+    <string name="wr_same_point">"문장은 달라도, 틀리는 곳은 같았어요."</string>
+    <string name="wr_week_before_min">"그 전 주: %d분"</string>
+    <string name="wr_waiting_in_expressions">"표현 목록에 담아뒀어요."</string>
+    <string name="wr_things_fluent_said">"유창해진 나는 말했지만, 나는 아직 안 써본 표현이에요."</string>
+    <string name="wr_this_week">"이번 주 할 일"</string>
+    <string name="wr_this_weeks_test">"이번 주 테스트"</string>
+    <string name="wr_try_in_next_talk">"다음 대화에서 “%s”, 한번 써봐요."</string>
+    <string name="wr_where_stuck">"자주 막힌 곳"</string>
+    <string name="wr_became_yours_body">"이번 주에 내 것이 된 단어와 표현이에요."</string>
+    <string name="wr_words_level_up">"한 단계 올려볼 단어"</string>
+    <string name="wr_words_leaned_on">"자주 쓴 말과, 그 대신 써볼 말이에요."</string>
+    <string name="wr_showed_up">"그래도 나왔어요. 그게 제일 중요해요."</string>
+    <string name="wr_studied_then_said">"공부했던 걸 실제 대화에서 내 입으로 꺼냈어요."</string>
+    <string name="wr_test_in_progress">"%2$d문제 중 %1$d문제까지 풀었어요. 이어서 풀어요."</string>
+    <string name="wr_your_week">"한 주 돌아보기"</string>
+    <string name="wr_your_week_is_ready">"지난 한 주를 정리했어요"</string>
+    <plurals name="wr_days_min_of_talk">
+        <item quantity="other">"%1$d일 · 대화 %2$d분"</item>
+    </plurals>
+    <plurals name="wr_notif_body_talk">
+        <item quantity="other">"%2$d일 동안 %1$d분 이야기했어요. 어떤 한 주였는지 보고, 테스트도 풀어봐요."</item>
+    </plurals>
+    <plurals name="wr_notif_body_days">
+        <item quantity="other">"%d일 동안 꾸준히 했어요. 어떤 한 주였는지 보고, 테스트도 풀어봐요."</item>
+    </plurals>
+    <plurals name="wr_min_of_talk_talks">
+        <item quantity="other">"%1$d분 대화 · %2$d번"</item>
+    </plurals>
+    <plurals name="wr_new_phrases">
+        <item quantity="other">"유창해진 나에게 받은 새 표현 %d개"</item>
+    </plurals>
+    <plurals name="wr_new_cards">
+        <item quantity="other">"고친 문장으로 복습 카드 %d장이 생겼어요"</item>
+    </plurals>
+    <plurals name="wr_scenes_watched">
+        <item quantity="other">"상황연습 %d개를 봤어요"</item>
+    </plurals>
+    <plurals name="wr_sentences_got">
+        <item quantity="other">"입에 붙은 문장 %d개"</item>
+    </plurals>
+    <plurals name="wr_shadow_takes">
+        <item quantity="other">"섀도잉 %d번"</item>
+    </plurals>
+    <plurals name="wr_things_said">
+        <item quantity="other">"공부한 것 %d개를 직접 말했어요"</item>
+    </plurals>
+    <plurals name="wr_became_yours">
+        <item quantity="other">"단어·표현 %d개가 내 것이 됐어요"</item>
+    </plurals>
+    <plurals name="wr_last_test_missed">
+        <item quantity="other">"지난 테스트 %1$d/%2$d. 틀린 %3$d문제는 이번 주에 다시 나와요."</item>
+    </plurals>
+</resources>

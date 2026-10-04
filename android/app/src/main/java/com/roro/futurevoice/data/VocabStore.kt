@@ -608,6 +608,12 @@ class VocabStore private constructor(context: Context) {
             .sortedByDescending { it.lastAt }
     }
 
+    /** Every word the pool has a record of (said or known), with when it
+     *  first got one — "Your week"'s became-yours list (iOS `records`). */
+    suspend fun wordEntries(language: String): Map<String, Long> = mutex.withLock {
+        readRecords(file(language, "vocab_pool.json")).mapValues { it.value.firstAt }
+    }
+
     data class ExpressionEntry(val text: String, val count: Int,
                                val firstAt: Long, val lastAt: Long)
 

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your week" (iOS WeekRecapSheet, 633418f). Android-only names: the
+     catalog pin predates these keys. Values copied from the iOS catalog at
+     7c12b9e; iOS ^[…](inflect: true) became <plurals>. -->
+<resources>
+    <string name="wr_talk_line_day_min">"%1$s · %2$d min"</string>
+    <string name="wr_min_more_than_week_before">"%d min de plus que la semaine d’avant"</string>
+    <string name="wr_plus_more">"+%d autres"</string>
+    <string name="wr_few_days_in">"Quelques jours. Le rythme s’installe."</string>
+    <string name="wr_test_ready_body">"Quelques minutes, tirées de ta semaine : les mots, les expressions, les phrases corrigées."</string>
+    <string name="wr_new_week_start_small">"Une nouvelle semaine commence. Vas-y doucement."</string>
+    <string name="wr_quiet_week">"Une semaine au calme"</string>
+    <string name="wr_and_more">"et %d de plus"</string>
+    <string name="wr_average">"moyenne %d"</string>
+    <string name="wr_continue_test">"Reprendre le test"</string>
+    <string name="wr_coach_failed">"Impossible de lire ta semaine pour le moment."</string>
+    <string name="wr_test_done">"Terminé : %1$d/%2$d."</string>
+    <string name="wr_every_day">"Tous les jours. C’est devenu une habitude."</string>
+    <string name="wr_from_coach">"De ton coach"</string>
+    <string name="wr_grammar_title">"La grammaire qui coince"</string>
+    <string name="wr_how_you_speak">"Ta façon de parler"</string>
+    <string name="wr_quiet_body">"Ça arrive. Une conversation suffit pour repartir."</string>
+    <string name="wr_last_week">"La semaine dernière"</string>
+    <string name="wr_shaky_lines">"Des phrases qui ne passaient pas encore en shadowing."</string>
+    <string name="wr_min">"min"</string>
+    <string name="wr_most_of_week">"Presque toute la semaine. Tu as trouvé ton rythme."</string>
+    <string name="wr_new_from_fluent">"Du nouveau de ton moi fluide"</string>
+    <string name="wr_no_grammar">"Aucune erreur de grammaire n’est revenue cette semaine."</string>
+    <string name="wr_no_word">"Aucun mot n’a porté toute la charge cette semaine."</string>
+    <string name="wr_test_thin">"Pas encore assez de matière pour un test. Une ou deux conversations, et il sera prêt."</string>
+    <string name="wr_of_7_days">"sur 7 jours"</string>
+    <string name="wr_one_talk_plan">"Une conversation, quelques minutes. C’est tout."</string>
+    <string name="wr_reading">"Je lis ta semaine…"</string>
+    <string name="wr_say_in_next_talk">"Dis « %s » dans ta prochaine conversation."</string>
+    <string name="wr_see_results">"Voir les résultats"</string>
+    <string name="wr_shadow_once_more">"Refais « %s » en shadowing."</string>
+    <string name="wr_start_test">"Commencer le test"</string>
+    <string name="wr_same_fix_back">"La même correction est revenue plusieurs fois. Encore un coup d’œil et c’est acquis."</string>
+    <string name="wr_same_point">"Des phrases différentes, la même erreur."</string>
+    <string name="wr_week_before_min">"La semaine d’avant : %d min"</string>
+    <string name="wr_waiting_in_expressions">"Elles t’attendent dans tes expressions."</string>
+    <string name="wr_things_fluent_said">"Ce que ton moi fluide a dit et que tu n’as pas encore dit."</string>
+    <string name="wr_this_week">"Cette semaine"</string>
+    <string name="wr_this_weeks_test">"Le test de la semaine"</string>
+    <string name="wr_try_in_next_talk">"Essaie « %s » dans ta prochaine conversation."</string>
+    <string name="wr_where_stuck">"Là où ça coince"</string>
+    <string name="wr_became_yours_body">"Les mots et expressions devenus les tiens cette semaine."</string>
+    <string name="wr_words_level_up">"Des mots à faire monter d’un cran"</string>
+    <string name="wr_words_leaned_on">"Les mots sur lesquels tu t’es appuyé, et celui à essayer ensuite."</string>
+    <string name="wr_showed_up">"Tu étais là, et c’est ce qui compte."</string>
+    <string name="wr_studied_then_said">"Tu les avais travaillées, et tu les as dites toi-même dans une vraie conversation."</string>
+    <string name="wr_test_in_progress">"Tu en es à %1$d sur %2$d. Reprends là où tu en étais."</string>
+    <string name="wr_your_week">"Ta semaine"</string>
+    <string name="wr_your_week_is_ready">"Ta semaine en résumé"</string>
+    <plurals name="wr_days_min_of_talk">
+        <item quantity="one">"%1$d jour · %2$d min de conversation"</item>
+        <item quantity="other">"%1$d jours · %2$d min de conversation"</item>
+    </plurals>
+    <plurals name="wr_notif_body_talk">
+        <item quantity="one">"%1$d min de conversation sur %2$d jour. Revois ta semaine, puis passe le test."</item>
+        <item quantity="other">"%1$d min de conversation sur %2$d jours. Revois ta semaine, puis passe le test."</item>
+    </plurals>
+    <plurals name="wr_notif_body_days">
+        <item quantity="one">"Tu as pratiqué %d jour. Revois ta semaine, puis passe le test."</item>
+        <item quantity="other">"Tu as pratiqué %d jours. Revois ta semaine, puis passe le test."</item>
+    </plurals>
+    <plurals name="wr_min_of_talk_talks">
+        <item quantity="one">"%1$d min de conversation · %2$d échange"</item>
+        <item quantity="other">"%1$d min de conversation · %2$d échanges"</item>
+    </plurals>
+    <plurals name="wr_new_phrases">
+        <item quantity="one">"%d nouvelle expression de ton moi fluide"</item>
+        <item quantity="other">"%d nouvelles expressions de ton moi fluide"</item>
+    </plurals>
+    <plurals name="wr_new_cards">
+        <item quantity="one">"%d nouvelle carte de révision tirée de tes corrections"</item>
+        <item quantity="other">"%d nouvelles cartes de révision tirées de tes corrections"</item>
+    </plurals>
+    <plurals name="wr_scenes_watched">
+        <item quantity="one">"%d scène regardée"</item>
+        <item quantity="other">"%d scènes regardées"</item>
+    </plurals>
+    <plurals name="wr_sentences_got">
+        <item quantity="one">"%d phrase acquise"</item>
+        <item quantity="other">"%d phrases acquises"</item>
+    </plurals>
+    <plurals name="wr_shadow_takes">
+        <item quantity="one">"%d prise de shadowing"</item>
+        <item quantity="other">"%d prises de shadowing"</item>
+    </plurals>
+    <plurals name="wr_things_said">
+        <item quantity="one">"%d chose travaillée, dite à voix haute"</item>
+        <item quantity="other">"%d choses travaillées, dites à voix haute"</item>
+    </plurals>
+    <plurals name="wr_became_yours">
+        <item quantity="other">"Mots et expressions désormais à toi : %d"</item>
+    </plurals>
+    <plurals name="wr_last_test_missed">
+        <item quantity="one">"Dernier test : %1$d/%2$d. Tu retrouveras cette semaine %3$d question ratée."</item>
+        <item quantity="other">"Dernier test : %1$d/%2$d. Tu retrouveras cette semaine %3$d questions ratées."</item>
+    </plurals>
+</resources>

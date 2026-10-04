@@ -59,6 +59,9 @@ object DeepLinkInbox {
             } ?: Destination.PRACTICE
             // The weekly test lives on the Practice tab; the tab opens it.
             "weeklytest" -> { WeeklyTestInbox.pending.value = true; Destination.PRACTICE }
+            // The week-turn notice spoke about the week: its cards, raised
+            // over whatever is on screen (the deck's last card is the test).
+            "weekrecap" -> { WeekRecapInbox.asked.value = true; return }
             else -> return          // login, and anything we don't own
         }
     }

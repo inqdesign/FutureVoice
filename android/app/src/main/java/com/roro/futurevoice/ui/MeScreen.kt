@@ -482,6 +482,39 @@ fun MeScreen(
                         MeRow(Icons.Filled.NotificationsActive, "Ring now (debug)",
                             kind = MeRowKind.ACTION,
                             onClick = { com.roro.futurevoice.data.DailyCallScheduler.ring(context) })
+                        // "Your week" rings once a week and slides up once a
+                        // week; these three reach every path of it on demand.
+                        MeRow(Icons.Filled.NotificationsActive, "Open Your week",
+                            subtitle = "The last 7 days as cards, with a fresh coach note",
+                            kind = MeRowKind.ACTION,
+                            onClick = {
+                                scope.launch {
+                                    val end = System.currentTimeMillis()
+                                    com.roro.futurevoice.data.WeekRecapInbox.debug.value =
+                                        com.roro.futurevoice.data.WeekRecapBuilder.build(context, end - 7 * 86_400_000L, end)
+                                }
+                            })
+                        MeRow(Icons.Filled.NotificationsActive, "Slide up Your week again",
+                            subtitle = "Next time the app opens, as if the week just turned",
+                            kind = MeRowKind.ACTION,
+                            onClick = {
+                                scope.launch {
+                                    val (_, end) = com.roro.futurevoice.data.WeekRecapBuilder.lastWeek(context)
+                                    com.roro.futurevoice.data.WeekRecapStore.remove(context, end)
+                                    com.roro.futurevoice.data.WeekRecapStore.resetShown(context)
+                                    com.roro.futurevoice.data.WeekRecapInbox.reoffer.value++
+                                }
+                            })
+                        MeRow(Icons.Filled.NotificationsActive, "Week notification in 10 s",
+                            subtitle = "Lock the phone or leave the app to see it",
+                            kind = MeRowKind.ACTION,
+                            onClick = {
+                                val app = context.applicationContext
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                                    kotlinx.coroutines.delay(10_000)
+                                    com.roro.futurevoice.data.WeeklyTestReminder.notifyReady(app, forceRecap = true)
+                                }
+                            })
                     }
                 }
             }

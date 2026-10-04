@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your week" (iOS WeekRecapSheet, 633418f). Android-only names: the
+     catalog pin predates these keys. Values copied from the iOS catalog at
+     7c12b9e; iOS ^[…](inflect: true) became <plurals>. -->
+<resources>
+    <string name="wr_talk_line_day_min">"%1$s · %2$d分鐘"</string>
+    <string name="wr_min_more_than_week_before">"比前一週多聊%d分鐘"</string>
+    <string name="wr_plus_more">"還有%d個"</string>
+    <string name="wr_few_days_in">"練了幾天，節奏正在成形。"</string>
+    <string name="wr_test_ready_body">"幾分鐘就好。用你上週遇到的單字、用語和修正過的句子出題。"</string>
+    <string name="wr_new_week_start_small">"新的一週開始了，輕鬆開始就好。"</string>
+    <string name="wr_quiet_week">"休息的一週"</string>
+    <string name="wr_and_more">"還有%d次"</string>
+    <string name="wr_average">"平均%d分"</string>
+    <string name="wr_continue_test">"繼續測驗"</string>
+    <string name="wr_coach_failed">"現在沒辦法讀取你的這一週。"</string>
+    <string name="wr_test_done">"完成 %1$d/%2$d"</string>
+    <string name="wr_every_day">"一天都沒缺，已經是習慣了。"</string>
+    <string name="wr_from_coach">"教練的話"</string>
+    <string name="wr_grammar_title">"老是出錯的文法"</string>
+    <string name="wr_how_you_speak">"你說話的習慣"</string>
+    <string name="wr_quiet_body">"難免會這樣。聊一次就能重新開始。"</string>
+    <string name="wr_last_week">"上週"</string>
+    <string name="wr_shaky_lines">"跟讀時還不太順的句子。"</string>
+    <string name="wr_min">"分鐘"</string>
+    <string name="wr_most_of_week">"大部分的日子都有練，節奏出來了。"</string>
+    <string name="wr_new_from_fluent">"流利的自己用過的新用語"</string>
+    <string name="wr_no_grammar">"這週沒有一再出錯的文法。"</string>
+    <string name="wr_no_word">"這週沒有哪個詞被用得太重。"</string>
+    <string name="wr_test_thin">"還不夠出一份測驗，再聊一兩次就好。"</string>
+    <string name="wr_of_7_days">"/ 7天"</string>
+    <string name="wr_one_talk_plan">"聊一次，幾分鐘就夠了。"</string>
+    <string name="wr_reading">"正在看你的這一週…"</string>
+    <string name="wr_say_in_next_talk">"下次聊天時，說說看「%s」。"</string>
+    <string name="wr_see_results">"看結果"</string>
+    <string name="wr_shadow_once_more">"再跟讀一次「%s」。"</string>
+    <string name="wr_start_test">"開始這週的測驗"</string>
+    <string name="wr_same_fix_back">"同一個地方一直被修正。再看一次，就是你的了。"</string>
+    <string name="wr_same_point">"句子不一樣，錯的地方卻一樣。"</string>
+    <string name="wr_week_before_min">"前一週：%d分鐘"</string>
+    <string name="wr_waiting_in_expressions">"已經放進你的用語裡了。"</string>
+    <string name="wr_things_fluent_said">"流利的自己說過、你還沒說過的用語。"</string>
+    <string name="wr_this_week">"這週要做的事"</string>
+    <string name="wr_this_weeks_test">"這週的測驗"</string>
+    <string name="wr_try_in_next_talk">"下次聊天時，用用看「%s」。"</string>
+    <string name="wr_where_stuck">"卡住的地方"</string>
+    <string name="wr_became_yours_body">"這週變成你的單字和用語。"</string>
+    <string name="wr_words_level_up">"可以升級的用詞"</string>
+    <string name="wr_words_leaned_on">"你常靠的詞，和下次可以換上的詞。"</string>
+    <string name="wr_showed_up">"你有來，這才是最重要的。"</string>
+    <string name="wr_studied_then_said">"學過的東西，在真正的對話裡你自己說出來了。"</string>
+    <string name="wr_test_in_progress">"%2$d題裡已經做了%1$d題，接著做吧。"</string>
+    <string name="wr_your_week">"一週回顧"</string>
+    <string name="wr_your_week_is_ready">"你的一週回顧來了"</string>
+    <plurals name="wr_days_min_of_talk">
+        <item quantity="other">"%1$d天 · 聊了%2$d分鐘"</item>
+    </plurals>
+    <plurals name="wr_notif_body_talk">
+        <item quantity="other">"這週你在%2$d天裡聊了%1$d分鐘。看看這一週，再來做個測驗吧。"</item>
+    </plurals>
+    <plurals name="wr_notif_body_days">
+        <item quantity="other">"這週你練了%d天。看看這一週，再來做個測驗吧。"</item>
+    </plurals>
+    <plurals name="wr_min_of_talk_talks">
+        <item quantity="other">"聊了%1$d分鐘 · %2$d次"</item>
+    </plurals>
+    <plurals name="wr_new_phrases">
+        <item quantity="other">"流利的自己帶來%d個新用語"</item>
+    </plurals>
+    <plurals name="wr_new_cards">
+        <item quantity="other">"從修正裡多了%d張複習卡"</item>
+    </plurals>
+    <plurals name="wr_scenes_watched">
+        <item quantity="other">"看了%d個情境"</item>
+    </plurals>
+    <plurals name="wr_sentences_got">
+        <item quantity="other">"說熟了的句子 %d句"</item>
+    </plurals>
+    <plurals name="wr_shadow_takes">
+        <item quantity="other">"跟讀%d次"</item>
+    </plurals>
+    <plurals name="wr_things_said">
+        <item quantity="other">"學過的東西，親口說出%d個"</item>
+    </plurals>
+    <plurals name="wr_became_yours">
+        <item quantity="other">"%d個單字和用語變成你的了"</item>
+    </plurals>
+    <plurals name="wr_last_test_missed">
+        <item quantity="other">"上次測驗%1$d/%2$d。答錯的%3$d題這週會再出現。"</item>
+    </plurals>
+</resources>

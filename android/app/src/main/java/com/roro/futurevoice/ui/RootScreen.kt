@@ -415,6 +415,17 @@ fun RootScreen() {
         }
     }
 
+    // "Your week": the closed week's cards, raised once per week on the
+    // first open after it turns (and on the week-turn notification), never
+    // over a call or another sheet.
+    val updatePending by com.roro.futurevoice.data.AppUpdateService.pending.collectAsStateWithLifecycle()
+    WeekRecapHost(
+        ready = state.setupComplete && state.voiceId != null,
+        blocked = inCall || paywalled || showIntroPreview || state.levelUp != null ||
+            referralJoin != null || welcomeMinutes != null || updatePending != null,
+        level = state.level,
+    )
+
     // A PARKED voice is rebuilt at the metered tap, on top of whatever is
     // up — sheets included (see `VoiceRevival`).
     VoiceRevivalHost(app)
