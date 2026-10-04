@@ -73,14 +73,33 @@ import kotlin.math.roundToInt
  * mixed session (words AND expressions, whatever came due) can resolve each
  * card into the right store.
  */
-data class StudyDeckItem(val kind: StudyScheduleStore.Kind, val text: String) {
-    val id: String get() = kind.raw + "|" + text.lowercase()
+data class StudyDeckItem(
+    val kind: StudyScheduleStore.Kind,
+    val text: String,
+    /** Set for a SENTENCE card (a correction — the Grammar chapter), which
+     *  lives in `DrillStore`, not the word/expression schedule. [text] is then
+     *  the fixed line and [kind] is unused. Added so the "put off" deck can
+     *  hold everything the learner put off in one place (iOS 2026-10-03). */
+    val cardId: String? = null,
+    val cardSaid: String = "",
+    val cardReason: String = "",
+) {
+    val isSentence: Boolean get() = cardId != null
+    val id: String get() = cardId?.let { "sentence|$it" } ?: (kind.raw + "|" + text.lowercase())
 
     companion object {
         fun word(t: String) = StudyDeckItem(StudyScheduleStore.Kind.WORD, t)
         fun expression(t: String) = StudyDeckItem(StudyScheduleStore.Kind.EXPRESSION, t)
+        fun sentence(c: com.roro.futurevoice.talk.DrillCard) = StudyDeckItem(
+            StudyScheduleStore.Kind.EXPRESSION, c.targetPhrase, cardId = c.id,
+            cardSaid = if (c.sourcePhrase.isBlank()) ""
+                else com.roro.futurevoice.data.DrillIngest.relevantFragment(c.sourcePhrase, c.targetPhrase),
+            cardReason = c.reason)
     }
 }
+
+/** One line in a folder — a scheduled word/expression or a put-off sentence. */
+data class StudyFolderItem(val item: StudyDeckItem, val at: Long)
 
 /**
  * The word / expression deck (iOS `StudyDeckView`): the item alone on the
@@ -115,7 +134,7 @@ fun StudyDeckScreen(
     var entry by remember { mutableStateOf<WordLore.Entry?>(null) }
     var loading by remember { mutableStateOf(false) }
     /** Where everything still WAITING sits, bucketed by when it comes back. */
-    var scheduled by remember { mutableStateOf<Map<DrillBin, List<StudyScheduleStore.DueItem>>>(emptyMap()) }
+    var scheduled by remember { mutableStateOf<Map<DrillBin, List<StudyFolderItem>>>(emptyMap()) }
     /** "Got it" can't come from the schedule — see the class comment. */
     var finished by remember { mutableStateOf<List<StudyDeckItem>>(emptyList()) }
     var openFolder by remember { mutableStateOf<DrillBin?>(null) }
@@ -147,10 +166,19 @@ fun StudyDeckScreen(
         val now = System.currentTimeMillis()
         // Scoped to the KINDS this deck was dealt: a Words session listing
         // expressions under "Later" would answer a question nobody asked.
-        val kinds = items.map { it.kind }.toSet()
-        scheduled = StudyScheduleStore.shared(context).snapshot(language).upcoming(now)
+        val kinds = items.filter { !it.isSentence }.map { it.kind }.toSet()
+        val waiting = StudyScheduleStore.shared(context).snapshot(language).upcoming(now)
             .filter { it.kind in kinds }
-            .groupBy { DrillBin.folder(it.at - now) }
+            .map { StudyFolderItem(StudyDeckItem(it.kind, it.text), it.at) }
+            .toMutableList()
+        // A deck holding sentences lists the sentences waiting too — put off
+        // from here or from a book's Grammar chapter, same store.
+        if (items.any { it.isSentence }) {
+            com.roro.futurevoice.data.DrillStore.shared(context).putOffCards(language)
+                .filter { it.nextReviewAt > now }
+                .forEach { waiting += StudyFolderItem(StudyDeckItem.sentence(it), it.nextReviewAt) }
+        }
+        scheduled = waiting.sortedBy { it.at }.groupBy { DrillBin.folder(it.at - now) }
     }
 
     LaunchedEffect(items) { refreshFolders() }
@@ -159,6 +187,8 @@ fun StudyDeckScreen(
         revealed = false
         entry = null
         val item = top ?: return@LaunchedEffect
+        // A sentence carries its own back side (the fix and why).
+        if (item.isSentence) return@LaunchedEffect
         // Capture seam: a drag can only be photographed from inside itself.
         if (com.roro.futurevoice.capture.flags.PracticeCaptureFlags.previewStudyTray) {
             revealed = true; dragging = true; dragOffset = 40f to 150f
@@ -232,7 +262,7 @@ fun StudyDeckScreen(
             } else {
                 Box(Modifier.weight(1f).padding(horizontal = 16.dp)) {
                     StudyCard(
-                        text = top.text,
+                        item = top,
                         revealed = revealed,
                         loading = loading,
                         entry = entry,
@@ -382,7 +412,7 @@ fun StudyDeckScreen(
     openFolder?.let { bin ->
         val rows: List<Pair<String, Long?>> =
             if (bin == DrillBin.GOT_IT) finished.map { it.text to null }
-            else (scheduled[bin] ?: emptyList()).map { it.text to it.at }
+            else (scheduled[bin] ?: emptyList()).map { it.item.text to it.at }
         ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { openFolder = null }) {
             Column(Modifier.bottomBarInsets().padding(20.dp).verticalScroll(rememberScrollState()),
@@ -429,7 +459,7 @@ private fun relativeReturn(at: Long): String {
  */
 @Composable
 private fun StudyCard(
-    text: String,
+    item: StudyDeckItem,
     revealed: Boolean,
     loading: Boolean,
     entry: WordLore.Entry?,
@@ -444,6 +474,54 @@ private fun StudyCard(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        val text = item.text
+        if (item.isSentence) {
+            // The sentence deck's own anatomy (`DrillView.cardSurface`): what
+            // you said, then the fluent version, hidden until the tap.
+            if (item.cardSaid.isNotBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.you_said_f105ab),
+                        style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+                    Text(item.cardSaid, style = MaterialTheme.typography.bodyMedium,
+                        color = onCardSecondary,
+                        textDecoration = if (revealed) androidx.compose.ui.text.style.TextDecoration.LineThrough
+                            else null)
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(if (revealed) R.string.try_saying
+                    else R.string.how_would_a_fluent_speaker_say_it),
+                    style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+                if (revealed) {
+                    Text(text, style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold, color = onCard)
+                } else {
+                    // Redacted, as iOS's `.placeholder`: the line's shape, not its words.
+                    Box(Modifier.fillMaxWidth().height(28.dp)
+                        .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
+                }
+            }
+            if (revealed && item.cardReason.isNotBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.why_label),
+                        style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+                    Text(item.cardReason, style = MaterialTheme.typography.bodyMedium,
+                        color = onCardSecondary)
+                }
+            }
+            if (!revealed) {
+                Spacer(Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Visibility, contentDescription = null,
+                        tint = onCardSecondary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    Text(stringResource(R.string.tap_to_reveal),
+                        style = MaterialTheme.typography.bodyLarge, color = onCardSecondary)
+                }
+            }
+            return@Column
+        }
         Text(
             stringResource(
                 if (revealed) R.string.when_should_it_come_back

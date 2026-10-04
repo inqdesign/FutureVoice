@@ -156,9 +156,10 @@ object CapturePractice {
 
     /** The Practice tab's body. The tab shell (title, tab bar) is RootScreen's. */
     @Composable
-    private fun Practice(c: Context, shelf: Shelf) {
-        // The real tab shell, so the header — the large title and the
-        // finished-books seal at its right — is in the shot, as on iOS.
+    internal fun Practice(c: Context, shelf: Shelf) {
+        // The real tab shell, so the header — the large title and the week's
+        // icons at its right (put off, the week, the tests) — is in the shot,
+        // as on iOS.
         val state = remember {
             val l = lang(c)
             com.roro.futurevoice.ui.AppState(
@@ -279,6 +280,14 @@ object CapturePractice {
         "practice-watch" to mode({ seedSessionsAndBooks(it, "practice-watch") }) { Practice(it, Shelf.WATCH) },
         "practice-studying" to mode({ seedSessionsAndBooks(it, "practice-studying") }) {
             Practice(it, Shelf.STUDYING)
+        },
+        // The book-first Studying page (iOS `790099d`): library tiles, then
+        // every unfinished book newest first with its four chapter buttons.
+        "practice-today" to mode({ seedSessionsAndBooks(it, "practice-today") }) {
+            Practice(it, Shelf.STUDYING)
+        },
+        "practice-finished" to mode({ seedSessionsAndBooks(it, "practice-finished") }) {
+            Practice(it, Shelf.FINISHED)
         },
         "practice-due" to mode({ seedPracticeDue(it, listOf("walk you through")) }) {
             Practice(it, Shelf.STUDYING)

@@ -91,9 +91,15 @@ import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.Session
 
 /**
- * Practice — the REVIEW home (`PracticeTab`'s spine): the day's due queue,
- * then the book shelves. Everything here came out of an activity; nothing is
- * born on this screen. Hosted by the tab shell, so no Scaffold of its own.
+ * Practice — the REVIEW home (`PracticeTab`'s spine). Everything here came out
+ * of an activity; nothing is born on this screen. Hosted by the tab shell, so
+ * no Scaffold of its own — the week's things (put off, the week, the tests)
+ * are in the tab's HEADER (`ReviewHeaderActions`).
+ *
+ * The Studying page is BOOK-FIRST (iOS `790099d`, 2026-10-03): the four lists
+ * on top as one row of tiles, then every unfinished book newest first, each
+ * the shelves' own card with four chapter buttons under it. The old Today card
+ * is gone — what a day asks for is the routine's.
  */
 @Composable
 fun PracticeBody(
@@ -104,146 +110,118 @@ fun PracticeBody(
     onOpenExpressions: () -> Unit,
     onOpenScenarioBook: (String) -> Unit,
     onOpenTalk: (String) -> Unit,
-    /** Today's shadow hand — dealt here, played by the root. */
+    /** A shadow hand — dealt here, played by the root. */
     onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
     /** Everything shadowable, not today's hand. */
     onShadowAll: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenDueReview: () -> Unit = {},
+    /** One talk's sentence cards — a book's Grammar chapter (iOS
+     *  `DrillView(source: .session)`). */
+    onOpenSessionDeck: (String) -> Unit = { onOpenDeck() },
+    nativeLanguage: String = "en",
     /** Which shelf the page opens on (iOS `PracticeTab(initialShelf:)`). */
     initialShelf: Shelf = Shelf.STUDYING,
 ) {
-    var editingGoals by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var shelf by remember { mutableStateOf(initialShelf) }
-    var due by remember { mutableStateOf(0) }
-    var wordsDue by remember { mutableStateOf(0) }
-    var expressionsDue by remember { mutableStateOf(0) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     val scope = rememberCoroutineScope()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
-    var goals by remember { mutableStateOf(GoalStore.Goals()) }
-    var today by remember { mutableStateOf(PracticeLog.Day()) }
-    var streak by remember { mutableStateOf(0) }
-    var dueBack by remember { mutableStateOf(0) }
-    /** How big the collection behind each tile's footer is. */
-    var wordsAll by remember { mutableStateOf<Int?>(null) }
-    var expressionsAll by remember { mutableStateOf<Int?>(null) }
-    var shadowAll by remember { mutableStateOf<Int?>(null) }
-    /** Each talk book's mastered / total — the shelf card's strip. */
-    var talkProgress by remember { mutableStateOf<Map<String, Pair<Int, Int>>>(emptyMap()) }
     /** Finished books. They keep their progress and can come back. */
     var archivedTalks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var archivedScenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    /** The feed, the finished shelf, each talk's strip and the library counts —
+     *  one curriculum pass, off the main thread. */
+    var data by remember { mutableStateOf<ReviewShelfData?>(null) }
+    var counterparts by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    /** A chapter's word/expression deck, over the tab (iOS's sheet). */
+    var chapterDeck by remember { mutableStateOf<Pair<String, List<StudyDeckItem>>?>(null) }
 
     LaunchedEffect(language, revision) {
-        due = DrillStore.shared(context).dueCount(language)
-        // The two library decks say how big TODAY's hand is, not how much is
-        // in the notebook: the number has to be the number the deck deals or
-        // the row promises work the deck won't hand over.
-        wordsDue = DailyStudyPick.words(context, DAILY_HAND, language, level).size
-        expressionsDue = DailyStudyPick.expressions(context, DAILY_HAND, language).size
         val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
-        scenarios = allScenarios.filter { it.archivedAt == null }
+        scenarios = allScenarios.filter { it.archivedAt == null }.sortedByDescending { it.createdAt }
         archivedScenarios = allScenarios.filter { it.archivedAt != null }
         val allTalks = SessionStore.shared(context).load(language).filter { it.summary != null }
+            .sortedByDescending { it.startedAt }
         talks = allTalks.filter { it.archivedAt == null }
         archivedTalks = allTalks.filter { it.archivedAt != null }
-        goals = GoalStore.load(context)
-        today = PracticeLog.day(context) ?: PracticeLog.Day()
-        streak = GoalStore.streak(context, goals)
-        // What the learner put away and asked to see again, now due.
-        dueBack = StudyScheduleStore.shared(context).snapshot(language).dueItems().size
-        wordsAll = StudyCollections.wordsToStudy(context, language)
-        expressionsAll = StudyCollections.expressionsToStudy(context, language)
-        shadowAll = StudyCollections.shadowToStudy(context, language)
-        // A curriculum build per talk — off the main thread.
-        talkProgress = withContext(Dispatchers.Default) {
-            val vocab = VocabStore.shared(context)
-            val attempts = ShadowAttemptStore.shared(context).load(language)
-            val cards = DrillStore.shared(context).load(language)
-            allTalks.mapNotNull { s ->
-                runCatching { TalkCurriculum.build(s, level, language, vocab, attempts, cards) }
-                    .getOrNull()?.let { s.id to (it.masteredCount to it.totalCount) }
-            }.toMap()
+        counterparts = runCatching {
+            com.roro.futurevoice.data.CounterpartStore.shared(context).load().associate { it.id to it.name }
+        }.getOrDefault(emptyMap())
+        data = withContext(Dispatchers.Default) {
+            runCatching { loadReviewShelves(context, language, level) }.getOrNull()
+        }
+    }
+    val talkProgress = data?.talkProgress.orEmpty()
+
+    fun study(chapter: BookPreview.Chapter, book: BookPreview) {
+        val items = chapter.toStudy
+        when (chapter.kind) {
+            BookPreview.Kind.WORDS ->
+                chapterDeck = context.getString(R.string.words) to items.map { StudyDeckItem.word(it.text) }
+            BookPreview.Kind.EXPRESSIONS ->
+                chapterDeck = context.getString(R.string.expressions) to items.map { StudyDeckItem.expression(it.text) }
+            // The talk's own turn where there is one (its audio and attempts
+            // are attached to it); a scene line becomes a synthetic turn under
+            // the item's id, the way the scene page does it.
+            BookPreview.Kind.SHADOW -> onShadowHand(items.map { item ->
+                val turn = book.session?.turns?.firstOrNull { it.id == item.id }
+                    ?: com.roro.futurevoice.talk.Turn(id = item.id, role = TurnRole.FLUENT_SELF,
+                        transcript = item.text)
+                com.roro.futurevoice.data.ShadowPicks.Pick(turn, item.note)
+            })
+            BookPreview.Kind.GRAMMAR -> book.session?.let { onOpenSessionDeck(it.id) }
+        }
+    }
+
+    @Composable
+    fun card(book: BookPreview, tall: Boolean, modifier: Modifier = Modifier) {
+        book.session?.let {
+            TalkCard(it, onOpenTalk, progress = if (tall) talkProgress[it.id] else null,
+                tall = tall, modifier = modifier)
+        }
+        book.scenario?.let {
+            ScenarioCard(it, onOpenScenarioBook, personaName = it.counterpartId?.let(counterparts::get),
+                tall = tall, modifier = modifier)
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // The finished-books seal lives in the tab's HEADER (RootScreen), as
-        // iOS puts it in the toolbar — visible from every shelf.
         ShelfChips(
             selected = shelf,
             counts = { s ->
                 when (s) {
-                    Shelf.STUDYING -> null
+                    Shelf.STUDYING -> data?.feed?.size?.takeIf { it > 0 }
                     Shelf.TALK -> talks.size.takeIf { it > 0 }
                     Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+                    Shelf.FINISHED -> data?.finished?.size?.takeIf { it > 0 }
                 }
             },
             onSelect = { shelf = it },
         )
 
         when (shelf) {
-            // The cross-cutting page: what today asks for, then the books
-            // currently in progress as horizontal rows.
             Shelf.STUDYING -> {
-                TodayCard(
-                    goals = goals, today = today, streak = streak,
-                    dueSentences = due, dueWords = wordsDue, dueExpressions = expressionsDue,
-                    onSentences = onOpenDeck, onWords = onOpenWords,
-                    onExpressions = onOpenExpressions,
-                    // Shadowing is reached through a book's line, so the tile
-                    // sends them to the shelf that has the lines in it.
-                    onShadowAll = onShadowAll,
-                    dueBack = dueBack,
-                    wordsToStudy = wordsAll,
-                    expressionsToStudy = expressionsAll,
-                    shadowToStudy = shadowAll,
-                    onDueBack = onOpenDueReview,
-                    onWordsAll = onOpenWordsAll,
-                    onExpressionsAll = onOpenExpressionsAll,
-                    onShadowing = {
-                        // Deal today's hand. With nothing to deal — no talks
-                        // yet — the Talk shelf is the honest fallback: the
-                        // material comes from conversations, so that is where
-                        // the learner has to go first.
-                        scope.launch {
-                            val picks = com.roro.futurevoice.data.ShadowPicks.pick(
-                                sessions = talks,
-                                attempts = com.roro.futurevoice.data.ShadowAttemptStore
-                                    .shared(context).load(language),
-                                level = level,
-                                language = language,
-                                limit = maxOf(goals.shadows, 1))
-                            if (picks.isEmpty()) shelf = Shelf.TALK else onShadowHand(picks)
-                        }
-                    },
-                    testRows = { WeeklyTestRows(language, level) },
-                    // What a day asks for is the routine's (iOS `e1b3501`).
-                    onEditGoals = { RoutineNav.editorOpen.value = true },
+                val d = data
+                LibraryTiles(
+                    stats = d?.stats ?: LibraryStats(),
+                    onWords = onOpenWordsAll,
+                    onExpressions = onOpenExpressionsAll,
+                    onSentences = onOpenDeck,
+                    onShadowing = onShadowAll,
                 )
-                if (editingGoals) {
-                    StudyGoalsSheet(onDismiss = {
-                        editingGoals = false
-                        // The card reads the goals it was handed, so the
-                        // change has to travel the same way every write does.
-                        StoreEvents.bump()
-                    })
-                }
-                if (talks.isNotEmpty()) {
-                    BookRow(stringResource(R.string.talk), talks.size, talks.take(6),
-                        onOpenShelf = { shelf = Shelf.TALK }) { TalkCard(it, onOpenTalk) }
-                }
-                if (scenarios.isNotEmpty()) {
-                    BookRow(stringResource(R.string.watch), scenarios.size, scenarios.take(6),
-                        onOpenShelf = { shelf = Shelf.WATCH }) {
-                        ScenarioCard(it, onOpenScenarioBook)
+                d?.feed?.forEach { book ->
+                    // The shelf's own card, with its chapter buttons under it
+                    // on the same ground.
+                    Column(Modifier.fillMaxWidth().clip(ContinuousShape(18.dp)).background(AppSurfacesCard())) {
+                        card(book, tall = false)
+                        BookChapterButtons(book) { chapter -> study(chapter, book) }
                     }
                 }
-                if (talks.isEmpty() && scenarios.isEmpty()) {
+                if (d != null && d.feed.isEmpty()) {
                     Text(stringResource(R.string.nothing_here_yet_have_a_talk_or_watch_a_scene),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -273,6 +251,7 @@ fun PracticeBody(
             Shelf.WATCH -> {
                 BookGrid(scenarios) { sc, m ->
                     ScenarioCard(sc, onOpenScenarioBook, modifier = m,
+                        personaName = sc.counterpartId?.let(counterparts::get),
                         onArchive = { id, on -> scope.launch {
                             ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
                         onDelete = { id -> scope.launch {
@@ -281,6 +260,7 @@ fun PracticeBody(
                 ArchiveSection(archivedScenarios.isNotEmpty()) {
                     archivedScenarios.forEach {
                         ScenarioCard(it, onOpenScenarioBook,
+                            personaName = it.counterpartId?.let(counterparts::get),
                             onArchive = { id, on -> scope.launch {
                                 ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
                             onDelete = { id -> scope.launch {
@@ -288,9 +268,40 @@ fun PracticeBody(
                     }
                 }
             }
+            // Books with every item mastered, as a shelf of their own (iOS
+            // 2026-10-03 — it was a page behind a header seal). The same cards
+            // as every shelf, most recently finished first.
+            Shelf.FINISHED -> {
+                val books = data?.finished.orEmpty()
+                if (data != null && books.isEmpty()) {
+                    Text(stringResource(R.string.master_every_word_and_line_in_a_book_from_a_talk_or_a_scene_ade546),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    BookGrid(books) { b, m -> card(b, tall = true, modifier = m) }
+                }
+            }
+        }
+    }
+
+    chapterDeck?.let { (title, items) ->
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { chapterDeck = null; StoreEvents.bump() },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            StudyDeckHost(
+                kind = items.firstOrNull()?.kind ?: StudyScheduleStore.Kind.WORD,
+                language = language, nativeLanguage = nativeLanguage, level = level,
+                hand = items, handTitle = title,
+                onBack = { chapterDeck = null; StoreEvents.bump() },
+            )
         }
     }
 }
+
+@Composable
+private fun AppSurfacesCard() = com.roro.futurevoice.ui.brand.AppSurfaces.card
 
 /** A book's own actions. Long-press, because a tap is for opening it. */
 @OptIn(ExperimentalFoundationApi::class)
@@ -325,6 +336,8 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
                      /** Mastered / total of the talk's book, once counted. */
                      progress: Pair<Int, Int>? = null,
                      modifier: Modifier = Modifier,
+                     /** The tall shelf shape; off under the chapter buttons. */
+                     tall: Boolean = true,
                      onArchive: ((String, Boolean) -> Unit)? = null,
                      onDelete: ((String) -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
@@ -356,6 +369,7 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         progressLabel = progress?.takeIf { it.second > 0 }
             ?.let { stringResource(R.string.lld_of_lld_mastered, it.first, it.second) },
         mastered = progress != null && progress.second > 0 && progress.first == progress.second,
+        tall = tall,
         modifier = modifier
             .combinedClickable(onClick = { onOpen(t.id) }, onLongClick = { menu = true }),
     )
@@ -367,27 +381,39 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
 private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
                          onTalk: ((Scenario) -> Unit)? = null,
                          modifier: Modifier = Modifier,
+                         /** The person this scene is with, if it is linked to one. */
+                         personaName: String? = null,
+                         tall: Boolean = true,
                          onArchive: ((String, Boolean) -> Unit)? = null,
                          onDelete: ((String) -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
     val cur = sc.curriculum
-    val total = cur?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
+    // Words and expressions — the items this platform masters on a scene
+    // (`scenarioFinished`), so the strip can reach its end.
+    val total = cur?.let { it.words.size + it.expressions.size } ?: 0
     val done = cur?.let {
         it.words.count { w -> w.masteredAt != null } +
             it.expressions.count { e -> e.masteredAt != null }
     } ?: 0
+    // A scene with a person shows THAT person — their photo, else their
+    // initials on the same disc (iOS `21dd1ac`).
+    val photo = if (personaName != null) rememberPersonPhoto(sc.counterpartId) else null
     BookCard(
         title = sc.cardTitle,
         icon = Symbols.icon(sc.categoryIcon),
+        photo = photo,
+        initials = personaName?.takeIf { photo == null }?.let(::initials),
+        tall = tall,
         // WHO the scene is with — a category names the shelf, not the scene.
         origin = sc.role?.takeIf { it.isNotBlank() } ?: sc.category,
         accent = Books.scenarios,
         detail = null,
-        progressLabel = if (cur == null) stringResource(R.string.watch_the_scene_first)
+        progressLabel = if (!tall) null
+        else if (cur == null) stringResource(R.string.watch_the_scene_first)
         else if (total > 0 && done == total) stringResource(R.string.mastered_550ec5)
         else stringResource(R.string.lld_of_lld_mastered, done, total),
-        mastered = total > 0 && done == total,
-        progress = if (total == 0) null else done / total.toFloat(),
+        mastered = scenarioFinished(sc),
+        progress = if (total == 0 || !tall) null else done / total.toFloat(),
         modifier = modifier
             .combinedClickable(onClick = { onOpen(sc.id) }, onLongClick = { menu = true }),
     )
@@ -402,9 +428,6 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
     ))
 }
 
-
-/** How many cards a daily deck deals. Mirrors iOS's per-day goal default. */
-private const val DAILY_HAND = 10
 
 /** Finished books, under the shelf they left. Collapsed to a header so they
  *  never compete with what is still in progress. */

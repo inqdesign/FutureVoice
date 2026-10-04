@@ -217,11 +217,9 @@ object CaptureWeeklyTest {
 
     @Composable
     private fun Practice(c: Context) {
-        Column(Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
-            .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-            PracticeBody(language = lang(c), level = level(c), onOpenDeck = {}, onOpenWords = {},
-                onOpenExpressions = {}, onOpenScenarioBook = {}, onOpenTalk = {}, initialShelf = Shelf.STUDYING)
-        }
+        // The test's door is the Review page's HEADER now (the host's face at
+        // the far right), so the shot is the whole tab shell.
+        CapturePractice.Practice(c, Shelf.STUDYING)
     }
 
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf(

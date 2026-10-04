@@ -72,10 +72,17 @@ fun BookCard(
     /** A caller's own accessory, beside the verdicts (the recent-talks row
      *  puts its level there). */
     trailing: (@Composable () -> Unit)? = null,
+    /** A person's photo, clipped to the icon disc (a scene with someone). */
+    photo: androidx.compose.ui.graphics.ImageBitmap? = null,
+    /** A person's initials on the disc, when there is no photo. */
+    initials: String? = null,
+    /** The tall shelf shape. Off on the Studying page, where the card has no
+     *  whole-book bar and its chapter buttons sit right under it. */
+    tall: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth().heightIn(min = 150.dp).then(
+        modifier = modifier.fillMaxWidth().heightIn(min = if (tall) 150.dp else 0.dp).then(
             if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         colors = CardDefaults.cardColors(
             // White off the grouped ground, as iOS's book cards are — the
@@ -84,19 +91,29 @@ fun BookCard(
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                icon?.let {
-                    Icon(it, contentDescription = null, tint = accent,
-                        modifier = Modifier.size(26.dp))
+                // In a soft round disc in the book's colour — the card's one
+                // coloured mark besides its bar (iOS `BookIconDisc`). A scene
+                // with a person shows THAT person: photo, else initials.
+                if (photo != null || initials != null || icon != null) {
+                    BookIconDisc(accent = accent, photo = photo) {
+                        when {
+                            initials != null -> Text(initials, style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold, color = accent)
+                            icon != null -> Icon(icon, contentDescription = null, tint = accent,
+                                modifier = Modifier.size(22.dp))
+                        }
+                    }
                 }
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 if (mastered) {
+                    // Neutral: colour lives on the bars and the disc alone.
                     Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
-                        tint = Books.mastery, modifier = Modifier.size(22.dp))
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
                 }
                 score?.let { ScoreRing(it) }
                 trailing?.invoke()
             }
-            androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            if (tall) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
             Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 origin?.let {
                     Text(it, style = MaterialTheme.typography.labelSmall,
@@ -127,29 +144,41 @@ fun BookCard(
                 }
                 progressLabel?.let {
                     Text(it, style = MaterialTheme.typography.labelSmall,
-                        color = if (mastered) Books.mastery
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
 }
 
-/** The talk's overall score as a small ring — quiet, but present. */
+/** The talk's overall score as a small ring — quiet, but present. Neutral
+ *  since iOS `912d6f4`: the page keeps colour for its bars. */
 @Composable
 private fun ScoreRing(score: Int) {
-    val band = when {
-        score < 50 -> Color(0xFFFF3B30)
-        score < 70 -> Color(0xFFFF9500)
-        score < 85 -> MaterialTheme.colorScheme.primary
-        else -> Books.mastery
-    }
     androidx.compose.foundation.layout.Box(
         Modifier.size(30.dp)
-            .border(2.dp, band.copy(alpha = 0.35f), CircleShape),
+            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text("$score", style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold, color = band)
+            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** A book card's icon: a soft tinted circle with the glyph (or initials) in
+ *  it, or a person's photo clipped to the same circle (iOS `BookIconDisc`). */
+@Composable
+fun BookIconDisc(accent: Color, photo: androidx.compose.ui.graphics.ImageBitmap? = null,
+                 size: androidx.compose.ui.unit.Dp = 44.dp, content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(size).clip(CircleShape)
+            .then(if (photo == null) Modifier.background(accent.copy(alpha = 0.14f)) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (photo != null) {
+            androidx.compose.foundation.Image(photo, contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.size(size))
+        } else content()
     }
 }

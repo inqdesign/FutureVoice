@@ -156,12 +156,8 @@ object CaptureWeekRecap {
             true
         }
         if (practice) {
-            Column(Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
-                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-                PracticeBody(language = LanguageScope.active(c), level = level(c), onOpenDeck = {},
-                    onOpenWords = {}, onOpenExpressions = {}, onOpenScenarioBook = {}, onOpenTalk = {},
-                    initialShelf = Shelf.STUDYING)
-            }
+            // "Your week" is the calendar in the Review page's HEADER now.
+            CapturePractice.Practice(c, Shelf.STUDYING)
         } else {
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
                 WeekRecapArchiveSheet(level(c)) {}

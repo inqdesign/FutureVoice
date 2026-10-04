@@ -305,6 +305,19 @@ class DrillStore private constructor(context: Context) {
         }
     }
 
+    /**
+     * Sentence cards the learner PUT OFF — graded at least once with a delay
+     * and not retired — soonest return first. What the Review tab's "put off"
+     * deck deals beside the snoozed words and expressions, so everything put
+     * off is in one place (iOS `DrillStore.putOffCards`, 2026-10-03: a Grammar
+     * card put off until tomorrow showed up nowhere).
+     */
+    suspend fun putOffCards(language: String = LanguageScope.active(appContext)): List<DrillCard> =
+        load(language)
+            .filter { it.lastReviewedAt != null && it.box < DrillIngest.MAX_BOX &&
+                it.nextReviewAt != DrillIngest.RETIRED_REVIEW_AT }
+            .sortedBy { it.nextReviewAt }
+
     /** Cards due now, newest first (fresh corrections feel more relevant). */
     suspend fun due(language: String = LanguageScope.active(appContext),
                     now: Long = System.currentTimeMillis()): List<DrillCard> =

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Review tab, book-first Studying page (iOS 1.1.4, plan 2d.3). -->
+<resources>
+    <string name="nothing_put_off">沒有延後的項目</string>
+    <string name="nothing_put_off_message">在卡組中延後的單字、表達和句子都會集中在這裡，依回來的時間排列。</string>
+</resources>

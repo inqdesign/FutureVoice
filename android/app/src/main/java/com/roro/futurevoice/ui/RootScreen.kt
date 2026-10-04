@@ -915,6 +915,8 @@ fun RootScreen() {
             onOpenWordsAll = { library = LibraryKind.WORDS },
             onOpenExpressionsAll = { library = LibraryKind.EXPRESSIONS },
             onOpenDueReview = { showDueReview = true },
+            // A book's Grammar chapter: that talk's sentence cards.
+            onOpenSessionDeck = { deckSessionId = it; showDeck = true },
             onSwitchLanguage = app::switchLanguage,
             // Adding one asks for a level, which is Me's sheet — the home
             // header is not the place for a form.
@@ -1079,6 +1081,7 @@ internal fun HomeScreen(
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenDueReview: () -> Unit = {},
+    onOpenSessionDeck: (String) -> Unit = {},
     onSwitchLanguage: (String) -> Unit = {},
     onAddLanguage: () -> Unit = {},
     /** Which shelf Practice opens on — the capture harness's seam. */
@@ -1091,20 +1094,6 @@ internal fun HomeScreen(
     // "Why & how" — each tab's guide, the first time it is opened (iOS
     // `RootTabView.offerPageIntro`).
     PageIntroHost(tab.guidePage(), blocked = guideBlocked || showDeepen)
-
-    // The finished shelf is counted for the HEADER, where iOS keeps it: one
-    // number visible from every Practice shelf. A curriculum build per talk,
-    // so off the main thread, and only once Practice has been opened.
-    var finished by remember { mutableStateOf<List<FinishedBook>>(emptyList()) }
-    val onPractice = tab == HomeTab.PRACTICE
-    val storeRevision by StoreEvents.revision.collectAsStateWithLifecycle()
-    LaunchedEffect(onPractice, state.targetLanguage, state.level, storeRevision) {
-        if (!onPractice) return@LaunchedEffect
-        finished = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            runCatching { loadFinishedBooks(context, state.targetLanguage, state.level) }
-                .getOrDefault(emptyList())
-        }
-    }
 
     // The call's first word, on disk before the tap. Synthesizing the
     // openers here costs one round trip per NEW line, once, and takes the
@@ -1256,12 +1245,12 @@ internal fun HomeScreen(
                                     modifier = Modifier.size(24.dp))
                             }
                         }
-                        // Books taken all the way to mastered — a running
-                        // tally, so it sits in the chrome (iOS `finishedShelfButton`).
+                        // The week's things — put off, the week, the tests — as
+                        // icons with a dot (iOS `weekToolbar`, 2026-10-03). The
+                        // finished books are a shelf chip now, not a seal here.
                         if (tab == HomeTab.PRACTICE) {
-                            FinishedShelfButton(count = finished.size,
-                                onClick = { onOpenFinished(finished) },
-                                modifier = Modifier.padding(end = 12.dp))
+                            ReviewHeaderActions(language = state.targetLanguage, level = state.level,
+                                onOpenPutOff = onOpenDueReview)
                         }
                     },
                 )
@@ -1359,6 +1348,8 @@ internal fun HomeScreen(
                         onOpenWordsAll = onOpenWordsAll,
                         onOpenExpressionsAll = onOpenExpressionsAll,
                         onOpenDueReview = onOpenDueReview,
+                        onOpenSessionDeck = onOpenSessionDeck,
+                        nativeLanguage = state.nativeLanguage,
                     )
 
                     HomeTab.PROGRESS -> ProgressBody(

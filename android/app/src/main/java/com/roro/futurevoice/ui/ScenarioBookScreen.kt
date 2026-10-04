@@ -179,13 +179,13 @@ fun ScenarioBookScreen(
         val tabs = listOf(
             BookmarkTab(Chapter.SCENE, Icons.Filled.PlayArrow,
                 stringResource(R.string.watch), count = cur.dialogue?.size),
-            BookmarkTab(Chapter.WORDS, Icons.Filled.Abc,
+            BookmarkTab(Chapter.WORDS, StudyIcon.words,
                 stringResource(R.string.words_d26d55),
                 done = wordMastered.size, total = cur.words.size),
-            BookmarkTab(Chapter.EXPRESSIONS, Icons.Filled.FormatQuote,
+            BookmarkTab(Chapter.EXPRESSIONS, StudyIcon.expressions,
                 stringResource(R.string.expressions),
                 done = exprMastered.size, total = cur.expressions.size),
-            BookmarkTab(Chapter.SHADOW, Icons.Filled.Mic,
+            BookmarkTab(Chapter.SHADOW, StudyIcon.shadowing,
                 stringResource(R.string.shadowing), count = cur.shadowLines.size),
         )
         BookmarkedPage(

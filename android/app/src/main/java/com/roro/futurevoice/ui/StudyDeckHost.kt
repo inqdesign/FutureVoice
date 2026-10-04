@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,8 +51,9 @@ import com.roro.futurevoice.ui.brand.DrillBin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyDeckHost(
-    /** null = the DUE queue: everything snoozed whose time has come, both
-     *  kinds together. A per-kind deck deals today's hand instead. */
+    /** null = the PUT-OFF pile: everything put off — words, expressions and
+     *  sentence cards, due or not — in return order ([putOffDeck]). A
+     *  per-kind deck deals today's hand instead. */
     kind: StudyScheduleStore.Kind?,
     language: String,
     nativeLanguage: String,
@@ -59,17 +61,21 @@ fun StudyDeckHost(
     /** The one item a per-item reminder named — dealt on its own (iOS
      *  `DueReviewView(focus:)`). */
     focus: StudyDeckItem? = null,
+    /** A book chapter's own deck (the Review tab's chapter buttons): these
+     *  items, under [handTitle], instead of a dealt hand or the put-off pile
+     *  (iOS `DueReviewView(hand:title:)`). */
+    hand: List<StudyDeckItem>? = null,
+    handTitle: String? = null,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val vocab = remember { VocabStore.shared(context) }
     var items by remember { mutableStateOf<List<StudyDeckItem>?>(null) }
 
-    LaunchedEffect(kind, language, focus) {
+    LaunchedEffect(kind, language, focus, hand) {
         val goal = 10
-        items = if (focus != null) listOf(focus) else when (kind) {
-            null -> StudyScheduleStore.shared(context).snapshot(language).dueItems()
-                .map { StudyDeckItem(it.kind, it.text) }
+        items = if (focus != null) listOf(focus) else if (hand != null) hand else when (kind) {
+            null -> putOffDeck(context, language)
             StudyScheduleStore.Kind.WORD ->
                 DailyStudyPick.words(context, goal, language, level).map(StudyDeckItem::word)
             StudyScheduleStore.Kind.EXPRESSION ->
@@ -80,12 +86,12 @@ fun StudyDeckHost(
     val dealt = items
     if (dealt == null) return
     if (dealt.isEmpty()) {
-        EmptyDeck(kind, onBack)
+        EmptyDeck(kind, onBack, handTitle)
         return
     }
 
     StudyDeckScreen(
-        title = stringResource(when (kind) {
+        title = handTitle ?: stringResource(when (kind) {
             null -> R.string.back_from_earlier
             StudyScheduleStore.Kind.WORD -> R.string.words
             else -> R.string.expressions
@@ -95,7 +101,21 @@ fun StudyDeckHost(
         nativeLanguage = nativeLanguage,
         onResolve = { item, bin ->
             val manual = bin.manual
-            if (manual != null) {
+            val cardId = item.cardId
+            if (cardId != null) {
+                // The sentence deck's own verdicts (`DrillDeckScreen.apply`).
+                val drills = com.roro.futurevoice.data.DrillStore.shared(context)
+                val card = drills.load(language).firstOrNull { it.id == cardId }
+                if (card != null) {
+                    if (manual != null) {
+                        drills.fileInBin(card, manual.first, manual.second, language)
+                        ReviewQueue.armSentence(context, card, System.currentTimeMillis() + manual.second)
+                    } else {
+                        drills.markKnown(card, language)
+                        ReviewQueue.cancelSentence(context, card.id)
+                    }
+                }
+            } else if (manual != null) {
                 // A delay means "still learning": the item joins the notebook
                 // if it wasn't there, and its return goes into the schedule
                 // the next deal reads.
@@ -127,14 +147,14 @@ fun StudyDeckHost(
 /** Where the material comes from — the deck can't be stocked from this screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit) {
+private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit, handTitle: String? = null) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    Text(stringResource(
+                    Text(handTitle ?: stringResource(
                         if (kind == null) R.string.back_from_earlier
                         else if (kind == StudyScheduleStore.Kind.WORD) R.string.words
                         else R.string.expressions))
@@ -152,6 +172,18 @@ private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (kind == null && handTitle == null) {
+                // The put-off pile: it says what lands here, never invents work.
+                Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.nothing_put_off),
+                    style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.nothing_put_off_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center)
+                return@Column
+            }
             Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
@@ -166,3 +198,27 @@ private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit) {
         }
     }
 }
+
+/**
+ * EVERYTHING the learner put off — words, expressions and sentence cards, due
+ * or not — in the order it comes back (iOS `DueReviewView.putOffDeck`,
+ * 2026-10-03: "what I put off, show me all of it", and "1 of N" counts all of
+ * it). A put-off item is still a promise the learner made; one whose time
+ * hasn't come is not hidden for that.
+ */
+suspend fun putOffDeck(context: android.content.Context, language: String,
+                       now: Long = System.currentTimeMillis()): List<StudyDeckItem> {
+    val snap = StudyScheduleStore.shared(context).snapshot(language)
+    val scheduled = (snap.dueItems(now) + snap.upcoming(now))
+        .map { StudyDeckItem(it.kind, it.text) to it.at }
+    val sentences = com.roro.futurevoice.data.DrillStore.shared(context).putOffCards(language)
+        .map { StudyDeckItem.sentence(it) to it.nextReviewAt }
+    return (scheduled + sentences).sortedBy { it.second }.map { it.first }.distinctBy { it.id }
+}
+
+/** What the header's put-off dot counts: words, expressions and sentence
+ *  cards whose return time has COME (iOS `dueReviewCount`). */
+suspend fun putOffDueCount(context: android.content.Context, language: String,
+                           now: Long = System.currentTimeMillis()): Int =
+    StudyScheduleStore.shared(context).snapshot(language).dueItems(now).size +
+        com.roro.futurevoice.data.DrillStore.shared(context).putOffCards(language).count { it.nextReviewAt <= now }

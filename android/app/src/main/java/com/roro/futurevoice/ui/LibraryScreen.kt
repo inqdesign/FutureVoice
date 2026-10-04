@@ -67,6 +67,11 @@ import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.BookmarkRemove
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.automirrored.filled.Undo
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -344,10 +349,15 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                 }
 
                 items(rows, key = { it.key }) { row ->
-                    LibraryRow(row, glosses[row.key], onOpen = {
-                        openList = rows.map { it.text }
-                        openTerm = row.text
-                    })
+                    // The card's two verdicts, a swipe away (iOS `e9d3096`):
+                    // right = Keep, left = I know — same store calls and the
+                    // same toggles as the card's action bar.
+                    SwipeVerdicts(kind, row, language) {
+                        LibraryRow(row, glosses[row.key], onOpen = {
+                            openList = rows.map { it.text }
+                            openTerm = row.text
+                        })
+                    }
                     LaunchedEffect(row.key) {
                         if (glosses.containsKey(row.key)) return@LaunchedEffect
                         // Cancelled with the row if it scrolls past before it
@@ -667,6 +677,82 @@ private fun LibraryRow(row: LibraryRowData, gloss: String?, onOpen: () -> Unit) 
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * Keep (swipe right) and I know (swipe left) on a list row — so a list can be
+ * sorted without opening every card. The row never moves away: the swipe is a
+ * toggle, it snaps back, and the list underneath re-reads the stores. The
+ * icon shows what the swipe will DO, so an already-kept term offers the
+ * slashed bookmark.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeVerdicts(kind: LibraryKind, row: LibraryRowData, language: String,
+                          content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val vocab = remember { com.roro.futurevoice.data.VocabStore.shared(context) }
+    val words = kind == LibraryKind.WORDS
+    // Read fresh at swipe time: the row's flags are a snapshot of the list.
+    suspend fun keep() {
+        if (words) {
+            if (vocab.isStudying(row.text, language)) vocab.removeStudying(row.text, language)
+            else vocab.addStudying(row.text, language)
+        } else {
+            vocab.setStudyingExpression(row.text, !vocab.isStudyingExpression(row.text, language), language)
+        }
+    }
+    suspend fun know() {
+        if (words) {
+            // The card's rule: a bookmark outranks a `.used` record on the row.
+            val known = vocab.state(row.key, language)?.let { st ->
+                st == "known" || !vocab.isStudying(row.text, language)
+            } ?: false
+            if (known) vocab.unmark(row.key, language) else vocab.markKnown(row.key, language)
+        } else {
+            vocab.setKnownExpression(row.text, !vocab.isKnownExpression(row.text, language), language)
+        }
+    }
+    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd ->
+                    scope.launch { keep(); StoreEvents.bump() }
+                androidx.compose.material3.SwipeToDismissBoxValue.EndToStart ->
+                    scope.launch { know(); StoreEvents.bump() }
+                else -> {}
+            }
+            false   // a toggle, not a dismissal: the row snaps back
+        },
+    )
+    androidx.compose.material3.SwipeToDismissBox(
+        state = state,
+        backgroundContent = {
+            val toEnd = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
+            val fromStart = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart
+            if (!toEnd && !fromStart) return@SwipeToDismissBox
+            val (label, icon, tint) = if (toEnd) Triple(
+                stringResource(R.string.keep),
+                if (row.kept) Icons.Filled.BookmarkRemove else Icons.Filled.BookmarkBorder,
+                if (row.kept) Color.Gray else MaterialTheme.colorScheme.primary)
+            else Triple(
+                stringResource(R.string.i_know),
+                if (row.known) Icons.AutoMirrored.Filled.Undo else Icons.Filled.CheckCircle,
+                if (row.known) Color.Gray else Color(0xFF34C759))
+            androidx.compose.foundation.layout.Row(
+                Modifier.fillMaxSize().background(tint).padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (toEnd) Arrangement.Start else Arrangement.End,
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
+                Text(label, color = Color.White, style = MaterialTheme.typography.labelLarge)
+            }
+        },
+    ) {
+        Box(Modifier.background(AppSurfaces.ground)) { content() }
     }
 }
 

@@ -231,7 +231,7 @@ fun TalkDetailScreen(
         if (curriculum.words.isNotEmpty()) {
             // Words carry MASTERY, not a bare count — the ribbon is the
             // book's progress, the same way the Watch book's does it.
-            add(BookmarkTab(TalkChapter.WORDS, Icons.Filled.Abc,
+            add(BookmarkTab(TalkChapter.WORDS, StudyIcon.words,
                 stringResource(R.string.words_d26d55),
                 done = curriculum.words.count { it.masteredAt != null },
                 total = curriculum.words.size))
@@ -239,25 +239,27 @@ fun TalkDetailScreen(
         // Every chapter carries done/total now — each one counts toward the
         // book, so each ribbon shows how far along it is (iOS 54).
         if (curriculum.expressions.isNotEmpty()) {
-            add(BookmarkTab(TalkChapter.EXPRESSIONS, Icons.Filled.FormatQuote,
+            add(BookmarkTab(TalkChapter.EXPRESSIONS, StudyIcon.expressions,
                 stringResource(R.string.expressions),
                 done = curriculum.expressions.count { it.masteredAt != null },
                 total = curriculum.expressions.size))
         }
-        if (curriculum.shadowLines.isNotEmpty()) {
-            add(BookmarkTab(TalkChapter.LINES, Icons.Filled.Mic,
-                stringResource(R.string.shadow),
-                done = curriculum.shadowLines.count { it.masteredAt != null },
-                total = curriculum.shadowLines.size))
-        }
         if (curriculum.corrections.isNotEmpty()) {
-            add(BookmarkTab(TalkChapter.CARDS, Icons.Filled.Style,
+            add(BookmarkTab(TalkChapter.CARDS, StudyIcon.grammar,
                 stringResource(R.string.drill),
                 done = curriculum.corrections.count { it.masteredAt != null },
                 total = curriculum.corrections.size))
         } else if (grammar.isNotEmpty()) {
-            add(BookmarkTab(TalkChapter.CARDS, Icons.Filled.Style,
+            add(BookmarkTab(TalkChapter.CARDS, StudyIcon.grammar,
                 stringResource(R.string.drill), count = grammar.size))
+        }
+        // Order and icons are the ones every study surface uses (`StudyIcon`,
+        // iOS `912d6f4`): words, expressions, drill, shadow.
+        if (curriculum.shadowLines.isNotEmpty()) {
+            add(BookmarkTab(TalkChapter.LINES, StudyIcon.shadowing,
+                stringResource(R.string.shadow),
+                done = curriculum.shadowLines.count { it.masteredAt != null },
+                total = curriculum.shadowLines.size))
         }
     }
 
