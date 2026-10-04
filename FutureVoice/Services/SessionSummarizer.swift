@@ -132,7 +132,10 @@ enum SessionSummarizer {
             // be corrected on it (`relationshipRegisterLine`).
             counterpart: session.counterpartId.flatMap { id in
                 appState.counterparts.first { $0.id == id }
-            }
+            },
+            // A scene's barista or interviewer is addressed politely
+            // (`politeSettingLine`); a talk with the fluent self is not.
+            inScene: session.origin == .scenario || session.originScenarioId != nil
         )
         let transcript = ConversationEngine.formatTranscript(turns)
         let metrics = ScorecardMetrics.compute(turns: turns)

@@ -674,6 +674,7 @@ enum ConversationEngine {
                                     expressionBudget: Int = 6,
                                     talkDate: Date? = nil,
                                     counterpart: Counterpart? = nil,
+                                    inScene: Bool = false,
                                     now: Date = Date()) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
@@ -764,7 +765,7 @@ enum ConversationEngine {
           natural speech, never something to report or "fix" anywhere. Every
           fluent_alternative / correction / suggested_drill must sound like a
           line said out loud in casual conversation — the user's own register,
-          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))
+          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
           this whole conversation, weighing vocabulary range, grammatical
           control, fluency, and how well they express ideas together. Anchor to
@@ -1031,7 +1032,8 @@ enum ConversationEngine {
     /// weekly report's repeated-mistake detection.
     static func turnOutputInstruction(targetLanguage: String,
                                       nativeLanguage: String,
-                                      counterpart: Counterpart? = nil) -> String {
+                                      counterpart: Counterpart? = nil,
+                                      inScene: Bool = false) -> String {
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
         return """
 
@@ -1073,7 +1075,7 @@ enum ConversationEngine {
           "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
-          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))
+          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - "suggestion" answers TWO different questions about the user's most
           recent line, and both are needed: "alternative" is how a fluent
           speaker would say THE WHOLE THING here, and "fixes" lists the
@@ -1157,7 +1159,8 @@ enum ConversationEngine {
     static func correctionOnlyPrompt(targetLanguage: String,
                                      nativeLanguage: String,
                                      level: CEFRLevel,
-                                     counterpart: Counterpart? = nil) -> String {
+                                     counterpart: Counterpart? = nil,
+                                     inScene: Bool = false) -> String {
         let targetName = LanguageCatalog.englishName(targetLanguage)
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
         return """
@@ -1190,7 +1193,7 @@ enum ConversationEngine {
           building" arrives as "I am building" every time. A suggestion whose
           only change is contracting what you received is correcting the
           transcriber, not the learner. If that is the only change you would
-          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))
+          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
@@ -1328,6 +1331,12 @@ enum ConversationEngine {
                 + "\n- KOREAN WORD ORDER in speech is free: an afterthought after the verb"
                 + "\n  (\"먹었어, 아까 라면\") is how people talk. A suggestion that only"
                 + "\n  reorders the same words corrects nothing; return null."
+                + "\n- KOREAN FIXES ARE ERRORS ONLY. A choice between two grammatical"
+                + "\n  options is not a mistake: 은/는 or 이/가 where both work (제 이름이 /"
+                + "\n  제 이름은), 나 or 저 beside a 요 ending, a subject honorific added or"
+                + "\n  left out (친절해요 / 친절하세요). Those may shape the alternative; they"
+                + "\n  never go in \"fixes\". A particle that is the wrong one for its verb"
+                + "\n  IS an error (카페에 일해 → 카페에서 일해, 의자를 앉아 → 의자에 앉아)."
         }
         if base == "ja" {
             text += "\n- JAPANESE HONORIFICS: 尊敬語 / 謙譲語 about a third person (いらっしゃる,"

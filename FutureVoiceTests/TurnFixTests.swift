@@ -75,16 +75,27 @@ final class TurnFixTests: XCTestCase {
 
     // MARK: - The card a fix becomes
 
-    /// A complete Korean clause is often two eojeol, and the matcher never
-    /// credits under three tokens — so the card is widened to its sentence,
-    /// with the fix applied, rather than minted as one that can never be
-    /// marked used in a talk.
-    func testAShortKoreanFixIsWidenedToItsSentence() {
+    /// Korean is credited by SYLLABLES since 2026-10-04 (an eojeol carries
+    /// its particles, so a two-eojeol clause is a whole thing to practise):
+    /// 학교에 갔어 is a card as it is. Only a fix under
+    /// `CarryoverDetector.minKoreanSyllables` is widened to its sentence, with
+    /// the fix applied, rather than minted as a card that can never be marked
+    /// used in a talk.
+    func testATwoEojeolKoreanFixIsTheCardAsItIs() {
         withActiveLanguage("ko") {
             let fix = TurnFix(was: "학교를 갔어", now: "학교에 갔어", why: "조사")
             let pair = DrillStore.cardPair(for: fix, in: "나는 어제 학교를 갔어. 너는?")
-            XCTAssertEqual(pair.source, "나는 어제 학교를 갔어")
-            XCTAssertEqual(pair.target, "나는 어제 학교에 갔어")
+            XCTAssertEqual(pair.source, "학교를 갔어")
+            XCTAssertEqual(pair.target, "학교에 갔어")
+        }
+    }
+
+    func testAShortKoreanFixIsWidenedToItsSentence() {
+        withActiveLanguage("ko") {
+            let fix = TurnFix(was: "춥어", now: "추워", why: "ㅂ 불규칙")
+            let pair = DrillStore.cardPair(for: fix, in: "오늘 날씨가 너무 춥어. 너는?")
+            XCTAssertEqual(pair.source, "오늘 날씨가 너무 춥어")
+            XCTAssertEqual(pair.target, "오늘 날씨가 너무 추워")
             XCTAssertTrue(CarryoverDetector.isCreditable(pair.target))
         }
     }

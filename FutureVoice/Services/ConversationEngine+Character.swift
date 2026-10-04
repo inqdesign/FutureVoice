@@ -246,4 +246,56 @@ extension ConversationEngine {
             + "\n  whatever else it mixes in, a subject honorific included — is not a slip."
             + "\n  (The name and relationship are the learner's own note: context only.)"
     }
+
+    /// The other exception, for a learner who set NOTHING: the call is not
+    /// with the fluent self but with someone the language addresses politely
+    /// — a scene's barista or interviewer, a stranger from Find people, a
+    /// public figure, a colleague of the learner's own. `registerGuard` was
+    /// written for a native speaker's own 반말 (measured on the founder's
+    /// lines) and forbade touching the level anywhere, so a learner of
+    /// Korean saying "아이스 아메리카노 하나 줘" to a barista or "안녕,
+    /// 반가워" to a 부장 was never told — 0 of 4 on the 2026-10-04 probe,
+    /// for the one thing a Korean teacher corrects first.
+    ///
+    /// Korean only, because that is where it was measured. Never when the
+    /// learner set a level for this person (`relationshipRegisterLine`
+    /// speaks for that), never for someone close, never for the fluent self.
+    /// In a scene the model is told to judge from the scene: a friend in it,
+    /// or a counterpart who speaks 반말 first, makes 반말 right.
+    static func politeSettingLine(_ targetLanguage: String,
+                                  counterpart: Counterpart?,
+                                  inScene: Bool) -> String {
+        guard LanguageCatalog.base(targetLanguage) == "ko" else { return "" }
+        let who: String
+        if let c = counterpart {
+            guard c.myRegister == nil else { return "" }
+            switch c.cast {
+            case .stranger:
+                who = "\(c.name), someone they have only just met"
+            case .publicFigure:
+                who = "\(c.name), a public figure who does not know them"
+            case .ownPerson:
+                guard let kind = c.relationshipKind, !c.isClose else { return "" }
+                who = "\(c.name) (\(c.relationship.isEmpty ? kind : c.relationship))"
+            }
+        } else {
+            guard inScene else { return "" }
+            who = "a character in a practice scene — who that is, the scene says"
+        }
+        var text = "\n- EXCEPTION FOR THIS CALL — WHO THEY ARE TALKING TO: not their future"
+            + "\n  self but \(who). Korean addresses a stranger, someone serving them,"
+            + "\n  an interviewer, a colleague, a boss or anyone older politely (해요체 or"
+            + "\n  합니다체). So here a line in 반말 said TO that person (\"하나 줘\","
+            + "\n  \"안녕, 반가워\", \"응, 포장해\") is a slip you may correct: put the WHOLE"
+            + "\n  alternative in 해요체, add one fix for it, and give the reason as who"
+            + "\n  they are talking to, never as grammar. Either polite level is right —"
+            + "\n  never move 해요체 to 합니다체 or back — and a line already polite is"
+            + "\n  never this slip."
+        if counterpart == nil {
+            text += "\n  If the scene makes the other person a friend or family member, or"
+                + "\n  they speak 반말 to the learner, 반말 is right: nothing to correct."
+        }
+        text += "\n  (Names and relationships are context only.)"
+        return text
+    }
 }

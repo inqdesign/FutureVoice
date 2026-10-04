@@ -94,7 +94,7 @@ enum CoreVocabulary {
     static func level(ofSurface token: String) -> CEFRLevel? {
         switch LanguageCatalog.language(LanguageScope.active)?.code {
         case "ko":
-            guard let head = KoreanMorph.dictionaryForm(of: token, in: set) else { return nil }
+            guard let head = KoreanMorph.dictionaryForm(of: token, in: set, rank: koreanRank) else { return nil }
             return level(of: head)
         case "ja":
             // Read as a chunk — 行きました needs its ました to be 行く rather
@@ -107,6 +107,10 @@ enum CoreVocabulary {
             return level(of: token)
         }
     }
+
+    /// The band `KoreanMorph` ranks competing readings by (가요 → 가다 over
+    /// the noun 가요): easier = more likely to be what was said.
+    static func koreanRank(_ word: String) -> Int? { level(of: word).map(levelRank) }
 
     /// Words per CEFR level — for filter-scoped counts in the UI.
     static var countByLevel: [CEFRLevel: Int] { current.countByLevel }

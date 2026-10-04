@@ -9,6 +9,9 @@
 #   LEVEL=B2 EXTRA='...appended prompt text...' scripts/correction-probe.py ja cases.json
 #   scripts/correction-probe.py de --show      # print the reconstructed prompt
 #   NO_REGISTER=1 …                            # run without the speech-level guard
+# A case with "scene": true runs the prompt as a practice SCENE call
+# (`politeSettingLine` with no counterpart, Korean only); every other case is
+# a talk with the future self, where both per-call lines are empty.
 # Every run's full output lands in $OUT_DIR (default /tmp) as <cases>.out.json.
 #
 # Reads GEMINI_API_KEY from gateway/.dev.vars. Baselines (2026-09-25): see
@@ -51,9 +54,29 @@ prompt = (prompt.replace("\\(targetName)", target_name).replace("\\(nativeName)"
   .replace("\\(scriptGuard(targetLanguage))", swift_guard("scriptGuard"))
   .replace("\\(spacingGuard(targetLanguage))", swift_guard("spacingGuard"))
   .replace("\\(registerGuard(targetLanguage))", "" if os.environ.get("NO_REGISTER") else swift_guard("registerGuard")))
+
+def scene_line():
+    """Mirror `politeSettingLine(_, counterpart: nil, inScene: true)`."""
+    csrc = open(os.path.join(ROOT, "FutureVoice/Services/ConversationEngine+Character.swift")).read()
+    start = csrc.index("static func politeSettingLine(")
+    end = csrc.index("\n    }\n", start)
+    body = csrc[start:end]
+    guard_line = body[body.index("guard LanguageCatalog.base"):].split("\n", 1)[0]
+    if lang not in re.findall(r'"([a-z]{2})"', guard_line):
+        return ""
+    who = re.search(r'who = "(a character in a practice scene[^"]*)"', body).group(1)
+    text = body[body.index("var text ="):]
+    return literals(text).replace("\\(who)", who)
+
+REL = "\\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))"
+POLITE = "\\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))"
+base_prompt = prompt.replace(REL, "")
+prompt = base_prompt.replace(POLITE, "")
+scene_prompt = base_prompt.replace(POLITE, scene_line())
 assert "\\(" not in prompt, prompt
 prompt += os.environ.get("EXTRA", "")
-if "--show" in sys.argv: print(prompt); sys.exit()
+scene_prompt += os.environ.get("EXTRA", "")
+if "--show" in sys.argv: print(scene_prompt if "--scene" in sys.argv else prompt); sys.exit()
 
 key = dict(l.split("=", 1) for l in open(os.path.join(ROOT, "gateway/.dev.vars")) if "=" in l)["GEMINI_API_KEY"].strip().strip('"')
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={key}"
@@ -65,8 +88,8 @@ def content(case):
     said = case["line"]
     return f'They were just told: "{heard}"\nThey said: "{said}"' if heard else f'They said: "{said}"'
 
-def ask(line):
-    body = {"systemInstruction": {"parts": [{"text": prompt}]},
+def ask(line, system=None):
+    body = {"systemInstruction": {"parts": [{"text": system or prompt}]},
             "contents": [{"role": "user", "parts": [{"text": line}]}],
             "generationConfig": {"maxOutputTokens": 900, "thinkingConfig": {"thinkingLevel": "low"},
                                   "responseMimeType": "application/json"}}
@@ -84,7 +107,7 @@ cases = json.load(open(sys.argv[2]))
 runs = int(sys.argv[3]) if len(sys.argv) > 3 else 2
 jobs = [(c, i) for c in cases for i in range(runs)]
 with cf.ThreadPoolExecutor(8) as ex:
-    results = list(ex.map(lambda ci: ask(content(ci[0])), jobs))
+    results = list(ex.map(lambda ci: ask(content(ci[0]), scene_prompt if ci[0].get("scene") else prompt), jobs))
 json.dump([{**c, "run": i, "suggestion": s} for (c, i), s in zip(jobs, results)],
           open(os.path.join(os.environ.get("OUT_DIR", "/tmp"),
                             os.path.basename(sys.argv[2]).replace(".json", ".out.json")), "w"),
@@ -107,7 +130,8 @@ def whole(alt, said):
 # Two more things a fix must be, because a fix becomes a drill card and a
 # card is credited by `CarryoverDetector.firstMatch`, which never matches
 # under 3 tokens in a spaced language (1 in Japanese) — a two-word fix is a
-# card that can never be marked used. And "was" has to be the learner's own
+# card that can never be marked used (Korean: 3 syllables, since
+# 2026-10-04). And "was" has to be the learner's own
 # words: a fix quoting something they didn't say accuses them of it.
 MIN_TOK = 1 if lang == "ja" else 3
 def norm(t): return re.sub(r"[^\w\s]", "", (t or "").lower()).strip()
@@ -123,6 +147,8 @@ fp = fn = frag = 0
 for (c, i), s in zip(jobs, results):
     fixes = (s or {}).get("fixes") or []
     alt = (s or {}).get("alternative") or ""
+    # "either": a line where a fix and no fix are both defensible (a usage
+    # natives split on) — printed, never counted.
     bad_fix = c["expect"] == "ok" and fixes
     miss = c["expect"] == "err" and not fixes
     fragment = bool(alt) and not whole(alt, c["line"])
@@ -135,7 +161,9 @@ for (c, i), s in zip(jobs, results):
                   + ("  FRAGMENT" if fragment else ""))
     for f in fixes:
         nfix += 1
-        is_short = words(f.get("now")) < MIN_TOK
+        # Korean credits by syllables, spaces ignored (`minKoreanSyllables`).
+        is_short = (len(re.sub(r"[^가-힣]", "", f.get("now") or "")) < 3 if lang == "ko"
+                    else words(f.get("now")) < MIN_TOK)
         is_unq = not quoted(f.get("was"), c["line"])
         short += is_short; unq += is_unq
         tag = ("  SHORT" if is_short else "") + ("  NOT-THEIRS" if is_unq else "")

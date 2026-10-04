@@ -780,7 +780,8 @@ final class VocabStore: ObservableObject {
         let w = raw.lowercased().trimmingCharacters(in: .punctuationCharacters)
         guard !w.isEmpty else { return w }
         if Self.matchesKorean {
-            return KoreanMorph.dictionaryForm(of: w, in: CoreVocabulary.set) ?? w
+            return KoreanMorph.dictionaryForm(of: w, in: CoreVocabulary.set,
+                                              rank: CoreVocabulary.koreanRank) ?? w
         }
         if Self.matchesJapanese {
             // The whole chunk, not one segment: 疲れた is 疲れ + た, and only
@@ -878,12 +879,20 @@ final class VocabStore: ObservableObject {
     nonisolated private static func koreanLemmas(in texts: [String]) -> Set<String> {
         var out = Set<String>()
         for text in texts {
-            let tokens = text.components(separatedBy: CharacterSet.alphanumerics.inverted)
-            for token in tokens where !token.isEmpty {
-                if let head = KoreanMorph.dictionaryForm(of: token, in: CoreVocabulary.set) {
-                    out.insert(head)
+            // Memoized per TEXT like the tagger path: every candidate of every
+            // token is tried against the lexicon, and every talk-book build
+            // re-asks for the same turns.
+            out.formUnion(lemmaMemo.value(for: text, language: .korean) {
+                var found = Set<String>()
+                let tokens = text.components(separatedBy: CharacterSet.alphanumerics.inverted)
+                for token in tokens where !token.isEmpty {
+                    if let head = KoreanMorph.dictionaryForm(of: token, in: CoreVocabulary.set,
+                                                             rank: CoreVocabulary.koreanRank) {
+                        found.insert(head)
+                    }
                 }
-            }
+                return found
+            })
         }
         return out
     }

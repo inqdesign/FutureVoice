@@ -249,12 +249,25 @@ enum CarryoverDetector {
     /// there, and no word it REMOVED may be.
     static func firstMatch(of item: String, in userTurns: [Turn],
                            rejectingMistake source: String? = nil) -> Hit? {
-        let needle = tokens(item)
-        let core = contentTokens(item)
+        let korean = isKorean
+        let politeFree = korean && source == nil
+        let needle = tokens(item).map { politeFree ? strippingPolite($0) : $0 }
+        let core = politeFree ? needle : contentTokens(item)
         guard needle.count >= minTokensNow, core.count >= minContentTokensNow else { return nil }
+        let koreanNeedle = korean ? koreanKey(item, politeFree: politeFree) : ""
+        if korean, koreanNeedle.count < minKoreanSyllables { return nil }
         for turn in userTurns {
-            guard let span = matchedSpan(needle, core: core, in: tokens(turn.transcript)) else { continue }
-            if let source, !showsTheFix(from: source, to: item, in: span) { continue }
+            let hay = tokens(turn.transcript).map { politeFree ? strippingPolite($0) : $0 }
+            if let span = matchedSpan(needle, core: core, in: hay) {
+                if let source, !showsTheFix(from: source, to: item, in: span) { continue }
+            } else if korean, koreanKey(turn.transcript, politeFree: politeFree).contains(koreanNeedle) {
+                // Same syllables, spaced differently. The match is the
+                // phrase itself, contiguous — a correction's fix is in it by
+                // construction and its mistake cannot be, so there is nothing
+                // for `showsTheFix` to reject.
+            } else {
+                continue
+            }
             return Hit(
                 quote: DrillStore.relevantFragment(of: turn.transcript, matching: item),
                 turnId: turn.id)
@@ -285,6 +298,7 @@ enum CarryoverDetector {
     /// decorative.
     static func isCreditable(_ phrase: String) -> Bool {
         tokens(phrase).count >= minTokensNow && contentTokens(phrase).count >= minContentTokensNow
+            && (!isKorean || koreanKey(phrase, politeFree: false).count >= minKoreanSyllables)
     }
 
     /// The bars above are written for a spaced language, where a single
@@ -294,8 +308,35 @@ enum CarryoverDetector {
     /// segment has no other way in, so the floor is one word and one
     /// meaning-carrying token. Generic small talk is still bounded by the
     /// order-and-window rule; the genericness gate was English-only anyway.
-    private static var minTokensNow: Int { WordSplitter.spaced ? minTokens : 1 }
-    private static var minContentTokensNow: Int { WordSplitter.spaced ? minContentTokens : 1 }
+    ///
+    /// Korean is spaced but takes the same floor as Japanese, for a
+    /// different reason: an eojeol is a word WITH its particles and endings,
+    /// so a two-eojeol phrase is a whole expression (잘 모르겠어, 그럴 리가)
+    /// and a three-word bar left most Korean expressions uncreditable. Its
+    /// floor is `minKoreanSyllables` instead — and there is no filler list,
+    /// so every eojeol must land, in order.
+    private static var minTokensNow: Int { WordSplitter.spaced && !isKorean ? minTokens : 1 }
+    private static var minContentTokensNow: Int { WordSplitter.spaced && !isKorean ? minContentTokens : 1 }
+
+    /// Shortest Korean phrase worth crediting, in syllables (spaces ignored).
+    /// 잘 가 (2) is small talk; 그러게 / 잘 모르겠어 are not.
+    static let minKoreanSyllables = 3
+
+    private static var isKorean: Bool { LanguageCatalog.base(LanguageScope.active) == "ko" }
+
+    /// A Korean phrase as one comparable string: tokens joined with NO
+    /// space, because 띄어쓰기 is the recognizer's (할수 있어 / 할 수 있어).
+    /// `politeFree` also drops the polite 요 at the end of each eojeol, so
+    /// 잘 모르겠어 is credited when it comes out as 잘 모르겠어요 — the
+    /// speech level is the learner's, the expression is the same. Never for
+    /// a correction card: there the speech level can be the fix itself.
+    private static func koreanKey(_ text: String, politeFree: Bool) -> String {
+        tokens(text).map { politeFree ? strippingPolite($0) : $0 }.joined()
+    }
+
+    private static func strippingPolite(_ token: String) -> String {
+        token.count > 1 && token.hasSuffix("요") ? String(token.dropLast()) : token
+    }
 
     /// First user turn that used `lemma`. Lemma-based, so the notebook's
     /// headword matches whatever form the learner actually inflected it into.

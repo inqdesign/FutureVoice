@@ -2730,7 +2730,8 @@ struct ConversationView: View {
             let payload: ConversationTurnPayload? = try? await GeminiClient.background.sendJSON(
                 system: ConversationEngine.correctionOnlyPrompt(
                     targetLanguage: target, nativeLanguage: native,
-                    level: appState.proficiency, counterpart: counterpart),
+                    level: appState.proficiency, counterpart: counterpart,
+                    inScene: sessionScenarioId != nil),
                 messages: [GeminiClient.Message(role: .user, content: content)],
                 maxTokens: 900,
                 purpose: "turn",
@@ -3617,7 +3618,8 @@ struct ConversationView: View {
                     + ConversationEngine.turnOutputInstruction(
                         targetLanguage: appState.targetLanguage,
                         nativeLanguage: appState.nativeLanguage,
-                        counterpart: counterpart),
+                        counterpart: counterpart,
+                        inScene: sessionScenarioId != nil),
                 messages: messages,
                 // Headroom for reply + suggestion: a MAX_TOKENS truncation
                 // shows up here as a DecodingError-failed turn. gen-3 counts
