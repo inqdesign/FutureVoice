@@ -673,6 +673,7 @@
 - ⏸ 7.4 `app_release` 마이그레이션 적용 (파일은 iOS 저장소에 있음, 미적용)
 - ☑ 7.6 테스트 계정이 동의 없이 올린 공개 소개 행 — 2026-10-02 조회: 그 계정의
   `public_personas` 행 0개. 이미 내려갔다.
+- ⏸ 7.10 안드로이드 전용 함수 배포 대기(사장님 승인) — iOS는 이 셋을 부르지 않아 iOS 무영향, 새 필드는 모두 선택이라 옛 빌드도 그대로: `session-summary`(1.1.4 요약 프롬프트·통화 날짜·달력 일수·관계 말투 예외 `62bc393`, 문법 range), `scenario-curriculum`(모든 레벨 같은 크기·SUBSTANCE·brief), `voicemail-script`(selfWarmth `7e1f232`, 울리는 시각 기준 `45b0648`). 명령: `supabase functions deploy <이름> --project-ref chhzjtigzdotacutwcyo`
 - ☑ 7.5 안드로이드 배포 스크립트 — `scripts/android/play-release.py`: 서명 확인한
   `bundleRelease` → 트랙(기본 internal)에 업로드, 언어별 `changelogs/<versionCode>.txt`,
   한 번도 출시 안 된 앱이면 draft로. 드라이런 기본, `--send`로 업로드, `--bump`. 드라이런
