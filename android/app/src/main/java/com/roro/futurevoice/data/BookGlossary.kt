@@ -49,7 +49,8 @@ object BookGlossary {
             }
         }.orEmpty()
         if (entries.isEmpty()) return null
-        return BookDocument.Section(context.getString(R.string.glossary), entries = entries)
+        return BookDocument.Section(context.getString(R.string.glossary), entries = entries,
+            kind = BookDocument.Section.Kind.GLOSSARY)
     }
 
     /** One dictionary entry flattened into the book's two-field shape: the

@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -28,8 +29,8 @@ import kotlinx.coroutines.launch
  *
  * Both book types come through the same [BookDocument], so this menu is the
  * same on both pages and neither knows which renderer it is asking for. PDF
- * to annotate on a tablet or print; Markdown to paste into whatever the
- * learner already keeps notes in.
+ * to annotate on a tablet or print; a Workbook to study with a pen; Markdown
+ * to paste into whatever the learner already keeps notes in.
  *
  * The document is built LAZILY, when a format is picked: building it walks
  * the whole transcript, and a book page must not pay that to draw a toolbar.
@@ -54,6 +55,23 @@ fun BookExportMenu(document: () -> BookDocument, nativeLanguage: String = "en", 
                     // The print sheet IS the destination picker — nothing to
                     // share afterwards, because the sheet writes the file.
                     runCatching { BookExport.printPdf(context, withGlossary(context, document(), nativeLanguage, targetLanguage)) }
+                    working = false
+                }
+            },
+        )
+        // The same book laid out for a pen — writing space, answers at the
+        // back, index tabs ([com.roro.futurevoice.data.WorkbookPdf]).
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.workbook)) },
+            leadingIcon = { Icon(Icons.Filled.EditNote, contentDescription = null) },
+            onClick = {
+                open = false; working = true
+                scope.launch {
+                    runCatching {
+                        val doc = withGlossary(context, document(), nativeLanguage, targetLanguage)
+                        BookExport.writeWorkbook(context,
+                            if (doc.language.isEmpty()) doc.copy(language = targetLanguage) else doc)
+                    }.onSuccess { BookExport.share(context, it, "application/pdf") }
                     working = false
                 }
             },

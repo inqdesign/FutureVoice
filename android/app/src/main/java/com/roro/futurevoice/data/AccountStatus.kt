@@ -52,10 +52,6 @@ data class AccountStatus(
      *  query of its OWN, so a database without the column can't blank the
      *  whole status. */
     val trialEndsAt: String? = null,
-    /** Tiers with an active catalog row (`light` / `plus` / `max`) — read in
-     *  a query of its OWN so a failure costs only the "move up" offers, never
-     *  the entitlement. Empty = couldn't read it, and then nothing is offered. */
-    val tiersOnSale: Set<String> = emptySet(),
 ) {
     val isEntitled: Boolean
         get() = subscriptionStatus in setOf("trialing", "active", "grace")
@@ -89,26 +85,6 @@ data class AccountStatus(
     val isPlusPlan: Boolean
         get() = isEntitled && planId?.startsWith("plus") == true
 
-    /** The tier (`light` / `plus` / `max`) of the plan held, or null. */
-    val tier: String?
-        get() = if (!isEntitled) null else planId?.substringBefore('_')
-
-    /**
-     * The next bigger tier actually ON SALE, for every "move up?" offer —
-     * Light → Plus, Plus → Max (iOS `upgradeTier`, 2026-10-02). Null at the
-     * top, on a trial (a trial is metered at the same pro-rated pool whatever
-     * it trials, so the move would cost money and change nothing), and while
-     * the catalog couldn't be read: an offer for a plan nobody can buy opens
-     * a row with no price on it.
-     */
-    val upgradeTier: String?
-        get() {
-            val t = tier ?: return null
-            if (isTrialing) return null
-            val i = TIER_ORDER.indexOf(t).takeIf { it >= 0 } ?: return null
-            return TIER_ORDER.drop(i + 1).firstOrNull { it in tiersOnSale }
-        }
-
     /** A free account that has had its scenes — the next one is the plans
      *  (iOS `freeScenesSpent`). It can still talk off its balance. */
     val freeScenesSpent: Boolean
@@ -121,29 +97,6 @@ data class AccountStatus(
         /** The shortest pool that can carry a conversation. Mirrors the
          *  server's floor in `consume_metered_seconds`; keep the two the same. */
         const val MINIMUM_CALL_SECONDS = 60
-
-        /** The tiers in order of SIZE, smallest first. Order is the only thing
-         *  it says — a tier missing from the catalog is skipped, never assumed. */
-        val TIER_ORDER = listOf("light", "plus", "max")
-
-        /**
-         * The name the buyer reads for a plan id — the ONE place tier names
-         * are built (iOS `AccountStatus.tierName`). Tier names say SIZE and
-         * never grade the buyer; the store product ids still carry the old
-         * words (`daily_*` = Light), so the id is a lookup key, never a label.
-         */
-        fun tierNameRes(planIdOrTier: String?): Int {
-            val id = planIdOrTier.orEmpty()
-            return when {
-                id.startsWith("max") -> com.roro.futurevoice.R.string.plan_tier_max
-                id.startsWith("plus") || id.contains("unlimited") ->
-                    com.roro.futurevoice.R.string.plan_tier_plus
-                else -> com.roro.futurevoice.R.string.plan_tier_light
-            }
-        }
-
-        @Serializable
-        private data class TierRow(val tier: String = "")
 
         @Serializable
         private data class TrialRow(val trial_ends_at: String? = null)
@@ -203,24 +156,8 @@ data class AccountStatus(
                 out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap,
                     freeScenesUsed = it.free_used ?: 0, freeScenesCap = it.free_cap)
             }
-            tiersOnSale(auth)?.let { out = out.copy(tiersOnSale = it) }
             out
         }
-
-        /** What is on sale — the same active-row filter the paywall's catalog uses. */
-        private suspend fun tiersOnSale(auth: AuthRepository): Set<String>? = runCatching {
-            val request = Request.Builder()
-                .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/subscription_plans" +
-                    "?select=tier&is_active=eq.true")
-                .header("Authorization", "Bearer ${auth.accessToken()}")
-                .header("apikey", Config.supabaseAnonKey)
-                .build()
-            Edge.client.newCall(request).execute().use { resp ->
-                if (resp.code !in 200..299) return@use null
-                Edge.json.decodeFromString(ListSerializer(TierRow.serializer()), resp.body.string())
-                    .map { it.tier }.filter { it.isNotEmpty() }.toSet()
-            }
-        }.getOrNull()
 
         private suspend inline fun <reified T> table(
             auth: AuthRepository, name: String, columns: String, userId: String,

@@ -69,11 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.billingclient.api.ProductDetails
 import com.roro.futurevoice.R
-import com.roro.futurevoice.data.AccountStatus
-import com.roro.futurevoice.data.AuthRepository
-import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.BillingService
-import com.roro.futurevoice.data.renewalLabel
 import com.roro.futurevoice.data.ConsentStore
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import java.text.NumberFormat
@@ -107,26 +103,28 @@ private const val PLAY_TERMS_URL = "https://play.google.com/about/play-terms/"
 private val SavingsGreen = Color(0xFF34C759)
 
 /**
- * What the app costs, and what you get for it — ONE ladder, smallest first,
- * one line per plan (iOS `PaywallView`, 2026-10-02, founder: "make it easy to
- * compare"). The card layout it replaced spent half of every card on rows that
- * were identical on all of them, and three cards needed two screens to
- * compare. Each row carries its minutes, its scenes on a line of their own,
- * the price and the price PER MINUTE — the one number that says what a bigger
- * plan buys. What every plan shares is said once, under the ladder.
+ * What the app costs, and what you get for it.
  *
- * The tiers are DATA: whatever `subscription_plans` sells (an inactive row is
- * not fetched at all), in [AccountStatus.TIER_ORDER]. Prices come from Play
- * only; with none the rows still render from the catalog and the CTA waits.
+ * The card IS the offer. Three rules hold it together, all learned the hard
+ * way on iOS and none of them cosmetic:
  *
- * The one-time minute pack iOS puts under the ladder is NOT drawn here: a
- * Play consumable needs a server that verifies its token and lands the
- * minutes (`google-topup`, master plan 4.0), and a pack that takes money and
- * grants nothing is worse than no pack.
+ * 1. **Same unit on both tiers.** Plus once printed "30 hours" beside Light's
+ *    "150 min", which made the two cards non-comparable at the exact moment
+ *    the reader is comparing them — nobody divides 30 by 2.5 in their head.
+ * 2. **The period rides on the figure** (`/mo`), which retired a footnote
+ *    under the cards that nobody read and that left the figures period-less.
+ * 3. **The free half lives ON the card.** Split into an "Always free" box
+ *    underneath, the offer had to be assembled from two places and the free
+ *    half read as a consolation prize rather than part of the purchase.
+ *
+ * And the one prose line describes what the plan LETS YOU DO, never who you
+ * are: the tiers are feature-identical, so "for experts / for beginners"
+ * promises a difference that isn't there and misroutes — someone prepping one
+ * interview needs ~90 minutes total and belongs on Light.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
+fun PaywallScreen(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val billing = remember { BillingService.shared(context) }
     val offers by billing.offers.collectAsStateWithLifecycle()
@@ -135,32 +133,15 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     val previewPlans = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewPlans
     val livePlans by billing.plans.collectAsStateWithLifecycle()
     val liveSettled by billing.settled.collectAsStateWithLifecycle()
-    val plans = (previewPlans ?: livePlans).filter { it.is_active }
+    val plans = previewPlans ?: livePlans
     val settled = liveSettled || previewPlans != null
-    val prices = rememberLadderPrices(offers)
     var period by remember { mutableStateOf("monthly") }
-    // The tier this screen was OPENED for outranks the held plan below: a
-    // learner who tapped "Move to Max" must not land on Plus, which they hold.
-    val asked = remember { preselectTier ?: BillingGate.paywallTier.value }
-    var tier by remember { mutableStateOf(asked ?: "plus") }
-    var account by remember { mutableStateOf<AccountStatus?>(null) }
+    var tier by remember { mutableStateOf("plus") }
     var step by remember {
         mutableStateOf(if (previewPlans != null) PaywallStep.PLANS else PaywallStep.RESOLVING)
     }
 
-    LaunchedEffect(Unit) {
-        BillingGate.paywallTier.value = null
-        if (previewPlans == null) billing.refresh()
-        val loaded = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
-            ?: if (previewPlans != null) AccountStatus() else AccountStatus.load(AuthRepository())
-        account = loaded
-        // Open on the plan they hold, so a subscriber starts by seeing their
-        // own state rather than a pitch for something else.
-        if (loaded.isEntitled) loaded.planId?.let { id ->
-            if (asked == null) tier = id.substringBefore('_')
-            id.substringAfter('_', "").takeIf { it.isNotEmpty() }?.let { period = it }
-        }
-    }
+    LaunchedEffect(Unit) { if (previewPlans == null) billing.refresh() }
 
     // Trial length and eligibility come from Play's own pricing phases: a
     // trial is a phase priced at zero, and Play only attaches one to an
@@ -170,13 +151,11 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     // one screen a tester without Play products would otherwise meet.
     val trialDays = offers.mapNotNull { trialDaysOf(it.details).takeIf { d -> d > 0 } }
         .maxOrNull() ?: DEFAULT_TRIAL_DAYS
-    val isSubscriber = account?.isEntitled == true
-    // A subscriber opened this to CHANGE plans: the trial funnel would be wrong.
-    val showsTrial = !isSubscriber && offers.any { trialDaysOf(it.details) > 0 }
+    val showsTrial = offers.any { trialDaysOf(it.details) > 0 }
     var redeemOpen by remember { mutableStateOf(false) }
 
-    LaunchedEffect(settled, showsTrial, account) {
-        if (settled && account != null && step == PaywallStep.RESOLVING) {
+    LaunchedEffect(settled, showsTrial) {
+        if (settled && step == PaywallStep.RESOLVING) {
             step = if (showsTrial) PaywallStep.PITCH else PaywallStep.PLANS
         }
     }
@@ -200,29 +179,16 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
 
     // Periods in a FIXED order, not the order the server happened to return
     // them in: a segmented control whose segments move between fetches reads
-    // as a different control each time. Annual is off sale (an inactive row),
-    // so today this is monthly alone and the picker hides itself.
+    // as a different control each time.
     val catalogPeriods = plans.map { it.period }.distinct()
     val periods = listOf("weekly", "monthly", "annual")
         .filter { it in catalogPeriods }
-        .ifEmpty { listOf("monthly") }
+        .ifEmpty { listOf("monthly", "annual") }
     LaunchedEffect(periods) { if (period !in periods) period = periods.first() }
-    // Max was picked on the monthly side and has no yearly row: the selection
-    // moves to the biggest tier that has one.
-    LaunchedEffect(period, plans) {
-        if (plans.isNotEmpty() && plans.none { it.tier == tier && it.period == period }) {
-            plans.filter { it.period == period }
-                .maxByOrNull { AccountStatus.TIER_ORDER.indexOf(it.tier) }
-                ?.let { tier = it.tier }
-        }
-    }
 
-    val currentPlanId = if (isSubscriber) account?.planId else null
-    val selectionIsCurrent = currentPlanId == "${tier}_$period"
-    // Buying needs a PRICED plan; the rows can render without one.
+    val forPeriod = plans.filter { it.period == period }
+    // Buying needs a PRICED plan; the cards can render without one.
     val chosen = offers.firstOrNull { it.plan.tier == tier && it.plan.period == period }
-    val tierName = stringResource(AccountStatus.tierNameRes(tier))
-    val uri = LocalUriHandler.current
 
     Scaffold(
         containerColor = AppSurfaces.ground,
@@ -249,19 +215,9 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
             PaywallBottomBar(
                 step = step,
                 trialDays = trialDays,
-                plansTitle = when {
-                    // A subscriber can't buy what they already have — the
-                    // only real action on their own plan is Play's screen.
-                    selectionIsCurrent -> stringResource(R.string.manage_subscription)
-                    isSubscriber -> stringResource(R.string.paywall_change_to, tierName)
-                    // A plan Play attaches no free phase to must not be sold
-                    // as a trial, whatever the funnel promised.
-                    showsTrial && chosen != null && trialDaysOf(chosen.details) > 0 ->
-                        stringResource(R.string.start_my_free_lld_day_trial, trialDays)
-                    period == "annual" -> stringResource(R.string.paywall_subscribe_yearly, tierName)
-                    else -> stringResource(R.string.paywall_subscribe_monthly, tierName)
-                },
-                canBuy = selectionIsCurrent || chosen != null,
+                showsTrial = showsTrial,
+                canBuy = chosen != null,
+                chosenTrialDays = chosen?.let { trialDaysOf(it.details) } ?: 0,
                 onCode = { redeemOpen = true },
                 onPrimary = {
                     when (step) {
@@ -270,10 +226,8 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                         PaywallStep.TIMELINE -> step = PaywallStep.PLANS
                         PaywallStep.PLANS -> {
                             val activity = context as? Activity
-                            when {
-                                selectionIsCurrent -> uri.openUri(PLAY_SUBSCRIPTIONS_URL)
-                                activity != null && chosen != null ->
-                                    billing.purchase(activity, chosen)
+                            if (activity != null && chosen != null) {
+                                billing.purchase(activity, chosen)
                             }
                         }
                     }
@@ -298,16 +252,15 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                 PaywallStep.PITCH -> PitchStep()
                 PaywallStep.TIMELINE -> TimelineStep(trialDays)
                 PaywallStep.PLANS -> PlansStep(
-                    plans = plans,
-                    prices = prices,
+                    plansForPeriod = forPeriod,
+                    offers = offers,
                     period = period,
                     periods = periods,
                     onPeriod = { period = it },
                     tier = tier,
                     onTier = { tier = it },
-                    account = account,
-                    currentPlanId = currentPlanId,
-                    showUnpriced = settled && chosen == null && !selectionIsCurrent,
+                    settled = settled,
+                    hasPricedPlan = chosen != null,
                 )
             }
         }
@@ -326,10 +279,9 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
 private fun PaywallBottomBar(
     step: PaywallStep,
     trialDays: Int,
-    /** The CTA's words on the plans step — chosen by the caller, which knows
-     *  the selection, the held plan and whether Play offers a trial. */
-    plansTitle: String,
+    showsTrial: Boolean,
     canBuy: Boolean,
+    chosenTrialDays: Int,
     onCode: () -> Unit,
     onPrimary: () -> Unit,
 ) {
@@ -357,7 +309,12 @@ private fun PaywallBottomBar(
                             PaywallStep.RESOLVING -> ""
                             PaywallStep.PITCH -> stringResource(R.string.try_for_free)
                             PaywallStep.TIMELINE -> stringResource(R.string.see_plans)
-                            PaywallStep.PLANS -> plansTitle
+                            // A plan Play attaches no free phase to must not be
+                            // sold as a trial, whatever the funnel promised.
+                            PaywallStep.PLANS ->
+                                if (showsTrial && chosenTrialDays > 0)
+                                    stringResource(R.string.start_my_free_lld_day_trial, trialDays)
+                                else stringResource(R.string.subscribe)
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -509,110 +466,26 @@ private fun TimelineRow(icon: ImageVector, title: String, caption: String, shows
     }
 }
 
-/** Play's subscription management page — changing or cancelling a live plan
- *  happens there, never in-app (iOS opens Apple's own). */
-private const val PLAY_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions"
-
-/**
- * The tier most people actually bought — a FACT the row can state, which is
- * why it says "most chosen" and never "recommended" (iOS, measured 2026-10-02:
- * Plus was the first paid plan of 6 of 9 subscribers). Text in the accent, not
- * a filled capsule, which reads as an award and makes the others look like
- * less. Never put it on a tier nobody has bought.
- */
-private const val MOST_CHOSEN_TIER = "plus"
-
-/** A store price kept as a NUMBER, so the ladder can divide it. */
-private data class LadderPrice(val formatted: String, val micros: Long, val currency: String)
-
-/**
- * Play's recurring price per plan id. In a capture build the harness seeds the
- * table instead (iOS does the same: a debug build is never priced by a store).
- */
-@Composable
-private fun rememberLadderPrices(offers: List<BillingService.Offer>): Map<String, LadderPrice> {
-    val flags = com.roro.futurevoice.capture.flags.MeCaptureFlags
-    val seeded = flags.previewPrices
-    val currency = flags.previewCurrency
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    return remember(offers, seeded, currency, locale) {
-        if (seeded != null && currency != null) {
-            seeded.mapValues { (_, micros) ->
-                LadderPrice(formatMoney(micros / 1_000_000.0, currency, locale, null), micros, currency)
-            }
-        } else offers.mapNotNull { o ->
-            recurringPhase(o.details)?.let {
-                o.plan.id to LadderPrice(it.formattedPrice, it.priceAmountMicros, it.priceCurrencyCode)
-            }
-        }.toMap()
-    }
-}
-
-private fun formatMoney(value: Double, currency: String, locale: Locale, fraction: Int?): String =
-    NumberFormat.getCurrencyInstance(locale).apply {
-        runCatching { this.currency = java.util.Currency.getInstance(currency) }
-        if (fraction != null) { minimumFractionDigits = fraction; maximumFractionDigits = fraction }
-    }.format(value)
-
-/** Step 3 — the prices, last, as one ladder. */
+/** Step 3 — the prices, last. */
 @Composable
 private fun PlansStep(
-    plans: List<BillingService.Plan>,
-    prices: Map<String, LadderPrice>,
+    plansForPeriod: List<BillingService.Plan>,
+    offers: List<BillingService.Offer>,
     period: String,
     periods: List<String>,
     onPeriod: (String) -> Unit,
     tier: String,
     onTier: (String) -> Unit,
-    account: AccountStatus?,
-    currentPlanId: String?,
-    /** Play answered and has no price for the selection. */
-    showUnpriced: Boolean,
+    settled: Boolean,
+    hasPricedPlan: Boolean,
 ) {
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    // Every tier the catalog sells, smallest first. A tier with no row in the
-    // selected period still shows ("Monthly only") so the ladder keeps its
-    // shape when the period flips.
-    val shownTiers = AccountStatus.TIER_ORDER.filter { t -> plans.any { it.tier == t } }
-        .ifEmpty { listOf("light", "plus") }
-    Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-        Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(stringResource(if (currentPlanId != null) R.string.your_plan else R.string.paywall_keep_talking),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold)
-            if (currentPlanId != null && account != null) {
-                val name = stringResource(AccountStatus.tierNameRes(currentPlanId))
-                val label = when {
-                    // A trial names the plan it will BECOME, not what it allows.
-                    account.isTrialing -> stringResource(R.string.trial, name)
-                    else -> "$name · " + stringResource(
-                        if (currentPlanId.endsWith("annual")) R.string.annual else R.string.monthly)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp))
-                    Text(
-                        when {
-                            account.isTrialing && account.cancelAtPeriodEnd -> stringResource(
-                                R.string.you_re_on_the_it_ends_on, label, account.renewalLabel(locale))
-                            account.isTrialing ->
-                                stringResource(R.string.you_re_on_the_it_converts_unless_you_cancel, label)
-                            else -> stringResource(R.string.you_re_subscribed_to, label)
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                Text(stringResource(R.string.paywall_pick_how_much),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Text(stringResource(R.string.choose_your_plan),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 12.dp))
 
         if (periods.size > 1) {
-            // The segment says only the period; the saving sits on each row.
             com.roro.futurevoice.ui.brand.IosSegmented(periods.map { p -> stringResource(when (p) {
                 "weekly" -> R.string.weekly
                 "annual" -> R.string.annual
@@ -620,215 +493,42 @@ private fun PlansStep(
             }) }, periods.indexOf(period).coerceAtLeast(0), { onPeriod(periods[it]) }, Modifier.fillMaxWidth())
         }
 
-        Column(Modifier.fillMaxWidth().background(AppSurfaces.card, ContinuousShape(14.dp))) {
-            shownTiers.forEachIndexed { i, t ->
-                if (i > 0) HorizontalDivider(Modifier.padding(start = 52.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant)
-                LadderRow(
-                    tier = t,
-                    plans = plans,
-                    prices = prices,
-                    period = period,
-                    selected = tier == t,
-                    isCurrent = currentPlanId == "${t}_$period",
-                    onSelect = { onTier(t) },
-                )
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            PlanCard(
+                plan = plansForPeriod.firstOrNull { it.tier == "plus" },
+                price = priceOf(offers, "plus", period),
+                savings = annualSavingsPercent(offers, "plus", period),
+                period = period,
+                name = stringResource(R.string.plan_tier_plus),
+                // "As much as you want" went with the uncapped pool on
+                // 2026-09-26 — Plus is 600 min now (iOS PaywallView, same day).
+                audience = stringResource(R.string.for_the_weeks_you_re_all_in),
+                selected = tier == "plus",
+                onSelect = { onTier("plus") },
+            )
+            PlanCard(
+                plan = plansForPeriod.firstOrNull { it.tier == "light" },
+                price = priceOf(offers, "light", period),
+                savings = annualSavingsPercent(offers, "light", period),
+                period = period,
+                name = stringResource(R.string.plan_tier_light),
+                audience = stringResource(R.string.keep_it_up_as_a_habit),
+                selected = tier == "light",
+                onSelect = { onTier("light") },
+            )
         }
 
         // Play answered and had nothing. Say so once, quietly: a disabled
         // button with no explanation reads as the app being broken.
-        if (showUnpriced) {
+        if (settled && !hasPricedPlan) {
             Text(stringResource(R.string.google_play_isnt_offering_this_plan_here_yet),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // What every plan shares, said ONCE — on the cards it was two rows
-        // identical on all of them.
-        Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            FootnoteRow(Icons.Filled.CheckCircle, stringResource(R.string.paywall_shared_unlimited))
-            FootnoteRow(Icons.Filled.Phone, stringResource(R.string.paywall_tutor_call))
-        }
-
         SubscriptionLegal()
     }
 }
-
-@Composable
-private fun FootnoteRow(icon: ImageVector, text: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp).padding(top = 1.dp))
-        Text(text, style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/**
- * One line of the ladder: name and minutes, scenes, the per-day cue, the
- * price and the price per minute. The selection is the whole row, lit — an
- * accent edge and a tinted fill that ease in and out (iOS slides one shape
- * between rows; the UI rules allow subtle motion only).
- */
-@Composable
-private fun LadderRow(
-    tier: String,
-    plans: List<BillingService.Plan>,
-    prices: Map<String, LadderPrice>,
-    period: String,
-    selected: Boolean,
-    isCurrent: Boolean,
-    onSelect: () -> Unit,
-) {
-    val accent = MaterialTheme.colorScheme.primary
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    val plan = plans.firstOrNull { it.tier == tier && it.period == period }
-    // A tier with no row in this period is shown so the ladder keeps its
-    // shape, but it can't be picked (founder, 2026-10-02).
-    val monthlyOnly = plan == null && period == "annual"
-    val shown = plan ?: plans.firstOrNull { it.tier == tier && it.period == "monthly" }
-    val minutes = ((shown?.monthly_seconds ?: 0L) / 60).toInt()
-    val scenes = (shown?.monthly_scenes ?: 0L).toInt()
-    val on = selected && !monthlyOnly
-    val price = shown?.let { prices[it.id] }
-    val fill by androidx.compose.animation.animateColorAsState(
-        if (on) accent.copy(alpha = 0.10f) else Color.Transparent,
-        androidx.compose.animation.core.tween(280), label = "ladderFill")
-    val edge by androidx.compose.animation.animateColorAsState(
-        if (on) accent else Color.Transparent,
-        androidx.compose.animation.core.tween(280), label = "ladderEdge")
-    Row(
-        Modifier.fillMaxWidth()
-            .background(fill, ContinuousShape(14.dp))
-            .border(2.dp, edge, ContinuousShape(14.dp))
-            .clickable(enabled = !monthlyOnly, onClick = onSelect)
-            .alpha(if (monthlyOnly) 0.55f else 1f)
-            .padding(horizontal = 12.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-            Icon(
-                if (on) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-                contentDescription = null,
-                tint = if (on) accent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            )
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            // The tag rides ABOVE the name, on a line of its own: beside it,
-            // "Am häufigsten gewählt" pushed "Plus 600 Min." onto two lines.
-            when {
-                isCurrent -> Text(stringResource(R.string.current_plan),
-                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                    color = accent)
-                tier == MOST_CHOSEN_TIER -> Text(stringResource(R.string.paywall_most_chosen),
-                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                    color = accent)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(AccountStatus.tierNameRes(tier)),
-                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                    maxLines = 1)
-                when {
-                    // Kept as a branch so the catalog can sell an uncapped
-                    // plan again with no app change — none is on sale.
-                    shown?.talk_unlimited == true -> Text(stringResource(R.string.no_limit),
-                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                        maxLines = 1)
-                    minutes > 0 -> Text(stringResource(R.string.min, grouped(minutes)),
-                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                        maxLines = 1)
-                }
-            }
-            if (scenes > 0) {
-                Text(stringResource(R.string.paywall_plus_scenes, scenes),
-                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            }
-            // A SIZE CUE, never a rule: the pool has no daily limit.
-            if (minutes / 30 > 0 && shown?.talk_unlimited != true) {
-                Text(stringResource(R.string.about_lld_min_a_day, minutes / 30),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            when {
-                monthlyOnly -> Text(stringResource(R.string.paywall_monthly_only),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // No placeholder when Play hasn't priced it: a dash reads as a
-                // broken field, and an absent price says the same more quietly.
-                price != null -> {
-                    Text(price.formatted, style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold)
-                    val saving = if (period == "annual") annualSavingLabel(prices, plans, tier) else null
-                    if (saving != null) {
-                        Text(saving, style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold, color = accent)
-                    } else {
-                        Text(stringResource(if (period == "annual") R.string.paywall_a_year
-                            else R.string.paywall_a_month),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (minutes > 0 && shown?.talk_unlimited != true) {
-                        Text(perMinuteLabel(price, if (period == "annual") minutes * 12 else minutes, locale),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold, color = SavingsGreen)
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** "₩48 a min" / "$0.04 a min" — whole units where the currency's unit is
- *  already small (won, yen), two decimals where it isn't. */
-@Composable
-private fun perMinuteLabel(price: LadderPrice, minutes: Int, locale: Locale): String {
-    if (minutes <= 0) return ""
-    val each = price.micros / 1_000_000.0 / minutes
-    val text = formatMoney(each, price.currency, locale, if (each >= 1) 0 else 2)
-    return stringResource(R.string.paywall_per_min, text)
-}
-
-/**
- * The annual saving, said the way the offer is built: "2 months free" when a
- * year costs a whole number of months less than paying monthly, a percentage
- * otherwise. Both only ever from LIVE prices — a badge worked out from figures
- * the viewer is never shown is a claim they cannot check.
- */
-@Composable
-private fun annualSavingLabel(
-    prices: Map<String, LadderPrice>, plans: List<BillingService.Plan>, tier: String,
-): String? {
-    fun micros(period: String) = plans.firstOrNull { it.tier == tier && it.period == period }
-        ?.let { prices[it.id]?.micros }
-    val monthly = micros("monthly") ?: return null
-    val annual = micros("annual") ?: return null
-    if (monthly <= 0) return null
-    val free = (monthly * 12 - annual).toDouble() / monthly
-    val whole = Math.round(free).toInt()
-    if (whole >= 1 && kotlin.math.abs(free - whole) < 0.2) {
-        return stringResource(R.string.lld_months_free, whole)
-    }
-    val full = monthly * 12
-    if (full <= annual) return null
-    val pct = Math.round((full - annual).toDouble() / full * 100).toInt()
-    return if (pct > 0) stringResource(R.string.save_lld_vs_monthly, pct) else null
-}
-
-/**
- * The RECURRING phase of an offer — never the trial's.
- *
- * Play lists a free trial as a pricing phase priced at zero, and it comes
- * FIRST. Reading the first phase therefore printed a "free" price on the card
- * of a plan that costs money.
- */
-private fun recurringPhase(details: ProductDetails): ProductDetails.PricingPhase? =
-    details.subscriptionOfferDetails?.firstOrNull()
-        ?.pricingPhases?.pricingPhaseList?.firstOrNull { it.priceAmountMicros > 0 }
 
 /**
  * Required on any screen that sells an auto-renewing subscription: what
@@ -860,6 +560,181 @@ private fun SubscriptionLegal() {
                 modifier = Modifier.clickable { uri.openUri(ConsentStore.privacyUrl()) })
         }
     }
+}
+
+/**
+ * One plan. Both cards carry the SAME four rows in the SAME order and units,
+ * so the eye compares down the column instead of parsing two sentences.
+ */
+@Composable
+private fun PlanCard(
+    plan: BillingService.Plan?,
+    /** Play's formatted price, when Play has one. Absent is not an error. */
+    price: String?,
+    /** Percent saved against paying monthly for a year, on the annual cycle. */
+    savings: Int?,
+    period: String,
+    name: String,
+    audience: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    Column(
+        Modifier.fillMaxWidth()
+            .background(AppSurfaces.card, ContinuousShape(16.dp))
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) accent
+                else MaterialTheme.colorScheme.outlineVariant,
+                shape = ContinuousShape(16.dp))
+            .clickable(onClick = onSelect)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold)
+                // A quiet line about what the plan lets you do — never a
+                // filled capsule, which reads as an award and ranks the plans
+                // on one axis, making the smaller one look like less.
+                Text(audience, style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(
+                if (selected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                contentDescription = null,
+                tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            when {
+                // Plus does not cap TALKING at all: talking costs the learner
+                // effort, and effort is a better limiter than any ceiling —
+                // nobody speaks for six hours. There is no figure to print and
+                // none is printed. WATCH still counts, because a scene plays
+                // itself — that is a real limit, and hiding a real limit is
+                // how you ambush someone.
+                plan?.talk_unlimited == true -> {
+                    SpecRow(stringResource(R.string.talking), stringResource(R.string.no_limit))
+                    plan.monthly_scenes?.let {
+                        SpecRow(stringResource(R.string.watch_scenes),
+                            stringResource(R.string.lld_mo, it.toInt()))
+                    }
+                }
+                // A card with no numbers beats a card with guessed ones: a
+                // catalog row missing its pool would otherwise print "0 min/mo
+                // · about 0 min a day", which is a figure nobody sells.
+                plan != null && (plan.monthly_seconds ?: 0L) > 0 -> {
+                    val minutes = (plan.monthly_seconds!! / 60).toInt()
+                    SpecRow(
+                        stringResource(R.string.talking),
+                        stringResource(R.string.lls_min_mo, grouped(minutes)),
+                        // A SIZE CUE, never a rule: the pool has no daily
+                        // limit, so this sits under the monthly figure as an
+                        // aside rather than replacing it.
+                        note = stringResource(R.string.about_lld_min_a_day, minutes / 30),
+                    )
+                    plan.monthly_scenes?.let {
+                        SpecRow(stringResource(R.string.watch_scenes),
+                            stringResource(R.string.lld_mo, it.toInt()))
+                    }
+                }
+            }
+            SpecRow(stringResource(R.string.your_own_review_book),
+                stringResource(R.string.unlimited))
+            SpecRow(stringResource(R.string.shadowing_words_replays_drills),
+                stringResource(R.string.unlimited))
+        }
+
+        // No placeholder when Play hasn't priced it: a dash reads as a broken
+        // field, and an absent price says the same thing more quietly. The
+        // whole row goes with it.
+        price?.let {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.price_per_cycle, it, stringResource(when (period) {
+                        "weekly" -> R.string.week
+                        "annual" -> R.string.year_4ff0b1
+                        else -> R.string.month_021710
+                    })),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                // Only ever computed from LIVE prices: a savings badge worked
+                // out from figures the viewer is never shown is a claim they
+                // cannot check.
+                if (period == "annual" && savings != null) {
+                    Text(stringResource(R.string.save_lld_vs_monthly, savings),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SavingsGreen)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One line of a card's spec block. Label left, figure right — the same labels
+ * in the same order on both cards.
+ */
+@Composable
+private fun SpecRow(label: String, value: String, note: String? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(label, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(value, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+            note?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/**
+ * The RECURRING phase of an offer — never the trial's.
+ *
+ * Play lists a free trial as a pricing phase priced at zero, and it comes
+ * FIRST. Reading the first phase therefore printed a "free" price on the card
+ * of a plan that costs money.
+ */
+private fun recurringPhase(details: ProductDetails): ProductDetails.PricingPhase? =
+    details.subscriptionOfferDetails?.firstOrNull()
+        ?.pricingPhases?.pricingPhaseList?.firstOrNull { it.priceAmountMicros > 0 }
+
+/** Play's formatted price for a tier+period, when it has one. */
+private fun priceOf(offers: List<BillingService.Offer>, tier: String, period: String): String? =
+    offers.firstOrNull { it.plan.tier == tier && it.plan.period == period }
+        ?.let { recurringPhase(it.details)?.formattedPrice }
+
+/** Micros for a tier+period, for the savings arithmetic only. */
+private fun microsOf(offers: List<BillingService.Offer>, tier: String, period: String): Long? =
+    offers.firstOrNull { it.plan.tier == tier && it.plan.period == period }
+        ?.let { recurringPhase(it.details)?.priceAmountMicros }
+
+/**
+ * Percentage the annual plan saves versus paying monthly for a year, for one
+ * tier. Null when either price is unknown or annual isn't actually cheaper —
+ * a badge is a claim, and an unbacked one is worse than none.
+ */
+private fun annualSavingsPercent(
+    offers: List<BillingService.Offer>, tier: String, period: String,
+): Int? {
+    if (period != "annual") return null
+    val monthly = microsOf(offers, tier, "monthly") ?: return null
+    val annual = microsOf(offers, tier, "annual") ?: return null
+    val full = monthly * 12
+    if (monthly <= 0 || full <= annual) return null
+    val pct = Math.round((full - annual).toDouble() / full * 100).toInt()
+    return pct.takeIf { it > 0 }
 }
 
 /**

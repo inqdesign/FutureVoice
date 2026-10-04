@@ -43,6 +43,11 @@ data class BookDocument(
      * building is synchronous by design so a page can render instantly.
      */
     val terms: List<Term> = emptyList(),
+    /**
+     * The target language's code — the workbook ([BookWorkbook]) rules Latin
+     * script in four lines and Japanese/Korean/Chinese in square cells.
+     */
+    val language: String = "",
 ) {
     /** Multi-word items get the "explain the whole thing" treatment rather
      *  than a headword entry — asking for a phrase as a word is what produced
@@ -82,7 +87,16 @@ data class BookDocument(
         val blurb: String = "",
         val entries: List<Entry> = emptyList(),
         val lines: List<Line> = emptyList(),
+        /**
+         * What the section IS, independent of its (localized) title — the
+         * workbook gives each kind its own page shape (a word gets writing
+         * bands, a correction gets a blank to redo it). The reader PDF and
+         * Markdown ignore it.
+         */
+        val kind: Kind = Kind.OTHER,
     ) {
+        enum class Kind { SCENE, OVERVIEW, WORDS, EXPRESSIONS, SHADOW, DRILL, TRANSCRIPT, GLOSSARY, OTHER }
+
         val isEmpty: Boolean get() = entries.isEmpty() && lines.isEmpty()
     }
 
@@ -277,6 +291,7 @@ data class BookDocument(
                         ?: role.ifEmpty { context.getString(R.string.the_other_person) }
                     sections.add(Section(
                         title = c.dialogueTitle ?: context.getString(R.string.scene),
+                        kind = Section.Kind.SCENE,
                         lines = dialogue.map {
                             Line(
                                 speaker = if (it.speaker == "user")
@@ -287,15 +302,16 @@ data class BookDocument(
                         },
                     ))
                 }
-                fun section(title: String, items: List<ScenarioCurriculum.Item>): Section? =
-                    if (items.isEmpty()) null else Section(title, entries = items.map {
+                fun section(title: String, kind: Section.Kind,
+                            items: List<ScenarioCurriculum.Item>): Section? =
+                    if (items.isEmpty()) null else Section(title, kind = kind, entries = items.map {
                         Entry(it.text, it.note, it.example.orEmpty(),
                             mastered = it.masteredAt != null)
                     })
                 sections += listOfNotNull(
-                    section(context.getString(R.string.words_d26d55), c.words),
-                    section(context.getString(R.string.expressions), c.expressions),
-                    section(context.getString(R.string.shadow), c.shadowLines),
+                    section(context.getString(R.string.words_d26d55), Section.Kind.WORDS, c.words),
+                    section(context.getString(R.string.expressions), Section.Kind.EXPRESSIONS, c.expressions),
+                    section(context.getString(R.string.shadow), Section.Kind.SHADOW, c.shadowLines),
                 )
             }
 
@@ -331,7 +347,7 @@ data class BookDocument(
 
             val sections = ArrayList<Section>()
             sm?.overallNote?.trim()?.takeIf { it.isNotEmpty() }?.let {
-                sections.add(Section(context.getString(R.string.overview), blurb = it))
+                sections.add(Section(context.getString(R.string.overview), blurb = it, kind = Section.Kind.OVERVIEW))
             }
 
             val firstTimeWords = sm?.newWordsUsed.orEmpty()
@@ -342,6 +358,7 @@ data class BookDocument(
                 sm?.expressionsUsed.orEmpty().map { Term(it, true) }
             if (firstTimeWords.isNotEmpty()) {
                 sections.add(Section(context.getString(R.string.words_d26d55),
+                    kind = Section.Kind.WORDS,
                     entries = firstTimeWords.map {
                         Entry(it, note = context.getString(R.string.you_used_this_for_the_first_time))
                     }))
@@ -353,6 +370,7 @@ data class BookDocument(
             val used = sm?.expressionsUsed.orEmpty()
             if (offered.isNotEmpty() || used.isNotEmpty()) {
                 sections.add(Section(context.getString(R.string.expressions),
+                    kind = Section.Kind.EXPRESSIONS,
                     entries = offered.map {
                         Entry(it, note = context.getString(R.string.your_fluent_self_used_this_you_didnt))
                     } + used.map { Entry(it) }))
@@ -363,6 +381,7 @@ data class BookDocument(
                 .map { it.transcript }
             if (fluentLines.isNotEmpty()) {
                 sections.add(Section(context.getString(R.string.shadow),
+                    kind = Section.Kind.SHADOW,
                     entries = fluentLines.map { Entry(it) }))
             }
 
@@ -375,12 +394,14 @@ data class BookDocument(
                     original = DrillIngest.relevantFragment(it.userSaid, it.fluentAlternative))
             }
             if (corrections.isNotEmpty()) {
-                sections.add(Section(context.getString(R.string.drill), entries = corrections))
+                sections.add(Section(context.getString(R.string.drill), entries = corrections,
+                    kind = Section.Kind.DRILL))
             }
 
             val transcript = session.turns.filter { it.transcript.isNotBlank() }
             if (transcript.isNotEmpty()) {
                 sections.add(Section(context.getString(R.string.transcript),
+                    kind = Section.Kind.TRANSCRIPT,
                     lines = transcript.map { turn ->
                         Line(
                             speaker = if (turn.role == TurnRole.USER)

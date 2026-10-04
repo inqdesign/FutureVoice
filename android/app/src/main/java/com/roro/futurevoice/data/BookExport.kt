@@ -45,6 +45,20 @@ object BookExport {
         }
 
     /**
+     * The same book laid out for a pen ([WorkbookPdf]) — written straight to
+     * a file and shared, like iOS, because a workbook's whole point is to land
+     * in a tablet notes app (or a printer), and its index tabs are links only
+     * a real file keeps.
+     */
+    suspend fun writeWorkbook(context: Context, doc: BookDocument): File =
+        withContext(Dispatchers.Default) {
+            val bytes = WorkbookPdf(context, doc).pdfData()
+            withContext(Dispatchers.IO) {
+                File(outDir(context), doc.filename + "-workbook.pdf").apply { writeBytes(bytes) }
+            }
+        }
+
+    /**
      * Lay the book out and hand it to the system print sheet, where "Save as
      * PDF" is one of the destinations. The WebView is held by the adapter for
      * the life of the job, so it is kept alive in a field rather than left to

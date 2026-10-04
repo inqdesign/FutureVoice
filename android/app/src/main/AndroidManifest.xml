@@ -97,11 +97,6 @@
             android:name=".data.DrillDueReceiver"
             android:exported="false" />
 
-        <!-- A routine block's own reminder (say it again), rebuilt from the plan. -->
-        <receiver
-            android:name=".data.PlanReminderReceiver"
-            android:exported="false" />
-
         <!-- The week's test opening (Practice → goals → Remind me). -->
         <receiver
             android:name=".data.WeeklyTestReminderReceiver"

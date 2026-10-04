@@ -182,9 +182,7 @@ fun DrillDeckScreen(
             }
             else -> store.due(language)
         }
-        // The routine's review number when today has one (iOS `b905ac2`).
-        deck = due.take(com.roro.futurevoice.data.GoalStore.target(context,
-            com.roro.futurevoice.data.StudyPlan.Kind.REVIEW) ?: SESSION_CAP)
+        deck = due.take(SESSION_CAP)
         remainingDue = (due.size - deck.size).coerceAtLeast(0)
         dealt = true
         refreshFolders()

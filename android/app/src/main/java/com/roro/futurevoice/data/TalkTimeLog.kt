@@ -98,21 +98,7 @@ object TalkTimeLog {
      */
     fun streakDays(context: Context, now: Long = System.currentTimeMillis()): Int {
         val spoken = spokenDays(context)
-        // The RULE is the learner's own (iOS 1.1.4, "나의 루틴"): until the
-        // routine is a promise a day counts when they studied at all; from
-        // then, only when the day's routine was kept, and a day with nothing
-        // planned rests.
-        return PromiseStreak.streak(now, floor = null) { at ->
-            PromiseStreak.standing(context, at) { studied(context, it, spoken) }
-        }
-    }
-
-    /** Is TODAY already kept, by the same rule as [streakDays]? What lights
-     *  the Talk header's flame (iOS `21df988`). */
-    fun keptToday(context: Context, now: Long = System.currentTimeMillis()): Boolean {
-        val spoken = spokenDays(context)
-        return PromiseStreak.standing(context, now) { studied(context, it, spoken) } ==
-            PromiseStreak.Standing.KEPT
+        return streakWalk(now) { at -> studied(context, at, spoken) }
     }
 
     /**

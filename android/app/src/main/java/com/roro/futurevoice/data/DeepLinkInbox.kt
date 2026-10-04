@@ -52,8 +52,6 @@ object DeepLinkInbox {
             // Streak widget: open Talk so the learner does something today.
             "talk" -> { widgetRoute.value = WidgetRoute.Talk; return }
             "freetalk" -> { widgetRoute.value = WidgetRoute.FreeTalk; return }
-            // A routine's say-it-again reminder: the talk picker.
-            "sayitagain" -> { PlanReminder.pendingSayItAgain.value = true; return }
             // Continue widget: that book's page, else the shelf.
             "book" -> uri.getQueryParameter("id")?.takeIf { it.isNotBlank() }?.let { id ->
                 widgetRoute.value = WidgetRoute.Book(uri.getQueryParameter("type") ?: "talk", id)

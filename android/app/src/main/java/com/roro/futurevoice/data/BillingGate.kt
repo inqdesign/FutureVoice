@@ -31,11 +31,6 @@ object BillingGate {
     /** Set when a gate refuses; the root presents the paywall from it. */
     val showPaywall = MutableStateFlow(false)
 
-    /** The tier the next paywall opens on, when its opener named one — the
-     *  spent sheet's "Move to Max" must not land on the plan already held
-     *  (iOS `PaywallView(preselectTier:)`). The paywall consumes it. */
-    val paywallTier = MutableStateFlow<String?>(null)
-
     @Volatile private var cached: AccountStatus? = null
     @Volatile private var fetchedAt: Long? = null
     @Volatile private var refreshing = false

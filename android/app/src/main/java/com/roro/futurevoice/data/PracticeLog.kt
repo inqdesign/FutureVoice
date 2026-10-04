@@ -98,8 +98,6 @@ object PracticeLog {
         val tmp = File(target.parentFile, target.name + ".tmp")
         tmp.writeText(StoreJson.json.encodeToString(serializer, days))
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
-        // WHEN it happened, for the routine's day view (iOS: the same door).
-        ActivityEventLog.record(c, ActivityEventLog.Kind.of(kind), at)
     }
 
     fun day(c: Context, at: Long = System.currentTimeMillis()): Day? = read(c)[key(at)]

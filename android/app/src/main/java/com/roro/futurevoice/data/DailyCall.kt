@@ -61,23 +61,8 @@ object DailyCallStore {
         val list = minutes.distinct().sorted().take(MAX_TIMES).ifEmpty { listOf(8 * 60) }
         if (enabled) com.roro.futurevoice.core.Analytics.capture("daily_call_scheduled",
             mapOf("times" to list.size))
-        val wasEnabled = isEnabled(c)
         prefs(c).edit().putBoolean(ENABLED, enabled).putString(TIMES, list.joinToString(",")).apply()
-        // The routine's timed talks ARE the call times (iOS 1.1.4): a time
-        // set here goes into the routine, and switching the call on gives an
-        // "any time" routine its first call.
-        // Turning the call OFF must not pin an "any time" routine to a clock.
-        if (enabled || StudyPlanStore.current(c).hasTimedTalk) StudyPlanStore.callTimesChanged(c, list)
-        if (enabled && !wasEnabled) StudyPlanStore.callTurnedOn(c)
         if (enabled) DailyCallScheduler.schedule(c) else DailyCallScheduler.cancel(c)
-    }
-
-    /** The routine wrote its talk times: keep this list in step without
-     *  bouncing them back into the routine. */
-    fun mirrorTimes(c: Context, minutes: List<Int>) {
-        val list = minutes.distinct().sorted().take(MAX_TIMES)
-        if (list.isEmpty() || list == times(c)) return
-        prefs(c).edit().putString(TIMES, list.joinToString(",")).apply()
     }
 
     /** One time — onboarding's picker. Collapses the list to that time. */
@@ -174,18 +159,9 @@ object DailyCallScheduler {
     const val ANSWER_EXTRA = "dailyCallAnswer"
     private const val REQUEST = 4801
 
-    /** Today's call times still ahead of [now], as epoch millis — from the
-     *  routine, whose timed talk blocks ARE the calls. */
+    /** Today's call times still ahead of [now], as epoch millis. */
     fun remainingToday(context: Context, now: Long = System.currentTimeMillis()): List<Long> =
-        fireDates(context, now).filter { StudyPlan.isSameDay(it, now) }
-
-    /**
-     * Every ring to arm (iOS `fireDates`): the routine's remaining timed
-     * talks today, else the next day's first. A routine with no talk at a set
-     * time rings nothing — there is no second schedule the routine can't show.
-     */
-    fun fireDates(context: Context, now: Long = System.currentTimeMillis()): List<Long> =
-        StudyPlanStore.current(context).callDates(now)
+        DailyCallStore.times(context).map { at(now, it, 0) }.filter { it > now }
 
     private fun at(now: Long, minutes: Int, dayOffset: Int): Long = Calendar.getInstance().apply {
         timeInMillis = now
@@ -211,9 +187,8 @@ object DailyCallScheduler {
         // and answering would open a call straight into the paywall. Stand
         // down; the revival re-arms it. The learner's setting is untouched.
         if (VoiceParking.parkedId.value != null) return
-        val fires = if (fromTomorrow) {
-            fireDates(context, StudyPlan.startOfDay(StudyPlan.addDays(now, 1)) - 1)
-        } else fireDates(context, now)
+        val today = if (fromTomorrow) emptyList() else remainingToday(context, now)
+        val fires = today.ifEmpty { listOf(at(now, DailyCallStore.times(context).first(), 1)) }
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         fires.forEachIndexed { slot, whenMs ->
             // `setAlarmClock` rings through Doze and shows in the status bar,

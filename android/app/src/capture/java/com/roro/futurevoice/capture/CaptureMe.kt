@@ -65,16 +65,6 @@ object CaptureMe {
         "paywall" to { _ -> PaywallScreen(onDismiss = {}) },
         "paywall-plans" to { _ ->
             MeCaptureFlags.previewPlans = samplePlans
-            // iOS seeds the storefront a reviewer of the capture would be in:
-            // won for a Korean app language, dollars otherwise.
-            val korean = java.util.Locale.getDefault().language == "ko"
-            MeCaptureFlags.previewCurrency = if (korean) "KRW" else "USD"
-            // Micros, as Play states them.
-            MeCaptureFlags.previewPrices = if (korean)
-                mapOf("light_monthly" to 15_000_000_000L, "plus_monthly" to 29_000_000_000L,
-                    "max_monthly" to 58_000_000_000L)
-            else mapOf("light_monthly" to 9_990_000L, "plus_monthly" to 24_990_000L,
-                "max_monthly" to 49_990_000L)
             PaywallScreen(onDismiss = {})
         },
         "me" to { context -> Me(context) },
@@ -120,19 +110,20 @@ object CaptureMe {
         get() = CaptureSeed.sampleTrialAccount.copy(monthlyCapSeconds = 35 * 60)
 
     /**
-     * The `subscription_plans` catalog as it is SOLD today (iOS seeds the
-     * same rows): Light 150 min + 10 scenes, Plus 600 + 30, Max 1,200 + 30 —
-     * monthly only, the annual rows are off sale. No `google_product_id`; the
-     * prices come from [MeCaptureFlags.previewPrices] instead of Play.
+     * The `subscription_plans` catalog as it stands (Light 150 min + 60
+     * scenes, Plus no talk ceiling + 120 scenes), both cycles. No
+     * `google_product_id` and no Play prices: the capture app can't price
+     * anything, so the cards render without a price row — as they do on any
+     * device Play hasn't priced.
      */
-    private val samplePlans: List<BillingService.Plan> = listOf(
-        BillingService.Plan(id = "light_monthly", tier = "light", period = "monthly",
-            monthly_seconds = 9000, monthly_scenes = 10),
-        BillingService.Plan(id = "plus_monthly", tier = "plus", period = "monthly",
-            monthly_seconds = 36000, monthly_scenes = 30),
-        BillingService.Plan(id = "max_monthly", tier = "max", period = "monthly",
-            monthly_seconds = 72000, monthly_scenes = 30),
-    )
+    private val samplePlans: List<BillingService.Plan> = listOf("monthly").flatMap { period ->
+        listOf(
+            BillingService.Plan(id = "light_$period", tier = "light", period = period,
+                monthly_seconds = 9000, monthly_scenes = 10),
+            BillingService.Plan(id = "plus_$period", tier = "plus", period = period,
+                monthly_seconds = 36000, monthly_scenes = 30),
+        )
+    }
 
     /** iOS: `MeTab()` over the harness's app state — whatever persona the
      *  sandbox holds (none unless `--es seed all` ran). Not signed in, so the

@@ -311,8 +311,8 @@ fun MeScreen(
                         value = when {
                             acct == null -> stringResource(R.string.checking)
                             acct.unlimited -> "Admin"
-                            acct.isEntitled ->
-                                stringResource(AccountStatus.tierNameRes(acct.planId))
+                            acct.isPlusPlan -> stringResource(R.string.plan_tier_plus)
+                            acct.isEntitled -> stringResource(R.string.plan_tier_light)
                             else -> null
                         },
                         onClick = onOpenPaywall)
