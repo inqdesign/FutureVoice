@@ -81,49 +81,49 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana fotografiert den Ort, an dem du heute gelernt hast, für die Karte des Tages."
+            "value" : "nawana filmt dich beim Sprechtraining, wenn du die Kamera einschaltest, und fotografiert den Ort, an dem du gelernt hast, für die Karte des Tages."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "nawana takes a photo of where you studied, for today's card."
+            "value" : "nawana films your speech practice when you turn the camera on, and takes a photo of where you studied for today's card."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana toma una foto del lugar donde estudiaste, para la tarjeta de hoy."
+            "value" : "nawana graba tu práctica de discurso cuando activas la cámara y toma una foto del lugar donde estudiaste para la tarjeta de hoy."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana prend une photo du lieu où tu as étudié, pour la carte du jour."
+            "value" : "nawana filme ton entraînement à l’oral quand tu allumes la caméra, et prend une photo du lieu où tu as étudié pour la carte du jour."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawanaが、今日勉強した場所を撮影して今日のカードに使います。"
+            "value" : "nawanaが、カメラをオンにしたときのスピーチ練習を録画し、今日勉強した場所を撮影して今日のカードに使います。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "나와나가 오늘 공부한 자리를 찍어 오늘의 카드에 씁니다."
+            "value" : "카메라를 켜면 나와나가 스피치 연습을 녹화하고, 오늘 공부한 자리를 찍어 오늘의 카드에 씁니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana 会拍下今天读书的地方，用在今日卡片上。"
+            "value" : "开启相机时，nawana 会录下你的演讲练习，并拍下今天读书的地方，用在今日卡片上。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana 會拍下今天讀書的地方，用在今日卡片上。"
+            "value" : "開啟相機時，nawana 會錄下你的演講練習，並拍下今天讀書的地方，用在今日卡片上。"
           }
         }
       }
