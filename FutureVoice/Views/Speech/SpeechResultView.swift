@@ -142,7 +142,9 @@ struct SpeechResultView: View {
         if let video = take.videoFilename {
             Section {
                 VideoPlayer(player: player)
-                    .aspectRatio(3 / 4, contentMode: .fit)
+                    // A screen take is phone-shaped, a camera take 3:4; the
+                    // player letterboxes either inside a fixed height.
+                    .frame(height: 480)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
                     .onAppear {

@@ -52,6 +52,11 @@ final class SpeechTakeSession: ObservableObject {
     private var position: Double = 0
     private var wavURL: URL?
     private var recordingVideo = false
+    /// When the screen recording started — it begins before the countdown,
+    /// so the voice's start is measured against it. Nil = not recording the
+    /// screen (camera off, refused, unavailable).
+    private var screenStartedAt: Date?
+    private var voiceStartedAt: Date?
 
     private let native: String
     private let level_: CEFRLevel
@@ -96,6 +101,10 @@ final class SpeechTakeSession: ObservableObject {
         cursor = 0
         position = 0
         elapsed = 0
+        // With the camera on, the take is saved as the whole screen —
+        // prompter and camera together. Started before the mic, so iOS's
+        // permission alert (if it shows) never sits inside the take.
+        screenStartedAt = cameraOn && camera.isRunning ? await SpeechScreenRecorder.start() : nil
         do {
             try live.start(locale: script.language,
                            preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
@@ -105,6 +114,7 @@ final class SpeechTakeSession: ObservableObject {
             wavURL = try recorder.prepare(quality: .sttOptimal)
         } catch {
             live.stop()
+            if screenStartedAt != nil { SpeechScreenRecorder.discard(); screenStartedAt = nil }
             phase = .failed(explain("The microphone couldn't start. Try again."))
             return
         }
@@ -115,7 +125,9 @@ final class SpeechTakeSession: ObservableObject {
             guard case .countdown = phase else { return }
         }
         try? recorder.beginPrepared()
-        recordingVideo = cameraOn && camera.startRecording() != nil
+        voiceStartedAt = Date()
+        // Screen refused or unavailable: keep the camera's own take instead.
+        recordingVideo = screenStartedAt == nil && cameraOn && camera.startRecording() != nil
         HapticEngine.countdownGo()
         startedAt = Date()
         lastAdvanceAt = Date()
@@ -186,7 +198,11 @@ final class SpeechTakeSession: ObservableObject {
         let duration = elapsed
         let recorded = recorder.stop() ?? wavURL
         let liveText = await live.stopAndFinalize()
-        let rawVideo = recordingVideo ? await camera.stopRecording() : nil
+        let screenVideo = screenStartedAt != nil ? await SpeechScreenRecorder.stop() : nil
+        var leadIn = 0.0
+        if let screen = screenStartedAt, let voice = voiceStartedAt { leadIn = voice.timeIntervalSince(screen) }
+        screenStartedAt = nil
+        let rawVideo = recordingVideo ? await camera.stopRecording() : screenVideo
         recordingVideo = false
 
         guard let recorded else {
@@ -219,7 +235,8 @@ final class SpeechTakeSession: ObservableObject {
         if let rawVideo {
             let name = "take-\(id.uuidString).mov"
             var url = SpeechStore.mediaURL(name)
-            if await SpeechMediaMerger.merge(video: rawVideo, audio: audioURL, to: url) {
+            if await SpeechMediaMerger.merge(video: rawVideo, audio: audioURL, to: url,
+                                             videoLeadIn: screenVideo != nil ? leadIn : 0) {
                 // A camera take is the learner's to keep or save to Photos;
                 // it doesn't ride in the device backup at this size.
                 var values = URLResourceValues()
@@ -273,6 +290,7 @@ final class SpeechTakeSession: ObservableObject {
             if recordingVideo {
                 Task { if let v = await camera.stopRecording() { try? FileManager.default.removeItem(at: v) } }
             }
+            if screenStartedAt != nil { SpeechScreenRecorder.discard(); screenStartedAt = nil }
         }
         camera.stop()
     }

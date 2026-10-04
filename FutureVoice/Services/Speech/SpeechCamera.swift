@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import ReplayKit
 import SwiftUI
 import UIKit
 
@@ -121,7 +122,10 @@ struct SpeechCameraPreview: UIViewRepresentable {
 /// within a few milliseconds of each other; that offset is below what an eye
 /// reads as out of sync, so they are laid on at zero.
 enum SpeechMediaMerger {
-    static func merge(video: URL, audio: URL, to output: URL) async -> Bool {
+    /// - Parameter videoLeadIn: seconds of the video before the voice
+    ///   started (the screen recording begins before the countdown); cut off
+    ///   so picture and voice start together.
+    static func merge(video: URL, audio: URL, to output: URL, videoLeadIn: Double = 0) async -> Bool {
         let composition = AVMutableComposition()
         let videoAsset = AVURLAsset(url: video)
         let audioAsset = AVURLAsset(url: audio)
@@ -133,9 +137,11 @@ enum SpeechMediaMerger {
               let cv = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
               let ca = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
         else { return false }
-        let duration = CMTimeMinimum(vDuration, aDuration)
+        let lead = CMTime(seconds: max(0, videoLeadIn), preferredTimescale: 600)
+        let duration = CMTimeMinimum(CMTimeSubtract(vDuration, lead), aDuration)
+        guard duration.seconds > 0.5 else { return false }
         do {
-            try cv.insertTimeRange(CMTimeRange(start: .zero, duration: duration), of: vTrack, at: .zero)
+            try cv.insertTimeRange(CMTimeRange(start: lead, duration: duration), of: vTrack, at: .zero)
             try ca.insertTimeRange(CMTimeRange(start: .zero, duration: duration), of: aTrack, at: .zero)
         } catch { return false }
         cv.preferredTransform = transform
@@ -148,5 +154,48 @@ enum SpeechMediaMerger {
             export.exportAsynchronously { cont.resume() }
         }
         return export.status == .completed
+    }
+}
+
+/// The whole take screen as one video — prompter on top, camera below,
+/// exactly what the reader saw — through ReplayKit's in-app recording.
+/// The screen recorder's own mic stays OFF: the voice is the app's capture
+/// (voice processing, the worn mic), muxed in afterwards like the camera.
+/// iOS asks the learner once before it records ("Allow screen recording?")
+/// and again after a few minutes; a refusal falls back to the camera take.
+@MainActor
+enum SpeechScreenRecorder {
+    static var isRecording: Bool { RPScreenRecorder.shared().isRecording }
+
+    /// Starts recording. Returns when it actually started, or nil.
+    static func start() async -> Date? {
+        let recorder = RPScreenRecorder.shared()
+        guard recorder.isAvailable, !recorder.isRecording else { return nil }
+        recorder.isMicrophoneEnabled = false
+        recorder.isCameraEnabled = false
+        do {
+            try await recorder.startRecording()
+            return Date()
+        } catch {
+            return nil
+        }
+    }
+
+    /// Stops and writes the movie; nil if nothing was recorded.
+    static func stop() async -> URL? {
+        let recorder = RPScreenRecorder.shared()
+        guard recorder.isRecording else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("speech-screen-\(UUID().uuidString).mp4")
+        do {
+            try await recorder.stopRecording(withOutput: url)
+            return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        } catch {
+            return nil
+        }
+    }
+
+    static func discard() {
+        Task { if let url = await stop() { try? FileManager.default.removeItem(at: url) } }
     }
 }
