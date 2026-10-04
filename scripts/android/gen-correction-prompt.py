@@ -7,19 +7,26 @@ content: retyped, the two platforms would judge the same spoken line by
 different rules, and the ASR guards (drop / digit / contraction) are exactly
 the lines a retype loses. So it is extracted, never copied by hand.
 
-    python3 scripts/android/gen-correction-prompt.py
+    python3 scripts/android/gen-correction-prompt.py               # worktree Swift
+    python3 scripts/android/gen-correction-prompt.py --ref 7c12b9e # iOS at a commit
 
 Fails loudly on any interpolation it does not know how to map.
 """
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SWIFT = ROOT / "FutureVoice/Services/ConversationEngine.swift"
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/talk/CorrectionOnlyPrompt.kt"
 
-src = SWIFT.read_text()
+REL = "FutureVoice/Services/ConversationEngine.swift"
+if "--ref" in sys.argv:
+    ref = sys.argv[sys.argv.index("--ref") + 1]
+    src = subprocess.check_output(["git", "-C", str(ROOT), "show", f"{ref}:{REL}"], text=True)
+else:
+    src = SWIFT.read_text()
 m = re.search(
     r'static func correctionOnlyPrompt\(.*?\{\s*'
     r'let targetName = .*?\n\s*let nativeName = .*?\n\s*return """\n(.*?)\n\s*"""',
@@ -43,6 +50,10 @@ mapping = {
     r"\(scriptGuard(targetLanguage))": "$scriptGuard",
     r"\(spacingGuard(targetLanguage))": "$spacingGuard",
     r"\(registerGuard(targetLanguage))": "$registerGuard",
+    # A call with someone the learner SET a form of address for (iOS
+    # `ede039e`): the one register slip a coach may name. Built by the
+    # caller (`ConversationEngine.relationshipRegisterLine`), "" otherwise.
+    r"\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))": "$relationshipLine",
 }
 
 
@@ -91,7 +102,7 @@ if r"\(" in text:
              + re.search(r"\\\([^)]*\)", text).group(0))
 
 # Kotlin raw strings can't escape `$`; only our own placeholders may remain.
-stray = re.sub(r"\$(targetName|nativeName|levelCode|scriptGuard|spacingGuard|registerGuard)\b", "", text)
+stray = re.sub(r"\$(targetName|nativeName|levelCode|scriptGuard|spacingGuard|registerGuard|relationshipLine)\b", "", text)
 if "$" in stray:
     sys.exit("prompt carries a literal '$' — escape it before generating")
 
@@ -129,7 +140,10 @@ object CorrectionOnlyPrompt {{
             else -> ""
         }}
 
-    fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel): String {{
+    /** [relationshipLine]: `ConversationEngine.relationshipRegisterLine` for a
+     *  cast call, "" otherwise — every other prompt stays byte-identical. */
+    fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel,
+              relationshipLine: String = ""): String {{
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()

@@ -30,7 +30,10 @@ object CorrectionOnlyPrompt {
             else -> ""
         }
 
-    fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel): String {
+    /** [relationshipLine]: `ConversationEngine.relationshipRegisterLine` for a
+     *  cast call, "" otherwise — every other prompt stays byte-identical. */
+    fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel,
+              relationshipLine: String = ""): String {
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()
@@ -66,7 +69,7 @@ Return STRICT JSON only — no prose, no code fences:
   building" arrives as "I am building" every time. A suggestion whose
   only change is contracting what you received is correcting the
   transcriber, not the learner. If that is the only change you would
-  make, the line was fine: return null.$scriptGuard$spacingGuard$registerGuard
+  make, the line was fine: return null.$scriptGuard$spacingGuard$registerGuard$relationshipLine
 - Judge it as SPEECH, never as writing. Contractions, casual register
   and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
   speakers talk, not slips.

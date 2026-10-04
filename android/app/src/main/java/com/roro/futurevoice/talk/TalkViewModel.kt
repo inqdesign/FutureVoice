@@ -266,7 +266,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                     cast = config.cast,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
-                ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage)
+                ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
+                    cast = config.cast)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 openConversation()
@@ -420,7 +421,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     } else runCatching {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
-                                config.targetLanguage, config.nativeLanguage),
+                                config.targetLanguage, config.nativeLanguage, cast = config.cast),
                             messages = listOf(GeminiClient.Message(
                                 GeminiClient.Message.Role.USER,
                                 "(the call just connected — say your opening line, nothing else)")),
@@ -693,7 +694,9 @@ class TalkViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             val payload = runCatching {
                 GeminiClient(auth).sendJson(
-                    system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level),
+                    system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level,
+                        relationshipLine = ConversationCharacter.relationshipRegisterLine(
+                            cfg.targetLanguage, cfg.cast)),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, content)),
                     serializer = ConversationTurnPayload.serializer(),
                     // Buffered: a truncation loses the WHOLE correction, and

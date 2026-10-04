@@ -518,7 +518,7 @@
 해당 없음: 웹 커뮤니티 9개, `a32bb74`(운영 SQL), `0cd6f78`(서버 알림), `cf63c4e` `01ecc15` `ba890d3`(게이트웨이 — 공용이라 자동 적용), `8df8e79`, `a7b42a8`.
 이미 됨: `632c2ce` 시계(통화 프롬프트, 2.38), `0fb399b` 목소리 보관(`6cb8312`), 탭 이름 Review(`99d742f`).
 
-- ☐ 2c.1 관계 세 배역·말투 단계·친한 사람은 내 삶을 앎 (`ede039e`) + 미래의 나는 그리워하지 않는다 대화 프롬프트 (`a212c70`)
+- ◐ 2c.1 관계 세 배역·말투 단계·친한 사람은 내 삶을 앎 (`ede039e`) + 미래의 나는 그리워하지 않는다 대화 프롬프트 (`a212c70`) — selfWarmth(`11def27`), 세 배역 블록(`talk/ConversationCharacter.kt`, `Cast.person`)·`SpeechRegister`(`data/`)·새 사람 입력의 말투 카드(관계 칩 다음, `defaultRegisters` 미리 채움)·폼의 "서로의 말투"(자동/세 단계·호칭·내 삶을 알아요)·유명인은 신원 한 줄만(`PublicFigureLookup.identify`, 다시 찾기)·교정 프롬프트 `relationshipRegisterLine`(통화 중 교정·턴 지시문)·장면 요청의 `common_ground`에 말투·유명인 신원(서버 무변경)·아이디어 프롬프트에서 유명인은 신원만. JVM `CounterpartCharacterTest` 11. 안드로이드는 Counterpart가 kotlinx라 유명인 필드 저장은 원래 됐음(왕복 테스트로 고정). 남은 것: 요약 프롬프트의 관계 예외 줄(서버 `session-summary`, 배포 승인 필요), 내 사람·유명인과의 통화 진입점은 iOS 1.1.3에도 없음(Find people 낯선 사람만 — 그 경로는 행 없이 정중체 기본), 폰에서 입력 카드·폼 메뉴·유명인 찾기 확인
 - ☐ 2c.2 코치 모드(이렇게 말해 봐·단어 힌트·연습 통화) (`ede039e` 이후 코치 커밋들) + 문법 초점 (`45b397e`)
 - ◐ 2c.3 견고함: JSON 따옴표 복구 (`55aa93a`), 비ASCII 멱등 키 해시 (`6a9e866`), 이벤트 공통 속성 speed·speed_picked·coach (`74585bf`) — 코드·JVM 테스트(`GeminiJsonRepairTest`) 완료, `net/GeminiJson.kt`가 모델 JSON 디코딩 9곳·멱등 키 헤더 5곳, coach는 코치 모드가 생길 때까지 "off"; 남은 것: 폰에서 한글 이름 계정의 인사말 풀 생성·client_events/PostHog 행에 speed 확인
 - ◐ 2c.4 인사말: 풀을 언어·페르소나별로 (`58d6802`), 문장별 합성 0.42초 간격(오프너·보이스메일, `9f81572`), selfWarmth 오프너·보이스메일 + 풀 키 v2 (`a212c70`) — 앱 쪽 완료(`FreeTalkOpeners` 언어별 저장·옛 파일 이전·실패 텔레메트리, `talk/PacedSpeech.kt` + `PacedSpeechTest`, 풀 프롬프트 selfWarmth·키 v2). 보이스메일은 안드로이드에선 대본이 서버(`voicemail-script`)에서 쓰이고 음성은 게이트웨이가 말하므로(이미 문장별) 앱 몫 없음 — selfWarmth는 공용 엣지 함수 수정이 필요해 보류. 남은 것: 폰에서 두 문장 인사말의 0.42초 쉼 귀 확인

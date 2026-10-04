@@ -258,4 +258,31 @@
     <string name="accent_american">미국식</string>
     <string name="accent_british">영국식</string>
     <string name="accent_australian">호주식</string>
+    <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
+    <string name="rel_how_do_you_two_talk">둘은 어떤 말투로 얘기해요?</string>
+    <string name="rel_how_do_you_and_s_talk">%1$s하고는 어떤 말투로 얘기해요?</string>
+    <string name="rel_calls_and_scenes_change_later">통화와 장면에서 이 말투를 써요. 나중에 바꿀 수 있어요.</string>
+    <string name="rel_you_talk_to_them">내 말투</string>
+    <string name="rel_they_talk_to_you">상대의 말투</string>
+    <string name="rel_s_talks_to_you">%1$s의 말투</string>
+    <string name="rel_casual">편하게</string>
+    <string name="rel_polite">예의 있게</string>
+    <string name="rel_formal">격식 있게</string>
+    <string name="rel_in_s_s">%1$s로는 %2$s</string>
+    <string name="rel_what_you_call_them_optional">내가 부르는 호칭 (선택)</string>
+    <string name="rel_what_they_call_you_optional">나를 부르는 호칭 (선택)</string>
+    <string name="rel_public_figure_we_find_you_confirm">누구인지는 저희가 찾을게요. 확인만 해 주세요. 목소리는 기본 목소리 중 하나이고, 실제 그 사람의 목소리는 쓰지 않아요.</string>
+    <string name="rel_how_you_two_talk">서로의 말투</string>
+    <string name="rel_automatic">자동</string>
+    <string name="rel_what_you_call_them">내가 부르는 호칭</string>
+    <string name="rel_what_they_call_you">나를 부르는 호칭</string>
+    <string name="rel_knows_your_life">내 삶을 알아요</string>
+    <string name="rel_calls_and_scenes_knows_your_life">통화와 장면에서 이 말투를 써요. 내 삶을 아는 사람은 미래의 나에게 한 이야기를 친한 친구처럼 알고 있어요.</string>
+    <string name="rel_calls_and_scenes">통화와 장면에서 이 말투를 써요.</string>
+    <string name="rel_who_they_are">누구인지</string>
+    <string name="rel_not_found">찾지 못했어요</string>
+    <string name="rel_look_up_again">다시 찾기</string>
+    <string name="rel_public_figure_found_footer">통화에서는 이 사람에 대해 공개된 모든 걸 바탕으로 이야기해요. 다른 사람이라면 이름을 고치고 다시 찾아 주세요.</string>
+    <string name="rel_public_figure_nobody_footer">이 이름으로 찾은 유명인이 없어요. 철자를 확인하고 다시 찾아 주세요.</string>
+    <string name="rel_public_figure_look_up_footer">누구인지 찾아본 뒤 확인해 주세요.</string>
 </resources>

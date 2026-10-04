@@ -274,4 +274,31 @@
     <string name="accent_american">American</string>
     <string name="accent_british">British</string>
     <string name="accent_australian">Australian</string>
+    <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
+    <string name="rel_how_do_you_two_talk">How do you two talk?</string>
+    <string name="rel_how_do_you_and_s_talk">How do you and %1$s talk?</string>
+    <string name="rel_calls_and_scenes_change_later">Calls and scenes speak this way. You can change it later.</string>
+    <string name="rel_you_talk_to_them">You talk to them</string>
+    <string name="rel_they_talk_to_you">They talk to you</string>
+    <string name="rel_s_talks_to_you">%1$s talks to you</string>
+    <string name="rel_casual">Casual</string>
+    <string name="rel_polite">Polite</string>
+    <string name="rel_formal">Formal</string>
+    <string name="rel_in_s_s">In %1$s: %2$s</string>
+    <string name="rel_what_you_call_them_optional">What you call them (optional)</string>
+    <string name="rel_what_they_call_you_optional">What they call you (optional)</string>
+    <string name="rel_public_figure_we_find_you_confirm">We\'ll find who they are — you just confirm. Their voice is a preset, never their real one.</string>
+    <string name="rel_how_you_two_talk">How you two talk</string>
+    <string name="rel_automatic">Automatic</string>
+    <string name="rel_what_you_call_them">What you call them</string>
+    <string name="rel_what_they_call_you">What they call you</string>
+    <string name="rel_knows_your_life">Knows your life</string>
+    <string name="rel_calls_and_scenes_knows_your_life">Calls and scenes speak this way. Someone who knows your life knows what you\'ve told your future self, the way a close friend would.</string>
+    <string name="rel_calls_and_scenes">Calls and scenes speak this way.</string>
+    <string name="rel_who_they_are">Who they are</string>
+    <string name="rel_not_found">Not found</string>
+    <string name="rel_look_up_again">Look up again</string>
+    <string name="rel_public_figure_found_footer">Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.</string>
+    <string name="rel_public_figure_nobody_footer">Nobody public came up for that name. Check the spelling and look up again.</string>
+    <string name="rel_public_figure_look_up_footer">Look up to find who they are, then confirm.</string>
 </resources>

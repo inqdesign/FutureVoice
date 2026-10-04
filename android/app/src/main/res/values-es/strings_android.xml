@@ -274,4 +274,31 @@
     <string name="accent_american">Americano</string>
     <string name="accent_british">Británico</string>
     <string name="accent_australian">Australiano</string>
+    <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
+    <string name="rel_how_do_you_two_talk">¿Cómo se hablan?</string>
+    <string name="rel_how_do_you_and_s_talk">¿Cómo hablas con %1$s?</string>
+    <string name="rel_calls_and_scenes_change_later">Las llamadas y las escenas hablan así. Puedes cambiarlo después.</string>
+    <string name="rel_you_talk_to_them">Cómo le hablas</string>
+    <string name="rel_they_talk_to_you">Cómo te habla</string>
+    <string name="rel_s_talks_to_you">Cómo te habla %1$s</string>
+    <string name="rel_casual">Informal</string>
+    <string name="rel_polite">Cortés</string>
+    <string name="rel_formal">Formal</string>
+    <string name="rel_in_s_s">En %1$s: %2$s</string>
+    <string name="rel_what_you_call_them_optional">Cómo le llamas (opcional)</string>
+    <string name="rel_what_they_call_you_optional">Cómo te llama (opcional)</string>
+    <string name="rel_public_figure_we_find_you_confirm">Nosotros averiguamos quién es; tú solo confirmas. Su voz es una predeterminada, nunca la real.</string>
+    <string name="rel_how_you_two_talk">Cómo se hablan</string>
+    <string name="rel_automatic">Automático</string>
+    <string name="rel_what_you_call_them">Cómo le llamas</string>
+    <string name="rel_what_they_call_you">Cómo te llama</string>
+    <string name="rel_knows_your_life">Conoce tu vida</string>
+    <string name="rel_calls_and_scenes_knows_your_life">Las llamadas y las escenas hablan así. Quien conoce tu vida sabe lo que le has contado a tu yo fluido, como un amigo cercano.</string>
+    <string name="rel_calls_and_scenes">Las llamadas y las escenas hablan así.</string>
+    <string name="rel_who_they_are">Quién es</string>
+    <string name="rel_not_found">No encontrado</string>
+    <string name="rel_look_up_again">Buscar de nuevo</string>
+    <string name="rel_public_figure_found_footer">Las llamadas se basan en todo lo que se sabe públicamente de esta persona. ¿No es quien buscas? Corrige el nombre y vuelve a buscar.</string>
+    <string name="rel_public_figure_nobody_footer">No encontramos a ninguna figura pública con ese nombre. Revisa cómo se escribe y vuelve a buscar.</string>
+    <string name="rel_public_figure_look_up_footer">Busca quién es y confírmalo.</string>
 </resources>

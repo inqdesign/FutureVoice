@@ -258,4 +258,31 @@
     <string name="accent_american">米国</string>
     <string name="accent_british">英国</string>
     <string name="accent_australian">豪州</string>
+    <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
+    <string name="rel_how_do_you_two_talk">ふたりはどう話していますか？</string>
+    <string name="rel_how_do_you_and_s_talk">%1$sとはどう話していますか？</string>
+    <string name="rel_calls_and_scenes_change_later">通話とシーンはこの話し方になります。あとから変えられます。</string>
+    <string name="rel_you_talk_to_them">自分の話し方</string>
+    <string name="rel_they_talk_to_you">相手の話し方</string>
+    <string name="rel_s_talks_to_you">%1$sの話し方</string>
+    <string name="rel_casual">くだけて</string>
+    <string name="rel_polite">ていねいに</string>
+    <string name="rel_formal">かしこまって</string>
+    <string name="rel_in_s_s">%1$sでは%2$s</string>
+    <string name="rel_what_you_call_them_optional">相手の呼び方（任意）</string>
+    <string name="rel_what_they_call_you_optional">自分の呼ばれ方（任意）</string>
+    <string name="rel_public_figure_we_find_you_confirm">誰なのかはこちらで探します。確認するだけで大丈夫です。声はプリセットで、本人の声は使いません。</string>
+    <string name="rel_how_you_two_talk">ふたりの話し方</string>
+    <string name="rel_automatic">自動</string>
+    <string name="rel_what_you_call_them">相手の呼び方</string>
+    <string name="rel_what_they_call_you">自分の呼ばれ方</string>
+    <string name="rel_knows_your_life">暮らしを知っている</string>
+    <string name="rel_calls_and_scenes_knows_your_life">通話とシーンはこの話し方になります。暮らしを知っている相手は、流暢な自分に話したことを親しい友だちのように知っています。</string>
+    <string name="rel_calls_and_scenes">通話とシーンはこの話し方になります。</string>
+    <string name="rel_who_they_are">どんな人か</string>
+    <string name="rel_not_found">見つかりません</string>
+    <string name="rel_look_up_again">もう一度検索</string>
+    <string name="rel_public_figure_found_footer">通話では、この人について公開されていることすべてをもとに話します。別の人なら、名前を直してもう一度検索してください。</string>
+    <string name="rel_public_figure_nobody_footer">この名前の有名人は見つかりませんでした。つづりを確認して、もう一度検索してください。</string>
+    <string name="rel_public_figure_look_up_footer">検索して誰なのかを確かめてください。</string>
 </resources>

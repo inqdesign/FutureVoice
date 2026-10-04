@@ -258,4 +258,31 @@
     <string name="accent_american">美式</string>
     <string name="accent_british">英式</string>
     <string name="accent_australian">澳式</string>
+    <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
+    <string name="rel_how_do_you_two_talk">你們怎麼說話？</string>
+    <string name="rel_how_do_you_and_s_talk">你和%1$s怎麼說話？</string>
+    <string name="rel_calls_and_scenes_change_later">通話和情境會用這種語氣，之後也能修改。</string>
+    <string name="rel_you_talk_to_them">我的語氣</string>
+    <string name="rel_they_talk_to_you">對方的語氣</string>
+    <string name="rel_s_talks_to_you">%1$s的語氣</string>
+    <string name="rel_casual">輕鬆</string>
+    <string name="rel_polite">禮貌</string>
+    <string name="rel_formal">正式</string>
+    <string name="rel_in_s_s">%1$s：%2$s</string>
+    <string name="rel_what_you_call_them_optional">你怎麼稱呼對方（選填）</string>
+    <string name="rel_what_they_call_you_optional">對方怎麼稱呼你（選填）</string>
+    <string name="rel_public_figure_we_find_you_confirm">我們會找出是誰，你只要確認就好。聲音是預設聲音，絕不會是本人的聲音。</string>
+    <string name="rel_how_you_two_talk">彼此的語氣</string>
+    <string name="rel_automatic">自動</string>
+    <string name="rel_what_you_call_them">你怎麼稱呼對方</string>
+    <string name="rel_what_they_call_you">對方怎麼稱呼你</string>
+    <string name="rel_knows_your_life">了解你的生活</string>
+    <string name="rel_calls_and_scenes_knows_your_life">通話和情境會用這種語氣。了解你生活的人，會像好朋友一樣知道你跟未來的自己說過的事。</string>
+    <string name="rel_calls_and_scenes">通話和情境會用這種語氣。</string>
+    <string name="rel_who_they_are">是誰</string>
+    <string name="rel_not_found">找不到</string>
+    <string name="rel_look_up_again">重新查詢</string>
+    <string name="rel_public_figure_found_footer">通話會以這個人公開的一切為基礎。不是這個人？修改名字後再查一次。</string>
+    <string name="rel_public_figure_nobody_footer">找不到這個名字的公眾人物。請確認拼寫後再查一次。</string>
+    <string name="rel_public_figure_look_up_footer">先查出是誰，再確認。</string>
 </resources>

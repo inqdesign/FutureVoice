@@ -75,6 +75,26 @@ data class Counterpart(
     @Serializable(with = IsoDateMillisSerializer::class)
     val factsRefreshedAt: Long? = null,
 
+    // How the two of them talk (iOS `ede039e`). The profile above says who
+    // the person IS; none of it said how they and the learner SPEAK to each
+    // other, so a best friend came out as a polite stranger.
+    /** The intake's relationship chip (`"Friend"`, `"Manager"` …), as its
+     *  English raw value — `relationship` is the learner's own words. */
+    val relationshipKind: String? = null,
+    /** How the LEARNER speaks to this person. null = the relationship decides. */
+    @Serializable(with = LenientSpeechRegisterSerializer::class)
+    val myRegister: SpeechRegister? = null,
+    /** How this person speaks to the learner (Korean/Japanese let the two differ). */
+    @Serializable(with = LenientSpeechRegisterSerializer::class)
+    val theirRegister: SpeechRegister? = null,
+    /** What the learner calls them ("형", "부장님", "Sarah"). */
+    val iCallThem: String = "",
+    /** What they call the learner. */
+    val theyCallMe: String = "",
+    /** Whether this person knows the learner's life the way someone close
+     *  does. null = the relationship's default ([knowsMyLifeByDefault]). */
+    val knowsMyLife: Boolean? = null,
+
     /** Situation ideas per target language — title + blurb, the blurb is the scene's seed. */
     val scenariosByLanguage: Map<String, List<com.roro.futurevoice.talk.SuggestedTopic>> = emptyMap(),
 

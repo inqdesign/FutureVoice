@@ -261,4 +261,31 @@
     <string name="accent_american">Américain</string>
     <string name="accent_british">Anglais</string>
     <string name="accent_australian">Australien</string>
+    <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
+    <string name="rel_how_do_you_two_talk">Comment vous vous parlez ?</string>
+    <string name="rel_how_do_you_and_s_talk">Comment tu parles avec %1$s ?</string>
+    <string name="rel_calls_and_scenes_change_later">Les appels et les scènes suivent ce ton. Tu pourras le changer plus tard.</string>
+    <string name="rel_you_talk_to_them">Comment tu lui parles</string>
+    <string name="rel_they_talk_to_you">Comment l’autre te parle</string>
+    <string name="rel_s_talks_to_you">Comment %1$s te parle</string>
+    <string name="rel_casual">Familier</string>
+    <string name="rel_polite">Poli</string>
+    <string name="rel_formal">Formel</string>
+    <string name="rel_in_s_s">En %1$s : %2$s</string>
+    <string name="rel_what_you_call_them_optional">Comment tu l’appelles (facultatif)</string>
+    <string name="rel_what_they_call_you_optional">Comment on t’appelle (facultatif)</string>
+    <string name="rel_public_figure_we_find_you_confirm">On trouve qui c’est, tu n’as qu’à confirmer. Sa voix est une voix prédéfinie, jamais la vraie.</string>
+    <string name="rel_how_you_two_talk">Votre façon de vous parler</string>
+    <string name="rel_automatic">Automatique</string>
+    <string name="rel_what_you_call_them">Comment tu l’appelles</string>
+    <string name="rel_what_they_call_you">Comment on t’appelle</string>
+    <string name="rel_knows_your_life">Connaît ta vie</string>
+    <string name="rel_calls_and_scenes_knows_your_life">Les appels et les scènes suivent ce ton. Une personne qui connaît ta vie sait ce que tu as dit à ton moi fluide, comme un ami proche.</string>
+    <string name="rel_calls_and_scenes">Les appels et les scènes suivent ce ton.</string>
+    <string name="rel_who_they_are">Qui c’est</string>
+    <string name="rel_not_found">Introuvable</string>
+    <string name="rel_look_up_again">Rechercher à nouveau</string>
+    <string name="rel_public_figure_found_footer">Les appels s’appuient sur tout ce qu’on sait publiquement de cette personne. Ce n’est pas la bonne ? Corrige le nom et relance la recherche.</string>
+    <string name="rel_public_figure_nobody_footer">Aucune personnalité publique ne correspond à ce nom. Vérifie l’orthographe et relance la recherche.</string>
+    <string name="rel_public_figure_look_up_footer">Lance la recherche pour savoir qui c’est, puis confirme.</string>
 </resources>
