@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,6 +64,12 @@ fun CounterpartDetailScreen(
     language: String,
     onOpenBook: (String) -> Unit,
     onBack: () -> Unit,
+    /**
+     * Open the composer with this person and one of their situation ideas
+     * written in (iOS `onPickIdea`, 2026-09-30). null = the ideas are
+     * read-only — there is no host to hand them to.
+     */
+    onPickIdea: ((Counterpart, String) -> Unit)? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -155,14 +162,23 @@ fun CounterpartDetailScreen(
                         modifier = Modifier.fillMaxWidth().clickable { regenerate(c) }.padding(16.dp))
                 } else ideas.forEachIndexed { i, idea ->
                     if (i > 0) GroupedRowDivider(inset = false)
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Text(idea.title, style = MaterialTheme.typography.bodyLarge)
-                        if (idea.blurb.isNotEmpty()) Text(idea.blurb, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // A tapped idea is the reel's pick: the composer opens with
+                    // the line written (the blurb, else the title).
+                    val pick = onPickIdea?.let { p -> { p(c, idea.blurb.trim().ifEmpty { idea.title }) } }
+                    Row(Modifier.fillMaxWidth().then(if (pick != null) Modifier.clickable(onClick = pick) else Modifier)
+                        .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(idea.title, style = MaterialTheme.typography.bodyLarge)
+                            if (idea.blurb.isNotEmpty()) Text(idea.blurb, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (pick != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline)
                     }
                 }
                 ideasError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
             }
-            GroupedFooter(stringResource(R.string.grounded_in_your_relationship_with_these_appear_as_ideas_whe_d659c0, c.name))
+            GroupedFooter(if (onPickIdea != null) stringResource(R.string.person_idea_tap_footer, c.name)
+                else stringResource(R.string.grounded_in_your_relationship_with_these_appear_as_ideas_whe_d659c0, c.name))
 
             if (scenes.isNotEmpty()) {
                 GroupedSectionSpacer()

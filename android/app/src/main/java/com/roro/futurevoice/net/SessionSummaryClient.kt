@@ -71,7 +71,7 @@ class SessionSummaryClient(private val auth: AuthRepository) {
         val request = Request.Builder()
             .url(Config.functionUrl("session-summary"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
-            .header("X-Idempotency-Key", idempotencyKey)
+            .header("X-Idempotency-Key", IdempotencyKey.headerSafe(idempotencyKey))
             .post(
                 Edge.json.encodeToString(RequestBody.serializer(), body)
                     .toRequestBody("application/json".toMediaType())

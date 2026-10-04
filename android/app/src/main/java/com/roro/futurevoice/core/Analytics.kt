@@ -75,9 +75,13 @@ object Analytics {
 
     fun capture(event: String, props: Map<String, Any?> = emptyMap()) {
         if (!enabled) return
+        // Per event rather than a super property: both settings change while
+        // the app runs (iOS `74585bf`). The caller's value wins.
+        val settings = runCatching { Telemetry.callSettings(appContext) }.getOrDefault(emptyMap())
         send(event, buildJsonObject {
             put("product", "nawana"); put("platform", "android")
             put("app_version", BuildConfig.VERSION_NAME)
+            for ((k, v) in settings) put(k, v)
             for ((k, v) in props) when (v) {
                 null -> Unit
                 is Boolean -> put(k, v)

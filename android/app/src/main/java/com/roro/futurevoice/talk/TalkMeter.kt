@@ -158,7 +158,8 @@ class TalkMeter(
                 .url(Config.functionUrl("talk-tick"))
                 .header("Authorization", "Bearer ${auth.accessToken()}")
                 // One key per tick: a retried request can't double-bill.
-                .header("X-Idempotency-Key", "tick:$sessionKey:$label")
+                .header("X-Idempotency-Key",
+                    com.roro.futurevoice.net.IdempotencyKey.headerSafe("tick:$sessionKey:$label"))
                 .post(
                     Edge.json.encodeToString(
                         TickBody.serializer(),

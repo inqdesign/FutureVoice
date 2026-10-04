@@ -42,8 +42,29 @@ object Telemetry {
 
     fun start(context: Context) { appContext = context.applicationContext }
 
+    /**
+     * How the learner has the call set up, stamped on every event (here and
+     * on [Analytics.capture]) — iOS `Telemetry.callSettings`, `74585bf`.
+     * Retention fell by self-reported level (A1 8% came back, B2+ 57%) and
+     * nothing on the server could say whether the slower voice or coach mode
+     * changed that. `speed` is the multiplier actually sent upstream,
+     * `speed_picked` separates a learner who chose a rung from one who never
+     * touched the default. Read per event, never registered once: both change
+     * while the app runs. Android has no coach mode yet, so `coach` is "off"
+     * until it does — then read the setting here.
+     */
+    fun callSettings(context: Context): Map<String, String> = mapOf(
+        "speed" to "%.2f".format(java.util.Locale.US,
+            com.roro.futurevoice.data.SpeechSpeed.current(context).multiplier(context)),
+        "speed_picked" to if (com.roro.futurevoice.data.SpeechSpeed.picked(context)) "1" else "0",
+        "coach" to "off",
+    )
+
     fun log(event: String, properties: Map<String, String> = emptyMap()) {
         val context = appContext ?: return
+        // Read now, not in the coroutine: the event describes the call as it
+        // was set up at this moment.
+        val settings = runCatching { callSettings(context) }.getOrDefault(emptyMap())
         scope.launch {
             runCatching {
                 val auth = AuthRepository()
@@ -53,6 +74,8 @@ object Telemetry {
                     put("user_id", uid)
                     put("event", event)
                     put("properties", buildJsonObject {
+                        // The caller's value wins over a setting of the same name.
+                        settings.forEach { (k, v) -> put(k, v) }
                         properties.forEach { (k, v) -> put(k, v) }
                         put("network", network(context))
                         // Which build produced this. Without it every gap in

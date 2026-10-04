@@ -45,12 +45,17 @@ class CallForegroundService : Service() {
         const val ACTION_END = "com.roro.futurevoice.call.END"
 
         fun start(context: Context, title: String, hint: String, paused: Boolean) {
+            // The "in a call" notification is the live-call bracket (iOS pairs
+            // `holdForLiveCall` with `CallNowPlaying`): no scheduled ring may
+            // land on a call already up. Idempotent — this runs per phase.
+            com.roro.futurevoice.data.DailyCallScheduler.holdForLiveCall(context)
             val i = Intent(context, CallForegroundService::class.java)
                 .putExtra(EXTRA_TITLE, title).putExtra(EXTRA_HINT, hint).putExtra(EXTRA_PAUSED, paused)
             runCatching { context.startForegroundService(i) }
         }
 
         fun stop(context: Context) {
+            com.roro.futurevoice.data.DailyCallScheduler.releaseAfterLiveCall(context)
             runCatching { context.stopService(Intent(context, CallForegroundService::class.java)) }
         }
 

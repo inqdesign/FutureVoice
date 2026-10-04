@@ -88,7 +88,7 @@ class CurriculumClient(private val auth: AuthRepository) {
         val request = Request.Builder()
             .url(Config.functionUrl("scenario-curriculum"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
-            .header("X-Idempotency-Key", key)
+            .header("X-Idempotency-Key", IdempotencyKey.headerSafe(key))
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
         Edge.client.newCall(request).execute().use { resp ->
@@ -98,7 +98,7 @@ class CurriculumClient(private val auth: AuthRepository) {
                 .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
                 ?.joinToString("").orEmpty()
             val json = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
-            val payload = Edge.json.decodeFromString(Payload.serializer(), json)
+            val payload = GeminiJson.decode(Payload.serializer(), json)
             val turns = payload.turns.map {
                 DialogueEngineTurn(
                     speaker = if (it.speaker.lowercase() == "user") "user" else "counterpart",

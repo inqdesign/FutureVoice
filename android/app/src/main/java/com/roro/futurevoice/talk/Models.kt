@@ -53,6 +53,17 @@ data class Turn(
     val audioURL: String? = null,
     /** The learner flagged this turn as misheard — out of every metric. */
     val excludedFromScoring: Boolean = false,
+    /**
+     * A fluent-self line the learner talked over moments after it began (iOS
+     * `Turn.talkedOver`, 2026-09-29): the gateway took a pause for the end of
+     * their turn and cut in, and they carried on with the SAME sentence. Say
+     * it again reads the learner's lines either side as one
+     * (`SayItAgainScript.mergingCutIns`). Encoded only when true, so every
+     * turn already on disk keeps its bytes.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val talkedOver: Boolean = false,
 )
 
 @Serializable

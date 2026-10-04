@@ -268,7 +268,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header(
                 "X-Idempotency-Key",
-                idempotencyKey ?: InstallSalt.ttsKey(text, voiceId, withTimestamps),
+                IdempotencyKey.headerSafe(idempotencyKey ?: InstallSalt.ttsKey(text, voiceId, withTimestamps)),
             )
             .post(
                 Edge.json.encodeToString(TtsBody.serializer(), body)

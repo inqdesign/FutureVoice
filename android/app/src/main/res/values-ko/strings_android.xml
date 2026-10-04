@@ -254,4 +254,5 @@
     <string name="set_the_speed_and_accent_again_then_start">속도와 억양을 다시 고르고 시작해요.</string>
     <string name="start_the_call">통화 시작</string>
     <string name="accent_original">그대로</string>
+    <string name="person_idea_tap_footer">하나를 누르면 그 상황으로 바로 만들 수 있어요.</string>
 </resources>

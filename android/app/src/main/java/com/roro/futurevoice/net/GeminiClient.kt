@@ -183,7 +183,7 @@ class GeminiClient(private val auth: AuthRepository) {
         val body = Edge.extractJson(raw)
             ?: throw if (truncated) EdgeError.Truncated else EdgeError.JsonNotFound(raw)
         try {
-            Edge.json.decodeFromString(serializer, body)
+            GeminiJson.decode(serializer, body)
         } catch (e: Exception) {
             if (truncated) throw EdgeError.Truncated else throw e
         }
@@ -246,7 +246,7 @@ class GeminiClient(private val auth: AuthRepository) {
                 val body = Edge.extractJson(joined)
                     ?: throw if (candidate?.finishReason == "MAX_TOKENS") EdgeError.Truncated
                     else EdgeError.JsonNotFound(joined)
-                return@withContext Edge.json.decodeFromString(serializer, body)
+                return@withContext GeminiJson.decode(serializer, body)
             }
 
             val raw = StringBuilder()
@@ -292,7 +292,7 @@ class GeminiClient(private val auth: AuthRepository) {
                 throw if (truncated) EdgeError.Truncated else EdgeError.JsonNotFound(trimmed)
             }
             try {
-                Edge.json.decodeFromString(serializer, body)
+                GeminiJson.decode(serializer, body)
             } catch (e: Exception) {
                 // The reply already shipped; a malformed or cut-off tail must not
                 // undo a turn the user has heard.
@@ -369,7 +369,7 @@ class GeminiClient(private val auth: AuthRepository) {
             val body = Edge.extractJson(text)
                 ?: throw if (truncated) EdgeError.Truncated else EdgeError.JsonNotFound(text)
             try {
-                Edge.json.decodeFromString(serializer, body)
+                GeminiJson.decode(serializer, body)
             } catch (e: Exception) {
                 if (truncated) throw EdgeError.Truncated else throw e
             }
@@ -438,7 +438,7 @@ class GeminiClient(private val auth: AuthRepository) {
             .header("Authorization", "Bearer ${auth.accessToken()}")
             // A caller-supplied key makes retries of the SAME logical request
             // free — the ledger dedupes charges on it.
-            .header("X-Idempotency-Key", idempotencyKey ?: UUID.randomUUID().toString())
+            .header("X-Idempotency-Key", IdempotencyKey.headerSafe(idempotencyKey ?: UUID.randomUUID().toString()))
             .post(payload.toRequestBody("application/json".toMediaType()))
             .build()
     }

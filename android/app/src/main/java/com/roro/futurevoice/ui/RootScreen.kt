@@ -625,6 +625,12 @@ fun RootScreen() {
             language = state.targetLanguage,
             onOpenBook = { bookScenarioId = it },
             onBack = { personDetailId = null },
+            // A tapped idea closes the People page and opens Watch's writing
+            // door with that person and that line (iOS 19b7882).
+            onPickIdea = { person, line ->
+                WatchComposeRequest.pending.value = person to line
+                personDetailId = null; showPeople = false; tab = HomeTab.WATCH
+            },
         )
 
         showPeople -> FindPeopleScreen(

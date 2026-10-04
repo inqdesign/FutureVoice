@@ -176,6 +176,9 @@ object DailyCallScheduler {
         ensureChannel(context)
         val now = System.currentTimeMillis()
         cancelAlarms(context)
+        // Never arm into a live call (see `holdForLiveCall`); the release
+        // re-arms.
+        if (liveCallSince != null) return
         // A PARKED voice (see `VoiceParking`) can't write tomorrow's voicemail,
         // and answering would open a call straight into the paywall. Stand
         // down; the revival re-arms it. The learner's setting is untouched.
@@ -198,6 +201,62 @@ object DailyCallScheduler {
             }
         }
     }
+
+    // MARK: - A call already in progress
+
+    /**
+     * Set while a conversation is live (iOS `DailyCallScheduler.liveCallSince`,
+     * 2026-09-28). In memory on purpose: a killed app drops it, and the next
+     * launch's re-arm puts the rings back.
+     */
+    @Volatile private var liveCallSince: Long? = null
+
+    /**
+     * A scheduled ring must not land on a call the learner is already in: the
+     * ring takes the audio focus out from under the call, and there is
+     * nothing to "answer" — they are on the phone with that same person right
+     * now. Every pending ring comes down for the length of the call, and
+     * [schedule] refuses to arm one until [releaseAfterLiveCall].
+     */
+    fun holdForLiveCall(context: Context) {
+        if (liveCallSince != null) return
+        liveCallSince = System.currentTimeMillis()
+        cancelAlarms(context)
+    }
+
+    /**
+     * The call is over: put the rings back. A slot that came due DURING the
+     * call settles as answered — they were talking to their future self at
+     * that very moment, and a voicemail asking "couldn't talk yesterday?"
+     * would be false. Answering re-arms from tomorrow, exactly as a pickup.
+     */
+    fun releaseAfterLiveCall(context: Context, now: Long = System.currentTimeMillis()) {
+        val since = liveCallSince ?: return
+        liveCallSince = null
+        if (!DailyCallStore.isEnabled(context)) return
+        // A day already settled (answered earlier, or every slot declined)
+        // is neither settled twice nor rung again today.
+        val settledToday = DailyCallStore.history(context).lastOrNull()
+            ?.let { dayOf(it.first) == dayOf(now) } == true
+        if (!settledToday && cameDueDuring(DailyCallStore.times(context), since, now)) {
+            com.roro.futurevoice.core.Analytics.capture("daily_call_during_talk")
+            DailyCallStore.onAnswered(context, now)
+            return
+        }
+        schedule(context, fromTomorrow = settledToday)
+    }
+
+    /** Did any of [minutes] (minutes past local midnight) fall in (since, now]? */
+    fun cameDueDuring(minutes: List<Int>, since: Long, now: Long): Boolean {
+        if (now <= since) return false
+        // A call can cross midnight: check each calendar day it touched.
+        return (0..((now - since) / 86_400_000L + 1).toInt()).any { offset ->
+            minutes.any { m -> at(since, m, offset).let { it > since && it <= now } }
+        }
+    }
+
+    private fun dayOf(at: Long) =
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(at))
 
     /** Whether an exact alarm can be armed right now. Always true below
      *  Android 12, where the permission did not exist. */
@@ -263,6 +322,9 @@ object DailyCallScheduler {
         // re-arm the next one either.
         VoiceParking.init(context)
         if (VoiceParking.parkedId.value != null) { cancelAlarms(context); return }
+        // An alarm that slipped past the hold: the learner is on the call
+        // right now. Stay silent; the release settles the slot as answered.
+        if (liveCallSince != null) return
         ensureChannel(context)
         val answer = contentIntent(context)
         val n: Notification = NotificationCompat.Builder(context, CHANNEL_ID)

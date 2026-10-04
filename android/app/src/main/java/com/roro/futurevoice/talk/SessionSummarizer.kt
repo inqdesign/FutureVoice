@@ -167,7 +167,10 @@ object SessionSummarizer {
         // The learner did nothing wrong: ask ONCE more before making the end
         // of a talk look like a failure. Free — the ledger dedupes on the key.
         // (iOS: the `isMalformedModelOutput` retry in SessionSummarizer.)
-        fun parse(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
+        // Before that retry, the read itself repairs the reported shape — a
+        // retry sends the same prompt and often gets the same slip (iOS
+        // `decodeRepairing`, `55aa93a`).
+        fun parse(text: String): JsonObject = com.roro.futurevoice.net.GeminiJson.parseObject(text)
         fun report(edit: (Progress) -> Progress) {
             progress = edit(progress); onProgress?.invoke(progress)
         }

@@ -148,7 +148,9 @@ class SayItAgainSource(
                 title = session.displayTitle ?: app.getString(R.string.conversation),
                 targetLanguage = session.targetLanguage,
                 otherName = otherName,
-                steps = SayItAgainScript.build(session),
+                steps = SayItAgainScript.build(session) { id ->
+                    File(File(app.filesDir, "turn-audio"), "$id.wav").let { it.isFile && it.length() > 44 }
+                },
                 audio = { step ->
                     val turn = byId[step.id]
                     val recorded = listOfNotNull(

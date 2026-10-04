@@ -59,6 +59,16 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.Symbols
 
 /**
+ * A situation idea tapped on a person's page (iOS `ComposerConfig.situation`,
+ * 2026-09-30): the People page closes and the Watch tab opens the writing door
+ * with that person and that line written in. Parked here because the page and
+ * the tab are different branches of the root.
+ */
+internal object WatchComposeRequest {
+    val pending = kotlinx.coroutines.flow.MutableStateFlow<Pair<Counterpart, String>?>(null)
+}
+
+/**
  * Watch — simulate a specific situation BEFORE it happens (iOS `WatchTab`,
  * as of 1.1.1). Three ways in, all landing in the situation composer:
  *
@@ -92,6 +102,15 @@ internal fun WatchTabBody(
     var managingPeople by remember { mutableStateOf(false) }
     /** The saved scenario open in the composer's EDIT mode, if any. */
     var editingScenario by remember { mutableStateOf<Scenario?>(null) }
+    /** The line the writing door opens with — an idea picked on a person's page. */
+    var situationPrefill by remember { mutableStateOf("") }
+    val composeRequest by WatchComposeRequest.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(composeRequest) {
+        val (person, line) = composeRequest ?: return@LaunchedEffect
+        WatchComposeRequest.pending.value = null
+        editingScenario = null
+        withPerson = person; situationPrefill = line; composing = ComposerMode.CUSTOM
+    }
     val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         scenarios = store.load(language)
@@ -172,6 +191,7 @@ internal fun WatchTabBody(
         ScenarioComposer(
             targetLanguage = language,
             existingCategories = scenarios.mapNotNull { it.category }.distinct(),
+            prefill = situationPrefill,
             person = withPerson,
             // A scene always needs an other person, so this host opens on a
             // character rather than on the fluent self.
@@ -179,7 +199,7 @@ internal fun WatchTabBody(
             mode = mode,
             // Minting it plays it — the composer's CTA IS "Watch".
             onCommitted = { sc -> if (enabled) onWatch(sc.id) },
-            onDismiss = { composing = null; withPerson = null },
+            onDismiss = { composing = null; withPerson = null; situationPrefill = "" },
         )
     }
 

@@ -80,6 +80,9 @@ class RealtimeTalkClient(private val context: Context) {
         const val MIC_RATE = 16_000
         /** What the gateway announces if it says nothing else. */
         private const val DEFAULT_REPLY_RATE = 22_050
+        /** iOS `cutInWindow`: the gateway's own `cutoffWindowMs`, measured
+         *  from the same moment give or take the model's first token. */
+        const val CUT_IN_WINDOW_MS = 2_500L
         /** Mic frames per socket message — ~128 ms, the same size iOS taps. */
         private const val MIC_FRAMES = 2048
     }
@@ -103,6 +106,10 @@ class RealtimeTalkClient(private val context: Context) {
     @Volatile var onReplyDelta: ((context: String, delta: String) -> Unit)? = null
     /** The learner spoke over the reply; playback was cut. */
     @Volatile var onInterrupted: ((context: String) -> Unit)? = null
+    /** The learner talked over the line moments after it began — the
+     *  gateway cut in on a pause and they carried on with the same sentence
+     *  (iOS `onReplyCutIn`). Fired just before that line's [onInterrupted]. */
+    @Volatile var onReplyCutIn: ((context: String) -> Unit)? = null
     /** The gateway ended the call on a wall — "insufficient_credits",
      *  "daily_cap_reached" or "fair_use_limit". */
     @Volatile var onWall: ((code: String) -> Unit)? = null
@@ -147,6 +154,9 @@ class RealtimeTalkClient(private val context: Context) {
     private var player: PcmStreamPlayer? = null
     private var replyRate = DEFAULT_REPLY_RATE
     private var replyContext: String? = null
+    /** When the line on screen began (`audio_start`), for telling a cut-in
+     *  from a learner talking over a line they have been hearing. */
+    @Volatile private var replyBeganAt: Long? = null
     /** Audio for the reply in flight, kept so a Replay has the closing line
      *  even when End lands mid-playback and `audio_end` never arrives. */
     private val replyPCM = ByteArrayOutputStream()
@@ -344,6 +354,7 @@ class RealtimeTalkClient(private val context: Context) {
             "audio_start" -> {
                 val ctx = msg["context"]?.jsonPrimitive?.content
                 replyContext = ctx
+                replyBeganAt = System.currentTimeMillis()
                 replyRate = msg["sampleRate"]?.jsonPrimitive?.content?.toIntOrNull() ?: DEFAULT_REPLY_RATE
                 replyPCM.reset()
                 val rate = replyRate
@@ -385,6 +396,12 @@ class RealtimeTalkClient(private val context: Context) {
             "interrupted" -> {
                 // Stop local playback NOW and drop what was buffered.
                 scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+                // A barge-in this soon after the line began is a cut-in, not
+                // the learner deliberately talking over a line they heard.
+                val began = replyBeganAt
+                if (began != null && System.currentTimeMillis() - began < CUT_IN_WINDOW_MS) {
+                    replyContext?.let { onReplyCutIn?.invoke(it) }
+                }
                 replyContext?.let { onInterrupted?.invoke(it) }
                 state = State.HEARING
             }

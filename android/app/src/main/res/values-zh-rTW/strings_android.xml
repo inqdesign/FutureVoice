@@ -254,4 +254,5 @@
     <string name="set_the_speed_and_accent_again_then_start">重新選好速度和口音，就可以開始了。</string>
     <string name="start_the_call">開始通話</string>
     <string name="accent_original">原聲</string>
+    <string name="person_idea_tap_footer">點一下，就能做成和%s的情境。</string>
 </resources>

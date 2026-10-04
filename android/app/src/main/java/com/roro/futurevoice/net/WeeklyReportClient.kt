@@ -179,7 +179,7 @@ object WeeklyReportEngine {
                 .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
                 ?.joinToString("").orEmpty()
             val json = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
-            Edge.json.decodeFromString(Payload.serializer(), json)
+            GeminiJson.decode(Payload.serializer(), json)
         }
 
         val ends = window.mapNotNull { it.endedAt }.sorted()

@@ -62,7 +62,7 @@ class VoicemailClient(private val auth: AuthRepository) {
                 .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
                 ?.joinToString("").orEmpty()
             val json = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
-            sanitize(Edge.json.decodeFromString(Payload.serializer(), json).script)
+            sanitize(GeminiJson.decode(Payload.serializer(), json).script)
         }
     }
 

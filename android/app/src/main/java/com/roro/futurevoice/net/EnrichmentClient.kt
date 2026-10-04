@@ -69,7 +69,7 @@ class EnrichmentClient(private val auth: AuthRepository) {
                 .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
                 ?.joinToString("").orEmpty()
             val json = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
-            Edge.json.decodeFromString(Enrichment.serializer(), json)
+            GeminiJson.decode(Enrichment.serializer(), json)
         }
     }
 

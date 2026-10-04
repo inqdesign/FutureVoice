@@ -54,7 +54,7 @@ class TopicClient(private val auth: AuthRepository) {
                 .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
                 ?.joinToString("").orEmpty()
             val body = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
-            Edge.json.decodeFromString(CategoryResult.serializer(), body)
+            GeminiJson.decode(CategoryResult.serializer(), body)
         }
     }
 

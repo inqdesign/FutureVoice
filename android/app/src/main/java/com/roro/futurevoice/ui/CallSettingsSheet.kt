@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,10 +10,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -78,13 +79,17 @@ fun CallSettingsSheet(
                 }
             }
 
-            SectionHeader(stringResource(R.string.voice))
-            SettingLabel(Icons.Filled.Speed, stringResource(R.string.speaking_speed))
-            val allSpeeds = SpeechSpeed.entries
-            com.roro.futurevoice.ui.brand.IosSegmented(allSpeeds.map { stringResource(it.label) }, allSpeeds.indexOf(speed), { i ->
-                val s = allSpeeds[i]
-                if (speed != s) { speed = s; SpeechSpeed.set(context, s); onSpeedChange(s) }
-            }, Modifier.fillMaxWidth())
+            // Drawn INLINE, one row per rung (iOS 6f416de): the call screen
+            // under this sheet recomposes on every mic level tick, and a popup
+            // or dropdown closed before it could take a tap. A plain row is a
+            // tap, nothing to dismiss — and the rung names are words, longer
+            // in every language but English, so they get the full width.
+            SectionHeader(stringResource(R.string.speaking_speed))
+            SpeechSpeed.entries.forEach { s ->
+                SpeedRow(stringResource(s.label), selected = speed == s) {
+                    if (speed != s) { speed = s; SpeechSpeed.set(context, s); onSpeedChange(s) }
+                }
+            }
             Footer(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
 
             SectionHeader(stringResource(R.string.screen))
@@ -115,12 +120,12 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun SettingLabel(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.padding(vertical = 6.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
+private fun SpeedRow(text: String, selected: Boolean, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (selected) Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary)
-        Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

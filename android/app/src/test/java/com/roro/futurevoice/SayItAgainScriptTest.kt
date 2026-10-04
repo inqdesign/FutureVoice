@@ -226,4 +226,94 @@ class SayItAgainScriptTest {
                 reason = "시제")))
         assertEquals("어제 학교에 갔어 그리고 공부했어", out.text)
     }
+    // ── A cut-in is not a turn (iOS 2026-09-29)
+
+    private fun heard(text: String, id: String = StoreJson.newId()) =
+        turn(text, role = TurnRole.FLUENT_SELF, id = id).copy(durationMs = 2400)
+
+    /** Some audio arrived; the flag is what decides. */
+    private fun cutIn(text: String) =
+        turn(text, role = TurnRole.FLUENT_SELF).copy(talkedOver = true, durationMs = 800)
+
+    @Test fun theTwoHalvesOfACutInSentenceAreOneLine() {
+        val steps = SayItAgainScript.build(session(listOf(
+            heard("How was the weekend?"),
+            turn("I went to the"),
+            cutIn("Oh nice, where did you go?"),
+            turn("mountains with my sister."),
+            heard("That sounds lovely."),
+        ))) { false }
+        assertEquals(listOf(false, true, false), steps.map { it.isSpoken })
+        assertEquals("I went to the mountains with my sister.", steps[1].text)
+        assertEquals("That sounds lovely.", steps[2].text)
+    }
+
+    @Test fun aLineWithNoAudioAtAllCountsAsUnheard() {
+        // Talks saved before the flag: nothing played, so nothing recorded.
+        val steps = SayItAgainScript.build(session(listOf(
+            turn("I went to the"),
+            turn("Where?", role = TurnRole.FLUENT_SELF),
+            turn("mountains."),
+        ))) { false }
+        assertEquals(1, steps.size)
+        assertEquals("I went to the mountains.", steps[0].text)
+    }
+
+    @Test fun aHeardAnswerStillSeparatesTwoLines() {
+        val id = StoreJson.newId()
+        // Duration lost, but its recording is on disk.
+        val answer = turn("Where?", role = TurnRole.FLUENT_SELF, id = id)
+        val steps = SayItAgainScript.build(session(listOf(
+            turn("I went away."), answer, turn("To the mountains."),
+        ))) { it == id }
+        assertEquals(3, steps.size)
+    }
+
+    @Test fun aChainOfCutInsIsOneLine() {
+        val steps = SayItAgainScript.build(session(listOf(
+            turn("So I"), cutIn("Mm?"), turn("was thinking"), cutIn("Yes?"), turn("about moving."),
+        ))) { false }
+        assertEquals(listOf("So I was thinking about moving."), steps.map { it.text })
+    }
+
+    @Test fun mergedHalvesKeepTheirCorrectionsAndTheDiffCoversBoth() {
+        val a = StoreJson.newId()
+        val steps = SayItAgainScript.build(session(listOf(
+            turn("yesterday I go to",
+                suggestion = TurnSuggestion("yesterday I went to", "past tense"), id = a),
+            cutIn("Where to?"),
+            turn("the museum."),
+        ))) { false }
+        assertEquals(1, steps.size)
+        assertEquals("yesterday I went to the museum.", steps[0].text)
+        assertEquals("yesterday I go to the museum.", steps[0].said)
+        assertEquals("past tense", steps[0].note)
+        // Exactly one half was material, and the merged line contains it whole.
+        assertEquals(TalkCurriculum.correctionId(a), steps[0].attemptId)
+        assertEquals(a, steps[0].id)
+    }
+
+    @Test fun anUnspacedLanguageJoinsWithoutASpace() {
+        val s = session(listOf(turn("昨日は"), cutIn("うん"), turn("山に行った。")))
+            .copy(targetLanguage = "ja")
+        val steps = SayItAgainScript.build(s) { false }
+        assertEquals(listOf("昨日は山に行った。"), steps.map { it.text })
+    }
+
+    @Test fun aCutInAtTheEndOfTheCallIsLeftAlone() {
+        val steps = SayItAgainScript.build(session(listOf(turn("I think"), cutIn("Go on?")))) { false }
+        assertEquals(2, steps.size)
+    }
+
+    // ── Android-only: the flag is written only when true
+
+    @Test fun talkedOverIsEncodedOnlyWhenTrue() {
+        val plain = StoreJson.json.encodeToString(Turn.serializer(),
+            Turn(role = TurnRole.FLUENT_SELF, transcript = "Hi"))
+        assertFalse(plain.contains("talkedOver"))
+        val flagged = StoreJson.json.encodeToString(Turn.serializer(),
+            Turn(role = TurnRole.FLUENT_SELF, transcript = "Hi", talkedOver = true))
+        assertTrue(flagged.contains("\"talkedOver\""))
+        assertTrue(StoreJson.json.decodeFromString(Turn.serializer(), flagged).talkedOver)
+    }
 }

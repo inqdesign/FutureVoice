@@ -270,4 +270,5 @@
     <string name="set_the_speed_and_accent_again_then_start">Set the speed and accent again, then start.</string>
     <string name="start_the_call">Start the call</string>
     <string name="accent_original">Original</string>
+    <string name="person_idea_tap_footer">Tap one to make it a situation with %s.</string>
 </resources>

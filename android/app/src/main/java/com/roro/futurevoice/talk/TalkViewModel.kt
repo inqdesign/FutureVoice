@@ -575,6 +575,13 @@ class TalkViewModel(context: Context) : ViewModel() {
                 })
             }
         }
+        realtime.onReplyCutIn = { ctx ->
+            realtimeReplyTurns[ctx]?.let { id ->
+                _state.update { st ->
+                    st.copy(turns = st.turns.map { if (it.id == id) it.copy(talkedOver = true) else it })
+                }
+            }
+        }
         realtime.onInterrupted = { _ -> lastActivityAt = System.currentTimeMillis() }
         realtime.onWall = { code ->
             val kind = when (code) {

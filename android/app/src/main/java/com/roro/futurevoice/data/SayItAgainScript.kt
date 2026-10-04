@@ -5,6 +5,7 @@ import com.roro.futurevoice.talk.DialogueEngineTurn
 import com.roro.futurevoice.talk.PhraseFeedback
 import com.roro.futurevoice.talk.ScenarioCurriculum
 import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
 import java.text.Normalizer
 
@@ -39,6 +40,12 @@ import java.text.Normalizer
  * 3. **What they said.** A turn nobody corrected is a turn they got right,
  *    and reading it back keeps the run a CONVERSATION.
  *
+ * **A cut-in is not a turn** (iOS 2026-09-29): when the learner pauses
+ * mid-sentence, the call can take the pause for the end of their turn, write
+ * a reply, and they talk straight over it with the rest of the sentence. A
+ * fluent-self line never heard ([isUnheard]) between two of the learner's
+ * turns is dropped, and their two lines become one ([mergingCutIns]).
+ *
  * A turn flagged as misheard is dropped outright — its transcript is the
  * recognizer's mistake. The fluent self's answer to it stays.
  */
@@ -63,11 +70,15 @@ object SayItAgainScript {
         val isCorrected: Boolean get() = said.isNotEmpty()
     }
 
-    fun build(session: Session): List<Step> {
+    /** [hasAudio] says whether a turn's recording is on disk
+     *  (`turn-audio/<id>.wav`); the screen passes the real check. */
+    fun build(session: Session, hasAudio: (String) -> Boolean = { false }): List<Step> {
         val language = session.targetLanguage
         val fixes = session.summary?.phrasesUsed.orEmpty()
         val out = ArrayList<Step>()
+        val unheard = HashSet<String>()
         for (turn in session.turns) {
+            if (isUnheard(turn, hasAudio)) unheard.add(turn.id)
             val transcript = turn.transcript.trim()
             if (transcript.isEmpty()) continue
             if (turn.role != TurnRole.USER) {
@@ -90,7 +101,59 @@ object SayItAgainScript {
             out.add(Step(id = turn.id, isSpoken = true, text = spliced.text,
                 said = if (spliced.changed) transcript else "", note = note))
         }
+        return mergingCutIns(out, unheard, spaced = LanguageCatalog.writesSpaces(language))
+    }
+
+    /**
+     * A fluent-self line the learner never heard: flagged as talked over by
+     * the live call, or — for a talk saved before that flag — a line with no
+     * audio at all (nothing played, so nothing was recorded).
+     */
+    fun isUnheard(turn: Turn, hasAudio: (String) -> Boolean): Boolean {
+        if (turn.role != TurnRole.FLUENT_SELF) return false
+        if (turn.talkedOver) return true
+        return turn.durationMs == 0 && turn.audioURL == null && !hasAudio(turn.id)
+    }
+
+    /**
+     * Learner line · unheard answer · learner line → one learner line, as many
+     * times as it repeats. A cut-in anywhere else (the last line of the call,
+     * or between two fluent-self lines) is left as it was.
+     */
+    fun mergingCutIns(steps: List<Step>, unheard: Set<String>, spaced: Boolean): List<Step> {
+        val out = ArrayList<Step>()
+        var i = 0
+        while (i < steps.size) {
+            val step = steps[i]
+            val last = out.lastOrNull()
+            if (step.id in unheard && !step.isSpoken && last != null && last.isSpoken &&
+                i + 1 < steps.size && steps[i + 1].isSpoken) {
+                out[out.size - 1] = joined(last, steps[i + 1], spaced)
+                i += 2
+                continue
+            }
+            out.add(step)
+            i += 1
+        }
         return out
+    }
+
+    /**
+     * Two halves of one utterance, read as one line. What they said is joined
+     * the same way, so the diff runs over the whole line; a half nobody
+     * corrected contributes its text as said. A pass is filed under a
+     * correction only when exactly one half carried one.
+     */
+    private fun joined(a: Step, b: Step, spaced: Boolean): Step {
+        val sep = if (spaced) " " else ""
+        val corrected = a.isCorrected || b.isCorrected
+        val said = if (corrected)
+            (if (a.isCorrected) a.said else a.text) + sep + (if (b.isCorrected) b.said else b.text)
+        else ""
+        val notes = listOf(a.note, b.note).filter { it.isNotEmpty() }
+        val ids = listOfNotNull(a.attemptId, b.attemptId)
+        return Step(id = a.id, isSpoken = true, text = a.text + sep + b.text, said = said,
+            note = notes.joinToString("\n"), attemptId = if (ids.size == 1) ids[0] else null)
     }
 
     /**

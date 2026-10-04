@@ -257,4 +257,5 @@
     <string name="set_the_speed_and_accent_again_then_start">Choisis à nouveau la vitesse et l’accent, puis lance-toi.</string>
     <string name="start_the_call">Lancer l’appel</string>
     <string name="accent_original">Original</string>
+    <string name="person_idea_tap_footer">Touche-en une pour en faire une situation avec %s.</string>
 </resources>
