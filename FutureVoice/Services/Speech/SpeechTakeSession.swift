@@ -22,7 +22,11 @@ final class SpeechTakeSession: ObservableObject {
     @Published private(set) var phase: Phase = .ready
     /// The first display word not yet read.
     @Published private(set) var cursor = 0
+    /// Whole seconds into the take — published once a second, because the
+    /// whole take screen redraws on every change and only the timer reads it.
     @Published private(set) var elapsed: TimeInterval = 0
+    /// The exact clock, for the take's own logic.
+    private var clock: TimeInterval = 0
     @Published var cameraOn: Bool {
         didSet {
             UserDefaults.standard.set(cameraOn, forKey: Self.cameraKey)
@@ -36,7 +40,9 @@ final class SpeechTakeSession: ObservableObject {
     @Published var speed: Double {
         didSet { UserDefaults.standard.set(speed, forKey: Self.speedKey) }
     }
-    @Published private(set) var level: Float = 0
+    /// The mic level, in its own object: it changes many times a second and
+    /// only the mic glyph draws it, so it must not redraw the whole screen.
+    let level = SpeechLevel()
 
     private static let cameraKey = "speech.cameraOn"
     private static let followKey = "speech.followVoice"
@@ -97,7 +103,7 @@ final class SpeechTakeSession: ObservableObject {
             .store(in: &bag)
         live.$level
             .receive(on: RunLoop.main)
-            .sink { [weak self] value in self?.level = value }
+            .sink { [weak self] value in self?.level.value = value }
             .store(in: &bag)
     }
 
@@ -120,6 +126,7 @@ final class SpeechTakeSession: ObservableObject {
         cursor = 0
         position = 0
         elapsed = 0
+        clock = 0
         // With the camera on, the take is saved as the whole screen —
         // prompter and camera together. Started before the mic, so iOS's
         // permission alert (if it shows) never sits inside the take.
@@ -189,7 +196,8 @@ final class SpeechTakeSession: ObservableObject {
 
     private func tick() {
         guard let startedAt else { return }
-        elapsed = Date().timeIntervalSince(startedAt)
+        clock = Date().timeIntervalSince(startedAt)
+        if clock.rounded(.down) != elapsed { elapsed = clock.rounded(.down) }
         let wps = track.wordsPerSecond(language: script.language)
         let voicedRecently = live.lastVoicedAt.map { Date().timeIntervalSince($0) < 0.8 } ?? false
 
@@ -207,20 +215,20 @@ final class SpeechTakeSession: ObservableObject {
         }
 
         // Finished: the last word is reached and they have stopped.
-        let quietFor = live.lastVoicedAt.map { Date().timeIntervalSince($0) } ?? elapsed
+        let quietFor = live.lastVoicedAt.map { Date().timeIntervalSince($0) } ?? clock
 
         // Cut a piece for the reader at a pause, never mid-word.
-        if elapsed - lastChunkAt >= Self.chunkSeconds, quietFor >= 0.35,
+        if clock - lastChunkAt >= Self.chunkSeconds, quietFor >= 0.35,
            let piece = live.rotateCaptureChunk() {
-            lastChunkAt = elapsed
+            lastChunkAt = clock
             chunkReads.append(readPiece(piece))
         }
-        if cursor >= track.words.count - 1, quietFor > 2.2, elapsed > 3 {
+        if cursor >= track.words.count - 1, quietFor > 2.2, clock > 3 {
             Task { await stop() }
             return
         }
         // A take nobody ends still ends.
-        if elapsed > Double(script.targetSeconds) * 3 + 60 {
+        if clock > Double(script.targetSeconds) * 3 + 60 {
             Task { await stop() }
         }
     }
@@ -233,7 +241,7 @@ final class SpeechTakeSession: ObservableObject {
         ticker?.cancel()
         let stoppedAt = Date()
         func ms(_ since: Date) -> Int { Int(Date().timeIntervalSince(since) * 1000) }
-        let duration = elapsed
+        let duration = clock
         let recorded = recorder.stop() ?? wavURL
         let liveText = await live.stopAndFinalize()
         if let tail = live.lastChunkRecordingURL { chunkReads.append(readPiece(tail)) }
@@ -299,8 +307,12 @@ final class SpeechTakeSession: ObservableObject {
             path = "whole"
         }
         let readMs = ms(readStart)
-        let metrics = SpeechAnalyzer.analyze(script: script.body, transcript: transcript,
-                                             language: script.language, envelope: envelope)
+        // The diff is O(script × transcript) — by syllable for Korean, a
+        // million cells for a long script — so it runs off the main thread.
+        let body = script.body, language = script.language
+        let metrics = await Task.detached {
+            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language, envelope: envelope)
+        }.value
 
         let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
                               durationSeconds: duration, audioFilename: audioName,
@@ -379,6 +391,7 @@ final class SpeechTakeSession: ObservableObject {
         cursor = 0
         position = 0
         elapsed = 0
+        clock = 0
         phase = .ready
     }
 
@@ -416,4 +429,10 @@ final class SpeechTakeSession: ObservableObject {
     #endif
 
     private var isCountdown: Bool { if case .countdown = phase { return true } else { return false } }
+}
+
+/// The live mic level, observed only by the glyph that shows it.
+@MainActor
+final class SpeechLevel: ObservableObject {
+    @Published var value: Float = 0
 }

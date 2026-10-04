@@ -183,11 +183,11 @@ final class SpeechVideoComposerTests: XCTestCase {
         let composer = SpeechVideoComposer()
         let cam = CIImage(color: CIColor(red: 0.6, green: 0.45, blue: 0.4)).cropped(to: CGRect(x: 0, y: 0, width: 720, height: 1280))
         // Reading the second line: the first line above it is read.
+        let prompter = SpeechVideoComposer.Prompter(offset: 20, word: CGRect(x: 120, y: 54, width: 80, height: 34))
         let frame = composer.compose(
             camera: cam, layout: layout,
-            column: (CIImage(cgImage: column.unread), CIImage(cgImage: column.read),
-                     CIImage(cgImage: column.accent), scale),
-            prompter: .init(offset: 20, word: CGRect(x: 120, y: 54, width: 80, height: 34)))
+            column: composer.visible(column, layout: layout, prompter: prompter),
+            prompter: prompter)
         let ctx = CIContext()
         let cg = try XCTUnwrap(ctx.createCGImage(frame, from: CGRect(x: 0, y: 0, width: 1080, height: 1920)))
         XCTAssertEqual(cg.width, 1080)

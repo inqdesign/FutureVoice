@@ -92,7 +92,9 @@ struct SpeechPrompterTrack {
     /// read), given what the recognizer has heard so far and the previous
     /// position. Returns `current` when nothing new agrees.
     func advance(current: Int, heard: String) -> Int {
-        let heardKeys = Self.keys(of: heard, perChar: perChar)
+        // Only the last few keys are matched, so only the tail is read: the
+        // transcript grows to the whole take and this runs on every partial.
+        let heardKeys = Self.keys(of: String(heard.suffix(160)), perChar: perChar)
         guard !heardKeys.isEmpty, !keys.isEmpty else { return current }
         let tail = Array(heardKeys.suffix(perChar ? 6 : 4))
         let need = perChar ? 4 : 2

@@ -59,7 +59,7 @@ final class SpeechVideoComposer: @unchecked Sendable {
 
     private let lock = NSLock()
     private var layout: Layout?
-    private var column: (unread: CIImage, read: CIImage, accent: CIImage, scale: CGFloat)?
+    private var column: Column?
     private var prompter = Prompter()
     private var recording = false
 
@@ -80,8 +80,7 @@ final class SpeechVideoComposer: @unchecked Sendable {
     func prepare(layout: Layout, column: Column) {
         lock.withLock {
             self.layout = layout
-            self.column = (CIImage(cgImage: column.unread), CIImage(cgImage: column.read),
-                           CIImage(cgImage: column.accent), column.scale)
+            self.column = column
         }
     }
 
@@ -111,7 +110,7 @@ final class SpeechVideoComposer: @unchecked Sendable {
         guard on, let layout, let column, let camera = CMSampleBufferGetImageBuffer(buffer) else { return }
         let pts = CMSampleBufferGetPresentationTimeStamp(buffer)
         let image = compose(camera: CIImage(cvPixelBuffer: camera), layout: layout,
-                            column: column, prompter: prompter)
+                            column: visible(column, layout: layout, prompter: prompter), prompter: prompter)
         writeQueue.sync { write(image, at: pts, layout: layout) }
     }
 
@@ -174,11 +173,37 @@ final class SpeechVideoComposer: @unchecked Sendable {
 
     // MARK: - Drawing
 
+    /// Only the part of the column the prompter shows this frame, as
+    /// CIImages placed where the full images would be. The full column of a
+    /// three-minute script is ~40 MB an image; handing it to Core Image whole
+    /// would send all of it to the GPU on every frame. `CGImage.cropping`
+    /// shares the pixels, so this costs nothing to make.
+    func visible(_ column: Column, layout: Layout,
+                 prompter: Prompter) -> (unread: CIImage, read: CIImage, accent: CIImage, scale: CGFloat, fullHeight: CGFloat) {
+        let s = column.scale
+        let fullH = CGFloat(column.unread.height)
+        let top = max(0, (prompter.offset * s).rounded(.down))
+        let height = min(fullH - top, (layout.prompter.height * s).rounded(.up) + 2)
+        guard height > 0 else {
+            let empty = CIImage.empty()
+            return (empty, empty, empty, s, fullH)
+        }
+        let rect = CGRect(x: 0, y: top, width: CGFloat(column.unread.width), height: height)
+        // CGImage space is top-left; place each crop at its bottom-left
+        // position in the full image's Core Image space.
+        let lift = CGAffineTransform(translationX: 0, y: fullH - top - height)
+        func piece(_ image: CGImage) -> CIImage {
+            guard let cropped = image.cropping(to: rect) else { return .empty() }
+            return CIImage(cgImage: cropped).transformed(by: lift)
+        }
+        return (piece(column.unread), piece(column.read), piece(column.accent), s, fullH)
+    }
+
     /// Core Image's origin is bottom-left; the layout's is top-left. `k` is
     /// output pixels per layout point.
     func compose(camera: CIImage,
                          layout: Layout,
-                         column: (unread: CIImage, read: CIImage, accent: CIImage, scale: CGFloat),
+                         column: (unread: CIImage, read: CIImage, accent: CIImage, scale: CGFloat, fullHeight: CGFloat),
                          prompter: Prompter) -> CIImage {
         let size = outputSize(layout)
         let k = size.width / max(1, layout.canvas.width)
@@ -190,7 +215,7 @@ final class SpeechVideoComposer: @unchecked Sendable {
         let background = CIImage(color: CIColor(color: layout.background)).cropped(to: full)
 
         // The script. Column images are k pixels per point, origin bottom-left.
-        let imgH = column.unread.extent.height
+        let imgH = column.fullHeight
         let s = column.scale
         let w = prompter.word
         func colRect(_ r: CGRect) -> CGRect {

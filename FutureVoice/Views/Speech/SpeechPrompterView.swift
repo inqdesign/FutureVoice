@@ -11,6 +11,11 @@ struct SpeechPrompterView: View {
     /// The prompter's width — the video's script wraps at the same width.
     @State private var prompterRect: CGRect = .zero
     private static let screenSpace = "take-screen"
+    /// What the drawn script depends on; drawn again only when it changes.
+    private var videoKey: String {
+        "\(Int(prompterRect.width))|\(textSize)|\(colorScheme == .dark)|\(session.cameraOn)"
+    }
+    @State private var preparedKey: String?
     @State private var showingScript = false
     /// A word or two said over the controls when a mode flips.
     @State private var toast: String?
@@ -48,6 +53,13 @@ struct SpeechPrompterView: View {
             }
         }
         .task { await session.appear() }
+        // The script is drawn for the video AHEAD of the take — three full
+        // column renders took a visible beat when done on the record tap.
+        .task(id: videoKey) {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, session.phase == .ready else { return }
+            prepareVideo()
+        }
         .onDisappear { session.tearDown() }
         .interactiveDismissDisabled()
     }
@@ -55,6 +67,7 @@ struct SpeechPrompterView: View {
     /// Hands the composer this screen's layout and the script drawn three
     /// ways. Once per take, at the tap, before the countdown hides the cost.
     private func prepareVideo() {
+        preparedKey = videoKey
         guard session.cameraOn, prompterRect.width > 0 else {
             session.prepareVideo(layout: .init(canvas: .zero, prompter: .zero, card: .zero,
                                                cardRadius: 0, background: .clear), column: nil)
@@ -286,11 +299,8 @@ struct SpeechPrompterView: View {
         ZStack {
             Color(.secondarySystemBackground)
             VStack(spacing: 14) {
-                Image(systemName: session.camera.denied && session.cameraOn ? "video.slash" : "mic.fill")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundStyle(isRecording ? .red : .secondary)
-                    .scaleEffect(1 + CGFloat(isRecording ? session.level : 0) * 0.35)
-                    .animation(.easeOut(duration: 0.12), value: session.level)
+                SpeechMicGlyph(level: session.level, recording: isRecording,
+                               symbol: session.camera.denied && session.cameraOn ? "video.slash" : "mic.fill")
                 if session.camera.denied && session.cameraOn {
                     Text("Camera access is off. Turn it on in Settings, or practise with the mic only.")
                         .font(.footnote)
@@ -321,7 +331,7 @@ struct SpeechPrompterView: View {
                     if isRecording {
                         await session.stop()
                     } else {
-                        prepareVideo()
+                        if preparedKey != videoKey { prepareVideo() }
                         await session.start()
                     }
                 }
@@ -696,5 +706,21 @@ private extension View {
             .allowsHitTesting(!recording)
             .accessibilityHidden(recording)
             .animation(.easeOut(duration: 0.2), value: recording)
+    }
+}
+
+/// The mic glyph that breathes with the voice. Its own view observing only
+/// the level, so the level never redraws the take screen.
+private struct SpeechMicGlyph: View {
+    @ObservedObject var level: SpeechLevel
+    let recording: Bool
+    let symbol: String
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 34, weight: .medium))
+            .foregroundStyle(recording ? .red : .secondary)
+            .scaleEffect(1 + CGFloat(recording ? level.value : 0) * 0.35)
+            .animation(.easeOut(duration: 0.12), value: level.value)
     }
 }
