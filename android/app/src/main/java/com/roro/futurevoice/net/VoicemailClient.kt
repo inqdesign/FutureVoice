@@ -36,6 +36,10 @@ class VoicemailClient(private val auth: AuthRepository) {
         /** How the last call went — the caller has a memory ("couldn't talk
          *  yesterday?"), never a scold. */
         lastOutcome: String? = null, consecutiveUnanswered: Int = 0,
+        /** When the last talk ended and when this script will ring — the
+         *  server measures the gap to the RING in calendar days (iOS
+         *  `lastTalkAt` + `ringDates`, 632c2ce). */
+        lastTalkAt: Long? = null, ringDates: List<Long> = emptyList(),
     ): String = withContext(Dispatchers.IO) {
         val body: JsonObject = buildJsonObject {
             put("target_language", targetLanguage)
@@ -48,6 +52,10 @@ class VoicemailClient(private val auth: AuthRepository) {
             put("due_count", dueCount)
             lastOutcome?.let { put("last_outcome", it) }
             if (consecutiveUnanswered > 0) put("consecutive_unanswered", consecutiveUnanswered)
+            lastTalkAt?.let { put("last_talk_at", java.time.Instant.ofEpochMilli(it).toString()) }
+            putJsonArray("ring_dates") { ringDates.forEach { add(java.time.Instant.ofEpochMilli(it).toString()) } }
+            put("utc_offset_minutes", java.util.TimeZone.getDefault()
+                .getOffset(ringDates.firstOrNull() ?: System.currentTimeMillis()) / 60_000)
         }
         val request = Request.Builder()
             .url(Config.functionUrl("voicemail-script"))

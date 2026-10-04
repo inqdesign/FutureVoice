@@ -388,6 +388,8 @@ object SessionSummarizer {
                     dueCount = drills.dueCount(language),
                     lastOutcome = DailyCallStore.lastOutcome(context)?.raw,
                     consecutiveUnanswered = DailyCallStore.consecutiveUnanswered(context),
+                    lastTalkAt = turns.maxOfOrNull { it.timestamp } ?: System.currentTimeMillis(),
+                    ringDates = runCatching { com.roro.futurevoice.data.DailyCallScheduler.fireDates(context) }.getOrDefault(emptyList()),
                 )
                 if (script.isNotBlank()) DailyCallStore.setScript(context, script)
             }

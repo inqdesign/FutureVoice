@@ -65,12 +65,38 @@ Deno.serve(async (req) => {
   if (phrases.length > 0) {
     grounding.push('Phrases that came up in it: ' + phrases.map((p) => `"${p}"`).join(", "))
   }
-  const days = num("days_since_last_talk")
+  // Dated to the RING, not the writing (iOS 632c2ce): the script is written
+  // at a talk's end and heard at the next ring, usually the next morning, so
+  // "0 days" at writing time announced last night's talk as "already
+  // practiced today" at 8 a.m. A build that sends last_talk_at + ring_dates
+  // gets calendar days in its own zone; an older build's day count is kept.
+  const offset = Math.max(-840, Math.min(840, Math.round(num("utc_offset_minutes") ?? 0)))
+  const localDay = (d: Date) => Math.floor((d.getTime() + offset * 60_000) / 86_400_000)
+  const ringDates = (Array.isArray(c.ring_dates) ? c.ring_dates as unknown[] : [])
+    .filter((x): x is string => typeof x === "string" && !isNaN(Date.parse(x)))
+    .map((x) => new Date(x)).sort((a, b) => a.getTime() - b.getTime())
+  const lastTalkAt = str("last_talk_at") && !isNaN(Date.parse(str("last_talk_at")!))
+    ? new Date(str("last_talk_at")!) : undefined
+  const ringDay = ringDates[0] ?? new Date()
+  const days = lastTalkAt ? Math.max(0, localDay(ringDay) - localDay(lastTalkAt)) : num("days_since_last_talk")
   if (days !== undefined) {
-    grounding.push(days === 0 ? "They already practiced today."
+    grounding.push(days === 0 ? (lastTalkAt ? "They already had a talk earlier today." : "They already practiced today.")
       : days === 1 ? "Their last talk was yesterday."
       : `It has been ${days} days since their last talk.`)
   }
+  // When they hear it (iOS `whenHeard`): one ring names its part of the day;
+  // several forbid a time-of-day greeting.
+  const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+  const MO = ["January", "February", "March", "April", "May", "June", "July", "August",
+    "September", "October", "November", "December"]
+  const local = (d: Date) => new Date(d.getTime() + offset * 60_000)
+  const hhmm = (d: Date) => { const l = local(d); return `${String(l.getUTCHours()).padStart(2, "0")}:${String(l.getUTCMinutes()).padStart(2, "0")}` }
+  const partOfDay = (h: number) => h >= 5 && h < 12 ? "morning" : h >= 12 && h < 17 ? "afternoon" : h >= 17 && h < 22 ? "evening" : "night"
+  const dayLine = (d: Date) => { const l = local(d); return `${WD[l.getUTCDay()]}, ${l.getUTCDate()} ${MO[l.getUTCMonth()]} ${l.getUTCFullYear()}` }
+  const whenHeard = ringDates.length === 0 ? ""
+    : ringDates.length === 1
+      ? `It rings on ${dayLine(ringDates[0])}, at ${hhmm(ringDates[0])} — ${partOfDay(local(ringDates[0]).getUTCHours())}.`
+      : `It rings on ${dayLine(ringDates[0])}, at ${ringDates.map(hhmm).join(", ")} — the same message each time until they pick up, so you cannot know which part of the day they hear it in.`
   const due = num("due_count") ?? 0
   if (due > 0) grounding.push(`${due} review cards are waiting.`)
   const lastCallbacks = num("last_callbacks") ?? 0
@@ -103,7 +129,10 @@ not a tutor, a coach, or an assistant, and you never sound like one.
 
 WHAT YOU KNOW ABOUT THEM
 ${groundingBlock}
-
+${whenHeard ? `
+WHEN THEY HEAR IT
+${whenHeard}
+` : ""}
 YOU ARE CALLING THEM, and that is not a figure of speech. You remember
 how the last call went and you open like someone who does. If they
 couldn't talk last time, acknowledge it lightly and move on. If you
