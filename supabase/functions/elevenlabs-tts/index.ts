@@ -17,6 +17,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { calmExclamations, restoreCharacters } from "../_shared/calm-exclamations.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
          beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
          dailyCapResponse, sceneCapResponse, rateLimitedResponse,
@@ -32,6 +33,9 @@ const CONVERSATION_MODEL = "eleven_turbo_v2_5"
 const FIDELITY_MODEL = "eleven_multilingual_v2"
 const FLASH_MODEL = "eleven_flash_v2_5"
 const ALLOWED_MODELS = new Set([CONVERSATION_MODEL, FIDELITY_MODEL, FLASH_MODEL])
+// Languages a client may pin with `language_code`. Korean only: it is the one
+// measured by ear (2026-10-05). Add a language only after the same test.
+const PINNABLE_LANGUAGES = new Set(["ko"])
 const FIDELITY_PURPOSES = new Set(["scene", "greeting", "voice_comparison"])
 
 // The four counterpart preset voices (VoicePreset.catalog). A caller may only
@@ -125,6 +129,12 @@ Deno.serve(async (req) => {
     // forwarded to ElevenLabs as `voice_settings.speed`. Absent means normal,
     // which is what every build before 2026-09-23 sends.
     speed?: number
+    // Pins the line's language upstream. Sent by the app only for a Korean
+    // learner's Hangul line (2026-10-05): a clone recorded in another
+    // language read Korean with an accent, and the pinned take was preferred
+    // by ear (scripts/tts-korean-probe.sh). Absent = the model guesses, as
+    // every build before it does.
+    language_code?: string
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -307,6 +317,9 @@ Deno.serve(async (req) => {
 
   const modelId = requestedModel
   const streaming = body.stream === true && !body.with_timestamps
+  // The voice is sent "." where the line has "!" — a "!" made it shout
+  // (_shared/calm-exclamations.ts). Same length, so nothing else moves.
+  const spokenText = calmExclamations(body.text)
 
   const fetchOptions: RequestInit = {
     method: "POST",
@@ -318,12 +331,16 @@ Deno.serve(async (req) => {
         : "audio/mpeg",
     },
     body: JSON.stringify({
-      text: body.text,
+      text: spokenText,
       model_id: modelId,
       // Omitted entirely when absent — sending empty strings would tell the
       // model "silence preceded this", which is worse than saying nothing.
-      ...(body.previous_text ? { previous_text: body.previous_text } : {}),
-      ...(body.next_text ? { next_text: body.next_text } : {}),
+      ...(body.previous_text ? { previous_text: calmExclamations(body.previous_text) } : {}),
+      ...(body.next_text ? { next_text: calmExclamations(body.next_text) } : {}),
+      // Allowlisted, and never on multilingual_v2, which refuses the field.
+      ...(body.language_code && PINNABLE_LANGUAGES.has(body.language_code) && modelId !== FIDELITY_MODEL
+        ? { language_code: body.language_code }
+        : {}),
       voice_settings: {
         stability: 0.55,
         similarity_boost: 0.90,
@@ -410,6 +427,15 @@ Deno.serve(async (req) => {
   headers.set("Content-Type", contentType)
   headers.set("X-Credits-Balance", String(ch.balanceAfter))
   if (streaming) headers.set("X-Audio-Format", streamFormatUsed)
+
+  // A timestamped reply spells the line out character by character, and the
+  // app draws shadowing words from it — give it back the "!" it sent.
+  if (body.with_timestamps && spokenText !== body.text) {
+    const json = await upstream.json()
+    restoreCharacters(json?.alignment?.characters, body.text, spokenText)
+    restoreCharacters(json?.normalized_alignment?.characters, body.text, spokenText)
+    return new Response(JSON.stringify(json), { status: 200, headers })
+  }
 
   return new Response(upstream.body, { status: 200, headers })
 })

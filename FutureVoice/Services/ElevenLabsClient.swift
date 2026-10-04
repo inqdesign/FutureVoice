@@ -393,6 +393,7 @@ final class ElevenLabsClient {
         // drops them and the line synthesizes exactly as it used to.
         if let previousText, !previousText.isEmpty { body["previous_text"] = previousText }
         if let nextText, !nextText.isEmpty { body["next_text"] = nextText }
+        if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.dataWithRetry(for: request)
@@ -415,6 +416,24 @@ final class ElevenLabsClient {
     /// walks down until the ElevenLabs plan accepts one (pcm_44100 is
     /// Pro-tier) — so conversation audio rides the highest rate the account
     /// allows instead of being pinned to the 22.05 kHz floor.
+    /// The language a line is pinned to upstream (`language_code`), or nil
+    /// to let the model guess as it always has.
+    ///
+    /// Korean only (2026-10-05). A learner of Korean who isn't Korean records
+    /// their clone in their own language, and their fluent self then speaks
+    /// Korean through it. In a blind test by a native ear, English-speaker
+    /// voices sounded foreign on 6 of 8 Korean lines as shipped, and the
+    /// pinned take was preferred over the unpinned one — same model, same
+    /// price (`scripts/tts-korean-probe.sh`). Pinned only when the LINE is
+    /// Korean too, so an English line read to the same learner is never
+    /// forced into Korean sounds. Every other language is untouched; the edge
+    /// function forwards it only for turbo/flash, and an older deploy drops it.
+    static func pinnedLanguage(for text: String) -> String? {
+        guard LanguageCatalog.base(LanguageScope.active) == "ko",
+              TextScript.isInTargetScript(text, language: "ko") else { return nil }
+        return "ko"
+    }
+
     private static let streamFormats = ["pcm_44100", "pcm_24000", "pcm_22050"]
 
     /// Streaming TTS: playback can start on the first chunk instead of after
@@ -464,6 +483,7 @@ final class ElevenLabsClient {
         body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         if let sceneKey { body["scene_key"] = sceneKey }
+        if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         // One immediate re-dial on a transient connect failure: a cellular
@@ -596,6 +616,7 @@ final class ElevenLabsClient {
         // synthesizes exactly as it used to.
         body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
+        if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.dataWithRetry(for: request)

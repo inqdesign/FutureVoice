@@ -685,6 +685,11 @@ export class CallSession implements DurableObject {
         modelId: CONVERSATION_MODEL,
         outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
         speed: clampSpeed(msg.speed),
+        // Korean replies are pinned to Korean (2026-10-05): a learner of
+        // Korean speaks through a clone recorded in another language, and the
+        // pinned take was preferred by ear over the unpinned one
+        // (scripts/tts-korean-probe.sh). Every other language is unchanged.
+        languageCode: this.language.toLowerCase().split("-")[0] === "ko" ? "ko" : undefined,
       },
       {
         onAudio: (contextId, pcm) => {

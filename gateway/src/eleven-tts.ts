@@ -10,6 +10,8 @@
 // capped at 180 s), so `ensureConnected()` lazily reopens it at the start of
 // a reply — worst case a turn pays one reconnect, never a failure.
 
+import { calmExclamations } from "./calm-exclamations"
+
 const ELEVEN_HOST = "https://api.elevenlabs.io"
 
 export interface ElevenTTSCallbacks {
@@ -28,6 +30,8 @@ export interface ElevenTTSConfig {
   outputFormat: string
   /** Optional speaking speed (0.7–1.2). Omitted = upstream default. */
   speed?: number
+  /** Pinned `language_code` ("ko"), or undefined to let the model guess. */
+  languageCode?: string
 }
 
 export class ElevenTTS {
@@ -87,7 +91,8 @@ export class ElevenTTS {
       // deltas (see CallSession.voiceBuffer). One SENTENCE per message
       // (CallSession.eachSentence) — the generation boundary is the pause.
       `&auto_mode=true` +
-      `&inactivity_timeout=180`
+      `&inactivity_timeout=180` +
+      (this.config.languageCode ? `&language_code=${this.config.languageCode}` : "")
     const resp = await fetch(url, {
       headers: {
         Upgrade: "websocket",
@@ -162,7 +167,9 @@ export class ElevenTTS {
     if (first) this.openContexts.add(contextId)
     this.ws?.send(JSON.stringify({
       context_id: contextId,
-      text,
+      // "." where the reply has "!" — a "!" made the voice shout
+      // (calm-exclamations.ts). The app gets the reply text separately.
+      text: calmExclamations(text),
       ...(first
         ? {
             voice_settings: {
