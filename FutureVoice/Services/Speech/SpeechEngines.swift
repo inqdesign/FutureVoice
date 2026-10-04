@@ -252,6 +252,8 @@ enum SpeechScriptEngine {
             return "PERSON INTRODUCTION — introduce a real person (living or historical): who they are, the one thing they are known for, a telling detail or turning point, and why they matter today."
         case .briefing:
             return "INFORMATION BRIEFING — a practical, useful briefing (a health finding, a travel rule, a how-to, a cultural custom) delivered like a presenter: what it is, what to know, what to do."
+        case .own:
+            return "A SCRIPT ON THE SUBJECT GIVEN — the shape that fits it best."
         case .news:
             return "NEWS ANCHOR READ — a neutral news-style report on a recent, real development: lead with the headline fact, then context, then what happens next. Neutral tone, no opinion."
         }

@@ -139,3 +139,18 @@ final class SpeechPrompterTrackTests: XCTestCase {
         XCTAssertEqual(track.paragraphs.count, 2)
     }
 }
+
+final class SpeechOwnScriptTests: XCTestCase {
+    func testDefaultTitleIsTheFirstSentence() {
+        XCTAssertEqual(SpeechOwnScriptSheet.defaultTitle("Good evening everyone. Tonight I want to talk."),
+                       "Good evening everyone")
+        XCTAssertEqual(SpeechOwnScriptSheet.defaultTitle("안녕하세요. 오늘은"), "안녕하세요")
+        let long = String(repeating: "word ", count: 30)
+        XCTAssertTrue(SpeechOwnScriptSheet.defaultTitle(long).hasSuffix("…"))
+    }
+
+    func testOwnIsNotOfferedToTheWriter() {
+        XCTAssertFalse(SpeechGenre.writable.contains(.own))
+        XCTAssertEqual(SpeechGenre.writable.count, 5)
+    }
+}

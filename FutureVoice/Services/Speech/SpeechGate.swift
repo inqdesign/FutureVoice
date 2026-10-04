@@ -27,6 +27,7 @@ extension SpeechGenre {
         case .person:   return explain(key: "speech.genre.person", default: "Person")
         case .briefing: return explain(key: "speech.genre.briefing", default: "Briefing")
         case .news:     return explain(key: "speech.genre.news", default: "News")
+        case .own:      return explain(key: "speech.genre.own", default: "My script")
         }
     }
 
@@ -37,6 +38,7 @@ extension SpeechGenre {
         case .person:   return explain("Introduce someone worth knowing")
         case .briefing: return explain("Useful information, clearly told")
         case .news:     return explain("Read the news like an anchor")
+        case .own:      return explain("Your own text")
         }
     }
 
@@ -47,6 +49,7 @@ extension SpeechGenre {
         case .person:   return "person.crop.square"
         case .briefing: return "info.circle"
         case .news:     return "newspaper"
+        case .own:      return "pencil.line"
         }
     }
 
@@ -57,6 +60,7 @@ extension SpeechGenre {
         case .person:   return explain("e.g. Marie Curie")
         case .briefing: return explain("e.g. How to sleep better on a long flight")
         case .news:     return explain("e.g. Space news this month")
+        case .own:      return ""
         }
     }
 }

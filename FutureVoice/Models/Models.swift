@@ -2004,7 +2004,11 @@ struct WeeklyTestAnswer: Codable, Hashable {
 /// matters, a news read is neutral), never the topic.
 enum SpeechGenre: String, Codable, CaseIterable, Identifiable {
     case explainer, product, person, briefing, news
+    /// The learner's own text, typed or pasted — nothing was written for it.
+    case own
     var id: String { rawValue }
+    /// The kinds the script writer can be asked for.
+    static var writable: [SpeechGenre] { allCases.filter { $0 != .own } }
 }
 
 /// A script the learner reads aloud under the prompter. MATERIAL — `title`,

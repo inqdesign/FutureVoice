@@ -567,6 +567,12 @@ enum DebugCapture {
             let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
             return AnyView(SpeechPrompterView(script: script, native: appState.nativeLanguage,
                                               level: appState.proficiency, previewCursor: 24))
+        case "speech-plus":
+            return AnyView(Color(.systemBackground).sheet(isPresented: .constant(true)) {
+                SpeechPlusSheet(isLight: true)
+            })
+        case "speech-own":
+            return AnyView(SpeechOwnScriptSheet(existing: nil) { _ in }.environmentObject(appState))
         case "speech-open":
             // The prompter exactly as Practice opens it: cursor 0, ready.
             let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
