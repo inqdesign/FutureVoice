@@ -509,37 +509,32 @@ struct PageIntroSheet: View {
                 hero: .symbol("flame.fill"),
                 eyebrow: explain("My routine"),
                 problem: PageIntro.problem(.routine),
-                detail: explain("A plan in your head slips the first busy day, and it's hard to tell whether this week went better than last."),
-                answer: explain("Set your week here once: what you'll do, and when. Each day then shows whether you kept it, and the days you keep in a row become your streak."),
+                detail: explain("A plan in your head slips the first busy day."),
+                answer: explain("Plan your week once here. Each day then shows whether you did it."),
                 answerHeading: "Here's how this page helps")
         case (.routine, 1):
             IntroScreenPage(
-                title: explain("What the day circles mean"),
-                subtitle: explain("Each date along the top shows whether you kept that day's routine."),
+                title: explain("Plan on the timeline"),
+                subtitle: explain("Tap Edit at the top right. Days run across, hours run down."),
                 callouts: [
-                    .init(title: explain("Green: you kept it"),
-                          detail: explain("You did everything your routine had for that day. Your streak grows by one.")),
-                    .init(title: explain("Grey ring: something was left"),
-                          detail: explain("Part of that day's routine wasn't done. Your streak starts again from the next day you keep.")),
-                    .init(title: explain("Just the number: a rest day"),
-                          detail: explain("Nothing was planned that day, so it neither adds to your streak nor breaks it.")),
-                    .init(title: explain("Today fills as you go"),
-                          detail: explain("Finish today's last block and the ring closes and turns green. Today lasts until midnight, so it never breaks your streak early.")),
-                ],
-                note: explain("If your routine is empty, every day you studied turns green.")) { RoutineDaysMock() }
+                    .init(title: explain("Tap an empty spot to add"),
+                          detail: explain("Pick what to do there: talk, words, review and more.")),
+                    .init(title: explain("Hold and drag to move"),
+                          detail: explain("Up and down changes the time, sideways changes the day.")),
+                    .init(title: explain("Set it once, it repeats"),
+                          detail: explain("The same plan comes back every week. Leave a day empty to rest.")),
+                ]) { RoutineTimelineMock() }
         case (.routine, _):
             IntroScreenPage(
-                title: explain("When a block counts as done"),
-                subtitle: explain("Under the dates is the chosen day's routine, one row per block."),
+                title: explain("Done it all? It turns green"),
+                subtitle: explain("Each date at the top shows how that day went."),
                 callouts: [
-                    .init(title: explain("Talk counts in minutes"),
-                          detail: explain("A 10-minute talk block is done once you've talked for 10 minutes that day. After 4 minutes the ring is 40% full.")),
-                    .init(title: explain("Everything else counts by number"),
-                          detail: explain("Words, expressions, sentence cards and shadowing are done when you've finished as many as the block asks for.")),
-                    .init(title: explain("Any time that day"),
-                          detail: explain("The times are a plan, not a deadline. An 8:00 talk done at noon still counts.")),
+                    .init(title: explain("Green: you did it all"),
+                          detail: explain("Everything planned for that day is done. Your streak grows by one.")),
+                    .init(title: explain("Today fills as you go"),
+                          detail: explain("Any time that day counts. The times are a plan, not a deadline.")),
                 ],
-                note: explain("Change your routine with Edit at the top right. Past days are judged by the routine they had, so raising the bar never turns an old green day grey.")) { RoutineDayListMock() }
+                note: explain("An empty day is a rest day, so it doesn't break your streak.")) { RoutineDaysMock() }
         }
     }
 }
@@ -1738,136 +1733,111 @@ private struct CastMock: View {
 
 // MARK: - My routine
 
-/// The day strip: a week of circles in each of their states, under the
-/// streak. Mirrors `PlannerDayStrip.circleFace`.
-private struct RoutineDaysMock: View {
-    private enum Mark { case kept, missed, rest, today(Double) }
-    private let days: [(Int, Mark)] = [
-        (12, .kept), (13, .missed), (14, .kept), (15, .rest),
-        (16, .kept), (17, .kept), (18, .today(0.55)),
-    ]
+/// The weekly plan editor (`WeeklyPlanEditor`): weekday columns, hour rows,
+/// a few blocks, an empty spot about to be filled and a block being dragged.
+private struct RoutineTimelineMock: View {
+    private let rowHeight: CGFloat = 26
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                TextBar(width: 110, height: 10)
-                Spacer()
-                Label {
-                    Text(verbatim: "3")
-                } icon: {
-                    Image(systemName: "flame.fill").foregroundStyle(.orange)
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Color.clear.frame(width: 14)
+                ForEach(0..<7, id: \.self) { _ in
+                    TextBar(width: 10, height: 5).frame(maxWidth: .infinity)
                 }
-                .font(.footnote.weight(.bold))
             }
-            HStack(spacing: 0) {
-                ForEach(days, id: \.0) { day, mark in
-                    VStack(spacing: 7) {
-                        TextBar(width: 9, height: 5)
-                        circle(day, mark)
-                            .frame(width: 32, height: 32)
-                            .modifier(MarkCallout(number: number(for: day)))
+            .frame(height: 12)
+            .callout(3, corner: 6, trailing: true)
+            HStack(alignment: .top, spacing: 4) {
+                VStack(spacing: 0) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        TextBar(width: 10, height: 4)
+                            .frame(height: rowHeight, alignment: .top)
                     }
-                    .frame(maxWidth: .infinity)
+                }
+                .frame(width: 14)
+                ForEach(0..<7, id: \.self) { day in
+                    // The dragged block hangs over the next column.
+                    column(day).zIndex(day == 1 ? 1 : 0)
                 }
             }
-            .padding(.top, 10)
-        }
-        .padding(.horizontal, 4)
-    }
-
-    /// One example of each state is numbered, the rest are plain.
-    private func number(for day: Int) -> Int? {
-        switch day {
-        case 14: return 1
-        case 13: return 2
-        case 15: return 3
-        case 18: return 4
-        default: return nil
         }
     }
 
-    @ViewBuilder
-    private func circle(_ day: Int, _ mark: Mark) -> some View {
-        let n = Text(verbatim: "\(day)").font(.footnote.weight(.semibold)).monospacedDigit()
-        ZStack {
-            switch mark {
-            case .kept:
-                Circle().fill(Color.green)
-                n.foregroundStyle(.white)
-            case .missed:
-                Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
-                n.foregroundStyle(.secondary)
-            case .rest:
-                n.foregroundStyle(.tertiary)
-            case .today(let p):
-                Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
-                Circle().trim(from: 0, to: p)
-                    .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .padding(1.5)
-                n.foregroundStyle(.primary)
+    private func column(_ day: Int) -> some View {
+        ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(mockCard)
+            VStack(spacing: 3) {
+                if day < 5 { block("phone.fill", .blue) } else { Color.clear.frame(height: 18) }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 4)
+            if day == 1 {
+                block("textformat", .purple)
+                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                    .callout(2, corner: 5, trailing: true)
+                    .offset(x: 6, y: rowHeight * 2.4)
+            }
+            if day == 3 {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                    .frame(height: 18)
+                    .overlay(Image(systemName: "plus").font(.caption2.weight(.bold)).foregroundStyle(.tint))
+                    .padding(.horizontal, 2)
+                    .callout(1, corner: 5)
+                    .offset(y: rowHeight * 3.6)
             }
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: rowHeight * 6)
     }
 
-    private struct MarkCallout: ViewModifier {
-        let number: Int?
-        func body(content: Content) -> some View {
-            if let number { content.callout(number, corner: 16) } else { content }
-        }
+    private func block(_ symbol: String, _ tint: Color) -> some View {
+        RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .fill(tint.opacity(0.2))
+            .frame(height: 18)
+            .overlay(Image(systemName: symbol).font(.system(size: 9, weight: .bold)).foregroundStyle(tint))
+            .padding(.horizontal, 2)
     }
 }
 
-/// The chosen day's list: a talk part-way, words part-way, and a block done
-/// at another time. Mirrors `PlannerDayCard.rowLayout`.
-private struct RoutineDayListMock: View {
+/// The date strip, reduced to the four looks a day can have: done (green),
+/// left undone (grey ring), a rest day (just the number), today filling.
+private struct RoutineDaysMock: View {
     var body: some View {
-        VStack(spacing: 10) {
-            row(time: "8:00", symbol: "phone.fill", tint: .blue, title: 60,
-                amount: "4/10", progress: 0.4)
-                .callout(1)
-            row(time: "12:30", symbol: "textformat", tint: .purple, title: 48,
-                amount: "12/20", progress: 0.6)
-                .callout(2)
-            row(time: "19:00", symbol: "waveform", tint: .yellow, title: 72,
-                amount: "✓ 12:04", progress: 1)
-                .callout(3)
+        HStack(spacing: 0) {
+            day(callout: 1) {
+                Circle().fill(Color.green)
+                number(14).foregroundStyle(.white)
+            }
+            day {
+                Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
+                number(15).foregroundStyle(.secondary)
+            }
+            day { number(16).foregroundStyle(.tertiary) }
+            day(callout: 2) {
+                Circle().strokeBorder(Color(.systemGray5), lineWidth: 3)
+                Circle().trim(from: 0, to: 0.55)
+                    .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .padding(1.5)
+                number(17).foregroundStyle(.primary)
+            }
         }
+        .padding(.vertical, 18)
     }
 
-    private func row(time: String, symbol: String, tint: Color, title: CGFloat,
-                     amount: String, progress: Double) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
-                .frame(width: 34, height: 34)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(tint.opacity(0.14)))
-            VStack(alignment: .leading, spacing: 5) {
-                TextBar(width: title, height: 8)
-                Text(verbatim: "\(time) · \(amount)")
-                    .font(.caption2)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 8)
-            ZStack {
-                if progress >= 1 {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.green)
-                } else {
-                    Circle().strokeBorder(Color(.systemGray4), lineWidth: 2)
-                    Circle().trim(from: 0, to: progress)
-                        .stroke(Color.green, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .padding(1)
-                }
-            }
-            .frame(width: 22, height: 22)
+    private func number(_ n: Int) -> Text {
+        Text(verbatim: "\(n)").font(.callout.weight(.semibold)).monospacedDigit()
+    }
+
+    @ViewBuilder
+    private func day<C: View>(callout n: Int? = nil, @ViewBuilder _ face: () -> C) -> some View {
+        let circle = ZStack { face() }.frame(width: 40, height: 40)
+        Group {
+            if let n { circle.callout(n, corner: 20) } else { circle }
         }
-        .padding(10)
-        .background(mockCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity)
     }
 }

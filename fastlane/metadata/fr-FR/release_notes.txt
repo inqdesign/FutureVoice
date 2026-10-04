@@ -4,6 +4,7 @@ Nouveautés
 • Quand tu découvres ta voix, tu peux écouter et choisir parmi quatre accents sur place.
 • Tu peux maintenant apprendre la langue dans laquelle tu utilises l’app.
 • Parler a un nouvel onglet Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
+• Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
 
 Corrections
 • Le salut au début d’un appel pouvait être coupé quand un appareil Bluetooth était à proximité.

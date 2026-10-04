@@ -4,6 +4,7 @@ Novedades
 • Al conocer tu voz por primera vez, puedes escuchar y elegir entre cuatro acentos ahí mismo.
 • Ahora puedes aprender el mismo idioma en el que usas la app.
 • Hablar tiene una nueva pestaña Día a día: situaciones cotidianas como una cafetería, un restaurante, una tienda de ropa o llamar a la clínica, con un solo toque.
+• Cada pestaña muestra una guía breve la primera vez: para qué sirve y cómo usarla. Vuelve a verlas cuando quieras en Mi perfil → Guía de la app.
 
 Correcciones
 • El saludo al empezar una llamada podía cortarse si había un dispositivo Bluetooth cerca.

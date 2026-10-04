@@ -4,6 +4,7 @@ Neu
 • Wenn du deine Stimme zum ersten Mal hörst, kannst du dir vier Akzente direkt anhören und einen auswählen.
 • Du kannst jetzt auch die Sprache lernen, in der du die App nutzt.
 • Im Tab „Sprechen“ gibt es jetzt „Alltag“: typische Situationen wie Café, Restaurant, Bekleidungsgeschäft oder Anruf in der Arztpraxis – mit einem Tipp starten.
+• Jeder Tab zeigt beim ersten Öffnen eine kurze Anleitung: wofür er da ist und wie du ihn nutzt. Du findest sie jederzeit unter Ich → App-Anleitung.
 
 Behoben
 • Die Begrüßung am Anfang eines Gesprächs brach ab, wenn ein Bluetooth-Gerät in der Nähe war.
