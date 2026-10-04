@@ -41,12 +41,38 @@ enum SpeechReader {
         }
     }
 
+    /// One piece of a take, read while the rest is still being spoken.
+    /// "" when the piece held no speech; nil when the read FAILED — the
+    /// caller then reads the whole take instead.
+    static func readPiece(audioURL: URL, language: String) async -> String? {
+        let aac = await Task.detached { AudioLoudness.aacADTS16kMono(fromFileAt: audioURL) }.value
+        guard let aac, !aac.isEmpty, aac.count <= 600_000 else { return nil }
+        struct Payload: Decodable { let transcript: String? }
+        do {
+            let payload: Payload = try await GeminiClient.shared.sendJSON(
+                system: prompt(language: language),
+                messages: [.init(role: .user, content: "Transcribe the attached audio.",
+                                 inlineAudio: .init(mimeType: "audio/aac",
+                                                    base64Data: aac.base64EncodedString()))],
+                model: .flash36,
+                maxTokens: 1024,
+                purpose: "transcribe",
+                requestTimeout: 25,
+                fastThinking: true
+            )
+            return payload.transcript?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        } catch {
+            return nil
+        }
+    }
+
     private static func prompt(language: String) -> String {
         let target = LanguageCatalog.englishName(language)
         let fillers = SpeechLibrary.fillers(language).joined(separator: ", ")
         return """
-        You transcribe ONE recorded speech practice: a language learner reading
-        a prepared text aloud in \(target). Output STRICT JSON only — no prose,
+        You transcribe ONE recorded speech practice — or one consecutive piece
+        of it — a language learner reading a prepared text aloud in \(target).
+        A piece may begin or end mid-sentence; write exactly what it holds. Output STRICT JSON only — no prose,
         no code fences: { "transcript": "..." }
 
         The AUDIO is the only source. You are not told what text they were
@@ -59,7 +85,7 @@ enum SpeechReader {
           was said.
         - If a word came out as a different word, write what was produced.
           Never fix grammar, never complete a sentence.
-        - Silent or unintelligible audio: "transcript": null.
+        - Silent or unintelligible audio: "transcript": "".
         """
     }
 }

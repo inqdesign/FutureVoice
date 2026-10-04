@@ -168,6 +168,13 @@ struct SpeechResultView: View {
             } footer: {
                 Text("Videos stay on this phone and aren't backed up. Save the ones you want to keep.")
             }
+        } else if store.videoPending.contains(take.id) {
+            Section {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Preparing your video…").foregroundStyle(.secondary)
+                }
+            }
         } else {
             Section {
                 Button {

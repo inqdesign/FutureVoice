@@ -145,15 +145,20 @@ enum SpeechMediaMerger {
             try ca.insertTimeRange(CMTimeRange(start: .zero, duration: duration), of: aTrack, at: .zero)
         } catch { return false }
         cv.preferredTransform = transform
-        guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality)
-        else { return false }
-        try? FileManager.default.removeItem(at: output)
-        export.outputURL = output
-        export.outputFileType = .mov
-        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            export.exportAsynchronously { cont.resume() }
+        // Passthrough first: the picture is already encoded, so it is copied,
+        // not re-encoded — near-instant where a re-encode of a three-minute
+        // take took tens of seconds. Re-encode only if passthrough refuses.
+        for preset in [AVAssetExportPresetPassthrough, AVAssetExportPresetHighestQuality] {
+            guard let export = AVAssetExportSession(asset: composition, presetName: preset) else { continue }
+            try? FileManager.default.removeItem(at: output)
+            export.outputURL = output
+            export.outputFileType = .mov
+            await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                export.exportAsynchronously { cont.resume() }
+            }
+            if export.status == .completed { return true }
         }
-        return export.status == .completed
+        return false
     }
 }
 

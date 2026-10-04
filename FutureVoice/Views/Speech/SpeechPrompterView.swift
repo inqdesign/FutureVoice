@@ -70,7 +70,18 @@ struct SpeechPrompterView: View {
     }
 
     private var isRecording: Bool { session.phase == .recording }
-    private var cameraShowing: Bool { session.cameraOn && session.camera.isRunning }
+    private var cameraShowing: Bool {
+        #if DEBUG
+        if Self.fakeCamera { return true }
+        #endif
+        return session.cameraOn && session.camera.isRunning
+    }
+
+    #if DEBUG
+    /// `-speechfakecam 1`: a stand-in picture where the camera goes, to see
+    /// the on-camera chrome in a simulator (which has no camera).
+    private static var fakeCamera: Bool { UserDefaults.standard.bool(forKey: "speechfakecam") }
+    #endif
 
     private var topBar: some View {
         HStack {
@@ -79,8 +90,7 @@ struct SpeechPrompterView: View {
                     .font(.body.weight(.semibold))
                     .frame(width: 36, height: 36)
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
+            .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .accessibilityLabel(Text("Close"))
 
             Spacer()
@@ -132,8 +142,7 @@ struct SpeechPrompterView: View {
                     .font(.body.weight(.semibold))
                     .frame(width: 36, height: 36)
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
+            .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .disabled(isRecording)
             .accessibilityLabel(Text("Prompter settings"))
             }
@@ -149,8 +158,7 @@ struct SpeechPrompterView: View {
                 .font(.body.weight(.semibold))
                 .frame(width: 36, height: 36)
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.circle)
+        .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
         .disabled(isRecording)
         .accessibilityLabel(label)
     }
@@ -169,7 +177,16 @@ struct SpeechPrompterView: View {
         ZStack(alignment: .bottom) {
             Group {
                 if cameraShowing {
+                    #if DEBUG
+                    if Self.fakeCamera {
+                        LinearGradient(colors: [Color(white: 0.75), Color(red: 0.55, green: 0.42, blue: 0.35), Color(white: 0.2)],
+                                       startPoint: .top, endPoint: .bottom)
+                    } else {
+                        SpeechCameraPreview(session: session.camera.session)
+                    }
+                    #else
                     SpeechCameraPreview(session: session.camera.session)
+                    #endif
                 } else {
                     micPanel
                 }
@@ -218,8 +235,7 @@ struct SpeechPrompterView: View {
                     .font(.title3)
                     .frame(width: 52, height: 52)
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
+            .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .disabled(isRecording)
             .accessibilityLabel(session.cameraOn ? Text("Turn camera off") : Text("Turn camera on"))
 
@@ -246,8 +262,7 @@ struct SpeechPrompterView: View {
                     .font(.title3)
                     .frame(width: 52, height: 52)
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
+            .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .disabled(isRecording)
             .accessibilityLabel(session.followVoice ? Text("Scrolling follows your voice") : Text("Scrolling at a steady speed"))
         }
@@ -510,6 +525,45 @@ struct SpeechWordWrap: Layout {
             view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
             x += size.width + spacing
             lineHeight = max(lineHeight, size.height)
+        }
+    }
+}
+
+/// The round buttons on the camera card. Over the camera they go NEUTRAL —
+/// a white glyph on glass (Liquid Glass on iOS 26, a blur below it) — so
+/// they read on any picture and never tint the face behind them. Without
+/// the camera they are the ordinary tinted circles.
+struct SpeechChromeButtonStyle: ButtonStyle {
+    let onCamera: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        ChromeLabel(configuration: configuration, onCamera: onCamera)
+    }
+
+    private struct ChromeLabel: View {
+        let configuration: Configuration
+        let onCamera: Bool
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            let label = configuration.label
+                .foregroundStyle(onCamera ? AnyShapeStyle(Color.white) : AnyShapeStyle(.tint))
+                .opacity(isEnabled ? 1 : 0.45)
+                .contentShape(Circle())
+            Group {
+                if onCamera {
+                    if #available(iOS 26.0, *) {
+                        label.glassEffect(.regular.interactive(), in: Circle())
+                    } else {
+                        label.background(.ultraThinMaterial, in: Circle())
+                            .environment(\.colorScheme, .dark)
+                    }
+                } else {
+                    label.background(Color.accentColor.opacity(0.15), in: Circle())
+                }
+            }
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
         }
     }
 }

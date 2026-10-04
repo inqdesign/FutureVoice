@@ -57,6 +57,14 @@ final class SpeechTakeSession: ObservableObject {
     /// screen (camera off, refused, unavailable).
     private var screenStartedAt: Date?
     private var voiceStartedAt: Date?
+    /// The take is read WHILE it is spoken: at each pause after
+    /// `chunkSeconds` the capture is cut and that piece goes to the reader,
+    /// so stopping leaves only the last few seconds to read instead of the
+    /// whole take (a three-minute file used to be read from scratch after
+    /// the reader had already stopped). In order; nil = that piece failed.
+    private var chunkReads: [Task<String?, Never>] = []
+    private var lastChunkAt: TimeInterval = 0
+    static let chunkSeconds: TimeInterval = 12
 
     private let native: String
     private let level_: CEFRLevel
@@ -114,7 +122,10 @@ final class SpeechTakeSession: ObservableObject {
                            preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
                            measurementMode: false,
                            contextualStrings: track.words.prefix(50).map(\.text),
+                           chunkCapture: true,
                            voiceProcessing: true)
+            chunkReads = []
+            lastChunkAt = 0
             wavURL = try recorder.prepare(quality: .sttOptimal)
         } catch {
             live.stop()
@@ -183,6 +194,13 @@ final class SpeechTakeSession: ObservableObject {
 
         // Finished: the last word is reached and they have stopped.
         let quietFor = live.lastVoicedAt.map { Date().timeIntervalSince($0) } ?? elapsed
+
+        // Cut a piece for the reader at a pause, never mid-word.
+        if elapsed - lastChunkAt >= Self.chunkSeconds, quietFor >= 0.35,
+           let piece = live.rotateCaptureChunk() {
+            lastChunkAt = elapsed
+            chunkReads.append(readPiece(piece))
+        }
         if cursor >= track.words.count - 1, quietFor > 2.2, elapsed > 3 {
             Task { await stop() }
             return
@@ -199,15 +217,28 @@ final class SpeechTakeSession: ObservableObject {
         guard phase == .recording else { return }
         phase = .analyzing
         ticker?.cancel()
+        let stoppedAt = Date()
+        func ms(_ since: Date) -> Int { Int(Date().timeIntervalSince(since) * 1000) }
         let duration = elapsed
         let recorded = recorder.stop() ?? wavURL
         let liveText = await live.stopAndFinalize()
-        let screenVideo = screenStartedAt != nil ? await SpeechScreenRecorder.stop() : nil
+        if let tail = live.lastChunkRecordingURL { chunkReads.append(readPiece(tail)) }
+        let pieces = chunkReads
+        chunkReads = []
+
+        // The video is finished in the background: the result never waits
+        // on it.
         var leadIn = 0.0
         if let screen = screenStartedAt, let voice = voiceStartedAt { leadIn = voice.timeIntervalSince(screen) }
+        let fromScreen = screenStartedAt != nil
+        let fromCamera = recordingVideo
         screenStartedAt = nil
-        let rawVideo = recordingVideo ? await camera.stopRecording() : screenVideo
         recordingVideo = false
+        let videoStop: Task<URL?, Never> = Task { [camera] in
+            if fromScreen { return await SpeechScreenRecorder.stop() }
+            if fromCamera { return await camera.stopRecording() }
+            return nil
+        }
 
         guard let recorded else {
             phase = .failed(explain("The recording couldn't be saved. Try again."))
@@ -226,54 +257,111 @@ final class SpeechTakeSession: ObservableObject {
         let envelope = await Task.detached { SpeechAnalyzer.envelope(of: audioURL) }.value
         guard let envelope, envelope.speakingSeconds > 1.5 else {
             try? FileManager.default.removeItem(at: audioURL)
-            if let rawVideo { try? FileManager.default.removeItem(at: rawVideo) }
+            Task { if let v = await videoStop.value { try? FileManager.default.removeItem(at: v) } }
             phase = .failed(explain("We didn't hear you. Check the microphone and try again."))
             return
         }
 
-        let reading = await SpeechReader.read(audioURL: audioURL, liveText: liveText, language: script.language)
-        let metrics = SpeechAnalyzer.analyze(script: script.body, transcript: reading.text,
+        // The pieces were read during the take; only the tail is left. Any
+        // piece that failed sends the whole file to the reader instead, so a
+        // hole is never scored as skipped words.
+        let readStart = Date()
+        var texts: [String] = []
+        for piece in pieces {
+            guard let text = await piece.value else { texts = []; break }
+            texts.append(text)
+        }
+        let transcript: String
+        let audioGrounded: Bool
+        let path: String
+        if !pieces.isEmpty, texts.count == pieces.count,
+           !texts.joined().trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let joiner = LanguageCatalog.writesSpaces(script.language) ? " " : ""
+            transcript = texts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }.joined(separator: joiner)
+            audioGrounded = true
+            path = "pieces"
+        } else {
+            let reading = await SpeechReader.read(audioURL: audioURL, liveText: liveText, language: script.language)
+            transcript = reading.text
+            audioGrounded = reading.audioGrounded
+            path = "whole"
+        }
+        let readMs = ms(readStart)
+        let metrics = SpeechAnalyzer.analyze(script: script.body, transcript: transcript,
                                              language: script.language, envelope: envelope)
 
-        var videoName: String?
-        if let rawVideo {
-            let name = "take-\(id.uuidString).mov"
-            var url = SpeechStore.mediaURL(name)
-            if await SpeechMediaMerger.merge(video: rawVideo, audio: audioURL, to: url,
-                                             videoLeadIn: screenVideo != nil ? leadIn : 0) {
-                // A camera take is the learner's to keep or save to Photos;
-                // it doesn't ride in the device backup at this size.
-                var values = URLResourceValues()
-                values.isExcludedFromBackup = true
-                try? url.setResourceValues(values)
-                videoName = name
-            }
-            try? FileManager.default.removeItem(at: rawVideo)
-        }
-
-        var take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
+        let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
                               durationSeconds: duration, audioFilename: audioName,
-                              videoFilename: videoName, transcript: reading.text,
+                              videoFilename: nil, transcript: transcript,
                               metrics: metrics, coaching: nil)
         SpeechStore.shared.save(take)
+        let resultMs = ms(stoppedAt)
+        // Flagged BEFORE the result shows, so it opens on "Preparing your
+        // video…" rather than flashing the audio player first.
+        if fromScreen || fromCamera { SpeechStore.shared.markVideoPending(id, true) }
         phase = .done(take)
+
+        // Picture and voice, put together behind the result.
+        let videoTask = Task {
+            defer { SpeechStore.shared.markVideoPending(id, false) }
+            guard let raw = await videoStop.value else { return false }
+            let name = "take-\(id.uuidString).mov"
+            var url = SpeechStore.mediaURL(name)
+            let merged = await SpeechMediaMerger.merge(video: raw, audio: audioURL, to: url,
+                                                       videoLeadIn: fromScreen ? leadIn : 0)
+            try? FileManager.default.removeItem(at: raw)
+            guard merged else { return false }
+            // A camera take is the learner's to keep or save to Photos; it
+            // doesn't ride in the device backup at this size.
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? url.setResourceValues(values)
+            self.update(id) { $0.videoFilename = name }
+            return true
+        }
+
+        let coachStart = Date()
+        if let coaching = await SpeechCoach.review(script: script, transcript: transcript,
+                                                   metrics: metrics, native: native, level: level_) {
+            update(id) { $0.coaching = coaching }
+        }
+        let coachMs = ms(coachStart)
+        let hasVideo = await videoTask.value
         Analytics.capture("speech_take", [
             "built_in": script.isBuiltIn,
             "genre": script.genre.rawValue,
             "seconds": Int(duration),
             "overall": metrics.overall,
             "accuracy": metrics.accuracy,
-            "camera": videoName != nil,
+            "camera": hasVideo,
+            "screen": fromScreen,
             "follow": followVoice,
-            "audio_grounded": reading.audioGrounded,
+            "audio_grounded": audioGrounded,
+            // Where the wait went: stop → result on screen, the reading part
+            // of it, and the coach that follows.
+            "read_path": path,
+            "pieces": pieces.count,
+            "read_ms": readMs,
+            "result_ms": resultMs,
+            "coach_ms": coachMs,
         ])
+    }
 
-        if let coaching = await SpeechCoach.review(script: script, transcript: reading.text,
-                                                   metrics: metrics, native: native, level: level_) {
-            take.coaching = coaching
-            SpeechStore.shared.save(take)
-            if case .done(let shown) = phase, shown.id == take.id { phase = .done(take) }
+    private func readPiece(_ url: URL) -> Task<String?, Never> {
+        let language = script.language
+        return Task {
+            defer { try? FileManager.default.removeItem(at: url) }
+            return await SpeechReader.readPiece(audioURL: url, language: language)
         }
+    }
+
+    /// Applies a change to the stored take and to the one on screen.
+    private func update(_ id: UUID, _ change: (inout SpeechTake) -> Void) {
+        guard var take = SpeechStore.shared.takes.first(where: { $0.id == id }) else { return }
+        change(&take)
+        SpeechStore.shared.save(take)
+        if case .done(let shown) = phase, shown.id == id { phase = .done(take) }
     }
 
     /// Back to the start of the script, ready for another take.
@@ -291,6 +379,8 @@ final class SpeechTakeSession: ObservableObject {
             let url = recorder.stop()
             live.stop()
             if let url { try? FileManager.default.removeItem(at: url) }
+            chunkReads.forEach { $0.cancel() }
+            chunkReads = []
             if recordingVideo {
                 Task { if let v = await camera.stopRecording() { try? FileManager.default.removeItem(at: v) } }
             }

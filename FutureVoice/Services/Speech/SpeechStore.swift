@@ -11,6 +11,8 @@ final class SpeechStore: ObservableObject {
 
     @Published private(set) var scripts: [SpeechScript] = []
     @Published private(set) var takes: [SpeechTake] = []
+    /// Takes whose video is still being put together.
+    @Published private(set) var videoPending: Set<UUID> = []
     private var loadedLanguage: String?
 
     private let encoder: JSONEncoder = {
@@ -57,6 +59,10 @@ final class SpeechStore: ObservableObject {
 
     func reloadIfLanguageChanged() {
         if loadedLanguage != LanguageScope.active { reload() }
+    }
+
+    func markVideoPending(_ id: UUID, _ pending: Bool) {
+        if pending { videoPending.insert(id) } else { videoPending.remove(id) }
     }
 
     func script(id: UUID) -> SpeechScript? { scripts.first { $0.id == id } }
