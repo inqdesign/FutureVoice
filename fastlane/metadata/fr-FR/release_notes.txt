@@ -5,6 +5,7 @@ Nouveautés
 • Tu peux maintenant apprendre la langue dans laquelle tu utilises l’app.
 • Parler a un nouvel onglet Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
 • Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
+• Ma routine : planifie ta semaine directement sur l’emploi du temps et fais glisser les blocs pour les déplacer. Place appels, révisions et Redire aux jours et heures de ton choix ; l’appel quotidien sonne à l’heure de conversation de ta routine.
 
 Corrections
 • Le salut au début d’un appel pouvait être coupé quand un appareil Bluetooth était à proximité.

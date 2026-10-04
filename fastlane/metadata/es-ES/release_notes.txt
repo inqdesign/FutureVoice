@@ -5,6 +5,7 @@ Novedades
 • Ahora puedes aprender el mismo idioma en el que usas la app.
 • Hablar tiene una nueva pestaña Día a día: situaciones cotidianas como una cafetería, un restaurante, una tienda de ropa o llamar a la clínica, con un solo toque.
 • Cada pestaña muestra una guía breve la primera vez: para qué sirve y cómo usarla. Vuelve a verlas cuando quieras en Mi perfil → Guía de la app.
+• Mi rutina: planea tu semana directamente en el horario y arrastra los bloques para moverlos. Pon conversaciones, repasos y Volver a decirlo en los días y horas que quieras; la llamada diaria suena a la hora de conversación de tu rutina.
 
 Correcciones
 • El saludo al empezar una llamada podía cortarse si había un dispositivo Bluetooth cerca.
