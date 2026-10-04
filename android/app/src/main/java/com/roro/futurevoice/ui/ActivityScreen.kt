@@ -189,6 +189,8 @@ fun ActivityScreen(
         SayItAgainPicker(language = language, onClose = { picking = false; StoreEvents.bump() })
         return
     }
+    // First visit: what a green day means (iOS `ActivityView.offerIntro`).
+    RoutineGuideHost(blocked = showCard)
 
     fun standing(day: Long) = PromiseStreak.standing(context, day) { dayKey(it) in activeKeys }
     val isPromise = plan.streakSince != null
@@ -274,8 +276,11 @@ fun ActivityScreen(
                     away = if (periodKey(periodAnchor, mode) == current) null else true,
                     onToday = { periodAnchor = current },
                 )
-                CenteredStrip(periods, idx, { periodAnchor = periods[it] }) { p, isSel ->
-                    PeriodCell(p, mode, isSel, today, ::standing)
+                // Keyed by the view: months and years are different strips.
+                androidx.compose.runtime.key(mode) {
+                    CenteredStrip(periods, idx, { periodAnchor = periods[it] }) { p, isSel ->
+                        PeriodCell(p, mode, isSel, today, ::standing)
+                    }
                 }
                 PinnedPanel(footer = { StatsBar(record, periodAnchor, mode) }) {
                     if (mode == Mode.MONTH) {
