@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.renewalLabel
 
 /** Which pool ran out. They read differently and offer different things. */
@@ -54,10 +55,11 @@ private val DoneGreen = Color(0xFF34C759)
  * So the sheet says the month's talking is done, names the size of what was
  * spent, says when it comes back, and offers the next thing to do.
  *
- * On Light the upgrade LEADS, because it is the answer to "I want to keep
- * talking"; review stays one tap away and free either way. On Plus the upgrade
- * half is ABSENT rather than disabled — there is nothing left to offer that
- * account, so for them the answer really is the renewal date.
+ * When a bigger plan is on sale the upgrade LEADS — Light → Plus, Plus → Max
+ * (`AccountStatus.upgradeTier`) — because it is the answer to "I want to keep
+ * talking"; review stays one tap away and free either way. At the top the
+ * upgrade half is ABSENT rather than disabled — there is nothing left to offer
+ * that account, so for them the answer really is the renewal date.
  *
  * It replaced two alerts on iOS that could state the rule but had nowhere to
  * put the thing to do next.
@@ -93,6 +95,15 @@ fun AllowanceSpentSheet(
         }
     }
     val renewsOn = account?.renewalLabel(locale).orEmpty()
+    // The tier "Move to …" lands on: the next bigger one ON SALE (Light →
+    // Plus, Plus → Max — iOS `upgradeTier`). Plus is the fallback name only
+    // while the account is still loading behind a caller that already knows.
+    val upgradeTier = account?.upgradeTier ?: "plus"
+    val upgradeName = stringResource(AccountStatus.tierNameRes(upgradeTier))
+    val upgrade = {
+        BillingGate.paywallTier.value = upgradeTier
+        onUpgrade()
+    }
 
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
@@ -130,9 +141,8 @@ fun AllowanceSpentSheet(
                         textAlign = TextAlign.Center)
                     // What to do about it — the whole reason this isn't an alert.
                     Text(
-                        stringResource(
-                            if (canUpgrade) R.string.review_what_this_month_left_you_or_move_to_plus_to_keep_goin_a63865
-                            else R.string.review_stays_free_and_always_did),
+                        if (canUpgrade) stringResource(R.string.spent_review_or_move_to_tier, upgradeName)
+                        else stringResource(R.string.review_stays_free_and_always_did),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center)
@@ -166,8 +176,8 @@ fun AllowanceSpentSheet(
             ) {
                 // Order is the recommendation.
                 if (canUpgrade) {
-                    Button(onClick = onUpgrade, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.move_to_plus))
+                    Button(onClick = upgrade, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.spent_move_to_tier, upgradeName))
                     }
                     // Tonal, not outlined: iOS's `.bordered` is a filled
                     // capsule, and an outline here reads as the weaker of two

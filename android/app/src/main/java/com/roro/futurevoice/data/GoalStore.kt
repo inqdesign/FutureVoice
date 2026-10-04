@@ -51,6 +51,33 @@ object GoalStore {
             .apply()
     }
 
+    // MARK: - The routine sets the day (iOS `b905ac2`)
+    //
+    // What a day ASKS for is the routine's: the per-day numbers above are
+    // only the hand a deck deals on a day the routine says nothing about.
+
+    /** How much of [kind] the routine asks for on [at] — null when it asks
+     *  for none (a rest day, or a day without that block). */
+    fun target(c: Context, kind: StudyPlan.Kind, at: Long = System.currentTimeMillis()): Int? {
+        val total = StudyPlanStore.current(c).occurrences(at, WeeklyTestSettings.schedule(c))
+            .filter { it.kind == kind }.sumOf { it.amount }
+        return total.takeIf { it > 0 }
+    }
+
+    /** How many a deck deals today: the routine's number when it has one,
+     *  else the standing default. */
+    fun handSize(c: Context, kind: StudyPlan.Kind): Int {
+        target(c, kind)?.let { return it }
+        val g = load(c)
+        return when (kind) {
+            StudyPlan.Kind.REVIEW -> maxOf(g.sentences, 1)
+            StudyPlan.Kind.WORDS -> maxOf(g.words, 1)
+            StudyPlan.Kind.EXPRESSIONS -> maxOf(g.expressions, 1)
+            StudyPlan.Kind.SHADOW -> maxOf(g.shadows, 1)
+            else -> 1
+        }
+    }
+
     /**
      * Every enabled challenge met on [at]. False when nothing is enabled — a
      * day with no goals cannot be "met", or the streak would be infinite.

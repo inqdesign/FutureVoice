@@ -24,4 +24,9 @@ object MeCaptureFlags {
     /** The paywall opens straight on its PLANS step over this catalog, without
      *  asking Play or the server. */
     @JvmField var previewPlans: List<BillingService.Plan>? = null
+
+    /** Store prices for [previewPlans], plan id → micros, in [previewCurrency]
+     *  (iOS seeds the same table: a capture build is never priced by a store). */
+    @JvmField var previewPrices: Map<String, Long>? = null
+    @JvmField var previewCurrency: String? = null
 }

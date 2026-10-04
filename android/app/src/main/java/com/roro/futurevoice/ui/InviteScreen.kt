@@ -319,8 +319,8 @@ private fun Footer(text: String) {
  * never grade the buyer, and the Apple/Play product ids deliberately still
  * carry the old words — so the id is a lookup key, never a label.
  */
-private fun tierName(context: android.content.Context, planId: String?): String = when {
-    planId != null && (planId.startsWith("light") || planId.contains("daily")) ->
-        context.getString(R.string.plan_tier_light)
-    else -> context.getString(R.string.plan_tier_plus)
-}
+private fun tierName(context: android.content.Context, planId: String?): String =
+    // A comp names no plan → Plus, as before; everything else through the
+    // one place tier names live (Max included since 2d.5).
+    context.getString(if (planId.isNullOrEmpty()) R.string.plan_tier_plus
+        else com.roro.futurevoice.data.AccountStatus.tierNameRes(planId))

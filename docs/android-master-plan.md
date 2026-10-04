@@ -548,7 +548,7 @@
 - ☐ 2d.2 코치: 매 줄 "이렇게 말해 보세요"·코치 통화는 연습 통화 (`6e9eb92`), A1/A2 구체적 질문 하나·첫 대화 확인 시트 (`eaaf3af`)
 - ☐ 2d.3 복습: 학습 중 페이지는 교재 중심 (`790099d` `21dd1ac` `912d6f4`), 목록 스와이프 Keep/I know (`e9d3096`)
 - ☐ 2d.4 주간: 한 주 돌아보기 아카이브·페이지 소개 시트 (`e9da8fc`), 주간 테스트 문법·단어 바꾸기 문제 (`9617756`), `cf5b08d` `36342dd`
-- ☐ 2d.5 요금: 맥스 요금제·50분 추가·한 화면 사다리 페이월 (`815c945`) — Play 상품은 7.1
+- ◐ 2d.5 요금: 맥스 요금제·50분 추가·한 화면 사다리 페이월 (`815c945`) — Play 상품은 7.1. **된 것** (`e85220b`): 페이월 요금 단계가 사다리(카탈로그 티어 작은 것부터, 비활성 행 제외, 분·상황연습·하루 몇 분꼴·가격·분당 가격, 연간 "N개월 무료", 연간 없는 티어는 "월간만", 플러스 "가장 많이 선택", 공통 기능·시간 세는 법 한 번), 구독 중이면 "내 요금제"·이용 중·구독 관리, `AccountStatus.upgradeTier`/`tierNameRes`(맥스 9개 언어), 다 쓴 시트 "○○로 바꾸기"가 다음 판매 티어를 고른 채 페이월로, 캡처 `paywall-plans` 사다리. **남은 것**: ① 50분 팩 — Play 소모성 `talk_50`은 `google-topup`이 있어야 분이 들어오므로 버튼 없음(4.0) ② Play 구독자의 플랜 변경은 `SubscriptionUpdateParams`(기존 구매 토큰) 필요 — 지금은 새 구매로 나감, 7.1 때 같이 ③ 폰 확인: 사다리 줄바꿈(de/fr "Am häufigsten gewählt"), 선택 하이라이트 전환
 - ☐ 2d.6 가이드: 탭별 "왜·어떻게" + 설정의 사용 가이드 (`e4bcd83` `0d11490`)
 - ☐ 2d.7 대화·기타: 대화 탭 '일상' (`5b0587a`), 다시 말하기 텔레프롬프터 (`5b24d43`), 요약 두 번 방지 (`cd31a1a`), 블루투스 첫인사 끊김 (`f0dd539`), 하루 카드 사진첩 저장 (`704cc4a`), 상황 링크는 폰이 읽음 (`c06a5cf`), 피드백 시트 기록 (`9a6f4dc`)
 - ☐ 2d.8 교재 워크북 PDF (`ab56652`)
@@ -572,7 +572,7 @@
 - (2.1)
 
 **P1 돈** — 과금·결제 게이트·한도가 iOS와 다른 것
-- ☐ 4.0 **100분 팩(소모성)** — iOS `apple-topup`/`TalkTopUpService`/`TalkTopUpButton`(2026-09-26)의 짝. Play 소모성 `talk_100`(`talk_topups.google_product_id`) → `google-topup` 엣지 함수(구매 토큰 검증) → `apply_talk_topup(…, 'google', purchaseToken)` → 소진 시트·Usage 페이지에 버튼. 서버 응답 뒤에만 consume. 상한 풀·무료 20분·`isUncappedTalk`는 2026-09-26에 맞춰 둠(`9c67c41` 이후 미커밋).
+- ☐ 4.0 **추가 시간 팩(소모성)** — 2026-10-02부터 iOS는 100분 팩을 끄고 **50분 팩**(`talk_50`, `talk_topups.google_product_id = 'talk_50'`, 구독 없이도 구매)을 판다; 페이월 사다리의 "추가 시간" 줄과 소진 시트 버튼이 이걸 기다린다(2d.5에서 버튼은 그리지 않음). 원래 항목: iOS `apple-topup`/`TalkTopUpService`/`TalkTopUpButton`(2026-09-26)의 짝. Play 소모성 `talk_100`(`talk_topups.google_product_id`) → `google-topup` 엣지 함수(구매 토큰 검증) → `apply_talk_topup(…, 'google', purchaseToken)` → 소진 시트·Usage 페이지에 버튼. 서버 응답 뒤에만 consume. 상한 풀·무료 20분·`isUncappedTalk`는 2026-09-26에 맞춰 둠(`9c67c41` 이후 미커밋).
 - ☑ 4.1 (확인만, 2026-09-29 — `RootScreen` 책 `onWatch = { id -> gate { … } }`, Watch 탭 카드도 같은 `gate`, 컴포저 CTA는 `BillingGate.start`; 코드 변경 없음) 책 페이지의 장면 다시 만들기(Watch)가 결제 게이트를 거치지 않는지
   확인하고, 거치지 않으면 게이트에 넣는다.
 - (2.16, 2.18, 2.27)

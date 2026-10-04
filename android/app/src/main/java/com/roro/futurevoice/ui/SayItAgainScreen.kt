@@ -462,6 +462,9 @@ fun SayItAgainScreen(
         }
         index = maxOf(0, steps.lastIndex)
         phase = SayPhase.FINISHED
+        // A finished run is what a routine's say-it-again block counts.
+        com.roro.futurevoice.data.ActivityEventLog.record(context,
+            com.roro.futurevoice.data.ActivityEventLog.Kind.SAY_IT_AGAIN)
         logWhenScored()
     }
 

@@ -224,7 +224,7 @@ fun TalkScreen(
     var spent by remember { mutableStateOf<SpentPool?>(null) }
     var canUpgrade by remember { mutableStateOf(false) }
     LaunchedEffect(spent) {
-        if (spent != null) canUpgrade = AccountStatus.load(AuthRepository()).isLightPlan
+        if (spent != null) canUpgrade = AccountStatus.load(AuthRepository()).upgradeTier != null
     }
     val listState = rememberLazyListState()
     // Call settings (iOS `CallSettingsSheet`): screen state the learner can
