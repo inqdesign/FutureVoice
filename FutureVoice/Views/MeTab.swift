@@ -207,6 +207,16 @@ struct MeTab: View {
                     }
                 }
 
+                Section {
+                    NavigationLink {
+                        AppGuideView()
+                    } label: {
+                        row(icon: "questionmark.circle",
+                            title: explain("App guide"),
+                            subtitle: explain("What each tab is for, and how to use it"))
+                    }
+                }
+
                 contactSection
 
                 Section {

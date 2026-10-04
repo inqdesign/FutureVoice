@@ -467,10 +467,17 @@ enum DebugCapture {
             }
             return AnyView(VoiceCloneOnboardingView().environmentObject(appState)
                 .environmentObject(AuthService()))
-        case "page-intro-talk", "page-intro-watch", "page-intro-review", "page-intro-progress":
+        case "app-guide":
+            // Me → App guide: every tab's guide in one list.
+            return AnyView(NavigationStack { AppGuideView() }.environmentObject(appState))
+        case _ where name.hasPrefix("page-intro-"):
             // The first-visit introduction, over the tab it introduces.
-            let page = PageIntro.Page(rawValue: String(name.dropFirst("page-intro-".count))) ?? .talk
-            return AnyView(PageIntroCaptureHost(page: page).environmentObject(appState))
+            // `page-intro-<tab>` opens its first page, `-<tab>-2` / `-3` the
+            // later ones.
+            let parts = name.dropFirst("page-intro-".count).split(separator: "-")
+            let page = PageIntro.Page(rawValue: String(parts.first ?? "")) ?? .talk
+            let step = parts.count > 1 ? max(0, (Int(parts[1]) ?? 1) - 1) : 0
+            return AnyView(PageIntroCaptureHost(page: page, step: step).environmentObject(appState))
         case "watchtab":
             // The Watch tab with the merged People entry in its header.
             return AnyView(WatchTab().environmentObject(appState))
@@ -2623,6 +2630,7 @@ private struct GoalSheetPreview: View {
 
 private struct PageIntroCaptureHost: View {
     let page: PageIntro.Page
+    var step = 0
     @State private var showing = false
 
     var body: some View {
@@ -2634,7 +2642,7 @@ private struct PageIntroCaptureHost: View {
             case .progress: ProgressTab()
             }
         }
-        .sheet(isPresented: $showing) { PageIntroSheet(page: page) }
+        .sheet(isPresented: $showing) { PageIntroSheet(page: page, initialStep: step) }
         .task {
             try? await Task.sleep(for: .milliseconds(400))
             showing = true
