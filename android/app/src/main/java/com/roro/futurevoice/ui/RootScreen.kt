@@ -310,6 +310,9 @@ fun RootScreen() {
     var studyDeckKind by remember { mutableStateOf<StudyScheduleStore.Kind?>(null) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
+    /** The book's Watch replays the saved scene (free, no gate); the Watch
+     *  tab writes a fresh take. */
+    var watchReplay by remember { mutableStateOf(false) }
     var shadowLine by remember { mutableStateOf<String?>(null) }
     // Today's shadow hand and where we are in it. A dealt hand, not a
     // browser: opening everything ever said and asking the learner to choose
@@ -603,6 +606,7 @@ fun RootScreen() {
             targetLanguage = state.targetLanguage,
             proficiency = state.level.code,
             onBack = { watchScenarioId = null },
+            replaySaved = watchReplay,
         )
 
         // Above the book: "Review this talk" opens the deck from a book page,
@@ -641,7 +645,10 @@ fun RootScreen() {
             language = state.targetLanguage,
             // A fresh take costs a scene count, so the wall is asked at the
             // tap here exactly as it is on the Watch tab.
-            onWatch = { id -> gateScene { watchScenarioId = id } },
+            // Watch on the book replays THE scene the book was extracted
+            // from (iOS `WatchView(savedDialogue:)`): free after the first
+            // listen, so no gate and no new take.
+            onWatch = { id -> watchReplay = true; watchScenarioId = id },
             onTalk = { sc -> gate {
                 bookScenarioId = null
                 callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
@@ -942,7 +949,7 @@ fun RootScreen() {
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
             onOpenTalk = { detailSessionId = it },
-            onWatch = { id -> gateScene { watchScenarioId = id } },
+            onWatch = { id -> gateScene { watchReplay = false; watchScenarioId = id } },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
             onSavePersona = app::savePersona,

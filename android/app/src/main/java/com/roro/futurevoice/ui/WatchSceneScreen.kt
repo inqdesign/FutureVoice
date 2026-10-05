@@ -87,6 +87,11 @@ fun WatchSceneScreen(
     targetLanguage: String,
     proficiency: String,
     onBack: () -> Unit,
+    /** The book's Watch (iOS `ScenarioDetailView` → `WatchView(savedDialogue:)`):
+     *  replay THE scene the book was extracted from — never a new generation,
+     *  no reading, no gate. Lines come from the audio cache the scene's first
+     *  play filled. The Watch tab leaves this off and writes a fresh take. */
+    replaySaved: Boolean = false,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -114,12 +119,88 @@ fun WatchSceneScreen(
     var otherId by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
 
+    /** Plays a scene line by line — the learner's lines in their clone, the
+     *  counterpart on its preset — cache first, so a replay costs nothing. */
+    suspend fun playLines(dialogue: List<com.roro.futurevoice.talk.DialogueEngineTurn>,
+                          sceneKey: String, castVoiceId: String) {
+            var sceneCounted = false
+            for (turn in dialogue) {
+                val isUser = turn.speaker == "user"
+                shown = shown + Turn(
+                    id = turn.id,
+                    role = if (isUser) TurnRole.USER else TurnRole.FLUENT_SELF,
+                    transcript = turn.text)
+                playingIndex = shown.lastIndex
+                val audio = runCatching {
+                    // Cache first — a scene replayed from Practice must not
+                    // re-bill lines the learner already owns.
+                    com.roro.futurevoice.data.cachedSynthesis(
+                        context,
+                        voiceId = if (isUser) voiceId else castVoiceId,
+                        text = turn.text,
+                        // The learner's own lines on the fidelity model —
+                        // similarity IS the product here; preset lines don't
+                        // need it (server allowlists fidelity per purpose).
+                        modelId = if (isUser) ElevenLabsClient.CLONE_MODEL_ID
+                        else ElevenLabsClient.CONVERSATION_MODEL_ID,
+                        purpose = "scene",
+                        sceneKey = sceneKey,
+                    )
+                }.getOrElse { e ->
+                    when (e) {
+                        // The free pool is genuinely empty — this account has
+                        // nothing to spend, so the paywall IS the answer.
+                        is EdgeError.InsufficientCredits -> {
+                            BillingGate.invalidate()
+                            BillingGate.showPaywall.value = true
+                            return
+                        }
+                        // They already paid; the pool refills on its own.
+                        is EdgeError.SceneCapReached -> {
+                            spent = SpentPool.SCENES; return
+                        }
+                        is EdgeError.DailyCapReached -> {
+                            spent = SpentPool.TALK; return
+                        }
+                        else -> null   // one failed line must not kill the scene
+                    }
+                }
+                audio?.let {
+                    // A scene the learner sat through is effort, so it keeps
+                    // a streak alive — logged ONCE, when its first line is
+                    // actually heard. Out of the daily goal: the goal counts
+                    // work they did, and a scene plays itself.
+                    if (!sceneCounted) {
+                        sceneCounted = true
+                        com.roro.futurevoice.data.PracticeLog.record(
+                            context, com.roro.futurevoice.data.PracticeLog.Kind.SCENE)
+                    }
+                    mp3.play(it)
+                }
+            }
+    }
+
     LaunchedEffect(scenarioId, replayKey) {
         val store = ScenarioStore.shared(context)
         error = null
         var scenario = store.load(targetLanguage).firstOrNull { it.id == scenarioId }
             ?.also { scene = it; otherId = it.counterpartId }
             ?: run { onBack(); return@LaunchedEffect }
+        if (replaySaved) {
+            // The saved scene, as it is in the book: no model call, no
+            // reading, no new take. One key per replay, as iOS's view keeps
+            // one `sceneRunKey` for every line it plays.
+            val saved = scenario.curriculum?.dialogue.orEmpty()
+            if (saved.isEmpty()) { onBack(); return@LaunchedEffect }
+            error = null
+            generating = false
+            title = scenario.curriculum?.dialogueTitle
+            shown = emptyList()
+            playLines(saved, "scene:${scenario.id}:replay-${UUID.randomUUID().toString().take(8)}",
+                StockPerson.by(scenario.voicePresetId).voiceId)
+            playingIndex = -1
+            return@LaunchedEffect
+        }
         // Material first (iOS `59c6481`). A brief with sources but no reading
         // yet is read here, once, with the board on screen; the scene below
         // is then written FROM it. A failed reading is the error state (Try
@@ -208,63 +289,7 @@ fun WatchSceneScreen(
             StoreEvents.bump()
 
             // ── Play the scene: one scene_key for every line = ONE count.
-            val eleven = ElevenLabsClient(auth)
-            val sceneKey = "scene:${scenario.id}:$runKey"
-            var sceneCounted = false
-            for (turn in fresh.dialogue.orEmpty()) {
-                val isUser = turn.speaker == "user"
-                shown = shown + Turn(
-                    id = turn.id,
-                    role = if (isUser) TurnRole.USER else TurnRole.FLUENT_SELF,
-                    transcript = turn.text)
-                playingIndex = shown.lastIndex
-                val audio = runCatching {
-                    // Cache first — a scene replayed from Practice must not
-                    // re-bill lines the learner already owns.
-                    com.roro.futurevoice.data.cachedSynthesis(
-                        context,
-                        voiceId = if (isUser) voiceId else cast.voiceId,
-                        text = turn.text,
-                        // The learner's own lines on the fidelity model —
-                        // similarity IS the product here; preset lines don't
-                        // need it (server allowlists fidelity per purpose).
-                        modelId = if (isUser) ElevenLabsClient.CLONE_MODEL_ID
-                        else ElevenLabsClient.CONVERSATION_MODEL_ID,
-                        purpose = "scene",
-                        sceneKey = sceneKey,
-                    )
-                }.getOrElse { e ->
-                    when (e) {
-                        // The free pool is genuinely empty — this account has
-                        // nothing to spend, so the paywall IS the answer.
-                        is EdgeError.InsufficientCredits -> {
-                            BillingGate.invalidate()
-                            BillingGate.showPaywall.value = true
-                            return@LaunchedEffect
-                        }
-                        // They already paid; the pool refills on its own.
-                        is EdgeError.SceneCapReached -> {
-                            spent = SpentPool.SCENES; return@LaunchedEffect
-                        }
-                        is EdgeError.DailyCapReached -> {
-                            spent = SpentPool.TALK; return@LaunchedEffect
-                        }
-                        else -> null   // one failed line must not kill the scene
-                    }
-                }
-                audio?.let {
-                    // A scene the learner sat through is effort, so it keeps
-                    // a streak alive — logged ONCE, when its first line is
-                    // actually heard. Out of the daily goal: the goal counts
-                    // work they did, and a scene plays itself.
-                    if (!sceneCounted) {
-                        sceneCounted = true
-                        com.roro.futurevoice.data.PracticeLog.record(
-                            context, com.roro.futurevoice.data.PracticeLog.Kind.SCENE)
-                    }
-                    mp3.play(it)
-                }
-            }
+            playLines(fresh.dialogue.orEmpty(), "scene:${scenario.id}:$runKey", cast.voiceId)
             playingIndex = -1
             // No ask here any more. The one feedback moment is after a
             // returning TALK: a scene just played is a poor place to stop
