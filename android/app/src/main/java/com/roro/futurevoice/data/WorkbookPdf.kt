@@ -53,22 +53,22 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
 
     private fun describe(id: BookWorkbook.PartId): Part = when (id) {
         BookWorkbook.PartId.WORDS -> Part(id, s(R.string.words_d26d55),
-            s(R.string.workbook_cover_and_write), s(R.string.workbook_words_blurb))
+            s(R.string.cover_and_write), s(R.string.recall_each_word_from_its_meaning))
         BookWorkbook.PartId.EXPRESSIONS -> Part(id, s(R.string.expressions),
-            s(R.string.workbook_copy_it_out), s(R.string.workbook_expressions_blurb))
-        BookWorkbook.PartId.DRILL -> Part(id, s(R.string.workbook_mistakes),
-            s(R.string.workbook_mistake_notebook), s(R.string.workbook_drill_blurb))
-        BookWorkbook.PartId.DICTATION -> Part(id, s(R.string.workbook_dictation),
-            s(R.string.workbook_dictation), s(R.string.workbook_dictation_blurb))
-        BookWorkbook.PartId.RECALL -> Part(id, s(R.string.workbook_recall),
-            s(R.string.workbook_blank_page), s(R.string.workbook_recall_blurb))
+            s(R.string.copy_it_out), s(R.string.copy_the_fluent_self_s_lines_then_make_them_yours))
+        BookWorkbook.PartId.DRILL -> Part(id, s(R.string.mistakes),
+            s(R.string.mistake_notebook), s(R.string.redo_what_you_said_answers_at_the_back))
+        BookWorkbook.PartId.DICTATION -> Part(id, s(R.string.dictation),
+            s(R.string.dictation), s(R.string.hear_it_in_the_app_write_it_here))
+        BookWorkbook.PartId.RECALL -> Part(id, s(R.string.recall),
+            s(R.string.blank_page), s(R.string.everything_you_remember_from_nothing))
         BookWorkbook.PartId.ANSWERS -> Part(id, s(R.string.workbook_answers),
-            s(R.string.workbook_answers), s(R.string.workbook_answers_blurb))
+            s(R.string.workbook_answers), s(R.string.look_here_only_after_you_ve_written))
         BookWorkbook.PartId.DIALOGUE -> {
             val d = wb.dialogue
             val title = if (d?.kind == BookDocument.Section.Kind.SCENE) d.title
-                else s(R.string.workbook_whole_conversation)
-            Part(id, s(R.string.talk), title, s(R.string.workbook_dialogue_blurb))
+                else s(R.string.the_whole_conversation)
+            Part(id, s(R.string.talk), title, s(R.string.with_room_in_the_margin))
         }
     }
 
@@ -231,26 +231,26 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
     // MARK: - Parts
 
     private fun wordsPart(f: Flow) {
-        header(f, s(R.string.workbook_cover_and_write), listOf(
-            s(R.string.workbook_say_the_word),
-            s(R.string.workbook_fold_column),
-            s(R.string.workbook_read_meaning_write),
-            s(R.string.workbook_unfold_check),
-            s(R.string.workbook_use_in_sentence),
+        header(f, s(R.string.cover_and_write), listOf(
+            s(R.string.say_the_word_out_loud),
+            s(R.string.fold_the_word_column_under),
+            s(R.string.read_the_meaning_write_the_word),
+            s(R.string.unfold_and_check_tick_the_box),
+            s(R.string.use_it_in_a_sentence_of_your_own),
         ))
         val leftW = 120f
         val rx = L + leftW + 12f
         val rw = RIGHT - rx
         for (w in wb.words) {
             val word = layout(w.text, text(12.5f, bold = true), leftW - 10f - 16f)
-            val tag = if (w.mastered) layout(s(R.string.workbook_mastered_in_app),
+            val tag = if (w.mastered) layout(s(R.string.mastered_in_the_app),
                 text(7.5f, grey(0x99)), leftW - 10f) else null
             val leftH = 2f + word.height + (tag?.let { 2f + it.height } ?: 0f)
 
             val meaning = if (w.meaning.isEmpty()) layout(s(R.string.meaning), text(9.5f, grey(0xAA)), rw * 0.6f)
                 else layout(w.meaning, text(9.5f, grey(0x55)), rw)
             val surface = if (wb.usesCells) cell else bandHeight
-            val cap = layout(s(R.string.workbook_your_sentence), text(7.5f, grey(0x99), spacing = 0.04f), rw)
+            val cap = layout(s(R.string.your_sentence), text(7.5f, grey(0x99), spacing = 0.04f), rw)
             val second = if (wb.usesCells) ruleHeight else bandHeight
             val rightH = 2f + meaning.height + 5f + surface + 5f + cap.height + 1f + second
             val contentH = maxOf(leftH, rightH)
@@ -276,14 +276,14 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
     }
 
     private fun expressionsPart(f: Flow) {
-        header(f, s(R.string.workbook_copy_it_out), listOf(
-            s(R.string.workbook_read_aloud),
-            s(R.string.workbook_copy_sentence),
-            s(R.string.workbook_say_about_life),
+        header(f, s(R.string.copy_it_out), listOf(
+            s(R.string.read_it_out_loud),
+            s(R.string.copy_the_sentence),
+            s(R.string.say_it_about_your_own_life),
         ))
         val x = L + 16f
         val w = RIGHT - x
-        val labels = listOf(s(R.string.workbook_copy), s(R.string.workbook_mine), "")
+        val labels = listOf(s(R.string.copy_clipboard), s(R.string.mine), "")
         val labelPaint = text(7.5f, grey(0x99))
         for (e in wb.expressions) {
             val head = SpannableStringBuilder(e.text).apply {
@@ -333,17 +333,17 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
     }
 
     private fun drillPart(f: Flow) {
-        header(f, s(R.string.workbook_mistake_notebook), listOf(
-            s(R.string.workbook_read_what_you_said),
-            s(R.string.workbook_write_it_now),
-            s(R.string.workbook_check_answers_back),
-            s(R.string.workbook_come_back_date),
+        header(f, s(R.string.mistake_notebook), listOf(
+            s(R.string.read_what_you_said),
+            s(R.string.write_it_the_way_you_d_say_it_now),
+            s(R.string.check_the_answers_at_the_back),
+            s(R.string.come_back_to_it_date_each_look),
         ))
         val ix = L + 10f
         val iw = W - 20f
         val lbl = text(7.5f, grey(0x99), spacing = 0.04f)
-        val youSaid = layout(s(R.string.workbook_you_said), lbl, iw)
-        val redo = layout(s(R.string.workbook_redo), lbl, iw)
+        val youSaid = layout(s(R.string.you_said_f105ab), lbl, iw)
+        val redo = layout(s(R.string.write_it_again), lbl, iw)
         for (q in wb.questions) {
             val said = layout(q.said, text(11.5f), iw)
             val inner = 16f + 6f + youSaid.height + 1f + said.height + 6f + redo.height + 2 * ruleHeight
@@ -351,7 +351,7 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
             f.block(h + 10f) { c, top ->
                 c.drawRoundRect(RectF(L, top, RIGHT, top + h), 5f, 5f, line(0.7f, grey(0xBB)))
                 var y = top + 8f
-                c.cardHead(ix, RIGHT - 10f, y, "Q${q.number}", null, s(R.string.workbook_looked_again), 0)
+                c.cardHead(ix, RIGHT - 10f, y, "Q${q.number}", null, s(R.string.looked_again), 0)
                 y += 16f + 6f
                 c.put(youSaid, ix, y); y += youSaid.height + 1f
                 c.put(said, ix, y); y += said.height + 6f
@@ -363,11 +363,11 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
     }
 
     private fun dictationPart(f: Flow) {
-        header(f, s(R.string.workbook_dictation), listOf(
-            s(R.string.workbook_play_in_shadow),
-            s(R.string.workbook_write_what_you_hear),
-            s(R.string.workbook_check_at_back),
-            s(R.string.workbook_read_five_times),
+        header(f, s(R.string.dictation), listOf(
+            s(R.string.play_the_line_in_the_app_s_shadow_chapter),
+            s(R.string.write_down_what_you_hear),
+            s(R.string.check_it_at_the_back),
+            s(R.string.read_it_aloud_five_times),
         ))
         for (d in wb.dictation) {
             val words = WordSplitter.count(d.text, doc.language.ifEmpty { "en" })
@@ -382,10 +382,10 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
     }
 
     private fun recallPart(f: Flow) {
-        header(f, s(R.string.workbook_blank_page), listOf(
-            s(R.string.workbook_close_book),
-            s(R.string.workbook_write_everything),
-            s(R.string.workbook_check_fill_gaps),
+        header(f, s(R.string.blank_page), listOf(
+            s(R.string.close_the_book),
+            s(R.string.write_every_word_phrase_and_sentence_you_remember),
+            s(R.string.then_check_against_the_pages_before_and_fill_gaps_in_another_363e20),
         ))
         repeat(24) { f.block(ruleHeight) { c, y -> c.rule(L, RIGHT, y) } }
     }
@@ -409,11 +409,11 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
     private fun answersPart(f: Flow) {
         h2(f, s(R.string.workbook_answers))
         if (wb.drillAnswers.isNotEmpty()) {
-            h3(f, s(R.string.workbook_mistake_notebook))
+            h3(f, s(R.string.mistake_notebook))
             answerRows(f, wb.drillAnswers)
         }
         if (wb.dictationAnswers.isNotEmpty()) {
-            h3(f, s(R.string.workbook_dictation))
+            h3(f, s(R.string.dictation))
             answerRows(f, wb.dictationAnswers)
         }
     }
@@ -424,7 +424,7 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
         val memoW = 130f
         val memoX = RIGHT - memoW
         val whoW = 64f
-        val notes = layout(s(R.string.workbook_notes), text(7.5f, grey(0xAA), spacing = 0.05f), memoW - 8f)
+        val notes = layout(s(R.string.notes), text(7.5f, grey(0xAA), spacing = 0.05f), memoW - 8f)
         f.block(notes.height + 6f) { c, y -> c.put(notes, memoX + 8f, y) }
         val whoP = text(7.5f, grey(0x88), spacing = 0.05f)
         for (line in section.lines) {
@@ -473,7 +473,7 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
             f.block(14f + o.height) { c, y -> c.put(o, L, y + 14f) }
         }
 
-        h3(f, s(R.string.workbook_in_this_book))
+        h3(f, s(R.string.in_this_book))
         val numP = text(11f, grey(0x77))
         for ((p, page) in parts.zip(firstPages)) {
             val t = layout(p.title, text(11.5f, bold = true), W - 50f)
@@ -489,11 +489,11 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
             }
         }
 
-        h3(f, s(R.string.workbook_review_days))
-        val hint = layout(s(R.string.workbook_review_days_hint), text(9.5f, grey(0x55)), W)
+        h3(f, s(R.string.review_days))
+        val hint = layout(s(R.string.come_back_after_a_day_three_days_a_week_and_two_weeks_date_e_91b639), text(9.5f, grey(0x55)), W)
         f.block(hint.height + 6f) { c, y -> c.put(hint, L, y) }
-        val labels = listOf(R.string.workbook_day_1, R.string.workbook_day_3,
-            R.string.workbook_day_7, R.string.workbook_day_14).map { s(it) }
+        val labels = listOf(R.string.day_1, R.string.day_3,
+            R.string.day_7, R.string.day_14).map { s(it) }
         f.block(74f) { c, top ->
             val cw = W / 4
             val border = line(0.7f, grey(0xBB))
@@ -542,7 +542,7 @@ class WorkbookPdf(private val context: Context, doc: BookDocument) {
         val firstPages = listOf(0) + starts(coverCount)
         val total = coverCount + counts.sum()
 
-        val tabs = listOf(s(R.string.workbook_contents)) + parts.map { it.tab }
+        val tabs = listOf(s(R.string.contents)) + parts.map { it.tab }
         val tabRects = tabRects(tabs.size)
         val links = ArrayList<PdfLinks.Link>()
 

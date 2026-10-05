@@ -119,7 +119,7 @@
     <string name="couldnt_take_it_down">Couldn\'t take it down — check your connection and try again.</string>
     <string name="youre_in_the_pool_other_lld_learners_can_find_you">You\'re in the pool — other %1$s learners can find and talk with your persona.</string>
     <string name="take_your_intro_out_of_the_pool">Take your intro out of the pool? Learners who already met your persona keep their own past talks.</string>
-    <string name="copy">Copy</string>
+    <string name="copy_clipboard">Copy</string>
     <string name="accent">Accent</string>
     <string name="your_clone_speaking_with_a_different_accent">Your own voice, speaking with a different accent. A clone recorded in your language doesn\'t carry one, so it borrows a default.</string>
     <string name="hear_some_takes">Hear some takes</string>
@@ -164,7 +164,6 @@
     <string name="talk_time_is_kept_for_lld_days">Talk time is kept for %1$d days.</string>
     <string name="back_in_10_minutes">Back in 10 minutes</string>
     <string name="save_expression">Save expression</string>
-    <string name="study_this">Study this</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Your subscription starts, and its own monthly talk time with it. Cancel any time before then in Google Play.</string>
     <!-- A price and its billing cycle. Punctuation only —
          nothing here is language, so it is never translated. -->
@@ -562,59 +561,6 @@
     <string name="topup_with_or_without_plan">Available with or without a plan</string>
     <string name="topup_once">once</string>
     <string name="spent_add_minutes_move_or_review">Add minutes to keep going now, move to %s, or review what this month left you.</string>
-    <!-- Book workbook PDF (iOS ab56652) -->
-    <string name="workbook">Workbook</string>
-    <string name="workbook_cover_and_write">Cover and write</string>
-    <string name="workbook_say_the_word">Say the word out loud</string>
-    <string name="workbook_fold_column">Fold the word column under</string>
-    <string name="workbook_read_meaning_write">Read the meaning, write the word</string>
-    <string name="workbook_unfold_check">Unfold and check — tick the box</string>
-    <string name="workbook_use_in_sentence">Use it in a sentence of your own</string>
-    <string name="workbook_mastered_in_app">Mastered in the app</string>
-    <string name="workbook_your_sentence">Your sentence</string>
-    <string name="workbook_words_blurb">Recall each word from its meaning</string>
-    <string name="workbook_copy_it_out">Copy it out</string>
-    <string name="workbook_read_aloud">Read it out loud</string>
-    <string name="workbook_copy_sentence">Copy the sentence</string>
-    <string name="workbook_say_about_life">Say it about your own life</string>
-    <string name="workbook_copy">Copy</string>
-    <string name="workbook_mine">Mine</string>
-    <string name="workbook_expressions_blurb">Copy the fluent self\'s lines, then make them yours</string>
-    <string name="workbook_mistake_notebook">Mistake notebook</string>
-    <string name="workbook_read_what_you_said">Read what you said</string>
-    <string name="workbook_write_it_now">Write it the way you\'d say it now</string>
-    <string name="workbook_check_answers_back">Check the answers at the back</string>
-    <string name="workbook_come_back_date">Come back to it — date each look</string>
-    <string name="workbook_looked_again">Looked again</string>
-    <string name="workbook_you_said">You said</string>
-    <string name="workbook_redo">Write it again</string>
-    <string name="workbook_mistakes">Mistakes</string>
-    <string name="workbook_drill_blurb">Redo what you said, answers at the back</string>
-    <string name="workbook_dictation">Dictation</string>
-    <string name="workbook_play_in_shadow">Play the line in the app\'s Shadow chapter</string>
-    <string name="workbook_write_what_you_hear">Write down what you hear</string>
-    <string name="workbook_check_at_back">Check it at the back</string>
-    <string name="workbook_read_five_times">Read it aloud five times</string>
-    <string name="workbook_dictation_blurb">Hear it in the app, write it here</string>
-    <string name="workbook_blank_page">Blank page</string>
-    <string name="workbook_close_book">Close the book</string>
-    <string name="workbook_write_everything">Write every word, phrase and sentence you remember</string>
-    <string name="workbook_check_fill_gaps">Then check against the pages before and fill gaps in another colour</string>
-    <string name="workbook_recall">Recall</string>
-    <string name="workbook_recall_blurb">Everything you remember, from nothing</string>
-    <string name="workbook_answers">Answers</string>
-    <string name="workbook_answers_blurb">Look here only after you\'ve written</string>
-    <string name="workbook_whole_conversation">The whole conversation</string>
-    <string name="workbook_notes">Notes</string>
-    <string name="workbook_dialogue_blurb">With room in the margin</string>
-    <string name="workbook_in_this_book">In this book</string>
-    <string name="workbook_review_days">Review days</string>
-    <string name="workbook_review_days_hint">Come back after a day, three days, a week and two weeks. Date each box when you do.</string>
-    <string name="workbook_day_1">Day 1</string>
-    <string name="workbook_day_3">Day 3</string>
-    <string name="workbook_day_7">Day 7</string>
-    <string name="workbook_day_14">Day 14</string>
-    <string name="workbook_contents">Contents</string>
     <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
     <string name="grammar_measures_two_reads">Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high.</string>
     <string name="grammar_improve_longer_sentences">Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.</string>

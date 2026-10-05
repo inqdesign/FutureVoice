@@ -144,7 +144,7 @@ fun InviteScreen(onBack: () -> Unit) {
                             letterSpacing = 3.sp, modifier = Modifier.weight(1f))
                         IconButton(onClick = { clipboard.setText(AnnotatedString(code)) }) {
                             Icon(Icons.Filled.ContentCopy,
-                                contentDescription = stringResource(R.string.copy))
+                                contentDescription = stringResource(R.string.copy_clipboard))
                         }
                     }
                     GroupedRowDivider(inset = false)

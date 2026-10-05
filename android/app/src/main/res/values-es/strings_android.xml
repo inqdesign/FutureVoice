@@ -119,7 +119,7 @@
     <string name="couldnt_take_it_down">No se pudo quitar — revisa tu conexión e inténtalo de nuevo.</string>
     <string name="youre_in_the_pool_other_lld_learners_can_find_you">Ya estás en el grupo — otros estudiantes de %1$s pueden encontrar y hablar con tu personaje.</string>
     <string name="take_your_intro_out_of_the_pool">¿Quitar tu presentación del grupo? Quienes ya conocieron a tu personaje conservan sus conversaciones pasadas.</string>
-    <string name="copy">Copiar</string>
+    <string name="copy_clipboard">Copiar</string>
     <string name="accent">Acento</string>
     <string name="your_clone_speaking_with_a_different_accent">Tu propia voz, hablando con otro acento. Un clon grabado en tu idioma no tiene acento propio, así que usa uno predeterminado.</string>
     <string name="hear_some_takes">Escuchar algunas tomas</string>
@@ -164,7 +164,6 @@
     <string name="talk_time_is_kept_for_lld_days">El tiempo de conversación se guarda %1$d días.</string>
     <string name="back_in_10_minutes">Volver en 10 minutos</string>
     <string name="save_expression">Guardar expresión</string>
-    <string name="study_this">Estudiar esto</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Empieza la suscripción, y con ella el tiempo de conversación mensual de tu plan. Puedes cancelarla antes en Google Play cuando quieras.</string>
     <!-- A price and its billing cycle. Punctuation only —
          nothing here is language, so it is never translated. -->
@@ -560,59 +559,6 @@
     <string name="topup_with_or_without_plan">Disponible con o sin plan</string>
     <string name="topup_once">una vez</string>
     <string name="spent_add_minutes_move_or_review">Añade minutos para seguir ahora, pasa a %s o repasa lo que te dejó este mes.</string>
-    <!-- Book workbook PDF (iOS ab56652) -->
-    <string name="workbook">Cuaderno de ejercicios</string>
-    <string name="workbook_cover_and_write">Tapa y escribe</string>
-    <string name="workbook_say_the_word">Di la palabra en voz alta</string>
-    <string name="workbook_fold_column">Dobla hacia atrás la columna de palabras</string>
-    <string name="workbook_read_meaning_write">Lee el significado y escribe la palabra</string>
-    <string name="workbook_unfold_check">Desdobla, comprueba y marca la casilla</string>
-    <string name="workbook_use_in_sentence">Úsala en una frase tuya</string>
-    <string name="workbook_mastered_in_app">Completado en la app</string>
-    <string name="workbook_your_sentence">Tu frase</string>
-    <string name="workbook_words_blurb">Recuerda cada palabra a partir de su significado</string>
-    <string name="workbook_copy_it_out">Cópialo a mano</string>
-    <string name="workbook_read_aloud">Léela en voz alta</string>
-    <string name="workbook_copy_sentence">Copia la frase</string>
-    <string name="workbook_say_about_life">Dila sobre tu propia vida</string>
-    <string name="workbook_copy">Copia</string>
-    <string name="workbook_mine">Mía</string>
-    <string name="workbook_expressions_blurb">Copia las frases de tu yo fluido y hazlas tuyas</string>
-    <string name="workbook_mistake_notebook">Cuaderno de errores</string>
-    <string name="workbook_read_what_you_said">Lee lo que dijiste</string>
-    <string name="workbook_write_it_now">Escríbela como la dirías ahora</string>
-    <string name="workbook_check_answers_back">Comprueba las respuestas al final</string>
-    <string name="workbook_come_back_date">Vuelve a ella y apunta la fecha cada vez</string>
-    <string name="workbook_looked_again">Repasado</string>
-    <string name="workbook_you_said">Dijiste</string>
-    <string name="workbook_redo">Escríbela otra vez</string>
-    <string name="workbook_mistakes">Errores</string>
-    <string name="workbook_drill_blurb">Rehaz lo que dijiste; las respuestas, al final</string>
-    <string name="workbook_dictation">Dictado</string>
-    <string name="workbook_play_in_shadow">Reproduce la frase en el capítulo Shadowing de la app</string>
-    <string name="workbook_write_what_you_hear">Escribe lo que oyes</string>
-    <string name="workbook_check_at_back">Compruébalo al final</string>
-    <string name="workbook_read_five_times">Léela en voz alta cinco veces</string>
-    <string name="workbook_dictation_blurb">Escúchala en la app y escríbela aquí</string>
-    <string name="workbook_blank_page">Página en blanco</string>
-    <string name="workbook_close_book">Cierra el cuaderno</string>
-    <string name="workbook_write_everything">Escribe todas las palabras, expresiones y frases que recuerdes</string>
-    <string name="workbook_check_fill_gaps">Luego compáralo con las páginas anteriores y completa lo que falte con otro color</string>
-    <string name="workbook_recall">Recordar</string>
-    <string name="workbook_recall_blurb">Todo lo que recuerdes, sin mirar nada</string>
-    <string name="workbook_answers">Respuestas</string>
-    <string name="workbook_answers_blurb">Mira aquí solo después de escribir</string>
-    <string name="workbook_whole_conversation">La conversación completa</string>
-    <string name="workbook_notes">Notas</string>
-    <string name="workbook_dialogue_blurb">Con margen para notas</string>
-    <string name="workbook_in_this_book">En este cuaderno</string>
-    <string name="workbook_review_days">Días de repaso</string>
-    <string name="workbook_review_days_hint">Vuelve después de un día, tres días, una semana y dos semanas. Apunta la fecha en cada casilla cuando lo hagas.</string>
-    <string name="workbook_day_1">Día 1</string>
-    <string name="workbook_day_3">Día 3</string>
-    <string name="workbook_day_7">Día 7</string>
-    <string name="workbook_day_14">Día 14</string>
-    <string name="workbook_contents">Índice</string>
     <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
     <string name="grammar_measures_two_reads">Dos lecturas, gana la más baja: las estructuras que de verdad construyes en una conversación y los errores verificados en la transcripción por cada 100 palabras, sin contar fallos de reconocimiento ni sugerencias de estilo. Las frases cortas y correctas dan un nivel bajo, no alto.</string>
     <string name="grammar_improve_longer_sentences">Di más en una sola frase: una razón, una condición, lo que pasó antes. Son las frases más largas las que mueven este nivel.</string>
