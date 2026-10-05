@@ -55,7 +55,7 @@
     <string name="you_said_these_for_the_first_time">第一次說出口的表達</string>
     <string name="keeps_coming_back">一直出現的</string>
     <string name="worth_reaching_for">下次可以試試的</string>
-    <string name="lets_talk">來對話吧</string>
+    <string name="lets_talk">開始說</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">這裡還沒有東西。對話或看一段情境，那裡做出來的材料就會在這裡變成書。</string>
     <string name="fluency">流暢度</string>
     <string name="expressiveness">表達力</string>
@@ -606,4 +606,8 @@
     <string name="workbook_day_7">7 天後</string>
     <string name="workbook_day_14">14 天後</string>
     <string name="workbook_contents">目錄</string>
+    <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
+    <string name="grammar_measures_two_reads">兩種判讀取較低者：你在對話中實際造出的句子結構，以及經逐字稿確認、每 100 字的文法錯誤（不含辨識錯誤與用詞建議）。簡短又正確的句子會被判得低，而不是高。</string>
+    <string name="grammar_improve_longer_sentences">試著在一句話裡多說一點：原因、條件、之前發生的事。能讓這個等級往上的是更長的句子。</string>
+    <string name="grammar_trend_caption_ceiling">每 100 字經確認的錯誤，每次對話一個點——這是你的準確度。上方的等級取決於你造出的句子結構，所以光靠這條曲線無法讓它變動。</string>
 </resources>

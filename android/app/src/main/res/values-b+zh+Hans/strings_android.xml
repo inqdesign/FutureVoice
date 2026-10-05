@@ -55,7 +55,7 @@
     <string name="you_said_these_for_the_first_time">第一次说出口的表达</string>
     <string name="keeps_coming_back">一直出现的</string>
     <string name="worth_reaching_for">下次可以试试的</string>
-    <string name="lets_talk">来对话吧</string>
+    <string name="lets_talk">开始说</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">这里还没有东西。对话或看一段情境，那里做出来的材料就会在这里变成书。</string>
     <string name="fluency">流畅度</string>
     <string name="expressiveness">表达力</string>
@@ -606,4 +606,8 @@
     <string name="workbook_day_7">7 天后</string>
     <string name="workbook_day_14">14 天后</string>
     <string name="workbook_contents">目录</string>
+    <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
+    <string name="grammar_measures_two_reads">两种判断取较低者：你在对话中实际造出的句子结构，以及经文字记录确认、每 100 词的语法错误（不含识别错误和用词建议）。简短又正确的句子会被判得低，而不是高。</string>
+    <string name="grammar_improve_longer_sentences">试着在一句话里多说一点：原因、条件、之前发生的事。能让这个等级上升的是更长的句子。</string>
+    <string name="grammar_trend_caption_ceiling">每 100 词经确认的错误，每次对话一个点——这是你的准确度。上方的等级取决于你造出的句子结构，所以单靠这条曲线无法让它变化。</string>
 </resources>

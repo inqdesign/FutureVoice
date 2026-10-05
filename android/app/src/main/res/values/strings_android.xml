@@ -627,4 +627,8 @@
     <string name="workbook_day_7">Day 7</string>
     <string name="workbook_day_14">Day 14</string>
     <string name="workbook_contents">Contents</string>
+    <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
+    <string name="grammar_measures_two_reads">Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high.</string>
+    <string name="grammar_improve_longer_sentences">Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.</string>
+    <string name="grammar_trend_caption_ceiling">Verified slips per 100 words, one point per talk — your accuracy. The band above comes from the structures you build, so this curve alone can’t move it.</string>
 </resources>

@@ -839,7 +839,11 @@ private fun FocusTips(
             ProgressAction(stringResource(R.string.see_words, next.code.uppercase()), onSeeWords,
                 Icons.AutoMirrored.Outlined.MenuBook))
     }
-    if (lags(m.grammarLevel)) {
+    if (lags(m.grammarLevel) && m.grammarCeiling != null) {
+        // Range, not slips, held the band: ask for longer sentences (iOS).
+        tips += Tip(Icons.Outlined.Verified,
+            stringResource(R.string.your_sentences_stay_simple_link_two_ideas_in_one_a_reason_a_869cf9), talk)
+    } else if (lags(m.grammarLevel)) {
         val hint = m.grammarNextThreshold?.let { t ->
             m.grammarLevel?.let { ProgressBands.next(it) }?.let { up ->
                 stringResource(R.string.get_under_1f_and_this_reads, t, up.code.uppercase())

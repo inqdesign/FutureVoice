@@ -55,7 +55,7 @@
     <string name="you_said_these_for_the_first_time">처음으로 말한 표현</string>
     <string name="keeps_coming_back">계속 나오는 것</string>
     <string name="worth_reaching_for">다음에 써 볼 것</string>
-    <string name="lets_talk">대화해요</string>
+    <string name="lets_talk">대화하기</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">아직 아무것도 없어요. 대화하거나 장면을 보면 거기서 나온 재료가 여기 책이 돼요.</string>
     <string name="fluency">유창성</string>
     <string name="expressiveness">표현력</string>
@@ -606,4 +606,8 @@
     <string name="workbook_day_7">7일 뒤</string>
     <string name="workbook_day_14">14일 뒤</string>
     <string name="workbook_contents">목차</string>
+    <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
+    <string name="grammar_measures_two_reads">두 가지로 읽고 낮은 쪽을 따라요. 대화에서 실제로 만든 문장 구조, 그리고 전사로 확인된 100단어당 실수예요. 인식 오류나 표현 제안은 빼요. 짧고 맞는 문장은 높게가 아니라 낮게 읽혀요.</string>
+    <string name="grammar_improve_longer_sentences">한 문장에 더 담아 보세요. 이유, 조건, 그 전에 있었던 일까지요. 이 밴드를 올리는 건 더 긴 문장이에요.</string>
+    <string name="grammar_trend_caption_ceiling">대화 한 번이 점 하나, 100단어당 확인된 실수예요. 정확도를 보여 줘요. 위의 밴드는 만든 문장 구조로 정해져서, 이 곡선만으로는 움직이지 않아요.</string>
 </resources>

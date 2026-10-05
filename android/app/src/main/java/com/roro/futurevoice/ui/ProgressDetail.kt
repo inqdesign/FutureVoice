@@ -504,15 +504,22 @@ fun ProgressSkillPage(
                     grammarTargetHint(m))
             else stringResource(
                 R.string.read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b),
-            measures = stringResource(R.string.counted_from_transcript_verified_slips_only),
-            improve = stringResource(R.string.run_your_review_cards_built_from_your_own_slips),
-            action = onReviewSlips?.let {
+            measures = stringResource(R.string.grammar_measures_two_reads),
+            // Under a range ceiling fewer slips move nothing: the page asks for
+            // longer sentences and offers a talk, not the slip deck (iOS).
+            improve = stringResource(if (m.grammarCeiling == null) R.string.run_your_review_cards_built_from_your_own_slips
+                else R.string.grammar_improve_longer_sentences),
+            action = if (m.grammarCeiling == null) onReviewSlips?.let {
                 ProgressAction(stringResource(R.string.review_your_slips), it,
                     androidx.compose.material.icons.Icons.Outlined.Verified)
-            },
+            } else onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it,
+                androidx.compose.material.icons.Icons.Filled.GraphicEq) },
             trend = m.grammarTrend,
-            trendCaption = stringResource(R.string.one_point_per_talk_down_is_progress),
-            bands = ProgressBands.grammarDensity,
+            // Under a ceiling the accuracy zones would label the curve with a
+            // band the headline doesn't follow ("C2" behind a ≈A2 page).
+            trendCaption = stringResource(if (m.grammarCeiling == null) R.string.one_point_per_talk_down_is_progress
+                else R.string.grammar_trend_caption_ceiling),
+            bands = if (m.grammarCeiling == null) ProgressBands.grammarDensity else emptyList(),
             trendTarget = m.grammarNextThreshold,
         )
         Dim.EXPRESSIVENESS -> MeasuredPage(

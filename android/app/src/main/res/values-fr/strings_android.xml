@@ -55,7 +55,7 @@
     <string name="you_said_these_for_the_first_time">Dits pour la première fois</string>
     <string name="keeps_coming_back">Revient sans arrêt</string>
     <string name="worth_reaching_for">À viser</string>
-    <string name="lets_talk">Parlons</string>
+    <string name="lets_talk">On parle ?</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Rien pour l’instant. Parle ou regarde une scène — ce que ça donne devient des carnets ici.</string>
     <string name="fluency">Aisance</string>
     <string name="expressiveness">Expressivité</string>
@@ -612,4 +612,8 @@
     <string name="workbook_day_7">Jour 7</string>
     <string name="workbook_day_14">Jour 14</string>
     <string name="workbook_contents">Sommaire</string>
+    <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
+    <string name="grammar_measures_two_reads">Deux lectures, la plus basse l’emporte : les structures que tu construis vraiment dans une conversation, et les fautes vérifiées dans la transcription pour 100 mots – erreurs de reconnaissance et suggestions de style exclues. Des phrases courtes et correctes donnent un niveau bas, pas haut.</string>
+    <string name="grammar_improve_longer_sentences">Dis plus de choses en une phrase – une raison, une condition, ce qui s’est passé avant. Ce sont les phrases plus longues qui font bouger ce niveau.</string>
+    <string name="grammar_trend_caption_ceiling">Fautes vérifiées pour 100 mots, un point par conversation – ta précision. Le niveau ci-dessus vient des structures que tu construis, donc cette courbe seule ne peut pas le faire bouger.</string>
 </resources>

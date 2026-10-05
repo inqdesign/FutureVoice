@@ -598,4 +598,8 @@
     <string name="workbook_day_7">Tag 7</string>
     <string name="workbook_day_14">Tag 14</string>
     <string name="workbook_contents">Inhalt</string>
+    <!-- iOS ProgressTab grammarContent (range × accuracy ceiling). -->
+    <string name="grammar_measures_two_reads">Zwei Messungen, die niedrigere zählt: die Satzstrukturen, die du im Gespräch tatsächlich baust, und im Transkript bestätigte Fehler pro 100 Wörter – Erkennungsfehler und Stilvorschläge ausgenommen. Kurze, korrekte Sätze werden niedrig gelesen, nicht hoch.</string>
+    <string name="grammar_improve_longer_sentences">Sag mehr in einem Satz – einen Grund, eine Bedingung, was vorher passiert ist. Längere Sätze sind es, die dieses Niveau bewegen.</string>
+    <string name="grammar_trend_caption_ceiling">Bestätigte Fehler pro 100 Wörter, ein Punkt pro Gespräch – deine Genauigkeit. Das Niveau oben kommt von den Strukturen, die du baust, deshalb kann diese Kurve allein es nicht bewegen.</string>
 </resources>

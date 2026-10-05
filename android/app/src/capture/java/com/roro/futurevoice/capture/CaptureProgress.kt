@@ -195,7 +195,10 @@ object CaptureProgress {
             )
             val origin = origins[day % 3]
             SessionStore.shared(c).save(Session(
-                id = UUID.nameUUIDFromBytes("capture:session:beginner-$day".toByteArray())
+                // The SAME ids `CaptureSeed.seedSessions` writes, as iOS's
+                // `seedSessions(beginner:)` does: the beginner talks replace the
+                // ordinary ones instead of joining them on the trend.
+                id = UUID.nameUUIDFromBytes("capture:session:sessions-$day".toByteArray())
                     .toString().uppercase(),
                 userId = uid, targetLanguage = "en", mode = SessionMode.CONVERSATION,
                 topic = when (origin) {
