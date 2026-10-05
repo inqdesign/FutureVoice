@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -79,10 +80,31 @@ fun DiscoverRow(
 }
 
 /**
- * The Discover header's segment chip: the selected one goes SOLID INK (label
- * colour as fill, background colour as text), the rest sit on the grouped
- * card colour. Same monochrome pairing Practice's selected chip uses.
+ * The Discover header's segment chip (`DiscoverSection.chip`): the selected
+ * one goes SOLID INK (label colour as fill, background colour as text), the
+ * rest sit on the grouped card colour.
+ *
+ * NOT the page chip ([IosChip], 37 pt, body size): iOS draws this one smaller
+ * — subheadline (15) MEDIUM, 14 × 8 padding — 34 pt tall, measured off the
+ * iOS build at @3x. Held as a 34 dp MINIMUM rather than 8 dp of padding
+ * round the text: a Hangul label falls back to a CJK font whose line box is
+ * ~21 dp at 15 sp (measured 37 dp with padding), where SwiftUI's is 18.
  */
 @Composable
-fun SegmentChip(label: String, selected: Boolean, onClick: () -> Unit) =
-    IosChip(label, selected, onClick = onClick)
+fun SegmentChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .clip(CircleShape)
+            .background(if (selected) scheme.onSurface else AppSurfaces.card)
+            .clickable(role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick)
+            .defaultMinSize(minHeight = 34.dp)
+            .padding(horizontal = 14.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium, maxLines = 1,
+            color = if (selected) scheme.surface else scheme.onSurface)
+    }
+}

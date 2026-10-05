@@ -1447,10 +1447,31 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
     // The hero's own top is MEASURED, never assumed: it moves with the status
     // bar, the header and whatever the OS puts above them.
     val density = LocalDensity.current
-    val screenHeightPx = with(density) {
-        LocalConfiguration.current.screenHeightDp.dp.toPx()
-    }
+    // The WINDOW's height (iOS `UIScreen.main.bounds`): on API < 35
+    // `screenHeightDp` leaves the system bars out, which would lift the ring
+    // by half their height.
+    val screenHeightPx = androidx.compose.ui.platform.LocalWindowInfo.current
+        .containerSize.height.toFloat()
     var heroTopPx by remember { mutableStateOf(0f) }
+    // Every report, kept WITHOUT laying out from it (iOS `latestHeroTopReport`).
+    val latestTop = remember { floatArrayOf(0f) }
+    // Adopted once, when it is plausible (a status bar is always above it) and
+    // SETTLED (unchanged across two samples) — iOS's settle-sample. Taking the
+    // very first report adopted a transient top before the header had landed,
+    // and the hero came out ~46 dp too tall: the ring sat that far below the
+    // midline.
+    LaunchedEffect(Unit) {
+        val floor = with(density) { 40.dp.toPx() }
+        var previous = Float.NaN
+        while (true) {
+            val current = latestTop[0]
+            if (current > floor && kotlin.math.abs(current - previous) < 0.5f) {
+                heroTopPx = current; break
+            }
+            previous = current
+            delay(250)
+        }
+    }
     val heroHeight = with(density) {
         val offset = (RING_DIAMETER / 2 + RING_TAIL).toPx()
         maxOf(380.dp.toPx(), screenHeightPx / 2f + offset - heroTopPx).toDp()
@@ -1460,15 +1481,17 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         Modifier
             .fillMaxWidth()
             .height(heroHeight)
-            // Measured ONCE, at rest. The page scrolls, so the hero's window
-            // top moves with it — and feeding a scrolled position back into
-            // the hero's own height made the page oscillate between two scroll
-            // offsets on a fling (seen as a double image). The first layout is
-            // always at scroll 0, and nothing above the hero changes height.
-            .onGloballyPositioned { if (heroTopPx == 0f) heroTopPx = it.boundsInWindow().top }
+            // Adopted ONCE, at rest (see the settle-sample above). The page
+            // scrolls, so the hero's window top moves with it — and feeding a
+            // scrolled position back into the hero's own height made the page
+            // oscillate between two scroll offsets on a fling.
+            .onGloballyPositioned { latestTop[0] = it.boundsInWindow().top }
             .padding(top = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        // No spacing of its own (iOS `VStack(spacing: 0)`): the two weighted
+        // spacers place the question, and the ring's centre must sit exactly
+        // `RING_TAIL + radius` above the bottom — a 20 dp gap here put it
+        // 20 dp off the midline the height is solved for.
     ) {
         Spacer(Modifier.weight(1f))
         val line = HeroGreeting.text(HeroGreeting.Input(
@@ -1518,7 +1541,8 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = label; TalkMorph.ringSub = sub }
                 Text(
                     sub,
-                    style = MaterialTheme.typography.labelMedium,
+                    // iOS `.footnote.weight(.medium).monospacedDigit()`.
+                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -1680,14 +1704,18 @@ private fun DiscoverSection(
                 // Interests FIRST, then refresh — iOS's order, and the one that
                 // reads left to right: what the stories are about, then get
                 // more of them.
-                IconButton(onClick = { editingInterests = true }) {
+                DiscoverHeaderButton(onClick = { editingInterests = true }) {
                     Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.edit_interests),
                         tint = MaterialTheme.colorScheme.primary)
                 }
-                if (loading) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                // iOS: the refresh slot exists only once there are stories,
+                // and while loading it holds the spinner in the same place.
+                if (topics.isNotEmpty() && loading) {
+                    Box(Modifier.size(DiscoverHeaderIcon), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    }
                 } else if (topics.isNotEmpty()) {
-                    IconButton(onClick = {
+                    DiscoverHeaderButton(onClick = {
                         scope.launch {
                             // Rotating the unseen pool is free — only ask the
                             // server once the local pool is exhausted.
@@ -1709,7 +1737,7 @@ private fun DiscoverSection(
                     }
                 }
             } else if (discoverTab == DiscoverTab.SCENARIOS) {
-                IconButton(onClick = { composing = true }) {
+                DiscoverHeaderButton(onClick = { composing = true }) {
                     Icon(Icons.Filled.Add,
                         contentDescription = stringResource(R.string.build_a_scenario),
                         tint = MaterialTheme.colorScheme.primary)
@@ -2159,4 +2187,30 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val cast = mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null)
     val castVoice = mutableStateOf<String?>(null)
     val counterpartId = mutableStateOf<String?>(null)
+}
+
+/**
+ * The Discover header's trailing glyph buttons (iOS: a bare `Button` with an
+ * SF Symbol at body size — ~17 × 15 pt glyphs, no padded hit box). Material's
+ * 48 dp IconButton made the header row 48 dp on News and Scenarios but only
+ * the chips' 34 dp on Everyday, so the list jumped on every switch; at this
+ * size the chips alone set the row height on every segment, as on iOS.
+ */
+private val DiscoverHeaderIcon = 22.dp
+
+@Composable
+private fun DiscoverHeaderButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier
+            .size(DiscoverHeaderIcon)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = androidx.compose.material3.ripple(bounded = false, radius = 20.dp),
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
 }

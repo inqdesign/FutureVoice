@@ -51,8 +51,8 @@ fun TalkRing(
     theme: FutureselfTheme,
     accent: Color,
     modifier: Modifier = Modifier,
-    diameter: Dp = 236.dp,
-    strokeWidth: Dp = 14.dp,
+    diameter: Dp = 280.dp,
+    strokeWidth: Dp = 20.dp,
     /** The call pill's height — pins the mosaic's cell size across sizes. */
     pixelHeight: Float = 64f,
     /** 0 while the free-talk morph's proxy stands in for the surface. */
@@ -62,55 +62,76 @@ fun TalkRing(
     content: @Composable () -> Unit = {},
 ) {
     val p = progress.coerceIn(0f, 1f)
+    val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.015f)
     Box(modifier.size(diameter), contentAlignment = Alignment.Center) {
+        // The stroke is CENTRED on the circle that fills [diameter], as a
+        // SwiftUI `Circle().stroke` is — half of it lies outside the frame,
+        // so the drawn ring is `diameter + strokeWidth` across (300 on the
+        // home) and its inner edge is exactly where the surface ends. An
+        // inset stroke drew a 280 ring around a smaller surface with a strip
+        // of page showing between them.
         Canvas(Modifier.size(diameter)) {
             val stroke = strokeWidth.toPx()
-            val inset = stroke / 2f
-            val d = min(size.width, size.height) - stroke
-            val topLeft = Offset(inset, inset)
+            val d = min(size.width, size.height)
+            val topLeft = Offset((size.width - d) / 2f, (size.height - d) / 2f)
             val arcSize = Size(d, d)
-            drawArc(color = Color.Black.copy(alpha = 0.015f), startAngle = 0f, sweepAngle = 360f,
+            val c = Offset(size.width / 2f, size.height / 2f)
+            drawArc(color = track, startAngle = 0f, sweepAngle = 360f,
                 useCenter = false, topLeft = topLeft, size = arcSize,
                 style = Stroke(width = stroke))
             if (p > 0.005f) {
-                // The tail always fades, but only over the rear: at most 90°
-                // of circle, never past the arc's halfway point.
-                val fadeEnd = min(0.5f, 0.25f / maxOf(p, 0.001f))
-                val tail = accent.copy(alpha = 0.15f)
-                val brush = Brush.sweepGradient(
-                    0f to tail,
-                    (fadeEnd * p) to accent,
-                    // The ROUND CAP at the arc's start overhangs BACKWARDS,
-                    // past 0° — which in a sweep gradient wraps to position
-                    // 1.0. With full accent parked there, that overhang came
-                    // out as a solid dark half-disc sitting on the faded
-                    // tail. The wrap point has to be the tail's own colour.
-                    // The head cap overhangs the other way, just past `p`,
-                    // where the ramp is still essentially full accent.
-                    1f to tail,
-                    center = Offset(size.width / 2f, size.height / 2f),
-                )
-                // A sweep gradient always starts at 3 o'clock; the arc has to
-                // start at 12. Left in phase the faded tail landed a quarter
-                // turn from the arc's start, so the ring read as a solid head
-                // with a washed-out stretch through its middle.
-                //
-                // Rotating the CANVAS by -90° moves both together — so the
-                // arc is drawn from 0° (which the rotation carries to 12
-                // o'clock on screen), and the gradient's own origin lands
-                // there with it. Drawing at -90° INSIDE the rotation would
-                // start the arc at 9 o'clock, which is the same bug turned
-                // the other way.
-                rotate(-90f, pivot = Offset(size.width / 2f, size.height / 2f)) {
+                // iOS `talkRing`: below `solidBelow` the arc is plain accent (a
+                // crisp dot); above it the last `fadeSpan` of the tail — at
+                // most 60° of circle, never more than two fifths of the arc —
+                // fades in from 40% accent. The gradient starts one cap-width
+                // BEFORE 12 o'clock, so the tail's round cap is painted at the
+                // floor colour rather than clamped to a solid block.
+                val solidBelow = 0.12f
+                val fadeSpan = min(60f / 360f, p * 0.4f)
+                val fadeEnd = if (p > solidBelow) fadeSpan / maxOf(p, 0.001f) else 0f
+                val capFrac = (stroke / 2f) / (2f * Math.PI.toFloat() * (d / 2f))
+                val brush: Brush = if (fadeEnd <= 0f) androidx.compose.ui.graphics.SolidColor(accent) else {
+                    val floor = accent.copy(alpha = 0.4f)
+                    // iOS's angular range runs -cap … p; mapped onto a sweep
+                    // gradient's 0 … 1 circle.
+                    val solidAt = -capFrac + fadeEnd * (p + capFrac)
+                    val atZero = androidx.compose.ui.graphics.lerp(floor, accent, capFrac / (solidAt + capFrac))
+                    val headEnd = min(p + capFrac, 1f - capFrac)
+                    Brush.sweepGradient(
+                        *buildList {
+                            add(0f to atZero)
+                            add(solidAt to accent)
+                            if (headEnd > solidAt) add(headEnd to accent)
+                            // The wrap just before 12 is the tail cap's own
+                            // floor colour (outside the range iOS clamps to it).
+                            add((1f - capFrac) to floor)
+                            add(1f to atZero)
+                        }.toTypedArray(),
+                        center = c,
+                    )
+                }
+                // A sweep gradient starts at 3 o'clock; rotating the CANVAS
+                // carries both the arc's 0° and the gradient's origin to 12.
+                rotate(-90f, pivot = c) {
                     drawArc(brush = brush, startAngle = 0f, sweepAngle = 360f * p,
                         useCenter = false, topLeft = topLeft, size = arcSize,
                         style = Stroke(width = stroke, cap = StrokeCap.Round))
+                    // At full progress the circle closes and its caps meet in
+                    // a butt seam at 12; iOS re-draws the last sliver in solid
+                    // accent with a round cap so the head pokes over the tail.
+                    if (p > 0.97f) {
+                        val from = maxOf(p - 0.02f, 0f)
+                        drawArc(color = accent, startAngle = 360f * from,
+                            sweepAngle = 360f * (p - from), useCenter = false,
+                            topLeft = topLeft, size = arcSize,
+                            style = Stroke(width = stroke, cap = StrokeCap.Round))
+                    }
                 }
             }
         }
         Box(
             Modifier
-                .size(diameter - strokeWidth * 2 - 4.dp)
+                .size(diameter - strokeWidth)
                 .then(if (onSurfaceBounds != null) Modifier.onGloballyPositioned {
                     onSurfaceBounds(it.boundsInWindow()) } else Modifier)
                 .graphicsLayer { alpha = surfaceAlpha }
