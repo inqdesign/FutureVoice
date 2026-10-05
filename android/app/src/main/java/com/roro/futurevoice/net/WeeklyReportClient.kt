@@ -140,7 +140,8 @@ object WeeklyReportEngine {
         for (s in window) {
             for (t in s.turns) {
                 val sug = t.suggestion ?: continue
-                if (t.role != TurnRole.USER) continue
+                // A misheard turn's correction fixes a line nobody said.
+                if (t.role != TurnRole.USER || t.excludedFromScoring) continue
                 pairs.putIfAbsent(key(t.transcript, sug.alternative), t.transcript to sug.alternative)
             }
             for (p in s.summary?.phrasesUsed.orEmpty()) {

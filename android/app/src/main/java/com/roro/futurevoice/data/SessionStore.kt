@@ -73,6 +73,38 @@ class SessionStore private constructor(context: Context) {
         }
     }
 
+    /**
+     * The learner flagged a turn as misheard (iOS `excludeTurnFromScoring`):
+     * the rewrite is [MisheardExclusion.excludeTurn], written through this
+     * store's one funnel. Drill cards and the weekly report are the caller's
+     * ([MisheardExclusion.excludeTurn] with a context). Null = nothing changed.
+     */
+    suspend fun excludeTurnFromScoring(sessionId: String, turnId: String,
+                                       language: String = LanguageScope.active(appContext)): Session? =
+        mutex.withLock {
+            val list = all(language)
+            val i = list.indexOfFirst { it.id == sessionId }
+            if (i < 0) return@withLock null
+            val updated = MisheardExclusion.excludeTurn(list[i], turnId) ?: return@withLock null
+            list[i] = updated
+            write(language, list)
+            updated
+        }
+
+    /** A grammar slip marked Misheard (iOS `excludeMishearing`): the session
+     *  and the turn it was traced to (null = only the slip was dropped). */
+    suspend fun excludeMishearing(sessionId: String, issueId: String,
+                                  language: String = LanguageScope.active(appContext)): Pair<Session, String?>? =
+        mutex.withLock {
+            val list = all(language)
+            val i = list.indexOfFirst { it.id == sessionId }
+            if (i < 0) return@withLock null
+            val result = MisheardExclusion.excludeIssue(list[i], issueId) ?: return@withLock null
+            list[i] = result.first
+            write(language, list)
+            result
+        }
+
     private suspend fun all(language: String): MutableList<Session> {
         cache?.let { if (cachedLanguage == language) return it }
         val loaded = withContext(Dispatchers.IO) {

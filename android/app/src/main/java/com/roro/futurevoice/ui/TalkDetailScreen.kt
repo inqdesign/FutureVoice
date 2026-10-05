@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -80,6 +81,7 @@ import androidx.compose.ui.graphics.Color
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.BookDocument
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.MicOff
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.AxisScore
@@ -298,7 +300,16 @@ fun TalkDetailScreen(
         GrammarReviewSheet(
             axis = sm?.scorecard?.grammar,
             issues = grammar,
-            onDismiss = { showingGrammarReview = false })
+            onDismiss = { showingGrammarReview = false },
+            // A capture's fixture talk isn't on disk — nothing to write to.
+            onMisheard = if (com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailSession != null) null
+                else ({ issue: GrammarIssue ->
+                    scope.launch {
+                        com.roro.futurevoice.data.MisheardExclusion.excludeIssue(
+                            context, sessionId, issue.id, language)
+                    }
+                    Unit
+                }))
     }
 
     Scaffold(
@@ -903,8 +914,9 @@ private fun Carryover.Source.icon(): ImageVector = when (this) {
  * literally said, the grammar-only fix, and the point involved. Quotes are
  * hallucination-guarded upstream — all of it appeared in their own turns.
  *
- * iOS also lets a slip be flagged as misheard, which rescales the score.
- * Android has no exclusion API yet, so this page reads only.
+ * A slip can be swiped left and marked Misheard (iOS `ScorecardView`'s
+ * swipe action): the turn it was quoted from is excluded from scoring, its
+ * slips go, and the grammar score is rescaled ([MisheardExclusion]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -912,6 +924,8 @@ private fun GrammarReviewSheet(
     axis: AxisScore?,
     issues: List<GrammarIssue>,
     onDismiss: () -> Unit,
+    /** Null where there is no stored talk to write to. */
+    onMisheard: ((GrammarIssue) -> Unit)? = null,
 ) {
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
@@ -943,6 +957,7 @@ private fun GrammarReviewSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             issues.forEach { issue ->
                 val diff = remember(issue.id) { GrammarDiff(issue.quote, issue.correction) }
+                MisheardSwipe(issue, onMisheard) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Close, contentDescription = null,
@@ -961,12 +976,60 @@ private fun GrammarReviewSheet(
                             modifier = Modifier.padding(start = 24.dp))
                     }
                 }
+                }
+            }
+            if (onMisheard != null && issues.isNotEmpty()) {
+                Text(stringResource(
+                    R.string.not_what_you_said_swipe_a_slip_left_and_mark_it_misheard_the_c3f9cf),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(stringResource(
                 R.string.every_slip_below_is_quoted_from_what_you_actually_said_this_8d3781),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+/** iOS `.swipeActions(edge: .trailing)` on a slip: swiped left past the
+ *  threshold it is marked Misheard; the row is then gone from the store's
+ *  copy, so nothing here snaps it back. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MisheardSwipe(
+    issue: GrammarIssue,
+    onMisheard: ((GrammarIssue) -> Unit)?,
+    content: @Composable () -> Unit,
+) {
+    if (onMisheard == null) { content(); return }
+    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) onMisheard(issue)
+            false   // the store's reload removes the row; a failed write leaves it
+        },
+    )
+    androidx.compose.material3.SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            if (state.dismissDirection != androidx.compose.material3.SwipeToDismissBoxValue.EndToStart)
+                return@SwipeToDismissBox
+            Row(
+                Modifier.fillMaxSize().background(Color(0xFFFF3B30), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+            ) {
+                Icon(Icons.Filled.MicOff, contentDescription = null, tint = Color.White,
+                    modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.misheard), color = Color.White,
+                    style = MaterialTheme.typography.labelLarge)
+            }
+        },
+    ) {
+        Box(Modifier.fillMaxWidth()
+            .background(androidx.compose.material3.BottomSheetDefaults.ContainerColor)) { content() }
     }
 }
 

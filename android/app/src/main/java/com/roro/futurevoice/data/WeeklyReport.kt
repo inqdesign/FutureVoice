@@ -92,6 +92,14 @@ class WeeklyReportStore private constructor(context: Context) {
         write(language, (all + report).sortedByDescending { it.generatedAt })
     }
 
+    /** Voids one report (iOS `WeeklyReportStore.delete`) — a talk in its
+     *  window lost a line to "misheard", so it was judged on wrong evidence. */
+    suspend fun delete(id: String, language: String) = mutex.withLock {
+        val all = read(language)
+        val kept = all.filterNot { it.id == id }
+        if (kept.size != all.size) write(language, kept)
+    }
+
     private fun read(language: String): List<WeeklyReport> {
         val f = file(language)
         if (!f.exists()) return emptyList()

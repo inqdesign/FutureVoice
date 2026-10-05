@@ -212,7 +212,10 @@ object SessionSummarizer {
         report { it.copy(phrases = computed.phrasesUsed.count()) }
 
         // Verbatim guards — the same normalization CarryoverDetector uses.
-        val userTexts = turns.filter { it.role == TurnRole.USER }.map { it.transcript }
+        // A turn marked misheard is out of every assessment path — the vocab
+        // pool and the verified expressions included (iOS `userTexts`).
+        val userTexts = turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }
+            .map { it.transcript }
         val haystack = normalized(userTexts.joinToString(" "))
         val verifiedUsed = computed.expressionsUsed.filter { p ->
             val n = normalized(p); n.isNotEmpty() && haystack.contains(n)

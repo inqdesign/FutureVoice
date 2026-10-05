@@ -258,7 +258,19 @@ class DrillStore private constructor(context: Context) {
      * visit mint another. Returns what is on file (so a caller can still open
      * it), the saved card, or null when the store would never read it back.
      */
-    suspend fun saveIfNew(card: DrillCard, language: String = LanguageScope.active(appContext)): DrillCard? {
+    /**
+     * A turn flagged misheard takes the cards minted from it with it (iOS
+     * `deleteForTurn`) — its "correction" fixes a sentence nobody said. One
+     * of the two deliberate ways a card leaves besides Got it.
+     */
+    suspend fun deleteForTurn(turnId: String, language: String = LanguageScope.active(appContext)) =
+        mutex.withLock {
+            val all = loadLocked(language)
+            val kept = all.filterNot { it.sourceTurnId == turnId }
+            if (kept.size != all.size) write(language, kept)
+        }
+
+    suspend fun saveIfNew(card: DrillCard,language: String = LanguageScope.active(appContext)): DrillCard? {
         if (!DrillIngest.isDrillable(card.targetPhrase)) return null
         val key = DrillIngest.normalizedForMatch(card.targetPhrase)
         return mutex.withLock {

@@ -2,6 +2,7 @@ package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -55,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -77,6 +81,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.JapaneseMorph
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.MisheardExclusion
 import com.roro.futurevoice.data.PhraseAudioStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.TalkCurriculum
@@ -123,6 +128,10 @@ fun TalkTranscriptScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsState()
+    // What this page draws: the host's copy, replaced the moment a line is
+    // marked misheard so the dimmed row doesn't wait on the host's reload.
+    var shown by remember(session) { mutableStateOf(session) }
+    val session = shown
     val nativeLanguage = remember {
         context.getSharedPreferences("futurevoice", 0)
             .getString("futurevoice.nativeLanguage", null) ?: "en"
@@ -256,7 +265,17 @@ fun TalkTranscriptScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 itemsIndexed(session.turns, key = { _, t -> t.id }) { idx, turn ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // iOS `.contextMenu` on the row: the learner's own line,
+                    // not yet flagged, can be marked misheard. No undo — iOS
+                    // has none (the cards it minted are already gone).
+                    var menu by remember(turn.id) { mutableStateOf(false) }
+                    val canExclude = turn.role == TurnRole.USER && !turn.excludedFromScoring
+                    Box {
+                    Column(
+                        Modifier.then(if (canExclude) Modifier.pointerInput(turn.id) {
+                            detectTapGestures(onLongPress = { menu = true })
+                        } else Modifier),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         TranscriptRow(
                             turn = turn,
                             language = language,
@@ -283,6 +302,21 @@ fun TalkTranscriptScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                             }
                         }
+                    }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.misheard_exclude_from_scoring),
+                                color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Filled.MicOff, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                menu = false
+                                scope.launch {
+                                    MisheardExclusion.excludeTurn(context, session.id, turn.id,
+                                        language)?.let { shown = it }
+                                }
+                            })
+                    }
                     }
                 }
             }
