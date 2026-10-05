@@ -306,11 +306,16 @@ fun WeeklyTestScreen(
         val opening = WeeklyTestSettings.schedule(context).currentOpening()
         val native = context.getSharedPreferences("futurevoice", 0)
             .getString("futurevoice.nativeLanguage", null) ?: "en"
-        val material = WeeklyTestEngine.gather(context, language, level, native)
-        var test = WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level) { word ->
-            WeeklyTestCaptureFlags.glosses?.let { return@build it[word] }
-            PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
-                ?.senses?.firstOrNull()?.meaning
+        // Off the main thread: gathering reads every store and rebuilds every
+        // talk book's word chapter, and with a few hundred talks that froze
+        // the screen long enough for an ANR (seen in the capture build).
+        var test = withContext(Dispatchers.Default) {
+            val material = WeeklyTestEngine.gather(context, language, level, native)
+            WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level) { word ->
+                WeeklyTestCaptureFlags.glosses?.let { return@build it[word] }
+                PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
+                    ?.senses?.firstOrNull()?.meaning
+            }
         }
         if (test == null) {
             WeeklyTestSettings.markThin(context, opening)

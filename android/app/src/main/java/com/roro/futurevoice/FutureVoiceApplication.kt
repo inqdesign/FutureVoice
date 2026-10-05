@@ -22,7 +22,18 @@ class FutureVoiceApplication : Application() {
         com.roro.futurevoice.talk.VoicePreset.init(this)
         com.roro.futurevoice.data.VoiceParking.init(this)
         com.roro.futurevoice.net.PublicIntroComposer.init(this)
-        BillingService.shared(this).refresh()
+        // Billing builds the Supabase client, whose HTTP stack pulls in
+        // kotlin-reflect (via postgrest-kt) — seconds of class loading on a
+        // slow device, and in onCreate that is a startup ANR (seen on the
+        // emulator: "failed to complete startup"). Warm the client on a
+        // worker; billing starts on the main thread once it exists.
+        val app = this
+        Thread({
+            runCatching { com.roro.futurevoice.data.Supa.client }
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                BillingService.shared(app).refresh()
+            }
+        }, "supabase-warmup").start()
         com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(this)
         // Shadow scoring digit spell-out: the built-in English speller (the
         // launch target). ICU's RuleBasedNumberFormat is absent from the
