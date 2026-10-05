@@ -1,241 +1,314 @@
 import AuthenticationServices
 import SwiftUI
 
-/// First screen — a swipeable, auto-playing carousel that shows the app's value
-/// through previews built from the SAME components the real screens use (the
-/// Futureself dialer orb, the plain transcript feed, the shadow karaoke
-/// timeline, the CEFR level equalizer) — not generic icons or chat bubbles.
-/// A pill Sign in with Apple is pinned below.
+/// First screen — a short film, not a tutorial (2026-10-05, founder: "strip
+/// the tutorial, a quiet gradient and words that animate in"). The fluent
+/// self tells the learner's own story back to them — the words that stay
+/// in their head, the years of apps — then introduces itself and says what
+/// the two of them will do together: talk, get every line back the natural
+/// way, keep a book of their own mistakes, review and shadow daily, rehearse
+/// speeches. It ends on what the app does, as a short list, and the buttons.
+///
+/// The captions are the whole film for now; a voice-over is planned
+/// (`StoryBeat.hold`). The narrator is the FLUENT SELF, so every line is
+/// informal wherever the language marks it (반말, タメ口, du/tu/tú) — the
+/// closing list is the app speaking and uses the app's register.
+///
+/// The old five-slide carousel (WelcomeHeroes.swift) is no longer shown.
 struct WelcomeView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var page = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Index into `beats`; `beats.count` is the closing frame.
+    @State private var beat = 0
     @State private var autoplay = true
+    /// Bumped on every manual step so the autoplay sleep restarts its clock
+    /// instead of firing a beat early.
+    @State private var tick = 0
     /// Sign-in is the SECONDARY path (returning users). New users tap
     /// "Get started" and onboard account-free — sign-up comes later, at the
     /// voice-clone moment.
     @State private var showingSignIn = false
+    /// The orb has opened into the Get started button.
+    @State private var doorOpen = false
+    /// The closing frame was reached by Skip or Sign in, not by watching.
+    @State private var skipped = false
+    @State private var showInvite = false
+    @State private var inviteCode = ""
 
     init() {
         #if DEBUG
-        // Screenshot helper: `-welcomePage <n>` lands directly on one slide.
+        // Screenshot helper: `-welcomePage <n>` holds on one beat
+        // (`n == beats.count` is the closing frame).
         let start = UserDefaults.standard.integer(forKey: "welcomePage")
-        _page = State(initialValue: start)
+        _beat = State(initialValue: start)
         _autoplay = State(initialValue: start == 0)
         // `-welcomeSignIn 1` opens on the returning-user sign-in buttons.
         if UserDefaults.standard.bool(forKey: "welcomeSignIn") {
             _showingSignIn = State(initialValue: true)
+            _beat = State(initialValue: Self.beats.count)
         }
         #endif
     }
-    @State private var showInvite = false
-    @State private var inviteCode = ""
 
-    private struct Feature: Identifiable {
-        let id = UUID()
-        let title: String
-        let subtitle: String
+    // MARK: - The script
+
+    struct StoryBeat {
+        /// The caption, one localized key; `\n` is where the line breathes.
+        let text: String
+        /// What the app does, said quietly under the line.
+        var glimpse: (symbol: String, label: String)? = nil
+        /// Seconds on screen. nil = derived from the caption's length; set
+        /// it from the clip's duration once the voice-over is recorded.
+        var hold: Double? = nil
     }
 
-    /// The pitch. Every line here is `explain()`, not chrome: this is the one
-    /// screen that has to be UNDERSTOOD before anything else happens, and a
-    /// learner who can't read the claim can't agree with it. Computed, not a
-    /// `let` — a stored static would resolve its strings once per process, and
-    /// setup's first question can change the learner's language behind it.
-    /// The same five beats the landing page's scrollytelling tells, in the
-    /// same order — the claim, then when and what you talk about, then the
-    /// BOOK the talk leaves, then what it accumulates, then the level. The
-    /// carousel used to name five features instead and never showed the book,
-    /// which is the one thing the learner keeps.
-    private static var features: [Feature] {
+    /// Computed, not a `let`: a stored static would resolve its strings once
+    /// per process, and setup can change the app language behind it.
+    static var beats: [StoryBeat] {
         [
-            // Slide one carries the whole product in two lines — the user
-            // should agree with THIS before anything else: it's your voice,
-            // already fluent, and you learn by talking with it.
-            Feature(title: explain("Learn the language\nwith the fluent you"),
-                    subtitle: explain("It's your own voice, already fluent. Say it however it comes out — every turn comes back the way you'll want to say it next time.")),
-            Feature(title: explain("When you want,\nabout what you want"),
-                    subtitle: explain("Today's news, a situation you're walking into this week, or nothing in particular. One tap, like placing a call.")),
-            // The beat that was missing. A talk isn't spent when it ends —
-            // it's bound into a book, and that's what the ribbons show.
-            Feature(title: explain("Every talk becomes\nyour own textbook"),
-                    subtitle: explain("The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.")),
-            // Slide four is the ONE place the carousel shows a mouth doing
-            // the work. The word cloud sat here first and it was the wrong
-            // pick: what a talk accumulates is already visible on the book
-            // (its chapters and mastery), while shadowing — the step that
-            // turns material into something you can say without thinking —
-            // had no picture anywhere.
-            Feature(title: explain("The more you say it,\nthe more it's yours"),
-                    subtitle: explain("Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking.")),
-            Feature(title: explain("A level measured,\nnot guessed"),
-                    subtitle: explain("Your level is read from the words you actually used in a talk. No quiz, no self-rating."))
+            StoryBeat(text: explain("So much you want to say,\nall of it still in your head.")),
+            StoryBeat(text: explain("Why is it so hard\njust to start talking...")),
+            StoryBeat(text: explain("School, classes, tutors, books, apps...\nYou tried so hard... didn't you?")),
+            StoryBeat(text: explain("Hi. It's me.\nYou, already fluent.")),
+            StoryBeat(text: explain("I'll call you.\nLet's talk five minutes a day."),
+                      glimpse: ("phone.fill", explain("Talk like a phone call"))),
+            StoryBeat(text: explain("Stumble, get it wrong, that's fine.\nI'll show you how it goes."),
+                      glimpse: ("text.bubble", explain("Every line, said naturally"))),
+            StoryBeat(text: explain("Everything we talk about\nbecomes your own textbook."),
+                      glimpse: ("book.closed", explain("Your own textbook"))),
+            StoryBeat(text: explain("What you keep getting wrong comes back every day,\nand you say it until it sticks."),
+                      glimpse: ("arrow.triangle.2.circlepath", explain("Daily review · Shadowing"))),
+            StoryBeat(text: explain("Practice while you watch yourself,\nuntil you feel sure, until it feels natural."),
+                      glimpse: ("music.mic", explain("Speech practice"))),
         ]
     }
 
+    /// The closing frame's line — the film's last word, said once, with the
+    /// chips gathered under it.
+    static var closingLine: String { explain("Until the day you become me,\nlet's do this together.") }
+
+    private var isClosing: Bool { beat >= Self.beats.count }
+
+    // MARK: - Body
+
     var body: some View {
+        ZStack {
+            StoryBackdrop(still: reduceMotion)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                topBar
+                story
+            }
+            .iPadContentPadding()
+        }
+        // The film is always on its cream ground, whatever the phone's
+        // appearance — the buttons below follow it.
+        .environment(\.colorScheme, .light)
+        // …but the status bar sits on the near-black top, so it asks the
+        // window for light content while this screen is up.
+        .preferredColorScheme(.dark)
+        .tint(FutureselfTheme.blue.tint)
+        .task(id: tick) { await play() }
+        .onAppear {
+            // A story told on a clock can't be read by VoiceOver; give those
+            // learners the closing frame, which says the same in a list.
+            if UIAccessibility.isVoiceOverRunning { finish() }
+        }
+    }
+
+    private func play() async {
+        while autoplay && !isClosing && !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(Self.duration(of: Self.beats[beat])))
+            guard autoplay, !Task.isCancelled else { return }
+            step()
+        }
+    }
+
+    /// Reveal + reading time. Long enough to read twice at a calm pace, short
+    /// enough that the whole film stays well under a minute.
+    static func duration(of b: StoryBeat) -> Double {
+        if let hold = b.hold { return hold }
+        let chars = Double(b.text.count)
+        return min(9, max(5.5, 3.2 + chars * 0.08))
+    }
+
+    private func step() {
+        withAnimation(.easeInOut(duration: 1.1)) { beat = min(beat + 1, Self.beats.count) }
+    }
+
+    /// From the first line again — the closing frame is where the film was
+    /// skipped to, or where it ended, and either way it can be seen again.
+    private func replay() {
+        showingSignIn = false
+        skipped = false
+        doorOpen = false
+        autoplay = true
+        withAnimation(.easeInOut(duration: 1.1)) { beat = 0 }
+        tick += 1
+    }
+
+    private func finish() {
+        skipped = true
+        autoplay = false
+        withAnimation(.easeInOut(duration: 0.7)) { beat = Self.beats.count }
+    }
+
+    // MARK: - Story
+
+    private var topBar: some View {
+        HStack {
+            Spacer()
+            if !isClosing {
+                Button("Skip") { finish() }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.horizontal, 20)
+                    .transition(.opacity)
+            } else {
+                Button("Watch again") { replay() }
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.75))
+                .padding(.horizontal, 20)
+                .transition(.opacity)
+            }
+        }
+        .frame(height: 44)
+    }
+
+    /// One layout from the first line to the buttons. The caption sits in the
+    /// middle; the fluent self sits below it from the first line on, and at
+    /// the end it stretches into the Get started button — the same surface
+    /// the Talk tab's call button is made of, so the first thing pressed in
+    /// the app is the thing that will call.
+    private var story: some View {
         VStack(spacing: 0) {
-            TabView(selection: $page) {
-                ForEach(Array(Self.features.enumerated()), id: \.offset) { i, f in
-                    featurePage(i, f).tag(i)
+            Spacer(minLength: 0)
+            ZStack {
+                // Each beat is its own view, so its words animate in fresh.
+                Group {
+                    if isClosing {
+                        VStack(spacing: 26) {
+                            RevealText(text: Self.closingLine, still: reduceMotion)
+                            // The film's own chips, gathered.
+                            CenteredFlow(spacing: 8, lineSpacing: 10) {
+                                ForEach(Array(Self.beats.compactMap(\.glimpse).enumerated()), id: \.offset) { i, g in
+                                    Glimpse(symbol: g.symbol, label: g.label,
+                                            delay: 2.2 + Double(i) * 0.15, still: reduceMotion)
+                                }
+                            }
+                        }
+                    } else {
+                        let b = Self.beats[beat]
+                        VStack(spacing: 22) {
+                            if let g = b.glimpse {
+                                Glimpse(symbol: g.symbol, label: g.label, delay: 0.2, still: reduceMotion)
+                            }
+                            RevealText(text: b.text, still: reduceMotion)
+                        }
+                    }
+                }
+                .id(beat)
+                .transition(.asymmetric(
+                    insertion: .identity,
+                    removal: .opacity.combined(with: .offset(y: reduceMotion ? 0 : -14))))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .frame(height: 250)
+            Spacer(minLength: 0)
+            bottom
+        }
+        .contentShape(Rectangle())
+        // Tap anywhere to move on — the film is never a wall.
+        .onTapGesture {
+            guard !isClosing else { return }
+            autoplay = true
+            step()
+            tick += 1
+        }
+        .task(id: isClosing) {
+            guard isClosing else { doorOpen = false; return }
+            // The orb opens into the button once the last line has landed;
+            // straight away for someone who skipped or came to sign in.
+            let wait = (skipped || showingSignIn || reduceMotion) ? 0.3 : 2.6
+            try? await Task.sleep(for: .seconds(wait))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.9)) { doorOpen = true }
+        }
+    }
+
+    /// The orb, and what sits under it. The orb's row never changes height,
+    /// so the orb is in the same place on every line and as a button.
+    private var bottom: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                FutureselfDoor(open: doorOpen && !showingSignIn, beat: beat, still: reduceMotion) {
+                    appState.onboardingStarted = true
+                }
+                .opacity(showingSignIn ? 0 : 1)
+            }
+            .frame(height: 76)
+            .padding(.horizontal, 32)
+
+            ZStack(alignment: .top) {
+                if !isClosing {
+                    VStack(spacing: 0) {
+                        progress
+                            .padding(.top, 22)
+                            .padding(.bottom, 16)
+                        Button("Already have an account? Sign in") {
+                            showingSignIn = true
+                            finish()
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(Color.storyInk.opacity(0.55))
+                    }
+                    .transition(.opacity)
+                } else {
+                    signInArea
+                        // Below the account buttons when they are up.
+                        .padding(.top, showingSignIn ? 84 : 14)
+                        .modifier(Arrive(delay: (skipped || showingSignIn) ? 0.3 : 3.3, still: reduceMotion))
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .simultaneousGesture(DragGesture(minimumDistance: 6).onChanged { _ in autoplay = false })
-
-            pageDots
-                .padding(.top, 2)
-                .padding(.bottom, 6)
-
-            signInArea
+            .frame(minHeight: 110, alignment: .top)
         }
-        .iPadContentPadding()
-        // systemBackground (not grouped) — the same ground the real
-        // conversation screens use, so DialogueLine's neutral bubble fill in
-        // the Talk/Watch heroes reads as a filled bubble, not empty text.
-        .background(Color(.systemBackground).ignoresSafeArea())
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 6_500_000_000)
-                if !autoplay { break }
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    page = (page + 1) % Self.features.count
-                }
+        .padding(.bottom, 10)
+        .overlay(alignment: .top) {
+            // Returning users: the button steps aside for the account buttons.
+            if isClosing && showingSignIn {
+                signInButtons
+                    .transition(.opacity)
             }
         }
     }
 
-    private func featurePage(_ i: Int, _ f: Feature) -> some View {
-        // One centered column per slide: a fixed-height hero area so the copy
-        // never jumps between slides during autoplay, then title + subtitle.
-        // maxHeight centers the whole group — no top-heavy void below.
-        VStack(spacing: 28) {
-            mock(i)
-                .frame(height: 410)
-                .frame(maxWidth: .infinity)
-                // The hero can overrun the available height on small screens.
-                // Rather than a hard clip, let it fade out at the very top and
-                // bottom edges so the asset dissolves into the ground.
-                .mask(
-                    LinearGradient(
-                        stops: mockFades(i)
-                            ? [
-                                .init(color: .clear, location: 0),
-                                .init(color: .black, location: 0.07),
-                                .init(color: .black, location: 0.93),
-                                .init(color: .clear, location: 1)
-                              ]
-                            : [.init(color: .black, location: 0), .init(color: .black, location: 1)],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                )
-            VStack(spacing: 12) {
-                Text(f.title)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 28)
-                Text(f.subtitle)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 36)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - Key visuals — the real components, alive
-
-    /// Each slide is a LIVE composition of the actual app UI (WelcomeHeroes):
-    /// the real `Futureself` surface taking a turn, the home's Discover
-    /// section, the book on the REAL `BookmarkedPage` with its ribbons being
-    /// tapped, the shadow line sweeping over `ShadowTimelinePlayer`'s
-    /// scrubber, and the Progress estimate panel. No screenshots.
-    @ViewBuilder
-    private func mock(_ i: Int) -> some View {
-        switch i {
-        case 0:  FutureselfHero()  // who is on the other end, and in whose voice
-        case 1:  HomeHero()        // and what there is to talk about
-        case 2:  BookHero()        // the talk, bound into your own textbook
-        case 3:  ShadowHero()      // said back in your voice, until it sticks
-        default: LevelHero()       // measured, not guessed
-        }
-    }
-
-    /// Whether the hero's top and bottom edges dissolve into the ground.
-    /// Right for the heroes whose content genuinely CONTINUES past the frame
-    /// (a transcript, a list, a cloud); wrong for the two that are cards —
-    /// fading a card's own edge reads as a rendering fault, not a window.
-    private func mockFades(_ i: Int) -> Bool { i != 2 && i != 4 }
-
-    // MARK: - Page dots + sign in
-
-    private var pageDots: some View {
-        HStack(spacing: 8) {
-            ForEach(Self.features.indices, id: \.self) { i in
+    private var progress: some View {
+        HStack(spacing: 5) {
+            ForEach(Self.beats.indices, id: \.self) { i in
                 Capsule()
-                    .fill(i == page ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: i == page ? 20 : 8, height: 8)
-                    .animation(.easeInOut(duration: 0.25), value: page)
+                    .fill(Color.storyInk.opacity(i <= beat ? 0.6 : 0.15))
+                    .frame(width: i == beat ? 14 : 5, height: 3)
             }
         }
+        .animation(.easeInOut(duration: 0.4), value: beat)
+        .accessibilityHidden(true)
     }
 
+    // MARK: - Sign in
+
+    /// Under the button: the returning-user link, the invite code, and in
+    /// debug builds the sign-in skip.
     private var signInArea: some View {
         VStack(spacing: 8) {
-            if showingSignIn {
-                // Returning users: restore the account (and the voice clone
-                // that comes with it).
-                SignInWithAppleButton(
-                    onRequest: { request in
-                        // Capture the invite code at the sign-in moment so
-                        // it's redeemed as soon as the session lands.
-                        savePendingInvite()
-                        auth.configure(request)
-                    },
-                    onCompletion: { result in auth.handle(result: result) }
-                )
-                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                .frame(height: 52)
-                .clipShape(Capsule())
-                .padding(.horizontal, 32)
-
-                GoogleSignInButton(height: 52) {
-                    savePendingInvite()
-                    auth.signInWithGoogle()
-                }
-                .padding(.horizontal, 32)
-
-                Button("New here? Get started instead") {
-                    withAnimation { showingSignIn = false }
-                }
-                .font(.footnote)
-                .foregroundStyle(.tint)
-                .padding(.top, 2)
-            } else {
-                // The primary path: begin account-free. Sign-up comes later,
-                // at the voice-clone step — after the app has earned it.
-                Button {
-                    appState.onboardingStarted = true
-                } label: {
-                    Text("Get started")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.horizontal, 32)
-
+            if !showingSignIn {
                 Button("Already have an account? Sign in") {
                     withAnimation { showingSignIn = true }
                 }
                 .font(.footnote)
                 .foregroundStyle(.tint)
-                .padding(.top, 2)
 
                 inviteArea
             }
@@ -258,8 +331,38 @@ struct WelcomeView: View {
                     .multilineTextAlignment(.center).padding(.horizontal, 32)
             }
         }
-        .padding(.top, 6)
-        .padding(.bottom, 14)
+    }
+
+    /// Returning users: restore the account (and the voice clone that comes
+    /// with it). Sits where the button was.
+    private var signInButtons: some View {
+        VStack(spacing: 8) {
+            SignInWithAppleButton(
+                onRequest: { request in
+                    // Capture the invite code at the sign-in moment so
+                    // it's redeemed as soon as the session lands.
+                    savePendingInvite()
+                    auth.configure(request)
+                },
+                onCompletion: { result in auth.handle(result: result) }
+            )
+            .signInWithAppleButtonStyle(.black)
+            .frame(height: 52)
+            .clipShape(Capsule())
+
+            GoogleSignInButton(height: 52) {
+                savePendingInvite()
+                auth.signInWithGoogle()
+            }
+
+            Button("New here? Get started instead") {
+                withAnimation { showingSignIn = false }
+            }
+            .font(.footnote)
+            .foregroundStyle(.tint)
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 32)
     }
 
     @ViewBuilder
@@ -272,11 +375,11 @@ struct WelcomeView: View {
                     .multilineTextAlignment(.center)
                     .font(.body.weight(.semibold))
                     .padding(.vertical, 11)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemGroupedBackground)))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.storyInk.opacity(0.06)))
                     .padding(.horizontal, 32)
                     .onChange(of: inviteCode) { _, _ in savePendingInvite() }
                 Text(explain("You'll both get \(ReferralService.bonusMinutes) minutes of talk time when you sign in."))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Color.storyInk.opacity(0.6))
             }
             .padding(.top, 4)
         } else {

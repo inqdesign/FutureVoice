@@ -29351,6 +29351,16 @@
         }
       }
     },
+    "Daily review · Shadowing" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 복습 · 따라 말하기"
+          }
+        }
+      }
+    },
     "Daily small talk" : {
       "localizations" : {
         "de" : {
@@ -35353,6 +35363,16 @@
         }
       }
     },
+    "Every line, said naturally" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매 문장, 자연스러운 말로"
+          }
+        }
+      }
+    },
     "Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up." : {
       "localizations" : {
         "de" : {
@@ -36541,6 +36561,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這次對話該學的，都學會了。"
+          }
+        }
+      }
+    },
+    "Everything we talk about\nbecomes your own textbook." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "우리가 나눈 대화는\n너만의 교재가 돼."
           }
         }
       }
@@ -44206,6 +44236,16 @@
         }
       }
     },
+    "Hi. It's me.\nYou, already fluent." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안녕, 나야.\n이미 유창하게 말하는 너."
+          }
+        }
+      }
+    },
     "Hide" : {
       "localizations" : {
         "de" : {
@@ -51677,6 +51717,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收合"
+          }
+        }
+      }
+    },
+    "Until the day you become me,\nlet's do this together." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네가 내가 되는 날까지,\n우리 같이 해보자."
           }
         }
       }
@@ -73271,6 +73321,16 @@
         }
       }
     },
+    "Practice while you watch yourself,\nuntil you feel sure, until it feels natural." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "너를 보면서 연습해 보자.\n자신감이 생길 때까지,\n자연스러워질 때까지."
+          }
+        }
+      }
+    },
     "Relationship (e.g. Best friend, Kita parent, Manager)" : {
       "localizations" : {
         "de" : {
@@ -76217,6 +76277,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "和「判定方式」用的是同一套標準。點一下項目就能看到實際量到的數字。"
+          }
+        }
+      }
+    },
+    "I'll call you.\nLet's talk five minutes a day." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 전화 걸어 줄게.\n매일 5분, 나와 대화하자."
           }
         }
       }
@@ -81474,6 +81544,16 @@
     "So — how did the interview go yesterday? Anything you'd do differently next time?" : {
       "shouldTranslate" : false
     },
+    "So much you want to say,\nall of it still in your head." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하고 싶은 말은\n머릿속에 가득한데"
+          }
+        }
+      }
+    },
     "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." : {
       "localizations" : {
         "de" : {
@@ -82568,6 +82648,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把講稿放上螢幕，大聲唸出來，畫面會跟著你往下走。想錄下自己的樣子就開相機，不開也可以。唸完會幫你看照稿唸得準不準、速度和停頓如何，講稿的主題也都有趣又實用，邊唸邊長知識。"
+          }
+        }
+      }
+    },
+    "Speech practice" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스피치 연습"
           }
         }
       }
@@ -84918,6 +85008,16 @@
         }
       }
     },
+    "Stumble, get it wrong, that's fine.\nI'll show you how it goes." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더듬어도, 틀려도 괜찮아.\n내가 다 알려줄게."
+          }
+        }
+      }
+    },
     "Style (e.g. Direct, loves jokes / Formal, careful)" : {
       "localizations" : {
         "de" : {
@@ -86297,6 +86397,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說 10 分鐘左右"
+          }
+        }
+      }
+    },
+    "Talk like a phone call" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화하듯 대화"
           }
         }
       }
@@ -93763,6 +93873,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再對照前面的頁面，用另一種顏色補上漏掉的"
+          }
+        }
+      }
+    },
+    "Why is it so hard\njust to start talking..." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "막상 입을 떼기가\n왜 그렇게 힘든지..."
           }
         }
       }
@@ -103542,6 +103662,16 @@
         }
       }
     },
+    "What you keep getting wrong comes back every day,\nand you say it until it sticks." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자주 틀리는 건 매일 다시,\n입에 붙을 때까지 말해 보자."
+          }
+        }
+      }
+    },
     "What you learn today is gone in a few days" : {
       "localizations" : {
         "de" : {
@@ -106592,6 +106722,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "單字·句子播放"
+          }
+        }
+      }
+    },
+    "School, classes, tutors, books, apps...\nYou tried so hard... didn't you?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학교, 학원, 전화영어, 책, 앱...\n참 열심히 했는데... 그치?"
           }
         }
       }
@@ -115612,6 +115752,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你自己的文字"
+          }
+        }
+      }
+    },
+    "Your own textbook" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나만의 교재"
           }
         }
       }
