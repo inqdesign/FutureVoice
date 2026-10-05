@@ -267,7 +267,12 @@ class TalkViewModel(context: Context) : ViewModel() {
                         .load(config.targetLanguage).firstOrNull { it.id == id }
                 }.getOrNull()?.let { sc ->
                     val role = sc.role.trim()
-                    if (role.isEmpty()) sc.environment else "${sc.environment} — talking with $role"
+                    val place = if (role.isEmpty()) sc.environment else "${sc.environment} — talking with $role"
+                    // The learner's own side, where the starter says it (iOS
+                    // 43810e21): "Meeting someone new" answers with a self-
+                    // introduction and asks it back.
+                    com.roro.futurevoice.data.StarterSituation.of(sc)?.learnerSide
+                        ?.let { "$place. $it" } ?: place
                 }
             }
         }
