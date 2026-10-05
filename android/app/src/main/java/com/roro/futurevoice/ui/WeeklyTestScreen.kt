@@ -1,5 +1,12 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.layout.PaddingValues
 import android.Manifest
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import android.content.pm.PackageManager
@@ -13,7 +20,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -130,6 +136,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 private val RIGHT_GREEN = Color(0xFF34C759)
+private val IOS_GRAY = Color(0xFF8E8E93)
 private val WRONG_RED = Color(0xFFFF3B30)
 
 /** The speak item's own little machine. */
@@ -707,7 +714,8 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
                    loadingLineAudio: Boolean, speakBusy: Boolean, canHear: Boolean,
                    onPlay: () -> Unit, onHear: () -> Unit) {
     when (item.kind) {
-        WeeklyTestItem.Kind.MEANING -> Text(item.prompt, style = MaterialTheme.typography.titleLarge,
+        // iOS .title2 semibold (22 pt).
+        WeeklyTestItem.Kind.MEANING -> Text(item.prompt, style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold)
         WeeklyTestItem.Kind.GAP -> {
             // The blank filled by the chosen phrase once one is picked, so the
@@ -723,7 +731,7 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
                     withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) { append(chosen) }
                 } else withStyle(SpanStyle(color = faint)) { append(WeeklyTestEngine.BLANK_MARK) }
                 append(parts[1])
-            }, style = MaterialTheme.typography.titleMedium)
+            }, style = MaterialTheme.typography.titleLarge) // iOS .title3
         }
         WeeklyTestItem.Kind.BUILD -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.labelMedium,
@@ -733,7 +741,7 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
         }
         WeeklyTestItem.Kind.GRAMMAR -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item.rule?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(it, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.labelMedium,
@@ -746,7 +754,7 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(marked(item.prompt, item.focus), style = MaterialTheme.typography.titleMedium)
+                Text(marked(item.prompt, item.focus), style = MaterialTheme.typography.titleLarge)
             }
             item.focus?.let {
                 Text(stringResource(R.string.wt_more_natural_than, it), style = MaterialTheme.typography.bodyMedium,
@@ -767,13 +775,14 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
             }
         }
         WeeklyTestItem.Kind.LISTEN -> Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), Alignment.Center) {
-            FilledIconButton(onClick = onPlay, modifier = Modifier.size(76.dp)) {
+            // iOS: a 76 pt label inside .borderedProminent, which pads it to ~90.
+            FilledIconButton(onClick = onPlay, modifier = Modifier.size(90.dp)) {
                 Icon(if (playing) Icons.Filled.VolumeUp else Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(R.string.play_the_line), modifier = Modifier.size(34.dp))
+                    contentDescription = stringResource(R.string.play_the_line), modifier = Modifier.size(36.dp))
             }
         }
         WeeklyTestItem.Kind.SPEAK -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(item.answer, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+            Text(item.answer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
             if (outcome == null && canHear) {
                 OutlinedButton(onClick = onHear, enabled = !speakBusy && !loadingLineAudio) {
                     if (loadingLineAudio) {
@@ -810,19 +819,23 @@ private fun OptionButton(option: String, item: WeeklyTestItem, chosen: String?, 
     val isAnswer = WeeklyTestEngine.isCorrect(item, option)
     val isChosen = chosen == option
     val graded = outcome != null
+    // iOS: `.bordered` + `.controlSize(.large)` — a filled capsule (tint at
+    // ~18 %, no stroke), ~62 pt tall; graded, the rows that are neither the
+    // answer nor the pick go GRAY (fill and text), never a dimmed outline.
     val tint = when {
         !graded -> MaterialTheme.colorScheme.primary
         isAnswer -> RIGHT_GREEN
         isChosen -> WRONG_RED
-        else -> MaterialTheme.colorScheme.outline
+        else -> IOS_GRAY
     }
-    OutlinedButton(
+    Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        shape = ContinuousShape(14.dp),
-        border = BorderStroke(if (graded && (isAnswer || isChosen)) 2.dp else 1.dp, tint.copy(alpha = 0.6f)),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = tint.copy(alpha = 0.10f), contentColor = tint),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 62.dp),
+        shape = CircleShape,
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = tint.copy(alpha = 0.18f), contentColor = tint),
+        elevation = null,
     ) {
         Text(option, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         // The verdict slot is ALWAYS laid out, so the text wraps the same way
@@ -857,9 +870,18 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, ContinuousShape(14.dp))
-            .clickable(onClick = onTapEnd).padding(12.dp)) {
+        // iOS: a DASHED 14 pt outline in .tertiary, 56 pt of room inside a 12 pt pad.
+        val dash = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+        Box(Modifier.fillMaxWidth()
+            .drawBehind {
+                val w = 1.dp.toPx()
+                drawRoundRect(dash, topLeft = Offset(w / 2, w / 2),
+                    size = Size(size.width - w, size.height - w),
+                    cornerRadius = CornerRadius(14.dp.toPx()),
+                    style = Stroke(w, pathEffect = PathEffect.dashPathEffect(
+                        floatArrayOf(6.dp.toPx(), 5.dp.toPx()))))
+            }
+            .clickable(onClick = onTapEnd).padding(12.dp).heightIn(min = 56.dp)) {
             if (laid.isEmpty() && item.kind == WeeklyTestItem.Kind.LISTEN) {
                 Text(stringResource(R.string.tap_the_words_in_order), style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(8.dp))
@@ -947,18 +969,20 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
 private fun Tile(word: String, filled: Boolean, outcome: Boolean?, verdict: Boolean?,
                  selected: Boolean = false, onClick: () -> Unit) {
     val tint = when {
-        !filled -> if (outcome == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+        !filled -> if (outcome == null) MaterialTheme.colorScheme.primary else IOS_GRAY
         outcome == null -> MaterialTheme.colorScheme.primary
         outcome == true -> RIGHT_GREEN
         verdict == true -> RIGHT_GREEN
         else -> WRONG_RED
     }
     Box(Modifier
-        .background(tint.copy(alpha = 0.13f), RoundedCornerShape(50))
+        .background(tint.copy(alpha = 0.18f), RoundedCornerShape(50))
         .border(if (selected) 2.dp else 0.dp,
             if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(50))
         .clickable(onClick = onClick)
-        .padding(horizontal = 14.dp, vertical = 9.dp)) {
+        // iOS: 12/8 label padding inside `.bordered`, which adds its own ~10/6 —
+        // a ~49 pt capsule.
+        .padding(horizontal = 22.dp, vertical = 14.dp)) {
         Text(word, color = tint, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
     }
 }
@@ -968,7 +992,7 @@ private fun Tile(word: String, filled: Boolean, outcome: Boolean?, verdict: Bool
 private fun Caret() {
     val t = rememberInfiniteTransition(label = "caret")
     val a by t.animateFloat(1f, 0.15f, infiniteRepeatable(tween(550), RepeatMode.Reverse), label = "blink")
-    Box(Modifier.height(40.dp), Alignment.Center) {
+    Box(Modifier.height(50.dp), Alignment.Center) {
         Box(Modifier.width(2.dp).height(24.dp).alpha(a)
             .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp)))
     }
@@ -983,7 +1007,7 @@ private fun SpeakArea(phase: SpeakPhase, outcome: Boolean?, transcript: String?,
         FilledIconButton(
             onClick = onToggle,
             enabled = phase != SpeakPhase.READING && outcome == null,
-            modifier = Modifier.size(76.dp).scale(if (recording) 1f + level.coerceIn(0f, 1f) * 0.12f else 1f),
+            modifier = Modifier.size(90.dp).scale(if (recording) 1f + level.coerceIn(0f, 1f) * 0.12f else 1f),
             shape = CircleShape,
             colors = if (recording) IconButtonDefaults.filledIconButtonColors(containerColor = WRONG_RED)
                 else IconButtonDefaults.filledIconButtonColors(),
@@ -994,7 +1018,7 @@ private fun SpeakArea(phase: SpeakPhase, outcome: Boolean?, transcript: String?,
             } else {
                 Icon(if (recording) Icons.Filled.Stop else Icons.Filled.Mic,
                     contentDescription = stringResource(if (recording) R.string.stop else R.string.record),
-                    modifier = Modifier.size(32.dp))
+                    modifier = Modifier.size(36.dp))
             }
         }
         val hint = when (phase) {
@@ -1023,7 +1047,8 @@ private fun SpeakArea(phase: SpeakPhase, outcome: Boolean?, transcript: String?,
         }
         if (outcome == null && phase in setOf(SpeakPhase.IDLE, SpeakPhase.HEARD_NOTHING, SpeakPhase.MIC_OFF)) {
             TextButton(onClick = onSkip) {
-                Text(stringResource(R.string.skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.skip), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
