@@ -47,7 +47,6 @@ import com.roro.futurevoice.talk.TalkUiState
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.AppState
-import com.roro.futurevoice.ui.AppearanceSheet
 import com.roro.futurevoice.ui.HomeScreen
 import com.roro.futurevoice.ui.HomeTab
 import com.roro.futurevoice.ui.SummaryBoard
@@ -655,12 +654,26 @@ object CaptureTalk {
     }
 
     /**
-     * iOS `themes`: the Futureself theme picker. On iOS it's a List section in
-     * Me; Android's picker is the Appearance sheet, shown open.
+     * iOS `themes`: the Futureself theme grid in its List habitat — a page
+     * titled Me, one Appearance section holding the picker, and its footer.
      */
     @Composable
     private fun Themes() {
-        Box(Modifier.fillMaxSize().background(AppSurfaces.ground))
-        AppearanceSheet(onPicked = {}, onDismiss = {})
+        androidx.compose.foundation.layout.Column(
+            Modifier.fillMaxSize().background(AppSurfaces.ground)
+                .statusBarsPadding().padding(horizontal = 16.dp)) {
+            val title = stringResource(com.roro.futurevoice.R.string.me)
+            Text(title, style = com.roro.futurevoice.ui.brand.DisplayFace.style(title,
+                MaterialTheme.typography.displaySmall),
+                modifier = Modifier.padding(start = 4.dp, top = 56.dp, bottom = 20.dp))
+            com.roro.futurevoice.ui.GroupedSectionHeader(stringResource(com.roro.futurevoice.R.string.appearance))
+            com.roro.futurevoice.ui.GroupedCard {
+                androidx.compose.foundation.layout.Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    com.roro.futurevoice.ui.FutureselfThemePicker()
+                }
+            }
+            com.roro.futurevoice.ui.GroupedFooter(stringResource(
+                com.roro.futurevoice.R.string.future_self_is_the_pixel_surface_behind_every_call_button_ta_f0338e))
+        }
     }
 }

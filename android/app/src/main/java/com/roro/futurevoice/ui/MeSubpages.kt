@@ -328,48 +328,17 @@ fun SoundPage(onBack: () -> Unit) {
 // ── Appearance ─────────────────────────────────────────────────────────────
 
 /**
- * iOS `appearancePage`: the Futureself palette, each option drawn as the
- * real surface. (iOS also has a Light/Dark/System segment; Android follows
+ * iOS `appearancePage`: the Futureself palette as iOS's 3×2 grid of live
+ * surfaces (`FutureselfThemePicker`). (iOS also has a Light/Dark/System segment; Android follows
  * the system and has no such setting.)
  */
 @Composable
 fun AppearancePage(onPicked: (FutureselfTheme) -> Unit, onBack: () -> Unit) {
-    val context = LocalContext.current
-    var picked by remember { mutableStateOf(FutureselfTheme.stored(context)) }
     MeSubpage(stringResource(R.string.appearance), onBack) {
         Spacer(Modifier.padding(top = 12.dp))
         GroupedCard {
-            FutureselfTheme.entries.forEachIndexed { i, theme ->
-                if (i > 0) GroupedRowDivider(inset = false)
-                Row(
-                    Modifier.fillMaxWidth()
-                        .clickable {
-                            picked = theme
-                            FutureselfTheme.pick(context, theme)
-                            onPicked(theme)
-                        }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Futureself(
-                        mode = FutureselfMode.IDLE, level = 0f, theme = theme,
-                        virtualHeight = 64f,
-                        modifier = Modifier.size(width = 64.dp, height = 34.dp)
-                            .clip(CircleShape)
-                            .border(if (theme == picked) 2.dp else 0.dp,
-                                if (theme == picked) theme.tint()
-                                else androidx.compose.ui.graphics.Color.Transparent,
-                                CircleShape),
-                    )
-                    Text(theme.label, Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge)
-                    if (theme == picked) {
-                        Icon(Icons.Filled.Check, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp))
-                    }
-                }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                FutureselfThemePicker(onPicked)
             }
         }
         GroupedFooter(stringResource(
