@@ -50,7 +50,7 @@ object CaptureOnboarding {
         // The account step after the clone: keep the voice you just heard.
         "signup-account" to { _ ->
             com.roro.futurevoice.ui.AccountScreen(
-                googleAvailable = true, onGoogleSignIn = {}, onAppleSignIn = {})
+                googleAvailable = true, onGoogleSignIn = {}, onAppleSignIn = {}, onBack = {})
         },
     )
 

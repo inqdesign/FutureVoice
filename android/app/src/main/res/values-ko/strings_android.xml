@@ -544,4 +544,6 @@
     <string name="grammar_measures_two_reads">두 가지로 읽고 낮은 쪽을 따라요. 대화에서 실제로 만든 문장 구조, 그리고 전사로 확인된 100단어당 실수예요. 인식 오류나 표현 제안은 빼요. 짧고 맞는 문장은 높게가 아니라 낮게 읽혀요.</string>
     <string name="grammar_improve_longer_sentences">한 문장에 더 담아 보세요. 이유, 조건, 그 전에 있었던 일까지요. 이 밴드를 올리는 건 더 긴 문장이에요.</string>
     <string name="grammar_trend_caption_ceiling">대화 한 번이 점 하나, 100단어당 확인된 실수예요. 정확도를 보여 줘요. 위의 밴드는 만든 문장 구조로 정해져서, 이 곡선만으로는 움직이지 않아요.</string>
+    <!-- The account step's body (iOS "It's built and it's yours…"), with the iPhone made a phone. -->
+    <string name="account_step_voice_stays">"방금 만든 목소리는 이미 내 것이에요. 로그인하면 학습 기록과 함께 계정에 남아, 휴대폰을 바꿔도 그대로예요."</string>
 </resources>

@@ -544,4 +544,6 @@
     <string name="grammar_measures_two_reads">2つの読みのうち低いほうを採ります。会話で実際に組み立てた文の構造と、文字起こしで確認された100語あたりのミスです。音声認識の誤りや言い回しの提案は除きます。短く正しい文は高くではなく低く読まれます。</string>
     <string name="grammar_improve_longer_sentences">1つの文にもっと込めてみましょう。理由、条件、その前にあったこと。このバンドを動かすのは長い文です。</string>
     <string name="grammar_trend_caption_ceiling">確認されたミス(100語あたり)、1回の会話で1点。あなたの正確さです。上のバンドは組み立てた文の構造で決まるので、この曲線だけでは動きません。</string>
+    <!-- The account step's body (iOS "It's built and it's yours…"), with the iPhone made a phone. -->
+    <string name="account_step_voice_stays">"作ったばかりのこの声は、もう自分のものです。ログインすれば学習の記録と一緒にアカウントに残り、スマホを替えてもそのままです。"</string>
 </resources>

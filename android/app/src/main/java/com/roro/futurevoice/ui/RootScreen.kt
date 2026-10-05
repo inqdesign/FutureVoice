@@ -6,6 +6,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.GraphicEq
@@ -864,6 +870,7 @@ fun RootScreen() {
             googleAvailable = app.isGoogleConfigured,
             onGoogleSignIn = app::signInWithGoogle,
             onAppleSignIn = app::signIn,
+            onBack = { pendingAccount = false },
         )
 
         // The week's rhythm before the day's: when the week is looked back on
@@ -1048,27 +1055,68 @@ internal fun AccountScreen(
     googleAvailable: Boolean,
     onGoogleSignIn: (android.content.Context) -> Unit,
     onAppleSignIn: () -> Unit,
+    /** iOS's Back in the page's leading corner — to the voice this step
+     *  interrupted. Null where there is nothing behind it (the kill guard). */
+    onBack: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    Column(
-        Modifier.fillMaxSize().systemBarsPadding().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.make_it_yours), style = MaterialTheme.typography.headlineSmall)
-        Text(
-            stringResource(R.string.your_voice_is_ready_sign_in_to_keep_it),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 12.dp),
-        )
-        if (googleAvailable) {
-            Button(onClick = { onGoogleSignIn(context) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.continue_with_google))
+    val theme = remember { FutureselfTheme.stored(context) }
+    // iOS `VoiceCloneOnboardingView`'s account act: the stage (pixel title +
+    // the idle orb) on top, the hook and its support line, and the two
+    // providers stacked full-width at the BOTTOM.
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding()) {
+        Box(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart) {
+            if (onBack != null) {
+                Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onBack)
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary,
+                        fontSize = 17.sp)
+                }
             }
         }
-        Button(onClick = onAppleSignIn, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.continue_with_apple))
+        val title = stringResource(R.string.make_it_yours)
+        Text(title, style = DisplayFace.style(title, TextStyle(fontSize = 24.sp)),
+            maxLines = 1, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 64.dp))
+        Spacer(Modifier.height(20.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            com.roro.futurevoice.ui.brand.Futureself(
+                mode = FutureselfMode.IDLE, level = 0f, theme = theme, virtualHeight = 64f,
+                modifier = Modifier.size(168.dp).clip(CircleShape)
+                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape))
+        }
+        Spacer(Modifier.weight(0.6f))
+        Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.save_this_voice_to_your_account),
+                fontSize = 22.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.account_step_voice_stays),
+                fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.widthIn(max = 300.dp))
+        }
+        Spacer(Modifier.weight(1f))
+        // Google first — Android's primary provider, in the slot iOS gives
+        // Apple. (Order not settled by the founder yet; iOS leads with Apple.)
+        Column(Modifier.fillMaxWidth().background(AppSurfaces.ground)
+            .padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val pill = RoundedCornerShape(50)
+            val ink = if (isSystemInDarkTheme()) Color.White else Color.Black
+            val onInk = if (isSystemInDarkTheme()) Color.Black else Color.White
+            @Composable fun provider(label: Int, onClick: () -> Unit) {
+                Box(Modifier.fillMaxWidth().height(50.dp).clip(pill).background(ink)
+                    .clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+                    Text(stringResource(label), color = onInk, fontSize = 19.sp, fontWeight = FontWeight.Medium)
+                }
+            }
+            if (googleAvailable) provider(R.string.continue_with_google) { onGoogleSignIn(context) }
+            provider(R.string.continue_with_apple, onAppleSignIn)
         }
     }
 }
