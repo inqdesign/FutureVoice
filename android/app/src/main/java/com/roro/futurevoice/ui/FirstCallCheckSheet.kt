@@ -1,5 +1,9 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.PaddingValues
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -178,14 +181,23 @@ fun FirstCallCheckSheet(
                             FirstCallCheck.Feeling.RIGHT -> R.string.fcc_just_right
                             FirstCallCheck.Feeling.HARD -> R.string.fcc_hard
                         })
-                        val mod = Modifier.weight(1f).heightIn(min = 52.dp)
-                        // The picked one is FILLED — the system's own "selected".
-                        if (feeling == f) Button(onClick = { pick(f) }, modifier = mod) {
-                            Text(label, fontWeight = FontWeight.SemiBold, maxLines = 2)
-                        } else OutlinedButton(onClick = { pick(f) }, modifier = mod) {
-                            Text(label, fontWeight = FontWeight.SemiBold, maxLines = 2,
-                                color = MaterialTheme.colorScheme.onSurface)
+                        // iOS: a 52 pt label inside `.bordered`, ~64 pt capsule, one line;
+                        // Material's 24 dp side padding wrapped 딱 좋았어요 onto two.
+                        val mod = Modifier.weight(1f).heightIn(min = 64.dp)
+                        val pad = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                        val text: @Composable () -> Unit = {
+                            Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         }
+                        // The picked one is FILLED — the system's own "selected"; the
+                        // others are `.bordered` tinted `.secondary`: a grey fill, grey words.
+                        if (feeling == f) Button(onClick = { pick(f) }, modifier = mod, shape = CircleShape,
+                            contentPadding = pad, elevation = null) { text() }
+                        else Button(onClick = { pick(f) }, modifier = mod, shape = CircleShape,
+                            contentPadding = pad, elevation = null,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.14f),
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) { text() }
                     }
                 }
                 feeling?.let { f ->
