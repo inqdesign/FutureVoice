@@ -172,7 +172,7 @@ data class PlannerSnapshot(
          *  stand-ins, one-off edits and rest weekdays left out. */
         fun master(c: Context, plan: StudyPlan, now: Long = System.currentTimeMillis()): PlannerSnapshot {
             val template = plan.copy(exceptions = emptyMap(), restDays = emptySet())
-            val start = StudyPlan.addDays(StudyPlan.startOfWeek(now), 7)
+            val start = StudyPlan.addDays(StudyPlan.startOfRoutineWeek(now), 7) // Monday–Sunday
             val off = plan.offWeekdays ?: emptySet()
             val days = (0 until 7).map { StudyPlan.addDays(start, it) }
                 .filter { StudyPlan.weekday(it) !in off }

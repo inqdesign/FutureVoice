@@ -460,6 +460,18 @@ data class StudyPlan(
         fun isSameDay(a: Long, b: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
             startOfDay(a, zone) == startOfDay(b, zone)
 
+        /** The routine's week runs Monday–Sunday whatever the locale (iOS's
+         *  weekly plan, CLAUDE.md "Monday–Sunday"); stored weekdays stay
+         *  1 = Sunday … 7 = Saturday. */
+        val ROUTINE_WEEK_ORDER: List<Int> = listOf(2, 3, 4, 5, 6, 7, 1)
+
+        /** The Monday that starts the routine week holding [at]. */
+        fun startOfRoutineWeek(at: Long, zone: TimeZone = TimeZone.getDefault()): Long {
+            val c = cal(startOfDay(at, zone), zone)
+            val back = (c.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
+            return addDays(c.timeInMillis, -back, zone)
+        }
+
         /** The week holding [at], from the locale's first weekday. */
         fun startOfWeek(at: Long, zone: TimeZone = TimeZone.getDefault()): Long {
             val c = cal(startOfDay(at, zone), zone)

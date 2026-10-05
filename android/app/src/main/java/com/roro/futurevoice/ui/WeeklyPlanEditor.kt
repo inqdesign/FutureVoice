@@ -717,11 +717,10 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     }
 }
 
-/** Seven weekday chips in the locale's order; lit = on. */
+/** Seven weekday chips, Monday first like the rest of the routine; lit = on. */
 @Composable
 private fun WeekdayChips(on: Set<Int>, lit: (Int) -> Boolean, onTap: (Int) -> Unit) {
-    val first = Calendar.getInstance().firstDayOfWeek
-    val order = (0 until 7).map { (first - 1 + it) % 7 + 1 }
+    val order = StudyPlan.ROUTINE_WEEK_ORDER
     val fmt = SimpleDateFormat("EEEEE", Locale.getDefault())
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         order.forEach { wd ->
