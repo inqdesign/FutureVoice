@@ -125,6 +125,15 @@ object CaptureRouter {
         "shadow",
         "shadow-ja",
         "signup-account",
+        "speech",
+        "speech-composer",
+        "speech-open",
+        "speech-own",
+        "speech-plus",
+        "speech-prompter",
+        "speech-result",
+        "speech-script-edit",
+        "speech-script-sheet",
         "summary-progress",
         "summary-progress-start",
         "sync",
@@ -191,7 +200,7 @@ object CaptureRouter {
         CaptureTalk.wired, CaptureWatch.wired, CapturePractice.wired, CaptureProgress.wired,
         CaptureMe.wired, CaptureOnboarding.wired, CaptureWidgets.wired, CaptureWeeklyTest.wired,
         CaptureShadow.wired, CaptureWeekRecap.wired, CaptureRoutine.wired,
-        CaptureGuide.wired,
+        CaptureGuide.wired, CaptureSpeech.wired,
     )
     private val wired: Map<String, @Composable (Context) -> Unit> = areas.fold(emptyMap()) { a, b -> a + b }
     private val notPorted: Map<String, String> =
