@@ -889,43 +889,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ca. %@ Lesezeit · lass zwischen Absätzen eine Leerzeile."
+            "value" : "Vorlesen dauert etwa %@. Lass zwischen Absätzen eine Leerzeile."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unos %@ de lectura · deja una línea en blanco entre párrafos."
+            "value" : "Leerlo lleva unos %@. Deja una línea en blanco entre párrafos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Environ %@ de lecture · laisse une ligne vide entre les paragraphes."
+            "value" : "Durée de lecture : environ %@. Laisse une ligne vide entre les paragraphes."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "読むのに約%@ · 段落の間は1行空けてください。"
+            "value" : "読むのにかかる時間は約%@です。段落の間は1行空けてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "읽는 데 약 %@ · 문단 사이는 한 줄 비워 주세요."
+            "value" : "읽는 데 %@ 정도 걸려요 · 문단 사이는 한 줄 띄워 주세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大约要读 %@ · 段落之间请空一行。"
+            "value" : "读完大约需要 %@。段落之间请空一行。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大約要讀 %@ · 段落之間請空一行。"
+            "value" : "唸完大約需要 %@。段落之間請空一行。"
           }
         }
       }
@@ -2008,43 +2008,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das mitgelieferte Skript kann jeder üben."
+            "value" : "Das eingebaute Skript kannst du sofort und kostenlos üben."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cualquier cuenta puede practicar con el guion incluido."
+            "value" : "Practica ya con el guion incluido, gratis para todos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout le monde peut s’entraîner avec le texte intégré."
+            "value" : "Tout le monde peut s’entraîner tout de suite et gratuitement avec le texte intégré."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最初から入っている原稿は、誰でも練習できます。"
+            "value" : "最初から入っている原稿は、どなたでも無料ですぐに練習できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "기본으로 들어 있는 스크립트는 누구나 연습할 수 있어요."
+            "value" : "기본 원고 하나는 누구나 바로 무료로 연습할 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "内置的讲稿每个人都能练习。"
+            "value" : "内置的示例讲稿人人都能免费练，马上就能开始。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "內建的講稿每個人都能練習。"
+            "value" : "內建的範例講稿人人都能免費練，馬上就能開始。"
           }
         }
       }
@@ -3099,7 +3099,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트"
+            "value" : "원고"
           }
         },
         "zh-Hans" : {
@@ -3145,7 +3145,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트"
+            "value" : "원고"
           }
         },
         "zh-Hans" : {
@@ -3949,43 +3949,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schalte sie ein, um dich zu filmen, oder aus, um nur mit der Stimme zu üben."
+            "value" : "An: Du wirst beim Lesen gefilmt. Aus: Nur deine Stimme wird aufgenommen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enciéndela para grabarte o apágala para practicar solo con la voz."
+            "value" : "Encendida, te graba mientras lees; apagada, solo graba tu voz."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allume-la pour te filmer, ou éteins-la pour t’entraîner avec ta voix seulement."
+            "value" : "Activée, elle te filme pendant la lecture ; désactivée, seule ta voix est enregistrée."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オンにすると自分の姿も録画し、オフにすると声だけで練習します。"
+            "value" : "オンにすると読む姿を録画、オフにすると声だけを録音します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "켜면 내 모습도 녹화하고, 끄면 목소리로만 연습해요."
+            "value" : "켜면 읽는 모습까지 담기고, 끄면 목소리만 녹음해요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开启就连你的样子一起录，关闭就只用声音练习。"
+            "value" : "打开会录下你读稿的样子，关掉就只录声音。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟就連你的樣子一起錄，關閉就只用聲音練習。"
+            "value" : "開著會把你唸稿的樣子錄下來，關掉就只錄聲音。"
           }
         }
       }
@@ -4271,43 +4271,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aufnahmen dieses Skripts erscheinen hier."
+            "value" : "Hier sammeln sich deine Aufnahmen dieses Skripts."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aquí aparecerán tus tomas de este guion."
+            "value" : "Aquí se irán guardando las tomas de este guion."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tes prises de ce texte apparaîtront ici."
+            "value" : "Les prises de ce texte s’afficheront ici."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この原稿で録画すると、ここにたまっていきます。"
+            "value" : "この原稿のテイクがここにたまっていきます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 스크립트로 녹화하면 여기에 모여요."
+            "value" : "이 원고로 녹화하면 여기에 모여요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用这份讲稿录制的内容都会放在这里。"
+            "value" : "这份讲稿的录制会放在这里。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用這份講稿錄製的內容都會放在這裡。"
+            "value" : "這份講稿的錄製會放在這裡。"
           }
         }
       }
@@ -14292,43 +14292,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eine Präsentation im Job, ein Pitch, die Vorstellungsrunde im Meeting. Vorbereitete Worte klar, in gleichmäßigem Tempo und mit Pausen an den richtigen Stellen zu sagen, ist eine eigene Fähigkeit. Die meisten merken das erst am Tag selbst."
+            "value" : "Eine Präsentation im Job, ein Pitch, dich im Meeting vorstellen. Vorbereitete Worte klar, im richtigen Tempo und mit Pausen an den richtigen Stellen vorzutragen, will eigens geübt sein. Das merken die meisten erst, wenn es so weit ist."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Una presentación en el trabajo, un pitch, presentarte en una reunión. Decir lo que preparaste con claridad, a un ritmo constante y con pausas en el lugar justo es una habilidad distinta a conversar. La mayoría lo descubre el mismo día."
+            "value" : "Una presentación en el trabajo, vender una idea, presentarte en una reunión. Decir un texto preparado con claridad, a buen ritmo y con pausas en su sitio requiere su propia práctica, y casi siempre te das cuenta el mismo día."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Une présentation au travail, un pitch, te présenter en réunion. Dire un texte préparé clairement, à un rythme régulier, avec des pauses aux bons endroits, c’est une compétence à part. La plupart des gens le découvrent le jour même."
+            "value" : "Une présentation au travail, un pitch, un tour de table en réunion. Dire un texte préparé clairement, au bon rythme, avec des pauses aux bons endroits, ça se travaille, et on s’en rend souvent compte le jour J."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "職場での発表、ピッチ、会議での自己紹介。準備した言葉をはっきりと、一定のペースで、区切るべきところで区切りながら話すのは、会話とは別のスキルです。たいていの人は、当日になって初めてそれに気づきます。"
+            "value" : "職場でのプレゼン、提案の場、会議での自己紹介。用意した言葉をはっきり、ちょうどいい速さで、間を取りながら届けるには、それだけの練習が必要です。多くの人は、本番になって初めてそれに気づきます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "회사 발표, 투자 피칭, 회의에서 하는 자기소개. 준비한 말을 또박또박, 일정한 속도로, 쉴 곳에서 쉬며 말하는 건 대화와는 다른 기술이에요. 대부분은 그날이 돼서야 그걸 깨달아요."
+            "value" : "회사 발표, 투자 피칭, 회의 자리의 자기소개. 준비한 말을 또박또박, 알맞은 속도로, 쉴 곳에서 쉬어 가며 전하는 건 따로 연습해야 늘어요. 대부분 그날이 돼서야 알게 되죠."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "公司汇报、融资路演、会议上的自我介绍。把准备好的话说得清楚、速度稳定、在该停的地方停，是和聊天不同的技巧。大多数人要到当天才发现这一点。"
+            "value" : "工作中做汇报、给别人提方案、开会时自我介绍。要把准备好的内容讲清楚，语速合适，该停的地方停下来，其实需要专门练习，很多人到了那天才意识到。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "公司簡報、募資提案、會議上的自我介紹。把準備好的話說得清楚、速度穩定、在該停的地方停，是和聊天不同的技巧。多數人要到當天才發現這件事。"
+            "value" : "工作上做簡報、向人提案、在會議上自我介紹。要把準備好的內容講清楚，速度剛好，該停的地方停下來，其實需要另外練習，很多人到了當天才發現。"
           }
         }
       }
@@ -14338,43 +14338,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Übe die Präsentation, den Pitch oder die Rede, die du halten musst."
+            "value" : "Übe die echte Präsentation, den Pitch oder die Rede, die bald ansteht."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ensaya la presentación, el pitch o el discurso que tienes que dar."
+            "value" : "Practica la presentación, el discurso o la propuesta que tienes por delante."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entraîne-toi sur la présentation, le pitch ou le discours que tu dois faire."
+            "value" : "Entraîne-toi sur la présentation, le pitch ou le discours qui t’attend."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "本番の発表、ピッチ、スピーチをそのまま練習できます。"
+            "value" : "控えているプレゼンや提案、スピーチをそのまま練習できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "해야 하는 발표, 피칭, 연설을 그대로 연습해요."
+            "value" : "곧 해야 할 발표, 피칭, 스피치를 그대로 연습해요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "照着你要做的汇报、路演或演讲来练习。"
+            "value" : "拿接下来要上场的汇报、方案或演讲来练。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "照著你要做的簡報、提案或演講來練習。"
+            "value" : "把接下來要上場的簡報、提案或演講拿來練。"
           }
         }
       }
@@ -15899,43 +15899,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Genauigkeit, Tempo, Pausen, Füllwörter und wie stabil deine Stimme bleibt – alles direkt aus deiner Aufnahme gemessen. Danach sagt dir ein Coach, was du beim nächsten Mal probieren kannst."
+            "value" : "Deine Aufnahme zeigt, ob du den Text genau gelesen hast, wie dein Tempo war, ob du an den richtigen Stellen pausiert hast, wie viele Füllwörter wie „äh“ dabei waren und ob deine Stimme bis zum Satzende getragen hat. Dazu sagt dir ein Coach, worauf du beim nächsten Mal achten kannst."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Precisión, ritmo, pausas, muletillas y la estabilidad de tu voz, todo medido a partir de tu grabación. Luego un coach te dice qué probar la próxima vez."
+            "value" : "Revisa si leíste el texto tal cual, si tu velocidad fue buena, si hiciste pausas donde tocaba, cuántas muletillas como «eh» o «este» se te escaparon y si tu voz llegó firme al final de cada frase. Además, un coach te dice qué mejorar en la próxima toma."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Précision, rythme, pauses, mots de remplissage et stabilité de ta voix, tout est mesuré à partir de ton enregistrement. Ensuite, un coach te dit quoi essayer la prochaine fois."
+            "value" : "On vérifie sur ta prise si tu as lu le texte tel quel, si ton débit était bon, si tu as marqué les pauses, combien d’hésitations comme « euh » t’ont échappé et si ta voix a tenu jusqu’au bout des phrases. Un coach te dit aussi quoi améliorer la prochaine fois."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正確さ、スピード、間、つなぎ言葉、声が最後まで安定しているかを録音から測ります。そのあと、次に試すことをコーチが教えてくれます。"
+            "value" : "原稿どおりに読めたか、速さは合っていたか、区切りで間を取れたか、「えー」「あの」などのフィラーがなかったか、文末まで声が保てたかを録音から確かめます。次に直したいポイントは、コーチが教えてくれます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "정확도, 속도, 쉼, 군말, 목소리가 끝까지 일정한지를 녹음에서 직접 재요. 그다음 코치가 다음번에 해볼 것을 알려줘요."
+            "value" : "원고대로 읽었는지, 속도는 알맞았는지, 쉴 곳에서 쉬었는지, '음, 어' 같은 군말은 없었는지, 문장 끝까지 목소리에 힘이 있었는지 녹음으로 확인해요. 다음에 고칠 점은 코치가 짚어 줘요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "准确度、语速、停顿、赘词，以及声音是否从头到尾都很稳，全部直接从录音测量。接着教练会告诉你下次可以试试什么。"
+            "value" : "根据录音看你有没有照稿读、语速是否合适、该停的地方有没有停、有没有“嗯”“呃”这类赘词，以及句尾声音有没有撑住。教练还会告诉你下次可以改进的地方。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "準確度、速度、停頓、贅詞，以及聲音是否從頭到尾都很穩，全部直接從錄音測量。接著教練會告訴你下次可以試試什麼。"
+            "value" : "從錄音看你有沒有照稿唸、速度合不合適、該停的地方有沒有停、有沒有「嗯」「呃」這類贅詞，還有句尾聲音有沒有撐住。教練也會告訴你下次可以改進的地方。"
           }
         }
       }
@@ -16475,7 +16475,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 스크립트 넣기"
+            "value" : "내 원고 넣기"
           }
         },
         "zh-Hans" : {
@@ -16544,43 +16544,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigenes Skript hinzufügen"
+            "value" : "Eigenes Skript mitbringen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añadir mi guion"
+            "value" : "Trae tu propio guion"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajouter mon texte"
+            "value" : "Apporte ton propre texte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自分の原稿を追加"
+            "value" : "自分の原稿を使う"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 스크립트 넣기"
+            "value" : "내 원고 넣기"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加我的讲稿"
+            "value" : "用自己的讲稿"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入我的講稿"
+            "value" : "用自己的講稿"
           }
         }
       }
@@ -16660,7 +16660,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 스크립트 넣기"
+            "value" : "내 원고 넣기"
           }
         },
         "zh-Hans" : {
@@ -16728,43 +16728,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nach jeder Aufnahme"
+            "value" : "Das bekommst du nach der Aufnahme"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Después de cada toma"
+            "value" : "Lo que recibes al terminar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Après chaque prise"
+            "value" : "Ce que tu obtiens à la fin"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "テイクが終わったら"
+            "value" : "録画が終わったら"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "녹화가 끝나면"
+            "value" : "녹화를 마치면"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每次录制之后"
+            "value" : "录完你会得到这些"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每次錄製之後"
+            "value" : "錄完你會拿到這些"
           }
         }
       }
@@ -21257,13 +21257,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atempausen am Satzende"
+            "value" : "Pausen an Satzenden"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pausas al final de frase"
+            "value" : "Pausas al final de cada frase"
           }
         },
         "fr" : {
@@ -21275,7 +21275,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "文末で間を取った回数"
+            "value" : "文末で間を取れた数"
           }
         },
         "ko" : {
@@ -21287,13 +21287,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "句尾停顿次数"
+            "value" : "在句尾停顿的次数"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "句尾停頓次數"
+            "value" : "在句尾停頓的次數"
           }
         }
       }
@@ -21303,43 +21303,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atempausen am Satzende · lange Stopps: %lld"
+            "value" : "Pausen an Satzenden · %lld lange Stopps"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pausas al final de frase · paradas largas: %lld"
+            "value" : "Pausas al final de frase · %lld paradas largas"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pauses en fin de phrase · longs arrêts : %lld"
+            "value" : "Pauses en fin de phrase · %lld arrêts longs"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "文末で間を取った回数 · 長い停止 %lld回"
+            "value" : "文末の間 · 長い沈黙 %lld回"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "문장 끝에서 쉰 횟수 · 길게 멈춤 %lld번"
+            "value" : "문장 끝에서 쉰 횟수 · 오래 멈춤 %lld번"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "句尾停顿次数 · 停太久 %lld 次"
+            "value" : "句尾停顿，以及 %lld 次卡顿过久"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "句尾停頓次數 · 停太久 %lld 次"
+            "value" : "句尾停頓，以及 %lld 次卡住太久"
           }
         }
       }
@@ -23230,43 +23230,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Kamerazugriff ist aus. Schalte ihn in den Einstellungen ein oder übe nur mit dem Mikrofon."
+            "value" : "Der Kamerazugriff ist aus. Erlaube ihn in den Einstellungen oder übe einfach nur mit dem Mikrofon."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El acceso a la cámara está desactivado. Actívalo en Ajustes o practica solo con el micrófono."
+            "value" : "La cámara no tiene permiso. Actívalo en Ajustes o practica solo con el micrófono."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L’accès à la caméra est désactivé. Active-le dans Réglages, ou entraîne-toi avec le micro seulement."
+            "value" : "L’accès à la caméra est désactivé. Autorise-le dans Réglages, ou entraîne-toi juste avec le micro."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カメラへのアクセスがオフです。設定でオンにするか、マイクだけで練習しましょう。"
+            "value" : "カメラへのアクセスがオフになっています。設定で許可するか、マイクだけで練習しましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "카메라 권한이 꺼져 있어요. 설정에서 켜거나, 마이크로만 연습해요."
+            "value" : "카메라 권한이 꺼져 있어요. 설정에서 켜거나, 마이크로만 연습해도 돼요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "相机权限已关闭。请到“设置”开启，或只用麦克风练习。"
+            "value" : "相机权限未开启。可以去“设置”里打开，或者直接用麦克风练习。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "相機權限已關閉。請到「設定」開啟，或只用麥克風練習。"
+            "value" : "相機權限沒有開啟。可以到「設定」開啟，或直接用麥克風練習。"
           }
         }
       }
@@ -24328,43 +24328,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sich unterhalten ist eine Sache. Präsentieren eine andere."
+            "value" : "Im Gespräch kommst du klar. Aber eine Rede halten?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Conversar no es lo mismo que presentar"
+            "value" : "Para charlar te las arreglas. Hablar en público es otra historia."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Discuter et présenter, ce n’est pas pareil"
+            "value" : "Tu te débrouilles à l’oral, mais prendre la parole devant un public, ça ne s’improvise pas."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会話ができることと、発表がうまいことは違います"
+            "value" : "会話はできても、\n人前で話すのはまた別です"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "대화가 되는 것과 발표를 잘하는 건 달라요"
+            "value" : "말은 되는데, 발표는 또 다르죠"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会聊天，不代表会上台"
+            "value" : "聊天没问题，\n上台讲话却是另一回事"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "會聊天，不代表會上台"
+            "value" : "聊天沒問題，\n上台講話卻是另一回事"
           }
         }
       }
@@ -28460,7 +28460,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트를 만들지 못했어요"
+            "value" : "원고를 만들지 못했어요"
           }
         },
         "zh-Hans" : {
@@ -30453,19 +30453,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Video löschen? Tonaufnahme und Punktzahl bleiben."
+            "value" : "Video löschen? Aufnahme und Bewertung bleiben erhalten."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "¿Eliminar el video? Tu grabación de voz y tu puntuación se conservan."
+            "value" : "¿Borrar el video? El audio y la puntuación se conservan."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer la vidéo ? Ton enregistrement audio et ton score restent."
+            "value" : "Supprimer la vidéo ? L’audio et le score sont conservés."
           }
         },
         "ja" : {
@@ -30477,13 +30477,13 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "영상을 삭제할까요? 녹음과 점수는 남아요."
+            "value" : "영상을 지울까요? 녹음과 점수는 그대로 남아요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "要删除视频吗？录音和分数会保留。"
+            "value" : "要删除视频吗？录音和得分会保留。"
           }
         },
         "zh-Hant" : {
@@ -34313,7 +34313,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트 편집"
+            "value" : "원고 편집"
           }
         },
         "zh-Hans" : {
@@ -35266,43 +35266,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jedes Skript bringt dir beim Üben etwas bei."
+            "value" : "Beim Lesen lernst du auch, worum es im Skript geht."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cada guion te enseña algo mientras practicas."
+            "value" : "Mientras lees, también aprendes sobre el tema."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chaque texte t’apprend quelque chose pendant que tu t’entraînes."
+            "value" : "En lisant, tu apprends aussi sur le sujet."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "練習しながら、原稿の内容も身につきます。"
+            "value" : "読むうちに、原稿の内容も身につきます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "연습하는 동안 스크립트 내용도 하나씩 알게 돼요."
+            "value" : "읽다 보면 원고 속 이야기도 자연스럽게 알게 돼요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "练习的同时，也能从讲稿学到新知。"
+            "value" : "读着读着，讲稿的内容也一起记住了。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "練習的同時，也能從講稿學到新知。"
+            "value" : "唸著唸著，講稿的內容也一起記住了。"
           }
         }
       }
@@ -35496,43 +35496,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jede Aufnahme eines Skripts bleibt erhalten, so siehst du, wie du besser wirst."
+            "value" : "Pro Skript sammeln sich deine Aufnahmen, so siehst du, wie viel besser du geworden bist."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se guardan todas las tomas de cada guion, así puedes ver cómo mejoras."
+            "value" : "Las tomas se van guardando por guion, así ves cuánto has mejorado."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toutes les prises de chaque texte sont gardées, pour que tu voies tes progrès."
+            "value" : "Tes prises s’accumulent texte par texte : tu vois tout de suite tes progrès."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原稿ごとにテイクがすべて残るので、上達していく様子を見られます。"
+            "value" : "テイクは原稿ごとにたまっていくので、どれだけ上達したかがひと目でわかります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트마다 녹화가 모두 남아서, 나아지는 모습을 볼 수 있어요."
+            "value" : "녹화는 원고마다 쌓여서, 얼마나 나아졌는지 한눈에 보여요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每份讲稿的录制都会保留，看得到自己的进步。"
+            "value" : "每份讲稿的录制都会保留下来，能看出自己进步了多少。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每份講稿的錄製都會留下，看得到自己的進步。"
+            "value" : "每份講稿的錄製都會留下來，看得出自己進步了多少。"
           }
         }
       }
@@ -37011,43 +37011,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erklärungen, Produkte, Personen, Briefings und News. Die Fakten stimmen, und alles passt zu deinem Niveau."
+            "value" : "Erklärungen, Produkt- und Personenvorstellungen, Briefings und Nachrichten, faktengeprüft und auf deinem Niveau."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Explicaciones, productos, personas, briefings y noticias. Con datos verificados y a tu nivel."
+            "value" : "Explicaciones, presentaciones de productos o personas, informes y noticias, con datos verificados y a tu nivel."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Explications, produits, personnalités, briefings et actualités. Des faits vérifiés, à ton niveau."
+            "value" : "Explications, présentations de produits ou de personnes, briefings et actualités, faits vérifiés et à ton niveau."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "解説、製品、人物、ブリーフィング、ニュース。事実を確かめ、今のレベルに合わせて書きます。"
+            "value" : "解説、商品や人物の紹介、ブリーフィング、ニュースなど。事実確認済みで、レベルに合わせて書きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "설명, 제품, 인물, 브리핑, 뉴스까지. 사실을 확인하고 내 수준에 맞춰 써요."
+            "value" : "설명, 제품, 인물, 브리핑, 뉴스 원고를 사실을 확인해 내 수준에 맞게 써 줘요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "讲解、产品、人物、简报、新闻都有。内容经过核实，用词符合你的水平。"
+            "value" : "讲解、产品或人物介绍、汇报、新闻都能写，内容经过核实，难度贴合你的水平。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "解說、產品、人物、簡報、新聞都有。內容經過查證，用詞符合你的程度。"
+            "value" : "解說、產品或人物介紹、簡報、新聞都能寫，內容經過查證，難度配合你的程度。"
           }
         }
       }
@@ -39871,19 +39871,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Folgt deiner Stimme"
+            "value" : "Text folgt deiner Stimme"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sigue tu voz"
+            "value" : "El texto sigue tu voz"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suit ta voix"
+            "value" : "Le texte suit ta voix"
           }
         },
         "ja" : {
@@ -39901,13 +39901,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "跟着你的声音滚动"
+            "value" : "文字跟着声音走"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "跟著你的聲音捲動"
+            "value" : "文字跟著聲音走"
           }
         }
       }
@@ -44349,43 +44349,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ob deine Lautstärke bis zum Satzende hält"
+            "value" : "Trägt deine Stimme bis zum Satzende?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si mantienes el volumen hasta el final de cada frase"
+            "value" : "Si tu voz llegó firme al final de cada frase"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si tu gardes le volume jusqu’à la fin de chaque phrase"
+            "value" : "Ta voix tient-elle jusqu’au bout des phrases"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "文の最後まで声の大きさを保てたか"
+            "value" : "文末まで声の強さを保てたか"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "문장 끝까지 목소리 크기를 유지했는지"
+            "value" : "문장 끝까지 목소리에 힘이 있었는지"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每句话是否保持音量到最后"
+            "value" : "句尾声音有没有撑住"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每句話是否撐住音量到最後"
+            "value" : "句尾聲音有沒有撐住"
           }
         }
       }
@@ -48901,43 +48901,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Text läuft mit, während du liest, und wird langsamer, wenn du pausierst. Die aktuelle Zeile steht direkt unter der Kamera, so bleibt dein Blick nah an der Linse."
+            "value" : "Der Text läuft weiter, während du liest, und wartet, wenn du stoppst. Die aktuelle Zeile steht direkt unter der Frontkamera, so schaust du im Video dein Publikum an."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avanza mientras lees y va más lento cuando haces una pausa. La línea que lees está justo debajo de la cámara, así tu mirada se queda cerca del lente."
+            "value" : "Avanza mientras lees y te espera cuando te detienes. La línea que lees queda justo debajo de la cámara frontal, así que en el video parece que miras a quien te ve."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le texte défile au fil de ta lecture et ralentit quand tu fais une pause. La ligne à lire est juste sous la caméra, pour que ton regard reste près de l’objectif."
+            "value" : "Il avance quand tu lis et t’attend quand tu t’arrêtes. La ligne en cours se place juste sous la caméra avant : sur la vidéo, tu regardes ton public dans les yeux."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "読むのに合わせて流れ、止まるとゆっくりになります。読む行はカメラのすぐ下にあるので、視線がレンズの近くに保たれます。"
+            "value" : "読み進めると原稿が流れ、止まると待ってくれます。読んでいる行はインカメラのすぐ下に来るので、動画では見る人と目が合って見えます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "읽는 대로 흘러가고, 멈추면 느려져요. 읽을 줄이 카메라 바로 아래에 있어서 시선이 렌즈 가까이에 머물러요."
+            "value" : "읽는 만큼 올라가고, 잠깐 멈추면 같이 기다려요. 지금 읽을 줄이 카메라 바로 아래에 있어서 영상 속 시선이 자연스럽게 정면을 향해요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你读到哪里就滚到哪里，停下来就会变慢。要读的那一行就在相机正下方，视线能一直靠近镜头。"
+            "value" : "你读到哪，文字就滚到哪；你停下来，它也会等你。正在读的那一行就在前置摄像头正下方，所以视频里看起来像在看着观众。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你念到哪裡就捲到哪裡，停下來就會變慢。要念的那一行就在相機正下方，視線能一直靠近鏡頭。"
+            "value" : "你唸到哪，文字就捲到哪；你停下來，它也會等你。正在唸的那一行就在前鏡頭正下方，所以影片裡看起來像在看著觀眾。"
           }
         }
       }
@@ -51270,43 +51270,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lass es leer, dann wählen wir etwas Wissenswertes."
+            "value" : "Lässt du das Thema leer, sucht die App eins aus, das sich zu kennen lohnt."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Déjalo vacío y elegiremos algo que valga la pena saber."
+            "value" : "Si dejas el tema vacío, elegimos uno que vale la pena conocer."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Laisse vide et on choisira un sujet qui vaut la peine d’être connu."
+            "value" : "Laisse le sujet vide et on en choisit un qui vaut la peine d’être connu."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "空欄のままなら、知っておきたいテーマを選びます。"
+            "value" : "テーマを空けておくと、知っておきたいテーマを選びます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "비워 두면 알아둘 만한 주제를 골라 드려요."
+            "value" : "비워 두면 알아 두면 좋을 주제로 골라 드려요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "留空的话，我们会帮你挑个值得了解的主题。"
+            "value" : "话题留空的话，会帮你挑一个值得了解的话题。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "留白的話，我們會幫你挑個值得知道的主題。"
+            "value" : "主題留空的話，會幫你挑一個值得知道的主題。"
           }
         }
       }
@@ -57872,7 +57872,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "새 스크립트"
+            "value" : "새 원고"
           }
         },
         "zh-Hans" : {
@@ -57894,43 +57894,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neue Skripte gibt es mit Plus"
+            "value" : "Neue Skripte gibt’s mit Plus"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los guiones nuevos son de Plus"
+            "value" : "Crea guiones nuevos con Plus"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les nouveaux textes sont réservés à Plus"
+            "value" : "Crée de nouveaux textes avec Plus"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しい原稿はPlusの機能です"
+            "value" : "新しい原稿づくりは Plus で"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "새 스크립트는 Plus 기능이에요"
+            "value" : "새 원고는 Plus부터 쓸 수 있어요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新讲稿是 Plus 功能"
+            "value" : "新建讲稿是 Plus 功能"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新講稿是 Plus 功能"
+            "value" : "新增講稿是 Plus 的功能"
           }
         }
       }
@@ -65109,43 +65109,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge die Präsentation oder Rede ein, die du wirklich halten musst. Plus und Max."
+            "value" : "Füg deine echte Präsentation oder Rede ein und übe genau die. Mit Plus und Max"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pega la presentación o el discurso que de verdad tienes que dar. Plus y Max."
+            "value" : "Pega la presentación o el discurso que de verdad tienes que dar y practica justo eso. Solo con Plus y Max."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Colle la présentation ou le discours que tu dois vraiment faire. Plus et Max."
+            "value" : "Colle la vraie présentation ou le discours que tu dois faire, et entraîne-toi sur celui-là. Avec Plus et Max."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "実際に話す発表やスピーチを貼り付けます。Plus·Max"
+            "value" : "本番で話すプレゼンやスピーチを貼り付けて、そのまま練習できます。Plus・Max 限定"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "실제로 해야 하는 발표나 연설을 붙여 넣어요. Plus·Max"
+            "value" : "곧 해야 할 발표나 스피치 원고를 그대로 넣고 연습해요. Plus·Max 전용"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "粘贴你真正要做的汇报或演讲。Plus·Max"
+            "value" : "把真正要讲的汇报或演讲粘贴进来，直接练这一份。“Plus・Max 专享”"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "貼上你真正要做的簡報或演講。Plus·Max"
+            "value" : "把真的要上台的簡報或演講貼進來，直接練那一份。「Plus・Max 專屬」"
           }
         }
       }
@@ -66539,43 +66539,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähle eine Art, etwa Erklärung, Person oder News, dann ein Thema und eine Länge. Die Fakten werden geprüft, und die Wörter passen zu deinem Niveau. Plus und Max."
+            "value" : "Wähl eine Art (etwas erklären, eine Person vorstellen, Nachrichten …), ein Thema und eine Länge. Die KI schreibt ein Skript auf deinem Niveau und prüft die Fakten. Mit Plus und Max"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige un tipo, como una explicación, una persona o las noticias, y luego un tema y una duración. Los datos se verifican y las palabras se ajustan a tu nivel. Plus y Max."
+            "value" : "Elige el tipo (explicar algo, presentar a alguien, noticias…), el tema y la duración, y te escribe un guion a tu nivel con los datos verificados. Solo con Plus y Max."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisis un type, comme une explication, une personnalité ou l’actualité, puis un sujet et une durée. Les faits sont vérifiés et les mots adaptés à ton niveau. Plus et Max."
+            "value" : "Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés. Avec Plus et Max."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "解説、人物、ニュースなどの種類を選び、テーマと長さを決めます。事実を確かめ、今のレベルに合った言葉で書きます。Plus·Max"
+            "value" : "解説、人物紹介、ニュースなどの種類とテーマ、長さを選ぶと、今のレベルに合った原稿を書きます。事実確認も済んでいます。Plus・Max 限定"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "설명, 인물, 뉴스 같은 종류를 고르고 주제와 길이를 정해요. 사실을 확인하고 내 수준에 맞는 단어로 써요. Plus·Max"
+            "value" : "설명, 인물, 뉴스 같은 종류와 주제, 길이만 고르면 내 수준에 맞춰 원고를 써 줘요. 사실관계도 확인해요. Plus·Max 전용"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选一种类型，例如讲解、人物或新闻，再决定主题和长度。内容经过核实，用词符合你的水平。Plus·Max"
+            "value" : "选好类型（讲解、人物介绍、新闻等）、话题和长度，就会写出适合你水平的讲稿，内容也会先核实过。“Plus・Max 专享”"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選一種類型，例如解說、人物或新聞，再決定主題和長度。內容經過查證，用詞符合你的程度。Plus·Max"
+            "value" : "選好類型（解說、介紹人物、新聞等）、主題和長度，就會寫出符合你程度的講稿，內容也會先查證過。「Plus・Max 專屬」"
           }
         }
       }
@@ -70775,43 +70775,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lies das Skript laut vor, wie bei einer Präsentation."
+            "value" : "Lies das Skript vor, als stündest du im Nachrichtenstudio."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lee el guion en voz alta, como un presentador."
+            "value" : "Lee el guion en voz alta, como quien presenta las noticias."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lis le texte à voix haute, comme un présentateur."
+            "value" : "Lis ton texte à voix haute, comme un présentateur du journal télévisé."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "発表者のように原稿を声に出して読みます。"
+            "value" : "アナウンサーのように、原稿を声に出して読みます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "발표자처럼 스크립트를 소리 내어 읽어요."
+            "value" : "아나운서처럼 원고를 소리 내어 읽어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "像演讲者一样，把讲稿大声读出来。"
+            "value" : "像主播一样，把讲稿读出来。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "像講者一樣，把講稿大聲念出來。"
+            "value" : "像主播一樣，把講稿唸出來。"
           }
         }
       }
@@ -72079,13 +72079,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aufnehmen"
+            "value" : "Aufnahmetaste"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Grabar"
+            "value" : "Botón de grabar"
           }
         },
         "fr" : {
@@ -72097,25 +72097,25 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録音"
+            "value" : "録画ボタン"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "녹음"
+            "value" : "녹화 버튼"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "录音"
+            "value" : "录制按钮"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "錄音"
+            "value" : "錄製按鈕"
           }
         }
       }
@@ -72309,43 +72309,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eine Aufnahme machen"
+            "value" : "So nimmst du auf"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Grabar una toma"
+            "value" : "Así se graba"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistrer une prise"
+            "value" : "Comment se passe l’enregistrement"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "テイクの録画"
+            "value" : "録画のしかた"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "녹화하기"
+            "value" : "이렇게 녹화해요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "录制"
+            "value" : "录制怎么进行"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "錄製"
+            "value" : "錄製怎麼進行"
           }
         }
       }
@@ -72493,43 +72493,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Aufnahme startet nach 3, 2, 1. Währenddessen verwirft ✕ die Aufnahme und ↺ fängt von vorn an."
+            "value" : "Tippen, 3-2-1, und die Aufnahme läuft. Während der Aufnahme verwirfst du sie mit ✕, mit ↺ fängst du von vorn an."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La grabación empieza tras 3, 2, 1. Mientras grabas, ✕ descarta la toma y ↺ la empieza de nuevo."
+            "value" : "Tócalo y, tras una cuenta de 3, 2, 1, empieza la grabación. Mientras grabas, ✕ descarta esta toma y ↺ vuelve a empezar desde el principio."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L’enregistrement commence après 3, 2, 1. Pendant l’enregistrement, ✕ supprime la prise et ↺ la recommence."
+            "value" : "Touche-le : après un décompte 3, 2, 1, l’enregistrement démarre. Pendant la prise, ✕ l’annule et ↺ reprend depuis le début."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3、2、1のあとに録画が始まります。録画中に✕を押すとそのテイクを破棄し、↺を押すと最初からやり直します。"
+            "value" : "タップすると3、2、1のカウントのあとに録画が始まります。録画中は ✕ でこのテイクを破棄、↺ で最初からやり直せます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3, 2, 1 뒤에 녹화가 시작돼요. 녹화 중에 ✕를 누르면 그 녹화를 버리고, ↺를 누르면 처음부터 다시 해요."
+            "value" : "누르면 3, 2, 1 뒤에 녹화가 시작돼요. 녹화 중에 ✕를 누르면 이번 녹화를 지우고, ↺를 누르면 처음부터 다시 찍어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "倒数 3、2、1 后开始录制。录制中点 ✕ 会放弃这次录制，点 ↺ 会从头再来。"
+            "value" : "点一下，倒数 3、2、1 后开始录制。录制中点 ✕ 放弃这次录制，点 ↺ 从头再来。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "倒數 3、2、1 後開始錄製。錄製中點 ✕ 會放棄這次錄製，點 ↺ 會從頭再來。"
+            "value" : "點一下，倒數 3、2、1 就開始錄製。錄到一半點 ✕ 會捨棄這次錄製，點 ↺ 則從頭再來。"
           }
         }
       }
@@ -82347,43 +82347,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rede ist ein Teleprompter. Lies ein Skript laut vor, während es deiner Stimme folgt, mit oder ohne Kamera. Bewertet werden, was du gesagt hast, dein Tempo und deine Pausen. Und jedes Skript bringt dir nebenbei etwas Wissenswertes bei."
+            "value" : "Du liest ein Skript laut vom Bildschirm, und es läuft mit dir mit. Die Kamera kannst du dazuschalten. Danach siehst du, wie genau du gelesen hast, wie dein Tempo war und wie du Pausen gesetzt hast. Und weil die Skripte spannende Themen behandeln, lernst du beim Lesen gleich etwas dazu."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Discurso es un teleprompter. Lee un guion en voz alta mientras avanza con tu voz, con la cámara encendida o apagada, y recibe una puntuación por lo que dijiste, tu ritmo y tus pausas. Además, cada guion te enseña algo que vale la pena saber."
+            "value" : "Pon un guion en pantalla y léelo en voz alta: avanza contigo mientras lees. Si quieres, enciende la cámara. Al terminar ves cómo te ceñiste al texto, tu velocidad y tus pausas, y de paso aprendes algo, porque los guiones tratan temas que vale la pena conocer."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Discours, c’est un prompteur. Lis un texte à voix haute pendant qu’il défile avec ta voix, caméra allumée ou non, et reçois un score sur ce que tu as dit, ton rythme et tes pauses. Chaque texte t’apprend aussi quelque chose qui vaut la peine d’être connu."
+            "value" : "Affiche un texte à l’écran et lis-le à voix haute : il défile au fil de ta lecture. Active la caméra si tu veux. Ensuite, tu as un score sur le respect du texte, ton débit et tes pauses, et tu apprends quelque chose en route, car les textes parlent de sujets qui valent le détour."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スピーチはプロンプターです。声に合わせて流れる原稿を声に出して読みます。カメラはオンでもオフでも大丈夫です。話した内容、スピード、間を採点します。どの原稿にも、知っておきたい内容が詰まっています。"
+            "value" : "画面に原稿を出して、声に出して読みましょう。読むのに合わせて原稿が進み、カメラはオンでもオフでも使えます。読み終えると、原稿どおりに読めたか、速さ、間の取り方が採点されます。原稿は知って得するテーマばかりなので、読みながら知識も身につきます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스피치는 프롬프터예요. 내 목소리를 따라 흐르는 스크립트를 소리 내어 읽고, 카메라는 켜도 꺼도 돼요. 무엇을 말했는지, 속도와 쉼까지 채점받아요. 스크립트마다 알아둘 만한 내용도 담겨 있어요."
+            "value" : "화면에 원고를 띄워 두고 소리 내어 읽어 보세요. 읽는 만큼 원고가 따라 올라가고, 카메라는 켜도 꺼도 돼요. 다 읽으면 원고대로 읽었는지, 속도와 쉼은 어땠는지 점수로 알려줘요. 원고마다 알아 두면 좋은 이야기가 담겨 있어서 읽는 재미도 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“演讲”是一台提词器。讲稿会跟着你的声音滚动，你把它大声读出来，相机开或关都可以。说了什么、语速和停顿都会评分。每份讲稿也都有值得了解的内容。"
+            "value" : "把讲稿放到屏幕上，大声读出来，文字会跟着你往下走。想录下自己的样子就打开相机，不开也行。读完会帮你看是否照稿读准、语速和停顿怎么样，讲稿的话题也都有趣又实用，边读边涨知识。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「演講」是一台提詞器。講稿會跟著你的聲音捲動，你把它大聲念出來，相機開或關都可以。說了什麼、速度和停頓都會評分。每份講稿也都有值得知道的內容。"
+            "value" : "把講稿放上螢幕，大聲唸出來，畫面會跟著你往下走。想錄下自己的樣子就開相機，不開也可以。唸完會幫你看照稿唸得準不準、速度和停頓如何，講稿的主題也都有趣又實用，邊唸邊長知識。"
           }
         }
       }
@@ -83128,43 +83128,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mit dem Beispiel starten"
+            "value" : "Mit dem Beispielskript starten"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Empezar con el ejemplo"
+            "value" : "Empieza con el guion de ejemplo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Commencer avec l’exemple"
+            "value" : "Commence par le texte d’exemple"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サンプルで始める"
+            "value" : "まずはサンプル原稿から"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "샘플로 시작하기"
+            "value" : "샘플 원고로 시작"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从示例开始"
+            "value" : "先从内置示例开始"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "從範例開始"
+            "value" : "先從內建範例開始"
           }
         }
       }
@@ -83450,43 +83450,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gleichmäßiges Tempo"
+            "value" : "Text läuft gleichmäßig"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Velocidad constante"
+            "value" : "El texto avanza a ritmo fijo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vitesse constante"
+            "value" : "Défilement à vitesse fixe"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一定の速さで流れます"
+            "value" : "一定の速さで進みます"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "일정한 속도로 흘러가요"
+            "value" : "같은 속도로 흘러가요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "以固定速度滚动"
+            "value" : "文字匀速滚动"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "以固定速度捲動"
+            "value" : "文字等速捲動"
           }
         }
       }
@@ -92393,7 +92393,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El guion de ejemplo siempre es gratis. Con Plus o Max, practica cualquier texto que quieras."
+            "value" : "El guion de ejemplo sigue siendo gratis. Con Plus o Max practicas el texto que quieras."
           }
         },
         "fr" : {
@@ -92405,25 +92405,25 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サンプル原稿はずっと無料で練習できます。PlusかMaxなら、好きな文章を何でも練習できます。"
+            "value" : "サンプル原稿はこれからも無料です。Plus・Max なら、好きな文章で練習できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "샘플 스크립트는 계속 무료예요. Plus나 Max로는 원하는 어떤 글이든 연습할 수 있어요."
+            "value" : "샘플 원고는 계속 무료예요. Plus나 Max에서는 원하는 글은 무엇이든 연습할 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "示例讲稿永久免费练习。有了 Plus 或 Max，任何文字都能拿来练。"
+            "value" : "内置示例依然免费。订阅 Plus 或 Max，想练什么内容都可以。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "範例講稿永遠免費練習。有了 Plus 或 Max，任何文字都能拿來練。"
+            "value" : "內建範例一樣免費。訂閱 Plus 或 Max，想練什麼內容都可以。"
           }
         }
       }
@@ -92526,43 +92526,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skript und Gesicht zusammen in einem Hochformat-Video. Sichere es in Fotos zum Teilen oder lösche es."
+            "value" : "Du bekommst ein Hochformat-Video mit Skript und Gesicht auf einem Bild. Speichere es in der Fotos-App zum Teilen oder lösch es."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El guion y tu cara juntos en un video vertical. Guárdalo en Fotos para compartirlo o elimínalo."
+            "value" : "Recibes un video vertical con el guion y tu cara en la misma pantalla. Puedes guardarlo en la app Fotos para compartirlo, o borrarlo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le texte et ton visage réunis dans une vidéo verticale. Enregistre-la dans Photos pour la partager, ou supprime-la."
+            "value" : "Tu reçois une vidéo verticale avec ton texte et ton visage sur le même écran. Enregistre-la dans l’app Photos pour la partager, ou supprime-la."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原稿と自分の顔が一緒に映った縦長の動画です。写真に保存して共有するか、削除できます。"
+            "value" : "原稿と顔がひとつの画面に収まった縦長の動画ができます。「写真」アプリに保存してシェアすることも、削除することもできます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트와 내 얼굴이 함께 담긴 세로 영상이에요. 사진 앱에 저장해 공유하거나 삭제할 수 있어요."
+            "value" : "원고와 내 얼굴이 한 화면에 담긴 세로 영상이 남아요. 사진 앱에 저장해서 공유해도 되고, 지워도 돼요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "讲稿和你的脸一起放进一段竖屏视频。可以保存到“照片”分享，也可以删除。"
+            "value" : "讲稿和你的脸会放在同一个竖屏视频里。可以保存到“照片”应用分享出去，也可以删除。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "講稿和你的臉一起放進一支直式影片。可以存到「照片」分享，也可以刪除。"
+            "value" : "講稿和你的臉會放在同一個直式影片裡。可以存到「照片」App 分享出去，也可以刪掉。"
           }
         }
       }
@@ -92596,7 +92596,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트를 만들지 못했어요. 다시 해 주세요."
+            "value" : "원고를 만들지 못했어요. 다시 해 볼까요?"
           }
         },
         "zh-Hans" : {
@@ -92618,43 +92618,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Skript folgt deiner Stimme"
+            "value" : "Der Text liest mit"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El guion sigue tu voz"
+            "value" : "El texto avanza contigo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le texte suit ta voix"
+            "value" : "Le texte suit ta lecture"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原稿が声に合わせて進みます"
+            "value" : "読むのに合わせて原稿が進む"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트가 목소리를 따라가요"
+            "value" : "원고가 나를 따라와요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "讲稿会跟着你的声音"
+            "value" : "文字跟着你走"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "講稿會跟著你的聲音"
+            "value" : "文字跟著你走"
           }
         }
       }
@@ -97451,43 +97451,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schreib oder füge den Text ein, den du üben willst."
+            "value" : "Schreib oder füg hier den Text ein, den du üben willst."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escribe o pega el texto que quieres practicar."
+            "value" : "Escribe o pega aquí el texto que quieres practicar."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Écris ou colle le texte sur lequel tu veux t’entraîner."
+            "value" : "Écris ou colle ici le texte à travailler."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "練習したい文章を入力するか貼り付けます。"
+            "value" : "練習したい文章を書くか、ここに貼り付けてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "연습할 글을 쓰거나 붙여 넣어요."
+            "value" : "연습할 글을 쓰거나 붙여 넣어 주세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "输入或粘贴你想练习的文字。"
+            "value" : "在这里输入或粘贴要练习的内容。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "輸入或貼上你想練習的文字。"
+            "value" : "在這裡輸入或貼上要練習的內容。"
           }
         }
       }
@@ -99321,43 +99321,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Videos bleiben auf diesem Telefon und werden nicht gesichert. Speichere die, die du behalten willst, in Fotos."
+            "value" : "Videos liegen nur auf diesem iPhone und werden nicht gesichert. Speichere die, die du behalten willst, in der Fotos-App."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los videos se quedan en este teléfono y no tienen copia de seguridad. Guarda en Fotos los que quieras conservar."
+            "value" : "Los videos están solo en este teléfono, sin copia de seguridad. Guarda en Fotos los que quieras conservar."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les vidéos restent sur ce téléphone et ne sont pas sauvegardées. Enregistre dans Photos celles que tu veux garder."
+            "value" : "Les vidéos restent sur ce téléphone, sans sauvegarde. Enregistre dans Photos celles que tu veux garder."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "動画はこの端末にだけ保存され、バックアップされません。残したい動画は写真に保存しておきましょう。"
+            "value" : "動画はこの端末にだけ保存され、バックアップされません。残したいものは「写真」に保存してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "영상은 이 폰에만 있고 백업되지 않아요. 남기고 싶은 영상은 사진 앱에 저장해 두세요."
+            "value" : "영상은 이 폰에만 있고 백업되지 않아요. 남기고 싶은 건 사진 앱에 저장해 두세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "视频只保存在这部手机上，不会备份。想留下的视频请保存到“照片”。"
+            "value" : "视频只保存在这台手机上，不会备份。想保留的请存到“照片”。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "影片只存在這支手機上，不會備份。想留下的影片請存到「照片」。"
+            "value" : "影片只存在這支手機上，不會備份。想留下來的請存到「照片」。"
           }
         }
       }
@@ -104913,43 +104913,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Woher die Skripte kommen"
+            "value" : "So kommst du an Skripte"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De dónde salen los guiones"
+            "value" : "De dónde sacar tu guion"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "D’où viennent les textes"
+            "value" : "Où trouver un texte à travailler"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原稿の作り方"
+            "value" : "原稿の用意のしかた"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트는 이렇게 만들어요"
+            "value" : "원고는 이렇게 준비해요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "讲稿从哪里来"
+            "value" : "练习用的讲稿从哪来"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "講稿從哪裡來"
+            "value" : "練習用的講稿從哪來"
           }
         }
       }
@@ -105935,7 +105935,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트 전체"
+            "value" : "원고 전체"
           }
         },
         "zh-Hans" : {
@@ -108131,43 +108131,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mit KI schreiben"
+            "value" : "Skript von der KI schreiben lassen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escribir con IA"
+            "value" : "Pide un guion a la IA"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Écrire avec l’IA"
+            "value" : "Faire écrire un texte par l’IA"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AIで書く"
+            "value" : "AIに原稿を書いてもらう"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI로 쓰기"
+            "value" : "AI에게 맡기기"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用 AI 撰写"
+            "value" : "让 AI 帮你写讲稿"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用 AI 撰寫"
+            "value" : "讓 AI 幫你寫講稿"
           }
         }
       }
@@ -108177,43 +108177,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mit Plus schreibst du Skripte zu jedem Thema oder fügst eigene hinzu."
+            "value" : "Mit Plus lässt du dir Skripte zu jedem Thema schreiben oder fügst eigene hinzu."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Con Plus, escribe guiones sobre cualquier tema o añade el tuyo."
+            "value" : "Con Plus, pide guiones sobre cualquier tema o añade los tuyos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avec Plus, écris des textes sur n’importe quel sujet ou ajoute le tien."
+            "value" : "Avec Plus, fais écrire des textes sur n’importe quel sujet ou ajoute les tiens."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plusなら、どんなテーマでも原稿を作ったり、自分の原稿を追加したりできます。"
+            "value" : "Plus なら、好きなテーマで原稿を書いてもらったり、自分の原稿を追加したりできます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plus로는 어떤 주제든 스크립트를 만들거나, 내 스크립트를 넣을 수 있어요."
+            "value" : "Plus에서는 어떤 주제든 원고를 만들거나 내 원고를 넣을 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "有了 Plus，任何主题都能生成讲稿，也能添加自己的讲稿。"
+            "value" : "订阅 Plus 就能让 AI 写任意话题的讲稿，也能添加自己的讲稿。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "有了 Plus，任何主題都能寫成講稿，也能加入自己的講稿。"
+            "value" : "訂閱 Plus 就能請 AI 寫任何主題的講稿，也能加入自己的講稿。"
           }
         }
       }
@@ -108754,7 +108754,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스크립트를 쓰고 있어요…"
+            "value" : "원고를 쓰고 있어요…"
           }
         },
         "zh-Hans" : {
@@ -112532,7 +112532,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Kamera"
+            "value" : "Kamera"
           }
         },
         "es" : {
@@ -116543,7 +116543,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Punktzahl"
+            "value" : "Bewertung"
           }
         },
         "es" : {
@@ -116573,7 +116573,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分数"
+            "value" : "得分"
           }
         },
         "zh-Hant" : {
@@ -116589,43 +116589,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Punktzahl kommt ein paar Sekunden nach dem Stoppen."
+            "value" : "Ein paar Sekunden nach dem Stopp ist dein Ergebnis da."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu puntuación llega unos segundos después de parar."
+            "value" : "Unos segundos después de parar, tu resultado está listo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ton score arrive quelques secondes après l’arrêt."
+            "value" : "Quelques secondes après l’arrêt, ton résultat est prêt."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録画を止めると、数秒後にスコアが出ます。"
+            "value" : "止めて数秒で、結果が届きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "녹화를 멈추면 몇 초 뒤에 점수가 나와요."
+            "value" : "멈추고 몇 초면 결과가 나와요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "停止录制后几秒就会出现分数。"
+            "value" : "停下几秒后，结果就出来了。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "停止錄製後幾秒就會出現分數。"
+            "value" : "停下來幾秒後，結果就出來了。"
           }
         }
       }
@@ -117184,19 +117184,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aufnahmen"
+            "value" : "Frühere Aufnahmen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tus tomas"
+            "value" : "Tomas anteriores"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tes prises"
+            "value" : "Prises précédentes"
           }
         },
         "ja" : {
@@ -117214,13 +117214,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你的录制"
+            "value" : "以往的录制"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你的錄製"
+            "value" : "之前的錄製"
           }
         }
       }
@@ -118001,7 +118001,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein Video"
+            "value" : "Video"
           }
         },
         "es" : {
@@ -121833,7 +121833,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 스크립트"
+            "value" : "내 원고"
           }
         },
         "zh-Hans" : {
@@ -122617,7 +122617,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 스크립트"
+            "value" : "내 원고"
           }
         },
         "zh-Hans" : {
