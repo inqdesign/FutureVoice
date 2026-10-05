@@ -267,12 +267,15 @@ fun LibraryScreen(kind: LibraryKind, language: String,
 
     Scaffold(
         topBar = {
-            androidx.compose.material3.TopAppBar(
+            // Pushed from Practice on iOS: the system back chevron leading,
+            // the page's name centred (`.navigationBarTitleDisplayMode(.inline)`).
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
                     Text(stringResource(
                         if (kind == LibraryKind.WORDS) R.string.words_d26d55
-                        else R.string.expressions))
+                        else R.string.expressions),
+                        style = MaterialTheme.typography.titleMedium)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
