@@ -915,6 +915,33 @@ a different thing.
   on the scenario) and the free-talk pool are told so, and the bundled
   fallback opener no longer asks "how was your day". Pools already on phones
   were left alone rather than regenerated.
+- **A date is not the news** (2026-10-05). Reported: asked for the newest
+  iPhone in Oct 2026, the fluent self said "the 16, it just came out last
+  month". The gateway's reply call has no search tool, so the model knows
+  only its training data, and KNOWLEDGE told it it knows "the recent news"
+  and must never say it doesn't know. The KNOWLEDGE block now carries WHAT
+  YOU CAN'T KNOW: anything that keeps changing (newest model, prices,
+  office holders, results, "the last" of anything recurring) is said as
+  "last I checked it was X — surely something newer by now"; books, films
+  and history keep the never-say-you-don't-know rule. Measured by asking
+  ko/en/de/ja time-sensitive and timeless questions on the live prompt:
+  3.6-flash stated a stale fact as current in 11/12 before, 3/12 after, and
+  still engaged fully on books. The hedge model (flash-lite) still invents
+  sometimes ("the president is Kamala Harris"). `beginner-probe.py` is
+  within run-to-run noise of the baseline.
+- **Search grounding was built, measured and NOT shipped** (same day,
+  founder: a language app can live with this limit).
+  `gateway/test/probe-reply-search.mjs` measured it: ordinary turns never
+  search and keep ~1 s to first text; time-sensitive questions searched
+  9/9, answered correctly, and took ~2–3 s (up to 4.3 s) — over the 2.5 s
+  hedge, so the hedge would have to wait longer (no byte, not even
+  headers, arrives before the search ends). Cost was fine (5,000 free a
+  month, then $14 / 1,000). What stopped it is Google's grounding terms:
+  a grounded answer may only be shown WITH Google's Search Suggestions
+  chip (HTML from `searchEntryPoint`), and its text may be stored at most
+  two years for chat history — the transcript shows every line, sessions
+  never expire, and summaries/cards are built from them. Revisit only
+  with a design for that chip and that retention.
 - Tests: `PromptClockTests`.
 
 ## The day card — today's share card (2026-08-28)
