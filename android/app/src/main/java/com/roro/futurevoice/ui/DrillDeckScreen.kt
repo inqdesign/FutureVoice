@@ -115,6 +115,10 @@ fun DrillDeckScreen(
      *  `DrillView(source: .session)`). Anything left joins the normal queue. */
     sessionId: String? = null,
     onBack: () -> Unit,
+    /** The sheet's title — iOS names the deck by where it was opened:
+     *  "Review" from Practice and a talk book, "Grammar" from a chapter,
+     *  "Sentences" from the old DrillSheet. Null = "Review". */
+    title: String? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -252,29 +256,17 @@ fun DrillDeckScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            // A sheet, as on iOS: the deck's name centred, Done on the right,
+            // no back arrow. The count sits under the bar, in the deck.
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    Column {
-                        Text(stringResource(R.string.review_cards),
-                            style = MaterialTheme.typography.titleMedium)
-                        if (deck.isNotEmpty() || resolved > 0) {
-                            Text(
-                                stringResource(R.string.lld_of_lld,
-                                    (resolved + 1).coerceAtMost(resolved + deck.size),
-                                    resolved + deck.size) +
-                                    // The rest of the due pile didn't vanish, it
-                                    // just isn't in this hand.
-                                    if (remainingDue > 0)
-                                        stringResource(R.string.lld_waiting, remainingDue) else "",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    Text(title ?: stringResource(R.string.review),
+                        style = MaterialTheme.typography.titleMedium)
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                actions = {
+                    androidx.compose.material3.TextButton(onClick = onBack) {
+                        Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
                     }
                 },
             )
@@ -287,6 +279,19 @@ fun DrillDeckScreen(
             // No progress bar: iOS draws none — the deck is a pile, not a
             // quiz with a finish line (gallery 4.2).
 
+            // "1 of 20 · 6 waiting" (iOS `counterRow`): the rest of the due
+            // pile didn't vanish, it just isn't in this hand.
+            if (top != null && (deck.isNotEmpty() || resolved > 0)) {
+                Text(
+                    stringResource(R.string.lld_of_lld,
+                        (resolved + 1).coerceAtMost(resolved + deck.size),
+                        resolved + deck.size) +
+                        if (remainingDue > 0) stringResource(R.string.lld_waiting, remainingDue) else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+            }
             if (top == null) {
                 if (dealt) {
                     DeckDone(

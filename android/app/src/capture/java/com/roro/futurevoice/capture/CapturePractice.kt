@@ -199,9 +199,11 @@ object CapturePractice {
         StudyDeckHost(kind = kind, language = lang(c), nativeLanguage = native(c),
             level = level(c), onBack = {})
 
+    // iOS's drills modes render `DrillSheet`: "Sentences" with Done.
     @Composable
     private fun Drills(c: Context) =
-        DrillDeckScreen(language = lang(c), nativeLanguage = native(c), onBack = {})
+        DrillDeckScreen(language = lang(c), nativeLanguage = native(c), onBack = {},
+            title = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.sentences))
 
     @Composable
     private fun Cloud(c: Context, language: String? = null) =
