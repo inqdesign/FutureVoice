@@ -596,6 +596,7 @@
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
     <string name="everything_you_ve_practiced_on_this_device_talks_drills_word_498dd4">"把這台裝置上練過的一切打包成一個檔案：通話、訓練、單字、複習本，還有語言、程度和目標。換到另一台裝置重新安裝時，用它把進度搬過去。聲音和通話時間本來就跟著帳號走。"</string>
     <string name="example">"例句"</string>
+    <string name="example_for">"「%s」的例句"</string>
     <string name="example_situations">"情境範例"</string>
     <string name="examples">"例句"</string>
     <string name="examples_variants">"例句與變化"</string>
@@ -1672,11 +1673,13 @@
     <string name="save_this_voice_to_your_account">"把這個聲音儲存到你的帳號。"</string>
     <string name="save_to_expressions">"存到用語"</string>
     <string name="save_to_photos">"儲存到照片"</string>
+    <string name="save_to_sentences">"存到句子"</string>
     <string name="saved">"已儲存"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"已存在這台裝置上，但 ElevenLabs 沒有接受新名字：%s 下次重新複製聲音時會套用。"</string>
     <string name="saved_to_expressions">"已存到用語"</string>
     <string name="saved_to_photos">"已儲存到照片"</string>
+    <string name="saved_to_sentences">"已存到句子"</string>
     <!-- 'Saving wraps up the talk and keeps the transcript, feedback, and drills.' -->
     <string name="saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079">"儲存後通話就會結束，並保留逐字稿、回饋和訓練。"</string>
     <string name="say">"這樣說"</string>

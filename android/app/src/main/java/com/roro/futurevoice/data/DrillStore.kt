@@ -211,6 +211,10 @@ class DrillStore private constructor(context: Context) {
 
     companion object {
         @Volatile private var instance: DrillStore? = null
+        /** The key [bookmarkSentence] files this line under. */
+        fun sentenceKey(text: String): String =
+            DrillIngest.normalizedForMatch(DrillIngest.coreSentence(text, ""))
+
         fun shared(context: Context): DrillStore =
             instance ?: synchronized(this) {
                 instance ?: DrillStore(context.applicationContext).also { instance = it }
@@ -280,6 +284,25 @@ class DrillStore private constructor(context: Context) {
                 ?: card.also { write(language, all + it) }
         }
     }
+
+    /**
+     * A sentence the learner kept by hand — an example under a word, an
+     * expression or a sentence card, long-pressed (iOS `bookmarkSentence`,
+     * 71c5e2da). No source line (nothing was said wrong), due now, and minted
+     * through [saveIfNew] so keeping the same example twice is still one card.
+     */
+    suspend fun bookmarkSentence(text: String, reason: String,
+                                 language: String = LanguageScope.active(appContext),
+                                 now: Long = System.currentTimeMillis()): DrillCard? {
+        val target = DrillIngest.coreSentence(text, "")
+        return saveIfNew(DrillCard(sourcePhrase = "", targetPhrase = target, reason = reason,
+            createdAt = now, nextReviewAt = now, box = 0), language)
+    }
+
+    /** Every sentence on file, keyed like [sentenceKey] — read ONCE by a card
+     *  that offers "Save to sentences", so its menu can say "Saved". */
+    suspend fun sentenceKeys(language: String = LanguageScope.active(appContext)): Set<String> =
+        load(language).map { DrillIngest.normalizedForMatch(it.targetPhrase) }.toSet()
 
     suspend fun upsertMany(cards: List<DrillCard>, language: String = LanguageScope.active(appContext)) {
         if (cards.isEmpty()) return

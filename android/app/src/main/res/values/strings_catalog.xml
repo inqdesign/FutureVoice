@@ -598,6 +598,7 @@
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
     <string name="everything_you_ve_practiced_on_this_device_talks_drills_word_498dd4">"Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account."</string>
     <string name="example">"Example"</string>
+    <string name="example_for">"Example for “%s”"</string>
     <string name="example_situations">"Example situations"</string>
     <string name="examples">"Examples"</string>
     <string name="examples_variants">"Examples &amp; variants"</string>
@@ -1675,11 +1676,13 @@
     <string name="save_this_voice_to_your_account">"Save this voice to your account."</string>
     <string name="save_to_expressions">"Save to expressions"</string>
     <string name="save_to_photos">"Save to Photos"</string>
+    <string name="save_to_sentences">"Save to sentences"</string>
     <string name="saved">"Saved"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Saved here, but ElevenLabs didn't accept the new name: %s It'll be applied the next time your voice is cloned."</string>
     <string name="saved_to_expressions">"Saved to expressions"</string>
     <string name="saved_to_photos">"Saved to Photos"</string>
+    <string name="saved_to_sentences">"Saved to sentences"</string>
     <!-- 'Saving wraps up the talk and keeps the transcript, feedback, and drills.' -->
     <string name="saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079">"Saving wraps up the talk and keeps the transcript, feedback, and drills."</string>
     <string name="say">"Say"</string>

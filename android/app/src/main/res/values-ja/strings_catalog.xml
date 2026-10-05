@@ -596,6 +596,7 @@
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
     <string name="everything_you_ve_practiced_on_this_device_talks_drills_word_498dd4">"この端末で練習したものすべてを1つのファイルにまとめます。通話、ドリル、単語、ブックに、言語・レベル・目標まで。別の端末に新しく入れたアプリへ進み具合を移すときに使えます。声と通話時間はもともとアカウントについてきます。"</string>
     <string name="example">"例文"</string>
+    <string name="example_for">"「%s」の例文"</string>
     <string name="example_situations">"シチュエーションの例"</string>
     <string name="examples">"例文"</string>
     <string name="examples_variants">"例文と言い換え"</string>
@@ -1672,11 +1673,13 @@
     <string name="save_this_voice_to_your_account">"この声をアカウントに保存してください。"</string>
     <string name="save_to_expressions">"表現に保存"</string>
     <string name="save_to_photos">"写真に保存"</string>
+    <string name="save_to_sentences">"文に保存"</string>
     <string name="saved">"保存済み"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"この端末には保存しましたが、ElevenLabsが新しい名前を受け付けませんでした: %s 次に声を作り直すときに反映されます。"</string>
     <string name="saved_to_expressions">"表現に保存済み"</string>
     <string name="saved_to_photos">"写真に保存しました"</string>
+    <string name="saved_to_sentences">"文に保存済み"</string>
     <!-- 'Saving wraps up the talk and keeps the transcript, feedback, and drills.' -->
     <string name="saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079">"保存すると通話が終了し、記録・フィードバック・ドリルが残ります。"</string>
     <string name="say">"こう言う"</string>

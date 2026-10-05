@@ -593,6 +593,7 @@
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
     <string name="everything_you_ve_practiced_on_this_device_talks_drills_word_498dd4">"Todo lo que has practicado en este teléfono — llamadas, ejercicios, palabras, cuadernos — más tus idiomas, niveles y objetivos, en un solo archivo. Úsalo para llevar tu progreso a otra instalación. Tu voz y tus minutos ya van con tu cuenta."</string>
     <string name="example">"Ejemplo"</string>
+    <string name="example_for">"Ejemplo de «%s»"</string>
     <string name="example_situations">"Ejemplos de situaciones"</string>
     <string name="examples">"Ejemplos"</string>
     <string name="examples_variants">"Ejemplos y variantes"</string>
@@ -1669,11 +1670,13 @@
     <string name="save_this_voice_to_your_account">"Guarda esta voz en tu cuenta."</string>
     <string name="save_to_expressions">"Guardar en expresiones"</string>
     <string name="save_to_photos">"Guardar en Fotos"</string>
+    <string name="save_to_sentences">"Guardar en frases"</string>
     <string name="saved">"Guardado"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Guardado aquí, pero ElevenLabs no aceptó el nombre nuevo: %s Se aplicará la próxima vez que se cree tu voz."</string>
     <string name="saved_to_expressions">"Guardado en expresiones"</string>
     <string name="saved_to_photos">"Guardada en Fotos"</string>
+    <string name="saved_to_sentences">"Guardado en frases"</string>
     <!-- 'Saving wraps up the talk and keeps the transcript, feedback, and drills.' -->
     <string name="saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079">"Al guardar, la llamada se cierra y quedan la transcripción, los comentarios y los ejercicios."</string>
     <string name="say">"Di"</string>

@@ -593,6 +593,7 @@
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
     <string name="everything_you_ve_practiced_on_this_device_talks_drills_word_498dd4">"Alles, was du auf diesem Gerät geübt hast — Gespräche, Drills, Wörter, Bücher — plus deine Sprachen, Level und Ziele, als eine Datei. Damit nimmst du deinen Fortschritt in eine andere Installation mit. Stimme und Minuten folgen ohnehin deinem Konto."</string>
     <string name="example">"Beispiel"</string>
+    <string name="example_for">"Beispiel zu „%s“"</string>
     <string name="example_situations">"Beispielsituationen"</string>
     <string name="examples">"Beispiele"</string>
     <string name="examples_variants">"Beispiele &amp; Varianten"</string>
@@ -1669,11 +1670,13 @@
     <string name="save_this_voice_to_your_account">"Sichere diese Stimme in deinem Konto."</string>
     <string name="save_to_expressions">"Zu Wendungen sichern"</string>
     <string name="save_to_photos">"In Fotos sichern"</string>
+    <string name="save_to_sentences">"Zu Sätzen sichern"</string>
     <string name="saved">"Gesichert"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Hier gesichert, aber ElevenLabs hat den neuen Namen nicht angenommen: %s Er wird beim nächsten Klonen deiner Stimme übernommen."</string>
     <string name="saved_to_expressions">"Zu Wendungen gesichert"</string>
     <string name="saved_to_photos">"In Fotos gesichert"</string>
+    <string name="saved_to_sentences">"Zu Sätzen gesichert"</string>
     <!-- 'Saving wraps up the talk and keeps the transcript, feedback, and drills.' -->
     <string name="saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079">"Beim Sichern wird das Gespräch abgeschlossen; Transkript, Feedback und Übungen bleiben erhalten."</string>
     <string name="say">"Sag"</string>

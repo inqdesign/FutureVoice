@@ -68,6 +68,14 @@ fun DrillEnrichmentSheet(
         }.getOrElse { failed = true; null }
     }
     LaunchedEffect(card.id) { load() }
+    // Sentences already on file, read once — an example's long-press says
+    // "Saved" instead of offering it again (iOS 71c5e2da).
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var savedSentences by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(Unit) {
+        savedSentences = com.roro.futurevoice.data.DrillStore.shared(context).sentenceKeys(targetLanguage)
+    }
+    val exampleReason = stringResource(R.string.example_for, card.targetPhrase)
 
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
@@ -95,10 +103,15 @@ fun DrillEnrichmentSheet(
                     if (p.examples.isNotEmpty()) {
                         Section(stringResource(R.string.in_your_life))
                         p.examples.forEach { e ->
-                            Column(Modifier.padding(vertical = 4.dp)) {
-                                Text(e.sentence, style = MaterialTheme.typography.bodyLarge)
-                                Text(e.situation, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // Long-press: keep this example as a sentence card
+                            // of its own.
+                            SaveSentenceMenu(e.sentence, exampleReason, targetLanguage, savedSentences,
+                                onSaved = { savedSentences = savedSentences + it }) {
+                                Column(Modifier.padding(vertical = 4.dp)) {
+                                    Text(e.sentence, style = MaterialTheme.typography.bodyLarge)
+                                    Text(e.situation, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }

@@ -20,7 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -138,6 +142,13 @@ fun WordCardSheet(
     var known by remember { mutableStateOf(false) }
     var voiceId by remember { mutableStateOf(cachedVoiceId) }
     var speaking by remember { mutableStateOf(false) }
+    /** Sentences already on file, read once — an example's long-press says
+     *  "Saved" instead of offering it again (iOS 71c5e2da). */
+    var savedSentences by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(Unit) {
+        savedSentences = com.roro.futurevoice.data.DrillStore.shared(context).sentenceKeys(language)
+    }
+    val exampleReason = stringResource(R.string.example_for, term)
 
     DisposableEffect(Unit) { onDispose { mp3.stop() } }
 
@@ -311,7 +322,12 @@ fun WordCardSheet(
                         LookupState(loading, failed = false) { attempt += 1 }
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            examples.forEach { ExampleRow(it.text, it.meaning) }
+                            examples.forEach { e ->
+                                SaveSentenceMenu(e.text, exampleReason, language, savedSentences,
+                                    onSaved = { savedSentences = savedSentences + it }) {
+                                    ExampleRow(e.text, e.meaning)
+                                }
+                            }
                         }
                     }
                 }
@@ -460,6 +476,62 @@ private fun SenseRow(number: Int, sense: WordLore.Sense) {
             sense.note?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/**
+ * Long-press an example to keep it as a sentence card of its own (iOS
+ * 71c5e2da, `DrillStore.bookmarkSentence` → `saveIfNew`): one card per
+ * sentence, no source line, due now. [saved] is the caller's one read of
+ * [com.roro.futurevoice.data.DrillStore.sentenceKeys].
+ */
+@Composable
+internal fun SaveSentenceMenu(
+    text: String,
+    reason: String,
+    language: String,
+    saved: Set<String>,
+    onSaved: (String) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var open by remember { mutableStateOf(false) }
+    val key = remember(text) { com.roro.futurevoice.data.DrillStore.sentenceKey(text) }
+    val isSaved = key in saved
+    Box(Modifier.fillMaxWidth().pointerInput(text) {
+        detectTapGestures(onLongPress = {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+            open = true
+        })
+    }) {
+        content()
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (isSaved) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.saved_to_sentences)) },
+                    leadingIcon = { Icon(Icons.Filled.Check, null) },
+                    enabled = false, onClick = {})
+            } else {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.save_to_sentences)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Chat, null) },
+                    onClick = {
+                        open = false
+                        scope.launch {
+                            val card = com.roro.futurevoice.data.DrillStore.shared(context)
+                                .bookmarkSentence(text, reason, language)
+                            if (card != null) {
+                                onSaved(key)
+                                haptic.performHapticFeedback(
+                                    androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                StoreEvents.bump()
+                            }
+                        }
+                    })
             }
         }
     }
