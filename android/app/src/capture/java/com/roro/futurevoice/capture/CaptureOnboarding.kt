@@ -27,7 +27,7 @@ object CaptureOnboarding {
         // `-welcomePage <n>` does (n = 9 is the closing frame with the button).
         "welcome" to { c ->
             val page = (c as? android.app.Activity)?.intent?.getStringExtra("welcomePage")?.toIntOrNull() ?: 0
-            WelcomeScreen(onGetStarted = {}, onSignIn = {}, initialBeat = page)
+            WelcomeScreen(onGetStarted = {}, onGoogleSignIn = {}, onAppleSignIn = {}, initialBeat = page)
         },
         // The first-run pickers, from the same starting values the app state
         // opens a fresh install with.
@@ -42,13 +42,10 @@ object CaptureOnboarding {
                 onFinish = { _, _, _, _ -> },
             )
         },
-        // iOS's sign-in step. On Android it is a screen of its own inside the
-        // root router; shown here signed out, with the Google button as a
-        // fresh install without a client id would draw it.
+        // iOS `-welcomeSignIn 1`: the film's closing frame with the account
+        // buttons in the Get started button's place.
         "welcome-signin" to { _ ->
-            com.roro.futurevoice.ui.SignInScreen(
-                state = com.roro.futurevoice.ui.AppState(),
-                onSignIn = {}, onDevSignIn = { _, _ -> })
+            WelcomeScreen(onGetStarted = {}, onGoogleSignIn = {}, onAppleSignIn = {}, initialSignIn = true)
         },
         // The account step after the clone: keep the voice you just heard.
         "signup-account" to { _ ->

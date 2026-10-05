@@ -12,6 +12,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -78,21 +83,30 @@ import kotlinx.coroutines.delay
  *
  * The old five-slide pager (`WelcomeHeroes.kt`) is no longer shown, as on iOS.
  *
- * Android differs in one place: sign-in is its own screen in the root router,
- * so "Already have an account? Sign in" goes there instead of swapping the
- * button for inline Apple/Google buttons.
+ * "Already have an account? Sign in" swaps the button for the account buttons
+ * IN PLACE, as on iOS — Google where iOS has Apple's button (Android's
+ * primary provider), then Apple, with "New here? Get started instead" to step
+ * back. Debug builds keep a small link to the developer sign-in screen, in
+ * the spot iOS keeps its "Skip sign-in (debug)".
  */
 @Composable
 fun WelcomeScreen(
     onGetStarted: () -> Unit,
-    /** A returning learner: go straight to sign-in, so their voice and
-     *  progress come back with them. */
-    onSignIn: (() -> Unit)? = null,
+    /** A returning learner's providers (the same actions `SignInScreen`
+     *  uses). Neither set = no sign-in link at all. */
+    onGoogleSignIn: ((Context) -> Unit)? = null,
+    onAppleSignIn: (() -> Unit)? = null,
+    signInBusy: Boolean = false,
+    signInError: String? = null,
+    /** Debug only: the developer sign-in screen (email/password). */
+    onDevSignIn: (() -> Unit)? = null,
     /** An invite is redeemed at the sign-in moment, so it is asked here. */
     onInviteCode: (() -> Unit)? = null,
     /** Capture only (iOS `-welcomePage <n>`): hold on one beat;
      *  `beats.size` is the closing frame. */
     initialBeat: Int = 0,
+    /** Capture only (iOS `-welcomeSignIn 1`): open on the account buttons. */
+    initialSignIn: Boolean = false,
 ) {
     val context = LocalContext.current
     val still = remember {
@@ -100,7 +114,10 @@ fun WelcomeScreen(
     }
     val beats = welcomeBeats()
     val closingLine = stringResource(R.string.until_the_day_you_become_me_let_s_do_this_together)
-    val startBeat = initialBeat.coerceIn(0, beats.size)
+    val startBeat = if (initialSignIn) beats.size else initialBeat.coerceIn(0, beats.size)
+    val canSignIn = onGoogleSignIn != null || onAppleSignIn != null
+    // Returning users: the button steps aside for the account buttons.
+    var showingSignIn by remember { mutableStateOf(initialSignIn) }
     var beat by remember { mutableIntStateOf(startBeat) }
     var autoplay by remember { mutableStateOf(startBeat == 0) }
     // Bumped on every manual step so the autoplay sleep restarts its clock.
@@ -112,7 +129,7 @@ fun WelcomeScreen(
 
     fun step() { beat = minOf(beat + 1, beats.size) }
     fun finish() { skipped = true; autoplay = false; beat = beats.size }
-    fun replay() { skipped = false; doorOpen = false; autoplay = true; beat = 0; tick++ }
+    fun replay() { showingSignIn = false; skipped = false; doorOpen = false; autoplay = true; beat = 0; tick++ }
 
     // The top of the film is near-black, the bottom cream: light status-bar
     // icons, dark navigation-bar icons, while this screen is up.
@@ -146,7 +163,7 @@ fun WelcomeScreen(
         if (!isClosing) { doorOpen = false; return@LaunchedEffect }
         // The orb opens into the button once the last line has landed;
         // straight away for someone who skipped.
-        delay(if (skipped || still) 300 else 1900)
+        delay(if (skipped || showingSignIn || still) 300 else 1900)
         doorOpen = true
     }
 
@@ -209,34 +226,90 @@ fun WelcomeScreen(
             Spacer(Modifier.weight(1f))
             // The orb's row never changes height, so it sits in the same
             // place on every line and as the button.
-            Box(Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 32.dp)) {
-                FutureselfDoor(open = doorOpen, beat = beat, label = stringResource(R.string.get_started),
-                    still = still, onClick = onGetStarted)
+            val tint = Color(0.040f, 0.360f, 0.960f)
+            Box(Modifier.fillMaxWidth().padding(bottom = 10.dp), contentAlignment = Alignment.TopCenter) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 32.dp)
+                .alpha(if (showingSignIn) 0f else 1f)) {
+                FutureselfDoor(open = doorOpen && !showingSignIn, beat = beat,
+                    label = stringResource(R.string.get_started), still = still, onClick = onGetStarted)
             }
-            Box(Modifier.fillMaxWidth().heightIn(min = 110.dp).padding(bottom = 10.dp),
-                contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.fillMaxWidth().heightIn(min = 110.dp), contentAlignment = Alignment.TopCenter) {
                 if (!isClosing) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Progress(count = beats.size, beat = beat,
                             modifier = Modifier.padding(top = 22.dp, bottom = 16.dp))
-                        if (onSignIn != null) {
+                        if (canSignIn) {
                             Link(stringResource(R.string.already_have_an_account_sign_in),
-                                StoryInk.copy(alpha = 0.55f), onSignIn)
+                                StoryInk.copy(alpha = 0.55f)) { showingSignIn = true; finish() }
                         }
                     }
                 } else {
+                    // Below the account buttons when they are up.
                     Column(
-                        Modifier.padding(top = 14.dp).arrive(if (skipped) 300 else 2500, still),
+                        Modifier.padding(top = if (showingSignIn) 84.dp else 14.dp)
+                            .arrive(if (skipped || showingSignIn) 300 else 2500, still),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        val tint = Color(0.040f, 0.360f, 0.960f)
-                        if (onSignIn != null) Link(stringResource(R.string.already_have_an_account_sign_in), tint, onSignIn)
-                        if (onInviteCode != null) Link(stringResource(R.string.have_an_invite_code), tint, onInviteCode)
+                        if (!showingSignIn) {
+                            if (canSignIn) Link(stringResource(R.string.already_have_an_account_sign_in), tint) { showingSignIn = true }
+                            if (onInviteCode != null) Link(stringResource(R.string.have_an_invite_code), tint, onInviteCode)
+                        }
+                        // Testing only — the developer sign-in, where iOS keeps
+                        // its "Skip sign-in (debug)". Never in release.
+                        if (onDevSignIn != null) {
+                            Text("Dev sign-in", color = StoryInk.copy(alpha = 0.35f), fontSize = 11.sp,
+                                modifier = Modifier.clickable(onClick = onDevSignIn).padding(4.dp))
+                        }
+                        if (signInBusy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        signInError?.let {
+                            Text(it, color = Color.Red, fontSize = 13.sp, textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp))
+                        }
                     }
                 }
             }
+            }
+            // Returning users: the account buttons sit where the button was.
+            if (isClosing && showingSignIn) {
+                SignInButtons(
+                    onGoogle = onGoogleSignIn?.let { g -> { g(context) } },
+                    onApple = onAppleSignIn,
+                    busy = signInBusy,
+                    onBack = { showingSignIn = false },
+                )
+            }
+            }
         }
+    }
+}
+
+/** The account buttons, in the Get started button's place (iOS
+ *  `signInButtons`): Google first (Android's primary provider, in the slot
+ *  iOS gives Apple), then Apple, then the way back to Get started. */
+@Composable
+private fun SignInButtons(onGoogle: (() -> Unit)?, onApple: (() -> Unit)?, busy: Boolean, onBack: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        onGoogle?.let {
+            Box(Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.Black)
+                .clickable(enabled = !busy, onClick = it), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.continue_with_google), color = Color.White,
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        onApple?.let {
+            Box(Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.White)
+                .border(0.5.dp, StoryInk.copy(alpha = 0.25f), shape)
+                .clickable(enabled = !busy, onClick = it), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.continue_with_apple), color = StoryInk,
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Link(stringResource(R.string.new_here_get_started_instead), Color(0.040f, 0.360f, 0.960f), onBack)
     }
 }
 

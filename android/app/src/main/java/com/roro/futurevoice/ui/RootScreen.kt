@@ -493,9 +493,8 @@ fun RootScreen() {
         )
 
         state.resolvingSession -> Loading()
-        // The pitch before the ask — the five beats a first-time user must
-        // agree with before an account means anything. Returning users
-        // (stored session) never see it.
+        // The pitch before the ask — the short film the fluent self narrates
+        // (iOS WelcomeView). Returning users (stored session) never see it.
         !state.signedIn && !welcomeDone -> WelcomeScreen(
             onGetStarted = {
                 welcomeDone = true
@@ -504,9 +503,17 @@ fun RootScreen() {
                 // Meet.
                 app.startAnonymous()
             },
-            // A returning learner goes to the real sign-in instead, so their
-            // voice and progress come back with them.
-            onSignIn = { welcomeDone = true },
+            // A returning learner signs in right there — the account buttons
+            // take the Get started button's place, as on iOS — so their voice
+            // and progress come back with them.
+            onGoogleSignIn = if (app.isGoogleConfigured) app::signInWithGoogle else null,
+            onAppleSignIn = app::signIn,
+            signInBusy = state.busy,
+            signInError = state.error,
+            // The developer email sign-in stays on SignInScreen, debug only.
+            onDevSignIn = if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
+                { welcomeDone = true }
+            } else null,
             // No invite link yet: redeeming needs an account, and iOS's
             // "capture the code, then sign in" path has no Android half. A
             // button that can only land on the sign-in screen would be the
