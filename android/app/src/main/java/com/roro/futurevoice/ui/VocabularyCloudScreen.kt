@@ -148,7 +148,11 @@ fun VocabularyCloudScreen(
      *  resting height). Null = the notebook's first word. */
     var peekWord by remember(language) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(language, revision) { marks = loadMarks(context, language) }
+    /** The notebook has been read at least once — the card waits for it, or
+     *  it would open on a one-word list and keep that position when the real
+     *  list arrived (a card opened on 慌てる showing the notebook's first). */
+    var marksLoaded by remember(language) { mutableStateOf(false) }
+    LaunchedEffect(language, revision) { marks = loadMarks(context, language); marksLoaded = true }
 
     // Off the main thread, as iOS lays out on a detached task — opening the
     // page and changing the filter must not stutter.
@@ -229,12 +233,15 @@ fun VocabularyCloudScreen(
         }
     }
 
-    openWord?.let { word ->
+    openWord?.takeIf { marksLoaded }?.let { word ->
         // The card walks the NOTEBOOK, as iOS's `WordCard` does — a cloud of
         // 8,000 words is a place to FIND one, not a list to page through. A
         // word not yet kept leads the list, so previous/next still goes
         // somewhere and the card opens on the word that was tapped.
-        val terms = remember(word, marks) {
+        // Snapshotted when the card opens, as the library does: a verdict
+        // rewrites the notebook underneath, and the list being walked must
+        // not slide out from under the thumb.
+        val terms = remember(word) {
             if (word in marks.studying) marks.studyingOrder
             else listOf(word) + marks.studyingOrder
         }
@@ -245,6 +252,9 @@ fun VocabularyCloudScreen(
             language = language,
             onShadow = { line -> openWord = null; onShadow(line) },
             onDismiss = { openWord = null },
+            // Browsing the notebook keeps the notebook's count (iOS
+            // `NotebookSheet` → `WordCard`: "My words · N").
+            notebookTitle = stringResource(R.string.my_words_lld, marks.studyingOrder.size),
         )
     }
 }

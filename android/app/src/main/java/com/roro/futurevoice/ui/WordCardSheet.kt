@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -113,6 +114,10 @@ fun WordCardSheet(
     /** Say it after the fluent self — the same screen the book pages open. */
     onShadow: (String) -> Unit = {},
     onDismiss: () -> Unit,
+    /** The header when the card walks the NOTEBOOK ("My words · 10", iOS
+     *  `WordCard`'s title off a dealt list): the count is the notebook's,
+     *  not a position. Null titles by position — "3 / 10". */
+    notebookTitle: String? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -247,12 +252,14 @@ fun WordCardSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-      Column(Modifier.fillMaxWidth().bottomBarInsets()) {
+      // The card is the page (iOS's `.large` detent): it fills the sheet,
+      // the entry scrolls and the action bar stays pinned at the foot.
+      Column(Modifier.fillMaxWidth().fillMaxHeight().bottomBarInsets()) {
         // Where you are in the list you came from. A dealt hand titles by
         // POSITION — that list isn't the notebook, so its count would be a
         // lie there; browsing the notebook keeps the count.
         Text(
-            stringResource(R.string.lld_of_lld, index + 1, terms.size),
+            notebookTitle ?: stringResource(R.string.lld_of_lld, index + 1, terms.size),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -262,7 +269,7 @@ fun WordCardSheet(
             // sheet measures its content with an UNBOUNDED height, where a
             // weight buys nothing and the bar is pushed off the screen.
             Modifier.fillMaxWidth()
-                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.68f).dp)
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 12.dp),
         ) {

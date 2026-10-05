@@ -336,9 +336,15 @@ object CapturePractice {
         },
 
         "vocab" to mode({ seedVocab(it) }) { Cloud(it) },
+        // The notebook's card at full height over the cloud (iOS `vocab-card`:
+        // `previewWordCard` pulls the sheet to `.large`). Offline, so the
+        // card is handed a stub entry — iOS's run had the word cached.
         "vocab-card" to mode({ c ->
             seedVocab(c)
-            PracticeCaptureFlags.cloudOpenWord = VocabStore.shared(c).studying(lang(c)).firstOrNull()
+            // Pinned to a seeded notebook word, so the stub below is ITS entry
+            // whatever other modes left at the head of the notebook.
+            PracticeCaptureFlags.cloudOpenWord = "hesitate"
+            PracticeCaptureFlags.stubWordEntry = hesitateEntry
         }) { Cloud(it) },
         "vocab-loading" to mode({
             seedVocab(it)
@@ -449,6 +455,19 @@ object CapturePractice {
             CaptureSeed.seedJapaneseWords(c)
             PracticeCaptureFlags.cloudOpenWord = "慌てる"
         }) { Cloud(it, "ja") },
+    )
+
+    /** The word card's offline entry for `vocab-card` — one sense, two examples. */
+    private val hesitateEntry = WordLore.Entry(
+        pos = "동사",
+        senses = listOf(WordLore.Sense(pos = "동사", meaning = "망설이다, 주저하다",
+            note = "결정이나 행동을 바로 하지 못하고 머뭇거릴 때 써요.")),
+        examples = listOf(
+            WordLore.Example(text = "Don't hesitate to ask if you need anything.",
+                meaning = "필요한 게 있으면 망설이지 말고 물어보세요."),
+            WordLore.Example(text = "She hesitated before answering the question.",
+                meaning = "그녀는 질문에 답하기 전에 잠시 망설였어요."),
+        ),
     )
 
     /** iOS `expr-card`'s `stubWordEntry`, verbatim. */
