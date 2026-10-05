@@ -252,7 +252,7 @@ fun LibraryScreen(kind: LibraryKind, language: String,
     val rows = remember(material, lens, source, level, trimmed) {
         material.visible(lens, source, level, trimmed)
     }
-    // Words only: expressions have no lexicon to search and no CEFR band.
+    // The filter menu is words-only: expressions have no CEFR band.
     val searchable = kind == LibraryKind.WORDS
     val filtering = (lens == Lens.TO_STUDY && source != SourceFilter.ALL) || level != null
 
@@ -291,10 +291,15 @@ fun LibraryScreen(kind: LibraryKind, language: String,
             Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
                 .padding(horizontal = 16.dp),
         ) {
-            if (searchable) {
+            // Both pages carry the search drawer, as on iOS (`.searchable`
+            // on WordsView and ExpressionsView alike); search reads both
+            // lenses whatever is up.
+            run {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
-                    label = { Text(stringResource(R.string.search_words)) },
+                    label = { Text(stringResource(
+                        if (kind == LibraryKind.WORDS) R.string.search_words
+                        else R.string.search_expressions)) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
