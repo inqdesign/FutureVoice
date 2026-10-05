@@ -164,6 +164,7 @@ class SpeechTakeSession(
             // The system gave the mic to the recognizer: keep the TAKE, drop
             // the recognizer for the rest of it. Following then runs on the
             // voice level alone.
+            android.util.Log.w("SpeechTake", "capture silenced by the system — dropping the recognizer")
             if (!liveDropped) { liveDropped = true; stopLive() }
         }
         try {
@@ -198,6 +199,7 @@ class SpeechTakeSession(
         partials++
         val t = _track.value
         val next = t.advance(_cursor.value, text)
+        if (com.roro.futurevoice.BuildConfig.DEBUG) android.util.Log.d("SpeechTake", "heard#$partials cursor=${_cursor.value}->$next \"${text.takeLast(60)}\"")
         if (next != _cursor.value) {
             follows++
             _cursor.value = minOf(next, t.words.size)

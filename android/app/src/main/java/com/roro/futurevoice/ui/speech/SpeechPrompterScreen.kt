@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui.speech
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -542,10 +544,14 @@ private fun Controls(
                 stringResource(if (cameraOn) R.string.turn_camera_off else R.string.turn_camera_on),
                 onCamera, onClick = onCameraToggle)
         }
+        val recordLabel = stringResource(if (recording) R.string.stop else R.string.record)
         Box(
             Modifier.size(76.dp).clip(CircleShape)
                 .border(4.dp, if (onCamera) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f), CircleShape)
-                .clickable(onClick = onRecord),
+                .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onRecord)
+                // iOS `.accessibilityLabel(isRecording ? "Stop" : "Record")` —
+                // without it TalkBack read the take's main button as nothing.
+                .then(Modifier.semantics { contentDescription = recordLabel }),
             contentAlignment = Alignment.Center,
         ) {
             if (recording) Box(Modifier.size(30.dp).background(Color(0xFFFF3B30), RoundedCornerShape(6.dp)))

@@ -38,6 +38,9 @@ import kotlin.math.sqrt
 class SpeechCapture(private val context: Context) {
 
     @Volatile var level: Float = 0f; private set
+    /** Once-a-second level line in logcat — the one way to tell, on a
+     *  device, whether a take that didn't follow heard anything at all. */
+    private var lastLevelLogMs = 0L
     private val meter = FluencyMeter()
     val lastVoicedAtMs: Long? get() = meter.lastVoicedAt()
     /** `System.nanoTime()` of the first sample written — the clock camera
@@ -99,6 +102,11 @@ class SpeechCapture(private val context: Context) {
                 val db = 20 * log10(max(sqrt(sum / n), 1e-7))
                 val l = (((db + 50) / 50).toFloat()).coerceIn(0f, 1f)
                 level = l
+                val nowMs = System.currentTimeMillis()
+                if (com.roro.futurevoice.BuildConfig.DEBUG && nowMs - lastLevelLogMs >= 1000) {
+                    lastLevelLogMs = nowMs
+                    android.util.Log.d("SpeechCapture", "level=${"%.2f".format(l)}")
+                }
                 meter.feed(l, n / SAMPLE_RATE.toDouble(), System.currentTimeMillis())
             }
             runCatching { rec.stop() }
