@@ -99,7 +99,10 @@ struct SpeechPrompterTrack {
         // The key index the current word starts at.
         let currentKey = keyWord.firstIndex(where: { $0 >= current }) ?? keys.count
         let back = perChar ? 8 : 3
-        let ahead = perChar ? 60 : 25
+        // How far ahead one partial may move the reader. Halved after a
+        // Korean test where a repeated phrase matched further down and the
+        // text jumped ahead of the voice.
+        let ahead = perChar ? 30 : 12
         let lo = max(0, currentKey - back)
         let hi = min(keys.count - 1, currentKey + ahead)
         guard lo <= hi else { return current }
@@ -136,6 +139,20 @@ struct SpeechPrompterTrack {
                     return next >= current - 2 ? next : current
                 }
             }
+        }
+        // Catching up: the reader got ahead while the recognizer was missing
+        // them, past the window. Look further, but only with the longest run
+        // and only where it occurs ONCE, so a repeated phrase can't throw the
+        // text ahead of the voice.
+        let longest = perChar ? 5 : 3
+        let far = min(keys.count - 1, currentKey + (perChar ? 120 : 45))
+        if heardKeys.count >= longest, hi < far {
+            let needle = Array(heardKeys.suffix(longest))
+            var hits: [Int] = []
+            for end in (hi + 1)...far where end - longest + 1 >= 0 {
+                if (0..<longest).allSatisfy({ keys[end - longest + 1 + $0] == needle[$0] }) { hits.append(end) }
+            }
+            if hits.count == 1 { return keyWord[hits[0]] + 1 }
         }
         // A single long word right where we are is enough on its own.
         if !perChar, let last = heardKeys.last, last.count >= 5 {

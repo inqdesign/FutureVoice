@@ -315,11 +315,29 @@ struct SpeechPrompterView: View {
         return window?.safeAreaInsets.bottom ?? 0
     }
 
+    /// The glass's own corner radius, by screen (no public API reports it;
+    /// the private one is not worth an App Review question). Measured values
+    /// per panel; an unknown panel with a home indicator gets the 55 of the
+    /// most common recent ones, a home-button phone square corners.
+    private static var displayCornerRadius: CGFloat {
+        let height = Int(UIScreen.main.nativeBounds.height)
+        switch height {
+        case 2622, 2868, 2736:  return 62      // 16 Pro · 16 Pro Max · 17 series
+        case 2556, 2796:        return 55      // 14 Pro…16, 14 Pro Max…16 Plus
+        case 2532:              return 47.33   // 12 · 13 · 14 · 16e
+        case 2778:              return 53.33   // 12/13 Pro Max · 14 Plus
+        case 2340:              return 44      // 12/13 mini
+        case 2436, 2688:        return 39      // X · XS · 11 Pro (Max)
+        case 1792:              return 41.5    // XR · 11
+        default:                return deviceBottomInset > 0 ? 55 : 0
+        }
+    }
+
     /// Top corners like any card; bottom corners CONCENTRIC with the
-    /// display's own rounded corners (≈55 pt on the current iPhones), less
-    /// the gap, so card and glass curve together.
+    /// display's own rounded corners, less the gap, so card and glass curve
+    /// together.
     private var cardShape: UnevenRoundedRectangle {
-        let bottom = Self.deviceBottomInset > 0 ? max(24, 55 - Self.cardInset) : 24
+        let bottom = max(24, Self.displayCornerRadius - Self.cardInset)
         return UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: bottom,
                                       bottomTrailingRadius: bottom, topTrailingRadius: 24,
                                       style: .continuous)
@@ -494,6 +512,7 @@ struct SpeechTeleprompter: View {
                                      let across = min(1, max(0, (frame.minX - 24) / lineWidth))
                                      let lineAdvance = frame.height + textSize * 0.35
                                      scroller.setTarget(frame.minY + across * lineAdvance,
+                                                        lineTop: frame.minY,
                                                         lineAdvance: lineAdvance,
                                                         snap: cursor == 0)
                                  })
@@ -561,6 +580,8 @@ final class PrompterScroller: NSObject, ObservableObject {
     var plannedPace: CGFloat = 0
 
     private var target: CGFloat = 0
+    /// Top of the line being read: the highest the column may rise.
+    private var ceiling: CGFloat = .greatestFiniteMagnitude
     private var lastTarget: CGFloat = 0
     private var lineAdvance: CGFloat = 40
     /// The reader's own pace: a LONG average, so a recognizer delivering
@@ -579,8 +600,9 @@ final class PrompterScroller: NSObject, ObservableObject {
     private let pullPerLine: CGFloat = 0.25
     private let maxPull: CGFloat = 0.4
 
-    func setTarget(_ y: CGFloat, lineAdvance: CGFloat, snap: Bool) {
+    func setTarget(_ y: CGFloat, lineTop: CGFloat, lineAdvance: CGFloat, snap: Bool) {
         if lineAdvance > 0 { self.lineAdvance = lineAdvance }
+        ceiling = lineTop
         // Moving the column by a fraction of a point re-rounds the layout to
         // the pixel grid, which moves the measured word by that fraction,
         // which moved the column again — an endless loop the moment the
@@ -644,7 +666,17 @@ final class PrompterScroller: NSObject, ObservableObject {
         }
         lastTarget = target
         velocity += (wanted - velocity) * min(1, dt / speedWindow)
-        let next = position + velocity * dt
+        var next = position + velocity * dt
+        // The line being read never leaves the screen. With the reading line
+        // at the very top, any lead over the reader pushed the rest of their
+        // line up and out before they had read it (founder, 2026-10-05). So
+        // the column may rise to the current line's top and no further; it
+        // waits there and flows on once the reader reaches the next line.
+        // Steady-speed mode has no reader position to wait for.
+        if follow, recording, next > ceiling {
+            next = max(position, ceiling)
+            velocity = min(velocity, 0)
+        }
         if abs(next - position) > 0.01 { position = next }
     }
 }
