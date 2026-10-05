@@ -1,5 +1,6 @@
 Neu
 • Rede: ein neuer Tab, in dem du deinen Text laut vom Teleprompter abliest, der mit deiner Stimme mitläuft. Mit eingeschalteter Kamera bekommst du ein Hochformat-Video mit Text und Gesicht. Bewertet werden Genauigkeit, Tempo, Pausen und Füllwörter, und ein Coach sagt dir, was du als Nächstes ausprobieren kannst.
+• Max: ein neuer Tarif mit 1.200 Minuten Gespräch im Monat. Brauchst du mehr, kaufst du 50 Minuten dazu, mit oder ohne Abo.
 • Meine Routine: Plane deine Woche direkt im Stundenplan und verschiebe Blöcke per Ziehen. Leg Gespräche, Wiederholungen und Nochmal sagen auf die Tage und Zeiten, die du willst. Der tägliche Anruf klingelt zur Gesprächszeit deiner Routine.
 • Jeder Tab zeigt beim ersten Öffnen eine kurze Anleitung: wofür er da ist und wie du ihn nutzt. Du findest sie jederzeit unter Ich → App-Anleitung.
 • Im Tab „Sprechen“ gibt es jetzt den Bereich „Alltag“: typische Situationen wie Café, Restaurant, Bekleidungsgeschäft oder Anruf in der Arztpraxis, mit einem Tipp gestartet.

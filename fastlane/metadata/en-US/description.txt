@@ -21,6 +21,9 @@ An interview, a doctor's visit, an awkward ask. Describe the situation in one li
 SHADOW. Until it comes out on its own
 The voice you match is your own. Speak along with the fluent line, loop the hard part at 0.5x, and see a per-word verdict: nailed, swapped, or skipped.
 
+SPEECH. Say it out loud before the day it counts
+Read a script aloud from a prompter that follows your voice. Turn the camera on and you keep a vertical video of you and your script together. Every take is scored for accuracy, pace, pauses and filler words, and a coach tells you what to try next. Anyone can practice the built-in script; writing one with AI or adding your own talk comes with Plus and Max.
+
 REVIEW. It returns right before you forget
 Fumbled sentences come back as spaced-repetition drills, answered out loud, never multiple choice. A pool of about 8,000 CEFR-graded words sits underneath, and every word you use is ticked off automatically.
 
@@ -28,7 +31,7 @@ YOUR VOICE, TREATED CAREFULLY
 Recording is sixty seconds at setup, once. Nothing is ever recorded outside a conversation you started. Re-record or delete your voice anytime. Sessions, drills, and progress stay on your iPhone.
 
 SUBSCRIPTION
-Light buys a month of talk time: 150 minutes, about five minutes a day, spent however you like. 600 min of talk, 30 scenes a month. Watch scenes are counted separately on both plans, 10 a month on Light and 30 on Plus, so watching never takes a minute off your talking. Review, replay, and building situations are always free.
+Light gives you 150 minutes of talk and 10 Watch scenes a month, Plus 600 minutes and 30 scenes, Max 1,200 minutes and 30 scenes. Plus and Max also let you write Speech scripts with AI or add your own. Spend the minutes in one go or across the month, and if you need more, you can buy 50 extra minutes, with or without a plan. Review, replay, and building situations are always free.
 
 Sixty seconds of setup. Start your first call with the fluent future you today.
 

@@ -1,5 +1,6 @@
 Nouveautés
 • Discours : un nouvel onglet pour lire ton texte à voix haute sur un prompteur qui avance au fil de ta voix. Active la caméra et tu repars avec une vidéo verticale où l’on voit ton texte et ton visage. Tu reçois une note sur la précision, le débit, les pauses et les mots de remplissage, et un coach te dit quoi essayer ensuite.
+• Max : une nouvelle formule avec 1 200 minutes de conversation par mois. Besoin de plus ? Achète 50 minutes supplémentaires, avec ou sans abonnement.
 • Ma routine : planifie ta semaine directement sur l’emploi du temps et fais glisser les blocs pour les déplacer. Place appels, révisions et Redire aux jours et heures de ton choix ; l’appel quotidien sonne à l’heure de conversation de ta routine.
 • Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
 • Parler a une nouvelle section Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.

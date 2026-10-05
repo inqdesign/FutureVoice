@@ -23,6 +23,9 @@ Un entretien, un rendez-vous chez le médecin, une demande délicate. Décris la
 SHADOWING : jusqu’à ce que ça sorte tout seul
 La voix que tu imites, c’est la tienne. Parle en même temps que la phrase fluide, reprends le passage difficile à 0,5× et vois le verdict mot par mot : dit, remplacé ou oublié.
 
+DISCOURS : dis-le à voix haute avant le jour J
+Lis ton texte avec un prompteur qui suit ta voix, et garde une vidéo verticale de toi et du texte si tu actives la caméra. Chaque prise est notée (justesse, rythme, pauses, tics de langage) et un coach te dit quoi essayer ensuite. Écrire un texte avec l’IA ou ajouter le tien : Plus et Max.
+
 RÉVISION : ça revient juste avant que tu oublies
 Les phrases où tu as buté reviennent en répétition espacée, et tu réponds à voix haute, jamais en QCM. En arrière-plan, des listes de mots classées par niveau CECR, et chaque mot que tu utilises est coché tout seul.
 
@@ -33,7 +36,7 @@ TA VOIX, AVEC SOIN
 L’enregistrement, c’est 60 secondes au moment de la configuration, une seule fois. Rien n’est jamais enregistré en dehors d’une conversation que tu as lancée. Tu peux refaire ou supprimer ton clone à tout moment, et tes conversations, exercices et progrès restent sur ton iPhone.
 
 ABONNEMENT
-Light comprend 150 minutes de conversation par mois et 10 scènes ; Plus, 600 minutes et 30 scènes. Utilise-les d’un coup ou répartis-les sur le mois. La révision, la réécoute et la création de situations sont toujours gratuites.
+Light comprend 150 minutes de conversation et 10 scènes par mois ; Plus, 600 minutes et 30 scènes ; Max, 1 200 minutes et 30 scènes. Utilise-les d’un coup ou sur tout le mois, et ajoute 50 minutes si besoin, avec ou sans abonnement. La révision, la réécoute et la création de situations sont toujours gratuites.
 
 Soixante secondes de configuration. Passe aujourd’hui ton premier appel avec ton moi fluide du futur.
 
