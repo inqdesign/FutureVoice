@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -89,6 +91,8 @@ import com.roro.futurevoice.ui.GroupedCard
 import com.roro.futurevoice.ui.GroupedFooter
 import com.roro.futurevoice.ui.GroupedRowDivider
 import com.roro.futurevoice.ui.GroupedSectionHeader
+import com.roro.futurevoice.ui.IosSwipeAction
+import com.roro.futurevoice.ui.IosSwipeActions
 import com.roro.futurevoice.ui.PaywallScreen
 import com.roro.futurevoice.ui.SheetHeader
 import com.roro.futurevoice.ui.bottomBarInsets
@@ -157,7 +161,6 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
     val takes by store.takes.collectAsStateWithLifecycle()
     var practicing by remember { mutableStateOf<SpeechScript?>(null) }
     var editing by remember { mutableStateOf<SpeechScript?>(null) }
-    var menuFor by remember { mutableStateOf<String?>(null) }
     val request by SpeechTabRequests.pending.collectAsStateWithLifecycle()
     LaunchedEffect(language) { store.reload() }
     LaunchedEffect(Unit) { store.reloadIfLanguageChanged() }
@@ -168,13 +171,24 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
         GroupedCard {
             scripts.forEachIndexed { i, script ->
                 if (i > 0) GroupedRowDivider()
-                Box {
+                // iOS `.swipeActions(edge: .trailing)`: Delete (not the
+                // bundled sample) outermost, then Edit (own scripts, accent);
+                // a full swipe deletes.
+                val deleteLabel = stringResource(R.string.delete)
+                val editLabel = stringResource(R.string.edit)
+                val accent = MaterialTheme.colorScheme.primary
+                val actions = buildList {
+                    if (!script.isBuiltIn) add(IosSwipeAction(Icons.Filled.Delete, deleteLabel, Color(0xFFFF3B30)) {
+                        store.deleteScript(script.id)
+                    })
+                    if (script.genre == SpeechGenre.OWN) add(IosSwipeAction(Icons.Filled.Edit, editLabel, accent) {
+                        editing = script
+                    })
+                }
+                IosSwipeActions(actions, background = AppSurfaces.card) {
                     Row(
                         Modifier.fillMaxWidth()
-                            .combinedClickable(
-                                onClick = { practicing = script },
-                                onLongClick = { if (!script.isBuiltIn) menuFor = script.id },
-                            )
+                            .clickable { practicing = script }
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -198,15 +212,6 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
                             Text("$best", style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold, color = scoreColor(best))
                         }
-                    }
-                    DropdownMenu(expanded = menuFor == script.id, onDismissRequest = { menuFor = null }) {
-                        if (script.genre == SpeechGenre.OWN) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.edit)) },
-                                onClick = { menuFor = null; editing = script })
-                        }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
-                            onClick = { menuFor = null; store.deleteScript(script.id) })
                     }
                 }
             }
@@ -655,7 +660,6 @@ internal fun SpeechTakesSheet(scriptId: String, onDismiss: () -> Unit) {
     val all by store.takes.collectAsStateWithLifecycle()
     val takes = all.filter { it.scriptId == scriptId }
     var open by remember { mutableStateOf<SpeechTake?>(null) }
-    var deleting by remember { mutableStateOf<SpeechTake?>(null) }
     if (open != null) {
         Dialog(onDismissRequest = { open = null },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
@@ -681,9 +685,11 @@ internal fun SpeechTakesSheet(scriptId: String, onDismiss: () -> Unit) {
             FormCard {
                 takes.forEachIndexed { i, take ->
                     if (i > 0) FormDivider()
-                    @OptIn(ExperimentalFoundationApi::class)
+                    // iOS `.onDelete`: swipe left for Delete, a full swipe deletes.
+                    IosSwipeActions(listOf(IosSwipeAction(Icons.Filled.Delete, stringResource(R.string.delete),
+                        Color(0xFFFF3B30)) { store.deleteTake(take.id) }), background = AppSurfaces.card) {
                     Row(Modifier.fillMaxWidth()
-                        .combinedClickable(onClick = { open = take }, onLongClick = { deleting = take })
+                        .clickable { open = take }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -702,18 +708,9 @@ internal fun SpeechTakesSheet(scriptId: String, onDismiss: () -> Unit) {
                         Text("${take.metrics.overall}", style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold, color = scoreColor(take.metrics.overall))
                     }
+                    }
                 }
             }
         }
-    }
-    deleting?.let { t ->
-        AlertDialog(onDismissRequest = { deleting = null },
-            confirmButton = {
-                TextButton(onClick = { store.deleteTake(t.id); deleting = null }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
-            text = { Text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(t.createdAt))) })
     }
 }
