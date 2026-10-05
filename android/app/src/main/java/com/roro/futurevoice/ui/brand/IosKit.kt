@@ -195,9 +195,13 @@ fun IosGlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, circle: B
 /** Glass text button with the accent label (Done, Cancel, Later). */
 @Composable
 fun IosGlassTextButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
-                       bold: Boolean = false) {
-    IosGlassButton(onClick, modifier) {
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
+                       bold: Boolean = false,
+                       /** iOS `.disabled(…)`: the label greys out and the tap does nothing. */
+                       enabled: Boolean = true) {
+    IosGlassButton({ if (enabled) onClick() }, modifier) {
+        Text(text, style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
             fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal)
     }
 }

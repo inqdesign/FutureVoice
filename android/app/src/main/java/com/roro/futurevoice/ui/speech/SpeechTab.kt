@@ -487,8 +487,8 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
         SheetHeader(stringResource(if (existing == null) R.string.my_script else R.string.edit_script),
             leading = { IosGlassTextButton(stringResource(R.string.cancel), onClick = onDismiss) },
             trailing = {
-                IosGlassTextButton(stringResource(R.string.save), onClick = { if (trimmed.isNotEmpty()) save() },
-                    bold = trimmed.isNotEmpty())
+                IosGlassTextButton(stringResource(R.string.save), onClick = { save() },
+                    bold = trimmed.isNotEmpty(), enabled = trimmed.isNotEmpty())
             })
         FormSection(null) {
             PlainField(title, { title = it }, stringResource(R.string.title_optional))
@@ -498,14 +498,21 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.script), style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                IosGlassButton(onClick = {
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val pasted = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)
-                        ?.coerceToText(context)?.toString().orEmpty()
-                    if (pasted.isNotEmpty()) text = if (text.isEmpty()) pasted else text + "\n\n" + pasted
-                }, circle = true) {
+                // iOS's system PasteButton, icon-only: a filled accent circle
+                // with a white glyph, not a glass button.
+                androidx.compose.foundation.layout.Box(
+                    Modifier.size(36.dp)
+                        .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+                        .clickable {
+                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val pasted = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)
+                                ?.coerceToText(context)?.toString().orEmpty()
+                            if (pasted.isNotEmpty()) text = if (text.isEmpty()) pasted else text + "\n\n" + pasted
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(Icons.Filled.ContentPaste, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
                 }
             }
             FormCard {
