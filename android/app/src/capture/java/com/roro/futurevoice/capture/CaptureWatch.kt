@@ -246,7 +246,7 @@ object CaptureWatch {
                 id = sid
             }) {
                 com.roro.futurevoice.ui.ScenarioBookScreen(
-                    scenarioId = id!!, language = lang(c), onWatch = {}, onShadow = {}, onBack = {})
+                    scenarioId = id!!, language = lang(c), onWatch = {}, onTalk = {}, onShadow = {}, onBack = {})
             }
         },
         // iOS `watchtab-empty`: a learner with no scenarios yet.

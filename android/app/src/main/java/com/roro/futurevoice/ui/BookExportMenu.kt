@@ -35,7 +35,14 @@ import kotlinx.coroutines.launch
  * the whole transcript, and a book page must not pay that to draw a toolbar.
  */
 @Composable
-fun BookExportMenu(document: () -> BookDocument, nativeLanguage: String = "en", targetLanguage: String = "en") {
+fun BookExportMenu(
+    document: () -> BookDocument,
+    nativeLanguage: String = "en",
+    targetLanguage: String = "en",
+    /** The book's own rows under the export pair — Archive / Unarchive and
+     *  Delete, as iOS's ⋯ menu holds them. Given a `close` to call first. */
+    extra: (@Composable (close: () -> Unit) -> Unit)? = null,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
@@ -76,6 +83,7 @@ fun BookExportMenu(document: () -> BookDocument, nativeLanguage: String = "en", 
                 }
             },
         )
+        extra?.invoke { open = false }
     }
 }
 

@@ -643,6 +643,8 @@ fun RootScreen() {
             } },
             onShadow = { shadowLine = it },
             onBack = { bookScenarioId = null },
+            // The talk page sits above the book, so back returns here.
+            onOpenTalk = { id -> detailSessionId = id },
         )
 
         // Above everything: an account that cannot spend must not be looking

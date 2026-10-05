@@ -255,7 +255,7 @@ object CapturePractice {
         },
     ) { c ->
         ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
-            onWatch = {}, onShadow = {}, onBack = {})
+            onWatch = {}, onTalk = {}, onShadow = {}, onBack = {})
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
