@@ -22,6 +22,22 @@ class ElevenLabsClient(private val auth: AuthRepository) {
 
     companion object {
         /**
+         * The language a line is pinned to upstream (`language_code`), or null
+         * to let the model guess as it always has (iOS `pinnedLanguage`,
+         * `73f0faac`). Korean only: a learner of Korean who isn't Korean
+         * recorded the clone in their own language, and in a blind test by a
+         * native ear the pinned take was preferred — same model, same price.
+         * Pinned only when the LINE is Korean too, so an English line read to
+         * the same learner is never forced into Korean sounds. The edge
+         * function forwards it only for turbo/flash; an older deploy drops it.
+         */
+        fun pinnedLanguage(text: String, activeLanguage: String?): String? {
+            if (activeLanguage?.substringBefore('-') != "ko") return null
+            if (!com.roro.futurevoice.data.TextScript.isInTargetScript(text, "ko")) return null
+            return "ko"
+        }
+
+        /**
          * Live Talk turns. Flash was tried here and reverted: same price per
          * character, but it buys latency by cutting speaker similarity — on the
          * surface where users hear their own clone most. Speaker similarity IS
@@ -74,6 +90,8 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         val scene_key: String? = null,
         /** `voice_settings.speed` (0.7–1.2) — the learner's rung, see `SpeechSpeed`. */
         val speed: Double? = null,
+        /** Pins the line's language upstream — Korean only ([pinnedLanguage]). */
+        val language_code: String? = null,
     )
 
     /** Buffered synthesis → MP3 bytes. */
@@ -266,6 +284,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             purpose = purpose,
             scene_key = sceneKey,
             speed = speed ?: com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
+            language_code = pinnedLanguage(text, com.roro.futurevoice.data.CoreVocabulary.activeLanguage()),
         )
         val builder = Request.Builder()
             .url(Config.functionUrl("elevenlabs-tts"))
