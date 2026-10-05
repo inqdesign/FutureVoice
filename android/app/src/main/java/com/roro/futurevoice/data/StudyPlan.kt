@@ -55,7 +55,10 @@ data class StudyPlan(
         @SerialName("words") WORDS("words"),
         @SerialName("expressions") EXPRESSIONS("expressions"),
         @SerialName("shadow") SHADOW("shadow"),
-        @SerialName("test") TEST("test");
+        @SerialName("test") TEST("test"),
+        /** A take of any script in the Speech tab, counted when it saves
+         *  (iOS `8f135c24`). */
+        @SerialName("speech") SPEECH("speech");
 
         /** Only a talk is measured in MINUTES (the talk meter). Every other
          *  kind is a COUNT the app actually keeps. */
@@ -69,7 +72,7 @@ data class StudyPlan(
             EXPRESSIONS -> 3
             REVIEW -> 20
             SHADOW -> 2
-            SAY_IT_AGAIN, TEST -> 1
+            SAY_IT_AGAIN, TEST, SPEECH -> 1
         }
 
         /** How tall the block is drawn in the editor, in minutes — a count
@@ -81,7 +84,7 @@ data class StudyPlan(
         companion object {
             /** Kinds the learner places by hand — whole ACTIONS (iOS
              *  2026-10-03): talk, review, say it again. */
-            val placeable = listOf(TALK, REVIEW, SAY_IT_AGAIN)
+            val placeable = listOf(TALK, REVIEW, SAY_IT_AGAIN, SPEECH)
         }
     }
 

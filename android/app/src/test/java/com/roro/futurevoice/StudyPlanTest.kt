@@ -172,6 +172,18 @@ class StudyPlanTest {
         assertEquals(12.0, totals.amount(Kind.REVIEW), 0.001)
     }
 
+    /** iOS `testASpeechTakeKeepsASpeechBlock` (`8f135c24`). */
+    @Test fun aSpeechTakeKeepsASpeechBlock() {
+        val plan = StudyPlan(blocks = listOf(Block(kind = Kind.SPEECH, weekdays = setOf(3), hour = 20, minute = 0, minutes = 1)))
+        val occ = plan.occurrences(at(6, 0), zone = zone)
+        assertTrue(PlannerDay.done(occ, PlannerDay.Totals()).isEmpty())
+        assertEquals(setOf(occ[0].id), PlannerDay.done(occ, PlannerDay.Totals(speech = 1.0)))
+        val acts = PlannerDay.actuals(emptyList(), listOf(ActivityEventLog.Event(ActivityEventLog.Kind.SPEECH, at(6, 20, 5))))
+        assertEquals(listOf(PlannerDay.Actual.Kind.SPEECH), acts.map { it.kind })
+        assertEquals(1, PlannerDay.absorbed(occ, acts).size)
+        assertTrue(Kind.SPEECH in Kind.placeable)
+    }
+
     @Test fun repsCloseTogetherAreOneSitting() {
         val events = listOf(at(6, 20, 0), at(6, 20, 4), at(6, 20, 9), at(6, 21, 0))
             .map { ActivityEventLog.Event(ActivityEventLog.Kind.DRILL, it) }

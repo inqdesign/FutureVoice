@@ -200,6 +200,8 @@ fun ActivityScreen(
         when (kind) {
             StudyPlan.Kind.TALK -> onStartTalk()
             StudyPlan.Kind.SAY_IT_AGAIN -> picking = true
+            // The root closes this page and opens the Speech tab.
+            StudyPlan.Kind.SPEECH -> com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = true
             StudyPlan.Kind.TEST -> onOpenTest()
             else -> onOpenReview()
         }

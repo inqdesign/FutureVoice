@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayCircle
@@ -105,6 +106,8 @@ fun StudyPlan.Kind.color(): Color = when (this) {
     StudyPlan.Kind.EXPRESSIONS -> Color(0xFFFF2D55)
     StudyPlan.Kind.SHADOW -> Color(0xFFFFCC00)
     StudyPlan.Kind.TEST -> Color(0xFFFF9500)
+    // Purple is the folded `words` kind's, which nothing draws any more.
+    StudyPlan.Kind.SPEECH -> Color(0xFFAF52DE)
 }
 
 fun StudyPlan.Kind.icon(): ImageVector = when (this) {
@@ -115,6 +118,7 @@ fun StudyPlan.Kind.icon(): ImageVector = when (this) {
     StudyPlan.Kind.SHADOW -> Icons.Filled.GraphicEq
     StudyPlan.Kind.SAY_IT_AGAIN -> Icons.Filled.Replay
     StudyPlan.Kind.TEST -> Icons.Filled.Verified
+    StudyPlan.Kind.SPEECH -> Icons.Filled.MicExternalOn
 }
 
 fun PlannerDay.Actual.Kind.color(): Color = when (this) {
@@ -122,6 +126,7 @@ fun PlannerDay.Actual.Kind.color(): Color = when (this) {
     PlannerDay.Actual.Kind.REVIEW -> Color(0xFF34C759)
     PlannerDay.Actual.Kind.SHADOW, PlannerDay.Actual.Kind.SAY_IT_AGAIN -> Color(0xFF30B0C7)
     PlannerDay.Actual.Kind.SCENE -> Color(0xFF8E8E93)
+    PlannerDay.Actual.Kind.SPEECH -> Color(0xFFAF52DE)
 }
 
 fun PlannerDay.Actual.Kind.icon(): ImageVector = when (this) {
@@ -130,6 +135,7 @@ fun PlannerDay.Actual.Kind.icon(): ImageVector = when (this) {
     PlannerDay.Actual.Kind.SHADOW -> Icons.Filled.GraphicEq
     PlannerDay.Actual.Kind.SAY_IT_AGAIN -> Icons.Filled.Replay
     PlannerDay.Actual.Kind.SCENE -> Icons.Filled.PlayCircle
+    PlannerDay.Actual.Kind.SPEECH -> Icons.Filled.MicExternalOn
 }
 
 @Composable
@@ -139,6 +145,7 @@ fun PlannerDay.Actual.Kind.label(): String = stringResource(when (this) {
     PlannerDay.Actual.Kind.SHADOW -> R.string.routine_kind_shadowing
     PlannerDay.Actual.Kind.SAY_IT_AGAIN -> R.string.routine_kind_say_it_again
     PlannerDay.Actual.Kind.SCENE -> R.string.routine_watch_scene
+    PlannerDay.Actual.Kind.SPEECH -> R.string.speech_d00d85
 })
 
 /** 24-hour "8:05" — the axis beside it is 24-hour, and a 12-hour time with

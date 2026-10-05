@@ -26,7 +26,9 @@ object ActivityEventLog {
         @SerialName("word") WORD,
         @SerialName("expression") EXPRESSION,
         @SerialName("scene") SCENE,
-        @SerialName("sayItAgain") SAY_IT_AGAIN;
+        @SerialName("sayItAgain") SAY_IT_AGAIN,
+        /** A saved Speech take (iOS `8f135c24`) — a cancelled or unheard take is not one. */
+        @SerialName("speech") SPEECH;
 
         companion object {
             fun of(kind: PracticeLog.Kind): Kind = when (kind) {

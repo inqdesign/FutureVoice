@@ -702,6 +702,7 @@ fun PlanBlockSheet(target: BlockTarget, onDismiss: () -> Unit, onRefused: () -> 
             when (kind) {
                 StudyPlan.Kind.TALK -> GroupedFooter(stringResource(R.string.routine_talk_block_footer))
                 StudyPlan.Kind.SAY_IT_AGAIN -> GroupedFooter(stringResource(R.string.routine_say_again_footer))
+                StudyPlan.Kind.SPEECH -> GroupedFooter(stringResource(R.string.any_script_counts_once_you_finish_a_take))
                 else -> Unit
             }
             if (existing != null) {

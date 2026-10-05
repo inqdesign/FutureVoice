@@ -35,8 +35,11 @@ object PlanReminder {
 
     /** A say-it-again reminder was tapped: the root opens the talk picker. */
     val pendingSayItAgain = MutableStateFlow(false)
+    /** A Speech block came due, or its routine line was tapped: the root
+     *  opens the Speech tab (iOS `DailyCallInbox.pendingSpeech`). */
+    val pendingSpeech = MutableStateFlow(false)
 
-    private val remindedKinds = setOf(StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.WORDS,
+    private val remindedKinds = setOf(StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.SPEECH, StudyPlan.Kind.WORDS,
         StudyPlan.Kind.EXPRESSIONS, StudyPlan.Kind.SHADOW)
 
     fun reschedule(c: Context, now: Long = System.currentTimeMillis()) {
@@ -68,7 +71,9 @@ object PlanReminder {
         val sayAgain = kind == StudyPlan.Kind.SAY_IT_AGAIN
         // Say it again lands on the talk picker; the rest on the review queue.
         val intent = Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val speech = kind == StudyPlan.Kind.SPEECH
         if (sayAgain) intent.data = Uri.parse("futurevoice://sayitagain")
+        else if (speech) intent.data = Uri.parse("futurevoice://speech")
         else intent.putExtra(ReviewQueue.OPEN_REVIEW_EXTRA, true)
         val open = PendingIntent.getActivity(c, NOTIFICATION_ID, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -77,9 +82,11 @@ object PlanReminder {
             StudyPlan.Kind.EXPRESSIONS -> R.string.routine_time_for_your_expressions
             StudyPlan.Kind.SHADOW -> R.string.routine_time_for_shadowing
             StudyPlan.Kind.SAY_IT_AGAIN -> R.string.routine_time_to_say_it_again
+            StudyPlan.Kind.SPEECH -> R.string.time_for_your_speech
             else -> R.string.routine_time_to_practice
         })
         val body = if (sayAgain) res.getString(R.string.routine_pick_a_recent_talk_and_say_it_again)
+        else if (speech) res.getString(R.string.pick_a_script_and_read_it_out_loud)
         else res.getString(R.string.routine_s_as_planned, RoutineText.titled(res.resources, kind, amount))
         val n = NotificationCompat.Builder(c, ReviewQueue.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_recent_history)
@@ -107,6 +114,7 @@ object RoutineText {
         StudyPlan.Kind.SHADOW -> R.string.routine_kind_shadowing
         StudyPlan.Kind.SAY_IT_AGAIN -> R.string.routine_kind_say_it_again
         StudyPlan.Kind.TEST -> R.string.routine_kind_weekly_test
+        StudyPlan.Kind.SPEECH -> R.string.speech_d00d85
     })
 
     /** Minutes for a talk, a count otherwise; empty for a one-off. */
@@ -115,7 +123,7 @@ object RoutineText {
         StudyPlan.Kind.WORDS, StudyPlan.Kind.EXPRESSIONS, StudyPlan.Kind.REVIEW ->
             res.getString(R.string.routine_n_items, n)
         StudyPlan.Kind.SHADOW -> res.getString(R.string.routine_n_lines, n)
-        StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.TEST ->
+        StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.TEST, StudyPlan.Kind.SPEECH ->
             if (n == 1) "" else res.getString(R.string.routine_n_times, n)
     }
 

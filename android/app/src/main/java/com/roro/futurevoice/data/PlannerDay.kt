@@ -25,7 +25,7 @@ object PlannerDay {
         val count: Int = 1,
     ) {
         enum class Kind(val raw: String) { TALK("talk"), REVIEW("review"), SHADOW("shadow"),
-            SCENE("scene"), SAY_IT_AGAIN("sayItAgain") }
+            SCENE("scene"), SAY_IT_AGAIN("sayItAgain"), SPEECH("speech") }
 
         val id: String get() = sessionId?.let { "talk-$it" } ?: "${kind.raw}-$start"
 
@@ -35,6 +35,7 @@ object PlannerDay {
             Kind.REVIEW -> StudyPlan.Kind.REVIEW
             Kind.SHADOW -> StudyPlan.Kind.SHADOW
             Kind.SAY_IT_AGAIN -> StudyPlan.Kind.SAY_IT_AGAIN
+            Kind.SPEECH -> StudyPlan.Kind.SPEECH
             Kind.SCENE -> null
         }
 
@@ -43,6 +44,7 @@ object PlannerDay {
             Kind.TALK -> planned == StudyPlan.Kind.TALK
             Kind.SHADOW -> planned == StudyPlan.Kind.SHADOW
             Kind.SAY_IT_AGAIN -> planned == StudyPlan.Kind.SAY_IT_AGAIN
+            Kind.SPEECH -> planned == StudyPlan.Kind.SPEECH
             Kind.REVIEW -> planned == StudyPlan.Kind.REVIEW || planned.isFoldedIntoReview
             Kind.SCENE -> false
         }
@@ -68,6 +70,7 @@ object PlannerDay {
             ActivityEventLog.Kind.EXPRESSION, ActivityEventLog.Kind.SHADOW -> Actual.Kind.REVIEW
             ActivityEventLog.Kind.SCENE -> Actual.Kind.SCENE
             ActivityEventLog.Kind.SAY_IT_AGAIN -> Actual.Kind.SAY_IT_AGAIN
+            ActivityEventLog.Kind.SPEECH -> Actual.Kind.SPEECH
         }
         for ((kind, events) in events.groupBy { group(it.kind) }) {
             var start = 0L; var last = 0L; var count = 0
@@ -91,6 +94,7 @@ object PlannerDay {
         val cards: Double = 0.0,
         val shadow: Double = 0.0,
         val sayItAgain: Double = 0.0,
+        val speech: Double = 0.0,
         val test: Double = 0.0,
     ) {
         fun amount(kind: StudyPlan.Kind): Double = when (kind) {
@@ -101,6 +105,7 @@ object PlannerDay {
             StudyPlan.Kind.REVIEW -> words + expressions + cards + shadow
             StudyPlan.Kind.SHADOW -> shadow
             StudyPlan.Kind.SAY_IT_AGAIN -> sayItAgain
+            StudyPlan.Kind.SPEECH -> speech
             StudyPlan.Kind.TEST -> test
         }
     }
@@ -109,7 +114,7 @@ object PlannerDay {
      * A day's totals from the logs that already count them: the talk meter
      * (the ring's seconds), the practice log's FINISHED counts — the numbers
      * the daily goals are judged by, so postponing a card is not doing it —
-     * and finished say-it-again runs and tests.
+     * and finished say-it-again runs, saved Speech takes and tests.
      */
     fun totals(talkSeconds: Int, log: PracticeLog.Day?, events: List<ActivityEventLog.Event>,
                testFinished: Boolean): Totals {
@@ -121,6 +126,7 @@ object PlannerDay {
             cards = d.drillDone.toDouble(),
             shadow = d.shadowDone.toDouble(),
             sayItAgain = events.count { it.kind == ActivityEventLog.Kind.SAY_IT_AGAIN }.toDouble(),
+            speech = events.count { it.kind == ActivityEventLog.Kind.SPEECH }.toDouble(),
             test = if (testFinished) 1.0 else 0.0,
         )
     }
@@ -171,6 +177,7 @@ object PlannerDay {
                 Actual.Kind.REVIEW -> kinds.none { it == StudyPlan.Kind.REVIEW || it.isFoldedIntoReview }
                 Actual.Kind.SHADOW -> StudyPlan.Kind.SHADOW !in kinds
                 Actual.Kind.SAY_IT_AGAIN -> StudyPlan.Kind.SAY_IT_AGAIN !in kinds
+                Actual.Kind.SPEECH -> StudyPlan.Kind.SPEECH !in kinds
                 Actual.Kind.SCENE -> true
             }
         }
