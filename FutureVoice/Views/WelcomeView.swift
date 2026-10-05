@@ -69,7 +69,7 @@ struct WelcomeView: View {
         [
             StoryBeat(text: explain("So much you want to say,\nall of it still in your head.")),
             StoryBeat(text: explain("Why is it so hard\njust to start talking...")),
-            StoryBeat(text: explain("School, classes, tutors, books, apps...\nYou tried so hard... didn't you?")),
+            StoryBeat(text: explain("School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?")),
             StoryBeat(text: explain("Hi. It's me.\nYou, already fluent.")),
             StoryBeat(text: explain("I'll call you.\nLet's talk five minutes a day."),
                       glimpse: ("phone.fill", explain("Talk like a phone call"))),
@@ -131,11 +131,11 @@ struct WelcomeView: View {
     static func duration(of b: StoryBeat) -> Double {
         if let hold = b.hold { return hold }
         let chars = Double(b.text.count)
-        return min(9, max(5.5, 3.2 + chars * 0.08))
+        return min(6.5, max(3.8, 2.2 + chars * 0.06))
     }
 
     private func step() {
-        withAnimation(.easeInOut(duration: 1.1)) { beat = min(beat + 1, Self.beats.count) }
+        withAnimation(.easeInOut(duration: 0.7)) { beat = min(beat + 1, Self.beats.count) }
     }
 
     /// From the first line again — the closing frame is where the film was
@@ -145,7 +145,7 @@ struct WelcomeView: View {
         skipped = false
         doorOpen = false
         autoplay = true
-        withAnimation(.easeInOut(duration: 1.1)) { beat = 0 }
+        withAnimation(.easeInOut(duration: 0.7)) { beat = 0 }
         tick += 1
     }
 
@@ -192,12 +192,15 @@ struct WelcomeView: View {
                         VStack(spacing: 26) {
                             RevealText(text: Self.closingLine, still: reduceMotion)
                             // The film's own chips, gathered.
-                            CenteredFlow(spacing: 8, lineSpacing: 10) {
+                            CenteredFlow(spacing: 6, lineSpacing: 8) {
                                 ForEach(Array(Self.beats.compactMap(\.glimpse).enumerated()), id: \.offset) { i, g in
                                     Glimpse(symbol: g.symbol, label: g.label,
-                                            delay: 2.2 + Double(i) * 0.15, still: reduceMotion)
+                                            delay: 1.5 + Double(i) * 0.12, compact: true, still: reduceMotion)
                                 }
                             }
+                            // Full width, or the chips wrap to the headline's
+                            // (narrower, balanced) width and stack one a row.
+                            .frame(maxWidth: .infinity)
                         }
                     } else {
                         let b = Self.beats[beat]
@@ -232,7 +235,7 @@ struct WelcomeView: View {
             guard isClosing else { doorOpen = false; return }
             // The orb opens into the button once the last line has landed;
             // straight away for someone who skipped or came to sign in.
-            let wait = (skipped || showingSignIn || reduceMotion) ? 0.3 : 2.6
+            let wait = (skipped || showingSignIn || reduceMotion) ? 0.3 : 1.9
             try? await Task.sleep(for: .seconds(wait))
             guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.9)) { doorOpen = true }
@@ -270,7 +273,7 @@ struct WelcomeView: View {
                     signInArea
                         // Below the account buttons when they are up.
                         .padding(.top, showingSignIn ? 84 : 14)
-                        .modifier(Arrive(delay: (skipped || showingSignIn) ? 0.3 : 3.3, still: reduceMotion))
+                        .modifier(Arrive(delay: (skipped || showingSignIn) ? 0.3 : 2.5, still: reduceMotion))
                 }
             }
             .frame(minHeight: 110, alignment: .top)

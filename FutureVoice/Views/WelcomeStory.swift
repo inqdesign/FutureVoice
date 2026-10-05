@@ -143,15 +143,54 @@ struct RevealText: View {
         text.components(separatedBy: "\n").map { line in
             line.contains(" ")
                 ? line.split(separator: " ").map(String.init)
-                : line.map(String.init)
+                : Self.unspacedPieces(line)
         }
+    }
+
+    /// Where a line without spaces (Japanese, Chinese) may break: at word
+    /// boundaries, never inside a word. Punctuation rides on the word before
+    /// it (an opening bracket on the word after), and in Japanese a run of
+    /// hiragana — a particle, an ending — stays with the word it follows, so
+    /// the pieces come out phrase-sized (間違えるところは · 毎日 · もう一度。).
+    static func unspacedPieces(_ line: String) -> [String] {
+        let ns = line as NSString
+        let hasKana = line.unicodeScalars.contains { (0x3040...0x30FF).contains($0.value) }
+        let locale = Locale(identifier: hasKana ? "ja" : "zh") as CFLocale
+        let tokenizer = CFStringTokenizerCreate(nil, line as CFString,
+                                                CFRange(location: 0, length: ns.length),
+                                                kCFStringTokenizerUnitWordBoundary, locale)
+        var raw: [String] = []
+        while CFStringTokenizerAdvanceToNextToken(tokenizer).rawValue != 0 {
+            let r = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+            raw.append(ns.substring(with: NSRange(location: r.location, length: r.length)))
+        }
+        func isPunct(_ s: String) -> Bool {
+            s.unicodeScalars.allSatisfy { CharacterSet.punctuationCharacters.contains($0) || CharacterSet.symbols.contains($0) || $0 == "…" }
+        }
+        func isHiragana(_ s: String) -> Bool {
+            !s.isEmpty && s.unicodeScalars.allSatisfy { (0x3040...0x309F).contains($0.value) }
+        }
+        let opening: Set<String> = ["「", "『", "（", "(", "【", "〈", "《", "“", "‘"]
+        var out: [String] = []
+        var leading = ""
+        for t in raw where !t.trimmingCharacters(in: .whitespaces).isEmpty {
+            if opening.contains(t) { leading += t; continue }
+            if let last = out.last, isPunct(t) || (hasKana && isHiragana(t) && !isPunct(String(last.suffix(1)))) {
+                out[out.count - 1] = last + t
+            } else {
+                out.append(leading + t)
+                leading = ""
+            }
+        }
+        if !leading.isEmpty { out.append(leading) }
+        return out.isEmpty ? [line] : out
     }
 
     var body: some View {
         let lines = self.lines
         let total = lines.reduce(0) { $0 + $1.count }
         // The whole line arrives in about a second and a half however long it is.
-        let stagger = min(0.18, 2.4 / Double(max(total, 1)))
+        let stagger = min(0.12, 1.5 / Double(max(total, 1)))
         let spaced = text.contains(" ")
         VStack(spacing: 6) {
             ForEach(Array(lines.enumerated()), id: \.offset) { li, tokens in
@@ -159,12 +198,14 @@ struct RevealText: View {
                 CenteredFlow(spacing: spaced ? 7 : 0, lineSpacing: 6) {
                     ForEach(Array(tokens.enumerated()), id: \.offset) { ti, token in
                         Text(token)
+                            .layoutValue(key: LineCloser.self,
+                                         value: token.count == 1 && "、。，．！？…」』）〉》,.!?:;)".contains(token))
                             .font(font)
                             .foregroundStyle(Color.storyInk)
                             .opacity(shown ? 1 : 0)
                             .blur(radius: shown || still ? 0 : 9)
                             .offset(y: shown || still ? 0 : 7)
-                            .animation(.easeOut(duration: still ? 0.6 : 1.3)
+                            .animation(.easeOut(duration: still ? 0.4 : 0.9)
                                 .delay(still ? 0 : Double(before + ti) * stagger),
                                        value: shown)
                     }
@@ -180,13 +221,18 @@ struct RevealText: View {
     }
 }
 
+/// Marks a token that may not begin a row (closing punctuation).
+struct LineCloser: LayoutValueKey {
+    static let defaultValue = false
+}
+
 /// Lays its children out in rows, wrapping at the width, each row centred.
 struct CenteredFlow: Layout {
     var spacing: CGFloat = 6
     var lineSpacing: CGFloat = 4
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = rows(for: subviews, width: proposal.width ?? .infinity)
+        let rows = balancedRows(for: subviews, width: proposal.width ?? .infinity)
         let width = rows.map(\.width).max() ?? 0
         let height = rows.map(\.height).reduce(0, +) + lineSpacing * CGFloat(max(rows.count - 1, 0))
         return CGSize(width: min(width, proposal.width ?? width), height: height)
@@ -194,7 +240,7 @@ struct CenteredFlow: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var y = bounds.minY
-        for row in rows(for: subviews, width: bounds.width) {
+        for row in balancedRows(for: subviews, width: bounds.width) {
             var x = bounds.minX + (bounds.width - row.width) / 2
             for i in row.indices {
                 let size = subviews[i].sizeThatFits(.unspecified)
@@ -206,6 +252,27 @@ struct CenteredFlow: Layout {
         }
     }
 
+    /// Rows that wrap EVENLY: when the content needs more than one row, the
+    /// narrowest width that still fits in that many rows — so a wrapped line
+    /// splits into halves of a similar length instead of leaving one word
+    /// alone on the last row (CSS's `text-wrap: balance`).
+    private func balancedRows(for subviews: Subviews, width: CGFloat) -> [Row] {
+        let greedy = rows(for: subviews, width: width)
+        guard greedy.count > 1, width.isFinite else { return greedy }
+        var lo = subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        var hi = width
+        for _ in 0..<14 where hi - lo > 0.5 {
+            let mid = (lo + hi) / 2
+            if rows(for: subviews, width: mid).count <= greedy.count { hi = mid } else { lo = mid }
+        }
+        return rows(for: subviews, width: hi)
+    }
+
+    /// A one-character token that must stay at the end of the row before.
+    private static func closesLine(_ view: LayoutSubview) -> Bool {
+        view[LineCloser.self]
+    }
+
     private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
 
     private func rows(for subviews: Subviews, width: CGFloat) -> [Row] {
@@ -214,7 +281,8 @@ struct CenteredFlow: Layout {
         for i in subviews.indices {
             let size = subviews[i].sizeThatFits(.unspecified)
             let added = row.indices.isEmpty ? size.width : row.width + spacing + size.width
-            if added > width && !row.indices.isEmpty {
+            // Closing punctuation never starts a row (、。，」… in CJK).
+            if added > width && !row.indices.isEmpty && !Self.closesLine(subviews[i]) {
                 rows.append(row)
                 row = Row(indices: [i], width: size.width, height: size.height)
             } else {
@@ -234,14 +302,17 @@ struct Glimpse: View {
     let symbol: String
     let label: String
     var delay: Double = 2.8
+    /// The closing frame gathers five of these; smaller, so they pair up
+    /// two to a row in the wordier languages instead of stacking.
+    var compact = false
     var still: Bool = false
 
     var body: some View {
         Label(label, systemImage: symbol)
-            .font(.subheadline.weight(.medium))
+            .font(compact ? .caption.weight(.medium) : .subheadline.weight(.medium))
             .foregroundStyle(Color.storyInk.opacity(0.75))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.horizontal, compact ? 11 : 14)
+            .padding(.vertical, compact ? 6 : 8)
             .background(Capsule().fill(.white.opacity(0.55)))
             .overlay(Capsule().strokeBorder(Color.storyInk.opacity(0.10), lineWidth: 0.5))
             .modifier(Arrive(delay: delay, still: still))
@@ -289,13 +360,15 @@ struct FutureselfDoor: View {
                 Futureself(mode: mode, level: level, theme: .blue, virtualHeight: 64)
                     .environment(\.colorScheme, .light)
                     .frame(width: w, height: h)
-                    // As it opens, the surface fills with the app's blue and
-                    // becomes an ordinary primary button.
+                    // ONE motion, not two: the fill rides the same animation
+                    // as the stretch (no curve of its own), while every cell
+                    // lights blue — so the pixels thicken into the solid
+                    // button as it widens, instead of a wide orb and then a
+                    // shape fading in on top of it.
                     .overlay {
                         Capsule()
                             .fill(FutureselfTheme.blue.tint)
                             .opacity(open ? 1 : 0)
-                            .animation(.easeInOut(duration: 0.8).delay(open ? 0.3 : 0), value: open)
                     }
                     .clipShape(Capsule())
                     .overlay(Capsule().strokeBorder(Color.storyInk.opacity(open ? 0 : 0.10), lineWidth: 0.5))
@@ -304,7 +377,7 @@ struct FutureselfDoor: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .opacity(open ? 1 : 0)
-                            .animation(.easeOut(duration: 0.5).delay(open ? 0.7 : 0), value: open)
+                            .animation(.easeOut(duration: 0.35).delay(open ? 0.6 : 0), value: open)
                     }
             }
             .buttonStyle(.plain)
@@ -316,13 +389,19 @@ struct FutureselfDoor: View {
             guard !still else { return }
             mode = .speaking
             // A speaking voice's energy: uneven syllables, not a sine.
-            let end = Date().addingTimeInterval(2.6)
-            while Date() < end && !Task.isCancelled {
+            let end = Date().addingTimeInterval(1.8)
+            while Date() < end && !Task.isCancelled && !open {
                 level = Float.random(in: 0.25...0.85)
                 try? await Task.sleep(for: .milliseconds(140))
             }
+            guard !open else { return }
             level = 0
             mode = .idle
+        }
+        .onChange(of: open) { _, isOpen in
+            // Every cell lights as it opens; back to rest if it closes.
+            mode = isOpen ? .speaking : .idle
+            level = isOpen ? 1 : 0
         }
     }
 }

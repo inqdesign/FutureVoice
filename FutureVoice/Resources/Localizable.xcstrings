@@ -29353,10 +29353,46 @@
     },
     "Daily review · Shadowing" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tägliches Wiederholen · Nachsprechen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repaso diario · Shadowing"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Révision quotidienne · Shadowing"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日の復習 · シャドーイング"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "매일 복습 · 따라 말하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日复习 · 跟读"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日複習 · 跟讀"
           }
         }
       }
@@ -35365,10 +35401,46 @@
     },
     "Every line, said naturally" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Satz, natürlicher"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada frase, más natural"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque phrase, plus naturelle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一文ずつ、自然な言い方に"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "매 문장, 자연스러운 말로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每一句，换成地道的说法"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每一句，都換成自然的說法"
           }
         }
       }
@@ -36567,10 +36639,46 @@
     },
     "Everything we talk about\nbecomes your own textbook." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles, worüber wir reden,\nwird zu deinem eigenen Lehrbuch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo lo que hablemos\nse convierte en tu propio libro de texto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout ce qu’on se dit\ndevient ton propre manuel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私たちの会話が\n君だけの教材になる。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "우리가 나눈 대화는\n너만의 교재가 돼."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我们聊过的每一段对话，\n都会变成你专属的教材。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我們聊過的每段對話，\n都會變成你專屬的教材。"
           }
         }
       }
@@ -44238,10 +44346,46 @@
     },
     "Hi. It's me.\nYou, already fluent." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hi, ich bin’s.\nDu – nur schon fließend."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hola, soy yo.\nTú, pero ya con fluidez."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salut, c’est moi.\nToi, qui parles déjà couramment."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "こんにちは、私だよ。\nもうすらすら話せるようになった、君。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "안녕, 나야.\n이미 유창하게 말하는 너."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "嗨，是我。\n已经能流利开口的你。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "嗨，是我。\n已經能流利開口的你。"
           }
         }
       }
@@ -51723,10 +51867,46 @@
     },
     "Until the day you become me,\nlet's do this together." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis zu dem Tag, an dem du ich bist,\nmachen wir das zusammen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hasta el día en que seas yo,\nsigamos tú y yo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jusqu’au jour où tu deviendras moi,\nfaisons-le ensemble."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "君が私になるその日まで、\n一緒にやっていこう。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "네가 내가 되는 날까지,\n우리 같이 해보자."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直到你成为我的那一天，\n我们一起加油吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直到你成為我的那一天，\n我們一起努力吧。"
           }
         }
       }
@@ -73323,10 +73503,46 @@
     },
     "Practice while you watch yourself,\nuntil you feel sure, until it feels natural." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Üb, während du dich selbst siehst.\nBis du dich sicher fühlst,\nbis es sich natürlich anfühlt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practica mientras te ves.\nHasta ganar confianza,\nhasta que salga natural."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entraîne-toi en te regardant.\nJusqu’à prendre confiance,\njusqu’à ce que ça devienne naturel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の姿を見ながら練習しよう。\n自信がつくまで、\n自然に話せるまで。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "너를 보면서 연습해 보자.\n자신감이 생길 때까지,\n자연스러워질 때까지."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看着自己练吧。\n练到有自信，\n练到自然为止。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看著自己練習吧。\n練到有自信，\n練到自然為止。"
           }
         }
       }
@@ -76283,10 +76499,46 @@
     },
     "I'll call you.\nLet's talk five minutes a day." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich ruf dich an.\nLass uns jeden Tag fünf Minuten reden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yo te llamo.\nHablemos cinco minutos cada día."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je vais t’appeler.\nParlons cinq minutes par jour."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私から電話するね。\n毎日5分、話そう。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "내가 전화 걸어 줄게.\n매일 5분, 나와 대화하자."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我会给你打电话。\n每天五分钟，和我聊聊吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我會打電話給你。\n每天五分鐘，跟我聊聊吧。"
           }
         }
       }
@@ -81546,10 +81798,46 @@
     },
     "So much you want to say,\nall of it still in your head." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So vieles, was du sagen willst,\nsteckt schon in deinem Kopf …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tienes tanto que decir,\ntodo ahí, en tu cabeza..."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as tant de choses à dire,\ntoutes là, dans ta tête…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "言いたいことは\n頭の中にいっぱいあるのに"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "하고 싶은 말은\n머릿속에 가득한데"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想说的话\n明明都在脑子里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想說的話\n明明都在腦子裡"
           }
         }
       }
@@ -82654,10 +82942,46 @@
     },
     "Speech practice" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rede üben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Práctica de discursos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entraînement au discours"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スピーチ練習"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "스피치 연습"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演讲练习"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演講練習"
           }
         }
       }
@@ -85010,10 +85334,46 @@
     },
     "Stumble, get it wrong, that's fine.\nI'll show you how it goes." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stocken, Fehler machen – alles okay.\nIch zeig dir alles."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si te trabas o te equivocas, no pasa nada.\nYo te lo enseño todo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bafouiller, te tromper, ce n’est pas grave.\nJe vais tout t’apprendre."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詰まっても、間違えても大丈夫。\n全部教えてあげる。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "더듬어도, 틀려도 괜찮아.\n내가 다 알려줄게."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡壳也好，说错也好，都没关系。\n我都会教你。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡住也好、說錯也好，都沒關係。\n我全部教你。"
           }
         }
       }
@@ -86403,10 +86763,46 @@
     },
     "Talk like a phone call" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reden wie am Telefon"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habla como en una llamada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parle comme au téléphone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "電話みたいに会話"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "전화하듯 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像打电话一样聊天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像打電話一樣聊天"
           }
         }
       }
@@ -93879,10 +94275,46 @@
     },
     "Why is it so hard\njust to start talking..." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doch sobald du den Mund aufmachst,\nwarum ist es dann so schwer …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pero a la hora de hablar,\n¿por qué cuesta tanto...?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mais au moment de parler,\npourquoi c’est si difficile…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いざ口を開こうとすると\nどうしてこんなに難しいんだろう…"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "막상 입을 떼기가\n왜 그렇게 힘든지..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可一张口\n怎么就这么难呢……"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可是一開口\n怎麼就這麼難呢……"
           }
         }
       }
@@ -103664,10 +104096,46 @@
     },
     "What you keep getting wrong comes back every day,\nand you say it until it sticks." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was dir oft danebengeht, kommt täglich wieder,\nbis es von allein sitzt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que más se te resiste vuelve cada día,\nhasta que te salga solo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce que tu rates souvent revient chaque jour,\njusqu’à ce que ça sorte tout seul."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく間違えるところは毎日もう一度。\n口が覚えるまで言ってみよう。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "자주 틀리는 건 매일 다시,\n입에 붙을 때까지 말해 보자."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常出错的地方，每天再练一遍，\n练到张口就来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常說錯的地方，每天再練一次，\n練到脫口而出為止。"
           }
         }
       }
@@ -106726,12 +107194,48 @@
         }
       }
     },
-    "School, classes, tutors, books, apps...\nYou tried so hard... didn't you?" : {
+    "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schule, Kurse, YouTube, Bücher, Apps …\nDu hast dich echt reingehängt, oder?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colegio, clases, YouTube, libros, apps...\nTe has esforzado muchísimo, ¿verdad?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "École, cours, YouTube, livres, applis…\nTu as tellement travaillé, pas vrai ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学校、塾、YouTube、本、アプリ…\nほんとに頑張ってきたよね。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "학교, 학원, 전화영어, 책, 앱...\n참 열심히 했는데... 그치?"
+            "value" : "학교, 학원, 유튜브, 책, 앱...\n참 열심히 했는데... 그치?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学校、培训班、YouTube、书、App……\n你真的很努力了，对吧？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "學校、補習班、YouTube、書、App……\n你真的很努力了，對吧？"
           }
         }
       }
@@ -115758,10 +116262,46 @@
     },
     "Your own textbook" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein eigenes Lehrbuch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu propio libro de texto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton propre manuel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分だけの教材"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "나만의 교재"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "专属于你的教材"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "專屬於你的教材"
           }
         }
       }
