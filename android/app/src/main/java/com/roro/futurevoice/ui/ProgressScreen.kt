@@ -576,7 +576,7 @@ private val PAGE_GUTTER = 20.dp
  * so a horizontally scrolling row reaches the screen edges. The row's content
  * padding puts the gutter back inside the scroll.
  */
-private fun Modifier.fullBleed(bleed: androidx.compose.ui.unit.Dp): Modifier =
+internal fun Modifier.fullBleed(bleed: androidx.compose.ui.unit.Dp): Modifier =
     this.layout { measurable, constraints ->
         val extra = bleed.roundToPx() * 2
         val placeable = measurable.measure(constraints.copy(

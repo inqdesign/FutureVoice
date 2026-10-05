@@ -73,7 +73,12 @@ enum class Shelf(val labelRes: Int) {
 fun ShelfChips(selected: Shelf, counts: (Shelf) -> Int?, onSelect: (Shelf) -> Unit) {
     // Scrolls sideways: four chips with counts don't fit a narrow phone in
     // every language (iOS's chip bar is a horizontal ScrollView too).
-    Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+    // Runs to the screen edges (as Progress's skill chips do): the page's
+    // gutter goes INSIDE the scroll, so the last chip isn't cut off 20 dp
+    // short of the edge.
+    Row(Modifier.fullBleed(PAGE_GUTTER)
+            .horizontalScroll(androidx.compose.foundation.rememberScrollState())
+            .padding(horizontal = PAGE_GUTTER),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Shelf.entries.forEach { s ->
             // Neutral for every shelf (iOS `912d6f4`): the page keeps colour

@@ -74,26 +74,26 @@ fun IosChip(label: String, selected: Boolean, count: Int? = null,
     val fill = if (selected) selectedFill ?: scheme.onSurface else AppSurfaces.card
     val ink = if (selected) (if (selectedFill != null) Color.White else scheme.surface) else scheme.onSurface
     val countInk = if (selected) ink.copy(alpha = 0.6f) else scheme.onSurfaceVariant
-    Text(
-        buildAnnotatedString {
-            append(label)
-            if (count != null) {
-                append(" ")
-                withStyle(SpanStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                    color = countInk, baselineShift = BaselineShift(0.45f))) { append("$count") }
-            }
-        },
-        style = MaterialTheme.typography.bodyLarge,
-        fontWeight = FontWeight.Normal,
-        color = ink,
-        maxLines = 1,
+    // The count is its own Text NUDGED up, not a raised span inside the
+    // label: a baseline-shifted span grew the line, so a chip with a count
+    // (Practice) stood taller than one without (Progress).
+    androidx.compose.foundation.layout.Row(
         modifier = Modifier
             .clip(CircleShape)
             .background(fill)
             .clickable(role = Role.Tab, onClick = onClick)
             .defaultMinSize(minHeight = 37.dp)
             .padding(horizontal = 16.dp, vertical = 7.dp),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Normal,
+            color = ink, maxLines = 1)
+        if (count != null) {
+            Text("$count", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = countInk,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 4.dp).offset(y = (-6).dp))
+        }
+    }
 }
 
 /**
