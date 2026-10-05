@@ -139,24 +139,6 @@ struct SpeechPrompterView: View {
                                speed: session.speed,
                                voiceActive: { [session] in session.voiceActive },
                                held: holding)
-                // Steady speed: press and hold the text to stop it, let go
-                // to carry on (founder, 2026-10-05). Following the voice
-                // already stops when the reader does.
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in
-                            guard !holding, isRecording, !session.followVoice else { return }
-                            holding = true
-                            session.holding = true
-                            HapticEngine.selection()
-                        }
-                        .onEnded { _ in
-                            guard holding else { return }
-                            holding = false
-                            session.holding = false
-                        }
-                )
                 .overlay(alignment: .top) {
                     if holding {
                         Label("Paused", systemImage: "pause.fill")
@@ -178,6 +160,24 @@ struct SpeechPrompterView: View {
                 .frame(maxHeight: .infinity)
         }
         .coordinateSpace(.named(Self.screenSpace))
+        // Steady speed: press and hold anywhere on the screen to stop the
+        // text, let go to carry on (founder, 2026-10-05; first on the text
+        // only). Following the voice already stops when the reader does.
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard !holding, isRecording, !session.followVoice else { return }
+                    holding = true
+                    session.holding = true
+                    HapticEngine.selection()
+                }
+                .onEnded { _ in
+                    guard holding else { return }
+                    holding = false
+                    session.holding = false
+                }
+        )
         .background(Color(.systemBackground))
         .overlay { overlay }
         }
