@@ -1337,7 +1337,6 @@ internal fun HomeScreen(
                             onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
                             onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                             onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc) },
-                            onWatch = onWatch,
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
                         )
@@ -1579,7 +1578,6 @@ private fun DiscoverSection(
     onPickScenario: (Scenario) -> Unit,
     /** A ready-made situation, possibly not saved yet (`StarterSituation`). */
     onPickStarter: (Scenario) -> Unit = {},
-    onWatch: (String) -> Unit,
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
     /** The full collection — the Watch tab, which is where they all live. */
     onAllScenarios: () -> Unit = {},
@@ -1818,11 +1816,6 @@ private fun DiscoverSection(
                                 }
                             },
                             onLongClick = { rowMenu = true }),
-                        trailing = {
-                            TextButton(onClick = { onWatch(sc.id) }) {
-                                Text(stringResource(R.string.watch))
-                            }
-                        },
                     )
                     DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
                         DropdownMenuItem(
