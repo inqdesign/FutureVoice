@@ -224,8 +224,13 @@ object CapturePractice {
             PracticeCaptureFlags.talkDetailChapter = chapter
         },
     ) { c ->
+        // iOS: the cover modes are the WRAP-UP of a call just ended (Done,
+        // "Review book", no Continue); the chapter modes are the book opened
+        // from the shelf (the talk's title, ⋯, Continue beside Replay).
         TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = lang(c),
-            level = level(c), onBack = {})
+            level = level(c), onBack = {},
+            onDone = if (chapter == null) ({}) else null,
+            onContinue = if (chapter == null) null else ({ _: String -> }))
     }
 
     private fun sayAgain(stage: String) = mode(
@@ -425,7 +430,7 @@ object CapturePractice {
             },
         ) { c ->
             TalkDetailScreen(sessionId = CaptureSeed.japaneseTalkSession.id, language = "ja",
-                level = level(c), onBack = {})
+                level = level(c), onBack = {}, onContinue = {})
         },
         // The English talk's transcript (iOS `TalkTranscriptView` on the
         // talk-detail session) — the talk book's Replay page, corrections

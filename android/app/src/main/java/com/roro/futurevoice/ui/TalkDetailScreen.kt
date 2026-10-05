@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -313,24 +315,70 @@ fun TalkDetailScreen(
                 }))
     }
 
+    var confirmDelete by remember { mutableStateOf(false) }
+    if (confirmDelete) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.delete_this_talk)) },
+            text = { Text(stringResource(R.string.the_conversation_its_score_review_cards_and_audio_are_remove_1fe16e)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    scope.launch {
+                        SessionStore.shared(context).delete(s.id, language)
+                        StoreEvents.bump()
+                        onBack()
+                    }
+                }) { Text(stringResource(R.string.delete_talk), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
-            // "Review book", centred — as on iOS. The talk's own title is the
-            // cover's headline right below; repeating it up here said it twice.
+            // iOS's rule: the wrap-up of a call that just ended is the
+            // "Review book" (with Done); a book opened from the shelf carries
+            // the talk's own title and the ⋯ menu.
             androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.review_book),
-                    style = MaterialTheme.typography.titleMedium) },
+                title = { Text(if (onDone != null) stringResource(R.string.review_book)
+                    else s.displayTitle ?: stringResource(R.string.conversation),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     if (onDone == null) IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 },
                 actions = {
-                    BookExportMenu(
+                    // Post-talk the page is the wrap-up: Done alone, as on iOS.
+                    if (onDone == null) BookExportMenu(
                         document = { BookDocument.make(context, s) },
                         nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
-                        targetLanguage = language)
+                        targetLanguage = language,
+                        extra = { close ->
+                            val archived = s.archivedAt != null
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(stringResource(if (archived) R.string.unarchive else R.string.archive)) },
+                                leadingIcon = { Icon(if (archived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                                    contentDescription = null) },
+                                onClick = {
+                                    close()
+                                    scope.launch {
+                                        SessionStore.shared(context).setArchived(s.id, !archived, language)
+                                        StoreEvents.bump()
+                                    }
+                                })
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(stringResource(R.string.delete_talk),
+                                    color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error) },
+                                onClick = { close(); confirmDelete = true })
+                        })
                     if (onDone != null) TextButton(onClick = onDone) {
                         Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
                     }

@@ -610,7 +610,7 @@ object CaptureTalk {
         }) {
             id?.let {
                 TalkDetailScreen(sessionId = it, language = LanguageScope.active(context),
-                    level = CefrLevel.B1, onBack = {})
+                    level = CefrLevel.B1, onBack = {}, onContinue = {})
             }
         }
     }
