@@ -237,9 +237,14 @@ final class SpeechTakeSession: ObservableObject {
             lastChunkAt = clock
             chunkReads.append(readPiece(piece))
         }
-        // One second is enough once the last line is reached: there is
-        // nothing left to say (it was 2.2 s, and the result waited on it).
-        if cursor >= track.words.count - 1, quietFor > 1.0, clock > 3 {
+        // Finished = the LAST word was heard, then a second of quiet. Being
+        // ON the last word isn't finished: a breath before it ("…바로 그 첫,
+        // 연습입니다") ended the take with the final word unsaid (founder,
+        // 2026-10-05). If the recognizer misses the last word, the take still
+        // ends — after a longer pause.
+        let lastHeard = cursor >= track.words.count
+        let onLast = cursor >= track.words.count - 1
+        if (lastHeard && quietFor > 1.0) || (onLast && quietFor > 3.0), clock > 3 {
             Task { await stop() }
             return
         }
