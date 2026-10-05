@@ -1009,7 +1009,6 @@
     <string name="made_from_this_week_s_talks">"用这周的对话做成"</string>
     <string name="make_a_situation">"创建情境"</string>
     <string name="make_it_yours">"变成自己的"</string>
-    <string name="make_your_own_situation">"自己创建情境"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在念几个版本，大约需要30秒。请不要关闭这个界面。"</string>
     <string name="making_it_yours">"变成你自己的"</string>
     <string name="making_your_test">"正在准备测验…"</string>
@@ -2507,8 +2506,6 @@
     <string name="your_trial_ends_on_d70dbd">"试用在%s结束。"</string>
     <!-- "Your trial is on: %lld minutes of talk over the next %lld days. Your plan's own monthly talk time starts when the trial converts." -->
     <string name="your_trial_is_on_lld_minutes_of_talk_over_the_next_lld_days_4dffb5">"试用已开始：接下来%2$d天有%1$d分钟通话。转为付费后，改用方案自己的每月通话时间。"</string>
-    <!-- "Your trial starts — a week's worth of talk, and all the review it produces." -->
-    <string name="your_trial_starts_a_week_s_worth_of_talk_and_all_the_review_18afb8">"试用开始。一周份的通话，加上它带来的所有复习。"</string>
     <!-- 'Your trial starts: %lld minutes of talk to use across the %lld days, and all the review it produces.' -->
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"试用开始：%2$d天内可用的%1$d分钟通话，加上它带来的所有复习。"</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->

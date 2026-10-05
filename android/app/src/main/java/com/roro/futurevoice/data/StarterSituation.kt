@@ -80,7 +80,7 @@ data class StarterSituation(
         val all: List<StarterSituation> = listOf(
             StarterSituation(
                 id = "introduce-yourself", icon = "hand.wave.fill",
-                title = R.string.starter_meeting_title, role = R.string.starter_meeting_role,
+                title = R.string.meeting_someone_new, role = R.string.someone_you_just_met,
                 showsRole = false,
                 notes = "You've just met the learner for the first time. $OPEN_NOTE",
                 openers = mapOf(
@@ -91,7 +91,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "order-cafe", icon = "cup.and.saucer.fill",
-                title = R.string.starter_cafe_title, role = R.string.starter_cafe_role,
+                title = R.string.at_a_caf, role = R.string.a_barista,
                 notes = "You work behind the counter at a café. $OPEN_NOTE",
                 openers = mapOf(
                     "en" to listOf("Hi! What can I get you?", "Hey! What are you having?"),
@@ -101,7 +101,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "order-restaurant", icon = "fork.knife",
-                title = R.string.starter_restaurant_title, role = R.string.starter_restaurant_role,
+                title = R.string.at_a_restaurant, role = R.string.a_server,
                 notes = "You're a server at a restaurant. $OPEN_NOTE",
                 openers = mapOf(
                     "en" to listOf("Hi! Can I get you something to drink to start?", "Hi! Have you decided, or do you need a minute?"),
@@ -111,7 +111,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "ask-directions", icon = "map.fill",
-                title = R.string.starter_street_title, role = R.string.starter_street_role,
+                title = R.string.on_the_street, role = R.string.a_passerby,
                 notes = "You're a friendly local walking down the street. The learner stops you to ask something — you speak only once they have, and help the way a kind stranger would. $OPEN_NOTE",
                 learnerFirst = mapOf(
                     "en" to "Excuse me, how do I get to the [station]?",
@@ -119,10 +119,10 @@ data class StarterSituation(
                     "ja" to "すみません、[駅]はどう行けばいいですか？",
                     "de" to "Entschuldigung, wie komme ich zum [Bahnhof]?",
                 ),
-                learnerFirstMeaning = R.string.starter_street_first_meaning),
+                learnerFirstMeaning = R.string.excuse_me_how_do_i_get_to_the_station),
             StarterSituation(
                 id = "shopping", icon = "bag.fill",
-                title = R.string.starter_shop_title, role = R.string.starter_shop_role,
+                title = R.string.at_a_clothing_store, role = R.string.a_shop_assistant,
                 notes = "You work at a clothing store. $OPEN_NOTE",
                 openers = mapOf(
                     "en" to listOf("Hi! Looking for anything in particular?", "Hi! Is there anything I can help you find?"),
@@ -132,7 +132,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "doctor-appointment", icon = "cross.case.fill",
-                title = R.string.starter_clinic_title, role = R.string.starter_clinic_role,
+                title = R.string.calling_a_clinic, role = R.string.a_clinic_receptionist,
                 notes = "You answer the phone at a doctor's clinic; the learner is calling. $OPEN_NOTE",
                 openers = mapOf(
                     "en" to listOf("Hello, this is the clinic. How can I help?", "Hi, clinic speaking. What can I do for you?"),
@@ -142,7 +142,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "hotel-checkin", icon = "bed.double.fill",
-                title = R.string.starter_hotel_title, role = R.string.starter_hotel_role,
+                title = R.string.at_a_hotel, role = R.string.a_front_desk_clerk,
                 notes = "You work at a hotel front desk. $OPEN_NOTE",
                 openers = mapOf(
                     "en" to listOf("Hi! Checking in?", "Hello! How can I help you?"),
@@ -152,7 +152,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "train-ticket", icon = "tram.fill",
-                title = R.string.starter_station_title, role = R.string.starter_station_role,
+                title = R.string.at_the_train_station, role = R.string.a_ticket_agent,
                 notes = "You work at the ticket counter of a train station. $OPEN_NOTE",
                 openers = mapOf(
                     "en" to listOf("Hi! Where are you headed?", "Hi, what can I do for you?"),
@@ -162,7 +162,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "make-plans", icon = "person.2.fill",
-                title = R.string.starter_friend_title, role = R.string.starter_friend_role,
+                title = R.string.with_a_friend, role = R.string.a_friend,
                 showsRole = false,
                 notes = "You're the learner's friend, catching up casually. Speak like a friend. $OPEN_NOTE",
                 openers = mapOf(
@@ -173,7 +173,7 @@ data class StarterSituation(
                 )),
             StarterSituation(
                 id = "neighbor-small-talk", icon = "house.fill",
-                title = R.string.starter_neighbor_title, role = R.string.starter_neighbor_role,
+                title = R.string.with_a_neighbor, role = R.string.a_neighbor,
                 showsRole = false,
                 notes = "You're the learner's friendly neighbor, bumping into them near home. $OPEN_NOTE",
                 openers = mapOf(

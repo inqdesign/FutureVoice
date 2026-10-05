@@ -378,7 +378,7 @@ fun TalkDetailScreen(
                             // (`Session.coached`, iOS `practiceBlock`).
                             HorizontalDivider(Modifier.padding(start = 20.dp))
                             GroupLabel(Icons.Outlined.Lightbulb, stringResource(R.string.practice_call))
-                            Text(stringResource(R.string.practice_call_note),
+                            Text(stringResource(R.string.you_practiced_with_suggestions_on_screen_calls_without_coach_f72398),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp))

@@ -142,7 +142,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { photosDenied = false },
             title = { Text(stringResource(R.string.allow_access_to_photos)) },
-            text = { Text(stringResource(R.string.photos_turn_on_in_settings)) },
+            text = { Text(stringResource(R.string.turn_on_photos_for_nawana_in_settings_to_save_the_card)) },
             confirmButton = {
                 TextButton(onClick = {
                     photosDenied = false

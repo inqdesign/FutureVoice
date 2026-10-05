@@ -1006,7 +1006,6 @@
     <string name="made_from_this_week_s_talks">"Hecho con las conversaciones de esta semana"</string>
     <string name="make_a_situation">"Crear una situación"</string>
     <string name="make_it_yours">"Hazlo tuyo"</string>
-    <string name="make_your_own_situation">"Crear tu propia situación"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Preparando varias tomas. Tarda unos 30 segundos, así que no cierres esta pantalla."</string>
     <string name="making_it_yours">"Hacerlo tuyo"</string>
     <string name="making_your_test">"Preparando tu test…"</string>
@@ -2504,8 +2503,6 @@
     <string name="your_trial_ends_on_d70dbd">"La prueba termina el %s."</string>
     <!-- "Your trial is on: %lld minutes of talk over the next %lld days. Your plan's own monthly talk time starts when the trial converts." -->
     <string name="your_trial_is_on_lld_minutes_of_talk_over_the_next_lld_days_4dffb5">"La prueba está en marcha: %1$d minutos de conversación durante los próximos %2$d días. El tiempo mensual de tu plan empieza cuando la prueba pase a pago."</string>
-    <!-- "Your trial starts — a week's worth of talk, and all the review it produces." -->
-    <string name="your_trial_starts_a_week_s_worth_of_talk_and_all_the_review_18afb8">"Empieza la prueba: una semana de conversación y todo el repaso que sale de ella."</string>
     <!-- 'Your trial starts: %lld minutes of talk to use across the %lld days, and all the review it produces.' -->
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"Empieza la prueba: %1$d minutos de conversación para usar en los %2$d días, y todo el repaso que sale de ahí."</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->

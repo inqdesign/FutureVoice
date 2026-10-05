@@ -163,9 +163,9 @@ fun FirstCallCheckSheet(
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(stringResource(R.string.fcc_title), style = MaterialTheme.typography.headlineSmall,
+                Text(stringResource(R.string.how_was_your_first_call), style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold)
-                Text(stringResource(R.string.fcc_you_picked, LanguageCatalog.levelLabel(currentLevel, targetLanguage)),
+                Text(stringResource(R.string.you_picked, LanguageCatalog.levelLabel(currentLevel, targetLanguage)),
                     style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(levelBlurb(currentLevel), style = MaterialTheme.typography.bodyMedium,
@@ -177,9 +177,9 @@ fun FirstCallCheckSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FirstCallCheck.Feeling.entries.forEach { f ->
                         val label = stringResource(when (f) {
-                            FirstCallCheck.Feeling.EASY -> R.string.fcc_easy
-                            FirstCallCheck.Feeling.RIGHT -> R.string.fcc_just_right
-                            FirstCallCheck.Feeling.HARD -> R.string.fcc_hard
+                            FirstCallCheck.Feeling.EASY -> R.string.easy
+                            FirstCallCheck.Feeling.RIGHT -> R.string.just_right
+                            FirstCallCheck.Feeling.HARD -> R.string.hard
                         })
                         // iOS: a 52 pt label inside `.bordered`, ~64 pt capsule, one line;
                         // Material's 24 dp side padding wrapped 딱 좋았어요 onto two.
@@ -202,9 +202,9 @@ fun FirstCallCheckSheet(
                 }
                 feeling?.let { f ->
                     Footer(stringResource(when (f) {
-                        FirstCallCheck.Feeling.HARD -> R.string.fcc_set_hard
-                        FirstCallCheck.Feeling.EASY -> R.string.fcc_set_easy
-                        FirstCallCheck.Feeling.RIGHT -> R.string.fcc_set_right
+                        FirstCallCheck.Feeling.HARD -> R.string.set_below_an_easier_level_a_slower_voice_and_coach_mode_chan_9d5a0a
+                        FirstCallCheck.Feeling.EASY -> R.string.set_below_a_harder_level_and_coach_mode_off_change_anything_a2fb61
+                        FirstCallCheck.Feeling.RIGHT -> R.string.great_keep_it_as_it_is_or_adjust_below
                     }))
                 }
 
@@ -232,7 +232,7 @@ fun FirstCallCheckSheet(
                         }
                     }
                 }
-                Footer(stringResource(R.string.fcc_speed_footer))
+                Footer(stringResource(R.string.how_fast_your_future_self_talks_from_the_next_call))
 
                 Spacer(Modifier.size(12.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -243,7 +243,7 @@ fun FirstCallCheckSheet(
                         modifier = Modifier.weight(1f))
                     com.roro.futurevoice.ui.brand.IosSwitch(checked = coach, onCheckedChange = { coach = it })
                 }
-                Footer(stringResource(R.string.fcc_coach_footer))
+                Footer(stringResource(R.string.while_you_think_a_sentence_you_could_say_appears_above_the_m_1f85d6))
                 Spacer(Modifier.size(12.dp))
             }
             Button(onClick = { save() },
@@ -263,7 +263,7 @@ private fun LevelRow(level: CefrLevel, target: String, onPick: (CefrLevel) -> Un
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(Icons.Filled.BarChart, contentDescription = null, modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary)
-            Text(stringResource(R.string.fcc_your_level), style = MaterialTheme.typography.bodyLarge,
+            Text(stringResource(R.string.your_level_0ad2c2), style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f))
             Text(LanguageCatalog.levelLabel(level, target), style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

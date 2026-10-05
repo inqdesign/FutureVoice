@@ -825,7 +825,7 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(14.dp),
                 tint = ink.copy(alpha = 0.5f))
-            Text(stringResource(R.string.say_again_moves_on), style = MaterialTheme.typography.labelMedium,
+            Text(stringResource(R.string.moves_on_when_you_finish), style = MaterialTheme.typography.labelMedium,
                 color = ink.copy(alpha = 0.5f))
         }
     }

@@ -1009,7 +1009,6 @@
     <string name="made_from_this_week_s_talks">"今週のトークから作りました"</string>
     <string name="make_a_situation">"シチュエーションを作る"</string>
     <string name="make_it_yours">"自分のものにする"</string>
-    <string name="make_your_own_situation">"自分でシチュエーションを作る"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"何度か読み上げています。30秒ほどかかるので、この画面を閉じずにお待ちください。"</string>
     <string name="making_it_yours">"自分のものにする"</string>
     <string name="making_your_test">"テストを作っています…"</string>
@@ -2507,8 +2506,6 @@
     <string name="your_trial_ends_on_d70dbd">"%sにトライアルが終了します。"</string>
     <!-- "Your trial is on: %lld minutes of talk over the next %lld days. Your plan's own monthly talk time starts when the trial converts." -->
     <string name="your_trial_is_on_lld_minutes_of_talk_over_the_next_lld_days_4dffb5">"トライアルが始まりました。これから%2$d日間、通話%1$d分が使えます。有料に変わると、そこからはプラン自体の毎月の通話時間になります。"</string>
-    <!-- "Your trial starts — a week's worth of talk, and all the review it produces." -->
-    <string name="your_trial_starts_a_week_s_worth_of_talk_and_all_the_review_18afb8">"トライアルが始まります。1週間分の通話と、そこから生まれる復習のすべてが一緒です。"</string>
     <!-- 'Your trial starts: %lld minutes of talk to use across the %lld days, and all the review it produces.' -->
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"トライアルが始まります。%2$d日間で使える通話%1$d分と、そこから生まれる復習のすべてが一緒です。"</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->

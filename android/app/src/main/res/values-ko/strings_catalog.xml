@@ -1010,7 +1010,6 @@
     <string name="made_from_this_week_s_talks">"이번 주 대화로 만들었어요"</string>
     <string name="make_a_situation">"상황 만들기"</string>
     <string name="make_it_yours">"내 것으로 만들기"</string>
-    <string name="make_your_own_situation">"직접 상황 만들기"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"여러 번 읽어보는 중이에요. 30초쯤 걸리니 이 화면을 닫지 말고 기다려 주세요."</string>
     <string name="making_it_yours">"내 것으로 만들기"</string>
     <string name="making_your_test">"테스트를 만들고 있어요…"</string>
@@ -2508,8 +2507,6 @@
     <string name="your_trial_ends_on_d70dbd">"%s에 체험이 끝나요."</string>
     <!-- "Your trial is on: %lld minutes of talk over the next %lld days. Your plan's own monthly talk time starts when the trial converts." -->
     <string name="your_trial_is_on_lld_minutes_of_talk_over_the_next_lld_days_4dffb5">"체험이 시작됐어요. 앞으로 %2$d일 동안 통화 %1$d분을 쓸 수 있어요. 체험이 유료로 바뀌면 그때부터 구독의 매달 통화 시간을 써요."</string>
-    <!-- "Your trial starts — a week's worth of talk, and all the review it produces." -->
-    <string name="your_trial_starts_a_week_s_worth_of_talk_and_all_the_review_18afb8">"체험이 시작돼요. 일주일치 통화와, 거기서 나오는 모든 복습이 함께예요."</string>
     <!-- 'Your trial starts: %lld minutes of talk to use across the %lld days, and all the review it produces.' -->
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"체험이 시작돼요. %2$d일 동안 쓸 수 있는 통화 %1$d분과, 거기서 나오는 모든 복습이 함께예요."</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->
