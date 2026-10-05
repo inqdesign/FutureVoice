@@ -559,8 +559,17 @@ private fun WeekGrid(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Icon(occ.kind.icon(), null, tint = color, modifier = Modifier.size(10.dp))
+                        // The theme's body line height is ~2.5x this size, so the
+                        // glyphs sat at the bottom of a too-tall box and the block
+                        // clipped them (seen on the phone). One tight, centred line.
                         Text(clockText(occ.start), fontSize = 9.sp, fontWeight = FontWeight.SemiBold,
-                            color = color, maxLines = 1, softWrap = false)
+                            color = color, maxLines = 1, softWrap = false,
+                            style = androidx.compose.material3.LocalTextStyle.current.copy(
+                                lineHeight = 10.sp,
+                                lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                                    androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                                    androidx.compose.ui.text.style.LineHeightStyle.Trim.Both),
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
                     }
                 }
             }
