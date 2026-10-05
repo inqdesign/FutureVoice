@@ -16,6 +16,9 @@ struct DrillEnrichmentSheet: View {
     /// In-flight synthesis marker — a second tap while one line is still
     /// synthesizing must not fire a concurrent duplicate request.
     @State private var synthesizingExample = false
+    /// Sentences already on file (`DrillStore.sentenceKeys`), read once —
+    /// an example's long-press says "Saved" instead of offering it again.
+    @State private var savedSentences: Set<String> = []
 
     var body: some View {
         bodyContent
@@ -145,6 +148,27 @@ struct DrillEnrichmentSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        // The word and expression cards' long-press: keep this example as a
+        // sentence card of its own.
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12))
+        .contextMenu { sentenceAction(for: item.sentence) }
+        .onAppear { if savedSentences.isEmpty { savedSentences = DrillStore.shared.sentenceKeys() } }
+    }
+
+    @ViewBuilder
+    private func sentenceAction(for text: String) -> some View {
+        if savedSentences.contains(DrillStore.sentenceKey(text)) {
+            Label("Saved to sentences", systemImage: "checkmark")
+        } else {
+            Button {
+                if DrillStore.shared.bookmarkSentence(text, reason: explain("Example for “\(card.targetPhrase)”")) != nil {
+                    savedSentences.insert(DrillStore.sentenceKey(text))
+                    HapticEngine.drillCorrect()
+                }
+            } label: {
+                Label("Save to sentences", systemImage: "text.bubble")
+            }
+        }
     }
 
     @ViewBuilder

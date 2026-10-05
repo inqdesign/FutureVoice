@@ -438,6 +438,9 @@ struct WordCard: View {
     @State private var speaking = false
     @State private var sentences: [VocabStore.SourceSentence] = []
     @State private var shadowing: Turn?
+    /// Sentences already on file (`DrillStore.sentenceKeys`), read once —
+    /// the example's long-press says "Saved" instead of offering it again.
+    @State private var savedSentences: Set<String> = []
 
     private var studyIndex: Int? { store.studying.firstIndex(of: word) }
     /// The list the chevrons navigate — a caller-supplied list, or the notebook.
@@ -756,6 +759,7 @@ struct WordCard: View {
         .fixedSize(horizontal: false, vertical: true)
         .contentShape(Rectangle())
         .contextMenu { saveActions(for: e.text) }
+        .onAppear { if savedSentences.isEmpty { savedSentences = DrillStore.shared.sentenceKeys() } }
     }
 
     private func phraseRow(_ p: WordEntry.Phrase) -> some View {
@@ -771,13 +775,28 @@ struct WordCard: View {
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
         .contentShape(Rectangle())
-        .contextMenu { saveActions(for: p.phrase) }
+        .contextMenu { saveActions(for: p.phrase, asSentence: false) }
     }
 
-    /// Long-press actions shared by examples and common phrases — save the
-    /// text to study later, or shadow-practice it right now.
+    /// Long-press actions shared by examples and common phrases — keep an
+    /// example as a sentence card, save the text to study later, or
+    /// shadow-practice it right now. A common phrase is not a sentence.
     @ViewBuilder
-    private func saveActions(for text: String) -> some View {
+    private func saveActions(for text: String, asSentence: Bool = true) -> some View {
+        if !asSentence {
+            EmptyView()
+        } else if savedSentences.contains(DrillStore.sentenceKey(text)) {
+            Label("Saved to sentences", systemImage: "checkmark")
+        } else {
+            Button {
+                if DrillStore.shared.bookmarkSentence(text, reason: explain("Example for “\(word)”")) != nil {
+                    savedSentences.insert(DrillStore.sentenceKey(text))
+                    HapticEngine.drillCorrect()
+                }
+            } label: {
+                Label("Save to sentences", systemImage: "text.bubble")
+            }
+        }
         if store.isStudyingExpression(text) {
             Label("Saved to expressions", systemImage: "checkmark")
         } else {

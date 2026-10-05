@@ -319,6 +319,9 @@ struct ExpressionCard: View {
     @State private var speaking = false
     @State private var sentences: [VocabStore.SourceSentence] = []
     @State private var shadowing: Turn?
+    /// Sentences already on file (`DrillStore.sentenceKeys`), read once —
+    /// the example's long-press says "Saved" instead of offering it again.
+    @State private var savedSentences: Set<String> = []
 
     private var navList: [String] { navigationPhrases ?? [] }
     private var navIndex: Int? { navList.firstIndex(of: phrase) }
@@ -522,12 +525,25 @@ struct ExpressionCard: View {
         .fixedSize(horizontal: false, vertical: true)
         .contentShape(Rectangle())
         .contextMenu { saveActions(for: e.text) }
+        .onAppear { if savedSentences.isEmpty { savedSentences = DrillStore.shared.sentenceKeys() } }
     }
 
     /// Long-press actions on an example — the word card's pair: save the
     /// sentence to study later, or shadow it right now.
     @ViewBuilder
     private func saveActions(for text: String) -> some View {
+        if savedSentences.contains(DrillStore.sentenceKey(text)) {
+            Label("Saved to sentences", systemImage: "checkmark")
+        } else {
+            Button {
+                if DrillStore.shared.bookmarkSentence(text, reason: explain("Example for “\(phrase)”")) != nil {
+                    savedSentences.insert(DrillStore.sentenceKey(text))
+                    HapticEngine.drillCorrect()
+                }
+            } label: {
+                Label("Save to sentences", systemImage: "text.bubble")
+            }
+        }
         if store.isStudyingExpression(text) {
             Label("Saved to expressions", systemImage: "checkmark")
         } else {

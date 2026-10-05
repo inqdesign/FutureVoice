@@ -127,6 +127,29 @@ final class DrillStore: LanguageScopedStore {
         return card
     }
 
+    /// A sentence the learner kept by hand — an example under a word, an
+    /// expression or a sentence card, long-pressed. No source line (nothing
+    /// was said wrong), due now, and minted through `saveIfNew` so keeping
+    /// the same example twice is still one card.
+    @discardableResult
+    func bookmarkSentence(_ text: String, reason: String) -> DrillCard? {
+        let target = Self.coreSentence(of: text, pairedWith: "")
+        return saveIfNew(DrillCard(sourcePhrase: "", targetPhrase: target, reason: reason,
+                                   createdAt: Date(), nextReviewAt: Date(), box: 0))
+    }
+
+    /// Every sentence on file, keyed for `sentenceKey(_:)` — read ONCE by a
+    /// card that offers "Save to sentences", so its long-press menu can say
+    /// "Saved" without a file read per row per render.
+    func sentenceKeys() -> Set<String> {
+        Set(load().map { Self.matchKey($0.targetPhrase) })
+    }
+
+    /// The key `bookmarkSentence` files this line under.
+    static func sentenceKey(_ text: String) -> String {
+        matchKey(coreSentence(of: text, pairedWith: ""))
+    }
+
     #if DEBUG
     /// Debug seeding only: the sample card IS the truth, so a copy left by an
     /// earlier capture run is replaced rather than kept — otherwise a
