@@ -166,7 +166,7 @@
     <string name="back_in_10_minutes">10분 뒤에 다시</string>
     <string name="save_expression">표현 저장</string>
     <string name="study_this">이걸로 공부하기</string>
-    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">구독이 시작돼요. 그 전까지는 Google Play에서 언제든 해지할 수 있어요.</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">구독이 시작되고, 그때부터 구독의 매달 통화 시간을 써요. 그 전까지는 Google Play에서 언제든 해지할 수 있어요.</string>
 
     <string name="fluency_pace">유창성과 속도</string>
     <string name="slip">문법 포인트</string>

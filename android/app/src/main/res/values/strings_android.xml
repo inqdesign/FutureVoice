@@ -166,7 +166,7 @@
     <string name="back_in_10_minutes">Back in 10 minutes</string>
     <string name="save_expression">Save expression</string>
     <string name="study_this">Study this</string>
-    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Your subscription starts. Cancel any time before then in Google Play.</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Your subscription starts, and its own monthly talk time with it. Cancel any time before then in Google Play.</string>
     <!-- A price and its billing cycle. Punctuation only —
          nothing here is language, so it is never translated. -->
     <string name="price_per_cycle" translatable="false">%1$s / %2$s</string>

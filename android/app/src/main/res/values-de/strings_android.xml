@@ -166,7 +166,7 @@
     <string name="back_in_10_minutes">In 10 Minuten wieder da</string>
     <string name="save_expression">Wendung sichern</string>
     <string name="study_this">Das lernen</string>
-    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Dein Abo beginnt. Bis dahin kannst du jederzeit in Google Play kündigen.</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Dein Abo beginnt und damit auch seine monatliche Sprechzeit. Bis dahin kannst du jederzeit in Google Play kündigen.</string>
 
     <!-- Talk book: the scorecard's fourth axis. -->
     <string name="fluency_pace">Flüssigkeit &amp; Tempo</string>

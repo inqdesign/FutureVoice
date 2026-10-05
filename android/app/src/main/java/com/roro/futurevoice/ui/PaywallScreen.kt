@@ -183,6 +183,11 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     // one screen a tester without Play products would otherwise meet.
     val trialDays = offers.mapNotNull { trialDaysOf(it.details).takeIf { d -> d > 0 } }
         .maxOrNull() ?: DEFAULT_TRIAL_DAYS
+    // The trial's SIZE (iOS `StoreKitService.trialTalkMinutes`): a trial is
+    // metered at Light's monthly pool pro-rated 7/30, whatever plan it
+    // trials — keep the formula in step with `consume_metered_seconds`.
+    val trialTalkMinutes = offers.filter { it.plan.tier == "light" }
+        .mapNotNull { it.plan.monthly_seconds }.minOrNull()?.let { (it * 7 / 30 / 60).toInt() }
     val isSubscriber = account?.isEntitled == true
     // A subscriber opened this to CHANGE plans: the trial funnel would be wrong.
     val showsTrial = !isSubscriber && offers.any { trialDaysOf(it.details) > 0 }
@@ -271,6 +276,7 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
             PaywallBottomBar(
                 step = step,
                 trialDays = trialDays,
+                trialTalkMinutes = trialTalkMinutes,
                 plansTitle = when {
                     packPicked -> stringResource(R.string.topup_buy_minutes, pack?.minutes ?: 50)
                     // A subscriber can't buy what they already have — the
@@ -334,7 +340,7 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                 ) { CircularProgressIndicator() }
 
                 PaywallStep.PITCH -> PitchStep()
-                PaywallStep.TIMELINE -> TimelineStep(trialDays)
+                PaywallStep.TIMELINE -> TimelineStep(trialDays, trialTalkMinutes)
                 PaywallStep.PLANS -> PlansStep(
                     plans = plans,
                     prices = prices,
@@ -389,6 +395,7 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
 private fun PaywallBottomBar(
     step: PaywallStep,
     trialDays: Int,
+    trialTalkMinutes: Int?,
     /** The CTA's words on the plans step — chosen by the caller, which knows
      *  the selection, the held plan and whether Play offers a trial. */
     plansTitle: String,
@@ -436,7 +443,9 @@ private fun PaywallBottomBar(
                 }
                 if (step == PaywallStep.PITCH || step == PaywallStep.TIMELINE) {
                     Text(
-                        stringResource(R.string.lld_days_free_cancel_anytime, trialDays),
+                        trialTalkMinutes?.let {
+                            stringResource(R.string.lld_days_free_with_lld_min_of_talk_cancel_anytime, trialDays, it)
+                        } ?: stringResource(R.string.lld_days_free_cancel_anytime, trialDays),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -511,7 +520,11 @@ private fun PitchRow(icon: ImageVector, title: String, detail: String) {
  * dated row on the same line as the charge.
  */
 @Composable
-private fun TimelineStep(trialDays: Int) {
+private fun TimelineStep(trialDays: Int, trialTalkMinutes: Int?) {
+    // The reminder's own day (iOS `reminderDay`, `TrialReminder.leadDays`),
+    // counting the purchase as day 1 — dropped when it would land on the
+    // start or the last day, rows the timeline already draws.
+    val reminderDay = (trialDays - (if (trialDays <= 4) 1 else 2)).takeIf { it in 2 until trialDays }
     Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
         Column(
             Modifier.padding(top = 12.dp),
@@ -525,14 +538,20 @@ private fun TimelineStep(trialDays: Int) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column {
+            // The trial's SIZE goes here, before anyone taps: it is the
+            // trial's own pool, not the plan's (iOS, 2026-09-25).
             TimelineRow(Icons.Filled.LockOpen,
                 stringResource(R.string.today),
-                stringResource(R.string.your_trial_starts_a_week_s_worth_of_talk_and_all_the_review_18afb8),
+                trialTalkMinutes?.let {
+                    stringResource(R.string.your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7, it, trialDays)
+                } ?: stringResource(R.string.your_trial_starts_talk_time_on_us_and_all_the_review_it_prod_1afe94),
                 showsLine = true)
-            TimelineRow(Icons.Filled.NotificationsActive,
-                stringResource(R.string.day_lld, maxOf(1, trialDays - 2)),
-                stringResource(R.string.a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350),
-                showsLine = true)
+            reminderDay?.let { day ->
+                TimelineRow(Icons.Filled.NotificationsActive,
+                    stringResource(R.string.day_lld, day),
+                    stringResource(R.string.a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350),
+                    showsLine = true)
+            }
             TimelineRow(Icons.Filled.WorkspacePremium,
                 stringResource(R.string.day_lld, trialDays),
                 stringResource(R.string.your_subscription_starts_cancel_any_time_before_then_in_google_play),

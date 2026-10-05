@@ -166,7 +166,7 @@
     <string name="back_in_10_minutes">10 分鐘後再來</string>
     <string name="save_expression">儲存表達</string>
     <string name="study_this">用這個學習</string>
-    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">訂閱開始。在那之前，隨時可以在 Google Play 取消。</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">訂閱開始，之後改用方案自己的每月通話時間。在那之前，隨時可以在 Google Play 取消。</string>
 
     <string name="fluency_pace">流暢度與節奏</string>
     <string name="slip">重點</string>
