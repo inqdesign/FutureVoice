@@ -224,7 +224,9 @@ final class SpeechTakeSession: ObservableObject {
             lastChunkAt = clock
             chunkReads.append(readPiece(piece))
         }
-        if cursor >= track.words.count - 1, quietFor > 2.2, clock > 3 {
+        // One second is enough once the last line is reached: there is
+        // nothing left to say (it was 2.2 s, and the result waited on it).
+        if cursor >= track.words.count - 1, quietFor > 1.0, clock > 3 {
             Task { await stop() }
             return
         }

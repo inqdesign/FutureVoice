@@ -157,6 +157,36 @@ enum ShadowEngine {
     /// audio-grounded transcript landed the same day, that branch is rare.
     /// It is also why every attempt saved before then keeps its old score:
     /// no `rhythmScore`, no blend.
+    /// True when what the live recognizer heard ENDS with the line's last
+    /// words — the learner has reached the end of the line. Used to end an
+    /// attempt on content rather than on a silence a noisy room may never
+    /// give. Words for spaced languages (the last two, in order, inside the
+    /// last five heard), characters for Korean/Japanese/Chinese (the last
+    /// three, inside the last eight heard — the recognizer spaces those its
+    /// own way). Digits are spelled out first, as the diff does. False for a
+    /// line too short to tell its end from its middle.
+    static func heardLineEnd(target: String, heard: String, language: String) -> Bool {
+        let style = LanguageCatalog.tokenStyle(language)
+        let t = tokenize(expandForDiff(target, language: language), style: .word)
+        let h = tokenize(expandForDiff(heard, language: language), style: .word)
+        let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
+        switch style {
+        case .word:
+            guard t.count >= 2, h.count >= 2 else { return false }
+            let end = t.suffix(2).map(key)
+            let tail = Array(h.suffix(5).map(key))
+            for i in 0..<(tail.count - 1) where tail[i] == end[0] && tail[i + 1] == end[1] {
+                return true
+            }
+            return false
+        case .syllable:
+            let tc = t.joined().map { key(String($0)) }.joined()
+            let hc = h.joined().map { key(String($0)) }.joined()
+            guard tc.count >= 4 else { return false }
+            return String(hc.suffix(8)).contains(String(tc.suffix(3)))
+        }
+    }
+
     static func overallScore(match: Int, rhythm: Int?) -> Int {
         guard let rhythm else { return match }
         let blended = Double(match) * matchWeight + Double(rhythm) * rhythmWeight

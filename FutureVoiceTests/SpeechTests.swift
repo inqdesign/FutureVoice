@@ -192,3 +192,27 @@ final class SpeechVideoComposerTests: XCTestCase {
         print("[speech-frame] \(url.path)")
     }
 }
+
+final class ShadowLineEndTests: XCTestCase {
+    func testEnglishEndIsHeard() {
+        let line = "Soak it all in, right?"
+        XCTAssertTrue(ShadowEngine.heardLineEnd(target: line, heard: "soak it all in right", language: "en"))
+        XCTAssertFalse(ShadowEngine.heardLineEnd(target: line, heard: "soak it all", language: "en"))
+        // A stray word after the end still counts.
+        XCTAssertTrue(ShadowEngine.heardLineEnd(target: line, heard: "soak it all in right okay", language: "en"))
+    }
+
+    func testDigitsAreSpelledOut() {
+        XCTAssertTrue(ShadowEngine.heardLineEnd(target: "Meet me at gate 12", heard: "meet me at gate twelve", language: "en"))
+    }
+
+    func testKoreanByCharacters() {
+        let line = "오늘은 날씨가 정말 좋네요."
+        XCTAssertTrue(ShadowEngine.heardLineEnd(target: line, heard: "오늘은 날씨가 정말좋네요", language: "ko"))
+        XCTAssertFalse(ShadowEngine.heardLineEnd(target: line, heard: "오늘은 날씨가", language: "ko"))
+    }
+
+    func testTooShortToTell() {
+        XCTAssertFalse(ShadowEngine.heardLineEnd(target: "Hi", heard: "hi", language: "en"))
+    }
+}

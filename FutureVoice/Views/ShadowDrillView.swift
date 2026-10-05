@@ -1355,23 +1355,39 @@ struct ShadowDrillView: View {
         let ceilingMs = Self.attemptCutoffMs(targetMs: targetMs)
         let earliestMs = max(1000, targetMs)
         autoStopTask?.cancel()
+        let lineText = attemptTargetText
+        let lineLanguage = targetLanguage
         autoStopTask = Task { @MainActor in
-            // Nothing can end the attempt before the line's OWN length — the
-            // learner can't be finished sooner, so a pause before that is
-            // always mid-attempt, never the end.
-            try? await Task.sleep(nanoseconds: UInt64(earliestMs) * 1_000_000)
-            guard !Task.isCancelled, phase == .syncing else { return }
-            // Past that, stop as soon as they have genuinely gone quiet, and
-            // never before. "Quiet" is 1.5s, not 0.5s — a mid-sentence BREATH
-            // runs 0.5–1.5s (the figure Talk's endpointer is built on), so the
-            // old threshold read an ordinary breath as "finished". On a long
-            // line, where breaths are unavoidable, that ended the recording in
-            // the middle of the sentence every time.
-            let hardStop = Date().addingTimeInterval(Double(ceilingMs - earliestMs) / 1000)
+            // Two ways the attempt ends, whichever comes first:
+            //
+            // 1. By CONTENT — the live recognizer has heard the line's last
+            //    words and they've paused briefly (`endOfLineQuietSeconds`).
+            //    They said the end; there is nothing left to wait for, and
+            //    this works even when the room keeps the level up (a fan,
+            //    a café), which is what used to hold attempts open to the
+            //    ceiling — 40–60 s on a 20-word line, read as "analysis is
+            //    slow" (founder, 2026-10-05).
+            // 2. By SILENCE — past the line's own length (the learner can't
+            //    be finished sooner, so a pause before it is mid-attempt),
+            //    1.5 s of quiet. Not 0.5 s: a mid-sentence BREATH runs
+            //    0.5–1.5 s (the figure Talk's endpointer is built on), and the
+            //    old threshold ended long lines mid-sentence.
+            let started = Date()
+            let earliest = started.addingTimeInterval(Double(earliestMs) / 1000)
+            let hardStop = started.addingTimeInterval(Double(ceilingMs) / 1000)
             while !Task.isCancelled, phase == .syncing, Date() < hardStop {
-                guard let lastVoiced = live.lastVoicedAt else { break }
-                if Date().timeIntervalSince(lastVoiced) >= Self.stillSpeakingSeconds { break }
-                try? await Task.sleep(nanoseconds: 200_000_000)
+                let now = Date()
+                if let lastVoiced = live.lastVoicedAt {
+                    let quiet = now.timeIntervalSince(lastVoiced)
+                    if quiet >= Self.endOfLineQuietSeconds,
+                       ShadowEngine.heardLineEnd(target: lineText, heard: live.transcript, language: lineLanguage) {
+                        break
+                    }
+                    if now >= earliest, quiet >= Self.stillSpeakingSeconds { break }
+                } else if now >= earliest {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
             }
             guard !Task.isCancelled, phase == .syncing else { return }
             finishSync()
@@ -1852,6 +1868,8 @@ struct ShadowDrillView: View {
     /// Silence that means "they've stopped", not "they took a breath".
     /// Matches the range Talk's endpointer is built on (breaths run 0.5–1.5s).
     static let stillSpeakingSeconds: TimeInterval = 1.5
+    /// The pause that ends an attempt once the line's last words were heard.
+    static let endOfLineQuietSeconds: TimeInterval = 0.6
 
     /// Absolute ceiling on one attempt, given the model line's length. The
     /// attempt normally ends before this, the moment the learner goes quiet;
