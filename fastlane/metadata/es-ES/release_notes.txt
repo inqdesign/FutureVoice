@@ -1,5 +1,5 @@
 Novedades
-• Discurso: una nueva pestaña para leer un guion en voz alta con un teleprompter. El guion avanza al ritmo de tu voz y, con la cámara activada, te queda un video vertical con el guion y tu cara juntos. Te califica la precisión, el ritmo, las pausas y las muletillas, y un coach te dice qué probar después.
+• Discurso: una nueva pestaña para practicar presentaciones y discursos. Pon tu texto en pantalla y léelo en voz alta; el texto avanza al ritmo de tu voz. Si activas la cámara, grabas un video con el texto y tu cara en la misma pantalla. Al terminar, recibes una puntuación según si leíste el texto tal cual, tu velocidad y tus pausas.
 • Resumen de la semana: al terminar la semana, repasa en tarjetas tus llamadas y las palabras y expresiones que aprendiste. La última tarjeta te lleva a la prueba de esta semana.
 • Enfoque gramatical: elige un error que repites y tenlo presente durante toda la llamada. Si vuelve a salir, lo verás al momento. Activado por defecto en A1 y A2.
 • Al conocer tu voz por primera vez, puedes escuchar y elegir entre cuatro acentos ahí mismo.
@@ -7,8 +7,8 @@ Novedades
 • Hablar tiene una nueva pestaña Día a día: situaciones cotidianas como una cafetería, un restaurante, una tienda de ropa o llamar a la clínica, con un solo toque.
 • Cada pestaña muestra una guía breve la primera vez: para qué sirve y cómo usarla. Vuelve a verlas cuando quieras en Mi perfil → Guía de la app.
 • Mi rutina: planea tu semana directamente en el horario y arrastra los bloques para moverlos. Pon conversaciones, repasos y Volver a decirlo en los días y horas que quieras; la llamada diaria suena a la hora de conversación de tu rutina.
-• Al exportar un cuaderno en PDF, obtienes un libro de ejercicios listo para completar.
-• Las preguntas que fallaste durante el mes vuelven en el siguiente test semanal.
+• Exporta un cuaderno en PDF y tendrás un libro de ejercicios para completar desde ya.
+• Las preguntas que fallaste en el mes siguen apareciendo en tu prueba semanal hasta que las aciertes.
 
 Correcciones
 • El saludo al empezar una llamada podía cortarse si había un dispositivo Bluetooth cerca.
@@ -18,8 +18,8 @@ Correcciones
 • Una llamada programada podía sonar en plena llamada y cortarla.
 • El material de repaso de un cuaderno podía desaparecer después de «Volver a decirlo».
 • Tu yo fluido a veces se quedaba sin responder. Ahora pasa mucho menos.
-• Si aprendes coreano, las palabras y expresiones que dices se reconocen con más precisión.
-• Tu yo fluido pronuncia el coreano como un hablante nativo y ya no grita en los signos de exclamación.
-• En Volver a decirlo, la siguiente línea podía empezar mientras aún pensabas.
-• Desactivar el modo coach durante una llamada no detenía las sugerencias.
-• En Shadowing, la cuenta atrás empieza en cuanto tocas grabar y tu resultado llega justo después de la última palabra.
+• Si estudias coreano, la app reconoce con más precisión las palabras y expresiones que dices.
+• Tu yo fluido habla coreano con una pronunciación más natural y ya no grita cuando hay un signo de exclamación.
+• En Volver a decirlo, con solo hacer una pausa para pensar podías saltar a la siguiente línea.
+• Si desactivabas el modo coach durante una llamada, las pistas seguían apareciendo.
+• En Shadowing, el conteo arranca en cuanto tocas grabar, y el resultado aparece enseguida después de decir la última palabra.
