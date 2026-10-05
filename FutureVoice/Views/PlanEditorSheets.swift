@@ -138,6 +138,8 @@ struct PlanBlockEditor: View {
                         Text("A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.")
                     } else if kind == .sayItAgain {
                         Text("When it's time, you pick which recent talk to say again.")
+                    } else if kind == .speech {
+                        Text("Any script counts, once you finish a take.")
                     }
                 }
                 if existingId != nil {

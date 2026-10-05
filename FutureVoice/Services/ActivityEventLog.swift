@@ -7,13 +7,14 @@ import Foundation
 ///
 /// Fed from the one door every rep already walks through
 /// (`PracticeLog.record`), plus "say it again" runs, which are logged when a
-/// run finishes. Device-local, pruned to `keepDays`; anything older is still
-/// counted in `PracticeLog`, it just has no time of day.
+/// run finishes, and Speech takes, logged when a take is saved.
+/// Device-local, pruned to `keepDays`; anything older is still counted in
+/// `PracticeLog`, it just has no time of day.
 final class ActivityEventLog: @unchecked Sendable {
     static let shared = ActivityEventLog()
 
     enum Kind: String, Codable {
-        case drill, shadow, word, expression, scene, sayItAgain
+        case drill, shadow, word, expression, scene, sayItAgain, speech
     }
 
     struct Event: Codable, Equatable {

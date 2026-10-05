@@ -10,7 +10,7 @@ import Foundation
 enum PlannerDay {
     /// What actually happened, grouped into blocks.
     struct Actual: Identifiable, Equatable {
-        enum Kind: String { case talk, review, shadow, scene, sayItAgain }
+        enum Kind: String { case talk, review, shadow, scene, sayItAgain, speech }
         var kind: Kind
         var start: Date
         var end: Date
@@ -30,6 +30,7 @@ enum PlannerDay {
             case .review: return .review
             case .shadow: return .shadow
             case .sayItAgain: return .sayItAgain
+            case .speech: return .speech
             case .scene: return nil
             }
         }
@@ -37,7 +38,7 @@ enum PlannerDay {
         /// Whether this sitting is the kind of practice a planned block asks for.
         func covers(_ planned: StudyPlan.Kind) -> Bool {
             switch (kind, planned) {
-            case (.talk, .talk), (.shadow, .shadow), (.sayItAgain, .sayItAgain): return true
+            case (.talk, .talk), (.shadow, .shadow), (.sayItAgain, .sayItAgain), (.speech, .speech): return true
             case (.review, .review), (.review, .words), (.review, .expressions), (.review, .shadow): return true
             default: return false
             }
@@ -68,6 +69,7 @@ enum PlannerDay {
             case .drill, .word, .expression, .shadow: return .review
             case .scene: return .scene
             case .sayItAgain: return .sayItAgain
+            case .speech: return .speech
             }
         }
         var byGroup: [Actual.Kind: [Date]] = [:]
@@ -101,6 +103,7 @@ enum PlannerDay {
         var cards: Double = 0
         var shadow: Double = 0
         var sayItAgain: Double = 0
+        var speech: Double = 0
         var test: Double = 0
 
         func amount(for kind: StudyPlan.Kind) -> Double {
@@ -113,6 +116,7 @@ enum PlannerDay {
             case .review: return words + expressions + cards + shadow
             case .shadow: return shadow
             case .sayItAgain: return sayItAgain
+            case .speech: return speech
             case .test: return test
             }
         }
@@ -121,7 +125,7 @@ enum PlannerDay {
     /// A day's totals from the logs that already count them: the talk meter
     /// (the ring's minutes), the practice log's FINISHED counts — the same
     /// numbers the daily goals are judged by, so postponing a card is not
-    /// doing it — and finished say-it-again runs and tests.
+    /// doing it — and finished say-it-again runs, saved Speech takes and tests.
     static func totals(on day: Date, events: [ActivityEventLog.Event], testFinished: Bool) -> Totals {
         let log = PracticeLog.shared.day(day) ?? PracticeLog.Day()
         return Totals(talkMinutes: Double(TalkTimeLog.seconds(on: day)) / 60,
@@ -130,6 +134,7 @@ enum PlannerDay {
                       cards: Double(log.drillDone),
                       shadow: Double(log.shadowDone),
                       sayItAgain: Double(events.filter { $0.kind == .sayItAgain }.count),
+                      speech: Double(events.filter { $0.kind == .speech }.count),
                       test: testFinished ? 1 : 0)
     }
 
@@ -189,6 +194,7 @@ enum PlannerDay {
                 return plannedKinds.isDisjoint(with: [.review, .words, .expressions, .shadow])
             case .shadow: return !plannedKinds.contains(.shadow)
             case .sayItAgain: return !plannedKinds.contains(.sayItAgain)
+            case .speech: return !plannedKinds.contains(.speech)
             case .scene: return true
             }
         }

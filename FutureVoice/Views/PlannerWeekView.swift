@@ -117,6 +117,8 @@ extension StudyPlan.Kind {
         case .expressions: return .pink
         case .shadow: return .yellow
         case .test: return .orange
+        // Purple is the folded `words` kind's, which nothing draws any more.
+        case .speech: return .purple
         }
     }
 
@@ -124,6 +126,7 @@ extension StudyPlan.Kind {
         switch self {
         case .talk: return "phone.fill"
         case .review: return "rectangle.stack.fill"
+        case .speech: return "music.mic"
         case .words: return "textformat"
         case .expressions: return "quote.bubble.fill"
         case .shadow: return "waveform"
@@ -140,7 +143,7 @@ extension StudyPlan.Kind {
         case .words, .expressions: return explain("\(n) items")
         case .review: return explain("\(n) items")
         case .shadow: return explain("\(n) lines")
-        case .sayItAgain, .test: return n == 1 ? "" : explain("\(n) times")
+        case .sayItAgain, .test, .speech: return n == 1 ? "" : explain("\(n) times")
         }
     }
 
@@ -159,6 +162,7 @@ extension StudyPlan.Kind {
         case .shadow: return explain("Shadowing")
         case .sayItAgain: return explain("Say it again")
         case .test: return explain("Weekly test")
+        case .speech: return explain("Speech")
         }
     }
 }
@@ -169,6 +173,7 @@ extension PlannerDay.Actual.Kind {
         case .talk: return .blue
         case .review: return .green
         case .shadow, .sayItAgain: return .teal
+        case .speech: return .purple
         case .scene: return .gray
         }
     }
@@ -179,6 +184,7 @@ extension PlannerDay.Actual.Kind {
         case .review: return "rectangle.stack.fill"
         case .shadow: return "waveform"
         case .sayItAgain: return "arrow.counterclockwise"
+        case .speech: return "music.mic"
         case .scene: return "play.rectangle.fill"
         }
     }
@@ -189,6 +195,7 @@ extension PlannerDay.Actual.Kind {
         case .review: return explain("Review")
         case .shadow: return explain("Shadowing")
         case .sayItAgain: return explain("Say it again")
+        case .speech: return explain("Speech")
         case .scene: return explain("Watch scene")
         }
     }
@@ -660,7 +667,7 @@ struct PlannerWeekCard: View {
     private var legend: some View {
         VStack(alignment: .leading, spacing: 6) {
             FlowLayout(spacing: 10) {
-                kindKey(.talk); kindKey(.review); kindKey(.sayItAgain); kindKey(.test)
+                kindKey(.talk); kindKey(.review); kindKey(.sayItAgain); kindKey(.speech); kindKey(.test)
             }
             HStack(spacing: 12) {
                 styleKey(filled: false, Text("Planned"))

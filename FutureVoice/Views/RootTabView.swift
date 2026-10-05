@@ -80,6 +80,9 @@ struct RootTabView: View {
 
     var body: some View {
         tabRoot
+        // A Speech block's reminder or routine line: the Speech tab.
+        .onAppear { consumeSpeechTap() }
+        .onChange(of: callInbox.pendingSpeech) { _, _ in consumeSpeechTap() }
         // A tab opened while something else was up gets its introduction the
         // moment that closes.
         .onChange(of: anotherSheetUp) { _, up in
@@ -555,6 +558,12 @@ struct RootTabView: View {
             selection = .home
             startFreeTalk()
         }
+    }
+
+    private func consumeSpeechTap() {
+        guard callInbox.pendingSpeech else { return }
+        callInbox.pendingSpeech = false
+        selection = .speech
     }
 
     private func consumeReviewTap() {

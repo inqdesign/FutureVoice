@@ -342,6 +342,8 @@ final class SpeechTakeSession: ObservableObject {
                               videoFilename: nil, transcript: transcript,
                               metrics: metrics, coaching: nil)
         SpeechStore.shared.save(take)
+        // A saved take is what a Speech block in the routine asks for.
+        ActivityEventLog.shared.record(.speech)
         let resultMs = ms(stoppedAt)
         // Flagged BEFORE the result shows, so it opens on "Preparing your
         // video…" rather than flashing the audio player first.

@@ -648,6 +648,11 @@ its own branch so the founder picks the build it ships in.
   numbers), and filled in plan order (`PlannerDay.progress`). The stored
   key is still `minutes`; `unitsVersion` nil marks a plan saved in minutes,
   converted on load to each kind's default count (`convertingToCounts`).
+- **Speech is a routine block too** (2026-10-05): one finished take of any
+  script in the Speech tab (`ActivityEventLog` `.speech`, written where
+  `SpeechTakeSession` saves the take) — a cancelled or unheard take is not
+  one. Its line and its reminder open the Speech tab
+  (`DailyCallInbox.pendingSpeech`). Purple, the folded `words` kind's colour.
 - Future review slots show how many items will be waiting
   (`StudyPlan.reviewLoad` over `DrillStore` + `ReviewQueue.returnDates`).
 - **One block per sitting, and every block names itself** (same day, founder:

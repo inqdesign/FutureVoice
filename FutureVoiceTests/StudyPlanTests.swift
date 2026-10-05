@@ -183,6 +183,20 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(totals.amount(for: .review), 12)
     }
 
+    func testASpeechTakeKeepsASpeechBlock() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .speech, weekdays: [3], hour: 20, minute: 0, minutes: 1)]
+        let occ = plan.occurrences(on: at(6, 0), calendar: cal)
+        var totals = PlannerDay.Totals()
+        XCTAssertTrue(PlannerDay.done(planned: occ, totals: totals).isEmpty)
+        totals.speech = 1
+        XCTAssertEqual(PlannerDay.done(planned: occ, totals: totals), [occ[0].id])
+        let acts = PlannerDay.actuals(talks: [], events: [.init(kind: .speech, at: at(6, 20, 5))])
+        XCTAssertEqual(acts.map(\.kind), [.speech])
+        XCTAssertEqual(PlannerDay.absorbed(planned: occ, actuals: acts).count, 1)
+        XCTAssertTrue(StudyPlan.Kind.placeable.contains(.speech))
+    }
+
     func testOldMinutePlansBecomeCounts() {
         var plan = StudyPlan()
         plan.unitsVersion = nil

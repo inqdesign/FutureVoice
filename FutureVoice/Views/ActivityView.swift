@@ -243,6 +243,7 @@ struct ActivityView: View {
         switch kind {
         case .talk: appState.pendingFreeTalk = true
         case .sayItAgain: showSayItAgainPicker = true
+        case .speech: DailyCallInbox.shared.pendingSpeech = true
         case .words: routineSheet = .words
         case .expressions: routineSheet = .expressions
         case .review:

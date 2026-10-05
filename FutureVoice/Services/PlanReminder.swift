@@ -14,6 +14,7 @@ enum PlanReminder {
     private static let prefix = "futurevoice.plan."
     /// Tapping lands on the talk picker, not just the app.
     static let sayItAgainCategoryId = "futurevoice.plan.say-again"
+    static let speechCategoryId = "futurevoice.plan.speech"
     static let horizonDays = 7
 
     static func reschedule(now: Date = Date(), calendar: Calendar = .current) async {
@@ -33,15 +34,18 @@ enum PlanReminder {
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
             for occ in plan.occurrences(on: day, calendar: calendar)
             where occ.remind && !occ.anytime && occ.start > now && occ.blockId != nil
-                && [.sayItAgain, .words, .expressions, .shadow].contains(occ.kind) {
+                && [.sayItAgain, .speech, .words, .expressions, .shadow].contains(occ.kind) {
                 let content = UNMutableNotificationContent()
                 content.title = title(for: occ.kind)
-                content.body = occ.kind == .sayItAgain
-                    ? explain("Pick a recent talk and say it again.")
-                    : explain("\(occ.kind.titled(occ.amount)), as planned.")
+                content.body = switch occ.kind {
+                case .sayItAgain: explain("Pick a recent talk and say it again.")
+                case .speech: explain("Pick a script and read it out loud.")
+                default: explain("\(occ.kind.titled(occ.amount)), as planned.")
+                }
                 content.sound = .default
                 switch occ.kind {
                 case .sayItAgain: content.categoryIdentifier = sayItAgainCategoryId
+                case .speech: content.categoryIdentifier = speechCategoryId
                 case .words, .expressions: content.categoryIdentifier = DrillReminder.categoryId
                 default: break
                 }
@@ -68,6 +72,7 @@ enum PlanReminder {
         case .expressions: return explain("Time for your expressions")
         case .shadow: return explain("Time for shadowing")
         case .sayItAgain: return explain("Time to say it again")
+        case .speech: return explain("Time for your speech")
         default: return explain("Time to practice")
         }
     }

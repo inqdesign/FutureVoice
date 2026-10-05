@@ -17,7 +17,7 @@ import Combine
 /// both ring.
 struct StudyPlan: Codable, Equatable {
     enum Kind: String, Codable, CaseIterable, Identifiable {
-        case talk, review, sayItAgain, words, expressions, shadow, test
+        case talk, review, sayItAgain, words, expressions, shadow, test, speech
         var id: String { rawValue }
 
         /// Only a talk is measured in MINUTES (the talk meter). Every other
@@ -36,7 +36,7 @@ struct StudyPlan: Codable, Equatable {
             case .expressions: return 3
             case .review: return 20
             case .shadow: return 2
-            case .sayItAgain, .test: return 1
+            case .sayItAgain, .test, .speech: return 1
             }
         }
 
@@ -48,8 +48,9 @@ struct StudyPlan: Codable, Equatable {
         /// 2026-10-03: talk, review, say it again — not words or shadowing
         /// as blocks of their own). Review counts every kind of review the
         /// app keeps: words and expressions judged, sentence cards, shadow
-        /// lines. The test comes from its own settings.
-        static let placeable: [Kind] = [.talk, .review, .sayItAgain]
+        /// lines. The test comes from its own settings. Speech (2026-10-05)
+        /// is a take of any script in the Speech tab, counted when it saves.
+        static let placeable: [Kind] = [.talk, .review, .sayItAgain, .speech]
 
         /// LEGACY kinds: plans saved with them are folded into review on
         /// load (`foldingIntoReview`); nothing places them any more.

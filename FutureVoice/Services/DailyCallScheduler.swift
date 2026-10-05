@@ -603,6 +603,9 @@ final class DailyCallInbox: ObservableObject {
     @Published var pendingWeeklyTest = false
     /// A timetable say-it-again reminder was tapped: pick a talk to redo.
     @Published var pendingSayItAgain = false
+    /// A Speech block came due, or its routine line was tapped: open the
+    /// Speech tab.
+    @Published var pendingSpeech = false
     /// Set when the week-turn notification carried the week's numbers — the
     /// app opens "Your week", whose last card is the test.
     @Published var pendingWeekRecap = false
@@ -661,6 +664,16 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
                 defer { completionHandler() }
                 guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
                 DailyCallInbox.shared.pendingSayItAgain = true
+            }
+            return
+        }
+
+        // A Speech block came due: the Speech tab.
+        if category == PlanReminder.speechCategoryId {
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                DailyCallInbox.shared.pendingSpeech = true
             }
             return
         }
