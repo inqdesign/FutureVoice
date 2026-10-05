@@ -789,4 +789,4 @@ private fun Provenance(row: LibraryRowData) {
 }
 
 private fun shortDate(at: Long): String =
-    SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(at))
+    SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMd"), Locale.getDefault()).format(Date(at))

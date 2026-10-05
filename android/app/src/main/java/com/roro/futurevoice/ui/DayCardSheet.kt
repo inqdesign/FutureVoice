@@ -171,7 +171,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
             val isToday = android.text.format.DateUtils.isToday(data.date)
             Text(
                 if (isToday) stringResource(R.string.today_s_card)
-                else java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault())
+                else java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "MMMd"), java.util.Locale.getDefault())
                     .format(java.util.Date(data.date)),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.fillMaxWidth())

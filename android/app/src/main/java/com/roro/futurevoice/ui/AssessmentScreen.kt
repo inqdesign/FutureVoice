@@ -163,6 +163,6 @@ private fun Entry(headline: String, detail: @Composable () -> Unit) {
 }
 
 private fun period(r: WeeklyReport): String {
-    val f = SimpleDateFormat("d MMM", Locale.getDefault())
+    val f = SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMd"), Locale.getDefault())
     return "${f.format(Date(r.periodStart))} – ${f.format(Date(r.periodEnd))} · ${r.sessionCount}"
 }
