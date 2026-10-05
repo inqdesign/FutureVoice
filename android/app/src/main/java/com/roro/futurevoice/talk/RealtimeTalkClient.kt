@@ -85,6 +85,64 @@ class RealtimeTalkClient(private val context: Context) {
         const val CUT_IN_WINDOW_MS = 2_500L
         /** Mic frames per socket message — ~128 ms, the same size iOS taps. */
         private const val MIC_FRAMES = 2048
+
+        /**
+         * Voiced time and mid-speech pauses, read off the learner's own take
+         * (iOS `RealtimeTalkClient.fluencyStats`, `55088c28`). Without it every
+         * realtime turn carried no `fluency`, so articulation rate was 0 for
+         * every call: Progress fell back to wall-clock pace and the level
+         * assessment was told "no timing data".
+         *
+         * iOS `FluencyMeter`'s rule, frame for frame — the same level curve
+         * (−50…0 dBFS → 0…1), the same −32.5 dBFS floor, 11 dB over a
+         * decaying-minimum noise estimate, 0.35 s for a pause — so a call reads
+         * the same pace on both platforms. [pcm] is 16-bit little-endian mono.
+         */
+        fun fluencyStats(pcm: ByteArray, sampleRate: Int): com.roro.futurevoice.audio.FluencyStats? {
+            val samples = pcm.size / 2
+            if (samples <= 0 || sampleRate <= 0) return null
+            val window = maxOf(1, (sampleRate * 0.02).toInt())          // 20 ms
+            val floorLevel = 0.35f; val margin = 0.22f; val risePerSecond = 0.03f
+            var voiced = 0.0; var pauses = 0; var pauseSeconds = 0.0; var longest = 0.0
+            var started = false
+            var silenceRun = 0.0
+            var noiseFloor: Float? = null
+            var index = 0
+            while (index < samples) {
+                val end = minOf(index + window, samples)
+                var sum = 0f
+                for (i in index until end) {
+                    val lo = pcm[2 * i].toInt() and 0xFF
+                    val hi = pcm[2 * i + 1].toInt()
+                    val v = ((hi shl 8) or lo).toShort() / 32768f
+                    sum += v * v
+                }
+                val count = end - index
+                val seconds = count.toDouble() / sampleRate
+                index = end
+                val rms = kotlin.math.sqrt(sum / count)
+                val level = ((20 * kotlin.math.log10(maxOf(rms, 0.00001f)) + 50) / 50).coerceIn(0f, 1f)
+                val floor = noiseFloor?.let { minOf(level, it + risePerSecond * seconds.toFloat()) }
+                    ?: minOf(level, floorLevel)
+                noiseFloor = floor
+                if (level >= maxOf(floorLevel, floor + margin)) {
+                    if (started && silenceRun >= 0.35) {
+                        pauses += 1
+                        pauseSeconds += silenceRun
+                        longest = maxOf(longest, silenceRun)
+                    }
+                    silenceRun = 0.0
+                    voiced += seconds
+                    started = true
+                } else if (started) {
+                    silenceRun += seconds
+                }
+            }
+            if (voiced <= 0) return null
+            return com.roro.futurevoice.audio.FluencyStats(speakingSeconds = voiced,
+                totalSeconds = voiced + pauseSeconds, pauseCount = pauses,
+                pauseSeconds = pauseSeconds, longestPauseSeconds = longest)
+        }
     }
 
     enum class State { IDLE, CONNECTING, LISTENING, HEARING, THINKING, SPEAKING, FAILED }
@@ -95,7 +153,8 @@ class RealtimeTalkClient(private val context: Context) {
     @Volatile var onPartial: ((String) -> Unit)? = null
     /** A committed learner turn: the audio-grounded text, the trimmed WAV
      *  (or null if nothing was captured), and its length in ms. */
-    @Volatile var onUserTurn: ((text: String, wav: File?, ms: Int) -> Unit)? = null
+    @Volatile var onUserTurn: ((text: String, wav: File?, ms: Int,
+                                fluency: com.roro.futurevoice.audio.FluencyStats?) -> Unit)? = null
     /** A reply began: [context] identifies it across deltas and audio. */
     /** A reply finished playing: its whole audio, for the talk's Replay and
      *  Say-it-again (iOS keeps every line's audio in `TurnAudioStore`). */
@@ -360,7 +419,7 @@ class RealtimeTalkClient(private val context: Context) {
                     val trimmed = trimSilence(pcm, MIC_RATE)
                     val wav = saveWav(trimmed, MIC_RATE)
                     val ms = (trimmed.size / 2 * 1000L / MIC_RATE).toInt()
-                    onUserTurn?.invoke(said, wav, ms)
+                    onUserTurn?.invoke(said, wav, ms, fluencyStats(trimmed, MIC_RATE))
                 }
                 onPartial?.invoke("")
                 state = if (said.isEmpty()) State.LISTENING else State.THINKING

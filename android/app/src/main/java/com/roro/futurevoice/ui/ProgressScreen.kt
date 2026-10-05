@@ -533,10 +533,21 @@ fun ProgressBody(language: String, nativeLanguage: String,
             onGenerate = {
                 generating = true
                 scope.launch {
+                    val previous = report
+                    val from = com.roro.futurevoice.data.LanguageScope.level(context, language, "")
                     runCatching {
                         WeeklyReportEngine.generate(context, talks.filter { it.endedAt != null && !it.isPractice },
                             report, language, nativeLanguage)
+                    }.onFailure { e ->
+                        com.roro.futurevoice.core.Analytics.capture("level_assess_failed", mapOf(
+                            "reason" to "manual", "error" to e.toString().take(200)))
                     }.getOrNull()?.let {
+                        // Every read, in every direction (iOS 55088c28): only
+                        // `level_up` existed, so a level that went DOWN left
+                        // no trace. Android assesses on the learner's tap.
+                        com.roro.futurevoice.core.Analytics.capture("level_assessed", mapOf(
+                            "from" to from, "to" to (it.cefrLevel ?: ""), "reason" to "manual",
+                            "talks" to it.sessionCount, "first" to (previous == null)))
                         WeeklyReportStore.shared(context).save(it, language)
                         report = it
                         if (it.cefrLevel != null) levelReport = it

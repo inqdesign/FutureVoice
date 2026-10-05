@@ -651,10 +651,12 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         realtime.onPartial = { text -> _state.update { it.copy(partial = text, level = realtime.level) } }
-        realtime.onUserTurn = { said, wav, ms ->
+        realtime.onUserTurn = { said, wav, ms, fluency ->
             markLearnerSpoke()
+            // Measured off the take (iOS 55088c28): realtime turns used to
+            // carry no fluency, so articulation rate read 0 for every call.
             val turn = Turn(role = TurnRole.USER, transcript = said, durationMs = ms,
-                audioURL = wav?.let { keepTurnAudio(it) })
+                audioURL = wav?.let { keepTurnAudio(it) }, fluency = fluency)
             _state.update { it.copy(turns = it.turns + turn, partial = "") }
             // The learner's first words open the steer (nothing before them).
             viewModelScope.launch { syncCoachSteer() }
