@@ -778,6 +778,13 @@ struct PaywallView: View {
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    // The per-day cue reads the minutes it sits under — it is
+                    // their size, not a third thing the plan includes.
+                    if perDay > 0 {
+                        Text(explain("about \(perDay) min a day"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     if scenes > 0 {
                         Text(explain("+ \(scenes) scenes"))
                             .font(.subheadline.weight(.medium))
@@ -788,11 +795,6 @@ struct PaywallView: View {
                     if ["plus", "max"].contains(tier) {
                         Text(explain("+ Speech"))
                             .font(.subheadline.weight(.medium))
-                    }
-                    if perDay > 0 {
-                        Text(explain("about \(perDay) min a day"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: 8)
