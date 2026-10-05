@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.filled.Warning
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -362,6 +363,7 @@ fun TalkDetailScreen(
                             // metered (see `SayItAgainScreen`).
                             onSayItAgain = if (sayItAgain.steps.any { it.isSpoken })
                                 { { sayingAgain = true } } else null)
+                        MissingSummaryBlock(s, level)
                         if (curriculum.isMastered && s.archivedAt == null) {
                             MasteredBanner(onArchive = {
                                 scope.launch {
@@ -716,6 +718,58 @@ internal fun SayItAgainButton(onClick: () -> Unit, modifier: Modifier = Modifier
         Text(stringResource(R.string.say_it_again), maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** The talk is here but its review material never got made — the analysis
+ *  call failed when the call ended and the raw conversation was saved
+ *  without it. Everything in the book derives from that summary, so this is
+ *  the only way back (iOS `ConversationDetailView.missingSummaryBlock`). */
+@Composable
+private fun MissingSummaryBlock(s: Session, level: com.roro.futurevoice.data.CefrLevel) {
+    if (!com.roro.futurevoice.talk.SessionSummarizer.needsSummary(s)) return
+    val context = LocalContext.current
+    val inFlight by com.roro.futurevoice.talk.SessionSummarizer.inFlight.collectAsStateWithLifecycle()
+    val progressBySession by com.roro.futurevoice.talk.SessionSummarizer.progressBySession
+        .collectAsStateWithLifecycle()
+    val working = s.id in inFlight
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFFF9500),
+                modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.review_material_missing),
+                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFFF9500))
+        }
+        if (working) {
+            // Same board the end of a live call shows — the rescue path
+            // builds exactly the same things.
+            SummaryBoard(progressBySession[s.id] ?: com.roro.futurevoice.talk.SessionSummarizer.Progress())
+        } else {
+            Text(stringResource(R.string.the_conversation_was_saved_but_the_analysis_that_turns_it_in_2727b6),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Button(
+            onClick = {
+                val native = context.getSharedPreferences("futurevoice", 0)
+                    .getString("futurevoice.nativeLanguage", null) ?: "en"
+                com.roro.futurevoice.talk.SessionSummarizer.summarizeInBackground(context, s, native, level)
+            },
+            enabled = !working,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (working) {
+                androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.working))
+            } else {
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.generate_review_material))
+            }
+        }
     }
 }
 

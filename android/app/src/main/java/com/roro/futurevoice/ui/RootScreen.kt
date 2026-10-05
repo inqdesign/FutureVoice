@@ -1,6 +1,5 @@
 package com.roro.futurevoice.ui
 
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.Canvas
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.border
@@ -128,8 +127,6 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.ui.draw.shadow
 import com.roro.futurevoice.ui.brand.DiscoverRow
 import com.roro.futurevoice.ui.brand.SegmentChip
-import com.roro.futurevoice.ui.brand.BookCard
-import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.ui.brand.DisplayFace
 import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
@@ -167,12 +164,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.Session
-import com.roro.futurevoice.talk.SessionSummarizer
-import com.roro.futurevoice.talk.TurnRole
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 @Composable
 fun RootScreen() {
@@ -1300,17 +1291,11 @@ internal fun HomeScreen(
         HomeTab.entries.filter { it in visited }.forEach { t ->
           androidx.compose.runtime.key(t) {
             val pageScroll = rememberScrollState()
-            // Capture `home-scenarios` only: Talk opens scrolled to where the
-            // Everyday list ends (iOS `defaultScrollAnchor(.bottom)` — iOS's
-            // page ends there; Android's carries Recent talks below it, so
-            // the scroll stops short of them).
-            var recentTalksHeight by remember { mutableStateOf(0) }
+            // Capture `home-scenarios` only: Talk opens scrolled to the
+            // bottom, where the Everyday list ends (iOS
+            // `defaultScrollAnchor(.bottom)`).
             if (t == HomeTab.TALK && com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab != null) {
-                val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.roundToPx() }
-                LaunchedEffect(pageScroll.maxValue, recentTalksHeight) {
-                    val tail = if (recentTalksHeight > 0) recentTalksHeight + gap else 0
-                    pageScroll.scrollTo((pageScroll.maxValue - tail).coerceAtLeast(0))
-                }
+                LaunchedEffect(pageScroll.maxValue) { pageScroll.scrollTo(pageScroll.maxValue) }
             }
             Column(
                 Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
@@ -1356,11 +1341,6 @@ internal fun HomeScreen(
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
                         )
-                        Box(Modifier.onSizeChanged { recentTalksHeight = it.height }) {
-                            RecentTalks(language = state.targetLanguage,
-                                nativeLanguage = state.nativeLanguage, level = state.level,
-                                onOpen = onOpenTalk)
-                        }
                         state.error?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error)
@@ -1583,66 +1563,6 @@ private fun FirstRunCard() {
 /** iOS's `talkRing` frame. The tail below it is what the centring solves for. */
 private val RING_DIAMETER = 280.dp
 private val RING_TAIL = 20.dp
-
-/**
- * The talks already on this phone — proof the loop persists. Reloads every
- * time Home comes back into composition (i.e. after every call).
- */
-@Composable
-private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLevel,
-                        onOpen: (String) -> Unit = {}) {
-    val context = LocalContext.current
-    val store = remember { SessionStore.shared(context) }
-    var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
-    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    val inFlight by SessionSummarizer.inFlight.collectAsStateWithLifecycle()
-    val progressBySession by SessionSummarizer.progressBySession.collectAsStateWithLifecycle()
-    LaunchedEffect(language, revision) { talks = store.load(language) }
-    if (talks.isEmpty()) return
-    HorizontalDivider()
-    Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium)
-    val formatter = remember { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT) }
-    talks.take(10).forEach { s ->
-        Column {
-            BookCard(
-                title = s.displayTitle ?: stringResource(R.string.conversation),
-                origin = when (s.origin?.name?.lowercase()) {
-                    "news" -> stringResource(R.string.news)
-                    "scenario" -> stringResource(R.string.scenarios)
-                    else -> stringResource(R.string.free_talk)
-                },
-                accent = if (s.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
-                detail = formatter.format(Instant.ofEpochMilli(s.rank).atZone(ZoneId.systemDefault())) +
-                    " · " + stringResource(R.string.lld_turns, s.turns.count { it.role == TurnRole.USER }) +
-                    // A practice (coach mode) call has no score to list
-                    // (iOS HistorySheet / TalkBookCard): it says what it was.
-                    (if (s.isPractice) " · " + stringResource(R.string.practice_call)
-                     else s.summary?.scorecard?.let { " · ${it.overall}" } ?: ""),
-                onClick = { onOpen(s.id) },
-                trailing = s.summary?.scorecard?.overall?.takeIf { !s.isPractice }?.let { score ->
-                    @Composable {
-                        Text("$score", style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                },
-                modifier = Modifier.padding(vertical = 4.dp),
-            )
-            // The rescue path (iOS: ConversationDetailView): a talk saved
-            // before its analysis finished isn't half a book, it's no book —
-            // so it can always be run again from here.
-            if (SessionSummarizer.needsSummary(s)) {
-                val working = s.id in inFlight
-                if (working) {
-                    SummaryBoard(progressBySession[s.id] ?: SessionSummarizer.Progress())
-                } else {
-                    TextButton(
-                        onClick = { SessionSummarizer.summarizeInBackground(context, s, nativeLanguage, level) },
-                    ) { Text(stringResource(R.string.generate_review_material)) }
-                }
-            }
-        }
-    }
-}
 
 /**
  * Discover — what to talk about today, in two chips (`DiscoverSection`):
