@@ -124,6 +124,7 @@ struct SpeechPrompterView: View {
     // MARK: - Screen
 
     private var prompterScreen: some View {
+        Group {
         // No header row: every point above the camera is prompter, so the
         // line being read sits right under the lens and the reader's eyes
         // look into the camera. The controls live on the camera card.
@@ -145,6 +146,7 @@ struct SpeechPrompterView: View {
         .coordinateSpace(.named(Self.screenSpace))
         .background(Color(.systemBackground))
         .overlay { overlay }
+        }
     }
 
     private var isRecording: Bool { session.phase == .recording }
@@ -497,11 +499,12 @@ struct SpeechTeleprompter: View {
 
     @StateObject private var scroller = PrompterScroller()
 
-    /// The line being read sits at the very TOP of the prompter, right under
-    /// the front camera, so the reader's eyes stay at the lens (founder,
-    /// 2026-10-05: one read line kept above it put the line to read too far
-    /// down, and the gaze dropped). Lines already read scroll out above.
-    private var readingLine: CGFloat { 6 }
+    /// Where the line being read sits: it enters as the SECOND row and rises
+    /// to the top row as the reader crosses it — so it stays right under the
+    /// camera and never leaves the screen before its end is read. (At the
+    /// very top row it was pushed out mid-line; one row lower and with a
+    /// read line kept above, the gaze dropped. This is the band between.)
+    private var readingLine: CGFloat { 6 + textSize * 1.55 }
 
     struct WordFrame: Equatable {
         var minX: CGFloat = 0
@@ -598,6 +601,10 @@ final class PrompterScroller: NSObject, ObservableObject {
     private var link: CADisplayLink?
     private var lastTick: CFTimeInterval = 0
 
+    /// How far behind the reader's spot the text trails, in seconds.
+    private let followTime: CGFloat = 0.45
+    /// The fastest the text moves when catching up.
+    private let maxLinesPerSecond: CGFloat = 2.5
     /// Seconds the reader's pace is averaged over.
     private let paceWindow: CGFloat = 6
     /// Seconds a change of speed takes.
@@ -647,43 +654,30 @@ final class PrompterScroller: NSObject, ObservableObject {
         guard lastTick > 0 else { lastTarget = target; return }
         let dt = CGFloat(min(0.05, now - lastTick))
         guard dt > 0 else { return }
-        let (recording, follow, speed, speaking) = inputs()
+        let (recording, follow, speed, _) = inputs()
         let planned = plannedPace > 0 ? plannedPace : lineAdvance / 2
 
-        var wanted: CGFloat = 0
+        var next = position
         if !recording {
-            wanted = 0
+            // Still between takes.
         } else if !follow {
             // Steady speed: exactly that, whatever is said.
-            wanted = planned * speed
+            next = position + planned * speed * dt
         } else {
-            // The reader's pace, learned slowly while they speak, starting
-            // from the language's ordinary pace and kept near it.
-            if pace == 0 { pace = planned }
-            let instant = max(0, target - lastTarget) / dt
-            if speaking {
-                pace += (instant - pace) * min(1, dt / paceWindow)
-                pace = min(max(pace, planned * 0.6), planned * 1.6)
-            }
-            if speaking {
-                let linesBehind = (target - position) / max(1, lineAdvance)
-                let pull = min(max(linesBehind * pullPerLine, -maxPull), maxPull)
-                wanted = pace * (1 + pull)
-            }
+            // Follow the voice, nothing more: ease toward where the reader
+            // is (their word, and how far across its line), a short lag
+            // behind. Speaking moves it, stopping stops it. The versions
+            // before ran ahead on a learned pace and then waited at a line,
+            // which read as drifting out of step with the voice (founder,
+            // 2026-10-05). A long catch-up after the recognizer missed a
+            // stretch is speed-capped so it glides rather than jumps.
+            let gap = target - position
+            var step = gap * (1 - exp(-dt / followTime))
+            let cap = max(1, lineAdvance) * maxLinesPerSecond * dt
+            step = min(max(step, -cap * 0.5), cap)
+            next = position + step
         }
         lastTarget = target
-        velocity += (wanted - velocity) * min(1, dt / speedWindow)
-        var next = position + velocity * dt
-        // The line being read never leaves the screen. With the reading line
-        // at the very top, any lead over the reader pushed the rest of their
-        // line up and out before they had read it (founder, 2026-10-05). So
-        // the column may rise to the current line's top and no further; it
-        // waits there and flows on once the reader reaches the next line.
-        // Steady-speed mode has no reader position to wait for.
-        if follow, recording, next > ceiling {
-            next = max(position, ceiling)
-            velocity = min(velocity, 0)
-        }
         if abs(next - position) > 0.01 { position = next }
     }
 }
