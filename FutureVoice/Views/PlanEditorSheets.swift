@@ -355,7 +355,9 @@ struct WeeklyPlanEditor: View {
                                         highlightBlockId: landedId)
                         .padding(.horizontal, 8)
                         .padding(.top, 6)
-                        .padding(.bottom, 24)
+                        // Room for the + to float over without covering
+                        // the last hours.
+                        .padding(.bottom, Self.addButtonClearance)
                         .overlay(alignment: .topLeading) {
                             // Scroll anchor at 7:00.
                             Color.clear.frame(height: 1)
@@ -398,15 +400,10 @@ struct WeeklyPlanEditor: View {
                 if let dragTarget { dragTimePill(dragTarget) }
                 else if let landedNote { pill(landedNote) }
             }
-            .overlay(alignment: .bottomTrailing) { addButton }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Text("Tap an empty spot to add. Hold a block and drag to move it.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(.bar)
+            // Out of the way while a block is being dragged — it would sit
+            // over the very hours the block is being dropped on.
+            .overlay(alignment: .bottomTrailing) {
+                if dragTarget == nil { addButton.transition(.opacity) }
             }
             .navigationTitle(explain("My routine"))
             .navigationBarTitleDisplayMode(.inline)
@@ -527,8 +524,11 @@ struct WeeklyPlanEditor: View {
         }
         .accessibilityLabel(Text(explain("Add a block")))
         .padding(.trailing, 20)
-        .padding(.bottom, 16)
+        .padding(.bottom, 4)
     }
+
+    /// The +'s height plus its margin, with some air.
+    static let addButtonClearance: CGFloat = 56 + 4 + 24
 
     private enum RestChoice: Hashable { case none, weekends, custom }
 
