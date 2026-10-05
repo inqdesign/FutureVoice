@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MarkChatRead
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
@@ -68,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
@@ -891,5 +893,96 @@ private fun RoutineDay(callout: Int?, modifier: Modifier, face: @Composable () -
             Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { face() }
         }
         if (callout != null) Callout(callout, corner = 20.dp) { circle() } else circle()
+    }
+}
+
+// MARK: - Speech (iOS `SpeechPrompterMock` / `SpeechResultMock`, `1a2b5e86`)
+
+/** Phone-shaped, like the take screen: script on top, camera card below. */
+@Composable
+internal fun SpeechPrompterMock() {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.width(168.dp)
+                .background(MaterialTheme.colorScheme.surface, ContinuousShape(22.dp))
+                .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, ContinuousShape(22.dp))
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Callout(1, corner = 12.dp) {
+                Column(Modifier.fillMaxWidth().background(mockCard, ContinuousShape(12.dp)).padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.alpha(0.5f)) { TextBar(92.dp) }
+                    TextBar(118.dp, 8.dp); TextBar(104.dp, 8.dp); TextBar(76.dp, 8.dp)
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(150.dp).clip(ContinuousShape(16.dp))
+                .background(Color(0xFFC7C7CC)), contentAlignment = Alignment.BottomCenter) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                    Icon(Icons.Filled.Person, null, Modifier.padding(top = 14.dp).size(52.dp), tint = Color(0xFFE5E5EA))
+                }
+                Row(Modifier.padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Callout(2, corner = 14.dp) {
+                        Box(Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center) { Glyph(Icons.Filled.Videocam, 11.dp, Color.White) }
+                    }
+                    Callout(3, corner = 20.dp, trailing = true) {
+                        Box(Modifier.size(40.dp).border(3.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(30.dp).background(Color(0xFFFF3B30), CircleShape))
+                        }
+                    }
+                    Box(Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center) { Glyph(Icons.Filled.GraphicEq, 11.dp, Color.White) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SpeechResultMock() {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Callout(1, corner = 14.dp) {
+            Row(Modifier.fillMaxWidth().background(mockCard, ContinuousShape(14.dp)).padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val green = Color(0xFF34C759)
+                val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                Box(Modifier.size(54.dp).drawBehind {
+                    val w = 6.dp.toPx()
+                    val s = Size(size.width - w, size.height - w)
+                    drawArc(track, 0f, 360f, false, Offset(w / 2, w / 2), s, style = Stroke(w))
+                    drawArc(green, -90f, 360f * 0.84f, false, Offset(w / 2, w / 2), s, style = Stroke(w, cap = StrokeCap.Round))
+                }, contentAlignment = Alignment.Center) { Caption("84", 15.sp) }
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    TextBar(140.dp); TextBar(110.dp); TextBar(90.dp, accentBar = true)
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Callout(2, corner = 8.dp) {
+                Column(Modifier.size(54.dp, 96.dp).clip(ContinuousShape(8.dp))) {
+                    Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFFE5E5EA)).padding(6.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { TextBar(34.dp, 4.dp); TextBar(28.dp, 4.dp) }
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFFC7C7CC)), contentAlignment = Alignment.Center) {
+                        Glyph(Icons.Filled.Person, 16.dp, Color(0xFFE5E5EA))
+                    }
+                }
+            }
+            Callout(3, corner = 8.dp, trailing = true, modifier = Modifier.weight(1f)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("84", "76", "69").forEachIndexed { i, n ->
+                        Row(Modifier.fillMaxWidth().height(26.dp).background(mockCard, ContinuousShape(8.dp))
+                            .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TextBar(80.dp)
+                            Spacer(Modifier.weight(1f))
+                            Caption(n, 12.sp, FontWeight.SemiBold,
+                                if (i == 0) Color(0xFF34C759) else Color(0xFFFF9500))
+                        }
+                    }
+                }
+            }
+        }
     }
 }

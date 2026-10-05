@@ -46,6 +46,9 @@ object BillingGate {
      *  cache, and re-read behind the tap. */
     internal const val FRESH_FOR_MS = 60_000L
 
+    /** The cached account, for gates that read the TIER (iOS `account`). */
+    val account: AccountStatus? get() = cached
+
     /** Fold in a status someone else just loaded (Me, a purchase result). */
     fun remember(status: AccountStatus) {
         cached = status

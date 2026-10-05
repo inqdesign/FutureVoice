@@ -272,6 +272,15 @@ fun RootScreen() {
      * coming back from a Practice deck dropped the learner on Talk.
      */
     var tab by remember { mutableStateOf(HomeTab.TALK) }
+    // A Speech block's reminder or routine line: the Speech tab, with nothing
+    // left open in front of it (iOS `consumeSpeechTap`).
+    val speechPending by com.roro.futurevoice.data.PlanReminder.pendingSpeech.collectAsStateWithLifecycle()
+    LaunchedEffect(speechPending) {
+        if (!speechPending) return@LaunchedEffect
+        com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = false
+        showActivity = false; showMe = false; showDeck = false; library = null
+        tab = HomeTab.SPEECH
+    }
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(deepLink) {
         when (DeepLinkInbox.consume()) {
@@ -1065,7 +1074,10 @@ internal fun AccountScreen(
 /** The four verbs, in the order the product does them. Internal so the
  *  capture build can open the shell on a tab. */
 internal enum class HomeTab(val label: Int) {
-    TALK(R.string.talk), WATCH(R.string.watch),
+    TALK(R.string.talk),
+    // Speech sits second, as on iOS (Talk · Speech · Watch · Review · Progress).
+    SPEECH(R.string.speech_d00d85),
+    WATCH(R.string.watch),
     // "Review" since iOS 2026-09-30 (RootTabView): the tab is the review home.
     PRACTICE(R.string.review), PROGRESS(R.string.progress)
 }
@@ -1275,6 +1287,7 @@ internal fun HomeScreen(
                         // The week's things — put off, the week, the tests — as
                         // icons with a dot (iOS `weekToolbar`, 2026-10-03). The
                         // finished books are a shelf chip now, not a seal here.
+                        if (tab == HomeTab.SPEECH) com.roro.futurevoice.ui.speech.SpeechHeaderAction()
                         if (tab == HomeTab.PRACTICE) {
                             ReviewHeaderActions(language = state.targetLanguage, level = state.level,
                                 onOpenPutOff = onOpenDueReview)
@@ -1356,6 +1369,14 @@ internal fun HomeScreen(
                             TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
                         }
                     }
+
+                    // Speech: read a script aloud under a prompter that follows
+                    // the voice, and get the take scored.
+                    HomeTab.SPEECH -> com.roro.futurevoice.ui.speech.SpeechTabBody(
+                        language = state.targetLanguage,
+                        native = state.nativeLanguage,
+                        level = state.level,
+                    )
 
                     // Watch: simulate the situation BEFORE it happens. Scenarios
                     // are reusable templates — a tap writes a fresh take.

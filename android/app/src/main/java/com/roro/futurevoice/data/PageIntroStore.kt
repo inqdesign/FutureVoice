@@ -10,14 +10,17 @@ import kotlinx.coroutines.flow.StateFlow
  * second first look. Same keys as iOS, so a backup carries the answer.
  */
 object PageIntroStore {
-    /** The four tabs plus My routine, by the raw value iOS stores. */
+    /** The five tabs plus My routine, by the raw value iOS stores. */
     enum class Page(val raw: String) {
-        TALK("talk"), WATCH("watch"), REVIEW("review"), PROGRESS("progress"),
+        TALK("talk"),
+        /** The Speech tab (iOS 1.1.4 (72), `6f2ccd53`). */
+        SPEECH("speech"),
+        WATCH("watch"), REVIEW("review"), PROGRESS("progress"),
         /** Not a tab: My routine, reached from the Talk header's streak. */
         ROUTINE("routine");
 
         companion object {
-            val tabs = listOf(TALK, WATCH, REVIEW, PROGRESS)
+            val tabs = listOf(TALK, SPEECH, WATCH, REVIEW, PROGRESS)
             fun from(raw: String): Page? = entries.firstOrNull { it.raw == raw }
         }
     }

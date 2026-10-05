@@ -34,6 +34,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -45,6 +47,8 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Replay
@@ -121,6 +125,7 @@ import kotlinx.coroutines.launch
 object PageIntro {
     fun icon(page: Page): ImageVector = when (page) {
         Page.TALK -> Icons.Filled.GraphicEq
+        Page.SPEECH -> Icons.Filled.MicExternalOn
         Page.WATCH -> Icons.Filled.PlayCircle
         Page.REVIEW -> Icons.AutoMirrored.Filled.MenuBook
         Page.PROGRESS -> Icons.Filled.BarChart
@@ -129,6 +134,7 @@ object PageIntro {
 
     fun nameRes(page: Page): Int = when (page) {
         Page.TALK -> R.string.guide_talk
+        Page.SPEECH -> R.string.speech_d00d85
         Page.WATCH -> R.string.guide_watch
         Page.REVIEW -> R.string.guide_review
         Page.PROGRESS -> R.string.guide_progress
@@ -138,6 +144,7 @@ object PageIntro {
     /** The guide's opening line, and the row's subtitle in Me → App guide. */
     fun problemRes(page: Page): Int = when (page) {
         Page.TALK -> R.string.guide_you_know_the_words_you_just
+        Page.SPEECH -> R.string.chatting_is_one_thing_presenting_is_another
         Page.WATCH -> R.string.guide_in_a_new_situation_you_dont
         Page.REVIEW -> R.string.guide_what_you_learn_today_is_gone
         Page.PROGRESS -> R.string.guide_am_i_actually_getting_better
@@ -149,7 +156,7 @@ object PageIntro {
     fun stepCount(page: Page): Int = when (page) {
         Page.TALK -> 6
         Page.WATCH -> 5
-        Page.REVIEW -> 4
+        Page.REVIEW, Page.SPEECH -> 4
         Page.PROGRESS, Page.ROUTINE -> 3
     }
 
@@ -161,6 +168,7 @@ object PageIntro {
 /** iOS `RootTabView.introPage`: the third tab is still Practice in code. */
 internal fun HomeTab.guidePage(): Page = when (this) {
     HomeTab.TALK -> Page.TALK
+    HomeTab.SPEECH -> Page.SPEECH
     HomeTab.WATCH -> Page.WATCH
     HomeTab.PRACTICE -> Page.REVIEW
     HomeTab.PROGRESS -> Page.PROGRESS
@@ -317,6 +325,32 @@ private fun GuidePage(page: Page, i: Int) {
                     c(R.string.guide_this_calls_grammar_focus, R.string.guide_the_mistake_you_make_most_like)),
                 note = R.string.guide_a_coached_call_counts_as_a,
             ) { CoachMock() }
+        }
+        Page.SPEECH -> when (i) {
+            0 -> WhyPage(Hero.Symbol(Icons.Filled.MicExternalOn), R.string.speech_d00d85, PageIntro.problemRes(page),
+                R.string.a_presentation_at_work_a_pitch_introducing_yourself_at_a_mee_fb70e2,
+                R.string.speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33)
+            1 -> ScreenPage(R.string.recording_a_take, R.string.read_the_script_out_loud_like_a_presenter,
+                listOf(c(R.string.the_script_follows_your_voice, R.string.it_scrolls_as_you_read_and_slows_down_when_you_pause_the_lin_627d8c),
+                    c(R.string.your_camera, R.string.turn_it_on_to_film_yourself_or_off_to_practice_with_your_voi_8f2b9e),
+                    c(R.string.record, R.string.recording_starts_after_3_2_1_while_you_record_throws_the_tak_5d0549)),
+            ) { SpeechPrompterMock() }
+            2 -> ScreenPage(R.string.after_each_take, R.string.your_score_comes_a_few_seconds_after_you_stop,
+                listOf(c(R.string.your_score, R.string.accuracy_pace_pauses_filler_words_and_how_steady_your_voice_b02205),
+                    c(R.string.your_video, R.string.the_script_and_your_face_together_in_one_vertical_video_save_41e503),
+                    c(R.string.your_takes, R.string.every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d)),
+            ) { SpeechResultMock() }
+            else -> StepsPage(R.string.where_scripts_come_from, R.string.every_script_teaches_you_something_while_you_practice,
+                listOf(
+                    GuideStep(Icons.AutoMirrored.Filled.Article, R.string.start_with_the_sample,
+                        R.string.every_account_can_practice_the_built_in_script),
+                    GuideStep(Icons.Filled.AutoAwesome, R.string.write_one_with_ai,
+                        R.string.pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90,
+                        badge = R.string.plus_and_max),
+                    GuideStep(Icons.Outlined.EditNote, R.string.add_your_own,
+                        R.string.paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a,
+                        badge = R.string.plus_and_max),
+                ))
         }
         Page.WATCH -> when (i) {
             0 -> WhyPage(Hero.Symbol(Icons.Filled.PlayCircle), R.string.guide_watch, PageIntro.problemRes(page),
@@ -616,7 +650,9 @@ internal fun Callout(
 
 // MARK: - Steps (a short timeline) and Concept (an idea the screen can't show)
 
-private class GuideStep(val icon: ImageVector, val title: Int, val detail: Int)
+/** [badge]: a plan tag beside the title ("Plus and Max") — said once, where
+ *  it's seen, instead of trailing the sentence (iOS `1a2b5e86`). */
+private class GuideStep(val icon: ImageVector, val title: Int, val detail: Int, val badge: Int? = null)
 
 @Composable
 private fun StepsPage(title: Int, subtitle: Int, steps: List<GuideStep>) {
@@ -646,7 +682,18 @@ private fun StepsPage(title: Int, subtitle: Int, steps: List<GuideStep>) {
                     }
                     Column(Modifier.weight(1f).padding(top = 10.dp, bottom = 22.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(step.title), style = MaterialTheme.typography.titleMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(stringResource(step.title), style = MaterialTheme.typography.titleMedium)
+                            step.badge?.let { b ->
+                                Row(Modifier.background(accent, CircleShape).padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Icon(Icons.Filled.Lock, null, Modifier.size(11.dp), tint = Color.White)
+                                    Text(stringResource(b), color = Color.White, fontWeight = FontWeight.SemiBold,
+                                        style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                         Text(stringResource(step.detail), style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

@@ -123,6 +123,11 @@ dependencies {
     implementation(libs.play.review)
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
+    // Speech tab: front-camera preview + frames the app draws into the take video.
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.serialization.json)

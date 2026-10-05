@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -122,6 +123,8 @@ internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit, modifier:
 private val HomeTab.symbol: ImageVector
     get() = when (this) {
         HomeTab.TALK -> Icons.Filled.GraphicEq
+        // SF `music.mic`: a hand-held stage mic.
+        HomeTab.SPEECH -> Icons.Filled.MicExternalOn
         HomeTab.WATCH -> Icons.Filled.PlayCircle
         HomeTab.PRACTICE -> Icons.Filled.MenuBook
         HomeTab.PROGRESS -> ChartBarFill
