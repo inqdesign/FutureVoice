@@ -621,7 +621,7 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 - ☑ 2h.1 루틴 편집 화면 — 안내 바 삭제, + 아래로, 드래그 중엔 숨김 (`d70de568`) — `3dfc9c6f`: 아래 힌트 바 삭제(알림 허용 바는 iOS처럼 유지), 타임라인이 화면 끝까지·아래 여백 56+4+24, + 아래 여백 4, 드래그 중 페이드 아웃. 에뮬레이터 `plan-editor` 확인
 - ☑ 2h.2 웰컴 칩은 기능 이름만, 줄이 바뀔 때 햅틱 (`e57dc08e`) — `13819e1e`: 대화·다시 말하기·나만의 교재·복습·스피치, 마지막 화면은 대화·교재·복습·스피치·다시 말하기 보통 크기(`compact` 삭제), 줄마다 가벼운 햅틱. 에뮬레이터 `welcome` 5·9 확인
 - ☑ 2h.3 큰 캡션, 더 깊은 하늘, nawana 워드마크 (`0777ae8c`) — `34581b52`: 캡션 30sp(60자 넘으면 26sp), 밤 40%·하늘 0.66/-0.06, 왼쪽 위 Pixelify Sans 워드마크(OFL, `assets/PIXELIFY-LICENSE.txt`). 에뮬레이터 ko 7·en 7·de 2 확인
-- ☑ 2h.4 예문 길게 눌러 문장 카드로 (`71c5e2da`) — `9e6d257b`: `DrillStore.bookmarkSentence`(→ `saveIfNew`, 원문 없음, 바로 복습)·`sentenceKeys`·`sentenceKey`, 단어·표현 카드(`WordCardSheet`)와 문장 카드 예문 시트(`DrillEnrichmentSheet`) 예문에 "문장에 저장"/"문장에 저장됨". 에뮬레이터 `expr-card`에서 저장→drills.json 확인. iOS 예문 메뉴의 "표현에 저장"·"따라 말하기"는 안드로이드 예문에 원래 없음(별도 격차)
+- ☑ 2h.4 예문 길게 눌러 문장 카드로 (`71c5e2da`) — `9e6d257b`: `DrillStore.bookmarkSentence`(→ `saveIfNew`, 원문 없음, 바로 복습)·`sentenceKeys`·`sentenceKey`, 단어·표현 카드(`WordCardSheet`)와 문장 카드 예문 시트(`DrillEnrichmentSheet`) 예문에 "문장에 저장"/"문장에 저장됨". 에뮬레이터 `expr-card`에서 저장→drills.json 확인. 메뉴 전체를 iOS `saveActions`와 같게 `e9e5c4f6`: 문장에 저장 → 표현에 저장(`VocabStore.addExpression` = 북마크, count 0 행만, 숙달 아님, `ExpressionBookmarkTest` 3) → 이 문장 섀도잉, 단어 카드의 구는 문장 항목 없이. 에뮬레이터에서 표현 저장(vocab_expressions.json `used`/count 0, 메뉴 "표현에 저장됨")·섀도잉 화면 열림 확인
 
 ---
 
