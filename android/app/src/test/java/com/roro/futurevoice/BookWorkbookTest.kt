@@ -192,4 +192,24 @@ class BookWorkbookTest {
         // A link to a page that doesn't exist is dropped, not written.
         assertSame(pdf, PdfLinks.add(pdf, 842f, listOf(PdfLinks.Link(0, 0f, 0f, 1f, 1f, 9))))
     }
+
+    /** iOS 25e4d8e2: a talk-book expression's example is the sentence of
+     *  that talk that carried it — the fluent self's first, then the
+     *  learner's, whole words only. */
+    @Test fun talkExpressionExampleIsTheSentenceItWasSaidIn() {
+        val session = com.roro.futurevoice.talk.Session(
+            userId = "u", targetLanguage = "en", startedAt = 0L,
+            turns = listOf(
+                com.roro.futurevoice.talk.Turn(role = com.roro.futurevoice.talk.TurnRole.USER,
+                    transcript = "I want to end up somewhere warm."),
+                com.roro.futurevoice.talk.Turn(role = com.roro.futurevoice.talk.TurnRole.FLUENT_SELF,
+                    transcript = "Nice. You might end up loving it. Pushback is normal."),
+            ))
+        assertEquals("You might end up loving it.", BookDocument.sentence("end up", session))
+        assertEquals("I want to end up somewhere warm.",
+            BookDocument.sentence("end up somewhere", session))
+        // Whole words: "push" is not "Pushback".
+        assertEquals("", BookDocument.sentence("push", session))
+        assertEquals("", BookDocument.sentence("", session))
+    }
 }

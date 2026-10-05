@@ -19,7 +19,7 @@ import java.util.Locale
  * plus dialogue blocks), which is the point: a Watch book and a Talk book
  * have the same anatomy on screen — a scene plus material to master — so they
  * should read the same on paper. One document model, two renderers
- * ([markdown], [html] → PDF), and every builder feeds the same thing. Add a
+ * ([markdown], and the workbook PDF — [WorkbookPdf]), and every builder feeds the same thing. Add a
  * field here and BOTH renderers pick it up; never render a book straight to a
  * format.
  *
@@ -155,112 +155,6 @@ data class BookDocument(
 
     // MARK: - Print HTML (what the PDF is laid out from)
 
-    /**
-     * Print-shaped HTML: black on white, one column, generous leading — meant
-     * to be marked up with a pencil, not to look like the app.
-     *
-     * The document is authored as HTML because the PDF is produced by handing
-     * this to a WebView's print adapter, which is the only thing on Android
-     * that flows arbitrary-length text across pages without hand-rolling
-     * pagination — the same reason iOS authors it as HTML.
-     */
-    val html: String
-        get() {
-            fun esc(s: String) = s
-                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-            val body = StringBuilder()
-            body.append("<header><p class=\"kind\">${esc(kind)}</p><h1>${esc(title)}</h1>")
-            val head = (if (subtitle.isEmpty()) emptyList() else listOf(subtitle)) + meta
-            if (head.isNotEmpty()) {
-                body.append("<p class=\"meta\">${esc(head.joinToString(" · "))}</p>")
-            }
-            body.append("</header>")
-
-            for (section in sections) {
-                if (section.isEmpty && section.blurb.isEmpty()) continue
-                body.append("<section><h2>${esc(section.title)}</h2>")
-                if (section.blurb.isNotEmpty()) {
-                    body.append("<p class=\"blurb\">${esc(section.blurb)}</p>")
-                }
-
-                if (section.entries.isNotEmpty()) {
-                    body.append("<ul>")
-                    for (entry in section.entries) {
-                        val box = when (entry.mastered) {
-                            true -> "<span class=\"box done\">&#10003;</span>"
-                            false -> "<span class=\"box\"></span>"
-                            null -> "<span class=\"box none\"></span>"
-                        }
-                        body.append("<li>$box<div class=\"item\">")
-                        if (!entry.original.isNullOrEmpty()) {
-                            body.append("<p class=\"said\">${esc(entry.original)}</p>")
-                        }
-                        body.append("<p class=\"text\">${esc(entry.text)}</p>")
-                        if (entry.example.isNotEmpty()) {
-                            body.append("<p class=\"example\">${esc(entry.example)}</p>")
-                        }
-                        if (entry.note.isNotEmpty()) {
-                            body.append("<p class=\"note\">${esc(entry.note)}</p>")
-                        }
-                        body.append("</div></li>")
-                    }
-                    body.append("</ul>")
-                }
-
-                for (line in section.lines) {
-                    body.append("<div class=\"turn${if (line.isUser) " mine" else ""}\">")
-                    body.append("<p class=\"speaker\">${esc(line.speaker)}</p>")
-                    body.append("<p class=\"line\">${esc(line.text)}</p>")
-                    if (!line.correction.isNullOrEmpty()) {
-                        body.append("<p class=\"fix\">${esc(line.correction)}</p>")
-                        if (line.correctionNote.isNotEmpty()) {
-                            body.append("<p class=\"note\">${esc(line.correctionNote)}</p>")
-                        }
-                    }
-                    body.append("</div>")
-                }
-                body.append("</section>")
-            }
-
-            return """
-            <!doctype html><html><head><meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1"><style>
-            * { box-sizing: border-box; }
-            body { font: 12pt/1.55 sans-serif; color: #111; margin: 0; }
-            header { border-bottom: 1.5px solid #111; padding-bottom: 10pt; margin-bottom: 18pt; }
-            .kind { font-size: 8.5pt; letter-spacing: .1em; text-transform: uppercase;
-                    color: #777; margin: 0 0 4pt; }
-            h1 { font-size: 21pt; line-height: 1.2; margin: 0; font-weight: 600; }
-            .meta { font-size: 9.5pt; color: #666; margin: 6pt 0 0; }
-            section { margin-bottom: 20pt; }
-            h2 { font-size: 12.5pt; font-weight: 600; margin: 0 0 8pt;
-                 padding-bottom: 3pt; border-bottom: .5px solid #ccc; }
-            .blurb { margin: 0 0 8pt; color: #333; }
-            ul { list-style: none; margin: 0; padding: 0; }
-            li { display: flex; align-items: flex-start; page-break-inside: avoid;
-                 padding: 5pt 0; border-bottom: .5px solid #eee; }
-            .box { display: inline-block; width: 11pt; height: 11pt; margin: 3pt 9pt 0 0;
-                   border: .8px solid #999; border-radius: 2pt; flex: 0 0 auto;
-                   text-align: center; line-height: 11pt; font-size: 8.5pt; color: #111; }
-            .box.done { border-color: #111; }
-            .box.none { border: none; }
-            .item { flex: 1 1 auto; }
-            .item p { margin: 0; }
-            .text { font-weight: 600; }
-            .said { color: #888; text-decoration: line-through; }
-            .example { color: #333; font-style: italic; margin-top: 1pt !important; }
-            .note { color: #777; font-size: 10pt; margin-top: 2pt !important; }
-            .turn { page-break-inside: avoid; margin-bottom: 10pt; padding-left: 0; }
-            .turn.mine { padding-left: 24pt; }
-            .speaker { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase;
-                       color: #888; margin: 0 0 1pt; }
-            .line { margin: 0; }
-            .fix { margin: 3pt 0 0; padding-left: 8pt; border-left: 2px solid #bbb; }
-            </style></head><body>$body</body></html>
-            """.trimIndent()
-        }
-
     companion object {
 
         /**
@@ -371,8 +265,9 @@ data class BookDocument(
                 sections.add(Section(context.getString(R.string.expressions),
                     kind = Section.Kind.EXPRESSIONS,
                     entries = offered.map {
-                        Entry(it, note = context.getString(R.string.your_fluent_self_used_this_you_didnt))
-                    } + used.map { Entry(it) }))
+                        Entry(it, note = context.getString(R.string.your_fluent_self_used_this_you_didnt),
+                            example = sentence(saying = it, session = session))
+                    } + used.map { Entry(it, example = sentence(saying = it, session = session)) }))
             }
 
             val fluentLines = session.turns
@@ -421,6 +316,33 @@ data class BookDocument(
                 meta = meta,
                 sections = sections,
             )
+        }
+
+        /**
+         * The sentence of THIS talk that carried the phrase — the fluent
+         * self's first, then the learner's (iOS 25e4d8e2). A talk-book
+         * expression has no example of its own, and the workbook's "Copy it
+         * out" page asks for a sentence to copy: before this the only source
+         * was the glossary, fetched inside a time budget, so a missed lookup
+         * printed "Copy the sentence" over an empty line. The line the phrase
+         * was actually said in is on the phone and is the better example.
+         */
+        fun sentence(saying: String, session: Session): String {
+            val needle = com.roro.futurevoice.talk.CarryoverDetector.normalized(saying)
+            if (needle.isEmpty()) return ""
+            val spaced = WordSplitter.spaced(session.targetLanguage)
+            fun pad(s: String) = if (spaced) " $s " else s
+            val target = pad(needle)
+            val ordered = session.turns.filter { it.role == TurnRole.FLUENT_SELF } +
+                session.turns.filter { it.role == TurnRole.USER }
+            for (turn in ordered) {
+                for (line in TalkCurriculum.sentences(turn.transcript)) {
+                    if (pad(com.roro.futurevoice.talk.CarryoverDetector.normalized(line)).contains(target)) {
+                        return line.trim()
+                    }
+                }
+            }
+            return ""
         }
 
         /** iOS `.dateTime.year().month(.wide).day()` — a skeleton, so each

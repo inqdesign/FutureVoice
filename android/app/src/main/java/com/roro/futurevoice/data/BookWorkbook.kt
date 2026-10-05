@@ -4,8 +4,8 @@ package com.roro.futurevoice.data
  * A book as a WORKBOOK — the same [BookDocument], laid out for a pen. Port of
  * `BookWorkbook.swift` (iOS `ab56652`).
  *
- * The reader PDF ([BookDocument.html]) is a document: everything is printed,
- * nothing is left to do. People who study by hand work differently, and the
+ * It is the book's ONE PDF (iOS 25e4d8e2 deleted the plain reader layout, a
+ * document where everything is printed and nothing is left to do). People who study by hand work differently, and the
  * pages here are built around what they already do rather than a new method:
  *
  * - **Cover, write** (words): the word sits left of a fold line, its meaning

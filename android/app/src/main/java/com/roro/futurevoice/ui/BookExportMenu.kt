@@ -1,7 +1,6 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -28,9 +27,9 @@ import kotlinx.coroutines.launch
  * The ⋯ on a book page: take this book off the phone.
  *
  * Both book types come through the same [BookDocument], so this menu is the
- * same on both pages and neither knows which renderer it is asking for. PDF
- * to annotate on a tablet or print; a Workbook to study with a pen; Markdown
- * to paste into whatever the learner already keeps notes in.
+ * same on both pages and neither knows which renderer it is asking for. The
+ * PDF is the workbook — to study with a pen, annotate on a tablet or print;
+ * Markdown to paste into whatever the learner already keeps notes in.
  *
  * The document is built LAZILY, when a format is picked: building it walks
  * the whole transcript, and a book page must not pay that to draw a toolbar.
@@ -46,30 +45,19 @@ fun BookExportMenu(document: () -> BookDocument, nativeLanguage: String = "en", 
         Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.export))
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        // The workbook — writing space, answers at the back, index tabs
+        // ([com.roro.futurevoice.data.WorkbookPdf]). It is the only PDF there
+        // is (iOS 25e4d8e2): the plain reader layout sat beside it as "Print
+        // or save as PDF" while the redesign hid under a second row.
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.print_or_save_as_pdf)) },
+            text = { Text(stringResource(R.string.pdf)) },
             leadingIcon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null) },
-            onClick = {
-                open = false; working = true
-                scope.launch {
-                    // The print sheet IS the destination picker — nothing to
-                    // share afterwards, because the sheet writes the file.
-                    runCatching { BookExport.printPdf(context, withGlossary(context, document(), nativeLanguage, targetLanguage)) }
-                    working = false
-                }
-            },
-        )
-        // The same book laid out for a pen — writing space, answers at the
-        // back, index tabs ([com.roro.futurevoice.data.WorkbookPdf]).
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.workbook)) },
-            leadingIcon = { Icon(Icons.Filled.EditNote, contentDescription = null) },
             onClick = {
                 open = false; working = true
                 scope.launch {
                     runCatching {
                         val doc = withGlossary(context, document(), nativeLanguage, targetLanguage)
-                        BookExport.writeWorkbook(context,
+                        BookExport.writePdf(context,
                             if (doc.language.isEmpty()) doc.copy(language = targetLanguage) else doc)
                     }.onSuccess { BookExport.share(context, it, "application/pdf") }
                     working = false
