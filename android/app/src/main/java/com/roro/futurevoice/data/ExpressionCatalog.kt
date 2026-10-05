@@ -40,6 +40,8 @@ object ExpressionCatalog {
         /** Where it came from, by name: the talk's topic for [Origin.HEARD],
          *  the scenario's situation for [Origin.SCENE]. Empty when unknown. */
         val title: String = "",
+        /** Said in a talk (record count > 0) — evidence, the filled check. */
+        val used: Boolean = false,
     )
 
     /**
@@ -82,8 +84,12 @@ object ExpressionCatalog {
             if (k.isEmpty()) continue
             byKey[k] = Item(e.text.trim(), Origin.SAID, count = e.count, lastAt = e.lastAt)
         }
+        val saidCounts = vocab.expressionEntries(language).associate { key(it.text) to it.count }
         return byKey.values
-            .map { it.copy(known = vocab.isKnownExpression(it.text, language),
+            // Known = known OR used (iOS `hasUsedExpression`), which is also
+            // what decides the lens; used alone is the talk's evidence.
+            .map { it.copy(known = vocab.hasUsedExpression(it.text, language),
+                used = (saidCounts[key(it.text)] ?: 0) > 0,
                 bookmarked = key(it.text) in bookmarked) }
             .sortedByDescending { it.lastAt }
     }

@@ -158,6 +158,8 @@ private data class LibraryRowData(
     val known: Boolean,
     val from: From,
     val level: CefrLevel?,
+    /** Said in a talk — the filled check (USED outranks KNOWN). */
+    val used: Boolean = false,
 )
 
 /**
@@ -381,7 +383,7 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                     }
                     // Inset to the text, as iOS's row separator is.
                     if (!last) androidx.compose.material3.HorizontalDivider(
-                        Modifier.padding(start = if (row.kept || row.known) 44.dp else 16.dp),
+                        Modifier.padding(start = if (row.kept || row.known || row.used) 44.dp else 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant)
                     }
                     LaunchedEffect(row.key) {
@@ -482,10 +484,11 @@ private suspend fun loadWords(context: Context, language: String): Material =
         for (word in studying) {
             val key = word.trim().lowercase()
             if (key.isEmpty() || !seen.add(key)) continue
-            val record = vocab.state(key, language) != null
+            val state = vocab.state(key, language)
+            val record = state != null
             toStudy += LibraryRowData(word, key, kept = true, known = record,
                 from = From.Kept(saidCount[key] ?: 0),
-                level = CoreVocabulary.level(key, language))
+                level = CoreVocabulary.level(key, language), used = state == "used")
             if (record && key !in saidCount) {
                 marked += LibraryRowData(word, key, kept = true, known = true,
                     from = From.Kept(0), level = CoreVocabulary.level(key, language))
@@ -504,9 +507,10 @@ private suspend fun loadWords(context: Context, language: String): Material =
                 // A record means the word is already retired — the same rule
                 // the Practice tile's count uses.
                 if (key in saidCount) continue
-                if (vocab.state(key, language) != null) {
+                val sceneState = vocab.state(key, language)
+                if (sceneState != null) {
                     marked += LibraryRowData(item.text, key, kept = false, known = true,
-                        from = From.Scene(title), level = level)
+                        from = From.Scene(title), level = level, used = sceneState == "used")
                     continue
                 }
                 toStudy += LibraryRowData(item.text, key, kept = false, known = false,
@@ -517,6 +521,7 @@ private suspend fun loadWords(context: Context, language: String): Material =
         val known = saidCount.keys.sortedByDescending { saidAt[it] ?: 0L }
             .map { key ->
                 LibraryRowData(key, key, kept = key in studyingKeys, known = true,
+                    used = vocab.state(key, language) == "used",
                     from = From.Kept(saidCount[key] ?: 0),
                     level = CoreVocabulary.level(key, language))
             } + marked
@@ -545,6 +550,7 @@ private suspend fun loadExpressions(context: Context, language: String): Materia
             key = item.text.trim().lowercase(),
             kept = item.bookmarked,
             known = item.known,
+            used = item.used,
             from = when (item.origin) {
                 // Named by the talk / the situation it came from, as on iOS.
                 ExpressionCatalog.Origin.HEARD -> From.Heard(item.title)
@@ -676,13 +682,19 @@ private fun LibraryRow(row: LibraryRowData, gloss: String?, onOpen: () -> Unit) 
     ) {
         // Badge grammar, shared with the card: bookmark = in the notebook,
         // check = retired.
-        if (row.kept || row.known) {
-            Icon(
-                if (row.kept) Icons.Filled.Bookmark else Icons.Filled.Check,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = if (row.kept) MaterialTheme.colorScheme.primary else Color(0xFF34C759),
-            )
+        // bookmark = in the notebook, check = marked known (a claim),
+        // filled check = said in a talk (evidence — USED outranks KNOWN).
+        when (com.roro.futurevoice.data.LibraryBadge.of(row.kept, row.known, row.used)) {
+            com.roro.futurevoice.data.LibraryBadge.STUDYING -> Icon(Icons.Filled.Bookmark,
+                contentDescription = stringResource(R.string.studying),
+                modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            com.roro.futurevoice.data.LibraryBadge.USED -> Icon(Icons.Filled.CheckCircle,
+                contentDescription = stringResource(R.string.used_in_a_talk),
+                modifier = Modifier.size(16.dp), tint = Color(0xFF34C759))
+            com.roro.futurevoice.data.LibraryBadge.KNOWN -> Icon(Icons.Filled.Check,
+                contentDescription = stringResource(R.string.marked_known),
+                modifier = Modifier.size(16.dp), tint = Color(0xFF34C759))
+            com.roro.futurevoice.data.LibraryBadge.NONE -> {}
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             // iOS `ExpressionsView.display`: stored keys are lowercased, so
