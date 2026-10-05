@@ -221,6 +221,11 @@ enum SpeechScriptEngine {
         THE GENRE: \(genreBrief(genre))
 
         THE BODY
+        - WRITE IT IN \(target) FROM THE START, the way a native \(target)
+          speechwriter would: that language's own sentence shapes, rhythm and
+          turns of phrase. Never compose in English and render it, never a
+          translation's word order or idioms. Read it to yourself as a native
+          listener: if any line sounds translated, rewrite it.
         - LENGTH: about \(units) \(unitName) (± 10%) — \(seconds) seconds at a
           clear presenter's pace. Count.
         - Written to be SPOKEN to an audience: open with a hook that makes the

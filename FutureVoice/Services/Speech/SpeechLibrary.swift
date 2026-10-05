@@ -115,65 +115,57 @@ enum SpeechLibrary {
         return UUID(uuidString: "5BEEC000-0000-4000-8000-\(suffix)")!
     }
 
+    /// Each language's sample is WRITTEN in that language, not translated
+    /// (2026-10-05, founder: the translated headphones explainer read badly
+    /// in Korean and stiffly in English). Same topic and facts, each its own
+    /// text.
     private static let builtInTitles: [String: String] = [
-        "en": "How noise-cancelling headphones work",
-        "ko": "노이즈 캔슬링 헤드폰의 원리",
-        "ja": "ノイズキャンセリングの仕組み",
-        "de": "Wie Geräuschunterdrückung funktioniert",
+        "en": "Why yawns are contagious",
+        "ko": "하품은 왜 옮을까",
+        "ja": "あくびはなぜうつるの？",
+        "de": "Warum Gähnen ansteckt",
     ]
 
     private static let builtInBodies: [String: String] = [
         "en": """
-        Good evening. Tonight, a question most of us never stop to ask: how do noise-cancelling headphones actually work?
+        Quick question: how many times have you yawned today? Don't be surprised if that number goes up in the next minute.
 
-        Sound is a wave. It travels through the air as tiny changes in pressure, rising and falling many times a second.
+        Yawns are contagious. See someone yawn, and there's a good chance you'll follow. In some studies, about half the people tested did. You don't even have to see it. Hearing a yawn, or just reading about one, like you're doing right now, can be enough.
 
-        Inside each ear cup, a small microphone listens to the noise around you. A chip studies that wave and, in a fraction of a millisecond, creates its mirror image. Where the noise rises, the new wave falls.
+        So why does it spread? Many scientists think it comes down to empathy. We catch yawns more easily from family and close friends than from strangers.
 
-        When the two waves meet, they cancel each other out. What reaches your ear is close to silence.
+        Here's the surprising part. Babies don't catch yawns at all. It usually starts around age four or five, right about when children begin to understand how other people feel.
 
-        This works best on steady, low sounds, like the hum of a plane's engine. Sudden, high sounds, like a voice, are harder to predict, which is why you can still hear them.
-
-        So the next time the world goes quiet, remember: you are not hearing less sound. You are hearing two sounds erasing each other.
+        So the next time a yawn ripples through a meeting, don't take it personally. It may just mean everyone in the room is tuned in to each other.
         """,
         "ko": """
-        안녕하세요. 오늘은 우리가 매일 쓰지만 원리는 잘 모르는 기술 하나를 소개해 드리겠습니다. 바로 노이즈 캔슬링 헤드폰입니다.
+        여러분, 오늘 하품 몇 번 하셨나요? 이 이야기를 듣다 보면 아마 한 번 더 하시게 될 겁니다.
 
-        소리는 파동입니다. 공기의 압력이 1초에도 여러 번 높아졌다 낮아지면서, 우리 귀에 전달됩니다.
+        하품은 옮습니다. 옆 사람이 하품하는 걸 보면 나도 모르게 따라 하게 되죠. 실제로 한 실험에서는 참가자의 절반 가까이가 하품을 따라 했습니다. 꼭 눈으로 볼 필요도 없습니다. 하품 소리를 듣거나, 지금처럼 하품 이야기를 읽기만 해도 하품이 나옵니다.
 
-        헤드폰 안에는 작은 마이크가 있어서, 주변의 소음을 계속 듣고 있습니다. 칩이 그 파동을 분석하고, 순식간에 정반대 모양의 파동을 만들어 냅니다. 소음이 올라갈 때, 새 파동은 내려가는 것이죠.
+        과학자들은 그 이유를 공감에서 찾습니다. 하품은 모르는 사람보다 가족이나 친한 친구에게서 더 잘 옮거든요.
 
-        두 파동이 만나면 서로를 지워 버립니다. 그래서 귀에는 거의 고요함만 남습니다.
+        재미있는 건 아기들은 하품이 옮지 않는다는 점입니다. 하품이 옮기 시작하는 건 네다섯 살 무렵, 아이가 다른 사람의 마음을 헤아리기 시작할 때쯤이라고 합니다.
 
-        이 기술은 비행기 엔진처럼 낮고 일정한 소리에 특히 강합니다. 반대로 사람 목소리처럼 갑자기 바뀌는 높은 소리는 예측하기 어려워서, 여전히 조금 들립니다.
-
-        다음에 세상이 조용해지면 기억해 보세요. 소리가 줄어든 것이 아니라, 두 소리가 서로를 지우고 있는 것입니다.
+        그러니 회의 시간에 하품이 번져도 너무 서운해하지 마세요. 서로에게 마음을 쓰고 있다는 뜻일지도 모르니까요.
         """,
         "ja": """
-        こんばんは。今日は、毎日使っているのに、仕組みはあまり知られていない技術をご紹介します。ノイズキャンセリングヘッドホンです。
+        皆さん、誰かのあくびを見て、つられてあくびをしたことはありませんか。実はこれ、とてもよくあることなんです。ある研究では、およそ半分の人があくびをうつされました。
 
-        音は波です。空気の圧力が一秒間に何度も上がったり下がったりして、私たちの耳に届きます。
+        しかも、見なくてもうつります。あくびの音を聞いたり、あくびについて読んだりするだけで十分なんです。もしかしたら今、皆さんもあくびが出そうになっていませんか。
 
-        ヘッドホンの中には小さなマイクがあり、周りの騒音をずっと聞いています。チップがその波を分析し、一瞬で正反対の形の波を作り出します。騒音が上がるとき、新しい波は下がるのです。
+        多くの研究者は、これを共感や人とのつながりに結びつけています。知らない人より、家族や親しい友だちのあくびのほうが、ずっとうつりやすいからです。そして、赤ちゃんや小さな子どもには、あくびはうつりません。始まるのは四歳か五歳ごろ。ちょうど、人の気持ちがわかり始めるころです。
 
-        二つの波が出会うと、お互いを打ち消し合います。その結果、耳にはほとんど静けさだけが残ります。
-
-        この技術は、飛行機のエンジンのように低くて一定の音に特に強いです。一方、人の声のように急に変わる高い音は予測しにくいので、まだ少し聞こえます。
-
-        次に世界が静かになったら、思い出してください。音が減ったのではなく、二つの音が消し合っているのです。
+        だから次にあくびがうつったら、恥ずかしがらなくて大丈夫です。それは、誰かとつながっているしるしなんです。
         """,
         "de": """
-        Guten Abend. Heute geht es um eine Technik, die viele von uns täglich benutzen, ohne sie wirklich zu kennen: Kopfhörer mit Geräuschunterdrückung.
+        Habt ihr schon mal gegähnt, nur weil jemand neben euch gegähnt hat? Dann seid ihr in guter Gesellschaft. In manchen Studien hat sich ungefähr die Hälfte der Leute anstecken lassen.
 
-        Schall ist eine Welle. Der Luftdruck steigt und fällt viele Male pro Sekunde, und so erreicht er unser Ohr.
+        Und man muss es nicht einmal sehen. Ein Gähnen zu hören reicht oft schon, sogar darüber zu lesen kann genügen. Und, merkt ihr es gerade selbst?
 
-        In jeder Ohrmuschel sitzt ein kleines Mikrofon, das die Umgebung belauscht. Ein Chip analysiert diese Welle und erzeugt in Sekundenbruchteilen ihr Spiegelbild. Wo das Geräusch steigt, fällt die neue Welle.
+        Viele Forschende sehen darin ein Zeichen von Empathie. Bei Familie und engen Freunden steckt man sich nämlich leichter an als bei Fremden. Babys und kleine Kinder gähnen übrigens nicht mit. Das beginnt meist erst mit vier oder fünf Jahren, ungefähr dann, wenn Kinder verstehen, was andere fühlen.
 
-        Treffen die beiden Wellen aufeinander, löschen sie sich gegenseitig aus. Am Ohr kommt fast nur Stille an.
-
-        Am besten funktioniert das bei tiefen, gleichmäßigen Tönen, etwa dem Brummen eines Flugzeugtriebwerks. Plötzliche, hohe Töne wie eine Stimme sind schwerer vorherzusagen. Deshalb hört man sie noch.
-
-        Wenn es also das nächste Mal still wird, denken Sie daran: Sie hören nicht weniger Schall. Sie hören zwei Geräusche, die sich gegenseitig auslöschen.
+        Wenn ihr also das nächste Mal mitgähnt, dann nehmt es als gutes Zeichen. Ihr seid mit jemandem verbunden.
         """,
     ]
 }
