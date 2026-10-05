@@ -144,6 +144,8 @@ final class SpeechTakeSession: ObservableObject {
                            voiceProcessing: true)
             chunkReads = []
             lastChunkAt = 0
+            follows = 0
+            partials = 0
             wavURL = try recorder.prepare(quality: .sttOptimal)
         } catch {
             live.stop()
@@ -183,8 +185,10 @@ final class SpeechTakeSession: ObservableObject {
 
     private func heard(_ text: String) {
         guard phase == .recording, followVoice else { return }
+        partials += 1
         let next = track.advance(current: cursor, heard: text)
         if next != cursor {
+            follows += 1
             cursor = min(next, track.words.count)
             position = Double(cursor)
             lastAdvanceAt = Date()
@@ -366,6 +370,7 @@ final class SpeechTakeSession: ObservableObject {
             // Where the wait went: stop → result on screen, the reading part
             // of it, and the coach that follows.
             "read_path": path,
+            "cursor_end": cursor, "words": track.words.count, "follows": follows, "partials": partials,
             "pieces": pieces.count,
             "read_ms": readMs,
             "result_ms": resultMs,
@@ -400,6 +405,9 @@ final class SpeechTakeSession: ObservableObject {
 
     /// Leaving mid-take: nothing is kept.
     func tearDown() {
+        if phase == .recording {
+            Analytics.capture("speech_take_cancelled", followFacts().merging(["seconds": Int(clock), "closed": true]) { a, _ in a })
+        }
         discardRecording()
         camera.stop()
     }
@@ -418,6 +426,9 @@ final class SpeechTakeSession: ObservableObject {
 
     /// Cancel: this take is dropped and the script is back at the top.
     func cancelTake() {
+        if phase == .recording {
+            Analytics.capture("speech_take_cancelled", followFacts().merging(["seconds": Int(clock)]) { a, _ in a })
+        }
         discardRecording()
         reset()
     }
@@ -434,7 +445,24 @@ final class SpeechTakeSession: ObservableObject {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "speechdemo") { return true }
         #endif
-        return live.lastVoicedAt.map { Date().timeIntervalSince($0) < 1.2 } ?? false
+        // Two witnesses, either is enough: the level meter heard a voice, or
+        // the recognizer is still turning sound into new words. The meter
+        // alone missed a reader whose phone sat on a desk, and the prompter
+        // stopped under them.
+        let now = Date()
+        if let voiced = live.lastVoicedAt, now.timeIntervalSince(voiced) < 1.2 { return true }
+        if let partial = live.lastLivePartialAt, now.timeIntervalSince(partial) < 1.5 { return true }
+        return false
+    }
+
+    /// Follow diagnostics for the take's analytics row: how often the
+    /// prompter found the reader, and where it ended.
+    private var follows = 0
+    private var partials = 0
+    private func followFacts() -> [String: Any] {
+        ["words": track.words.count, "cursor_end": cursor, "follows": follows,
+         "partials": partials, "heard_chars": live.transcript.count,
+         "language": script.language, "follow": followVoice]
     }
 
     #if DEBUG

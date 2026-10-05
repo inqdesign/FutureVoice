@@ -216,3 +216,40 @@ final class ShadowLineEndTests: XCTestCase {
         XCTAssertFalse(ShadowEngine.heardLineEnd(target: "Hi", heard: "hi", language: "en"))
     }
 }
+
+final class SpeechKoreanFollowTests: XCTestCase {
+    private let track = SpeechPrompterTrack(script: SpeechLibrary.builtIn(for: "ko")!.body, language: "ko")
+
+    private func word(_ cursor: Int) -> String { track.words[max(0, cursor - 1)].text }
+
+    func testFollowsKoreanWithRecognizerSpacing() {
+        var c = 0
+        c = track.advance(current: c, heard: "여러분 오늘 하품 몇번 하셨나요")
+        XCTAssertEqual(word(c), "하셨나요?")
+        c = track.advance(current: c, heard: "여러분 오늘 하품 몇번 하셨나요 이 이야기를 듣다보면 아마")
+        XCTAssertEqual(word(c), "아마")
+    }
+
+    func testOneWrongSyllableInsideDoesNotStopIt() {
+        // "하품은 옮습니다" heard as "하품은 옴습니다" — the old matcher lost the
+        // whole tail to one syllable.
+        let start = track.advance(current: 0, heard: "아마 한 번 더 하시게 될 겁니다")
+        let next = track.advance(current: start, heard: "아마 한 번 더 하시게 될 겁니다 하품은 옴습니다 옆 사람이 하품하는")
+        XCTAssertEqual(word(next), "하품하는")
+    }
+
+    func testUnsureLastSyllableIsTolerated() {
+        let start = track.advance(current: 0, heard: "아마 한 번 더 하시게 될 겁니다")
+        // The newest partial ends on a half-heard syllable.
+        let next = track.advance(current: start, heard: "아마 한 번 더 하시게 될 겁니다 하품은 옮습니다 옆 사람이 하ㅍ")
+        // The reader has started the next word; it counts as reached.
+        XCTAssertEqual(word(next), "하품하는")
+    }
+
+    func testDoesNotJumpFarOnACommonShortRun() {
+        // "하품" appears all through the script; three syllables of it must not
+        // throw the reader to a later paragraph.
+        let c = track.advance(current: 0, heard: "하품이")
+        XCTAssertLessThan(c, 12)
+    }
+}

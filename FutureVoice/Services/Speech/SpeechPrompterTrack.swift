@@ -96,8 +96,6 @@ struct SpeechPrompterTrack {
         // transcript grows to the whole take and this runs on every partial.
         let heardKeys = Self.keys(of: String(heard.suffix(160)), perChar: perChar)
         guard !heardKeys.isEmpty, !keys.isEmpty else { return current }
-        let tail = Array(heardKeys.suffix(perChar ? 6 : 4))
-        let need = perChar ? 4 : 2
         // The key index the current word starts at.
         let currentKey = keyWord.firstIndex(where: { $0 >= current }) ?? keys.count
         let back = perChar ? 8 : 3
@@ -106,27 +104,46 @@ struct SpeechPrompterTrack {
         let hi = min(keys.count - 1, currentKey + ahead)
         guard lo <= hi else { return current }
 
-        var best: (end: Int, score: Int)?
-        for end in lo...hi {
-            var score = 0
-            for i in 0..<tail.count {
-                let k = end - i
-                guard k >= 0 else { break }
-                if keys[k] == tail[tail.count - 1 - i] { score += 1 }
-            }
-            // A single long word right where we are is enough on its own.
-            let solo = !perChar && score == 1 && keys[end] == tail.last
-                && (tail.last?.count ?? 0) >= 5 && end <= currentKey + 3
-            guard score >= need || solo else { continue }
-            if best == nil || score > best!.score
-                || (score == best!.score && abs(end - currentKey) < abs(best!.end - currentKey)) {
-                best = (end, score)
+        // A run of the heard tail, looked for as a CONTIGUOUS run of the
+        // script near where the reader is. Longest run first; the last key
+        // or two may be dropped, because the newest partial is the one the
+        // recognizer is least sure of (Korean especially: a syllable it will
+        // rewrite a moment later). The first version scored the tail against
+        // the script position by position, so one dropped or changed syllable
+        // inside it shifted every comparison and NOTHING matched — the
+        // prompter sat still under a Korean reader (founder, 2026-10-05).
+        let lengths = perChar ? [5, 4, 3] : [3, 2]
+        for length in lengths {
+            for drop in 0...2 {
+                guard heardKeys.count >= length + drop else { continue }
+                let needle = Array(heardKeys[(heardKeys.count - drop - length)..<(heardKeys.count - drop)])
+                // Short runs are common words; only trust them close by.
+                let reach = length >= (perChar ? 4 : 3) ? hi : min(hi, currentKey + (perChar ? 20 : 8))
+                guard lo + length - 1 <= reach else { continue }
+                var best: Int?
+                for end in (lo + length - 1)...reach {
+                    var same = true
+                    for i in 0..<length where keys[end - length + 1 + i] != needle[i] {
+                        same = false
+                        break
+                    }
+                    guard same else { continue }
+                    if best == nil || abs(end - currentKey) < abs(best! - currentKey) { best = end }
+                }
+                if let end = best {
+                    let next = keyWord[end] + 1
+                    // Small steps back are allowed (a re-read), big ones are not.
+                    return next >= current - 2 ? next : current
+                }
             }
         }
-        guard let best else { return current }
-        let next = keyWord[best.end] + 1
-        // Small steps back are allowed (a re-read), big ones are not.
-        return next >= current - 2 ? next : current
+        // A single long word right where we are is enough on its own.
+        if !perChar, let last = heardKeys.last, last.count >= 5 {
+            for end in lo...min(hi, currentKey + 3) where keys[end] == last {
+                return max(current, keyWord[end] + 1)
+            }
+        }
+        return current
     }
 
     /// Words a reader covers in `seconds` at the planned pace — the
