@@ -478,17 +478,27 @@ fun ShadowScreen(
             said = ""
             takeRecording = null
             val takeFile = File(File(context.filesDir, "shadow-takes"), StoreJson.newId() + ".wav")
-            // Mic FIRST: the session is up before the count, and anything
-            // before "0" is cut from the file afterwards (iOS records from
-            // the go beat — the 3-2-1 never reaches the scored audio or the
-            // take the learner plays back).
+            // "3" goes up FIRST, and the mic is set up while it shows (iOS
+            // 34eca23a): opening the recorder holds the main thread for a
+            // beat, and it used to run before the count began — a blank pause
+            // after the tap. The pause before "2" shrinks by whatever the
+            // setup took, so the count is as long as ever.
+            val countStartedAt = System.currentTimeMillis()
+            phase = ShadowPhase.COUNTDOWN
+            countdown = 3
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            delay(30)   // let "3" draw first
+            // The mic is up before "2", and anything before "0" is cut from
+            // the file afterwards (iOS records from the go beat — the 3-2-1
+            // never reaches the scored audio or the take played back).
             if (runCatching { recorder.start(takeFile) }.isFailure) {
                 error = context.getString(R.string.microphone_or_speech_permission_denied)
+                countdown = 0
                 phase = ShadowPhase.IDLE
                 return@launch
             }
-            phase = ShadowPhase.COUNTDOWN
-            for (n in 3 downTo 1) {
+            delay(maxOf(0L, 700L - (System.currentTimeMillis() - countStartedAt)))
+            for (n in 2 downTo 1) {
                 countdown = n
                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 delay(700)
