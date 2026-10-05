@@ -391,10 +391,12 @@ struct PageIntroSheet: View {
                           detail: explain("Every account can practice the built-in script.")),
                     .init(symbol: "sparkles",
                           title: explain("Write one with AI"),
-                          detail: explain("Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.")),
+                          detail: explain("Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max."),
+                          badge: explain("Plus and Max")),
                     .init(symbol: "pencil.line",
                           title: explain("Add your own"),
-                          detail: explain("Paste the presentation or speech you actually have to give. Plus and Max.")),
+                          detail: explain("Paste the presentation or speech you actually have to give. Plus and Max."),
+                          badge: explain("Plus and Max")),
                 ])
 
         // MARK: Watch
@@ -762,6 +764,10 @@ private struct IntroScreenPage<Mock: View>: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
+                        // The row of the lit spot is lit too, so the eye
+                        // goes from the picture straight to its words.
+                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.accentColor.opacity(focus == n ? 0.10 : 0)))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -846,6 +852,9 @@ private struct IntroStepsPage: View {
         let symbol: String
         let title: String
         let detail: String
+        /// A plan tag beside the title ("Plus·Max only") — said once, where
+        /// it's seen, instead of trailing the sentence.
+        var badge: String? = nil
         var id: String { symbol }
     }
 
@@ -889,8 +898,19 @@ private struct IntroStepsPage: View {
                             }
                         }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(step.title)
-                                .font(.headline)
+                            HStack(spacing: 8) {
+                                Text(step.title)
+                                    .font(.headline)
+                                if let badge = step.badge {
+                                    Label(badge, systemImage: "lock.fill")
+                                        .font(.caption.weight(.semibold))
+                                        .labelStyle(.titleAndIcon)
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Capsule().fill(Color.accentColor))
+                                }
+                            }
                             Text(step.detail)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -1471,43 +1491,50 @@ private struct ReviewCardMock: View {
 }
 
 private struct SpeechPrompterMock: View {
+    /// Phone-shaped, like the take screen: script on top, camera card below.
+    /// A full-width card stretched it into a shape no phone has.
     var body: some View {
-        VStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 9) {
-                TextBar(width: 150).opacity(0.5)
-                TextBar(width: 190, height: 9)
-                TextBar(width: 170, height: 9)
-                TextBar(width: 120, height: 9)
+        VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
+                TextBar(width: 92).opacity(0.5)
+                TextBar(width: 118, height: 8)
+                TextBar(width: 104, height: 8)
+                TextBar(width: 76, height: 8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(mockCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .callout(1, corner: 14)
+            .padding(10)
+            .background(mockCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .callout(1, corner: 12)
 
             ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color(.systemGray3))
-                    .frame(height: 150)
-                    .overlay {
+                    .overlay(alignment: .top) {
                         Image(systemName: "person.fill")
-                            .font(.system(size: 54))
+                            .font(.system(size: 52))
                             .foregroundStyle(Color(.systemGray5))
-                            .offset(y: 10)
+                            .padding(.top, 14)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                HStack(spacing: 26) {
-                    Circle().fill(Color.black.opacity(0.35)).frame(width: 34, height: 34)
-                        .overlay { Image(systemName: "video.fill").font(.caption).foregroundStyle(.white) }
-                        .callout(2, corner: 17)
-                    Circle().strokeBorder(.white, lineWidth: 3).frame(width: 46, height: 46)
-                        .overlay { Circle().fill(.red).frame(width: 36, height: 36) }
-                        .callout(3, corner: 23, trailing: true)
-                    Circle().fill(Color.black.opacity(0.35)).frame(width: 34, height: 34)
-                        .overlay { Image(systemName: "waveform").font(.caption).foregroundStyle(.white) }
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                HStack(spacing: 14) {
+                    Circle().fill(Color.black.opacity(0.35)).frame(width: 28, height: 28)
+                        .overlay { Image(systemName: "video.fill").font(.caption2).foregroundStyle(.white) }
+                        .callout(2, corner: 14)
+                    Circle().strokeBorder(.white, lineWidth: 3).frame(width: 40, height: 40)
+                        .overlay { Circle().fill(.red).frame(width: 30, height: 30) }
+                        .callout(3, corner: 20, trailing: true)
+                    Circle().fill(Color.black.opacity(0.35)).frame(width: 28, height: 28)
+                        .overlay { Image(systemName: "waveform").font(.caption2).foregroundStyle(.white) }
                 }
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
             }
+            .frame(height: 150)
         }
+        .padding(8)
+        .frame(width: 168)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color(.separator), lineWidth: 0.5))
+        .frame(maxWidth: .infinity)
     }
 }
 

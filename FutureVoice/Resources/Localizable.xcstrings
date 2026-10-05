@@ -65109,43 +65109,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füg deine echte Präsentation oder Rede ein und übe genau die. Mit Plus und Max"
+            "value" : "Füg deine echte Präsentation oder Rede ein und übe genau die."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pega la presentación o el discurso que de verdad tienes que dar y practica justo eso. Solo con Plus y Max."
+            "value" : "Pega la presentación o el discurso que de verdad tienes que dar y practica justo eso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Colle la vraie présentation ou le discours que tu dois faire, et entraîne-toi sur celui-là. Avec Plus et Max."
+            "value" : "Colle la vraie présentation ou le discours que tu dois faire, et entraîne-toi sur celui-là."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "本番で話すプレゼンやスピーチを貼り付けて、そのまま練習できます。Plus・Max 限定"
+            "value" : "本番で話すプレゼンやスピーチを貼り付けて、そのまま練習できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "곧 해야 할 발표나 스피치 원고를 그대로 넣고 연습해요. Plus·Max 전용"
+            "value" : "곧 해야 할 발표나 스피치 원고를 그대로 넣고 연습해요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把真正要讲的汇报或演讲粘贴进来，直接练这一份。“Plus・Max 专享”"
+            "value" : "把真正要讲的汇报或演讲粘贴进来，直接练这一份。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把真的要上台的簡報或演講貼進來，直接練那一份。「Plus・Max 專屬」"
+            "value" : "把真的要上台的簡報或演講貼進來，直接練那一份。"
           }
         }
       }
@@ -66539,43 +66539,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähl eine Art (etwas erklären, eine Person vorstellen, Nachrichten …), ein Thema und eine Länge. Die KI schreibt ein Skript auf deinem Niveau und prüft die Fakten. Mit Plus und Max"
+            "value" : "Wähl eine Art (etwas erklären, eine Person vorstellen, Nachrichten …), ein Thema und eine Länge. Die KI schreibt ein Skript auf deinem Niveau und prüft die Fakten."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige el tipo (explicar algo, presentar a alguien, noticias…), el tema y la duración, y te escribe un guion a tu nivel con los datos verificados. Solo con Plus y Max."
+            "value" : "Elige el tipo (explicar algo, presentar a alguien, noticias…), el tema y la duración, y te escribe un guion a tu nivel con los datos verificados."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés. Avec Plus et Max."
+            "value" : "Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "解説、人物紹介、ニュースなどの種類とテーマ、長さを選ぶと、今のレベルに合った原稿を書きます。事実確認も済んでいます。Plus・Max 限定"
+            "value" : "解説、人物紹介、ニュースなどの種類とテーマ、長さを選ぶと、今のレベルに合った原稿を書きます。事実確認も済んでいます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "설명, 인물, 뉴스 같은 종류와 주제, 길이만 고르면 내 수준에 맞춰 원고를 써 줘요. 사실관계도 확인해요. Plus·Max 전용"
+            "value" : "설명, 인물, 뉴스 같은 종류와 주제, 길이만 고르면 내 수준에 맞춰 원고를 써 줘요. 사실관계도 확인해요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选好类型（讲解、人物介绍、新闻等）、话题和长度，就会写出适合你水平的讲稿，内容也会先核实过。“Plus・Max 专享”"
+            "value" : "选好类型（讲解、人物介绍、新闻等）、话题和长度，就会写出适合你水平的讲稿，内容也会先核实过。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選好類型（解說、介紹人物、新聞等）、主題和長度，就會寫出符合你程度的講稿，內容也會先查證過。「Plus・Max 專屬」"
+            "value" : "選好類型（解說、介紹人物、新聞等）、主題和長度，就會寫出符合你程度的講稿，內容也會先查證過。"
           }
         }
       }
