@@ -1,5 +1,11 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.unit.sp
+
+import androidx.compose.ui.draw.clip
+
+import androidx.compose.foundation.lazy.itemsIndexed
+
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -136,8 +142,9 @@ private sealed interface From {
     /** A Watch book's material. [title] is the scene, empty where the source
      *  list doesn't carry one. */
     data class Scene(val title: String) : From
-    /** The fluent self used it in a call and the learner didn't. */
-    data object Heard : From
+    /** The fluent self used it in a call and the learner didn't. [title] is
+     *  the talk's topic, empty when it had none. */
+    data class Heard(val title: String = "") : From
     /** Straight out of the core word list — nothing personal about it yet.
      *  Only the All lens and whole-list search mint these. */
     data object Pool : From
@@ -353,7 +360,16 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                     }
                 }
 
-                items(rows, key = { it.key }) { row ->
+                itemsIndexed(rows, key = { _, it -> it.key }) { index, row ->
+                    // iOS's inset-grouped List: one rounded card holding the
+                    // rows, hairlines between them inset past the badge.
+                    val first = index == 0
+                    val last = index == rows.lastIndex
+                    val r = com.roro.futurevoice.ui.brand.IosRadius.groupedCard
+                    val shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        topStart = if (first) r else 0.dp, topEnd = if (first) r else 0.dp,
+                        bottomStart = if (last) r else 0.dp, bottomEnd = if (last) r else 0.dp)
+                    Column(Modifier.fillMaxWidth().clip(shape).background(AppSurfaces.card)) {
                     // The card's two verdicts, a swipe away (iOS `e9d3096`):
                     // right = Keep, left = I know — same store calls and the
                     // same toggles as the card's action bar.
@@ -362,6 +378,11 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                             openList = rows.map { it.text }
                             openTerm = row.text
                         })
+                    }
+                    // Inset to the text, as iOS's row separator is.
+                    if (!last) androidx.compose.material3.HorizontalDivider(
+                        Modifier.padding(start = if (row.kept || row.known) 44.dp else 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant)
                     }
                     LaunchedEffect(row.key) {
                         if (glosses.containsKey(row.key)) return@LaunchedEffect
@@ -518,17 +539,16 @@ private suspend fun loadWords(context: Context, language: String): Material =
  * library exists to teach.
  */
 private suspend fun loadExpressions(context: Context, language: String): Material {
-    val rows = ExpressionCatalog.all(context, language).map { item ->
+    val rows = ExpressionCatalog.library(context, language).map { item ->
         LibraryRowData(
             text = item.text,
             key = item.text.trim().lowercase(),
             kept = item.bookmarked,
             known = item.known,
             from = when (item.origin) {
-                ExpressionCatalog.Origin.HEARD -> From.Heard
-                // The catalog doesn't carry which scene taught it, so the row
-                // says the shelf instead of inventing a title.
-                ExpressionCatalog.Origin.SCENE -> From.Scene("")
+                // Named by the talk / the situation it came from, as on iOS.
+                ExpressionCatalog.Origin.HEARD -> From.Heard(item.title)
+                ExpressionCatalog.Origin.SCENE -> From.Scene(item.title)
                 ExpressionCatalog.Origin.SAID -> From.Said(item.count, item.lastAt)
             },
             level = null,
@@ -649,9 +669,10 @@ private fun footerFor(kind: LibraryKind, lens: Lens): Int? = when {
 @Composable
 private fun LibraryRow(row: LibraryRowData, gloss: String?, onOpen: () -> Unit) {
     androidx.compose.foundation.layout.Row(
-        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().background(AppSurfaces.card).clickable(onClick = onOpen)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Badge grammar, shared with the card: bookmark = in the notebook,
         // check = retired.
@@ -663,8 +684,12 @@ private fun LibraryRow(row: LibraryRowData, gloss: String?, onOpen: () -> Unit) 
                 tint = if (row.kept) MaterialTheme.colorScheme.primary else Color(0xFF34C759),
             )
         }
-        Column(Modifier.weight(1f)) {
-            Text(row.text, style = MaterialTheme.typography.bodyLarge)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            // iOS `ExpressionsView.display`: stored keys are lowercased, so
+            // the row shows a capitalised first letter, in the card's face.
+            Text(row.text.replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
             // The meaning is CONTENT, not metadata — and until it lands (or
             // when there is none) the row says where the term came from.
             if (!gloss.isNullOrEmpty()) {
@@ -680,7 +705,7 @@ private fun LibraryRow(row: LibraryRowData, gloss: String?, onOpen: () -> Unit) 
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
         )
     }
 }
@@ -765,7 +790,7 @@ private fun SwipeVerdicts(kind: LibraryKind, row: LibraryRowData, language: Stri
 private fun Provenance(row: LibraryRowData) {
     val icon = when (row.from) {
         is From.Scene -> Icons.Filled.Movie
-        From.Heard -> Icons.Filled.ChatBubbleOutline
+        is From.Heard -> Icons.Filled.ChatBubbleOutline
         else -> null
     }
     val text = when (val from = row.from) {
@@ -775,7 +800,7 @@ private fun Provenance(row: LibraryRowData) {
         is From.Said -> stringResource(R.string.used_lld_time, from.count,
             if (from.count == 1) "" else "s", shortDate(from.at))
         is From.Scene -> from.title.ifEmpty { stringResource(R.string.from_scenarios) }
-        From.Heard -> stringResource(R.string.heard_in_a_call)
+        is From.Heard -> from.title.ifEmpty { stringResource(R.string.heard_in_a_call) }
         From.Pool -> row.level?.code?.uppercase().orEmpty()
     }
     if (text.isEmpty()) return
@@ -784,7 +809,7 @@ private fun Provenance(row: LibraryRowData) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         icon?.let {
-            Icon(it, contentDescription = null, modifier = Modifier.size(12.dp),
+            Icon(it, contentDescription = null, modifier = Modifier.size(15.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(text, style = MaterialTheme.typography.bodyMedium,
