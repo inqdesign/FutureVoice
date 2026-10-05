@@ -207,9 +207,6 @@ private data class SayTake(val score: Int? = null, val outcome: Outcome, val hea
     enum class Outcome { SCORED, HEARD_NOTHING, SKIPPED }
 }
 
-/** How long the prompter waits for the learner to START before letting the
- *  conversation move on. Generous — the run's promise is that it doesn't stop. */
-private const val FIRST_VOICE_MS = 8_000L
 /** Earliest a read can end, per word — measured from the FIRST WORD. */
 private const val READ_MS_PER_WORD = 380
 /** The only thing that ends a take on a learner still talking: a room that
@@ -344,14 +341,13 @@ fun SayItAgainScreen(
      *  1.5 s of quiet (someone reading a line for the first time breathes
      *  more than a talker does). */
     suspend fun waitForReadToEnd(text: String): Boolean {
-        val firstDeadline = System.currentTimeMillis() + FIRST_VOICE_MS
-        var voiced = false
-        while (!skipRequested && System.currentTimeMillis() < firstDeadline) {
-            if (recorder.level >= VOICED_LEVEL) { voiced = true; break }
-            delay(100)
-        }
+        // The line WAITS for them (iOS 384fb8d9, founder: "it keeps moving on
+        // when I haven't said anything"). It used to give up after 8 s and
+        // play the next answer, so a learner who looked away came back to a
+        // conversation that had gone on without them. Only Skip (or Close)
+        // moves past a line nobody has started to say.
+        while (!skipRequested && recorder.level < VOICED_LEVEL) delay(100)
         if (skipRequested) return false
-        if (!voiced) return false
 
         val lineMs = maxOf(1_200, WordSplitter.count(text, language) * READ_MS_PER_WORD)
         val began = System.currentTimeMillis()
