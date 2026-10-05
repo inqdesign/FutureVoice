@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,28 +49,39 @@ fun DrillFolderSheet(
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().bottomBarInsets()
-            .padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(stringResource(bin.folderTitleRes), style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 6.dp))
+            .padding(horizontal = 16.dp).padding(bottom = 28.dp)) {
+            // iOS's folder sheet: the folder's name centred, Done on the right.
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Text(stringResource(bin.folderTitleRes), style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+                androidx.compose.material3.TextButton(onClick = onDismiss,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.CenterEnd)) {
+                    Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
+                }
+            }
             if (cards.isEmpty()) {
                 Text(stringResource(R.string.nothing_waiting_here),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp))
                 return@Column
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // One inset-grouped card holding the rows, as iOS's List does.
+            LazyColumn(Modifier
+                .background(com.roro.futurevoice.ui.brand.AppSurfaces.card,
+                    com.roro.futurevoice.ui.brand.ContinuousShape(com.roro.futurevoice.ui.brand.IosRadius.groupedCard))) {
                 items(cards.size) { i ->
                     val card = cards[i]
                     var menu by remember(card.id) { mutableStateOf(false) }
                     Column(Modifier.fillMaxWidth()
                         .combinedClickable(onClick = { menu = true }, onLongClick = { menu = true })
-                        .padding(vertical = 10.dp)) {
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(card.targetPhrase, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
                         // Known says it is KNOWN: a retired card has no
                         // return, so a countdown here would announce one the
                         // learner just said they didn't need.
-                        Text(if (bin == DrillBin.GOT_IT) stringResource(R.string.marked_as_known)
+                        Text(if (bin == DrillBin.GOT_IT) stringResource(bin.dropHintRes)
                              else returnLabel(card.nextReviewAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -87,6 +99,8 @@ fun DrillFolderSheet(
                             }
                         }
                     }
+                    if (i < cards.lastIndex) androidx.compose.material3.HorizontalDivider(
+                        Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
             // An affordance nothing points at is the same dead end as not
@@ -96,10 +110,12 @@ fun DrillFolderSheet(
     }
 }
 
-/** When it comes back, said the way a phone says it ("in 3 days"). The
- *  system formatter follows the default locale, which the app language sets. */
+/** When it comes back, said the way iOS's `.relative(presentation: .named)`
+ *  says it — "13시간 후", "내일", "in 3 days". The phrase carries its own
+ *  preposition in every language, so it stands alone: wrapped in a "back %s"
+ *  shell it doubled ("13시간 후 뒤에 다시"). The system formatter follows the
+ *  default locale, which the app language sets. */
 @Composable
-private fun returnLabel(at: Long): String = stringResource(
-    R.string.back_in_when,
+private fun returnLabel(at: Long): String =
     android.text.format.DateUtils.getRelativeTimeSpanString(
-        at, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString())
+        at, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
