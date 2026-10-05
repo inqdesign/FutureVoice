@@ -84,6 +84,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.roro.futurevoice.ui.brand.IosGlassTextButton
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -512,41 +516,42 @@ internal fun ScenarioComposer(
             // Cancel · title · the primary action. The CTA lives in the
             // HEADER on both doors (iOS `9fe8cc7`): one primary button, one
             // place, and the box's row never changes width with it.
-            Row(
-                Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onDismiss, enabled = !committing) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Text(
-                    when {
-                        usesBox -> stringResource(R.string.your_situation)
-                        editing != null -> stringResource(R.string.edit_scenario)
-                        person != null -> stringResource(R.string.a_scene_with_lls, person.name)
-                        else -> stringResource(R.string.new_scenario)
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                )
-                Button(
-                    enabled = draft.isNotBlank() && !committing,
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    colors = ButtonDefaults.buttonColors(),
-                    onClick = { commit() },
-                ) {
-                    Icon(when {
-                            playsScene -> Icons.Filled.PlayArrow
-                            startsCall -> Icons.Filled.Mic
-                            else -> Icons.Filled.Add
-                        },
-                        contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (committing) stringResource(R.string.working) else ctaTitle)
-                }
-            }
+            // iOS 26's inline bar: a glass Cancel, the title CENTRED in the
+            // display face, and the prominent CTA as a toolbar circle — the
+            // toolbar draws a Label icon-only, its title the button's name.
+            val ready = draft.isNotBlank() && !committing
+            SheetHeader(
+                title = when {
+                    usesBox -> stringResource(R.string.your_situation)
+                    editing != null -> stringResource(R.string.edit_scenario)
+                    person != null -> stringResource(R.string.a_scene_with_lls, person.name)
+                    else -> stringResource(R.string.new_scenario)
+                },
+                leading = {
+                    IosGlassTextButton(stringResource(R.string.cancel), onClick = onDismiss,
+                        enabled = !committing)
+                },
+                trailing = {
+                    Box(
+                        Modifier.size(44.dp).clip(CircleShape)
+                            .background(if (ready) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f))
+                            .clickable(enabled = ready, role = androidx.compose.ui.semantics.Role.Button) { commit() }
+                            .semantics { contentDescription = ctaTitle },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (committing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                            color = Color.White)
+                        else Icon(when {
+                                playsScene -> Icons.Filled.PlayArrow
+                                startsCall -> Icons.Filled.Mic
+                                else -> Icons.Filled.Add
+                            },
+                            contentDescription = null, modifier = Modifier.size(22.dp), tint = Color.White)
+                    }
+                },
+                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp),
+            )
 
             if (usesBox) {
                 // MARK: The box — the writing door.

@@ -86,6 +86,9 @@ object CaptureWatch {
                 ScenarioComposer(
                     targetLanguage = lang(c), existingCategories = emptyList(),
                     host = ComposerHost.TALK, onDismiss = {},
+                    // iOS `ctaTitle: "Talk", ctaIcon: "mic.fill"`: Talk's
+                    // builder goes into the call, so the CTA is the mic.
+                    onCommitted = {},
                 )
             }
         },
