@@ -47,6 +47,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -359,8 +362,10 @@ fun TalkScreen(
     // changing its mind about the learner.
     // A coach hint on a word outside the chip row is judged the same way;
     // its key joins the ticks so the hint can say "Used it".
-    LaunchedEffect(state.turns, state.coachHint) {
-        val items = goals + listOfNotNull(state.coachHint).filter { h -> goals.none { it.key == h.key } }
+    LaunchedEffect(state.turns, state.coachHint, state.coachStale) {
+        // A hidden (stale) hint is out of the judging (iOS 30e49b07).
+        val items = goals + listOfNotNull(state.coachHint.takeIf { !state.coachStale })
+            .filter { h -> goals.none { it.key == h.key } }
         if (items.isEmpty()) return@LaunchedEffect
         var next = goalsUsed
         for (turn in state.turns) next = next + TalkGoalPicker.hits(turn, items)
@@ -375,6 +380,13 @@ fun TalkScreen(
     // item's top left the fluent self's answer below the fold. Following
     // stops while the learner has scrolled up to read, and resumes once
     // they are back at the bottom.
+    // A fluent-self bubble is appended the moment its reply begins, before
+    // the first word. Drawn then, it appeared EMPTY and grew twice — each a
+    // step the scroll had to catch up with (iOS 8b3b45f2). Held back until
+    // it has words; the thinking line keeps the place meanwhile.
+    val replyHasNoWordsYet = state.turns.lastOrNull()
+        ?.let { it.role == TurnRole.FLUENT_SELF && it.transcript.isEmpty() } == true
+    val visibleTurns = if (replyHasNoWordsYet) state.turns.dropLast(1) else state.turns
     var followBottom by remember { mutableStateOf(true) }
     LaunchedEffect(listState) {
         androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
@@ -605,11 +617,18 @@ fun TalkScreen(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.fillMaxWidth().padding(top = 24.dp))
                     }
-                    if (showsTranscript) items(state.turns, key = { it.id }) { turn ->
-                        DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
-                            showsCorrections = showsCorrections,
-                            focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)
-                                state.grammarFocus?.label else null)
+                    if (showsTranscript) items(visibleTurns, key = { it.id }) { turn ->
+                        // Everything that changes the feed's height — a bubble
+                        // arriving, a correction card a second after the line —
+                        // moves on one easing instead of jumping the content
+                        // and the scroll chasing it (iOS 8b3b45f2).
+                        Box(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = tween(250),
+                            fadeOutSpec = tween(250)).animateContentSize(tween(250))) {
+                            DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
+                                showsCorrections = showsCorrections,
+                                focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)
+                                    state.grammarFocus?.label else null)
+                        }
                     }
                     // The learner's turn, drawn where it will land (iOS
                     // `PartialTurnView`): the You bubble appears EMPTY the moment
@@ -619,8 +638,14 @@ fun TalkScreen(
                     // fluent self, and an empty bubble would flash and vanish.
                     if (showsTranscript && state.phase == TalkPhase.LISTENING &&
                         (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
+                        // A placeholder is REPLACED by the bubble that follows
+                        // it, so it leaves at once (iOS c95242cc): faded out,
+                        // it kept its height while the new bubble came in and
+                        // the list rose and dropped a little every turn.
                         item(key = "partial-listening") {
                             com.roro.futurevoice.ui.brand.DialogueLine(
+                                modifier = Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null,
+                                    fadeOutSpec = null),
                                 speaker = com.roro.futurevoice.ui.brand.DialogueSpeaker.USER,
                                 name = stringResource(R.string.you),
                                 scale = DialogueScale.CALL,
@@ -633,9 +658,14 @@ fun TalkScreen(
                             }
                         }
                     }
-                    if (state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) {
+                    // The reply has begun but has no words yet: the thinking
+                    // line keeps its place (same key) until the bubble that
+                    // replaces it has text to be drawn with (iOS 8b3b45f2).
+                    if ((state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) ||
+                        replyHasNoWordsYet) {
                         item(key = "partial-thinking") {
-                            Row(verticalAlignment = Alignment.CenterVertically,
+                            Row(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null, fadeOutSpec = null),
+                                verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
                                 Text(stringResource(R.string.future_self_is_thinking),
@@ -758,13 +788,20 @@ fun TalkScreen(
                             // away.
                             // "You go first" (a situation the learner opens)
                             // shows whatever coach mode says.
+                            // When a reply begins the coach's line goes from SIGHT
+                            // only (iOS 30e49b07): removing it shrank this bar at
+                            // the very moment the reply's bubble pushed the feed
+                            // up. The slot keeps its height until the next
+                            // suggestion replaces it.
+                            val coachAlpha by animateFloatAsState(if (state.coachStale) 0f else 1f, tween(200),
+                                label = "coachStale")
                             state.coachReply?.takeIf { coachMode || it.heading != null }?.let { reply ->
-                                CoachReplyLabel(reply, Modifier.padding(horizontal = 32.dp))
+                                CoachReplyLabel(reply, Modifier.padding(horizontal = 32.dp).alpha(coachAlpha))
                             }
                             if (coachMode) state.coachHint?.let { hint ->
-                                Box(Modifier.padding(horizontal = 24.dp)) {
+                                Box(Modifier.padding(horizontal = 24.dp).alpha(coachAlpha)) {
                                     CoachHintLabel(hint, used = hint.key in goalsUsed,
-                                        onTap = { openGoal = hint })
+                                        onTap = { if (!state.coachStale) openGoal = hint })
                                 }
                             }
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

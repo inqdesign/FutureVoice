@@ -115,6 +115,11 @@ data class TalkUiState(
     /** Coach mode's "try saying" for the line just spoken (iOS `coachReply`,
      *  `CoachSuggester`) — every line, the opener included. */
     val coachReply: CoachReply? = null,
+    /** The coach's line belongs to the question just answered, so it goes
+     *  when the reply begins — but only from SIGHT (iOS `coachStale`,
+     *  30e49b07): the slot keeps its height until the next suggestion
+     *  replaces it, so the bar never shrinks as the reply's bubble arrives. */
+    val coachStale: Boolean = false,
     /** Coach mode's grammar focus for this call, once named. */
     val grammarFocus: GrammarFocus? = null,
     /** Learner turns whose correction was the focus coming back. */
@@ -667,8 +672,12 @@ class TalkViewModel(context: Context) : ViewModel() {
         realtime.onReplyBegan = { ctx ->
             val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
             realtimeReplyTurns[ctx] = turn.id
-            // The hint and the suggestion belonged to the line just answered.
-            _state.update { it.copy(turns = it.turns + turn, coachHint = null, coachReply = null) }
+            // The hint and the suggestion belonged to the line just answered:
+            // hidden, not removed (see `coachStale`).
+            _state.update {
+                it.copy(turns = it.turns + turn,
+                    coachStale = it.coachStale || it.coachHint != null || it.coachReply != null)
+            }
         }
         realtime.onReplyEnded = { ctx ->
             realtimeReplyTurns[ctx]?.let { id ->
@@ -1251,7 +1260,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (coachOn == on) return
         coachOn = on
         if (on) { coachWasOn = true; config?.let { loadGrammarFocus(it) } }
-        else _state.update { it.copy(coachHint = null, coachReply = null) }
+        else _state.update { it.copy(coachHint = null, coachReply = null, coachStale = false) }
         syncCoachSteer()
     }
 
@@ -1317,15 +1326,24 @@ class TalkViewModel(context: Context) : ViewModel() {
                 candidates = candidates,
                 target = cfg.targetLanguage, native = cfg.nativeLanguage,
                 level = cfg.level, turnId = turnId,
-            ) ?: return@launch
+            )
             val st = _state.value
             // Still the line being answered — a late suggestion must never
             // sit under the NEXT one.
             if (!coachOn || st.phase == TalkPhase.ENDED ||
                 st.turns.lastOrNull { it.role == TurnRole.FLUENT_SELF }?.id != turnId) return@launch
-            val item = result.second?.takeIf { it.key !in usedGoalKeys }
+            val item = result?.second?.takeIf { it.key !in usedGoalKeys }
             if (item != null) coachPlan = coachPlan.hintShown(item)
-            _state.update { it.copy(coachReply = result.first, coachHint = item ?: it.coachHint) }
+            // One update: the hidden old line is swapped for the new one in
+            // place, so the slot changes height at most once; a failed
+            // suggestion empties the hidden slot then (iOS 30e49b07).
+            _state.update {
+                it.copy(
+                    coachReply = result?.first ?: if (it.coachStale) null else it.coachReply,
+                    coachHint = item ?: if (it.coachStale) null else it.coachHint,
+                    coachStale = false,
+                )
+            }
             if (item != null) syncCoachSteer()
         }
         if (learnerSpokeThisCall) syncCoachSteer()
