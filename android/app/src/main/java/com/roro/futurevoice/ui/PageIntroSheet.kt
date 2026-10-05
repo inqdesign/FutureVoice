@@ -31,6 +31,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -526,6 +527,11 @@ private fun ScreenPage(title: Int, subtitle: Int, callouts: List<PageIntro.Callo
                     Row(
                         Modifier.fillMaxWidth()
                             .onGloballyPositioned { rowTops[n] = it.positionInParent().y.toInt() }
+                            // The row of the lit spot is lit too, so the eye
+                            // goes from the picture straight to its words
+                            // (iOS 1a2b5e86).
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = rowLit(focus == n)),
+                                RoundedCornerShape(12.dp))
                             .clickable(remember { MutableInteractionSource() }, indication = null) {
                                 steered = true; focus = n
                             }
@@ -552,6 +558,11 @@ private fun ScreenPage(title: Int, subtitle: Int, callouts: List<PageIntro.Callo
         }
     }
 }
+
+/** The lit callout row's fill, faded in and out with the badge. */
+@Composable
+private fun rowLit(lit: Boolean): Float =
+    animateFloatAsState(if (lit) 0.10f else 0f, tween(250), label = "rowLit").value
 
 @Composable
 internal fun CalloutBadge(number: Int, lit: Boolean, modifier: Modifier = Modifier) {
