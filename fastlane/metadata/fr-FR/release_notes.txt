@@ -1,25 +1,23 @@
 Nouveautés
-• Discours : un nouvel onglet pour t’entraîner à tes présentations et à tes discours. Affiche ton texte à l’écran et lis-le à voix haute : il avance au fil de ta voix. Active la caméra et tu obtiens une vidéo avec ton texte et ton visage sur le même écran. À la fin, tu reçois une note sur ta fidélité au texte, ton débit et tes pauses.
-• Ta semaine en revue : à la fin de la semaine, parcours en cartes tes appels et les mots et expressions appris. La dernière carte t’emmène au test de la semaine.
-• Focus grammaire : choisis une erreur que tu refais souvent et garde-la en tête pendant tout l’appel. Si elle revient, tu le vois tout de suite. Activé par défaut en A1 et A2.
-• Quand tu découvres ta voix, tu peux écouter et choisir parmi quatre accents sur place.
-• Tu peux maintenant apprendre la langue dans laquelle tu utilises l’app.
-• Parler a un nouvel onglet Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
-• Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
-• Ma routine : planifie ta semaine directement sur l’emploi du temps et fais glisser les blocs pour les déplacer. Place appels, révisions et Redire aux jours et heures de ton choix ; l’appel quotidien sonne à l’heure de conversation de ta routine.
+• Discours : un nouvel onglet pour lire ton texte à voix haute sur un prompteur qui avance au fil de ta voix. Active la caméra et tu repars avec une vidéo verticale où l’on voit ton texte et ton visage. Tu reçois une note sur la précision, le débit, les pauses et les mots de remplissage, et un coach te dit quoi essayer ensuite.
+• Ma routine : planifie ta semaine directement sur l’emploi du temps et fais glisser les blocs pour les déplacer. Place appels, révisions et Redire aux jours et heures de ton choix ; l’appel quotidien sonne à l’heure de conversation de ta routine.
+• Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
+• Parler a une nouvelle section Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
+• La page Révision fait peau neuve et t’aide à terminer plus facilement chacun de tes carnets.
 • Exporte un carnet en PDF et tu obtiens un cahier d’exercices prêt à remplir.
-• Les questions ratées dans le mois reviennent dans ton test hebdo jusqu’à ce que tu trouves la bonne réponse.
 
 Corrections
+• En shadowing, le décompte démarre dès que tu touches Enregistrer, et ton résultat s’affiche vite une fois le dernier mot prononcé.
 • Le salut au début d’un appel pouvait être coupé quand un appareil Bluetooth était à proximité.
-• Les suggestions de phrases sonnent maintenant comme on parle vraiment.
+• Les suggestions « Essaie de dire » sont plus naturelles.
 • Ton moi fluide respire entre les phrases et parle plus naturellement.
 • Tu peux changer la vitesse de la voix pendant un appel.
 • Un appel programmé pouvait sonner pendant un appel en cours et le couper.
-• Le matériel de révision d’un carnet pouvait disparaître après « Redire ».
+• Le matériel de révision d’un carnet pouvait disparaître après « Redire ».
+• Ce que tu disais en coréen familier pouvait être retranscrit en langage poli.
 • Ton moi fluide restait parfois bloqué sans répondre. C’est beaucoup plus rare maintenant.
+• Le troisième onglet s’appelle désormais bien Révision.
 • Si tu apprends le coréen, les mots et expressions que tu prononces sont mieux reconnus.
 • Ton moi fluide parle coréen avec une prononciation plus naturelle et ne crie plus devant un point d’exclamation.
 • Dans Redire, une simple pause pour réfléchir pouvait te faire passer à la ligne suivante.
-• Même après avoir désactivé le mode coach pendant un appel, les conseils continuaient de s’afficher.
-• En shadowing, le décompte démarre dès que tu touches Enregistrer, et ton résultat s’affiche vite une fois le dernier mot prononcé.
+• Même après avoir désactivé le mode coach pendant un appel, les suggestions continuaient de s’afficher.

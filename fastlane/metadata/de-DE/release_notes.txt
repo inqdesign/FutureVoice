@@ -1,25 +1,23 @@
 Neu
-• Rede: ein neuer Tab, um Präsentationen und Reden zu üben. Leg deinen Text auf den Bildschirm und lies ihn laut vor, er läuft mit deiner Stimme mit. Mit eingeschalteter Kamera nimmst du ein Video auf, in dem Text und Gesicht zusammen im Bild sind. Danach bekommst du eine Bewertung, ob du dich an den Text gehalten hast, wie schnell du warst und wie du Pausen gesetzt hast.
-• Wochenrückblick: Am Ende der Woche blätterst du durch deine Gespräche und die Wörter und Wendungen, die du gelernt hast – die letzte Karte führt direkt zum Test der Woche.
-• Grammatik-Fokus: Such dir einen Fehler aus, den du oft machst, und behalte ihn das ganze Gespräch über im Blick. Kommt er wieder vor, siehst du es sofort. Bei A1 und A2 standardmäßig an.
-• Wenn du deine Stimme zum ersten Mal hörst, kannst du dir vier Akzente direkt anhören und einen auswählen.
-• Du kannst jetzt auch die Sprache lernen, in der du die App nutzt.
-• Im Tab „Sprechen“ gibt es jetzt „Alltag“: typische Situationen wie Café, Restaurant, Bekleidungsgeschäft oder Anruf in der Arztpraxis – mit einem Tipp starten.
+• Rede: ein neuer Tab, in dem du deinen Text laut vom Teleprompter abliest, der mit deiner Stimme mitläuft. Mit eingeschalteter Kamera bekommst du ein Hochformat-Video mit Text und Gesicht. Bewertet werden Genauigkeit, Tempo, Pausen und Füllwörter, und ein Coach sagt dir, was du als Nächstes ausprobieren kannst.
+• Meine Routine: Plane deine Woche direkt im Stundenplan und verschiebe Blöcke per Ziehen. Leg Gespräche, Wiederholungen und Nochmal sagen auf die Tage und Zeiten, die du willst. Der tägliche Anruf klingelt zur Gesprächszeit deiner Routine.
 • Jeder Tab zeigt beim ersten Öffnen eine kurze Anleitung: wofür er da ist und wie du ihn nutzt. Du findest sie jederzeit unter Ich → App-Anleitung.
-• Meine Routine: Plane deine Woche direkt im Stundenplan und verschiebe Blöcke per Ziehen. Leg Gespräche, Wiederholungen und Nochmal sagen auf die Tage und Zeiten, die du willst – der tägliche Anruf klingelt zur Gesprächszeit deiner Routine.
+• Im Tab „Sprechen“ gibt es jetzt den Bereich „Alltag“: typische Situationen wie Café, Restaurant, Bekleidungsgeschäft oder Anruf in der Arztpraxis, mit einem Tipp gestartet.
+• Die Seite „Wiederholen“ ist neu gestaltet und hilft dir, jedes deiner Bücher leichter zu Ende zu bringen.
 • Exportier ein Buch als PDF und du hast ein Arbeitsheft, in das du sofort reinschreiben kannst.
-• Fragen, die du im Lauf des Monats falsch hattest, tauchen so lange im Wochentest auf, bis du sie richtig beantwortest.
 
 Behoben
+• Beim Nachsprechen läuft der Countdown, sobald du auf Aufnehmen tippst, und nach dem letzten Wort ist dein Ergebnis schnell da.
 • Die Begrüßung am Anfang eines Gesprächs brach ab, wenn ein Bluetooth-Gerät in der Nähe war.
-• „Sag zum Beispiel“-Vorschläge klingen jetzt so, wie Muttersprachler wirklich reden.
+• „Sag mal so“-Vorschläge klingen jetzt natürlicher.
 • Dein fließendes Ich atmet zwischen den Sätzen und klingt natürlicher.
 • Du kannst die Sprechgeschwindigkeit auch während eines Gesprächs ändern.
 • Ein geplanter Anruf konnte während eines laufenden Gesprächs klingeln und es abbrechen.
 • Lernmaterial in einem Buch konnte nach „Nochmal sagen“ verschwinden.
+• Lockeres Koreanisch wurde manchmal in der Höflichkeitsform aufgeschrieben.
 • Dein fließendes Ich blieb manchmal ohne Antwort hängen. Das passiert jetzt viel seltener.
+• Der dritte Tab heißt jetzt richtig „Wiederholen“.
 • Lernst du Koreanisch, werden deine gesprochenen Wörter und Wendungen jetzt genauer erkannt.
 • Dein fließendes Ich spricht Koreanisch mit natürlicherer Aussprache und schreit bei Ausrufezeichen nicht mehr.
 • Bei „Nochmal sagen“ ging es manchmal schon zur nächsten Zeile, wenn du nur kurz nachgedacht hast.
-• Hast du den Coach-Modus während eines Gesprächs ausgeschaltet, wurden trotzdem weiter Hinweise angezeigt.
-• Beim Nachsprechen läuft der Countdown, sobald du auf Aufnehmen tippst, und nach dem letzten Wort ist dein Ergebnis schnell da.
+• Hast du den Coach-Modus während eines Gesprächs ausgeschaltet, kamen trotzdem weiter Vorschläge.

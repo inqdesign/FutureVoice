@@ -1,27 +1,23 @@
 New
-• Speech: a new tab for practicing talks and presentations. Put your script on screen and read it out loud while it moves along with your voice. Turn on the camera to record a video with your script and your face in one frame. When you finish, you get a score for sticking to the script, your pace and your pauses.
-• Week in review: when a week ends, flip through last week's calls and the words and expressions you picked up, with this week's test on the last card.
-• Grammar focus: pick one mistake you keep making and keep it in mind for the whole call. You'll see it right away if it comes up again. On by default at A1 and A2.
-• When you first meet your voice, you can hear and choose from four accents right there.
-• You can now learn the language you use the app in.
-• Talk has a new Everyday tab: everyday situations like a café, a restaurant, a clothing store or calling a clinic, one tap to start.
-• Each tab now opens with a short guide the first time: what it's for and how to use it. See them again anytime in Me → App guide.
+• Speech: a new tab for practicing talks and presentations. Read your script out loud from a prompter that keeps pace with your voice. Turn on the camera and you get a vertical video with your script and your face. You're scored on accuracy, pace, pauses and filler words, and a coach tells you what to try next.
 • My routine: plan your week right on the timetable and drag blocks to move them. Put talks, reviews and Say it again on the days and times you want; the daily call rings at your routine's talk times.
+• Each tab now opens with a short guide the first time: what it's for and how to use it. See them again anytime in Me → App guide.
+• Talk has a new Everyday section: common situations like a café, a restaurant, a clothing store or calling a clinic, one tap to start.
+• The Review page has a fresh design that makes it easier to finish each of your books.
 • Export a book as a PDF and you get a workbook you can start filling in right away.
-• Questions you missed during the month keep coming back in your weekly test until you get them right.
 
 Fixed
+• In shadowing, the countdown starts the moment you tap record, and your result shows up quickly once you say the last word.
 • The greeting at the start of a call could cut off when a Bluetooth device was nearby.
-• "Try saying" suggestions now sound the way native speakers actually talk.
+• "Try saying" suggestions now sound more natural.
 • Your future self now breathes between sentences and sounds more natural.
 • You can change the speaking speed during a call.
 • A scheduled call could ring during a call you were already on and cut it off.
 • Review material in a book could disappear after Say it again.
-• Casual Korean could be transcribed as polite speech.
+• Casual Korean could be written down as polite speech.
 • Your future self sometimes stalled without answering. This happens far less now.
 • The third tab is now correctly called Review.
-• Learning Korean? The words and expressions you say are now picked up more accurately.
-• Your future self now sounds more natural in Korean and no longer shouts when there's an exclamation mark.
+• Learning Korean? The words and expressions you say are now recognized more accurately.
+• Your future self now pronounces Korean more naturally and no longer shouts at exclamation marks.
 • In Say it again, just pausing to think could skip you ahead to the next line.
-• Turning off coach mode during a call didn't stop the hints from showing up.
-• In shadowing, the countdown starts the moment you tap record, and your result shows up quickly once you say the last word.
+• Turning off coach mode during a call didn't stop the suggestions.
