@@ -354,9 +354,18 @@ object CapturePractice {
             CaptureSeed.once("expr") { CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c, scored = true) }
             PracticeCaptureFlags.stubWordEntry = pushBackEntry
         }) {
-            LibraryScreen(kind = LibraryKind.EXPRESSIONS, language = lang(it), onBack = {})
-            WordCardSheet(terms = listOf("push back"), initialTerm = "push back",
-                kind = LibraryKind.EXPRESSIONS, language = lang(it), onDismiss = {})
+            // An example's "Shadow this" opens the shadow screen as the app
+            // does (RootScreen: the card closes, the line opens).
+            var shadow by remember { mutableStateOf<String?>(null) }
+            val line = shadow
+            if (line != null) {
+                ShadowScreen(line = line, voiceId = "", targetLanguage = "en", onBack = { shadow = null })
+            } else {
+                LibraryScreen(kind = LibraryKind.EXPRESSIONS, language = lang(it), onBack = {})
+                WordCardSheet(terms = listOf("push back"), initialTerm = "push back",
+                    kind = LibraryKind.EXPRESSIONS, language = lang(it),
+                    onShadow = { s -> shadow = s }, onDismiss = {})
+            }
         },
 
         "book" to book(null),

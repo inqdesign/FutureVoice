@@ -33,6 +33,21 @@ class VocabStore private constructor(context: Context) {
             }
 
         /**
+         * The row a BOOKMARK leaves (iOS `setStudyingExpression`): a
+         * `count = 0` row only when the phrase has none, so it shows in the
+         * Expressions list; an existing row — known or said — is untouched.
+         * Null = nothing to write. Never a `known` verdict (2026-09-21: a
+         * bookmark filed as "I know this" was the bug).
+         */
+        fun bookmarkedExpressionRecord(existing: Record?, now: Long): Record? =
+            if (existing == null) Record("used", now, now, 0) else null
+
+        /** Expression mastered = real evidence only: said in a talk
+         *  (count > 0) or an explicit "I know it" (iOS `hasUsedExpression`). */
+        fun isMasteredExpression(r: Record?): Boolean =
+            r != null && (r.state == "known" || r.count > 0)
+
+        /**
          * The order a talk's pickup words are offered in — pure, so the rule
          * is testable without the asset pool (plan 5.7, iOS
          * `VocabStore.pickupCandidates`):
@@ -297,15 +312,14 @@ class VocabStore private constructor(context: Context) {
      * (iOS `hasUsedExpression`).
      */
     suspend fun hasUsedExpression(phrase: String, language: String): Boolean = mutex.withLock {
-        val r = readRecords(file(language, "vocab_expressions.json"))[exprKey(phrase)]
-        r != null && (r.state == "known" || r.count > 0)
+        isMasteredExpression(readRecords(file(language, "vocab_expressions.json"))[exprKey(phrase)])
     }
 
     /** [hasUsedExpression]'s own test, read for its DATE — the talk book
      *  orders its shelf by when the phrase was mastered, not when it looked. */
     suspend fun expressionMasteredAt(phrase: String, language: String): Long? = mutex.withLock {
         val r = readRecords(file(language, "vocab_expressions.json"))[exprKey(phrase)]
-        if (r != null && (r.state == "known" || r.count > 0)) r.lastAt else null
+        if (isMasteredExpression(r)) r?.lastAt else null
     }
 
     // ── Session ingestion (`VocabStore.ingest`) ──
@@ -570,8 +584,7 @@ class VocabStore private constructor(context: Context) {
      * evidence that anyone has said it.
      */
     suspend fun setStudyingExpression(phrase: String, studying: Boolean, language: String,
-                                      now: Long = System.currentTimeMillis()) = mutex.withLock {
-        if (studying) com.roro.futurevoice.core.Analytics.capture("expression_bookmarked")
+                                      now: Long = System.currentTimeMillis()): Unit = mutex.withLock {
         val k = exprKey(phrase)
         if (k.isEmpty()) return
         val f = file(language, "vocab_studying_expressions.json")
@@ -580,12 +593,25 @@ class VocabStore private constructor(context: Context) {
             if (list.contains(k)) return
             writeList(f, listOf(k) + list)
             PracticeLog.record(appContext, PracticeLog.Kind.EXPRESSION)
+            com.roro.futurevoice.core.Analytics.capture("expression_bookmarked")
             val ef = file(language, "vocab_expressions.json")
             val records = readRecords(ef)
-            if (records[k] == null) writeRecords(ef, records + (k to Record("used", now, now, 0)))
+            val row = bookmarkedExpressionRecord(records[k], now)
+            if (row != null) writeRecords(ef, records + (k to row))
         } else {
             writeList(f, list.filterNot { it == k })
         }
+    }
+
+    /**
+     * "Save to expressions" on a card's example or phrase (iOS `addExpression`):
+     * a BOOKMARK, nothing more — it used to write a `known` row on iOS, filing
+     * "study this later" as "I already know this". False if already bookmarked.
+     */
+    suspend fun addExpression(phrase: String, language: String): Boolean {
+        if (exprKey(phrase).isEmpty() || isStudyingExpression(phrase, language)) return false
+        setStudyingExpression(phrase, true, language)
+        return true
     }
 
     suspend fun isKnownExpression(phrase: String, language: String): Boolean = mutex.withLock {

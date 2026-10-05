@@ -323,8 +323,9 @@ fun WordCardSheet(
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             examples.forEach { e ->
-                                SaveSentenceMenu(e.text, exampleReason, language, savedSentences,
-                                    onSaved = { savedSentences = savedSentences + it }) {
+                                ExampleMenu(e.text, language, exampleReason, savedSentences,
+                                    onSavedSentence = { savedSentences = savedSentences + it },
+                                    onShadow = onShadow) {
                                     ExampleRow(e.text, e.meaning)
                                 }
                             }
@@ -340,7 +341,15 @@ fun WordCardSheet(
                 CardSection(stringResource(
                     if (isWord) R.string.common_phrases else R.string.another_way_to_say_it)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        phrases.forEach { PhraseRow(it.phrase, it.meaning) }
+                        // A word's common phrase is not a sentence; an
+                        // expression's other wording is (iOS).
+                        phrases.forEach { p ->
+                            ExampleMenu(p.phrase, language, if (isWord) null else exampleReason,
+                                savedSentences, onSavedSentence = { savedSentences = savedSentences + it },
+                                onShadow = onShadow) {
+                                PhraseRow(p.phrase, p.meaning)
+                            }
+                        }
                     }
                 }
             }
@@ -482,56 +491,87 @@ private fun SenseRow(number: Int, sense: WordLore.Sense) {
 }
 
 /**
- * Long-press an example to keep it as a sentence card of its own (iOS
- * 71c5e2da, `DrillStore.bookmarkSentence` → `saveIfNew`): one card per
- * sentence, no source line, due now. [saved] is the caller's one read of
- * [com.roro.futurevoice.data.DrillStore.sentenceKeys].
+ * The long-press menu on a card's example or phrase (iOS `saveActions`,
+ * 71c5e2da): "Save to sentences" (a sentence card of its own through
+ * `DrillStore.bookmarkSentence` → `saveIfNew`; only when [sentenceReason] is
+ * set — a word's common phrase is not a sentence), "Save to expressions" (a
+ * BOOKMARK, `VocabStore.addExpression`), then "Shadow this". Without
+ * [onShadow] (a sentence card's example sheet) the menu is the sentence item
+ * alone. [savedSentences] is the caller's one read of `DrillStore.sentenceKeys`.
  */
 @Composable
-internal fun SaveSentenceMenu(
+internal fun ExampleMenu(
     text: String,
-    reason: String,
     language: String,
-    saved: Set<String>,
-    onSaved: (String) -> Unit,
+    sentenceReason: String?,
+    savedSentences: Set<String>,
+    onSavedSentence: (String) -> Unit,
+    onShadow: ((String) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var open by remember { mutableStateOf(false) }
+    // Read as the menu opens, like iOS's context menu reads the store.
+    var savedExpression by remember { mutableStateOf(false) }
     val key = remember(text) { com.roro.futurevoice.data.DrillStore.sentenceKey(text) }
-    val isSaved = key in saved
+    fun tick() = haptic.performHapticFeedback(
+        androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
     Box(Modifier.fillMaxWidth().pointerInput(text) {
         detectTapGestures(onLongPress = {
             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-            open = true
+            scope.launch {
+                if (onShadow != null) savedExpression =
+                    com.roro.futurevoice.data.VocabStore.shared(context).isStudyingExpression(text, language)
+                open = true
+            }
         })
     }) {
         content()
         androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            if (isSaved) {
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(stringResource(R.string.saved_to_sentences)) },
-                    leadingIcon = { Icon(Icons.Filled.Check, null) },
-                    enabled = false, onClick = {})
-            } else {
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(stringResource(R.string.save_to_sentences)) },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Chat, null) },
-                    onClick = {
-                        open = false
-                        scope.launch {
-                            val card = com.roro.futurevoice.data.DrillStore.shared(context)
-                                .bookmarkSentence(text, reason, language)
-                            if (card != null) {
-                                onSaved(key)
-                                haptic.performHapticFeedback(
-                                    androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                                StoreEvents.bump()
+            if (sentenceReason != null) {
+                if (key in savedSentences) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(stringResource(R.string.saved_to_sentences)) },
+                        leadingIcon = { Icon(Icons.Filled.Check, null) },
+                        enabled = false, onClick = {})
+                } else {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(stringResource(R.string.save_to_sentences)) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Chat, null) },
+                        onClick = {
+                            open = false
+                            scope.launch {
+                                val card = com.roro.futurevoice.data.DrillStore.shared(context)
+                                    .bookmarkSentence(text, sentenceReason, language)
+                                if (card != null) { onSavedSentence(key); tick(); StoreEvents.bump() }
                             }
-                        }
-                    })
+                        })
+                }
+            }
+            if (onShadow != null) {
+                if (savedExpression) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(stringResource(R.string.saved_to_expressions)) },
+                        leadingIcon = { Icon(Icons.Filled.Check, null) },
+                        enabled = false, onClick = {})
+                } else {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(stringResource(R.string.save_to_expressions)) },
+                        leadingIcon = { Icon(Icons.Filled.Bookmark, null) },
+                        onClick = {
+                            open = false
+                            scope.launch {
+                                com.roro.futurevoice.data.VocabStore.shared(context).addExpression(text, language)
+                                tick(); StoreEvents.bump()
+                            }
+                        })
+                }
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.shadow_this)) },
+                    leadingIcon = { Icon(Icons.Filled.GraphicEq, null) },
+                    onClick = { open = false; onShadow(text) })
             }
         }
     }

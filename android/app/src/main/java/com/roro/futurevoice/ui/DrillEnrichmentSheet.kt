@@ -105,8 +105,8 @@ fun DrillEnrichmentSheet(
                         p.examples.forEach { e ->
                             // Long-press: keep this example as a sentence card
                             // of its own.
-                            SaveSentenceMenu(e.sentence, exampleReason, targetLanguage, savedSentences,
-                                onSaved = { savedSentences = savedSentences + it }) {
+                            ExampleMenu(e.sentence, targetLanguage, exampleReason, savedSentences,
+                                onSavedSentence = { savedSentences = savedSentences + it }) {
                                 Column(Modifier.padding(vertical = 4.dp)) {
                                     Text(e.sentence, style = MaterialTheme.typography.bodyLarge)
                                     Text(e.situation, style = MaterialTheme.typography.bodySmall,
