@@ -23,7 +23,12 @@ object CaptureOnboarding {
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
         // The first screen, primary path — with the sign-in link RootScreen
         // gives it (no invite path on Android, so that button is absent there too).
-        "welcome" to { _ -> WelcomeScreen(onGetStarted = {}, onSignIn = {}) },
+        // `--es welcomePage <n>` holds on one beat of the film, as iOS's
+        // `-welcomePage <n>` does (n = 9 is the closing frame with the button).
+        "welcome" to { c ->
+            val page = (c as? android.app.Activity)?.intent?.getStringExtra("welcomePage")?.toIntOrNull() ?: 0
+            WelcomeScreen(onGetStarted = {}, onSignIn = {}, initialBeat = page)
+        },
         // The first-run pickers, from the same starting values the app state
         // opens a fresh install with.
         "setup" to { context ->
