@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,7 +60,7 @@ data class DayCardData(
         get() = buildList {
             add("Talk" to "$talkMinutes min")
             add("Study" to "$studyMinutes min")
-            if (streakDays > 0) add("Streak" to "$streakDays d")
+            if (streakDays > 0) add("Streak" to "$streakDays days")
             if (talks > 0) add("Talks" to "$talks")
             if (reviews > 0) add("Reviews" to "$reviews")
             if (shadowTakes > 0) add("Shadow" to "$shadowTakes")
@@ -119,9 +123,16 @@ fun DayCard(
             verticalArrangement = Arrangement.spacedBy(if (isFeed) 15.dp else 11.dp),
         ) {
             data.topics.firstOrNull()?.let { topic ->
+                // iOS `.lineLimit(3).minimumScaleFactor(0.6)`: a long headline
+                // SHRINKS until it fits three lines, and is cut only past 60%.
+                var scale by remember(topic, format) { mutableStateOf(1f) }
                 Text(topic, color = PAPER, maxLines = 3, overflow = TextOverflow.Ellipsis,
                     style = DisplayFace.style(topic, TextStyle(
-                        fontSize = (if (isFeed) 35 else 29).sp, lineHeight = (if (isFeed) 40 else 34).sp)))
+                        fontSize = (if (isFeed) 35 else 29).sp * scale,
+                        lineHeight = (if (isFeed) 40 else 34).sp * scale)),
+                    onTextLayout = { r ->
+                        if (r.hasVisualOverflow && scale > 0.6f) scale = (scale - 0.05f).coerceAtLeast(0.6f)
+                    })
             }
             // Up to four numbers — the value in the pixel face, the label
             // small and tracked beneath, like the stat row under a run.

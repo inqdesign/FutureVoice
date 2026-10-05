@@ -30,7 +30,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import com.roro.futurevoice.ui.brand.IosGlassButton
+import com.roro.futurevoice.ui.brand.IosGlassTextButton
+import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -117,6 +121,28 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
         else Bitmap.createScaledBitmap(raw, targetW, targetH, true)
     }
 
+    /** The card into the share sheet (iOS's toolbar ShareLink). */
+    fun share() {
+        scope.launch {
+            val bmp = renderCard()
+            val file = withContext(Dispatchers.IO) {
+                val dir = File(context.cacheDir, "share").apply { mkdirs() }
+                File(dir, "daycard.png").also { f ->
+                    f.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                }
+            }
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file)
+            DayCardStore.freeze(context, data)
+            context.startActivity(Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }, null))
+        }
+    }
+
     // Where "Save to Photos" stands for the card as it is drawn NOW; any
     // change to the card puts it back to idle, since that is a new picture.
     var saveState by remember { mutableStateOf(SaveState.IDLE) }
@@ -155,26 +181,37 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     // Fully expanded: the card is 450dp tall and a half-height sheet cut it
     // off, so the learner saw a black slab with no footer and no date.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
+        // iOS: an inline nav bar — Done leading, the title centred, Share
+        // trailing. "Today's card" is a claim about WHICH day — say it only
+        // when it is true, and name the day otherwise.
+        val isToday = android.text.format.DateUtils.isToday(data.date)
+        SheetHeader(
+            title = if (isToday) stringResource(R.string.today_s_card)
+                else java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "MMMd"), java.util.Locale.getDefault())
+                    .format(java.util.Date(data.date)),
+            leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss) },
+            trailing = {
+                IosGlassButton(onClick = { share() }, circle = true) {
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.IosShare,
+                        contentDescription = stringResource(R.string.share),
+                        tint = MaterialTheme.colorScheme.primary)
+                }
+            },
+            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp),
+        )
         Column(
             Modifier.fillMaxWidth().bottomBarInsets().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(bottom = 32.dp),
+                .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // "Today's card" is a claim about WHICH day — say it only when it
-            // is true, and name the day otherwise.
-            val isToday = android.text.format.DateUtils.isToday(data.date)
-            Text(
-                if (isToday) stringResource(R.string.today_s_card)
-                else java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "MMMd"), java.util.Locale.getDefault())
-                    .format(java.util.Date(data.date)),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.fillMaxWidth())
             DayCard(
                 data = data.copy(topics = listOfNotNull(headline.takeIf { it.isNotBlank() })),
                 photo = photo?.asImageBitmap(), format = format, theme = theme,
-                modifier = Modifier.drawWithContent {
+                // Same corner as iOS's preview; the export records inside it,
+                // so the shared picture stays square-cornered like iOS's render.
+                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp)).drawWithContent {
                     // Record the card as it is drawn, so the exported picture
                     // is exactly what the learner is looking at.
                     layer.record { this@drawWithContent.drawContent() }
@@ -259,29 +296,6 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
             Text(stringResource(R.string.where_you_studied_that_day_the_photo_is_the_place_nothing_el_642592),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(
-                onClick = {
-                    scope.launch {
-                        val bmp = renderCard()
-                        val file = withContext(Dispatchers.IO) {
-                            val dir = File(context.cacheDir, "share").apply { mkdirs() }
-                            File(dir, "daycard.png").also { f ->
-                                f.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                            }
-                        }
-                        val uri = FileProvider.getUriForFile(
-                            context, "${context.packageName}.fileprovider", file)
-                        DayCardStore.freeze(context, data)
-                        context.startActivity(Intent.createChooser(
-                            Intent(Intent.ACTION_SEND).apply {
-                                type = "image/png"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }, null))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.share)) }
         }
     }
 }
