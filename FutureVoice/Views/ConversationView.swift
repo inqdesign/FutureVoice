@@ -634,6 +634,12 @@ struct ConversationView: View {
     @State private var coachHint: TalkGoalItem?
     /// Coach mode's "try saying" for the line just spoken (`CoachSuggester`).
     @State private var coachReply: CoachReply?
+    /// The coach's line belongs to the question just answered, so it goes
+    /// when the reply begins — but only from SIGHT. Removing it shrank the
+    /// bar at the very moment the reply's bubble pushed the feed up, and the
+    /// two together read as the list jumping up and back down (2026-10-05).
+    /// The slot keeps its height until the next suggestion replaces it.
+    @State private var coachStale = false
     /// Coach mode was on at some point in this call — the whole call is then
     /// a practice call (`Session.coached`).
     @State private var coachWasOn = false
@@ -1141,7 +1147,7 @@ struct ConversationView: View {
                 if on, grammarFocus == nil { Task { await loadGrammarFocus() } }
                 syncCoachSteer()
                 if on { coachWasOn = true }
-                if !on { coachHint = nil; coachReply = nil }
+                if !on { coachHint = nil; coachReply = nil; coachStale = false }
             }
             .task {
                 let account = await AccountStatus.fetch()
@@ -1564,12 +1570,17 @@ struct ConversationView: View {
             if let reply = coachReply {
                 CoachReplyLabel(reply: reply)
                     .padding(.horizontal, 32)
+                    .opacity(coachStale ? 0 : 1)
+                    .accessibilityHidden(coachStale)
                     .transition(.opacity)
             }
             if let item = coachHint {
                 CoachHintLine(item: item, used: usedGoalKeys.contains(item.key)) {
                     goalDetail = item
                 }
+                .opacity(coachStale ? 0 : 1)
+                .allowsHitTesting(!coachStale)
+                .accessibilityHidden(coachStale)
                 .transition(.opacity)
             }
             // A ZStack, not an HStack: the pill is centred by
@@ -2648,7 +2659,7 @@ struct ConversationView: View {
             if firstWords { syncCoachSteer() }
             // A coach hint on a word outside the chip row is judged the same
             // way; its key joins `usedGoalKeys` so the line can tick.
-            if let hint = coachHint, !usedGoalKeys.contains(hint.key),
+            if let hint = coachHint, !coachStale, !usedGoalKeys.contains(hint.key),
                !TalkGoalPicker.hits(in: turn, among: [hint]).isEmpty {
                 withAnimation(.easeInOut(duration: 0.25)) { _ = usedGoalKeys.insert(hint.key) }
                 HapticEngine.success()
@@ -2661,8 +2672,8 @@ struct ConversationView: View {
         realtime.onReplyBegan = { context in
             guard !isTornDown else { return }
             // The hint belonged to the question just answered.
-            if coachHint != nil || coachReply != nil {
-                withAnimation(.easeInOut(duration: 0.2)) { coachHint = nil; coachReply = nil }
+            if (coachHint != nil || coachReply != nil) && !coachStale {
+                withAnimation(.easeInOut(duration: 0.2)) { coachStale = true }
             }
             let turn = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
                             transcript: "", durationMs: 0, timestamp: Date(),
@@ -3558,23 +3569,29 @@ struct ConversationView: View {
         let learnerSaid = turns.last(where: { $0.role == .user })?.transcript
         let earlier = turns.filter { $0.role == .fluentSelf && $0.id != turnId }.last?.transcript
         Task { @MainActor in
-            guard let result = await CoachSuggester.suggest(
+            let result = await CoachSuggester.suggest(
                     line: text, learnerSaid: learnerSaid,
                     earlier: learnerSaid == nil ? nil : earlier,
                     situation: coachSituation,
                     candidates: candidates,
                     target: appState.targetLanguage, native: appState.nativeLanguage,
-                    level: appState.proficiency, turnId: turnId),
-                  coachMode, !isTornDown,
+                    level: appState.proficiency, turnId: turnId)
+            guard coachMode, !isTornDown,
                   // Still the line being answered — a late suggestion must
                   // never sit under the NEXT one.
                   turns.last(where: { $0.role == .fluentSelf })?.id == turnId else { return }
-            withAnimation(.easeInOut(duration: 0.25)) { coachReply = result.reply }
-            if let item = result.item, !usedGoalKeys.contains(item.key) {
-                coach.hintShown(item)
-                withAnimation(.easeInOut(duration: 0.25)) { coachHint = item }
-                syncCoachSteer()
+            let newHint = result?.item.flatMap { usedGoalKeys.contains($0.key) ? nil : $0 }
+            if let newHint { coach.hintShown(newHint) }
+            // One transaction: the hidden old line is swapped for the new one
+            // in place, so the slot changes height at most once.
+            withAnimation(.easeInOut(duration: 0.25)) {
+                if let result { coachReply = result.reply }
+                else if coachStale { coachReply = nil }
+                if let newHint { coachHint = newHint }
+                else if coachStale { coachHint = nil }
+                coachStale = false
             }
+            if newHint != nil { syncCoachSteer() }
         }
         if learnerSpokeThisCall { syncCoachSteer() }
     }
