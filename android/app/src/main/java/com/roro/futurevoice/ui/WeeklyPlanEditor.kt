@@ -504,10 +504,13 @@ private fun WeekGrid(
         snapshot.days.forEachIndexed { i, day ->
             val shown = snapshot.planned[day].orEmpty().filter { !it.anytime }
             val minH = with(density) { 16.dp.toPx() }
+            // Blocks that run into each other keep a visible gap between them
+            // (the founder's ask, 2026-10-05; iOS stacks them 1 pt apart).
+            val gap = with(density) { 3.dp.toPx() }
             var bottom = Float.NEGATIVE_INFINITY
             shown.sortedBy { it.start }.forEach { occ ->
                 val h = maxOf(minH, occ.minutes / 60f * hourPx)
-                val top = maxOf(y(occ.start), bottom + 1f)
+                val top = maxOf(y(occ.start), bottom + gap)
                 bottom = top + h
                 val isDragging = dragging == occ.id
                 val draggable = occ.blockId != null || occ.kind == StudyPlan.Kind.TEST
