@@ -1182,9 +1182,11 @@ private fun TargetLineSection(
                 timings.forEachIndexed { i, wt ->
                     val selected = selection?.contains(i) == true
                     // As wide as the WORD: the dot row may not
-                    // push words apart ("I" and "to" gapped).
+                    // push words apart ("I" and "to" gapped). MAX, not
+                    // MIN: a CJK word's min intrinsic width is ONE
+                    // character, which stacked なるほど into a column.
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min).clickable(
+                        modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max).clickable(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null) { tapWord(i) }) {
                         Text(wt.word,
