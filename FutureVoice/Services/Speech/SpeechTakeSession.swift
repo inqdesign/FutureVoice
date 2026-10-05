@@ -223,7 +223,7 @@ final class SpeechTakeSession: ObservableObject {
 
         // Steady speed: the cursor walks at the planned pace (the prompter
         // itself moves on its own clock; this keeps the auto-stop honest).
-        if !followVoice {
+        if !followVoice && !holding {
             position += wps * speed * 0.1
             cursor = min(track.words.count, Int(position))
         }
@@ -242,6 +242,8 @@ final class SpeechTakeSession: ObservableObject {
         // 연습입니다") ended the take with the final word unsaid (founder,
         // 2026-10-05). If the recognizer misses the last word, the take still
         // ends — after a longer pause.
+        // Held: the reader stopped the text on purpose; nothing ends now.
+        if holding { return }
         let lastHeard = cursor >= track.words.count
         let onLast = cursor >= track.words.count - 1
         if (lastHeard && quietFor > 1.0) || (onLast && quietFor > 3.0), clock > 3 {
@@ -452,6 +454,9 @@ final class SpeechTakeSession: ObservableObject {
         cancelTake()
         await start()
     }
+
+    /// The reader is pressing the prompter to hold the steady scroll.
+    var holding = false
 
     /// Whether a voice was heard in the last moment — the prompter keeps
     /// flowing while someone is speaking and eases to a stop when they don't.

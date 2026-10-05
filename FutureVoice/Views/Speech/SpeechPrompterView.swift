@@ -18,6 +18,8 @@ struct SpeechPrompterView: View {
     }
     @State private var preparedKey: String?
     @State private var showingScript = false
+    /// The reader is holding the prompter still (steady-speed mode).
+    @State private var holding = false
     /// A word or two said over the controls when a mode flips.
     @State private var toast: String?
     @State private var showingTakes = false
@@ -135,7 +137,39 @@ struct SpeechPrompterView: View {
                                recording: isRecording,
                                follow: session.followVoice,
                                speed: session.speed,
-                               voiceActive: { [session] in session.voiceActive })
+                               voiceActive: { [session] in session.voiceActive },
+                               held: holding)
+                // Steady speed: press and hold the text to stop it, let go
+                // to carry on (founder, 2026-10-05). Following the voice
+                // already stops when the reader does.
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            guard !holding, isRecording, !session.followVoice else { return }
+                            holding = true
+                            session.holding = true
+                            HapticEngine.selection()
+                        }
+                        .onEnded { _ in
+                            guard holding else { return }
+                            holding = false
+                            session.holding = false
+                        }
+                )
+                .overlay(alignment: .top) {
+                    if holding {
+                        Label("Paused", systemImage: "pause.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.6), in: Capsule())
+                            .padding(.top, 4)
+                            .transition(.opacity)
+                    }
+                }
+                .animation(.easeOut(duration: 0.15), value: holding)
                 .frame(maxHeight: .infinity)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.screenSpace)) } action: {
                     prompterRect = $0
@@ -496,6 +530,8 @@ struct SpeechTeleprompter: View {
     /// The steady-speed multiplier.
     var speed: Double = 1
     var voiceActive: () -> Bool = { false }
+    /// Pressed and held: the steady scroll eases to a stop.
+    var held = false
 
     @StateObject private var scroller = PrompterScroller()
 
@@ -563,6 +599,7 @@ struct SpeechTeleprompter: View {
         .onChange(of: follow) { _, f in
             scroller.inputs = { [voiceActive] in (recording, f, CGFloat(speed), voiceActive()) }
         }
+        .onChange(of: held) { _, h in scroller.held = h }
         .onChange(of: speed) { _, sp in
             scroller.inputs = { [voiceActive] in (recording, follow, CGFloat(sp), voiceActive()) }
         }
@@ -601,6 +638,8 @@ final class PrompterScroller: NSObject, ObservableObject {
     private var link: CADisplayLink?
     private var lastTick: CFTimeInterval = 0
 
+    /// The reader is holding the text still.
+    var held = false
     /// How far behind the reader's spot the text trails, in seconds.
     private let followTime: CGFloat = 0.45
     /// The fastest the text moves when catching up.
@@ -661,8 +700,11 @@ final class PrompterScroller: NSObject, ObservableObject {
         if !recording {
             // Still between takes.
         } else if !follow {
-            // Steady speed: exactly that, whatever is said.
-            next = position + planned * speed * dt
+            // Steady speed: exactly that, whatever is said — eased, so a
+            // press-and-hold stops it gently and letting go starts it again.
+            let wanted = held ? 0 : planned * speed
+            velocity += (wanted - velocity) * min(1, dt / 0.3)
+            next = position + velocity * dt
         } else {
             // Follow the voice, nothing more: ease toward where the reader
             // is (their word, and how far across its line), a short lag
