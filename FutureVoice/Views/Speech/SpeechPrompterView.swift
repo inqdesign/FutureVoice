@@ -138,7 +138,6 @@ struct SpeechPrompterView: View {
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.screenSpace)) } action: {
                     prompterRect = $0
                 }
-            progressStrip
             bottomHalf
                 .frame(maxHeight: .infinity)
         }
@@ -244,16 +243,6 @@ struct SpeechPrompterView: View {
         .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
         .disabled(isRecording)
         .accessibilityLabel(label)
-    }
-
-    /// How far through the script, as a thin bar — the one number a reader
-    /// glances at mid-sentence.
-    private var progressStrip: some View {
-        ProgressView(value: Double(session.cursor), total: Double(max(1, session.track.words.count)))
-            .progressViewStyle(.linear)
-            .tint(isRecording ? .red : .accentColor)
-            .padding(.horizontal)
-            .padding(.vertical, 6)
     }
 
     private var bottomHalf: some View {

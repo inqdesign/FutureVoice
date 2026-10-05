@@ -2680,6 +2680,7 @@ private struct PageIntroCaptureHost: View {
         Group {
             switch page {
             case .talk:     ConversationHome()
+            case .speech:   SpeechTab()
             case .watch:    WatchTab()
             case .review:   PracticeTab()
             case .progress: ProgressTab()

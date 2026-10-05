@@ -478,7 +478,7 @@ struct RootTabView: View {
 
     private static func introPage(_ tab: Tab) -> PageIntro.Page? {
         switch tab {
-        case .speech:   return nil
+        case .speech:   return .speech
         case .home:     return .talk
         case .watch:    return .watch
         case .practice: return .review

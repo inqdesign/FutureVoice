@@ -20,7 +20,7 @@ import SwiftUI
 /// control are real words.
 enum PageIntro {
     enum Page: String, Identifiable, CaseIterable {
-        case talk, watch, review, progress
+        case talk, speech, watch, review, progress
         /// Not a tab: My routine, reached from the Talk header's streak.
         /// Its marks (a green day, a grey ring, a bare number) carry a rule
         /// nobody can guess, so it explains itself on the first visit.
@@ -29,11 +29,12 @@ enum PageIntro {
     }
 
     /// The four tabs, in tab order — what `RootTabView` raises guides for.
-    static let tabs: [Page] = [.talk, .watch, .review, .progress]
+    static let tabs: [Page] = [.talk, .speech, .watch, .review, .progress]
 
     static func symbol(_ page: Page) -> String {
         switch page {
         case .talk:     return "waveform"
+        case .speech:   return "music.mic"
         case .watch:    return "play.circle.fill"
         case .review:   return "book.fill"
         case .progress: return "chart.bar.fill"
@@ -44,6 +45,7 @@ enum PageIntro {
     static func tabName(_ page: Page) -> String {
         switch page {
         case .talk:     return explain("Talk")
+        case .speech:   return explain("Speech")
         case .watch:    return explain("Watch")
         case .review:   return explain("Review")
         case .progress: return explain("Progress")
@@ -56,6 +58,7 @@ enum PageIntro {
     static func problem(_ page: Page) -> String {
         switch page {
         case .talk:     return explain("You know the words. You just never get to speak.")
+        case .speech:   return explain("Chatting is one thing. Presenting is another.")
         case .watch:    return explain("In a new situation, you don't know what to say")
         case .review:   return explain("What you learn today is gone in a few days")
         case .progress: return explain("Am I actually getting better?")
@@ -196,6 +199,7 @@ struct PageIntroSheet: View {
     private var stepCount: Int {
         switch page {
         case .talk:  return 6
+        case .speech: return 4
         case .watch: return 5
         case .review: return 4
         default:     return 3   // progress, routine
@@ -354,6 +358,54 @@ struct PageIntroSheet: View {
                           detail: explain("The mistake you make most, like the past tense, is pinned at the top. Your fluent self asks questions that need it, and if the same mistake comes back, its correction is marked.")),
                 ],
                 note: explain("A coached call counts as a practice call. Your minutes, streak and book all count, but it isn't used to measure your level, and words you use in it aren't marked as learned.")) { CoachMock() }
+
+        // MARK: Speech
+        case (.speech, 0):
+            IntroWhyPage(
+                hero: .symbol("music.mic"),
+                eyebrow: explain("Speech"),
+                problem: PageIntro.problem(.speech),
+                detail: explain("A presentation at work, a pitch, introducing yourself at a meeting. Saying prepared words clearly, at a steady pace, with pauses in the right places, is its own skill, and most people only find that out on the day."),
+                answer: explain("Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too."))
+        case (.speech, 1):
+            IntroScreenPage(
+                title: explain("Recording a take"),
+                subtitle: explain("Read the script out loud, like a presenter."),
+                callouts: [
+                    .init(title: explain("The script follows your voice"),
+                          detail: explain("It scrolls as you read and slows down when you pause. The line to read sits right under the camera, so your eyes stay near the lens.")),
+                    .init(title: explain("Your camera"),
+                          detail: explain("Turn it on to film yourself, or off to practice with your voice only.")),
+                    .init(title: explain("Record"),
+                          detail: explain("Recording starts after 3, 2, 1. While you record, ✕ throws the take away and ↺ starts it over.")),
+                ]) { SpeechPrompterMock() }
+        case (.speech, 2):
+            IntroScreenPage(
+                title: explain("After each take"),
+                subtitle: explain("Your score comes a few seconds after you stop."),
+                callouts: [
+                    .init(title: explain("Your score"),
+                          detail: explain("Accuracy, pace, pauses, filler words and how steady your voice stays, all measured from your recording. Then a coach tells you what to try next time.")),
+                    .init(title: explain("Your video"),
+                          detail: explain("The script and your face together in one vertical video. Save it to Photos to share, or delete it.")),
+                    .init(title: explain("Your takes"),
+                          detail: explain("Every take of a script is kept, so you can watch yourself get better.")),
+                ]) { SpeechResultMock() }
+        case (.speech, _):
+            IntroStepsPage(
+                title: explain("Where scripts come from"),
+                subtitle: explain("Every script teaches you something while you practice."),
+                steps: [
+                    .init(symbol: "doc.text",
+                          title: explain("Start with the sample"),
+                          detail: explain("Every account can practice the built-in script.")),
+                    .init(symbol: "sparkles",
+                          title: explain("Write one with AI"),
+                          detail: explain("Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.")),
+                    .init(symbol: "pencil.line",
+                          title: explain("Add your own"),
+                          detail: explain("Paste the presentation or speech you actually have to give. Plus and Max.")),
+                ])
 
         // MARK: Watch
         case (.watch, 0):
@@ -1425,6 +1477,105 @@ private struct ReviewCardMock: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
         .background(mockCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct SpeechPrompterMock: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 9) {
+                TextBar(width: 150).opacity(0.5)
+                TextBar(width: 190, height: 9)
+                TextBar(width: 170, height: 9)
+                TextBar(width: 120, height: 9)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(mockCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .callout(1, corner: 14)
+
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(.systemGray3))
+                    .frame(height: 150)
+                    .overlay {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 54))
+                            .foregroundStyle(Color(.systemGray5))
+                            .offset(y: 10)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                HStack(spacing: 26) {
+                    Circle().fill(Color.black.opacity(0.35)).frame(width: 34, height: 34)
+                        .overlay { Image(systemName: "video.fill").font(.caption).foregroundStyle(.white) }
+                        .callout(2, corner: 17)
+                    Circle().strokeBorder(.white, lineWidth: 3).frame(width: 46, height: 46)
+                        .overlay { Circle().fill(.red).frame(width: 36, height: 36) }
+                        .callout(3, corner: 23, trailing: true)
+                    Circle().fill(Color.black.opacity(0.35)).frame(width: 34, height: 34)
+                        .overlay { Image(systemName: "waveform").font(.caption).foregroundStyle(.white) }
+                }
+                .padding(.bottom, 12)
+            }
+        }
+    }
+}
+
+private struct SpeechResultMock: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().stroke(Color(.tertiaryLabel).opacity(0.3), lineWidth: 6)
+                    Circle().trim(from: 0, to: 0.84)
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Text(verbatim: "84").font(.headline.monospacedDigit())
+                }
+                .frame(width: 54, height: 54)
+                VStack(alignment: .leading, spacing: 7) {
+                    TextBar(width: 140)
+                    TextBar(width: 110)
+                    TextBar(width: 90, accent: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(mockCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .callout(1, corner: 14)
+
+            HStack(spacing: 10) {
+                VStack(spacing: 0) {
+                    Color(.systemGray5).overlay {
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextBar(width: 34, height: 4); TextBar(width: 28, height: 4)
+                        }
+                    }
+                    Color(.systemGray3).overlay {
+                        Image(systemName: "person.fill").foregroundStyle(Color(.systemGray5))
+                    }
+                }
+                .frame(width: 54, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .callout(2, corner: 8)
+
+                VStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { i in
+                        HStack {
+                            TextBar(width: 80)
+                            Spacer(minLength: 0)
+                            Text(verbatim: ["84", "76", "69"][i])
+                                .font(.caption.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(i == 0 ? Color.green : Color.orange)
+                        }
+                        .padding(.horizontal, 10)
+                        .frame(height: 26)
+                        .background(mockCard, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                }
+                .callout(3, corner: 8, trailing: true)
+            }
+        }
     }
 }
 
