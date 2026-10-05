@@ -604,8 +604,8 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 - ☑ 2g.9 '처음 만난 사람'은 서로 알아가는 대화 (`43810e21`) — `fdc58923` (MEETING_NOTE, learnerSide → 코치 상황)
 - ◐ 2g.10 통화 피드 덜컹임 (`8b3b45f2` `c95242cc` `30e49b07`) — `f8b3ca6e`: 빈 답장 버블 숨김·'생각 중' 자리 유지, animateItem/animateContentSize, 대기 줄 즉시 제거, 코치 줄 `coachStale`(숨김→다음 추천에서 교체). iOS `defaultScrollAnchor(.bottom)`는 Compose에 없어 기존 따라가기 스크롤 유지. 남은 것: 폰 확인
 - n/a 2g.11 기간 사용량을 시각부터 (`1702ee3a`) — 서버 마이그레이션만(프로덕션 적용됨), 앱은 `talk_allowance`를 읽음
-- ☑ 2g.12 레벨 측정은 실제 증거만 (`55088c28`) — 이 커밋: 리얼타임 턴 fluency(`RealtimeTalkClient.fluencyStats`, iOS 규칙 그대로, `RealtimeFluencyTest` 4), `level_assessed`/`level_assess_failed`(안드로이드는 성장 탭 탭으로 평가 — reason `manual`). n/a: 단어 백필(안드로이드엔 세션 백필이 없고 요약은 이미 연습 통화·제외 턴을 뺌), 삭제·보관 시 재평가 생략(안드로이드는 삭제·보관에 재평가를 하지 않음)
-- ☑ 2g.13 아는 시점을 붙여 말하기 (`8d6543a4`) — 이 커밋: 대화 프롬프트 KNOWLEDGE + WHAT YOU CAN'T KNOW
+- ☑ 2g.12 레벨 측정은 실제 증거만 (`55088c28`) — `8fd07f28`: 리얼타임 턴 fluency(`RealtimeTalkClient.fluencyStats`, iOS 규칙 그대로, `RealtimeFluencyTest` 4), `level_assessed`/`level_assess_failed`(안드로이드는 성장 탭 탭으로 평가 — reason `manual`). n/a: 단어 백필(안드로이드엔 세션 백필이 없고 요약은 이미 연습 통화·제외 턴을 뺌), 삭제·보관 시 재평가 생략(안드로이드는 삭제·보관에 재평가를 하지 않음)
+- ☑ 2g.13 아는 시점을 붙여 말하기 (`8d6543a4`) — `f68db73d`: 대화 프롬프트 KNOWLEDGE + WHAT YOU CAN'T KNOW
 - ☑ 2g.14 페이월 사다리 '+ 스피치'·하루 N분꼴 위치 (`63817b73` `964bae15`) — `2e925fb2`. 스피치 탭(2e)이 나가기 전 빌드에선 이 줄이 아직 없는 기능을 약속함
 - n/a: 릴리스·문서·스토어 `2c09cded` `40458a30` `bbc1f837` `310d0361` `0ec952df` `6457902e` `7e83cf14`, 머지 `1d6fa8d7`. 스피치(`speech` 범위·`8f135c24`)는 2e, 웰컴(`d4d1d566` `10f65de5`)은 2f
 
