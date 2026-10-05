@@ -25,6 +25,10 @@ object TalkCaptureFlags {
         val goalsUsed: Set<String> = emptySet(),
         /** A goal chip's sheet already open (iOS `GoalSheetPreview`). */
         val openGoal: TalkGoalItem? = null,
+        /** A plain one-line title instead of topic · level (iOS stages
+         *  `call-coach` / `call-focus` with `Text("Let's talk")` /
+         *  `Text("Free talk")` as the principal item, no level line). */
+        val titleRes: Int? = null,
     )
 
     @JvmField var callPreview: CallPreview? = null

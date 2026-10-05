@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.Canvas
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.border
@@ -1299,10 +1300,17 @@ internal fun HomeScreen(
         HomeTab.entries.filter { it in visited }.forEach { t ->
           androidx.compose.runtime.key(t) {
             val pageScroll = rememberScrollState()
-            // Capture `home-scenarios` only: Talk opens scrolled to its
-            // bottom, where the Everyday list is (iOS `defaultScrollAnchor`).
+            // Capture `home-scenarios` only: Talk opens scrolled to where the
+            // Everyday list ends (iOS `defaultScrollAnchor(.bottom)` — iOS's
+            // page ends there; Android's carries Recent talks below it, so
+            // the scroll stops short of them).
+            var recentTalksHeight by remember { mutableStateOf(0) }
             if (t == HomeTab.TALK && com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab != null) {
-                LaunchedEffect(pageScroll.maxValue) { pageScroll.scrollTo(pageScroll.maxValue) }
+                val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.roundToPx() }
+                LaunchedEffect(pageScroll.maxValue, recentTalksHeight) {
+                    val tail = if (recentTalksHeight > 0) recentTalksHeight + gap else 0
+                    pageScroll.scrollTo((pageScroll.maxValue - tail).coerceAtLeast(0))
+                }
             }
             Column(
                 Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
@@ -1348,9 +1356,11 @@ internal fun HomeScreen(
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
                         )
-                        RecentTalks(language = state.targetLanguage,
-                            nativeLanguage = state.nativeLanguage, level = state.level,
-                            onOpen = onOpenTalk)
+                        Box(Modifier.onSizeChanged { recentTalksHeight = it.height }) {
+                            RecentTalks(language = state.targetLanguage,
+                                nativeLanguage = state.nativeLanguage, level = state.level,
+                                onOpen = onOpenTalk)
+                        }
                         state.error?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error)

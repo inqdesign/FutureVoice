@@ -406,6 +406,7 @@ object CaptureTalk {
                 TalkGoalItem("next", "next", isWord = true),
             ),
             goalsUsed = setOf("next"),
+            titleRes = R.string.lets_talk,
         ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
     }
 
@@ -512,6 +513,7 @@ object CaptureTalk {
                 TalkGoalItem("it slipped my mind", "it slipped my mind", isWord = false),
             ),
             goalsUsed = setOf("commute"),
+            titleRes = R.string.free_talk,
         ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
         if (sheet) GrammarFocusSheet(focus, repeats = 1, onDismiss = {})
     }

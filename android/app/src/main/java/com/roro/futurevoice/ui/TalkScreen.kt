@@ -470,7 +470,10 @@ fun TalkScreen(
                     var showingLevel by remember { mutableStateOf(false) }
                     if (showingLevel) LevelInfoSheet(level) { showingLevel = false }
                     // Tapping the title explains the level (iOS `LevelHeaderTitle`).
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    val stagedTitle = preview?.titleRes
+                    if (stagedTitle != null) Text(stringResource(stagedTitle),
+                        style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    else Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.clickable { showingLevel = true }) {
                         Text(topic.ifBlank { stringResource(R.string.lets_talk) },
                             style = MaterialTheme.typography.titleMedium,
