@@ -57,7 +57,6 @@
     <string name="worth_reaching_for">Lohnt sich</string>
     <string name="lets_talk">Sprechen wir</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Hier ist noch nichts. Führ ein Gespräch oder sieh dir eine Szene an – das Material daraus wird hier zu Büchern.</string>
-    <string name="fluency">Flüssigkeit</string>
     <string name="expressiveness">Ausdruck</string>
     <string name="have_a_talk_and_this_gets_measured">Führ ein Gespräch, dann wird das gemessen.</string>
     <string name="things_you_studied_came_out_of_your_mouth">Dinge, die du gelernt hast, hast du in einem echten Gespräch gesagt</string>
@@ -165,7 +164,6 @@
     <string name="lld_m">%1$d Min.</string>
     <string name="talk_time_is_kept_for_lld_days">Sprechzeit wird %1$d Tage lang aufbewahrt.</string>
     <string name="back_in_10_minutes">In 10 Minuten wieder da</string>
-    <string name="how_would_a_fluent_speaker_say_it">Wie würde es jemand sagen, der fließend spricht?</string>
     <string name="save_expression">Wendung sichern</string>
     <string name="study_this">Das lernen</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Dein Abo beginnt. Bis dahin kannst du jederzeit in Google Play kündigen.</string>
@@ -237,14 +235,6 @@
     <string name="widget_free_talk_description">Ein Tippen, und du rufst dein fließendes Ich an.</string>
     <string name="widget_to_review">zum Wiederholen</string>
     <string name="google_sign_in_failed">Anmeldung mit Google fehlgeschlagen. Versuch es noch einmal.</string>
-    <string name="recreating_your_voice">Deine Stimme wird neu erstellt</string>
-    <string name="this_takes_a_few_seconds">Das dauert ein paar Sekunden.</string>
-    <string name="couldn_t_make_your_voice">Deine Stimme konnte nicht erstellt werden</string>
-    <string name="your_voice_is_back">Deine Stimme ist zurück</string>
-    <string name="set_the_speed_and_accent_again_then_start">Stell Tempo und Akzent noch einmal ein, dann geht es los.</string>
-    <string name="start_the_call">Anruf starten</string>
-    <string name="accent_original">Original</string>
-    <string name="person_idea_tap_footer">Tippe auf eine, um daraus eine Situation mit %s zu machen.</string>
     <string name="accent_american">Amerikanisch</string>
     <string name="accent_british">Britisch</string>
     <string name="accent_australian">Australisch</string>
@@ -523,7 +513,6 @@
     <string name="welcome_gloss_wear_and_tear">normale Abnutzung durch Gebrauch</string>
     <string name="welcome_gloss_deducted">vom Gesamtbetrag abgezogen</string>
     <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
-    <string name="plan_tier_max">Max</string>
     <string name="paywall_keep_talking">Weiter sprechen</string>
     <string name="paywall_pick_how_much">Wähle, wie viel du jeden Monat sprechen willst.</string>
     <string name="paywall_shared_unlimited">Übungsbuch, Nachsprechen, Wörter, Nochmal anhören und Drills sind in jedem Tarif unbegrenzt.</string>

@@ -57,7 +57,6 @@
     <string name="worth_reaching_for">次に使ってみたいもの</string>
     <string name="lets_talk">話す</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">まだ何もありません。通話をするか、シーン練習を見てみてください。そこで生まれた材料が、ここでブックになります。</string>
-    <string name="fluency">流暢さ</string>
     <string name="expressiveness">表現力</string>
     <string name="have_a_talk_and_this_gets_measured">通話をすると、ここが測定されます。</string>
     <string name="things_you_studied_came_out_of_your_mouth">学んだことが実際の会話で口から出ました</string>
@@ -165,7 +164,6 @@
     <string name="lld_m">%1$d分</string>
     <string name="talk_time_is_kept_for_lld_days">トーク時間は%1$d日分まで残ります。</string>
     <string name="back_in_10_minutes">10分後にもう一度</string>
-    <string name="how_would_a_fluent_speaker_say_it">流暢な人ならどう言う？</string>
     <string name="save_expression">表現を保存</string>
     <string name="study_this">これで学ぶ</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">サブスクリプションが始まります。それまではGoogle Playでいつでも解約できます。</string>
@@ -247,14 +245,6 @@
     <string name="widget_to_review">復習待ち</string>
     <string name="google_sign_in_failed">Googleでログインできませんでした。もう一度お試しください。</string>
     <!-- Parked voice revival (iOS VoiceRevivalView) -->
-    <string name="recreating_your_voice">声を作り直しています</string>
-    <string name="this_takes_a_few_seconds">数秒で終わります。</string>
-    <string name="couldn_t_make_your_voice">声を作れませんでした</string>
-    <string name="your_voice_is_back">声が戻りました</string>
-    <string name="set_the_speed_and_accent_again_then_start">スピードとアクセントを選び直してから始めましょう。</string>
-    <string name="start_the_call">通話を始める</string>
-    <string name="accent_original">そのまま</string>
-    <string name="person_idea_tap_footer">タップすると、%sとのシーンを作れます。</string>
     <string name="accent_american">米国</string>
     <string name="accent_british">英国</string>
     <string name="accent_australian">豪州</string>
@@ -531,7 +521,6 @@
     <string name="welcome_gloss_wear_and_tear">普通に使ってできる傷み</string>
     <string name="welcome_gloss_deducted">合計から差し引かれた</string>
     <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
-    <string name="plan_tier_max">マックス</string>
     <string name="paywall_keep_talking">会話を続けましょう</string>
     <string name="paywall_pick_how_much">毎月どれくらい話すか選んでください。</string>
     <string name="paywall_shared_unlimited">復習ブック、シャドーイング、単語学習、会話の再生、ドリル復習はどのプランでも無制限です。</string>

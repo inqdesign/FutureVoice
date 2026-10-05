@@ -1574,7 +1574,7 @@ private fun FirstRunCard() {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold)
         }
-        Text(stringResource(R.string.tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_d9b4f5),
+        Text(stringResource(R.string.tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

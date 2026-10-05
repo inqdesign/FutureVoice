@@ -637,7 +637,7 @@ private fun footerFor(kind: LibraryKind, lens: Lens): Int? = when {
     kind == LibraryKind.WORDS && lens == Lens.KNOWN ->
         R.string.words_you_ve_used_out_loud_or_marked_as_known
     kind == LibraryKind.EXPRESSIONS && lens == Lens.TO_STUDY ->
-        R.string.captured_from_what_you_say_what_your_fluent_self_says_back_a_5f4946
+        R.string.captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65
     else -> null
 }
 

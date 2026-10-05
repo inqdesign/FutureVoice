@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Review tab, book-first Studying page (iOS 1.1.4, plan 2d.3). -->
 <resources>
-    <string name="nothing_put_off">미뤄둔 게 없어요</string>
     <string name="nothing_put_off_message">덱에서 미룬 단어, 표현, 문장이 모두 여기 모여요. 다시 볼 시간이 가까운 순서대로요.</string>
 </resources>

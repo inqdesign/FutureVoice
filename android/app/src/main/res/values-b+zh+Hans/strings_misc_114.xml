@@ -3,8 +3,6 @@
      teleprompter, the day card's Save to Photos. Values copied from the
      iOS catalog at ebf848e. -->
 <resources>
-    <string name="everyday">日常</string>
-    <string name="you_go_first">你先开口吧</string>
     <string name="starter_meeting_title">和刚认识的人</string>
     <string name="starter_meeting_role">刚认识的人</string>
     <string name="starter_cafe_title">在咖啡店</string>
@@ -27,8 +25,5 @@
     <string name="starter_neighbor_title">和邻居</string>
     <string name="starter_neighbor_role">邻居</string>
     <string name="say_again_moves_on">说完就会自动继续</string>
-    <string name="save_to_photos">存储到照片</string>
-    <string name="saved_to_photos">已存储到照片</string>
-    <string name="allow_access_to_photos">请允许访问照片</string>
     <string name="photos_turn_on_in_settings">要存储卡片，请在设置中允许 nawana 访问照片。</string>
 </resources>

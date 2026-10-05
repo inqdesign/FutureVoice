@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Review tab, book-first Studying page (iOS 1.1.4, plan 2d.3). -->
 <resources>
-    <string name="nothing_put_off">Rien de reporté</string>
     <string name="nothing_put_off_message">Les mots, expressions et phrases que tu reportes dans un paquet apparaissent tous ici, dans l’ordre où ils reviennent.</string>
 </resources>

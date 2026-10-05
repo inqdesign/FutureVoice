@@ -216,11 +216,11 @@ fun AllowanceSpentSheet(
                 // rather than the free one.
                 if (packLeads || canUpgrade) {
                     FilledTonalButton(onClick = onReview, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.go_to_practice))
+                        Text(stringResource(R.string.go_to_review))
                     }
                 } else {
                     Button(onClick = onReview, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.go_to_practice))
+                        Text(stringResource(R.string.go_to_review))
                     }
                 }
                 // Last, and on a TALK wall only: an invite can't resume this

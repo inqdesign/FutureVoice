@@ -2,7 +2,6 @@
 <!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
      first-call check. Values copied from the iOS catalog at ebf848e. -->
 <resources>
-    <string name="practice_call">연습 대화</string>
     <string name="practice_call_note">예시 문장을 보면서 연습한 대화예요. 레벨은 코치 모드 없이 한 대화로 측정해요.</string>
     <string name="fcc_title">첫 대화 어땠어요?</string>
     <string name="fcc_you_picked">고른 레벨: %1$s</string>

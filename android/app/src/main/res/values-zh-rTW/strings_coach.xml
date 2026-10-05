@@ -2,7 +2,6 @@
 <!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
      first-call check. Values copied from the iOS catalog at ebf848e. -->
 <resources>
-    <string name="practice_call">練習對話</string>
     <string name="practice_call_note">這是看著範例句練習的對話。等級只會用沒開教練模式的對話來評估。</string>
     <string name="fcc_title">第一次對話感覺如何？</string>
     <string name="fcc_you_picked">你選的等級：%1$s</string>

@@ -881,7 +881,7 @@ fun HowAssessedSheet(
             }
 
             FormSection(header = stringResource(R.string.what_never_moves_the_level)) {
-                Text(stringResource(R.string.shadowing_scores_and_review_reps_measure_practice_not_level_4c91dc),
+                Text(stringResource(R.string.shadowing_scores_and_review_reps_measure_practice_not_level_3e15b4),
                     style = PT.callout,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp))
             }

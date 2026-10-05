@@ -179,8 +179,7 @@ fun CounterpartDetailScreen(
                 }
                 ideasError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
             }
-            GroupedFooter(if (onPickIdea != null) stringResource(R.string.person_idea_tap_footer, c.name)
-                else stringResource(R.string.grounded_in_your_relationship_with_these_appear_as_ideas_whe_d659c0, c.name))
+            GroupedFooter(stringResource(R.string.tap_one_to_make_it_a_situation_with, c.name))
 
             if (scenes.isNotEmpty()) {
                 GroupedSectionSpacer()

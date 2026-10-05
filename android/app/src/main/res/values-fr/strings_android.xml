@@ -57,7 +57,6 @@
     <string name="worth_reaching_for">À viser</string>
     <string name="lets_talk">On parle ?</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Rien pour l’instant. Parle ou regarde une scène — ce que ça donne devient des carnets ici.</string>
-    <string name="fluency">Aisance</string>
     <string name="expressiveness">Expressivité</string>
     <string name="have_a_talk_and_this_gets_measured">Parle, et ça se mesure.</string>
     <string name="things_you_studied_came_out_of_your_mouth">choses étudiées que tu as dites dans une vraie conversation</string>
@@ -165,7 +164,6 @@
     <string name="lld_m">%1$d min</string>
     <string name="talk_time_is_kept_for_lld_days">Le temps de parole est conservé %1$d jours.</string>
     <string name="back_in_10_minutes">De retour dans 10 minutes</string>
-    <string name="how_would_a_fluent_speaker_say_it">Comment quelqu’un de fluide le dirait ?</string>
     <string name="save_expression">Enregistrer l’expression</string>
     <string name="study_this">Étudier ça</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Ton abonnement démarre. Annule-le à tout moment avant ça dans Google Play.</string>
@@ -250,14 +248,6 @@
     <string name="widget_to_review">à revoir</string>
     <string name="google_sign_in_failed">Connexion avec Google impossible. Réessaie.</string>
     <!-- Parked voice revival (iOS VoiceRevivalView) -->
-    <string name="recreating_your_voice">Recréation de ta voix</string>
-    <string name="this_takes_a_few_seconds">Ça ne prend que quelques secondes.</string>
-    <string name="couldn_t_make_your_voice">Impossible de créer ta voix</string>
-    <string name="your_voice_is_back">Ta voix est de retour</string>
-    <string name="set_the_speed_and_accent_again_then_start">Choisis à nouveau la vitesse et l’accent, puis lance-toi.</string>
-    <string name="start_the_call">Lancer l’appel</string>
-    <string name="accent_original">Original</string>
-    <string name="person_idea_tap_footer">Touche-en une pour en faire une situation avec %s.</string>
     <string name="accent_american">Américain</string>
     <string name="accent_british">Anglais</string>
     <string name="accent_australian">Australien</string>
@@ -537,7 +527,6 @@
     <string name="welcome_gloss_wear_and_tear">l’usure normale due à l’usage</string>
     <string name="welcome_gloss_deducted">retiré du total</string>
     <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
-    <string name="plan_tier_max">Max</string>
     <string name="paywall_keep_talking">Continue à parler</string>
     <string name="paywall_pick_how_much">Choisis combien tu veux parler chaque mois.</string>
     <string name="paywall_shared_unlimited">Ton carnet de révision, le shadowing, les mots, les réécoutes et les exercices sont illimités dans toutes les formules.</string>

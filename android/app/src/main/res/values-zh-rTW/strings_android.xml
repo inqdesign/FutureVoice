@@ -57,7 +57,6 @@
     <string name="worth_reaching_for">下次可以試試的</string>
     <string name="lets_talk">開始說</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">這裡還沒有東西。對話或看一段情境，那裡做出來的材料就會在這裡變成書。</string>
-    <string name="fluency">流暢度</string>
     <string name="expressiveness">表達力</string>
     <string name="have_a_talk_and_this_gets_measured">對話之後就會測量這裡。</string>
     <string name="things_you_studied_came_out_of_your_mouth">學過的東西在真實對話中說出口了</string>
@@ -165,7 +164,6 @@
     <string name="lld_m">%1$d分鐘</string>
     <string name="talk_time_is_kept_for_lld_days">通話時間只保留 %1$d 天。</string>
     <string name="back_in_10_minutes">10 分鐘後再來</string>
-    <string name="how_would_a_fluent_speaker_say_it">流暢的人會怎麼說？</string>
     <string name="save_expression">儲存表達</string>
     <string name="study_this">用這個學習</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">訂閱開始。在那之前，隨時可以在 Google Play 取消。</string>
@@ -247,14 +245,6 @@
     <string name="widget_to_review">待複習</string>
     <string name="google_sign_in_failed">無法使用 Google 登入，請再試一次。</string>
     <!-- Parked voice revival (iOS VoiceRevivalView) -->
-    <string name="recreating_your_voice">正在重新製作你的聲音</string>
-    <string name="this_takes_a_few_seconds">只要幾秒鐘。</string>
-    <string name="couldn_t_make_your_voice">無法製作你的聲音</string>
-    <string name="your_voice_is_back">你的聲音回來了</string>
-    <string name="set_the_speed_and_accent_again_then_start">重新選好速度和口音，就可以開始了。</string>
-    <string name="start_the_call">開始通話</string>
-    <string name="accent_original">原聲</string>
-    <string name="person_idea_tap_footer">點一下，就能做成和%s的情境。</string>
     <string name="accent_american">美式</string>
     <string name="accent_british">英式</string>
     <string name="accent_australian">澳式</string>
@@ -531,7 +521,6 @@
     <string name="welcome_gloss_wear_and_tear">正常使用造成的損耗</string>
     <string name="welcome_gloss_deducted">從總額扣掉</string>
     <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
-    <string name="plan_tier_max">Max</string>
     <string name="paywall_keep_talking">繼續聊下去</string>
     <string name="paywall_pick_how_much">選擇每個月想聊多久。</string>
     <string name="paywall_shared_unlimited">複習書、跟讀、單字、對話重播和練習在每個方案都無限使用。</string>

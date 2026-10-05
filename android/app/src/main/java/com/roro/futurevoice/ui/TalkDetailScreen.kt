@@ -561,7 +561,7 @@ fun TalkDetailScreen(
                                 Text(stringResource(R.string.review_this_talk), maxLines = 1)
                             }
                             PageFooter(stringResource(
-                                R.string.a_quick_run_through_this_talk_s_key_phrases_anything_left_jo_fde2ca))
+                                R.string.a_quick_run_through_this_talk_s_key_phrases_anything_left_co_e8cef5))
                         }
                     }
                 }

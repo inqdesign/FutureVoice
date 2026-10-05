@@ -845,7 +845,7 @@ internal fun ScenarioComposer(
             AlertDialog(
                 onDismissRequest = { confirmingDelete = false },
                 title = { Text(stringResource(R.string.delete_this_scenario)) },
-                text = { Text(stringResource(R.string.its_book_in_practice_goes_with_it_study_items_and_mastery_in_1285e6)) },
+                text = { Text(stringResource(R.string.its_book_in_review_goes_with_it_study_items_and_mastery_incl_ad0876)) },
                 confirmButton = {
                     TextButton(onClick = {
                         confirmingDelete = false

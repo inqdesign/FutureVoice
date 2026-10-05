@@ -3,8 +3,6 @@
      teleprompter, the day card's Save to Photos. Values copied from the
      iOS catalog at ebf848e. -->
 <resources>
-    <string name="everyday">일상</string>
-    <string name="you_go_first">먼저 말을 걸어 보세요</string>
     <string name="starter_meeting_title">처음 만난 사람과</string>
     <string name="starter_meeting_role">방금 만난 사람</string>
     <string name="starter_cafe_title">카페에서</string>
@@ -27,8 +25,5 @@
     <string name="starter_neighbor_title">이웃과</string>
     <string name="starter_neighbor_role">이웃</string>
     <string name="say_again_moves_on">말을 마치면 다음으로 넘어가요</string>
-    <string name="save_to_photos">사진첩에 저장</string>
-    <string name="saved_to_photos">사진첩에 저장했어요</string>
-    <string name="allow_access_to_photos">사진 접근을 허용해 주세요</string>
     <string name="photos_turn_on_in_settings">카드를 저장하려면 설정에서 나와나의 사진 접근을 켜 주세요.</string>
 </resources>

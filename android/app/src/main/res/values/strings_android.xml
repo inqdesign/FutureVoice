@@ -57,7 +57,6 @@
     <string name="worth_reaching_for">Worth reaching for</string>
     <string name="lets_talk">Let\'s talk</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Nothing here yet. Have a talk or watch a scene — the material it makes becomes books here.</string>
-    <string name="fluency">Fluency</string>
     <string name="expressiveness">Expressiveness</string>
     <string name="have_a_talk_and_this_gets_measured">Have a talk and this gets measured.</string>
     <string name="things_you_studied_came_out_of_your_mouth">things you studied have come out of your mouth in a real conversation</string>
@@ -165,7 +164,6 @@
     <string name="lld_m">%1$dm</string>
     <string name="talk_time_is_kept_for_lld_days">Talk time is kept for %1$d days.</string>
     <string name="back_in_10_minutes">Back in 10 minutes</string>
-    <string name="how_would_a_fluent_speaker_say_it">How would a fluent speaker say it?</string>
     <string name="save_expression">Save expression</string>
     <string name="study_this">Study this</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Your subscription starts. Cancel any time before then in Google Play.</string>
@@ -263,14 +261,6 @@
     <string name="widget_to_review">to review</string>
     <string name="google_sign_in_failed">Couldn\'t sign in with Google. Try again.</string>
     <!-- Parked voice revival (iOS VoiceRevivalView) -->
-    <string name="recreating_your_voice">Recreating your voice</string>
-    <string name="this_takes_a_few_seconds">This takes a few seconds.</string>
-    <string name="couldn_t_make_your_voice">Couldn\'t make your voice</string>
-    <string name="your_voice_is_back">Your voice is back</string>
-    <string name="set_the_speed_and_accent_again_then_start">Set the speed and accent again, then start.</string>
-    <string name="start_the_call">Start the call</string>
-    <string name="accent_original">Original</string>
-    <string name="person_idea_tap_footer">Tap one to make it a situation with %s.</string>
     <string name="accent_american">American</string>
     <string name="accent_british">British</string>
     <string name="accent_australian">Australian</string>
@@ -550,7 +540,6 @@
     <string name="welcome_gloss_wear_and_tear">normal damage from regular use</string>
     <string name="welcome_gloss_deducted">taken off the total</string>
     <!-- 2d.5 paywall ladder + Max tier (iOS 815c945) -->
-    <string name="plan_tier_max">Max</string>
     <string name="paywall_keep_talking">Keep talking</string>
     <string name="paywall_pick_how_much">Pick how much you want to talk each month.</string>
     <string name="paywall_shared_unlimited">Review book, shadowing, words, replays and drills are unlimited on every plan.</string>

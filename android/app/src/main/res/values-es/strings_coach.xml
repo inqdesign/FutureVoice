@@ -2,7 +2,6 @@
 <!-- Coach mode 1.1.4 (iOS 6e9eb92 + eaaf3af): the practice call and the
      first-call check. Values copied from the iOS catalog at ebf848e. -->
 <resources>
-    <string name="practice_call">Conversación de práctica</string>
     <string name="practice_call_note">Practicaste con frases de ejemplo en pantalla. Tu nivel se mide con las conversaciones sin modo coach.</string>
     <string name="fcc_title">¿Qué tal tu primera conversación?</string>
     <string name="fcc_you_picked">Elegiste %1$s.</string>
