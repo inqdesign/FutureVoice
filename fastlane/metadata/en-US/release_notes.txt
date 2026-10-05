@@ -1,4 +1,5 @@
 New
+• Speech: a new tab for reading a script aloud from a teleprompter. The script scrolls with your voice, and with the camera on you get a vertical video of the script and your face together. You're scored on accuracy, pace, pauses and filler words, and a coach tells you what to try next.
 • Week in review: when a week ends, flip through last week's calls and the words and expressions you picked up, with this week's test on the last card.
 • Grammar focus: pick one mistake you keep making and keep it in mind for the whole call. You'll see it right away if it comes up again. On by default at A1 and A2.
 • When you first meet your voice, you can hear and choose from four accents right there.
@@ -6,6 +7,8 @@ New
 • Talk has a new Everyday tab: everyday situations like a café, a restaurant, a clothing store or calling a clinic, one tap to start.
 • Each tab now opens with a short guide the first time: what it's for and how to use it. See them again anytime in Me → App guide.
 • My routine: plan your week right on the timetable and drag blocks to move them. Put talks, reviews and Say it again on the days and times you want; the daily call rings at your routine's talk times.
+• Exporting a book as a PDF now gives you a workbook you can fill in right away.
+• Questions you got wrong during the month come back in the next weekly test.
 
 Fixed
 • The greeting at the start of a call could cut off when a Bluetooth device was nearby.
@@ -17,3 +20,8 @@ Fixed
 • Casual Korean could be transcribed as polite speech.
 • Your future self sometimes stalled without answering. This happens far less now.
 • The third tab is now correctly called Review.
+• When you learn Korean, the words and expressions you say are recognized more accurately.
+• Your future self pronounces Korean like a Korean speaker and no longer shouts at exclamation marks.
+• In Say it again, the next line could start while you were still thinking.
+• Turning coach mode off during a call didn't stop the suggestions.
+• In shadowing, the countdown starts as soon as you tap record, and your result comes right after the last word.

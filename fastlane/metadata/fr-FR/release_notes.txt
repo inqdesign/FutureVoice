@@ -1,4 +1,5 @@
 Nouveautés
+• Discours : un nouvel onglet pour lire un texte à voix haute sur un prompteur. Le texte défile au rythme de ta voix et, caméra allumée, tu gardes une vidéo verticale où ton texte et ton visage apparaissent ensemble. Tu es noté sur la précision, le débit, les pauses et les mots de remplissage, et un coach te dit quoi essayer ensuite.
 • Ta semaine en revue : à la fin de la semaine, parcours en cartes tes appels et les mots et expressions appris. La dernière carte t’emmène au test de la semaine.
 • Focus grammaire : choisis une erreur que tu refais souvent et garde-la en tête pendant tout l’appel. Si elle revient, tu le vois tout de suite. Activé par défaut en A1 et A2.
 • Quand tu découvres ta voix, tu peux écouter et choisir parmi quatre accents sur place.
@@ -6,6 +7,8 @@ Nouveautés
 • Parler a un nouvel onglet Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
 • Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
 • Ma routine : planifie ta semaine directement sur l’emploi du temps et fais glisser les blocs pour les déplacer. Place appels, révisions et Redire aux jours et heures de ton choix ; l’appel quotidien sonne à l’heure de conversation de ta routine.
+• Exporter un carnet en PDF te donne un cahier d’exercices à remplir tout de suite.
+• Les questions ratées pendant le mois reviennent dans le test hebdo suivant.
 
 Corrections
 • Le salut au début d’un appel pouvait être coupé quand un appareil Bluetooth était à proximité.
@@ -15,3 +18,8 @@ Corrections
 • Un appel programmé pouvait sonner pendant un appel en cours et le couper.
 • Le matériel de révision d’un carnet pouvait disparaître après « Redire ».
 • Ton moi fluide restait parfois bloqué sans répondre. C’est beaucoup plus rare maintenant.
+• Quand tu apprends le coréen, les mots et expressions que tu dis sont reconnus plus précisément.
+• Ton moi fluide prononce le coréen comme un locuteur coréen et ne crie plus sur les points d’exclamation.
+• Dans Redire, la ligne suivante pouvait démarrer pendant que tu réfléchissais encore.
+• Désactiver le mode coach pendant un appel n’arrêtait pas les suggestions.
+• En shadowing, le compte à rebours démarre dès que tu touches Enregistrer, et ton résultat arrive juste après le dernier mot.
