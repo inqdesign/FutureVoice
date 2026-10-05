@@ -178,6 +178,8 @@
     <string name="cloud_words_total">%1$d / %2$d Wörter</string>
 
     <string name="cancel_any_time_before_then_in_google_play">Bis dahin jederzeit in Google Play kündbar</string>
+    <!-- iOS "Your subscription is active…" names Apple; the Play build names Play. -->
+    <string name="your_subscription_is_active_google_play">Dein Abo ist aktiv. Deine Sprechzeit landet auf deinem Konto, sobald Google Play den Kauf bestätigt.</string>
     <string name="manage_in_google_play">In Google Play verwalten</string>
     <string name="everything_you_read_in_the_app">Alles, was du in der App liest – Menüs, Tasten, Korrekturen, Notizen –, ist in dieser Sprache.</string>
 

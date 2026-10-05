@@ -137,6 +137,20 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
     /** The pack, once both the catalog row and Play's price have answered. */
     val pack: StateFlow<Pack?> = _pack
 
+    /**
+     * A subscription bought through this app's flow just landed — what the
+     * paywall answers with "You're in" (iOS `purchaseState == .purchased`).
+     * [trialDays] is the free phase it was bought on, 0 for none: a trialer
+     * is told the trial's own size, not the plan's.
+     */
+    data class Subscribed(val trialDays: Int)
+
+    private val _subscribed = MutableStateFlow<Subscribed?>(null)
+    val subscribed: StateFlow<Subscribed?> = _subscribed
+
+    /** The paywall said it; the next purchase starts clean. */
+    fun resetSubscribed() { _subscribed.value = null }
+
     private val _packState = MutableStateFlow<PackState>(PackState.Idle)
     val packState: StateFlow<PackState> = _packState
 
@@ -331,6 +345,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
             // answer is stale, and a PARKED voice is re-read (iOS invalidate).
             BillingGate.invalidate()
             VoiceParking.requestRecheck(force = true)
+            _subscribed.value = Subscribed(pendingTrialDays)
             // The promise the paywall makes about a trial is kept here.
             if (pendingTrialDays > 0) {
                 TrialReminder.schedule(appContext, pendingTrialDays)

@@ -101,6 +101,15 @@ fun AllowanceSpentSheet(
         }
     }
     val renewsOn = account?.renewalLabel(locale).orEmpty()
+    // A TRIAL's pool is the trial's own (pro-rated, whatever plan is being
+    // tried): nothing here may say "this month", offer a bigger plan (a
+    // bigger plan's trial is metered at the same pool — the button would
+    // cost money and change nothing), or call the date a refill — it is the
+    // day the subscription starts (iOS `isTrial`, 2026-09-25).
+    val isTrial = account?.isTrialing == true
+    val planMinutesAfterTrial = account?.planMonthlySeconds?.takeIf { it > 0 }?.div(60)
+    val endsInstead = account?.cancelAtPeriodEnd == true
+    val showsUpgrade = SpentSheetCopy.showsUpgrade(canUpgrade, isTrial)
     // The tier "Move to …" lands on: the next bigger one ON SALE (Light →
     // Plus, Plus → Max — iOS `upgradeTier`). Plus is the fallback name only
     // while the account is still loading behind a caller that already knows.
@@ -132,9 +141,7 @@ fun AllowanceSpentSheet(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(
-                    stringResource(
-                        if (pool == SpentPool.TALK) R.string.that_s_this_month_s_talk_time
-                        else R.string.that_s_this_month_s_scenes),
+                    stringResource(SpentSheetCopy.title(pool, isTrial)),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
@@ -146,7 +153,7 @@ fun AllowanceSpentSheet(
                 ) {
                     // What ran out — named as the size that was bought, not as
                     // a number sprung on someone.
-                    Text(spentLine(pool, allowance),
+                    Text(spentLine(pool, allowance, isTrial),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center)
@@ -155,13 +162,21 @@ fun AllowanceSpentSheet(
                     // line that says "add minutes" over a sheet with no such
                     // button is the wrong promise the lead rule exists for.
                     Text(
-                        when {
-                            packLeads && canUpgrade ->
+                        when (SpentSheetCopy.next(isTrial, endsInstead, renewsOn.isNotEmpty(),
+                            planMinutesAfterTrial != null, packLeads, showsUpgrade)) {
+                            SpentSheetCopy.Next.TRIAL_STARTS_WITH_MINUTES -> stringResource(
+                                R.string.your_plan_starts_on_with_lld_minutes_of_talk_a_month_review_4d9f2b,
+                                renewsOn, planMinutesAfterTrial ?: 0)
+                            SpentSheetCopy.Next.TRIAL_STARTS -> stringResource(
+                                R.string.your_plan_starts_on_review_stays_free_until_then, renewsOn)
+                            SpentSheetCopy.Next.ADD_MOVE_OR_REVIEW ->
                                 stringResource(R.string.spent_add_minutes_move_or_review, upgradeName)
-                            packLeads -> stringResource(
+                            SpentSheetCopy.Next.ADD_OR_REVIEW -> stringResource(
                                 R.string.add_minutes_to_keep_going_now_or_review_what_this_month_left_044ece)
-                            canUpgrade -> stringResource(R.string.spent_review_or_move_to_tier, upgradeName)
-                            else -> stringResource(R.string.review_stays_free_and_always_did)
+                            SpentSheetCopy.Next.REVIEW_OR_MOVE ->
+                                stringResource(R.string.spent_review_or_move_to_tier, upgradeName)
+                            SpentSheetCopy.Next.REVIEW_FREE ->
+                                stringResource(R.string.review_stays_free_and_always_did)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -172,7 +187,8 @@ fun AllowanceSpentSheet(
                 // WHEN it comes back. "Tomorrow" explained itself; a date has
                 // to be said — and a plan told to stop ENDS on that date
                 // instead, which is the same date with the opposite promise.
-                if (renewsOn.isNotEmpty()) {
+                val renewal = SpentSheetCopy.renewal(isTrial, endsInstead, renewsOn.isNotEmpty())
+                if (renewal != SpentSheetCopy.Renewal.NONE) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -181,9 +197,13 @@ fun AllowanceSpentSheet(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp))
                         Text(
-                            if (account?.cancelAtPeriodEnd == true)
-                                stringResource(R.string.your_plan_ends_on_1352d6, renewsOn)
-                            else stringResource(R.string.your_pool_refills_on, renewsOn),
+                            when (renewal) {
+                                SpentSheetCopy.Renewal.TRIAL_ENDS ->
+                                    stringResource(R.string.your_trial_ends_on_d70dbd, renewsOn)
+                                SpentSheetCopy.Renewal.PLAN_ENDS ->
+                                    stringResource(R.string.your_plan_ends_on_1352d6, renewsOn)
+                                else -> stringResource(R.string.your_pool_refills_on, renewsOn)
+                            },
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -200,7 +220,7 @@ fun AllowanceSpentSheet(
                 if (packOffered) {
                     TalkTopUpButton(onAvailability = { packOnSale = it }, onPurchased = onDismiss)
                 }
-                if (canUpgrade) {
+                if (showsUpgrade) {
                     if (packLeads) {
                         FilledTonalButton(onClick = upgrade, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(R.string.spent_move_to_tier, upgradeName))
@@ -214,7 +234,7 @@ fun AllowanceSpentSheet(
                 // Tonal, not outlined: iOS's `.bordered` is a filled capsule,
                 // and an outline here reads as the weaker of two choices
                 // rather than the free one.
-                if (packLeads || canUpgrade) {
+                if (packLeads || showsUpgrade) {
                     FilledTonalButton(onClick = onReview, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.go_to_review))
                     }
@@ -243,10 +263,65 @@ fun AllowanceSpentSheet(
  * unlimited, so hiding its number would be concealment.
  */
 @Composable
-private fun spentLine(pool: SpentPool, allowance: Int?): String = when {
+private fun spentLine(pool: SpentPool, allowance: Int?, isTrial: Boolean): String = when {
+    isTrial && pool == SpentPool.TALK && allowance != null ->
+        stringResource(R.string.all_lld_minutes_of_trial_talk_are_used_up, allowance)
+    isTrial && pool == SpentPool.TALK -> stringResource(R.string.the_trial_s_talk_time_is_used_up)
+    isTrial && allowance != null -> stringResource(R.string.all_lld_trial_scenes_are_used_up, allowance)
+    isTrial -> stringResource(R.string.the_trial_s_scenes_are_used_up)
     pool == SpentPool.TALK && allowance != null ->
         stringResource(R.string.all_lld_minutes_of_talk_are_used_up, allowance)
     pool == SpentPool.TALK -> stringResource(R.string.this_month_s_talk_time_is_used_up)
     allowance != null -> stringResource(R.string.all_lld_scenes_are_used_up, allowance)
     else -> stringResource(R.string.this_month_s_scenes_are_used_up)
+}
+
+/**
+ * The sheet's copy decisions, pure so they can be pinned by a test (iOS
+ * `DailyAllowanceSheet.title` / `nextLine` / `renewalLine`).
+ */
+internal object SpentSheetCopy {
+    /** "Move to …" is drawn: a bigger plan is on sale and this is not a trial. */
+    fun showsUpgrade(canUpgrade: Boolean, isTrial: Boolean): Boolean = canUpgrade && !isTrial
+
+    fun title(pool: SpentPool, isTrial: Boolean): Int = when {
+        isTrial && pool == SpentPool.TALK -> R.string.that_s_your_trial_s_talk_time
+        isTrial -> R.string.that_s_your_trial_s_scenes
+        pool == SpentPool.TALK -> R.string.that_s_this_month_s_talk_time
+        else -> R.string.that_s_this_month_s_scenes
+    }
+
+    enum class Next {
+        TRIAL_STARTS_WITH_MINUTES, TRIAL_STARTS,
+        ADD_MOVE_OR_REVIEW, ADD_OR_REVIEW, REVIEW_OR_MOVE, REVIEW_FREE,
+    }
+
+    /**
+     * What to do about it. A stopped trialer hears the one thing they need:
+     * this was the trial's pool, the plan starts on a date, and it is a
+     * different size. A cancelled trial (or no date) has nothing starting.
+     */
+    fun next(
+        isTrial: Boolean, endsInstead: Boolean, hasDate: Boolean,
+        knowsPlanMinutes: Boolean, packLeads: Boolean, showsUpgrade: Boolean,
+    ): Next = when {
+        isTrial && (endsInstead || !hasDate) -> Next.REVIEW_FREE
+        isTrial && knowsPlanMinutes -> Next.TRIAL_STARTS_WITH_MINUTES
+        isTrial -> Next.TRIAL_STARTS
+        packLeads && showsUpgrade -> Next.ADD_MOVE_OR_REVIEW
+        packLeads -> Next.ADD_OR_REVIEW
+        showsUpgrade -> Next.REVIEW_OR_MOVE
+        else -> Next.REVIEW_FREE
+    }
+
+    enum class Renewal { NONE, TRIAL_ENDS, PLAN_ENDS, REFILLS }
+
+    /** The date line. On a trial the start date is already in [next]; only a
+     *  cancelled trial has a separate thing to say about that day. */
+    fun renewal(isTrial: Boolean, endsInstead: Boolean, hasDate: Boolean): Renewal = when {
+        !hasDate -> Renewal.NONE
+        isTrial -> if (endsInstead) Renewal.TRIAL_ENDS else Renewal.NONE
+        endsInstead -> Renewal.PLAN_ENDS
+        else -> Renewal.REFILLS
+    }
 }

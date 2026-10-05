@@ -178,6 +178,8 @@
          Play, so the catalog's App Store wording cannot be reused. -->
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">在那之前，随时可以到 Google Play 取消</string>
+    <!-- iOS "Your subscription is active…" names Apple; the Play build names Play. -->
+    <string name="your_subscription_is_active_google_play">订阅已生效。Google Play 确认付款后，通话时间就会进到账号。</string>
     <string name="manage_in_google_play">在 Google Play 管理</string>
     <!-- What picking a fully translated native language buys, said
          BEFORE the tap. -->

@@ -134,7 +134,17 @@ fun PlanPageScreen(
             GroupedSectionHeader(stringResource(
                 if (a?.isEntitled == true) R.string.this_month else R.string.left_to_spend))
             GroupedCard {
-                ValueRow(Icons.Filled.Bolt, stringResource(R.string.talk_time), talkValue(a))
+                // A trial's pool is the trial's own; under its fraction, what the
+                // plan itself gives once the trial converts, so 35 minutes is
+                // never read as the plan's size (iOS `trialPoolSubtitle`).
+                val trialPlanMinutes = a?.takeIf { it.isTrialing && !it.cancelAtPeriodEnd }
+                    ?.planMonthlySeconds?.div(60)
+                ValueRow(Icons.Filled.Bolt,
+                    stringResource(if (a?.isTrialing == true) R.string.trial_talk_time else R.string.talk_time),
+                    talkValue(a),
+                    subtitle = trialPlanMinutes?.let {
+                        stringResource(R.string.lld_min_a_month_once_your_plan_starts, it)
+                    })
                 // Extra minutes — invite minutes and packs bought, one balance
                 // (iOS relabel, 2026-09-26) — are time ON TOP of the pool, so
                 // they are their own row and never folded into the figure above —

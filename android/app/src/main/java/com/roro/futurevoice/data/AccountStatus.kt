@@ -52,6 +52,15 @@ data class AccountStatus(
      *  query of its OWN, so a database without the column can't blank the
      *  whole status. */
     val trialEndsAt: String? = null,
+    /**
+     * The plan's OWN talk pool per month (`subscription_plans.monthly_seconds`),
+     * which during a trial is NOT [monthlyCapSeconds] — a trial is metered at
+     * the pro-rated pool whatever plan it trials (iOS `planMonthlySeconds`).
+     * Read so the trial screens can say what starts when the trial converts
+     * ("150 minutes a month from Oct 9"). Null on an uncapped plan and when
+     * the catalog row could not be read.
+     */
+    val planMonthlySeconds: Int? = null,
     /** Tiers with an active catalog row (`light` / `plus` / `max`) — read in
      *  a query of its OWN so a failure costs only the "move up" offers, never
      *  the entitlement. Empty = couldn't read it, and then nothing is offered. */
@@ -149,6 +158,12 @@ data class AccountStatus(
         private data class TrialRow(val trial_ends_at: String? = null)
 
         @Serializable
+        private data class PlanPoolRow(
+            val monthly_seconds: Int? = null,
+            val talk_unlimited: Boolean? = null,
+        )
+
+        @Serializable
         private data class CreditRow(val balance: Int = 0, val unlimited: Boolean = false)
 
         @Serializable
@@ -203,9 +218,30 @@ data class AccountStatus(
                 out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap,
                     freeScenesUsed = it.free_used ?: 0, freeScenesCap = it.free_cap)
             }
+            // The plan's own pool, in a query of its OWN: a failure here costs
+            // one sentence on the trial screens, never the entitlement above.
+            out.planId?.let { planPool(auth, it) }?.let {
+                out = out.copy(planMonthlySeconds = it)
+            }
             tiersOnSale(auth)?.let { out = out.copy(tiersOnSale = it) }
             out
         }
+
+        /** `subscription_plans.monthly_seconds` for [planId], null when the
+         *  plan is uncapped or the row can't be read (iOS `PlanRow`). */
+        private suspend fun planPool(auth: AuthRepository, planId: String): Int? = runCatching {
+            val request = Request.Builder()
+                .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/subscription_plans" +
+                    "?select=monthly_seconds,talk_unlimited&id=eq.$planId&limit=1")
+                .header("Authorization", "Bearer ${auth.accessToken()}")
+                .header("apikey", Config.supabaseAnonKey)
+                .build()
+            Edge.client.newCall(request).execute().use { resp ->
+                if (resp.code !in 200..299) return@use null
+                Edge.json.decodeFromString(ListSerializer(PlanPoolRow.serializer()), resp.body.string())
+                    .firstOrNull()?.takeIf { it.talk_unlimited != true }?.monthly_seconds
+            }
+        }.getOrNull()
 
         /** What is on sale — the same active-row filter the paywall's catalog uses. */
         private suspend fun tiersOnSale(auth: AuthRepository): Set<String>? = runCatching {

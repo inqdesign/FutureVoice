@@ -192,6 +192,8 @@
     <!-- A used/total count. Punctuation only — nothing here is language. -->
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">Cancel any time before then in Google Play</string>
+    <!-- iOS "Your subscription is active…" names Apple; the Play build names Play. -->
+    <string name="your_subscription_is_active_google_play">Your subscription is active. Your talk time lands on your account as soon as Google Play confirms the purchase.</string>
     <string name="manage_in_google_play">Manage in Google Play</string>
     <!-- What picking a fully translated native language buys, said
          BEFORE the tap. -->

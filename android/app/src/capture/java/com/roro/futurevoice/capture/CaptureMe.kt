@@ -128,8 +128,18 @@ object CaptureMe {
         "day-spent-unlimited" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, CaptureSeed.sampleLightAccount) },
         // iOS: a TRIAL meets the Light pool pro-rated 7/30 (35 min), dated at
         // the trial's end (+4 days, already `sampleTrialAccount.periodEnd`).
-        "day-spent-trial" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = true, trialAccount) },
-        "day-spent-trial-plus" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, trialAccount) },
+        // The sheet says when the plan starts and, where the client knows it,
+        // with how many minutes (`planMinutesAfterTrial`: 150 on the Light
+        // trial, unknown on iOS's Plus sample). A trialer sees the invite line
+        // too — the one free way forward besides review.
+        "day-spent-trial" to { _ ->
+            DaySpent(SpentPool.TALK, canUpgrade = true,
+                trialAccount.copy(planMonthlySeconds = 150 * 60), sampleInvite)
+        },
+        "day-spent-trial-plus" to { _ ->
+            DaySpent(SpentPool.TALK, canUpgrade = false,
+                trialAccount.copy(planId = "plus_monthly"), sampleInvite)
+        },
         "update" to { _ -> Update(required = false) },
         "update-required" to { _ -> Update(required = true) },
         "feedback" to { _ ->

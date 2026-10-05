@@ -155,9 +155,13 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     }
     val pack = rememberTalkPack()
     val packState by billing.packState.collectAsStateWithLifecycle()
+    val subscribed by billing.subscribed.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         BillingGate.paywallTier.value = null
+        // A notice left from a purchase made behind another screen is not
+        // this paywall's to say.
+        billing.resetSubscribed()
         if (previewPlans == null) billing.refresh()
         val loaded = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
             ?: if (previewPlans != null) AccountStatus() else AccountStatus.load(AuthRepository())
@@ -356,6 +360,29 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                 )
             }
         }
+    }
+    // The subscription is bought: say so, then the paywall's job is done
+    // (iOS "You're in"). A trial is told its OWN size — the trial's pool,
+    // not the plan's — because a trialer who first meets that number when it
+    // runs out reads the stop as a paywall (2026-09-25).
+    subscribed?.let { done ->
+        val close = { billing.resetSubscribed(); onDismiss() }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = close,
+            title = { Text(stringResource(R.string.you_re_in)) },
+            text = {
+                Text(
+                    if (done.trialDays > 0 && trialTalkMinutes != null) stringResource(
+                        R.string.your_trial_is_on_lld_minutes_of_talk_over_the_next_lld_days_4dffb5,
+                        trialTalkMinutes, done.trialDays)
+                    else stringResource(R.string.your_subscription_is_active_google_play))
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = close) {
+                    Text(stringResource(R.string.done))
+                }
+            },
+        )
     }
     // The pack is on the account: say so, then the paywall's job is done.
     (packState as? BillingService.PackState.Purchased)?.let { done ->
