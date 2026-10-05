@@ -68,6 +68,7 @@ struct ConversationView: View {
     /// learner scrolling away and following would end up switching itself
     /// off the first time anyone spoke.
     @State private var followTail = true
+    @State private var settleScroll: Task<Void, Never>?
     /// Bumped whenever a correction card is attached. The card hangs off a
     /// turn that is already on screen, so the feed's other triggers
     /// (`turns.count`, the last transcript) never fire — the row simply grew
@@ -1363,7 +1364,7 @@ struct ConversationView: View {
                             .padding(.top, 24)
                     }
                     if showsTranscript {
-                        ForEach(turns) { turn in
+                        ForEach(visibleTurns) { turn in
                             // No implicit morph between adjacent turns — each
                             // bubble fades in / out cleanly. Prevents the
                             // previous bubble's text from being visible inside
@@ -1405,7 +1406,15 @@ struct ConversationView: View {
                                 .id("partial-thinking")
                                 .transition(.opacity)
                         default:
-                            EmptyView()
+                            // The reply has begun but has no words yet: the
+                            // thinking line keeps its place (same id, so it
+                            // is not re-inserted) until the bubble that
+                            // replaces it has text to be drawn with.
+                            if replyHasNoWordsYet {
+                                ThinkingIndicator()
+                                    .id("partial-thinking")
+                                    .transition(.opacity)
+                            }
                         }
                     } else if phase == .listening, showsTranscript {
                         // Separate id from ThinkingIndicator + explicit opacity
@@ -1441,6 +1450,16 @@ struct ConversationView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 4)
+                // Everything that changes the feed's height lands on its own
+                // clock — a correction card a second after the line, the
+                // reply's bubble, the thinking line going. Applied bare, each
+                // one jumped the content and the scroll then chased it, which
+                // read as the new bubble arriving with a jolt (2026-10-05).
+                // Animated, the growth and the scroll move together.
+                .animation(.easeOut(duration: 0.25), value: visibleTurns.count)
+                .animation(.easeOut(duration: 0.25), value: suggestionsShown)
+                .animation(.easeOut(duration: 0.25), value: realtime.state)
+                .animation(.easeOut(duration: 0.25), value: replyHasNoWordsYet)
             }
             .coordinateSpace(name: Self.feedSpace)
             // Background, so measuring the viewport can't affect the layout
@@ -1465,7 +1484,7 @@ struct ConversationView: View {
                     if followTail { followTail = false }
                 }
             )
-            .onChange(of: turns.count) { _, _ in scroll(proxy) }
+            .onChange(of: visibleTurns.count) { _, _ in scroll(proxy) }
             .onChange(of: phase)       { _, _ in scroll(proxy) }
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
             .onChange(of: realtime.partial) { _, _ in scroll(proxy) }
@@ -1482,19 +1501,36 @@ struct ConversationView: View {
     /// on the learner's own next word.
     private static let tailSlack: CGFloat = 64
 
+    /// A fluent-self bubble is appended the moment its reply begins
+    /// (`onReplyBegan`), before the first word. Drawn then, it appeared as an
+    /// empty bubble and grew twice — its first line, then the Meaning row —
+    /// each a step the scroll had to catch up with.
+    private var replyHasNoWordsYet: Bool {
+        guard let last = turns.last else { return false }
+        return last.role == .fluentSelf && last.transcript.isEmpty
+    }
+
+    private var visibleTurns: [Turn] {
+        replyHasNoWordsYet ? Array(turns.dropLast()) : turns
+    }
+
     private func scroll(_ proxy: ScrollViewProxy) {
         guard followTail else { return }
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.easeOut(duration: 0.25)) {
             proxy.scrollTo(Self.bottomId, anchor: .bottom)
         }
+        // One settle pass, not one per change: a streaming reply calls this
+        // on every delta, and a stack of late passes each re-aiming the
+        // scroll was a stutter of its own.
+        settleScroll?.cancel()
         // A bubble grows AFTER the state that produced it: a correction card
         // appearing, a reply's text filling in. Scrolling once aims at the
         // layout as it was, and the content that arrives a frame later ends up
         // below the fold. A second pass, once it has settled, is what keeps
         // the newest line on screen.
-        Task { @MainActor in
+        settleScroll = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 220_000_000)
-            guard followTail, !isTornDown else { return }
+            guard !Task.isCancelled, followTail, !isTornDown else { return }
             withAnimation(.easeOut(duration: 0.15)) {
                 proxy.scrollTo(Self.bottomId, anchor: .bottom)
             }
