@@ -782,6 +782,13 @@ struct PaywallView: View {
                         Text(explain("+ \(scenes) scenes"))
                             .font(.subheadline.weight(.medium))
                     }
+                    // Writing Speech scripts (AI or your own) is these tiers'
+                    // alone — the same rule `canWriteSpeechScripts` enforces,
+                    // so the row can't promise what the tab then refuses.
+                    if ["plus", "max"].contains(tier) {
+                        Text(explain("+ Speech"))
+                            .font(.subheadline.weight(.medium))
+                    }
                     if perDay > 0 {
                         Text(explain("about \(perDay) min a day"))
                             .font(.caption)
