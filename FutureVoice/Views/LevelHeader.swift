@@ -227,7 +227,7 @@ struct LevelInfoSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .presentationDetents([.medium, .large])
+            .fittingDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .onAppear {
                 unlock = WeeklyReportEngine.unlockState(

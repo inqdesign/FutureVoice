@@ -177,7 +177,7 @@ struct GrammarFocusSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 }
 

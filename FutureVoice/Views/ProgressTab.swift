@@ -1348,7 +1348,7 @@ struct ProgressTab: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
     private func assessedRow(name: String, level: String?, detail: String) -> some View {

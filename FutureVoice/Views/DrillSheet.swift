@@ -521,7 +521,7 @@ struct DrillView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
 

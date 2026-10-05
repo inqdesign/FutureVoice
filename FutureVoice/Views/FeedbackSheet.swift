@@ -134,7 +134,7 @@ struct FeedbackSheet: View {
                 Text(explain("Your feedback goes straight to the person building this."))
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
         .onAppear { report("feedback_sheet_shown") }
         .onDisappear {
             if !delivered { report("feedback_dismissed", dismissedProps) }

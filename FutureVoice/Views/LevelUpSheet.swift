@@ -67,7 +67,7 @@ struct LevelUpSheet: View {
                 revealed = true
             }
         }
-        .presentationDetents([.medium])
+        .fittingDetents([.medium])
     }
 
     /// CEFR plus the local exam scale where one exists (TOPIK/JLPT).

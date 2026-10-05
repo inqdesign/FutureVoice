@@ -52,6 +52,13 @@ struct VoiceCloneOnboardingView: View {
     @StateObject private var player = AudioPlayer()
 
     @State private var status: Status = .intro
+    /// The screen's own height, read once it lays out. A 667 pt phone
+    /// (iPhone SE, and the mini with Display Zoom) can't hold the 300 pt
+    /// stage AND a step's copy AND the action bar, and the step's text is
+    /// fixed-size — so the bar was pushed off the bottom and the room-check
+    /// step had no reachable Next: nobody on a small phone could get to
+    /// the recording at all.
+    @State private var screenHeight: CGFloat = 800
 
     init() {
         #if DEBUG
@@ -196,12 +203,27 @@ struct VoiceCloneOnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
             stage
-                .padding(.top, 28)
+                .padding(.top, isShortScreen ? 12 : 28)
             // The script/teleprompter acts fill the space; the wizard steps
             // keep their short copy anchored under the orb.
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, contentTopPadding)
+            // The teleprompter acts scroll their own script; every other act
+            // scrolls as a whole when it doesn't fit, so the action bar under
+            // it can never be pushed off a short screen.
+            Group {
+                if status == .script || status == .recording {
+                    content
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                } else {
+                    ScrollView {
+                        content
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, 12)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(maxHeight: .infinity)
+                }
+            }
+            .padding(.top, contentTopPadding)
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .font(.footnote)
@@ -213,6 +235,7 @@ struct VoiceCloneOnboardingView: View {
             actionBar
         }
         .background(Color(.systemBackground).ignoresSafeArea())
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
         // The account step's Back, as a header control — it used to share the
         // action bar with the Apple button, which forced the two sign-in
         // buttons into different widths.
@@ -299,18 +322,27 @@ struct VoiceCloneOnboardingView: View {
     private var contentTopPadding: CGFloat {
         switch status {
         case .script, .recording: return 8
-        default:                  return 32
+        default:                  return isShortScreen ? 12 : 32
         }
     }
+
+    /// Under 750 pt of usable height (iPhone SE ~647, a 13 mini ~728; a
+    /// 6.1" phone is ~763) the stage gives up height so a step's copy and
+    /// its buttons both stay on screen.
+    private var isShortScreen: Bool { screenHeight < 750 }
 
     // MARK: - The stage (orb + ring + timer)
 
     /// One fixed-size stage across every act so nothing jumps: the pixel
     /// headline, the orb (with its recording ring), and the timer line.
     private var stage: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: isShortScreen ? 10 : 20) {
             Text(stageTitle)
                 .geistPixel(24)
+                // The account step's Back sits in this row's leading corner.
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .padding(.horizontal, status == .account ? 64 : 16)
                 .id(stageTitle)
                 .transition(.opacity)
 
@@ -342,7 +374,7 @@ struct VoiceCloneOnboardingView: View {
                                         ? Text(explain("Hear it again"))
                                         : Text(""))
             }
-            .frame(width: 182, height: orbSize + 14)
+            .frame(width: orbSize + 14, height: orbSize + 14)
 
             Text(timerLine)
                 .geistPixel(16)
@@ -355,7 +387,8 @@ struct VoiceCloneOnboardingView: View {
     /// The script step shrinks the orb so the full script gets the room —
     /// the being steps aside while you rehearse.
     private var orbSize: CGFloat {
-        status == .script ? 72 : 168
+        if status == .script { return isShortScreen ? 56 : 72 }
+        return isShortScreen ? 112 : 168
     }
 
     private var stageTitle: String {

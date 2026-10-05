@@ -62,7 +62,7 @@ struct FreeTalkWelcomeSheet: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.5).delay(0.15)) { revealed = true }
         }
-        .presentationDetents([.medium])
+        .fittingDetents([.medium])
     }
 }
 

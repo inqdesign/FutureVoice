@@ -161,7 +161,7 @@ struct DailyAllowanceSheet: View {
         // `.large` is offered as a second stop rather than a taller single
         // detent: at accessibility text sizes the copy grows past any fixed
         // height, and a sheet that cannot be dragged bigger clips instead.
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
     /// The pack is asked for: a spent TALK pool on a counted, non-trial

@@ -48,7 +48,7 @@ struct InterestsEditorSheet: View {
                 loaded = true
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
     private var chipGrid: some View {

@@ -68,7 +68,7 @@ struct BackupOfferSheet: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
         .interactiveDismissDisabled(turningOn)
         .onAppear { Analytics.capture("backup_offer_shown") }
     }

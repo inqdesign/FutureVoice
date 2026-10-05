@@ -20,3 +20,26 @@ private struct IPadContentPadding: ViewModifier {
         content.padding(.horizontal, sizeClass == .regular ? pad : 0)
     }
 }
+
+/// A phone whose screen is 667 pt tall (iPhone SE, a mini with Display
+/// Zoom). Every layout here was drawn on 844+ pt, and on this class a
+/// `.medium` sheet is ~330 pt — less than most sheets' fixed copy and
+/// buttons, so the last rows were simply cut off.
+enum ScreenClass {
+    static var isShort: Bool { UIScreen.main.bounds.height < 700 }
+}
+
+extension View {
+    /// `presentationDetents`, except that on a short phone `.medium` opens
+    /// as `.large`: half of 667 pt holds too little to show a sheet's
+    /// buttons. Full-size phones keep exactly the detents asked for.
+    func fittingDetents(_ detents: Set<PresentationDetent>) -> some View {
+        guard ScreenClass.isShort, detents.contains(.medium) else {
+            return presentationDetents(detents)
+        }
+        var fitted = detents
+        fitted.remove(.medium)
+        fitted.insert(.large)
+        return presentationDetents(fitted)
+    }
+}

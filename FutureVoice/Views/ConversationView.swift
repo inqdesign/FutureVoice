@@ -4883,7 +4883,7 @@ private struct TopicPickerSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
     private func applyCustom() {

@@ -60,7 +60,7 @@ struct MicChoiceSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
         }
-        .presentationDetents([.medium])
+        .fittingDetents([.medium])
         // No interactive dismiss: the caller is waiting on an answer, and a
         // swipe-away would have to invent one. Both buttons are answers.
         .interactiveDismissDisabled()

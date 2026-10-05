@@ -516,7 +516,7 @@ struct StudyDeckView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
     private func deck(height: CGFloat) -> some View {

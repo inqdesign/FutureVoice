@@ -65,7 +65,7 @@ struct AgeCheckSheet: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
         }
-        .presentationDetents([.medium])
+        .fittingDetents([.medium])
         .presentationDragIndicator(.visible)
     }
 }

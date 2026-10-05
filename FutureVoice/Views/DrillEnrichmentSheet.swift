@@ -56,7 +56,7 @@ struct DrillEnrichmentSheet: View {
             }
             .task { await loadIfNeeded() }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
     }
 
     // MARK: - Sections

@@ -131,7 +131,7 @@ struct CallSettingsSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .fittingDetents([.medium, .large])
         // The call keeps running and stays tappable underneath — the mic pill
         // included, so this sheet can never be the reason a call can't be
         // hung up.
