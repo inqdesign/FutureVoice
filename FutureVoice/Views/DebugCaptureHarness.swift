@@ -566,18 +566,28 @@ enum DebugCapture {
             // panel below (no camera in the simulator).
             let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
             return AnyView(SpeechPrompterView(script: script, native: appState.nativeLanguage,
-                                              level: appState.proficiency, previewCursor: 24))
+                                              level: appState.proficiency, previewCursor: 24)
+                .environmentObject(appState))
         case "speech-plus":
             return AnyView(Color(.systemBackground).sheet(isPresented: .constant(true)) {
                 SpeechPlusSheet(isLight: true)
             })
+        case "speech-script-sheet", "speech-script-edit":
+            // The whole-script sheet for a written script, and its editor.
+            once("speech") { seedSpeech(appState) }
+            let script = SpeechStore.shared.scripts.first { !$0.isBuiltIn }!
+            if name == "speech-script-edit" {
+                return AnyView(SpeechOwnScriptSheet(existing: script) { _ in }.environmentObject(appState))
+            }
+            return AnyView(SpeechScriptSheet(script: script).environmentObject(appState))
         case "speech-own":
             return AnyView(SpeechOwnScriptSheet(existing: nil) { _ in }.environmentObject(appState))
         case "speech-open":
             // The prompter exactly as Practice opens it: cursor 0, ready.
             let script = SpeechLibrary.builtIn(for: appState.targetLanguage)!
             return AnyView(SpeechPrompterView(script: script, native: appState.nativeLanguage,
-                                              level: appState.proficiency))
+                                              level: appState.proficiency)
+                .environmentObject(appState))
         case "speech-result":
             once("speech") { seedSpeech(appState) }
             let take = SpeechStore.shared.takes.first!

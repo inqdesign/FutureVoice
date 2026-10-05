@@ -122,6 +122,7 @@ struct SpeechTab: View {
         .fullScreenCover(item: $practicing) { script in
             SpeechPrompterView(script: script, native: appState.nativeLanguage,
                                level: appState.proficiency)
+                .environmentObject(appState)
         }
         // Any script beyond the bundled one is Plus and up. The tap is
         // answered with what the feature is FIRST, never a bare paywall; the
@@ -191,8 +192,18 @@ enum SpeechScoreColor {
 /// The full text with its notes, opened from the prompter's script button —
 /// to read it through before a take, or to look something up.
 struct SpeechScriptSheet: View {
-    let script: SpeechScript
+    /// Called with the script after an edit, so the prompter reads the new
+    /// text at once.
+    var onEdited: (SpeechScript) -> Void = { _ in }
+    @State private var script: SpeechScript
+    @State private var editing = false
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appState: AppState
+
+    init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in }) {
+        _script = State(initialValue: script)
+        self.onEdited = onEdited
+    }
 
     var body: some View {
         NavigationStack {
@@ -245,9 +256,25 @@ struct SpeechScriptSheet: View {
             .navigationTitle("Script")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // The bundled sample is everyone's and stays as shipped;
+                // changing it would make it a script of your own, which is
+                // the Plus side of the tab.
+                if !script.isBuiltIn {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Edit") { editing = true }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $editing) {
+                SpeechOwnScriptSheet(existing: script) { updated in
+                    SpeechStore.shared.add(updated)
+                    script = updated
+                    onEdited(updated)
+                }
+                .environmentObject(appState)
             }
         }
     }
@@ -509,15 +536,18 @@ struct SpeechOwnScriptSheet: View {
 
     private func save() {
         let givenTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Editing keeps what the script already was — an AI script stays an
+        // AI script with its summary and sources; only key terms the new text
+        // no longer contains drop out.
         let script = SpeechScript(
             id: existing?.id ?? UUID(),
             title: givenTitle.isEmpty ? Self.defaultTitle(trimmed) : givenTitle,
-            genre: .own,
-            topic: "",
+            genre: existing?.genre ?? .own,
+            topic: existing?.topic ?? "",
             body: trimmed,
-            summary: "",
-            keyTerms: [],
-            sources: [],
+            summary: existing?.summary ?? "",
+            keyTerms: (existing?.keyTerms ?? []).filter { trimmed.localizedCaseInsensitiveContains($0.term) },
+            sources: existing?.sources ?? [],
             language: language,
             targetSeconds: SpeechLibrary.estimatedSeconds(trimmed, language: language),
             createdAt: existing?.createdAt ?? Date(),

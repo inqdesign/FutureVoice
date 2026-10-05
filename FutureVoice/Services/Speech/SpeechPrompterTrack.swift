@@ -18,6 +18,9 @@ struct SpeechPrompterTrack {
 
     let words: [Word]
     let paragraphs: [[Word]]
+    /// The text this was built from, hashed — two tracks of different text
+    /// are never "equal" to the views that skip redrawing on equality.
+    let signature: Int
     /// Key stream over the script, and which display word each key sits in.
     private let keys: [String]
     private let keyWord: [Int]
@@ -25,6 +28,7 @@ struct SpeechPrompterTrack {
 
     init(script: String, language: String) {
         perChar = LanguageCatalog.tokenStyle(language) == .syllable
+        signature = script.hashValue
         var words: [Word] = []
         var paragraphs: [[Word]] = []
         let blocks = script.components(separatedBy: "\n")

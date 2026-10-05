@@ -8,6 +8,7 @@ struct SpeechPrompterView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speech.textSize") private var textSize: Double = 28
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var appState: AppState
     /// The prompter's width — the video's script wraps at the same width.
     @State private var prompterRect: CGRect = .zero
     private static let screenSpace = "take-screen"
@@ -230,7 +231,13 @@ struct SpeechPrompterView: View {
             }
         }
         .padding(.horizontal, 12)
-        .sheet(isPresented: $showingScript) { SpeechScriptSheet(script: session.script) }
+        .sheet(isPresented: $showingScript) {
+            SpeechScriptSheet(script: session.script) { updated in
+                session.replaceScript(updated)
+                preparedKey = nil   // the video's script image is redrawn
+            }
+            .environmentObject(appState)
+        }
         .sheet(isPresented: $showingTakes) { SpeechTakesSheet(scriptId: session.script.id) }
     }
 
@@ -697,7 +704,7 @@ struct SpeechPrompterColumn: View, Equatable {
 
     static func == (a: Self, b: Self) -> Bool {
         a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width && a.measures == b.measures
-            && a.language == b.language && a.track.words.count == b.track.words.count
+            && a.language == b.language && a.track.signature == b.track.signature
     }
 
     private static let space = "prompter-column"

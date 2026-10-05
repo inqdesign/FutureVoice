@@ -15,8 +15,8 @@ final class SpeechTakeSession: ObservableObject {
         case failed(String)
     }
 
-    let script: SpeechScript
-    let track: SpeechPrompterTrack
+    @Published private(set) var script: SpeechScript
+    @Published private(set) var track: SpeechPrompterTrack
     let camera = SpeechCamera()
 
     @Published private(set) var phase: Phase = .ready
@@ -171,6 +171,15 @@ final class SpeechTakeSession: ObservableObject {
         lastAdvanceAt = Date()
         phase = .recording
         runTicker()
+    }
+
+    /// The script was edited from the prompter: read the new text from the
+    /// top. Only between takes — the edit sheet can't open mid-take.
+    func replaceScript(_ updated: SpeechScript) {
+        guard phase == .ready || isFailed else { return }
+        script = updated
+        track = SpeechPrompterTrack(script: updated.body, language: updated.language)
+        reset()
     }
 
     /// Called by the screen right before a take: where everything is, and
