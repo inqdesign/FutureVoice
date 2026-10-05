@@ -467,7 +467,8 @@ fun TalkGoalSheet(
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(item.text, style = MaterialTheme.typography.headlineSmall)
+            Text(item.text, style = MaterialTheme.typography.headlineSmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
 
             if (loading) {
                 androidx.compose.material3.CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
