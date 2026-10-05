@@ -43,6 +43,39 @@ object DayCardStore {
         return if (f.exists()) BitmapFactory.decodeFile(f.path) else null
     }
 
+    /**
+     * A picked photo, UPRIGHT and no bigger than the card needs. Re-encoding
+     * drops EXIF, and with it the orientation tag a phone camera writes
+     * instead of rotating the pixels — so a portrait shot read sideways on
+     * the card. The tag is applied here first (as `CounterpartPhotoStore`
+     * does), and the decode is sampled down to ~[MAX_EDGE] so a 12 MP original
+     * isn't held in memory for a 1080-wide card.
+     */
+    fun decodeUpright(context: Context, uri: android.net.Uri): Bitmap? {
+        val bytes = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        }.getOrNull() ?: return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_EDGE) sample *= 2
+        val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
+            BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
+        val degrees = runCatching {
+            when (android.media.ExifInterface(bytes.inputStream()).getAttributeInt(
+                android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)) {
+                android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+        }.getOrDefault(0f)
+        return if (degrees == 0f) source else Bitmap.createBitmap(source, 0, 0, source.width, source.height,
+            android.graphics.Matrix().apply { postRotate(degrees) }, true)
+    }
+
+    private const val MAX_EDGE = 2160
+
     /** Re-encodes on save, which is what drops EXIF/GPS. */
     fun savePhoto(context: Context, day: Long, bitmap: Bitmap) {
         photoFile(context, day).outputStream().use {

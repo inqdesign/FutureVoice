@@ -97,11 +97,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
         ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        runCatching {
-            context.contentResolver.openInputStream(uri).use {
-                android.graphics.BitmapFactory.decodeStream(it)
-            }
-        }.getOrNull()?.let { bitmap ->
+        DayCardStore.decodeUpright(context, uri)?.let { bitmap ->
             photo = bitmap
             DayCardStore.savePhoto(context, data.date, bitmap)
             DayCardStore.freeze(context, data)

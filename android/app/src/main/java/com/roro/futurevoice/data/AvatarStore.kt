@@ -31,9 +31,9 @@ object AvatarStore {
     /** Center-crop to a square and downscale before saving — an avatar never
      *  needs more than a small circle's worth of pixels. */
     suspend fun save(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
-        val source = runCatching {
-            context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
-        }.getOrNull() ?: return@withContext false
+        // Upright first: a camera photo carries its rotation as an EXIF tag,
+        // which the re-encode below would drop and leave the face sideways.
+        val source = DayCardStore.decodeUpright(context, uri) ?: return@withContext false
         val side = minOf(source.width, source.height)
         val target = minOf(512, side)
         val square = Bitmap.createBitmap(target, target, Bitmap.Config.ARGB_8888)
