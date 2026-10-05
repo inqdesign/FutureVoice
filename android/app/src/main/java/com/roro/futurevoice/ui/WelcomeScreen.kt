@@ -58,6 +58,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -188,9 +192,15 @@ fun WelcomeScreen(
                 },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Top bar: Skip during the film, Watch again at the end.
-            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically) {
+            // Top bar: the wordmark, then Skip during the film, Watch again
+            // at the end.
+            Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+                // The wordmark, in the website's face (Pixelify Sans, OFL), on
+                // the dark top (iOS 0777ae8c).
+                Text("nawana", color = Color.White, fontSize = 24.sp,
+                    fontFamily = FontFamily(Font(R.font.pixelify_sans_regular)),
+                    modifier = Modifier.padding(horizontal = 20.dp).semantics { heading() })
+                Spacer(Modifier.weight(1f))
                 Text(
                     stringResource(if (isClosing) R.string.watch_again else R.string.skip),
                     color = Color.White.copy(alpha = 0.75f),

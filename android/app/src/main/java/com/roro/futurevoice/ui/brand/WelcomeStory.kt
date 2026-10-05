@@ -105,16 +105,17 @@ fun StoryBackdrop(modifier: Modifier = Modifier, still: Boolean = false) {
         drawRect(Color(Cream[0], Cream[1], Cream[2]))
         // The sky: a wide ellipse centred above the top edge, so only its
         // soft lower half comes down into the screen.
-        val r = h * 0.62f
+        val r = h * 0.66f
         val cx = w * (0.5f + 0.04f * sin(t * 0.05f))
-        val cy = h * (-0.16f + 0.02f * cos(t * 0.04f))
+        val cy = h * (-0.06f + 0.02f * cos(t * 0.04f))
         scale(scaleX = 1.2f, scaleY = 1f, pivot = Offset(cx, cy)) {
             drawCircle(Brush.radialGradient(colorStops = SkyStops, center = Offset(cx, cy), radius = r),
                 radius = r, center = Offset(cx, cy))
         }
-        // Night at the very top.
-        drawRect(Brush.verticalGradient(colorStops = NightStops, startY = 0f, endY = h * 0.26f),
-            size = androidx.compose.ui.geometry.Size(w, h * 0.26f))
+        // Night at the very top, reaching 40% down; the sky comes to ~60%
+        // (iOS 0777ae8c).
+        drawRect(Brush.verticalGradient(colorStops = NightStops, startY = 0f, endY = h * 0.40f),
+            size = androidx.compose.ui.geometry.Size(w, h * 0.40f))
         // A little warmth gathering at the bottom, under the buttons.
         drawRect(Brush.verticalGradient(
             listOf(Color.Transparent, Color(0.96f, 0.88f, 0.78f).copy(alpha = 0.7f)),
@@ -163,8 +164,8 @@ private val SkyStops = smoothStops(listOf(
 ))
 
 private val NightStops = smoothStops(listOf(
-    floatArrayOf(0.015f, 0.03f, 0.10f, 1f), floatArrayOf(0.03f, 0.10f, 0.36f, 0.6f),
-    floatArrayOf(0.05f, 0.20f, 0.70f, 0f),
+    floatArrayOf(0.015f, 0.03f, 0.10f, 1f), floatArrayOf(0.02f, 0.06f, 0.22f, 0.9f),
+    floatArrayOf(0.04f, 0.14f, 0.50f, 0.45f), floatArrayOf(0.05f, 0.20f, 0.70f, 0f),
 ))
 
 /**
@@ -184,6 +185,9 @@ fun RevealText(text: String, still: Boolean = false) {
     // The whole line arrives in about a second and a half however long it is.
     val stagger = min(0.12, 1.5 / max(total, 1))
     val spaced = text.contains(" ")
+    // 30 sp, a step down for a long line — the wordier languages would
+    // otherwise run a single beat to five or six rows (iOS 0777ae8c).
+    val long = text.length > 60
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     Column(
@@ -210,8 +214,8 @@ fun RevealText(text: String, still: Boolean = false) {
                     Text(
                         token,
                         color = StoryInk,
-                        fontSize = 25.sp,
-                        lineHeight = 31.sp,
+                        fontSize = if (long) 26.sp else 30.sp,
+                        lineHeight = if (long) 32.sp else 37.sp,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
