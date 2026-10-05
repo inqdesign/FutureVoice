@@ -72,21 +72,33 @@ struct WelcomeView: View {
             StoryBeat(text: explain("School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?")),
             StoryBeat(text: explain("Hi. It's me.\nYou, already fluent.")),
             StoryBeat(text: explain("I'll call you.\nLet's talk five minutes a day."),
-                      glimpse: ("phone.fill", explain("Talk like a phone call"))),
+                      glimpse: ("phone.fill", explain("Talk"))),
             StoryBeat(text: explain("Stumble, get it wrong, that's fine.\nI'll show you how it goes."),
-                      glimpse: ("text.bubble", explain("Every line, said naturally"))),
+                      glimpse: ("text.viewfinder", explain("Say it again"))),
             StoryBeat(text: explain("Everything we talk about\nbecomes your own textbook."),
-                      glimpse: ("book.closed", explain("Your own textbook"))),
+                      glimpse: ("book.closed", explain("Your textbook"))),
             StoryBeat(text: explain("What you keep getting wrong comes back every day,\nand you say it until it sticks."),
-                      glimpse: ("arrow.triangle.2.circlepath", explain("Daily review · Shadowing"))),
+                      glimpse: ("arrow.triangle.2.circlepath", explain("Review"))),
             StoryBeat(text: explain("Practice while you watch yourself,\nuntil you feel sure, until it feels natural."),
-                      glimpse: ("music.mic", explain("Speech practice"))),
+                      glimpse: ("music.mic", explain("Speech"))),
         ]
     }
 
     /// The closing frame's line — the film's last word, said once, with the
     /// chips gathered under it.
     static var closingLine: String { explain("Until the day you become me,\nlet's do this together.") }
+
+    /// The closing frame's chips: what the app does, by the names the app
+    /// itself uses for them.
+    static var closingChips: [(symbol: String, label: String)] {
+        [
+            ("phone.fill", explain("Talk")),
+            ("book.closed", explain("Your textbook")),
+            ("arrow.triangle.2.circlepath", explain("Review")),
+            ("music.mic", explain("Speech")),
+            ("text.viewfinder", explain("Say it again")),
+        ]
+    }
 
     private var isClosing: Bool { beat >= Self.beats.count }
 
@@ -116,6 +128,9 @@ struct WelcomeView: View {
             // learners the closing frame, which says the same in a list.
             if UIAccessibility.isVoiceOverRunning { finish() }
         }
+        // A soft tap as each line turns over: felt, not heard. A voice-over
+        // was tried and removed (2026-10-05).
+        .onChange(of: beat) { _, _ in HapticEngine.soft() }
     }
 
     private func play() async {
@@ -193,9 +208,9 @@ struct WelcomeView: View {
                             RevealText(text: Self.closingLine, still: reduceMotion)
                             // The film's own chips, gathered.
                             CenteredFlow(spacing: 6, lineSpacing: 8) {
-                                ForEach(Array(Self.beats.compactMap(\.glimpse).enumerated()), id: \.offset) { i, g in
+                                ForEach(Array(Self.closingChips.enumerated()), id: \.offset) { i, g in
                                     Glimpse(symbol: g.symbol, label: g.label,
-                                            delay: 1.5 + Double(i) * 0.12, compact: true, still: reduceMotion)
+                                            delay: 1.5 + Double(i) * 0.12, still: reduceMotion)
                                 }
                             }
                             // Full width, or the chips wrap to the headline's

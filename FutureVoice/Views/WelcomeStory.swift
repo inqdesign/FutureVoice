@@ -302,17 +302,14 @@ struct Glimpse: View {
     let symbol: String
     let label: String
     var delay: Double = 2.8
-    /// The closing frame gathers five of these; smaller, so they pair up
-    /// two to a row in the wordier languages instead of stacking.
-    var compact = false
     var still: Bool = false
 
     var body: some View {
         Label(label, systemImage: symbol)
-            .font(compact ? .caption.weight(.medium) : .subheadline.weight(.medium))
+            .font(.subheadline.weight(.medium))
             .foregroundStyle(Color.storyInk.opacity(0.75))
-            .padding(.horizontal, compact ? 11 : 14)
-            .padding(.vertical, compact ? 6 : 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .background(Capsule().fill(.white.opacity(0.55)))
             .overlay(Capsule().strokeBorder(Color.storyInk.opacity(0.10), lineWidth: 0.5))
             .modifier(Arrive(delay: delay, still: still))

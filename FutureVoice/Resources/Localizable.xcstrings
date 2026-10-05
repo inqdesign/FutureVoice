@@ -29351,52 +29351,6 @@
         }
       }
     },
-    "Daily review · Shadowing" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tägliches Wiederholen · Nachsprechen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repaso diario · Shadowing"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Révision quotidienne · Shadowing"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "毎日の復習 · シャドーイング"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "매일 복습 · 따라 말하기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每日复习 · 跟读"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每日複習 · 跟讀"
-          }
-        }
-      }
-    },
     "Daily small talk" : {
       "localizations" : {
         "de" : {
@@ -35395,52 +35349,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不論哪個等級，長度和內容的份量都一樣。改變的只有用字和句子的形態。"
-          }
-        }
-      }
-    },
-    "Every line, said naturally" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeder Satz, natürlicher"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cada frase, más natural"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque phrase, plus naturelle"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一文ずつ、自然な言い方に"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "매 문장, 자연스러운 말로"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每一句，换成地道的说法"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每一句，都換成自然的說法"
           }
         }
       }
@@ -82940,52 +82848,6 @@
         }
       }
     },
-    "Speech practice" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rede üben"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Práctica de discursos"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Entraînement au discours"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スピーチ練習"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "스피치 연습"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "演讲练习"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "演講練習"
-          }
-        }
-      }
-    },
     "Speed" : {
       "localizations" : {
         "de" : {
@@ -86757,52 +86619,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說 10 分鐘左右"
-          }
-        }
-      }
-    },
-    "Talk like a phone call" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reden wie am Telefon"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Habla como en una llamada"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parle comme au téléphone"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "電話みたいに会話"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "전화하듯 대화"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "像打电话一样聊天"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "像打電話一樣聊天"
           }
         }
       }
@@ -116260,30 +116076,30 @@
         }
       }
     },
-    "Your own textbook" : {
+    "Your textbook" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein eigenes Lehrbuch"
+            "value" : "Dein Lehrbuch"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu propio libro de texto"
+            "value" : "Tu libro de texto"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ton propre manuel"
+            "value" : "Ton manuel"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自分だけの教材"
+            "value" : "自分の教材"
           }
         },
         "ko" : {
@@ -116295,13 +116111,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "专属于你的教材"
+            "value" : "我的教材"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "專屬於你的教材"
+            "value" : "我的教材"
           }
         }
       }
