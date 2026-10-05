@@ -263,8 +263,8 @@ struct SpeechPrompterView: View {
                     micPanel
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .padding(.horizontal, 12)
+            .clipShape(cardShape)
+            .padding(.horizontal, Self.cardInset)
 
             VStack(spacing: 14) {
                 if let toast {
@@ -278,7 +278,9 @@ struct SpeechPrompterView: View {
                 }
                 controls
             }
-            .padding(.bottom, 20)
+            // Clear of the home indicator: the card runs under it, the
+            // buttons don't.
+            .padding(.bottom, max(20, Self.deviceBottomInset))
         }
         // The count-in sits on the camera card, where the reader is looking
         // to get ready, not over the script.
@@ -296,7 +298,31 @@ struct SpeechPrompterView: View {
                 .padding(.horizontal, 12)
                 .padding(.top, 10)
         }
-        .padding(.bottom, 8)
+        .padding(.bottom, Self.cardInset)
+        // The card runs to the bottom of the glass: the strip under it was
+        // empty space (founder, 2026-10-05).
+        .ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    /// Gap between the camera card and the screen's edges.
+    private static let cardInset: CGFloat = 8
+
+    /// The home indicator's inset, read once from the window — zero on a
+    /// phone with a home button, where the screen corners are square.
+    private static var deviceBottomInset: CGFloat {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first
+        return window?.safeAreaInsets.bottom ?? 0
+    }
+
+    /// Top corners like any card; bottom corners CONCENTRIC with the
+    /// display's own rounded corners (≈55 pt on the current iPhones), less
+    /// the gap, so card and glass curve together.
+    private var cardShape: UnevenRoundedRectangle {
+        let bottom = Self.deviceBottomInset > 0 ? max(24, 55 - Self.cardInset) : 24
+        return UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: bottom,
+                                      bottomTrailingRadius: bottom, topTrailingRadius: 24,
+                                      style: .continuous)
     }
 
     private var micPanel: some View {
@@ -446,8 +472,11 @@ struct SpeechTeleprompter: View {
 
     @StateObject private var scroller = PrompterScroller()
 
-    /// One line of text plus its spacing, and a little air above it.
-    private var readingLine: CGFloat { textSize * 1.75 + 8 }
+    /// The line being read sits at the very TOP of the prompter, right under
+    /// the front camera, so the reader's eyes stay at the lens (founder,
+    /// 2026-10-05: one read line kept above it put the line to read too far
+    /// down, and the gaze dropped). Lines already read scroll out above.
+    private var readingLine: CGFloat { 6 }
 
     struct WordFrame: Equatable {
         var minX: CGFloat = 0
@@ -484,7 +513,7 @@ struct SpeechTeleprompter: View {
                 .mask(
                     LinearGradient(stops: [
                         .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.05),
+                        .init(color: .black, location: 0.015),
                         .init(color: .black, location: 0.86),
                         .init(color: .clear, location: 1),
                     ], startPoint: .top, endPoint: .bottom)

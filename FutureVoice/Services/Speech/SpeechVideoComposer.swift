@@ -26,7 +26,7 @@ final class SpeechVideoComposer: @unchecked Sendable {
         var cardRadius: CGFloat
         var background: UIColor
         /// The prompter's fades, as fractions of its height (the screen's mask).
-        var topFade: CGFloat = 0.05
+        var topFade: CGFloat = 0.015
         var bottomFade: CGFloat = 0.14
     }
 
