@@ -177,13 +177,31 @@ object CarryoverDetector {
      * satisfied the card "give me feedback" — the learner repeated the exact
      * mistake and was credited (iOS 2026-09-16, `showsTheFix`).
      */
-    fun firstMatch(item: String, userTurns: List<Turn>, rejectingMistake: String? = null): Hit? {
-        val needle = tokens(item)
-        val core = contentTokens(item)
-        if (needle.size < MIN_TOKENS || core.size < MIN_CONTENT_TOKENS) return null
+    fun firstMatch(item: String, userTurns: List<Turn>, rejectingMistake: String? = null,
+                   language: String? = CoreVocabulary.activeLanguage()): Hit? {
+        val korean = language == "ko"
+        // Korean (iOS bee9052d): an expression is credited whether it was
+        // said with the polite 요 or without — the speech level is the
+        // learner's, the expression is the same. Never for a correction card:
+        // there the speech level can be the fix itself.
+        val politeFree = korean && rejectingMistake == null
+        val needle = tokens(item).map { if (politeFree) strippingPolite(it) else it }
+        val core = if (politeFree) needle else contentTokens(item)
+        if (needle.size < minTokens(language) || core.size < minContentTokens(language)) return null
+        val koreanNeedle = if (korean) koreanKey(item, politeFree) else ""
+        if (korean && koreanNeedle.length < MIN_KOREAN_SYLLABLES) return null
         for (turn in userTurns) {
-            val span = matchedSpan(needle, core, tokens(turn.transcript)) ?: continue
-            if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span)) continue
+            val hay = tokens(turn.transcript).map { if (politeFree) strippingPolite(it) else it }
+            val span = matchedSpan(needle, core, hay, minTokens(language))
+            if (span != null) {
+                if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span)) continue
+            } else if (korean && koreanKey(turn.transcript, politeFree).contains(koreanNeedle)) {
+                // Same syllables, spaced differently. The match is the phrase
+                // itself, contiguous — a correction's fix is in it by
+                // construction and its mistake cannot be.
+            } else {
+                continue
+            }
             return Hit(DrillIngest.relevantFragment(turn.transcript, item), turn.id)
         }
         return null
@@ -199,8 +217,32 @@ object CarryoverDetector {
         return said.containsAll(added) && removed.none { it in said }
     }
 
-    fun isCreditable(phrase: String): Boolean =
-        tokens(phrase).size >= MIN_TOKENS && contentTokens(phrase).size >= MIN_CONTENT_TOKENS
+    fun isCreditable(phrase: String, language: String? = CoreVocabulary.activeLanguage()): Boolean =
+        tokens(phrase).size >= minTokens(language) && contentTokens(phrase).size >= minContentTokens(language) &&
+            (language != "ko" || koreanKey(phrase, politeFree = false).length >= MIN_KOREAN_SYLLABLES)
+
+    /**
+     * Korean takes a floor of one word instead of three (iOS `bee9052d`): an
+     * eojeol is a word WITH its particles and endings, so a two-eojeol phrase
+     * is a whole expression (잘 모르겠어, 그럴 리가) and the three-word bar
+     * left most Korean expressions uncreditable. Its floor is
+     * [MIN_KOREAN_SYLLABLES] instead — and there is no filler list, so every
+     * eojeol must land, in order.
+     */
+    private fun minTokens(language: String?) = if (language == "ko") 1 else MIN_TOKENS
+    private fun minContentTokens(language: String?) = if (language == "ko") 1 else MIN_CONTENT_TOKENS
+
+    /** Shortest Korean phrase worth crediting, in syllables (spaces ignored).
+     *  잘 가 (2) is small talk; 그러게 / 잘 모르겠어 are not. */
+    const val MIN_KOREAN_SYLLABLES = 3
+
+    /** A Korean phrase as one comparable string: tokens joined with NO space,
+     *  because 띄어쓰기 is the recognizer's (할수 있어 / 할 수 있어). */
+    private fun koreanKey(text: String, politeFree: Boolean): String =
+        tokens(text).joinToString("") { if (politeFree) strippingPolite(it) else it }
+
+    private fun strippingPolite(token: String): String =
+        if (token.length > 1 && token.endsWith("요")) token.dropLast(1) else token
 
     fun firstLemmaMatch(lemma: String, userTurns: List<Turn>): Hit? {
         for (turn in userTurns) {
@@ -214,8 +256,9 @@ object CarryoverDetector {
      * In-order coverage inside a bounded window; EVERY content word must land
      * in order (function words may slip — that's what [MIN_COVERAGE] is for).
      */
-    private fun matchedSpan(needle: List<String>, core: List<String>, hay: List<String>): List<String>? {
-        if (needle.isEmpty() || hay.size < MIN_TOKENS) return null
+    private fun matchedSpan(needle: List<String>, core: List<String>, hay: List<String>,
+                            minHay: Int = MIN_TOKENS): List<String>? {
+        if (needle.isEmpty() || hay.size < minHay) return null
         val window = needle.size * 2 + 4
         val required = Math.ceil(needle.size * MIN_COVERAGE).toInt()
         if (hay.size < required) return null

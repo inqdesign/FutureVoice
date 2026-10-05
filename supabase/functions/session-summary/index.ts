@@ -65,6 +65,8 @@ Deno.serve(async (req) => {
     known_about_user?: unknown; expression_budget?: unknown
     remembered_notes?: unknown; share_corrections?: unknown
     transcript?: unknown; metrics?: unknown; stream?: unknown
+    talk_date?: unknown; utc_offset_minutes?: unknown
+    relationship_register_line?: unknown; polite_setting_line?: unknown
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const targetLanguage = typeof body.target_language === "string" ? body.target_language : "en"
@@ -91,6 +93,10 @@ Deno.serve(async (req) => {
     ? Math.max(-14 * 60, Math.min(14 * 60, Math.round(body.utc_offset_minutes))) : 0
   const relationshipRegisterLine = typeof body.relationship_register_line === "string"
     ? body.relationship_register_line.slice(0, 600) : ""
+  // Korean only, client-built (iOS `politeSettingLine`, bee9052d). An older
+  // client sends nothing and the prompt is byte-identical to before.
+  const politeSettingLine = typeof body.polite_setting_line === "string"
+    ? body.polite_setting_line.slice(0, 1200) : ""
 
   const rec = await recordFreeUsage({
     supabase, userId: user.id, action: "gemini_summary", purpose: "summary",
@@ -105,7 +111,7 @@ Deno.serve(async (req) => {
   const system = summarySystemPrompt({
     targetLanguage, nativeLanguage, profile: body.profile ?? {},
     knownAboutUser, rememberedNotes, shareCorrections, expressionBudget,
-    talkDate, utcOffsetMinutes, relationshipRegisterLine,
+    talkDate, utcOffsetMinutes, relationshipRegisterLine, politeSettingLine,
   })
   // Same user message SessionSummarizer.swift builds.
   const userMessage = `transcript:\n${transcript}\n\nmetrics:\n${metricsJSON}`

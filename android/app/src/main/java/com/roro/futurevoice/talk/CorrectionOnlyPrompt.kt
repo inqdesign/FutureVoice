@@ -25,15 +25,17 @@ object CorrectionOnlyPrompt {
     /** Korean and Japanese: the speech level is the learner's, never a slip. */
     private fun registerGuard(targetLanguage: String): String =
         when (targetLanguage.substringBefore('-')) {
-            "ko" -> "\n- SPEECH LEVEL is the learner's choice, never a slip. Talking to their\n  own future self they use the informal level (반말 / plain form); in a\n  scene or with a stranger they may use the polite one. Either way the\n  level they spoke in is correct. NEVER change it — not a single\n  ending — and \"alternative\" stays in the level the line was said in,\n  even when it fixes something else." + "\n- KOREAN HONORIFICS: a subject honorific about a third person (계시다,\n  주무시다, 드시다, 말씀하시다, -시-) combines freely with a 반말 ending\n  to the listener — \"할아버지 지금 주무셔\", \"체험을 하고 계시는 거야\"\n  are correct Korean, not mixed politeness. Never add 요 / 예요 to them.\n- KOREAN WORD ORDER in speech is free: an afterthought after the verb\n  (\"먹었어, 아까 라면\") is how people talk. A suggestion that only\n  reorders the same words corrects nothing; return null."
+            "ko" -> "\n- SPEECH LEVEL is the learner's choice, never a slip. Talking to their\n  own future self they use the informal level (반말 / plain form); in a\n  scene or with a stranger they may use the polite one. Either way the\n  level they spoke in is correct. NEVER change it — not a single\n  ending — and \"alternative\" stays in the level the line was said in,\n  even when it fixes something else." + "\n- KOREAN HONORIFICS: a subject honorific about a third person (계시다,\n  주무시다, 드시다, 말씀하시다, -시-) combines freely with a 반말 ending\n  to the listener — \"할아버지 지금 주무셔\", \"체험을 하고 계시는 거야\"\n  are correct Korean, not mixed politeness. Never add 요 / 예요 to them.\n- KOREAN WORD ORDER in speech is free: an afterthought after the verb\n  (\"먹었어, 아까 라면\") is how people talk. A suggestion that only\n  reorders the same words corrects nothing; return null.\n- KOREAN FIXES ARE ERRORS ONLY. A choice between two grammatical\n  options is not a mistake: 은/는 or 이/가 where both work (제 이름이 /\n  제 이름은), 나 or 저 beside a 요 ending, a subject honorific added or\n  left out (친절해요 / 친절하세요). Those may shape the alternative; they\n  never go in \"fixes\". A particle that is the wrong one for its verb\n  IS an error (카페에 일해 → 카페에서 일해, 의자를 앉아 → 의자에 앉아)."
             "ja" -> "\n- SPEECH LEVEL is the learner's choice, never a slip. Talking to their\n  own future self they use the informal level (반말 / plain form); in a\n  scene or with a stranger they may use the polite one. Either way the\n  level they spoke in is correct. NEVER change it — not a single\n  ending — and \"alternative\" stays in the level the line was said in,\n  even when it fixes something else." + "\n- JAPANESE HONORIFICS: 尊敬語 / 謙譲語 about a third person (いらっしゃる,\n  おっしゃる, なさる, 召し上がる) combine freely with a plain ending to the\n  listener — \"社長がいらっしゃるまで待ってて\", \"先生がそうおっしゃってた\"\n  are correct Japanese, not inconsistent. Never add です / ます / ください\n  to them."
             else -> ""
         }
 
     /** [relationshipLine]: `ConversationEngine.relationshipRegisterLine` for a
-     *  cast call, "" otherwise — every other prompt stays byte-identical. */
+     *  cast call, "" otherwise; [politeLine]: `politeSettingLine` (Korean, a
+     *  polite setting with no level set), "" otherwise — every other prompt
+     *  stays byte-identical. */
     fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel,
-              relationshipLine: String = ""): String {
+              relationshipLine: String = "", politeLine: String = ""): String {
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()
@@ -69,7 +71,7 @@ Return STRICT JSON only — no prose, no code fences:
   building" arrives as "I am building" every time. A suggestion whose
   only change is contracting what you received is correcting the
   transcriber, not the learner. If that is the only change you would
-  make, the line was fine: return null.$scriptGuard$spacingGuard$registerGuard$relationshipLine
+  make, the line was fine: return null.$scriptGuard$spacingGuard$registerGuard$relationshipLine$politeLine
 - Judge it as SPEECH, never as writing. Contractions, casual register
   and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
   speakers talk, not slips.

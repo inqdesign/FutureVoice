@@ -313,7 +313,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
-                    cast = config.cast)
+                    cast = config.cast, inScene = config.scenarioId != null)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 openConversation()
@@ -509,7 +509,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                     } ?: runCatching {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
-                                config.targetLanguage, config.nativeLanguage, cast = config.cast),
+                                config.targetLanguage, config.nativeLanguage, cast = config.cast,
+                                inScene = config.scenarioId != null),
                             messages = listOf(GeminiClient.Message(
                                 GeminiClient.Message.Role.USER,
                                 "(the call just connected — say your opening line, nothing else)")),
@@ -798,7 +799,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                 GeminiClient(auth).sendJson(
                     system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level,
                         relationshipLine = ConversationCharacter.relationshipRegisterLine(
-                            cfg.targetLanguage, cfg.cast)),
+                            cfg.targetLanguage, cfg.cast),
+                        politeLine = ConversationCharacter.politeSettingLine(
+                            cfg.targetLanguage, cfg.cast?.person, inScene = cfg.scenarioId != null)),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, content)),
                     serializer = ConversationTurnPayload.serializer(),
                     // Buffered: a truncation loses the WHOLE correction, and

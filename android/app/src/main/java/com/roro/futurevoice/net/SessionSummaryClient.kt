@@ -49,6 +49,8 @@ class SessionSummaryClient(private val auth: AuthRepository) {
         val utc_offset_minutes: Int = 0,
         /** The relationship register exception built from the person ("" = none). */
         val relationship_register_line: String = "",
+        /** Korean polite-setting exception (iOS `politeSettingLine`), "" otherwise. */
+        val polite_setting_line: String = "",
     )
 
     /** One remembered line: `kind` "fact"|"now", `learned_at` ISO-8601 (the server writes its age). */

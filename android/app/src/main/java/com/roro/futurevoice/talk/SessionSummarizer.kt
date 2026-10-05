@@ -171,6 +171,9 @@ object SessionSummarizer {
         // call (iOS `rememberedNotes`). Expired `now` lines are not in it.
         val persona = PersonaStore.shared(context).load()
         val rememberedNotes = persona?.currentNotes().orEmpty()
+        val person = session.counterpartId?.let { id ->
+            com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }
+        }
         val body = requestBody(
             session = session,
             nativeLanguage = nativeLanguage,
@@ -179,9 +182,11 @@ object SessionSummarizer {
             persona = persona,
             rememberedNotes = rememberedNotes,
             metrics = metrics.promptJson(),
-            relationshipRegisterLine = session.counterpartId?.let { id ->
-                com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }
-            }.let { ConversationCharacter.relationshipRegisterLine(session.targetLanguage, it) },
+            relationshipRegisterLine = person.let { ConversationCharacter.relationshipRegisterLine(session.targetLanguage, it) },
+            // A scene's barista or interviewer is addressed politely; a talk
+            // with the fluent self is not (iOS `bee9052d`).
+            politeSettingLine = ConversationCharacter.politeSettingLine(session.targetLanguage, person,
+                inScene = session.origin == SessionOrigin.SCENARIO || session.originScenarioId != null),
         )
         // Stable key: a retry re-runs the SAME logical request for free as
         // long as the transcript hasn't grown (iOS: "summary:<id>:<turns>").
@@ -419,6 +424,7 @@ object SessionSummarizer {
         rememberedNotes: List<PersonaNote>,
         metrics: JsonObject,
         relationshipRegisterLine: String = "",
+        politeSettingLine: String = "",
         utcOffsetMinutes: Int = java.util.TimeZone.getDefault().getOffset(session.startedAt) / 60_000,
     ): SessionSummaryClient.RequestBody = SessionSummaryClient.RequestBody(
         target_language = session.targetLanguage,
@@ -444,6 +450,7 @@ object SessionSummarizer {
             .truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString(),
         utc_offset_minutes = utcOffsetMinutes,
         relationship_register_line = relationshipRegisterLine,
+        polite_setting_line = politeSettingLine,
     )
 
     /** `ConversationEngine.formatTranscript` — role-labelled lines. */

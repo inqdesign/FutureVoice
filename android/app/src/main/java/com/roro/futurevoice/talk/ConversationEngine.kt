@@ -362,8 +362,11 @@ object ConversationEngine {
         nativeLanguage: String,
         /** A cast call: the learner's set form of address may be corrected (iOS `relationshipRegisterLine`). */
         cast: Cast? = null,
+        /** A Watch scene's call: Korean 반말 to its character may be corrected (iOS `politeSettingLine`). */
+        inScene: Boolean = false,
     ): String {
-        val relationshipLine = ConversationCharacter.relationshipRegisterLine(targetLanguage, cast)
+        val relationshipLine = (ConversationCharacter.relationshipRegisterLine(targetLanguage, cast) +
+            ConversationCharacter.politeSettingLine(targetLanguage, cast?.person, inScene))
             .split("\n").joinToString("\n") { if (it.isEmpty()) it else "        $it" }
         val languageName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)

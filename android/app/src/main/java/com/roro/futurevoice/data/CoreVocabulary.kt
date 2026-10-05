@@ -216,6 +216,10 @@ object CoreVocabulary {
     fun level(word: String, language: String): CefrLevel? = pool(language).levelByWord[word.lowercase()]
     fun levelRank(level: CefrLevel): Int = CefrLevel.entries.indexOf(level)
 
+    /** The band [KoreanMorph] ranks competing readings by (가요 → 가다 over
+     *  the noun 가요): easier = more likely to be what was said. */
+    fun koreanRank(word: String): Int? = level(word, "ko")?.let(::levelRank)
+
     /**
      * Every core word at or above [level], easiest first — the top-up a daily
      * word deck falls back on so the hand is never short, even on day one.
@@ -249,6 +253,7 @@ object VocabLemmas {
      */
     fun lemmas(texts: List<String>, language: String? = null): Set<String> {
         val lang = language ?: CoreVocabulary.activeLanguage()
+        if (lang == "ko") return koreanLemmas(texts)
         val forms = if (lang == "en") CoreVocabulary.forms("en") else emptyMap()
         val out = HashSet<String>()
         for (text in texts) {
@@ -263,9 +268,43 @@ object VocabLemmas {
         return out
     }
 
-    /** One surface token's headword (English forms table; others as written). */
+    /** One surface token's headword (English forms table, Korean through
+     *  [KoreanMorph]; others as written). */
     fun lemma(token: String, language: String): String {
         val t = token.lowercase()
-        return if (language == "en") CoreVocabulary.forms("en")[t] ?: t else t
+        return when (language) {
+            "en" -> CoreVocabulary.forms("en")[t] ?: t
+            "ko" -> KoreanMorph.dictionaryForm(t, CoreVocabulary.set("ko"), CoreVocabulary::koreanRank) ?: t
+            else -> t
+        }
+    }
+
+    /**
+     * Korean headwords in [texts] — lexicon hits only (iOS `koreanLemmas`,
+     * `bee9052d`): an unconfirmable dictionary form is a guess, not a word to
+     * track. Memoized per TEXT: every candidate of every token is tried
+     * against the lexicon, and every talk-book build re-asks for the same turns.
+     */
+    private fun koreanLemmas(texts: List<String>): Set<String> {
+        val out = HashSet<String>()
+        for (text in texts) {
+            out += synchronized(koreanMemo) { koreanMemo[text] } ?: run {
+                val lexicon = CoreVocabulary.set("ko")
+                val found = HashSet<String>()
+                for (token in text.split(Regex("[^\\p{L}\\p{N}]+"))) {
+                    if (token.isEmpty()) continue
+                    KoreanMorph.dictionaryForm(token, lexicon, CoreVocabulary::koreanRank)
+                        ?.takeIf { !CoreVocabulary.isUngraded(it, "ko") }?.let(found::add)
+                }
+                // An empty lexicon (no app context yet) is not memoized.
+                if (lexicon.isNotEmpty()) synchronized(koreanMemo) { koreanMemo[text] = found }
+                found
+            }
+        }
+        return out
+    }
+
+    private val koreanMemo = object : LinkedHashMap<String, Set<String>>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Set<String>>?) = size > 2_000
     }
 }

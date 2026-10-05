@@ -54,6 +54,11 @@ mapping = {
     # `ede039e`): the one register slip a coach may name. Built by the
     # caller (`ConversationEngine.relationshipRegisterLine`), "" otherwise.
     r"\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))": "$relationshipLine",
+    # Korean only (iOS `bee9052d`): a learner who set NO level, talking to a
+    # scene character / stranger / public figure / colleague, may be told a
+    # 반말 line wants 해요체. Built by the caller
+    # (`ConversationCharacter.politeSettingLine`), "" otherwise.
+    r"\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))": "$politeLine",
 }
 
 
@@ -102,7 +107,7 @@ if r"\(" in text:
              + re.search(r"\\\([^)]*\)", text).group(0))
 
 # Kotlin raw strings can't escape `$`; only our own placeholders may remain.
-stray = re.sub(r"\$(targetName|nativeName|levelCode|scriptGuard|spacingGuard|registerGuard|relationshipLine)\b", "", text)
+stray = re.sub(r"\$(targetName|nativeName|levelCode|scriptGuard|spacingGuard|registerGuard|relationshipLine|politeLine)\b", "", text)
 if "$" in stray:
     sys.exit("prompt carries a literal '$' — escape it before generating")
 
@@ -141,9 +146,11 @@ object CorrectionOnlyPrompt {{
         }}
 
     /** [relationshipLine]: `ConversationEngine.relationshipRegisterLine` for a
-     *  cast call, "" otherwise — every other prompt stays byte-identical. */
+     *  cast call, "" otherwise; [politeLine]: `politeSettingLine` (Korean, a
+     *  polite setting with no level set), "" otherwise — every other prompt
+     *  stays byte-identical. */
     fun build(targetLanguage: String, nativeLanguage: String, level: CefrLevel,
-              relationshipLine: String = ""): String {{
+              relationshipLine: String = "", politeLine: String = ""): String {{
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val levelCode = level.code.uppercase()

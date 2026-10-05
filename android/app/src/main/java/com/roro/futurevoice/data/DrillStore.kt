@@ -121,15 +121,16 @@ object DrillIngest {
      * clause is often two eojeol) could never be marked used, so it is
      * widened to the SENTENCE it sits in, with the fix applied.
      */
-    fun cardPair(fix: com.roro.futurevoice.talk.TurnFix, transcript: String): Pair<String, String> {
-        if (com.roro.futurevoice.talk.CarryoverDetector.isCreditable(fix.now)) return fix.was to fix.now
+    fun cardPair(fix: com.roro.futurevoice.talk.TurnFix, transcript: String,
+                 language: String? = CoreVocabulary.activeLanguage()): Pair<String, String> {
+        if (com.roro.futurevoice.talk.CarryoverDetector.isCreditable(fix.now, language)) return fix.was to fix.now
         val sentences = transcript.split(Regex("[.!?。！？\\n]"))
             .map { it.trim() }.filter { it.isNotEmpty() }
         for (sentence in sentences) {
             val at = sentence.indexOf(fix.was, ignoreCase = true)
             if (at < 0) continue
             val widened = sentence.replaceRange(at, at + fix.was.length, fix.now)
-            if (!com.roro.futurevoice.talk.CarryoverDetector.isCreditable(widened)) break
+            if (!com.roro.futurevoice.talk.CarryoverDetector.isCreditable(widened, language)) break
             return sentence to widened
         }
         return fix.was to fix.now

@@ -212,6 +212,10 @@ INTERP = {
     # Built by the client (it holds the person's registers; Android
     # `relationshipRegisterLine`) and inserted as is — "" for everyone else.
     "relationshipRegisterLine(targetLanguage, counterpart: counterpart)": "${opts.relationshipRegisterLine ?? \"\"}",
+    # Korean only (iOS `bee9052d`): a polite setting with no level set — a
+    # scene character, a stranger, a public figure, a colleague. Also built
+    # by the client (Android `ConversationCharacter.politeSettingLine`).
+    "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)": "${opts.politeSettingLine ?? \"\"}",
     norm('knownAboutUser.isEmpty ? "(nothing yet)" : knownAboutUser.map { "- \\($0)" }'
          '.joined(separator: "\\n")'): "${knownBlock}",
     norm('rememberedNotes.isEmpty ? "(nothing yet)" : rememberedNotes.enumerated().map { '
@@ -407,6 +411,8 @@ export function summarySystemPrompt(opts: {{
   utcOffsetMinutes?: number
   /** The client-built relationship register exception ("" when none). */
   relationshipRegisterLine?: string
+  /** The client-built polite-setting exception, Korean ("" when none). */
+  politeSettingLine?: string
 }}): string {{
   const languageName = englishName(opts.targetLanguage)
   const nativeName = englishName(opts.nativeLanguage)

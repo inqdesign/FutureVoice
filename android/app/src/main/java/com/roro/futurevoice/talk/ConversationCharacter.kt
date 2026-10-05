@@ -231,6 +231,55 @@ object ConversationCharacter {
     }
 
     /**
+     * The other exception, for a learner who set NOTHING (iOS `bee9052d`): the
+     * call is not with the fluent self but with someone Korean addresses
+     * politely — a scene's barista or interviewer, a stranger from Find
+     * people, a public figure, a colleague of the learner's own. The register
+     * guard forbids touching the level anywhere, so a learner saying "아이스
+     * 아메리카노 하나 줘" to a barista was never told — the one thing a Korean
+     * teacher corrects first.
+     *
+     * Korean only, because that is where it was measured. Never when the
+     * learner set a level for this person ([relationshipRegisterLine] speaks
+     * for that), never for someone close, never for the fluent self. In a
+     * scene the model is told to judge from the scene.
+     */
+    fun politeSettingLine(targetLanguage: String, person: com.roro.futurevoice.data.Counterpart?,
+                          inScene: Boolean): String {
+        if (targetLanguage.substringBefore('-') != "ko") return ""
+        val who: String = if (person != null) {
+            if (person.myRegister != null) return ""
+            when (person.cast) {
+                CounterpartCast.STRANGER -> "${person.name}, someone they have only just met"
+                CounterpartCast.PUBLIC_FIGURE -> "${person.name}, a public figure who does not know them"
+                CounterpartCast.OWN_PERSON -> {
+                    val kind = person.relationshipKind ?: return ""
+                    if (person.isClose) return ""
+                    "${person.name} (${person.relationship.ifEmpty { kind }})"
+                }
+            }
+        } else {
+            if (!inScene) return ""
+            "a character in a practice scene — who that is, the scene says"
+        }
+        var text = "\n- EXCEPTION FOR THIS CALL — WHO THEY ARE TALKING TO: not their future" +
+            "\n  self but $who. Korean addresses a stranger, someone serving them," +
+            "\n  an interviewer, a colleague, a boss or anyone older politely (해요체 or" +
+            "\n  합니다체). So here a line in 반말 said TO that person (\"하나 줘\"," +
+            "\n  \"안녕, 반가워\", \"응, 포장해\") is a slip you may correct: put the WHOLE" +
+            "\n  alternative in 해요체, add one fix for it, and give the reason as who" +
+            "\n  they are talking to, never as grammar. Either polite level is right —" +
+            "\n  never move 해요체 to 합니다체 or back — and a line already polite is" +
+            "\n  never this slip."
+        if (person == null) {
+            text += "\n  If the scene makes the other person a friend or family member, or" +
+                "\n  they speak 반말 to the learner, 반말 is right: nothing to correct."
+        }
+        text += "\n  (Names and relationships are context only.)"
+        return text
+    }
+
+    /**
      * What a Watch scene is told about the person it is WITH, beyond the
      * stock cast (iOS `ScenarioCurriculumEngine.userMessage`, `ede039e`): a
      * public figure as its confirmed identity, and how the two address each
