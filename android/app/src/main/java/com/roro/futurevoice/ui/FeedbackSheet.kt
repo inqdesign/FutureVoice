@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -13,14 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
-import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +36,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.IosGlassTextButton
 import com.roro.futurevoice.BuildConfig
 import com.roro.futurevoice.R
 import com.roro.futurevoice.core.Config
@@ -91,8 +93,8 @@ enum class FeedbackContext(
     val rated: Boolean,
 ) {
     /** A learner who came BACK and had another real call. The only ask there is. */
-    RETURNING_TALK("returning_talk", R.string.feedback_returning_title,
-        R.string.feedback_returning_subtitle, true),
+    RETURNING_TALK("returning_talk", R.string.how_is_it_going_so_far,
+        R.string.you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f, true),
 }
 
 /** Once per milestone. Key prefix is the beta-era one on purpose — it is the
@@ -201,47 +203,71 @@ fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
         )
         return
     }
+    fun submit() {
+        sending = true; sendError = null
+        scope.launch {
+            runCatching { send(context, text.trim(), appRating, callRating) }
+                .onSuccess {
+                    delivered = true
+                    sent = true
+                    report("feedback_sent", mapOf(
+                        "app_rating" to appRating.toString(),
+                        "call_rating" to callRating.toString(),
+                        "typed" to if (text.isBlank()) "0" else "1"))
+                }
+                .onFailure {
+                    lastSendError = it.message ?: it::class.java.simpleName
+                    sendError = app.getString(R.string.feedback_couldnt_send, it.message ?: "")
+                }
+            sending = false
+        }
+    }
+
+    // iOS: a grouped Form under an inline bar — Not now leading, Send
+    // trailing — then the title block, the two star rows in one card, and
+    // "Anything you want to say" over its own field.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { if (!sending) onDismiss() }) {
-        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(context.title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(stringResource(context.subtitle), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (context.rated) {
-                StarRow(stringResource(R.string.feedback_the_app_overall), appRating) { appRating = it }
-                StarRow(stringResource(R.string.feedback_talking_to_your_future_self), callRating) { callRating = it }
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = { if (!sending) onDismiss() },
+        containerColor = AppSurfaces.ground) {
+        SheetHeader(
+            title = "",
+            leading = { IosGlassTextButton(stringResource(R.string.not_now),
+                onClick = onDismiss, enabled = !sending) },
+            trailing = {
+                if (sending) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                else IosGlassTextButton(stringResource(R.string.send), onClick = { submit() }, enabled = canSend)
+            },
+            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 8.dp),
+        )
+        Column(Modifier.fillMaxWidth().bottomBarInsets().verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(context.title), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(context.subtitle), fontSize = 16.sp, lineHeight = 22.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            OutlinedTextField(value = text, onValueChange = { text = it },
-                label = { Text(stringResource(R.string.feedback_anything_you_want_to_say)) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp))
-            sendError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onDismiss, enabled = !sending, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.not_now)) }
-                Button(onClick = {
-                    sending = true; sendError = null
-                    scope.launch {
-                        runCatching { send(context, text.trim(), appRating, callRating) }
-                            .onSuccess {
-                                delivered = true
-                                sent = true
-                                report("feedback_sent", mapOf(
-                                    "app_rating" to appRating.toString(),
-                                    "call_rating" to callRating.toString(),
-                                    "typed" to if (text.isBlank()) "0" else "1"))
-                            }
-                            .onFailure {
-                                lastSendError = it.message ?: it::class.java.simpleName
-                                sendError = app.getString(R.string.feedback_couldnt_send, it.message ?: "")
-                            }
-                        sending = false
-                    }
-                }, enabled = !sending && canSend, modifier = Modifier.weight(1f)) {
-                    if (sending) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(R.string.send))
+            if (context.rated) {
+                GroupedCard {
+                    StarRow(stringResource(R.string.the_app_overall), appRating) { appRating = it }
+                    GroupedRowDivider(inset = false)
+                    StarRow(stringResource(R.string.talking_to_your_future_self), callRating) { callRating = it }
                 }
             }
-            Spacer(Modifier.size(4.dp))
+            GroupedSectionHeader(stringResource(R.string.anything_you_want_to_say))
+            GroupedCard {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = text, onValueChange = { text = it },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp))
+            }
+            sendError?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(start = 16.dp, top = 12.dp))
+            }
         }
     }
 }
@@ -257,7 +283,7 @@ private fun StarRow(title: String, rating: Int, onChange: (Int) -> Unit) {
     val value = if (rating == 0) stringResource(R.string.feedback_not_rated)
     else stringResource(R.string.feedback_lld_out_of_5, rating)
     Row(
-        Modifier.fillMaxWidth().clearAndSetSemantics {
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp).clearAndSetSemantics {
             contentDescription = title
             stateDescription = value
         },
