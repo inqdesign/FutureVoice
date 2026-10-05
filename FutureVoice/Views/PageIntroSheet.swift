@@ -76,33 +76,23 @@ enum PageIntro {
 /// Which introductions this install has seen. Device-local on purpose: a
 /// second device is a second first look.
 enum PageIntroStore {
+    /// `v2` (1.1.4, founder: "every user sees the guide cards once, the first
+    /// time"): the guides were finished for this release, so everyone gets
+    /// each tab's guide once — existing learners included, and installs that
+    /// flipped through an earlier cut on TestFlight start over. The old
+    /// rule marked every tab seen for anyone who had already talked, on the
+    /// theory that they knew the pages; that hid the guides from exactly the
+    /// people the pages changed under.
     private static func key(_ page: PageIntro.Page) -> String {
-        "futurevoice.pageIntro.seen.\(page.rawValue)"
+        "futurevoice.pageIntro.seen.v2.\(page.rawValue)"
     }
-    private static let preparedKey = "futurevoice.pageIntro.prepared"
 
     static func isDue(_ page: PageIntro.Page) -> Bool {
-        prepareOnce()
-        return !UserDefaults.standard.bool(forKey: key(page))
+        !UserDefaults.standard.bool(forKey: key(page))
     }
 
     static func markSeen(_ page: PageIntro.Page) {
         UserDefaults.standard.set(true, forKey: key(page))
-    }
-
-    /// The introductions shipped after people already knew these pages. An
-    /// install that has talked before has opened every tab it cares about,
-    /// so it is marked as having seen them all, once, on its first check.
-    private static func prepareOnce() {
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: preparedKey) else { return }
-        defaults.set(true, forKey: preparedKey)
-        if !SessionStore.shared.loadAcrossLanguages().isEmpty {
-            // Tabs only: My routine's guide came later than the page, and
-            // what it explains (which days are green) is exactly what
-            // people who already use the page were asking.
-            PageIntro.tabs.forEach(markSeen)
-        }
     }
 
     /// Me → App guide's "show them again": each tab opens with its guide
