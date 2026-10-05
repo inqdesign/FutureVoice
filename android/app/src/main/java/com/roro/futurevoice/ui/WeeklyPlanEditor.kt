@@ -110,6 +110,8 @@ import kotlin.math.roundToInt
 private val HOUR_HEIGHT = 40.dp
 private val LABEL_WIDTH = 16.dp
 private val GAP = 3.dp
+/** The +'s height plus its margin, with some air. */
+private val ADD_BUTTON_CLEARANCE = (56 + 4 + 24).dp
 /** A drag moves the time in 10-minute steps, each one felt. */
 private const val DRAG_STEP_MINUTES = 10
 
@@ -257,15 +259,10 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                 actions = { TextButton(onClick = onClose) { Text(stringResource(R.string.routine_done)) } },
             )
         },
-        bottomBar = {
-            Text(stringResource(R.string.routine_editor_hint),
-                style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().background(AppSurfaces.card).bottomBarInsets()
-                    .padding(vertical = 10.dp, horizontal = 16.dp))
-        },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        // The timeline runs to the screen's bottom edge; only the top bar is
+        // padded off.
+        Column(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
             if (!notificationsOn) {
                 Row(Modifier.fillMaxWidth().background(AppSurfaces.card).clickable {
                     if (canAsk) askOnce() else context.startActivity(
@@ -287,7 +284,10 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
             WeekdayHeader(snapshot) { occ -> occ.blockId?.let { blockEditor = BlockTarget.InWeek(it) } }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Column(Modifier.fillMaxSize().verticalScroll(scroll)
-                    .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 96.dp)) {
+                    // Room for the + to float over without covering the
+                    // last hours.
+                    .padding(start = 8.dp, end = 8.dp, top = 6.dp).bottomBarInsets()
+                    .padding(bottom = ADD_BUTTON_CLEARANCE)) {
                     WeekGrid(
                         snapshot = snapshot, highlightId = landedId,
                         onAdd = { day, minute ->
@@ -314,7 +314,12 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                 }
                 // The + : the three blocks a routine is made of, put straight
                 // on the grid at the first free slot from the kind's usual time.
-                Box(Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 16.dp)) {
+                // Out of the way while a block is being dragged — it would sit
+                // over the very hours the block is being dropped on.
+                androidx.compose.animation.AnimatedVisibility(visible = dragTarget == null,
+                    enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomEnd)) {
+                Box(Modifier.bottomBarInsets().padding(end = 20.dp, bottom = 4.dp)) {
                     Box(Modifier.size(56.dp).shadow(8.dp, CircleShape).clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary).clickable { addMenu = true },
                         contentAlignment = Alignment.Center) {
@@ -329,6 +334,7 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                                 onClick = { addMenu = false; addBlock(k) })
                         }
                     }
+                }
                 }
             }
         }
