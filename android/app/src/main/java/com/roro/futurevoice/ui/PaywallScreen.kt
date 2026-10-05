@@ -841,15 +841,23 @@ private fun LadderRow(
                         maxLines = 1)
                 }
             }
-            if (scenes > 0) {
-                Text(stringResource(R.string.paywall_plus_scenes, scenes),
-                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            }
-            // A SIZE CUE, never a rule: the pool has no daily limit.
+            // A SIZE CUE, never a rule: the pool has no daily limit. It reads
+            // the minutes it sits under, so it comes right after them (iOS
+            // 964bae15); scenes and Speech follow as what the plan includes.
             if (minutes / 30 > 0 && shown?.talk_unlimited != true) {
                 Text(stringResource(R.string.about_lld_min_a_day, minutes / 30),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (scenes > 0) {
+                Text(stringResource(R.string.paywall_plus_scenes, scenes),
+                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            }
+            // Writing Speech scripts (AI or your own) is these tiers' alone
+            // (iOS 63817b73, the same rule as `canWriteSpeechScripts`).
+            if (tier == "plus" || tier == "max") {
+                Text(stringResource(R.string.speech_d35aea),
+                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
         }
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
