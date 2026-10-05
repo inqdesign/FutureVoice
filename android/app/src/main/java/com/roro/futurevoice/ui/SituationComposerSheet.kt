@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -488,7 +489,14 @@ internal fun ScenarioComposer(
     }
 
     val playsScene = host == ComposerHost.WATCH && onCommitted != null
-    val ctaTitle = stringResource(if (playsScene) R.string.watch else R.string.create)
+    // Talk's builder goes straight into the call (iOS ConversationHome:
+    // `ctaTitle: "Talk", ctaIcon: "mic.fill"`).
+    val startsCall = host == ComposerHost.TALK && onCommitted != null
+    val ctaTitle = stringResource(when {
+        playsScene -> R.string.watch
+        startsCall -> R.string.talk
+        else -> R.string.create
+    })
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // A SHEET, not a dialog: non-primary content lives in sheets (iOS UI
@@ -529,7 +537,11 @@ internal fun ScenarioComposer(
                     colors = ButtonDefaults.buttonColors(),
                     onClick = { commit() },
                 ) {
-                    Icon(if (playsScene) Icons.Filled.PlayArrow else Icons.Filled.Add,
+                    Icon(when {
+                            playsScene -> Icons.Filled.PlayArrow
+                            startsCall -> Icons.Filled.Mic
+                            else -> Icons.Filled.Add
+                        },
                         contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(if (committing) stringResource(R.string.working) else ctaTitle)

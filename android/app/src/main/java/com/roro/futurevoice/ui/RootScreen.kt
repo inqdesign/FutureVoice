@@ -1713,7 +1713,7 @@ private fun DiscoverSection(
             } else if (discoverTab == DiscoverTab.SCENARIOS) {
                 IconButton(onClick = { composing = true }) {
                     Icon(Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.make_your_own_situation),
+                        contentDescription = stringResource(R.string.build_a_scenario),
                         tint = MaterialTheme.colorScheme.primary)
                 }
             }
@@ -1838,8 +1838,9 @@ private fun DiscoverSection(
                 }
             }
             // The door to the rest of them, rather than a list that grows
-            // until the home screen is a filing cabinet.
-            if (live.size > 5) {
+            // until the home screen is a filing cabinet — always the list's
+            // tail, as on iOS.
+            if (live.isNotEmpty()) {
                 DiscoverRow(
                     title = stringResource(R.string.all_scenarios),
                     caption = "${live.size}",
@@ -1847,20 +1848,26 @@ private fun DiscoverSection(
                     onClick = onAllScenarios,
                 )
             }
-            if (scenarios.none { it.archivedAt == null && it.isMeeting != true && it.starterId == null }) {
-                DiscoverRow(
-                    title = stringResource(R.string.make_your_own_situation),
-                    icon = Icons.Filled.Add,
-                    onClick = { composing = true },
-                )
+            if (live.isEmpty()) {
+                // iOS `scenariosContent`: a plain tinted "+" label, not a card.
+                TextButton(onClick = { composing = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.build_your_first_scenario),
+                        style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
     }
 
     if (composing) {
+        // iOS: the box door (`.custom`), CTA "Talk" — the fresh scenario
+        // goes straight into the call.
         ScenarioComposer(
             targetLanguage = language,
             existingCategories = scenarios.mapNotNull { it.category }.distinct(),
+            mode = ComposerMode.CUSTOM,
+            onCommitted = { sc -> onPickScenario(sc) },
             onDismiss = { composing = false },
         )
     }
