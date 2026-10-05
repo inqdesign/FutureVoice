@@ -559,8 +559,19 @@ final class VocabStore: ObservableObject {
     /// Fold every ended session into the pool (idempotent) — used to seed the
     /// page from history the first time, and to catch anything missed.
     func backfillFromSessions() {
-        for s in SessionStore.shared.load() where s.endedAt != nil {
-            let userTexts = s.turns.filter { $0.role == .user }.map { $0.transcript }
+        // The SAME turns `SessionSummarizer` ingests, and nothing it refuses:
+        // a practice call (coach mode) credits nothing as used, and a turn
+        // flagged misheard is the recognizer's words, not the learner's.
+        // This pass reads every ended talk on every Progress/Practice/Home
+        // visit, so without the filter it credited both the moment the
+        // learner next opened a tab — words read off a suggestion left the
+        // notebook as "used" and raised the Progress vocabulary level.
+        // Same filter, same count: `ingest` resumes by position, so the two
+        // callers must hand it identical lists.
+        for s in SessionStore.shared.load() where s.endedAt != nil && !s.isPractice {
+            let userTexts = s.turns
+                .filter { $0.role == .user && !$0.excludedFromScoring }
+                .map { $0.transcript }
             ingest(sessionId: s.id, userTexts: userTexts, at: s.endedAt ?? s.startedAt)
         }
     }

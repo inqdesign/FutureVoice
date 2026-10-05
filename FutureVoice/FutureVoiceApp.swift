@@ -757,7 +757,7 @@ final class AppState: ObservableObject {
     ///   callers holding evidence that did not exist at the failed attempt —
     ///   a talk that just ended, or an assessment voided by an excluded turn.
     ///   Never pass it from a view refresh.
-    func maybeGenerateWeeklyReport(retryNow: Bool = false) {
+    func maybeGenerateWeeklyReport(retryNow: Bool = false, reason: String = "due") {
         if retryNow { weeklyReportRetryAfter = nil }
         // Archived talks and practice (coach mode) calls are out of the
         // evidence pool — same rule as the Progress tab's score stats. A
@@ -791,6 +791,17 @@ final class AppState: ObservableObject {
                 await MainActor.run {
                     WeeklyReportStore.shared.save(report)
                     self.weeklyReports = WeeklyReportStore.shared.load()
+                    // Every read, in every direction. Only `level_up` existed,
+                    // so a level that went DOWN — or flapped b1/b2 over the
+                    // same evidence when a talk was deleted — left no trace
+                    // (found 2026-10-05 reading the ledger by hand).
+                    Analytics.capture("level_assessed", [
+                        "from": self.proficiency.rawValue,
+                        "to": report.cefrLevel ?? "",
+                        "reason": reason,
+                        "talks": report.sessionCount,
+                        "first": last == nil
+                    ])
                     // The measured level replaces the self-reported setting —
                     // from here scoring calibration, pickup-word difficulty
                     // and the talk-card label all track measurement. A manual
@@ -813,6 +824,10 @@ final class AppState: ObservableObject {
                 }
             } catch {
                 print("weekly report generation failed:", error)
+                Analytics.capture("level_assess_failed", [
+                    "reason": reason,
+                    "error": String(describing: error).prefix(200).description
+                ])
                 await MainActor.run {
                     self.weeklyReportRetryAfter =
                         Date().addingTimeInterval(Self.weeklyReportRetryCooldown)
@@ -836,7 +851,8 @@ final class AppState: ObservableObject {
               (s.archivedAt != nil) != archived else { return }
         s.archivedAt = archived ? Date() : nil
         SessionStore.shared.save(s)
-        reassessAfterEvidenceChange(in: s)
+        // Archiving is an evidence change only for a talk that WAS evidence.
+        if s.isLevelEvidence { reassessAfterEvidenceChange(in: s) }
     }
 
     /// Delete a talk for good: the session row, its drill cards, and its
@@ -852,7 +868,8 @@ final class AppState: ObservableObject {
                 try? FileManager.default.removeItem(at: url)
             }
         }
-        reassessAfterEvidenceChange(in: s)
+        // An archived talk was already out of the evidence pool.
+        if s.archivedAt == nil, s.isLevelEvidence { reassessAfterEvidenceChange(in: s) }
     }
 
     /// Evidence inside an already-minted assessment changed — the user
@@ -867,12 +884,20 @@ final class AppState: ObservableObject {
         // The latest window = everything after the previous report's end.
         let windowStart = weeklyReports.dropFirst().first?.periodEnd ?? .distantPast
         guard when > windowStart, when <= latest.periodEnd else { return }
+        // A talk the learner never spoke in, or a practice call, was never
+        // evidence, so dropping it changes nothing the verdict stood on —
+        // yet it voided the assessment and re-ran it over the same window.
+        // The ledger shows identical prompts minutes apart and levels that
+        // flapped b1 → b2 → b1 on deletes (2026-10-05): a second model read
+        // of the same evidence is noise, not a correction.
+        guard session.isLevelEvidence || session.turns.contains(where: { $0.excludedFromScoring })
+        else { return }
         WeeklyReportStore.shared.delete(id: latest.id)
         weeklyReports = WeeklyReportStore.shared.load()
         // With the voided report gone, the unlock conditions are met by the
         // same window that produced it — this regenerates immediately, now
         // with the excluded turns filtered out.
-        maybeGenerateWeeklyReport(retryNow: true)
+        maybeGenerateWeeklyReport(retryNow: true, reason: "evidence_changed")
     }
 
     /// Watches Supabase auth state. When a session appears (either restored

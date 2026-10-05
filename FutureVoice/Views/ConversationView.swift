@@ -2640,11 +2640,12 @@ struct ConversationView: View {
             error = explain("Your voice isn't ready yet.")
             return
         }
-        realtime.onUserTurn = { text, url, ms in
+        realtime.onUserTurn = { text, url, ms, fluency in
             guard !isTornDown else { return }
             var turn = Turn(id: UUID(), role: .user, audioURL: nil,
                             transcript: text, durationMs: ms, timestamp: Date(),
                             suggestion: nil)
+            turn.fluency = fluency
             // `TurnAudioStore` owns the file from here; the client wrote it to
             // a temp path precisely so this move is the only copy.
             if let url, let data = try? Data(contentsOf: url) {

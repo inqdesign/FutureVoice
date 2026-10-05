@@ -328,6 +328,16 @@ struct Session: Codable, Identifiable {
 
     /// See `coached`.
     var isPractice: Bool { coached == true }
+
+    /// Whether this talk is something the level assessment reads: not a
+    /// practice call, and the learner said at least one scorable line.
+    /// (Archiving is checked by the caller — it is the change being made.)
+    var isLevelEvidence: Bool {
+        !isPractice && turns.contains {
+            $0.role == .user && !$0.excludedFromScoring
+                && !$0.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
 }
 
 /// One call's grammar focus, as it was shown and as it went (2026-09-30).

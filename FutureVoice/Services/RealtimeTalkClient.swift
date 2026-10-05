@@ -97,7 +97,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     // for listen-back, the fluent self's line for replay and shadowing.
 
     /// A committed learner turn: text, their own audio, duration in ms.
-    var onUserTurn: ((String, URL?, Int) -> Void)?
+    /// text, the take's WAV, its length, and its measured delivery.
+    var onUserTurn: ((String, URL?, Int, FluencyStats?) -> Void)?
     /// The fluent self has STARTED a line — its bubble belongs on screen
     /// now, empty, because the voice is about to be heard. Carries the
     /// context id so later events find the same bubble.
@@ -1872,7 +1873,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 let trimmed = Self.trimSilence(pcm: pcm, sampleRate: rate)
                 let url = Self.saveWAV(pcm: trimmed, sampleRate: rate)
                 let ms = Int(Double(trimmed.count / 2) / rate * 1000)
-                onUserTurn?(said, url, ms)
+                onUserTurn?(said, url, ms, Self.fluencyStats(pcm: trimmed, sampleRate: rate))
             } else {
                 userPCM = Data()
             }
@@ -2152,6 +2153,67 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let end = min(samples, (lastLoud + 1) * window + lead)
         guard end > start else { return pcm }
         return pcm.subdata(in: (start * 2)..<(end * 2))
+    }
+
+    /// Voiced time and mid-speech pauses, read off the learner's own take —
+    /// the realtime path's stand-in for `FluencyMeter`, which only runs on
+    /// the HTTP path's mic. Without it every realtime turn carried no
+    /// `fluency`, so articulation rate was 0 for every call: Progress fell
+    /// back to wall-clock pace and the level assessment was told "no timing
+    /// data" for the one dimension a transcript cannot show (2026-10-05).
+    ///
+    /// It is `FluencyMeter`'s rule, frame for frame — the same level curve
+    /// (−50…0 dBFS → 0…1), the same −32.5 dBFS floor, 11 dB over a
+    /// decaying-minimum noise estimate, 0.35 s for a pause — because the
+    /// fluency bands were set against that ruler, and a call must read the
+    /// same pace whichever path carried it. A bar relative to the take's
+    /// own peak was tried first and measured on four real recorded voices:
+    /// it disagreed with the meter by up to a factor of two.
+    nonisolated static func fluencyStats(pcm: Data, sampleRate: Double) -> FluencyStats? {
+        let samples = pcm.count / MemoryLayout<Int16>.size
+        guard samples > 0, sampleRate > 0 else { return nil }
+        let window = max(1, Int(sampleRate * 0.02))          // 20 ms
+        let floorLevel: Float = 0.35, margin: Float = 0.22, risePerSecond: Float = 0.03
+        var voiced = 0.0, pauses = 0, pauseSeconds = 0.0, longest = 0.0
+        var started = false
+        var silenceRun = 0.0
+        var noiseFloor: Float?
+        pcm.withUnsafeBytes { raw in
+            let ptr = raw.bindMemory(to: Int16.self)
+            var index = 0
+            while index < samples {
+                let end = min(index + window, samples)
+                var sum: Float = 0
+                for i in index..<end {
+                    let v = Float(Int16(littleEndian: ptr[i])) / 32768.0
+                    sum += v * v
+                }
+                let count = end - index
+                let seconds = Double(count) / sampleRate
+                index = end
+                let rms = (sum / Float(count)).squareRoot()
+                let level = max(0, min(1, (20 * log10(max(rms, 0.00001)) + 50) / 50))
+                let floor = noiseFloor.map { min(level, $0 + risePerSecond * Float(seconds)) }
+                    ?? min(level, floorLevel)
+                noiseFloor = floor
+                if level >= max(floorLevel, floor + margin) {
+                    if started, silenceRun >= 0.35 {
+                        pauses += 1
+                        pauseSeconds += silenceRun
+                        longest = max(longest, silenceRun)
+                    }
+                    silenceRun = 0
+                    voiced += seconds
+                    started = true
+                } else if started {
+                    silenceRun += seconds
+                }
+            }
+        }
+        guard voiced > 0 else { return nil }
+        return FluencyStats(speakingSeconds: voiced, totalSeconds: voiced + pauseSeconds,
+                            pauseCount: pauses, pauseSeconds: pauseSeconds,
+                            longestPauseSeconds: longest)
     }
 
     /// PCM → a WAV file in the caches directory. The caller moves it into the
