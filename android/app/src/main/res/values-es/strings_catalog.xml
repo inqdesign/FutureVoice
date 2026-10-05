@@ -395,7 +395,6 @@
     <string name="daily_call">"Llamada diaria"</string>
     <string name="daily_goal">"Objetivo diario"</string>
     <string name="daily_goals">"Objetivos diarios"</string>
-    <string name="daily_review_shadowing">"Repaso diario · Shadowing"</string>
     <string name="daily_small_talk">"Charla del día a día"</string>
     <string name="dark">"Oscuro"</string>
     <string name="day">"Día"</string>
@@ -544,7 +543,6 @@
     <string name="every_day_it_runs">"Todos los días que tiene"</string>
     <!-- 'Every level gets the same length and the same amount of substance — only the words and sentence shapes change.' -->
     <string name="every_level_gets_the_same_length_and_the_same_amount_of_subs_ff323e">"Todos los niveles tienen la misma duración y la misma sustancia: solo cambian las palabras y las formas de las frases."</string>
-    <string name="every_line_said_naturally">"Cada frase, más natural"</string>
     <!-- 'Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up.' -->
     <string name="every_measured_skill_already_reads_at_or_above_keep_talking_24170a">"Todo lo medido ya está en %s o por encima — sigue hablando y la nota global también llegará."</string>
     <!-- "Every scene is the same length and gets just as far into the situation. Your level picks the words and sentence shapes inside it, and the vocabulary it teaches comes from just above — words a learner at your level plausibly doesn't own yet." -->
@@ -1838,7 +1836,6 @@
     <string name="speech_genre_product">"Producto"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"Pon un guion en pantalla y léelo en voz alta: avanza contigo mientras lees. Si quieres, enciende la cámara. Al terminar ves cómo te ceñiste al texto, tu velocidad y tus pausas, y de paso aprendes algo, porque los guiones tratan temas que vale la pena conocer."</string>
-    <string name="speech_practice">"Práctica de discursos"</string>
     <string name="speed">"Velocidad"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"Úsalos como quieras, sin límite diario."</string>
     <string name="sports">"deportes"</string>
@@ -1922,7 +1919,6 @@
     <string name="talk_at_length_most_days">"Llamadas largas casi todos los días"</string>
     <string name="talk_book">"Cuaderno de la llamada"</string>
     <string name="talk_for_about_10_minutes">"Habla unos 10 minutos"</string>
-    <string name="talk_like_a_phone_call">"Habla como en una llamada"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Habla %1$d minutos al día, %2$d días seguidos."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"Habla %d minutos más y volvemos a leer este nivel con todo lo nuevo que has dicho."</string>
@@ -2656,7 +2652,6 @@
     <string name="your_own_review_book">"Tu propio cuaderno de repaso"</string>
     <string name="your_own_situation">"Tu propia situación"</string>
     <string name="your_own_text">"Tu propio texto"</string>
-    <string name="your_own_textbook">"Tu propio libro de texto"</string>
     <string name="your_own_voice_already_fluent">"Tu propia voz, ya fluida"</string>
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"Tu ritmo es de %d palabras por minuto. Habla más a menudo y un poco más largo: los turnos largos crean fluidez."</string>
@@ -2713,6 +2708,7 @@
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"Tus conversaciones, tarjetas, palabras y grabaciones, audio incluido, se mantienen iguales en todos los dispositivos con esta cuenta y tu iCloud. Desactivarlo detiene la sincronización y no elimina nada."</string>
     <string name="your_talks_together">"Llamadas juntos"</string>
+    <string name="your_textbook">"Tu libro de texto"</string>
     <!-- 'Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store.' -->
     <string name="your_trial_becomes_a_paid_subscription_in_lld_days_you_can_c_3e05d0">"La prueba pasa a suscripción de pago en %d días. Puedes cancelarla en el App Store cuando quieras."</string>
     <string name="your_trial_becomes_paid_on">"La prueba pasa a pago el %s"</string>

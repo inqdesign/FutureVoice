@@ -398,7 +398,6 @@
     <string name="daily_call">"毎日の電話"</string>
     <string name="daily_goal">"1日の目標"</string>
     <string name="daily_goals">"1日の目標"</string>
-    <string name="daily_review_shadowing">"毎日の復習 · シャドーイング"</string>
     <string name="daily_small_talk">"日常の雑談"</string>
     <string name="dark">"ダーク"</string>
     <string name="day">"日"</string>
@@ -547,7 +546,6 @@
     <string name="every_day_it_runs">"このブロックのある全曜日"</string>
     <!-- 'Every level gets the same length and the same amount of substance — only the words and sentence shapes change.' -->
     <string name="every_level_gets_the_same_length_and_the_same_amount_of_subs_ff323e">"どのレベルでも長さも中身の濃さも同じです。変わるのは使う単語と文の形だけ。"</string>
-    <string name="every_line_said_naturally">"一文ずつ、自然な言い方に"</string>
     <!-- 'Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up.' -->
     <string name="every_measured_skill_already_reads_at_or_above_keep_talking_24170a">"測定した項目はすべて%s以上です。話し続ければ総合評価も追いつきます。"</string>
     <!-- "Every scene is the same length and gets just as far into the situation. Your level picks the words and sentence shapes inside it, and the vocabulary it teaches comes from just above — words a learner at your level plausibly doesn't own yet." -->
@@ -1841,7 +1839,6 @@
     <string name="speech_genre_product">"製品"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"画面に原稿を出して、声に出して読みましょう。読むのに合わせて原稿が進み、カメラはオンでもオフでも使えます。読み終えると、原稿どおりに読めたか、速さ、間の取り方が採点されます。原稿は知って得するテーマばかりなので、読みながら知識も身につきます。"</string>
-    <string name="speech_practice">"スピーチ練習"</string>
     <string name="speed">"速度"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"1日の上限なしで、好きなように使えます。"</string>
     <string name="sports">"スポーツ"</string>
@@ -1925,7 +1922,6 @@
     <string name="talk_at_length_most_days">"ほぼ毎日たっぷり通話"</string>
     <string name="talk_book">"通話ブック"</string>
     <string name="talk_for_about_10_minutes">"10分ほど話す"</string>
-    <string name="talk_like_a_phone_call">"電話みたいに会話"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"1日%1$d分の通話を、%2$d日連続。"</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"あと%d分話すと、新しく話したことをすべて集めてレベルを判定し直します。"</string>
@@ -2659,7 +2655,6 @@
     <string name="your_own_review_book">"自分だけの復習ブック"</string>
     <string name="your_own_situation">"自分の場面をつくる"</string>
     <string name="your_own_text">"自分で書いた文章"</string>
-    <string name="your_own_textbook">"自分だけの教材"</string>
     <string name="your_own_voice_already_fluent">"流暢になった自分の声で話します"</string>
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"話す速さは1分あたり%d語です。もっと頻繁に、少し長く話すと流れがつきます。"</string>
@@ -2716,6 +2711,7 @@
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"トーク、カード、単語、録音が、音声も含めて、このアカウントとiCloudにサインインしたすべてのデバイスで同じに保たれます。オフにしても同期が止まるだけで、何も削除されません。"</string>
     <string name="your_talks_together">"一緒にした通話"</string>
+    <string name="your_textbook">"自分の教材"</string>
     <!-- 'Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store.' -->
     <string name="your_trial_becomes_a_paid_subscription_in_lld_days_you_can_c_3e05d0">"%d日後にトライアルが有料サブスクリプションに変わります。App Storeでいつでも解約できます。"</string>
     <string name="your_trial_becomes_paid_on">"%sにトライアルが有料に変わります"</string>

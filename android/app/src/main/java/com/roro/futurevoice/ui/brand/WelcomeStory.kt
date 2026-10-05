@@ -346,11 +346,11 @@ fun CenteredFlow(
 
 /**
  * What the app does, said quietly under a line: one symbol, a few words,
- * arriving after the caption has. [compact] for the closing frame, where
- * five are gathered and should pair up two to a row.
+ * arriving after the caption has. One size everywhere, the closing frame
+ * included (iOS e57dc08e).
  */
 @Composable
-fun Glimpse(icon: ImageVector, label: String, delayMs: Int = 2800, compact: Boolean = false, still: Boolean = false) {
+fun Glimpse(icon: ImageVector, label: String, delayMs: Int = 2800, still: Boolean = false) {
     val shape = RoundedCornerShape(50)
     Row(
         Modifier
@@ -358,13 +358,13 @@ fun Glimpse(icon: ImageVector, label: String, delayMs: Int = 2800, compact: Bool
             .clip(shape)
             .background(Color.White.copy(alpha = 0.55f))
             .border(0.5.dp, StoryInk.copy(alpha = 0.10f), shape)
-            .padding(horizontal = if (compact) 11.dp else 14.dp, vertical = if (compact) 6.dp else 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         val tint = StoryInk.copy(alpha = 0.75f)
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(if (compact) 13.dp else 16.dp))
-        Text(label, color = tint, fontSize = if (compact) 12.sp else 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        Text(label, color = tint, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }
 

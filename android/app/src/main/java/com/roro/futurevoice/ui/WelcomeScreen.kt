@@ -36,8 +36,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.filled.MicExternalOn
+import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,7 +52,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -75,7 +77,8 @@ import kotlinx.coroutines.delay
  * 10f65de5; founder: "strip the tutorial, a quiet gradient and words that
  * animate in"). The fluent self tells the learner's own story back to them,
  * introduces itself and says what the two of them will do together; it ends
- * on the five things the app does, gathered, and the button.
+ * on the five things the app does, gathered, and the button. Chips carry the
+ * app's own feature names (iOS e57dc08e).
  *
  * The narrator is the FLUENT SELF, so every line is informal wherever the
  * language marks it; the chips are the app speaking. The captions are the
@@ -159,6 +162,13 @@ fun WelcomeScreen(
             step()
         }
     }
+    // A soft tap as each line turns over: felt, not heard (iOS e57dc08e —
+    // a voice-over was tried and removed).
+    val haptic = LocalHapticFeedback.current
+    var lastBeat by remember { mutableIntStateOf(startBeat) }
+    LaunchedEffect(beat) {
+        if (beat != lastBeat) { lastBeat = beat; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+    }
     LaunchedEffect(isClosing) {
         if (!isClosing) { doorOpen = false; return@LaunchedEffect }
         // The orb opens into the button once the last line has landed;
@@ -209,8 +219,8 @@ fun WelcomeScreen(
                         // The film's own chips, gathered — full width, so
                         // they pair up rather than stack one a row.
                         CenteredFlow(Modifier.fillMaxWidth(), spacing = 6.dp, lineSpacing = 8.dp) {
-                            beats.mapNotNull { it.glimpse }.forEachIndexed { i, g ->
-                                Glimpse(g.first, g.second, delayMs = 1500 + i * 120, compact = true, still = still)
+                            welcomeClosingChips().forEachIndexed { i, g ->
+                                Glimpse(g.first, g.second, delayMs = 1500 + i * 120, still = still)
                             }
                         }
                     }
@@ -352,13 +362,24 @@ fun welcomeBeats(): List<StoryBeat> = listOf(
     StoryBeat(stringResource(R.string.school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65)),
     StoryBeat(stringResource(R.string.hi_it_s_me_you_already_fluent)),
     StoryBeat(stringResource(R.string.i_ll_call_you_let_s_talk_five_minutes_a_day),
-        Icons.Filled.Phone to stringResource(R.string.talk_like_a_phone_call)),
+        Icons.Filled.Phone to stringResource(R.string.talk)),
     StoryBeat(stringResource(R.string.stumble_get_it_wrong_that_s_fine_i_ll_show_you_how_it_goes),
-        Icons.Outlined.ChatBubbleOutline to stringResource(R.string.every_line_said_naturally)),
+        Icons.Outlined.DocumentScanner to stringResource(R.string.say_it_again)),
     StoryBeat(stringResource(R.string.everything_we_talk_about_becomes_your_own_textbook),
-        Icons.AutoMirrored.Outlined.MenuBook to stringResource(R.string.your_own_textbook)),
+        Icons.AutoMirrored.Outlined.MenuBook to stringResource(R.string.your_textbook)),
     StoryBeat(stringResource(R.string.what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e),
-        Icons.Filled.Autorenew to stringResource(R.string.daily_review_shadowing)),
+        Icons.Filled.Autorenew to stringResource(R.string.review)),
     StoryBeat(stringResource(R.string.practice_while_you_watch_yourself_until_you_feel_sure_until_5d1614),
-        Icons.Filled.RecordVoiceOver to stringResource(R.string.speech_practice)),
+        Icons.Filled.MicExternalOn to stringResource(R.string.speech_d00d85)),
+)
+
+/** The closing frame's chips: what the app does, by the names the app itself
+ *  uses for them (iOS `WelcomeView.closingChips`). */
+@Composable
+fun welcomeClosingChips(): List<Pair<ImageVector, String>> = listOf(
+    Icons.Filled.Phone to stringResource(R.string.talk),
+    Icons.AutoMirrored.Outlined.MenuBook to stringResource(R.string.your_textbook),
+    Icons.Filled.Autorenew to stringResource(R.string.review),
+    Icons.Filled.MicExternalOn to stringResource(R.string.speech_d00d85),
+    Icons.Outlined.DocumentScanner to stringResource(R.string.say_it_again),
 )

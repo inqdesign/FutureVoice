@@ -398,7 +398,6 @@
     <string name="daily_call">"每日來電"</string>
     <string name="daily_goal">"每日目標"</string>
     <string name="daily_goals">"每日目標"</string>
-    <string name="daily_review_shadowing">"每日複習 · 跟讀"</string>
     <string name="daily_small_talk">"日常閒聊"</string>
     <string name="dark">"深色"</string>
     <string name="day">"天"</string>
@@ -547,7 +546,6 @@
     <string name="every_day_it_runs">"套用到所有有這個時段的日子"</string>
     <!-- 'Every level gets the same length and the same amount of substance — only the words and sentence shapes change.' -->
     <string name="every_level_gets_the_same_length_and_the_same_amount_of_subs_ff323e">"不論哪個等級，長度和內容的份量都一樣。改變的只有用字和句子的形態。"</string>
-    <string name="every_line_said_naturally">"每一句，都換成自然的說法"</string>
     <!-- 'Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up.' -->
     <string name="every_measured_skill_already_reads_at_or_above_keep_talking_24170a">"測到的項目都已經在%s以上了。繼續說，綜合評估就會跟上。"</string>
     <!-- "Every scene is the same length and gets just as far into the situation. Your level picks the words and sentence shapes inside it, and the vocabulary it teaches comes from just above — words a learner at your level plausibly doesn't own yet." -->
@@ -1841,7 +1839,6 @@
     <string name="speech_genre_product">"產品"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"把講稿放上螢幕，大聲唸出來，畫面會跟著你往下走。想錄下自己的樣子就開相機，不開也可以。唸完會幫你看照稿唸得準不準、速度和停頓如何，講稿的主題也都有趣又實用，邊唸邊長知識。"</string>
-    <string name="speech_practice">"演講練習"</string>
     <string name="speed">"速度"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"沒有每日上限，想怎麼用就怎麼用。"</string>
     <string name="sports">"運動"</string>
@@ -1925,7 +1922,6 @@
     <string name="talk_at_length_most_days">"幾乎每天長時間通話"</string>
     <string name="talk_book">"通話複習本"</string>
     <string name="talk_for_about_10_minutes">"說 10 分鐘左右"</string>
-    <string name="talk_like_a_phone_call">"像打電話一樣聊天"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"每天通話%1$d分鐘，連續%2$d天。"</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"再聊%d分鐘，就會把這段時間新說的話全部拿來重新判定程度。"</string>
@@ -2659,7 +2655,6 @@
     <string name="your_own_review_book">"專屬的複習本"</string>
     <string name="your_own_situation">"我的情境"</string>
     <string name="your_own_text">"你自己的文字"</string>
-    <string name="your_own_textbook">"專屬於你的教材"</string>
     <string name="your_own_voice_already_fluent">"自己的聲音，已經很流利"</string>
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"說話速度是每分鐘%d個字。更常說、說久一點，流暢度就會上來。"</string>
@@ -2716,6 +2711,7 @@
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"對話、卡片、單字和錄音（包含音訊）會在登入此帳號與 iCloud 的所有裝置上保持一致。關閉只會停止同步，不會刪除任何內容。"</string>
     <string name="your_talks_together">"一起聊過的通話"</string>
+    <string name="your_textbook">"我的教材"</string>
     <!-- 'Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store.' -->
     <string name="your_trial_becomes_a_paid_subscription_in_lld_days_you_can_c_3e05d0">"%d天後試用會轉為付費訂閱。隨時可以在 App Store 取消。"</string>
     <string name="your_trial_becomes_paid_on">"試用在%s轉為付費"</string>

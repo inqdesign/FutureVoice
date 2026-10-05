@@ -399,7 +399,6 @@
     <string name="daily_call">"매일 전화"</string>
     <string name="daily_goal">"하루 목표"</string>
     <string name="daily_goals">"하루 목표"</string>
-    <string name="daily_review_shadowing">"매일 복습 · 따라 말하기"</string>
     <string name="daily_small_talk">"일상 잡담"</string>
     <string name="dark">"어둡게"</string>
     <string name="day">"일"</string>
@@ -548,7 +547,6 @@
     <string name="every_day_it_runs">"이 칸이 있는 모든 요일"</string>
     <!-- 'Every level gets the same length and the same amount of substance — only the words and sentence shapes change.' -->
     <string name="every_level_gets_the_same_length_and_the_same_amount_of_subs_ff323e">"어느 레벨이든 길이도 담기는 내용도 같아요. 달라지는 건 쓰는 단어와 문장 형태뿐이에요."</string>
-    <string name="every_line_said_naturally">"매 문장, 자연스러운 말로"</string>
     <!-- 'Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up.' -->
     <string name="every_measured_skill_already_reads_at_or_above_keep_talking_24170a">"측정된 항목은 모두 %s 이상이에요. 계속 말하면 종합 평가도 따라와요."</string>
     <!-- "Every scene is the same length and gets just as far into the situation. Your level picks the words and sentence shapes inside it, and the vocabulary it teaches comes from just above — words a learner at your level plausibly doesn't own yet." -->
@@ -1842,7 +1840,6 @@
     <string name="speech_genre_product">"제품"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"화면에 원고를 띄워 두고 소리 내어 읽어 보세요. 읽는 만큼 원고가 따라 올라가고, 카메라는 켜도 꺼도 돼요. 다 읽으면 원고대로 읽었는지, 속도와 쉼은 어땠는지 점수로 알려줘요. 원고마다 알아 두면 좋은 이야기가 담겨 있어서 읽는 재미도 있어요."</string>
-    <string name="speech_practice">"스피치 연습"</string>
     <string name="speed">"속도"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"하루 제한 없이 원하는 대로 쓰면 돼요."</string>
     <string name="sports">"스포츠"</string>
@@ -1926,7 +1923,6 @@
     <string name="talk_at_length_most_days">"거의 매일 길게 통화"</string>
     <string name="talk_book">"대화 책"</string>
     <string name="talk_for_about_10_minutes">"10분 정도 말하기"</string>
-    <string name="talk_like_a_phone_call">"전화하듯 대화"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Talk 하루 %1$d분씩, %2$d일 연속."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"%d분 더 대화하면 그동안 새로 말한 걸 전부 모아 레벨을 다시 판정해요."</string>
@@ -2660,7 +2656,6 @@
     <string name="your_own_review_book">"개인화된 복습교재"</string>
     <string name="your_own_situation">"내 상황 만들기"</string>
     <string name="your_own_text">"내가 쓴 글"</string>
-    <string name="your_own_textbook">"나만의 교재"</string>
     <string name="your_own_voice_already_fluent">"유창해진 내 목소리로 말해요"</string>
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"말하기 속도가 분당 %d단어예요. 더 자주, 조금 더 길게 말하면 흐름이 붙어요."</string>
@@ -2717,6 +2712,7 @@
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"통화, 카드, 단어, 녹음이 — 오디오까지 — 이 계정과 iCloud에 로그인한 모든 기기에서 같게 유지돼요. 끄면 동기화만 멈추고 아무것도 지우지 않아요."</string>
     <string name="your_talks_together">"함께한 대화"</string>
+    <string name="your_textbook">"나만의 교재"</string>
     <!-- 'Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store.' -->
     <string name="your_trial_becomes_a_paid_subscription_in_lld_days_you_can_c_3e05d0">"%d일 뒤에 체험이 유료 구독으로 바뀌어요. App Store에서 언제든 해지할 수 있어요."</string>
     <string name="your_trial_becomes_paid_on">"%s에 체험이 유료로 바뀌어요"</string>
