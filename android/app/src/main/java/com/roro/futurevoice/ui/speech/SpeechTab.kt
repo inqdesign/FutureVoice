@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -32,7 +34,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Info
@@ -303,23 +305,35 @@ internal fun clockLabel(seconds: Double): String {
 internal fun scoreColor(score: Int): Color =
     if (score >= 85) Color(0xFF34C759) else if (score >= 65) Color(0xFFFF9500) else Color(0xFFFF3B30)
 
-/** A full-height sheet on the page ground, like the other form sheets. */
+/**
+ * A sheet on the page ground. iOS presents these with `.sheet` and no
+ * detents — the LARGE detent, the whole screen below the status bar — so
+ * [fullHeight] fills the screen however short the content; only the Plus
+ * sheet (iOS `.height(560)`) hugs its content. Capture runs draw it inline,
+ * as iOS's harness returns the view itself rather than presenting it.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SpeechSheet(onDismiss: () -> Unit, dismissible: Boolean = true,
+internal fun SpeechSheet(onDismiss: () -> Unit, dismissible: Boolean = true, fullHeight: Boolean = true,
                          content: @Composable ColumnScope.() -> Unit) {
+    val body: @Composable (Modifier) -> Unit = { m ->
+        Column(
+            m.fillMaxWidth().then(if (fullHeight) Modifier.fillMaxHeight() else Modifier)
+                .bottomBarInsets().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            content = content,
+        )
+    }
+    if (com.roro.futurevoice.capture.flags.SpeechCaptureFlags.inlineSheets) {
+        Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) { body(Modifier.statusBarsPadding()) }
+        return
+    }
     ModalBottomSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
             confirmValueChange = { dismissible }),
         onDismissRequest = { if (dismissible) onDismiss() },
         containerColor = AppSurfaces.ground, dragHandle = null,
-    ) {
-        Column(
-            Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 16.dp).padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            content = content,
-        )
-    }
+    ) { body(Modifier) }
 }
 
 // MARK: - Composer
@@ -380,9 +394,8 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
                                 Text(g.blurb(), style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Icon(if (g == genre) Icons.Filled.RadioButtonChecked else Icons.Filled.RadioButtonUnchecked,
-                                null, tint = if (g == genre) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.outlineVariant)
+                            // iOS's inline Picker: a trailing check on the chosen one.
+                            if (g == genre) Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -520,7 +533,7 @@ internal fun SpeechPlusSheet(isLight: Boolean, onDismiss: () -> Unit) {
     var paywall by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { Analytics.capture("speech_plus_sheet", mapOf("light" to isLight)) }
-    SpeechSheet(onDismiss) {
+    SpeechSheet(onDismiss, fullHeight = false) {
         SheetHeader("", leading = {
             IosGlassButton(onClick = onDismiss, circle = true) {
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close),
@@ -693,8 +706,7 @@ internal fun SpeechTakesSheet(scriptId: String, onDismiss: () -> Unit) {
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
-                                .format(Date(take.createdAt)), style = MaterialTheme.typography.bodyLarge)
+                            Text(takeDateLabel(take.createdAt), style = MaterialTheme.typography.bodyLarge)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(clockLabel(take.durationSeconds), style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -713,4 +725,12 @@ internal fun SpeechTakesSheet(scriptId: String, onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+/** iOS `.dateTime.month().day().hour().minute()`: month-day and time in the
+ *  learner's locale, no year ("10월 5일 오후 9:17"). */
+internal fun takeDateLabel(at: Long): String {
+    val locale = java.util.Locale.getDefault()
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMdjmm")
+    return java.text.SimpleDateFormat(pattern, locale).format(Date(at))
 }

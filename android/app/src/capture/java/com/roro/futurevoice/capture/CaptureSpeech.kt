@@ -92,7 +92,10 @@ object CaptureSpeech {
     }
 
     @Composable
-    private fun Seeded(context: Context, content: @Composable () -> Unit) {
+    private fun Seeded(context: Context, inline: Boolean = true, content: @Composable () -> Unit) {
+        // iOS returns these sheets' views as the page; only speech-plus is
+        // presented over a background.
+        SpeechCaptureFlags.inlineSheets = inline
         var ready by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { seed(context); StoreEvents.bump(); ready = true }
         if (ready) Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) { content() }
@@ -117,7 +120,7 @@ object CaptureSpeech {
         },
         "speech-prompter" to { ctx -> Prompter(ctx, 24) },
         "speech-open" to { ctx -> Prompter(ctx, null) },
-        "speech-plus" to { ctx -> Seeded(ctx) { SpeechPlusSheet(isLight = true, onDismiss = {}) } },
+        "speech-plus" to { ctx -> Seeded(ctx, inline = false) { SpeechPlusSheet(isLight = true, onDismiss = {}) } },
         "speech-script-sheet" to { ctx ->
             Seeded(ctx) {
                 val s = SpeechStore.shared(ctx).scripts.value.first { !it.isBuiltIn && it.genre == SpeechGenre.PERSON }

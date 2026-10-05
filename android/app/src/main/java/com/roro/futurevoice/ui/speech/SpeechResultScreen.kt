@@ -114,7 +114,7 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         SheetHeader(
-            take?.let { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it.createdAt)) }.orEmpty(),
+            take?.let { takeDateLabel(it.createdAt) }.orEmpty(),
             leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onBack) },
             trailing = onAgain?.let { again -> {
                 IosGlassButton(onClick = again) {
