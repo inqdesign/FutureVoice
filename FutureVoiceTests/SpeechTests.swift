@@ -218,7 +218,14 @@ final class ShadowLineEndTests: XCTestCase {
 }
 
 final class SpeechKoreanFollowTests: XCTestCase {
-    private let track = SpeechPrompterTrack(script: SpeechLibrary.builtIn(for: "ko")!.body, language: "ko")
+    /// A fixed Korean passage, so the tests don't move when the bundled
+    /// sample is rewritten.
+    private static let passage = """
+    여러분, 오늘 하품 몇 번 하셨나요? 이 이야기를 듣다 보면 아마 한 번 더 하시게 될 겁니다.
+
+    하품은 옮습니다. 옆 사람이 하품하는 걸 보면 나도 모르게 따라 하게 되죠. 실제로 한 실험에서는 참가자의 절반 가까이가 하품을 따라 했습니다.
+    """
+    private let track = SpeechPrompterTrack(script: passage, language: "ko")
 
     private func word(_ cursor: Int) -> String { track.words[max(0, cursor - 1)].text }
 

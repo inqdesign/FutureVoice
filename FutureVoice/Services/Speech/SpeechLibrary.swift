@@ -117,55 +117,61 @@ enum SpeechLibrary {
 
     /// Each language's sample is WRITTEN in that language, not translated
     /// (2026-10-05, founder: the translated headphones explainer read badly
-    /// in Korean and stiffly in English). Same topic and facts, each its own
-    /// text.
+    /// in Korean and stiffly in English). Same points, each its own text.
+    /// The topic is the tab's own case — why practise speaking out loud —
+    /// so the first thing a learner reads here is also why to keep coming
+    /// back (founder's call, replacing a yawning piece).
     private static let builtInTitles: [String: String] = [
-        "en": "Why yawns are contagious",
-        "ko": "하품은 왜 옮을까",
-        "ja": "あくびはなぜうつるの？",
-        "de": "Warum Gähnen ansteckt",
+        "en": "Why practise out loud?",
+        "ko": "왜 소리 내어 연습해야 할까",
+        "ja": "声に出して話そう",
+        "de": "Sprecht es laut aus",
     ]
 
     private static let builtInBodies: [String: String] = [
         "en": """
-        Quick question: how many times have you yawned today? Don't be surprised if that number goes up in the next minute.
+        Have you ever had the perfect sentence in your head, only to watch it fall apart the moment you said it?
 
-        Yawns are contagious. See someone yawn, and there's a good chance you'll follow. In some studies, about half the people tested did. You don't even have to see it. Hearing a yawn, or just reading about one, like you're doing right now, can be enough.
+        Speaking is a skill, not just knowledge. You can know the words and the grammar, but if your mouth has never actually built the sentence, it tends to let you down when it matters. That's why practice has to happen out loud.
 
-        So why does it spread? Many scientists think it comes down to empathy. We catch yawns more easily from family and close friends than from strangers.
+        Saying things aloud also helps them stick. Research suggests we remember what we've said better than what we've only read.
 
-        Here's the surprising part. Babies don't catch yawns at all. It usually starts around age four or five, right about when children begin to understand how other people feel.
+        And when you record yourself, you notice things you'd never catch otherwise: how fast you really talk, how often you say "um" and "uh", whether your voice fades at the end of a sentence.
 
-        So the next time a yawn ripples through a meeting, don't take it personally. It may just mean everyone in the room is tuned in to each other.
+        Presentations, interviews, even a first conversation with someone new all get easier with practice. The minute you just spent reading this out loud? That was your first rep.
         """,
         "ko": """
-        여러분, 오늘 하품 몇 번 하셨나요? 이 이야기를 듣다 보면 아마 한 번 더 하시게 될 겁니다.
+        여러분, 머릿속에서는 완벽했던 문장이 막상 입 밖으로 나오는 순간 엉켜 버린 적, 있으시죠?
 
-        하품은 옮습니다. 옆 사람이 하품하는 걸 보면 나도 모르게 따라 하게 되죠. 실제로 한 실험에서는 참가자의 절반 가까이가 하품을 따라 했습니다. 꼭 눈으로 볼 필요도 없습니다. 하품 소리를 듣거나, 지금처럼 하품 이야기를 읽기만 해도 하품이 나옵니다.
+        말하기는 아는 것과 하는 것이 다른 기술입니다. 단어와 문법을 알아도 입이 그 문장을 직접 만들어 본 적이 없으면, 정작 중요한 순간에 막힙니다. 그래서 연습은 소리 내어 해야 합니다.
 
-        과학자들은 그 이유를 공감에서 찾습니다. 하품은 모르는 사람보다 가족이나 친한 친구에게서 더 잘 옮거든요.
+        소리 내어 말하면 기억에도 더 오래 남습니다. 눈으로만 읽은 내용보다 직접 말해 본 내용을 더 잘 기억한다는 연구도 있습니다.
 
-        재미있는 건 아기들은 하품이 옮지 않는다는 점입니다. 하품이 옮기 시작하는 건 네다섯 살 무렵, 아이가 다른 사람의 마음을 헤아리기 시작할 때쯤이라고 합니다.
+        녹음해서 들어 보면 더 많은 것이 보입니다. 내가 실제로 얼마나 빨리 말하는지, "음", "어" 같은 말을 얼마나 자주 하는지, 문장 끝에서 목소리가 작아지지는 않는지. 혼자서는 잘 모르는 것들이거든요.
 
-        그러니 회의 시간에 하품이 번져도 너무 서운해하지 마세요. 서로에게 마음을 쓰고 있다는 뜻일지도 모르니까요.
+        발표도, 면접도, 처음 만나는 사람과 나누는 대화도 연습한 만큼 편해집니다. 지금 이 원고를 소리 내어 읽은 일 분이 바로 그 첫 연습입니다.
         """,
         "ja": """
-        皆さん、誰かのあくびを見て、つられてあくびをしたことはありませんか。実はこれ、とてもよくあることなんです。ある研究では、およそ半分の人があくびをうつされました。
+        皆さん、頭の中では完璧だった文が、口に出した瞬間に崩れてしまった経験はありませんか。
 
-        しかも、見なくてもうつります。あくびの音を聞いたり、あくびについて読んだりするだけで十分なんです。もしかしたら今、皆さんもあくびが出そうになっていませんか。
+        話すことは、知識ではなく技術です。単語や文法を知っていても、自分の口で一度も言ったことのない文は、いざという時に出てきません。だから練習は、声に出してするものなんです。
 
-        多くの研究者は、これを共感や人とのつながりに結びつけています。知らない人より、家族や親しい友だちのあくびのほうが、ずっとうつりやすいからです。そして、赤ちゃんや小さな子どもには、あくびはうつりません。始まるのは四歳か五歳ごろ。ちょうど、人の気持ちがわかり始めるころです。
+        声に出すと、覚えやすくもなります。黙って読んだことより、声に出して言ったことのほうが記憶に残りやすい、という研究もあるそうです。
 
-        だから次にあくびがうつったら、恥ずかしがらなくて大丈夫です。それは、誰かとつながっているしるしなんです。
+        そして、自分の声を録音してみてください。本当はどのくらいの速さで話しているのか。「えーと」や「あの」を、どれだけ言っているのか。文の終わりで、声が小さくなっていないか。一人では気づけないことが、はっきり聞こえてきます。
+
+        発表も、面接も、初めての人との会話も、練習すれば楽になります。今この文章を声に出して読んだ一分間が、皆さんの最初の練習です。
         """,
         "de": """
-        Habt ihr schon mal gegähnt, nur weil jemand neben euch gegähnt hat? Dann seid ihr in guter Gesellschaft. In manchen Studien hat sich ungefähr die Hälfte der Leute anstecken lassen.
+        Kennt ihr das? Im Kopf ist der Satz perfekt. Und sobald ihr ihn aussprecht, fällt er auseinander.
 
-        Und man muss es nicht einmal sehen. Ein Gähnen zu hören reicht oft schon, sogar darüber zu lesen kann genügen. Und, merkt ihr es gerade selbst?
+        Sprechen ist eine Fähigkeit, nicht nur Wissen. Ihr könnt alle Wörter und die Grammatik kennen. Wenn euer Mund den Satz aber noch nie gebildet hat, lässt er euch im entscheidenden Moment im Stich. Deshalb müsst ihr laut üben.
 
-        Viele Forschende sehen darin ein Zeichen von Empathie. Bei Familie und engen Freunden steckt man sich nämlich leichter an als bei Fremden. Babys und kleine Kinder gähnen übrigens nicht mit. Das beginnt meist erst mit vier oder fünf Jahren, ungefähr dann, wenn Kinder verstehen, was andere fühlen.
+        Was ihr laut sagt, bleibt außerdem besser hängen. Studien deuten darauf hin, dass wir uns an Ausgesprochenes besser erinnern als an das, was wir nur still gelesen haben.
 
-        Wenn ihr also das nächste Mal mitgähnt, dann nehmt es als gutes Zeichen. Ihr seid mit jemandem verbunden.
+        Nehmt euch dabei auf. Dann hört ihr, was euch allein nicht auffällt: wie schnell ihr wirklich sprecht, wie oft ihr „äh“ oder „ähm“ sagt, und ob eure Stimme am Satzende leiser wird.
+
+        Präsentationen, Vorstellungsgespräche, sogar ein Gespräch mit jemand Neuem: Mit Übung wird das alles leichter. Und die Minute, in der ihr das gerade laut gelesen habt? Das war eure erste Übung.
         """,
     ]
 }
