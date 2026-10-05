@@ -1399,12 +1399,12 @@ struct ConversationView: View {
                                !turns.isEmpty || !realtime.partial.isEmpty {
                                 PartialTurnView(text: realtime.partial)
                                     .id("partial-listening")
-                                    .transition(.opacity)
+                                    .transition(Self.placeholderTransition)
                             }
                         case .thinkingReply:
                             ThinkingIndicator()
                                 .id("partial-thinking")
-                                .transition(.opacity)
+                                .transition(Self.placeholderTransition)
                         default:
                             // The reply has begun but has no words yet: the
                             // thinking line keeps its place (same id, so it
@@ -1413,7 +1413,7 @@ struct ConversationView: View {
                             if replyHasNoWordsYet {
                                 ThinkingIndicator()
                                     .id("partial-thinking")
-                                    .transition(.opacity)
+                                    .transition(Self.placeholderTransition)
                             }
                         }
                     } else if phase == .listening, showsTranscript {
@@ -1424,11 +1424,11 @@ struct ConversationView: View {
                         // "Future self is thinking…" bubble during the swap.
                         PartialTurnView(text: live.transcript)
                             .id("partial-listening")
-                            .transition(.opacity)
+                            .transition(Self.placeholderTransition)
                     } else if phase == .thinking && (turns.last?.role == .user) {
                         ThinkingIndicator()
                             .id("partial-thinking")
-                            .transition(.opacity)
+                            .transition(Self.placeholderTransition)
                     } else if let fid = failedTurnId, turns.last?.id == fid {
                         RetryReplyRow(outOfCredits: outOfCredits,
                                       onRetry: retryReply,
@@ -1462,6 +1462,12 @@ struct ConversationView: View {
                 .animation(.easeOut(duration: 0.25), value: replyHasNoWordsYet)
             }
             .coordinateSpace(name: Self.feedSpace)
+            // While following, the bottom is the anchor: when the feed grows
+            // or shrinks the scroll view keeps its END in place itself, in
+            // the same frame, instead of the content moving first and a
+            // scrollTo chasing it. Off while the learner reads back, so the
+            // lines they are reading don't move under them.
+            .defaultScrollAnchor(followTail ? .bottom : nil)
             // Background, so measuring the viewport can't affect the layout
             // it is measuring.
             .background(GeometryReader { g in
@@ -1492,6 +1498,14 @@ struct ConversationView: View {
             .onChange(of: turns.last?.transcript) { _, _ in scroll(proxy) }
         }
     }
+
+    /// The live line ("listening", "thinking") is REPLACED by the bubble
+    /// that follows it, so it leaves at once. Faded out, it kept its height
+    /// while the new bubble came in, the feed was briefly taller by one
+    /// line, the scroll went to that bottom and then settled back — the list
+    /// rising and dropping a little every turn (2026-10-05).
+    static let placeholderTransition = AnyTransition.asymmetric(insertion: .opacity,
+                                                                removal: .identity)
 
     private static let partialId = "partial-indicator"
     private static let bottomId  = "feed-bottom"
