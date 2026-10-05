@@ -174,6 +174,15 @@ struct WelcomeView: View {
 
     private var topBar: some View {
         HStack {
+            // The wordmark, in the website's face (Pixelify Sans, OFL), on
+            // the dark top. `.fontDesign(nil)` or the root's `.rounded`
+            // quietly swaps the custom face for SF Rounded.
+            Text(verbatim: "nawana")
+                .font(.custom("PixelifySans-Regular", fixedSize: 24))
+                .fontDesign(nil)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .accessibilityAddTraits(.isHeader)
             Spacer()
             if !isClosing {
                 Button("Skip") { finish() }

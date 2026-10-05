@@ -37,7 +37,8 @@ struct StoryBackdrop: View {
 
     /// Night at the very top, fading into the sky the same smooth way.
     private static let nightStops = smoothStops([
-        (0.015, 0.03, 0.10, 1), (0.03, 0.10, 0.36, 0.6), (0.05, 0.20, 0.70, 0),
+        (0.015, 0.03, 0.10, 1), (0.02, 0.06, 0.22, 0.9),
+        (0.04, 0.14, 0.50, 0.45), (0.05, 0.20, 0.70, 0),
     ])
 
     /// Evenly spaced key colours through a Catmull-Rom curve, sampled finely:
@@ -71,17 +72,17 @@ struct StoryBackdrop: View {
                 Color(rgb: Self.cream)
                 // The sky: a wide ellipse centred above the top edge, so
                 // only its soft lower half comes down into the screen.
-                let r = h * 0.62
+                let r = h * 0.66
                 Ellipse()
                     .fill(RadialGradient(stops: Self.skyStops, center: .center,
                                          startRadius: 0, endRadius: r))
                     .frame(width: r * 2.4, height: r * 2)
                     .position(x: w * (0.5 + 0.04 * sin(t * 0.05)),
-                              y: h * (-0.16 + 0.02 * cos(t * 0.04)))
+                              y: h * (-0.06 + 0.02 * cos(t * 0.04)))
                 // Night at the very top: the sky deepens to near-black, so
                 // the notch and the status bar sink into it.
                 LinearGradient(stops: Self.nightStops,
-                               startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.26))
+                               startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.40))
                 // A little warmth gathering at the bottom, under the buttons.
                 LinearGradient(colors: [.clear, Color(rgb: (0.96, 0.88, 0.78)).opacity(0.7)],
                                startPoint: UnitPoint(x: 0.5, y: 0.55), endPoint: .bottom)
@@ -135,7 +136,11 @@ extension Color {
 struct RevealText: View {
     let text: String
     var still: Bool = false
-    var font: Font = .system(size: 25, weight: .semibold, design: .rounded)
+    /// 30 pt, a step down for a long line — the wordier languages would
+    /// otherwise run a single beat to five or six rows.
+    private var font: Font {
+        .system(size: text.count > 60 ? 26 : 30, weight: .semibold, design: .rounded)
+    }
 
     @State private var shown = false
 

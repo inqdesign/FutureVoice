@@ -1,0 +1,6 @@
+Pixelify Sans — https://github.com/eifetx/Pixelify-Sans
+Copyright 2021 The Pixelify Sans Project Authors. Licensed under the SIL Open Font License, Version 1.1.
+Full text: https://openfontlicense.org
+
+Bundled here as PixelifySans-Regular.ttf: the Regular instance of the subset the website
+(web/PixelifySans.woff2) serves, as a static TTF. Used only for the "nawana" wordmark.
