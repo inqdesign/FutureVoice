@@ -423,7 +423,13 @@ data class BookDocument(
             )
         }
 
-        private fun dateLine(at: Long): String =
-            SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(Date(at))
+        /** iOS `.dateTime.year().month(.wide).day()` — a skeleton, so each
+         *  language orders it itself (2026년 10월 4일, October 4, 2026). A
+         *  fixed "d MMMM yyyy" read "4 10월 2026" in Korean. */
+        private fun dateLine(at: Long): String {
+            val locale = Locale.getDefault()
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "yMMMMd")
+            return SimpleDateFormat(pattern, locale).format(Date(at))
+        }
     }
 }
