@@ -222,7 +222,6 @@
     <string name="open_google_play">Google Play öffnen</string>
     <string name="get_the_new_test_build">Neue Testversion holen</string>
     <string name="android_is_blocking_the_call">Android blockiert den Anruf. Aktiviere Benachrichtigungen für nawana in den Einstellungen und schalte es dann unter „Ich“ wieder ein.</string>
-    <string name="back_in_when">"Zurück %s"</string>
     <string name="talk_time_used_up_call_saved">"Deine Sprechzeit ist aufgebraucht. Dieses Gespräch ist gesichert – du kannst es jederzeit fortsetzen."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"Das konnte nicht bewertet werden – deine Aufnahme ist noch da."</string>
     <string name="read_from_verified_grammar_slips_per_100_spoken_words_fewer_6d1e6b">Ermittelt aus bestätigten Grammatikfehlern pro 100 gesprochene Wörter – weniger ergibt ein höheres Niveau.</string>

@@ -244,7 +244,6 @@
     <string name="open_google_play">Open Google Play</string>
     <string name="get_the_new_test_build">Get the new test build</string>
     <string name="android_is_blocking_the_call">Android is blocking the call. Turn on notifications for nawana in Settings, then switch it on again in Me.</string>
-    <string name="back_in_when">"Back %s"</string>
     <string name="talk_time_used_up_call_saved">"Your talk time is used up. This call is saved — you can pick it up again any time."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"Couldn't score that one — your take is still here."</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->

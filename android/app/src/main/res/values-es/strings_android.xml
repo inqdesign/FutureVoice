@@ -244,7 +244,6 @@
     <string name="open_google_play">Abrir Google Play</string>
     <string name="get_the_new_test_build">Obtener la nueva versión de prueba</string>
     <string name="android_is_blocking_the_call">Android está bloqueando la llamada. Activa las notificaciones de nawana en Ajustes y vuelve a activarlo en Mi perfil.</string>
-    <string name="back_in_when">"De vuelta en %s"</string>
     <string name="talk_time_used_up_call_saved">"Se te acabó el tiempo de conversación. Esta llamada quedó guardada — puedes retomarla cuando quieras."</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"No se pudo calificar esa vez — tu toma sigue aquí."</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->

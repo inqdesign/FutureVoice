@@ -228,7 +228,6 @@
     <string name="open_google_play">Google Play を開く</string>
     <string name="get_the_new_test_build">新しいテストビルドを入手</string>
     <string name="android_is_blocking_the_call">Androidが電話をブロックしています。設定でnawanaの通知をオンにしてから、マイページでもう一度オンにしてください。</string>
-    <string name="back_in_when">"%s後にまた"</string>
     <string name="talk_time_used_up_call_saved">"通話時間を使い切りました。この通話は保存してあるので、いつでも続きからできます。"</string>
     <string name="couldn_t_score_that_one_your_take_is_still_here">"今回は採点できませんでした。録った声はそのまま聞けます。"</string>
     <!-- iOS retired this line (grammar band now range × accuracy); Android still shows it until Progress is re-ported. -->
