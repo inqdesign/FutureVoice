@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.PathEffect
@@ -131,7 +132,21 @@ internal fun WatchTabBody(
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
                 PersonRowBubble(name = stringResource(R.string.create), person = null,
                     onClick = { managingPeople = true })
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Runs past the page's 20 dp gutter to the right edge, the
+                // gutter moved inside as content padding: inside the gutter
+                // the row was cut off short of the edge (as Review's was).
+                LazyRow(
+                    modifier = Modifier.layout { measurable, constraints ->
+                        val extra = 20.dp.roundToPx()
+                        val p = measurable.measure(constraints.copy(
+                            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra
+                            else constraints.maxWidth))
+                        layout(if (constraints.hasBoundedWidth) constraints.maxWidth else p.width, p.height) {
+                            p.place(0, 0)
+                        }
+                    },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(people, key = { it.id }) { person ->
                         PersonRowBubble(name = person.name, person = person, onClick = {
                             withPerson = person; composing = ComposerMode.CUSTOM
