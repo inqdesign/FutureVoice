@@ -38,6 +38,40 @@ object Translator {
     fun cachedExplanation(c: Context, original: String, alternative: String, lang: String): String? =
         load(c)[key(original, alternative, lang)]
 
+    private fun translateKey(text: String, lang: String) = "T\u0001" + lang + "\u0001" + text
+
+    /** A translation already on disk, no network (iOS `Translator.cached`). */
+    fun cached(c: Context, text: String, lang: String): String? = load(c)[translateKey(text, lang)]
+
+    /**
+     * [text] in [lang] — a fluent-self line's "Meaning" (iOS
+     * `Translator.translate`, the same `translate` edge function with
+     * `kind: translate`). Cached beside the explanations; null on failure.
+     */
+    suspend fun translate(c: Context, text: String, lang: String): String? = withContext(Dispatchers.IO) {
+        val k = translateKey(text, lang)
+        load(c)[k]?.let { return@withContext it }
+        val body = buildJsonObject {
+            put("kind", "translate"); put("text", text); put("to_lang", lang)
+        }
+        val out = runCatching {
+            val req = Request.Builder().url(Config.functionUrl("translate"))
+                .header("Authorization", "Bearer ${AuthRepository().accessToken()}")
+                .header("apikey", Config.supabaseAnonKey)
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            Edge.client.newCall(req).execute().use { r ->
+                if (r.code !in 200..299) null
+                else Edge.json.decodeFromString(Response.serializer(), r.body.string())
+                    .text.trim().takeIf { it.isNotEmpty() }
+            }
+        }.getOrNull() ?: return@withContext null
+        val map = load(c)
+        map[k] = out
+        runCatching { file(c).writeText(Edge.json.encodeToString(map.toMap())) }
+        out
+    }
+
     suspend fun explainCorrection(
         c: Context, original: String, alternative: String, lang: String,
     ): String? = withContext(Dispatchers.IO) {

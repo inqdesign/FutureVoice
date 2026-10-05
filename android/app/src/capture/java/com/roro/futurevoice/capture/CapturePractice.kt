@@ -40,6 +40,7 @@ import com.roro.futurevoice.ui.ShadowScreen
 import com.roro.futurevoice.ui.Shelf
 import com.roro.futurevoice.ui.StudyDeckHost
 import com.roro.futurevoice.ui.TalkDetailScreen
+import com.roro.futurevoice.ui.TalkTranscriptScreen
 import com.roro.futurevoice.ui.VocabularyCloudScreen
 import com.roro.futurevoice.ui.WordCardSheet
 import com.roro.futurevoice.net.WordLore
@@ -418,26 +419,15 @@ object CapturePractice {
                 level = level(c), onBack = {})
         },
         // The English talk's transcript (iOS `TalkTranscriptView` on the
-        // talk-detail session) — corrections under the learner's lines.
-        // Android has no separate transcript destination: the talk book opens
-        // with its transcript unfolded, as `transcript-ja` does.
-        "transcript" to mode(
-            seed = {
-                PracticeCaptureFlags.talkDetailSession = CaptureSeed.talkDetailSession
-                PracticeCaptureFlags.talkDetailTranscript = true
-            },
-        ) { c ->
-            TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = "en",
-                level = level(c), onBack = {})
+        // talk-detail session) — the talk book's Replay page, corrections
+        // under the learner's lines, Replay / Continue pinned at the bottom.
+        "transcript" to mode { c ->
+            TalkTranscriptScreen(session = CaptureSeed.talkDetailSession, language = "en",
+                level = level(c), onBack = {}, onContinue = {})
         },
-        "transcript-ja" to mode(
-            seed = {
-                PracticeCaptureFlags.talkDetailSession = CaptureSeed.japaneseTalkSession
-                PracticeCaptureFlags.talkDetailTranscript = true
-            },
-        ) { c ->
-            TalkDetailScreen(sessionId = CaptureSeed.japaneseTalkSession.id, language = "ja",
-                level = level(c), onBack = {})
+        "transcript-ja" to mode { c ->
+            TalkTranscriptScreen(session = CaptureSeed.japaneseTalkSession, language = "ja",
+                level = level(c), onBack = {}, onContinue = {})
         },
         // A kanji headword has to print its reading (あわてる), or the card
         // teaches a word nobody can say.

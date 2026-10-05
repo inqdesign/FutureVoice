@@ -219,8 +219,8 @@ fun TalkDetailScreen(
         }
     }
     // The transcript is the book's "scene": one tap away behind Replay, never
-    // the first thing the cover shows. Android has no separate transcript
-    // destination, so the page opens it in place.
+    // the first thing the cover shows — its own page (`TalkTranscriptScreen`,
+    // iOS `TalkTranscriptView`), with the stored audio and Continue.
     var showingTranscript by remember(sessionId) {
         mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailTranscript)
     }
@@ -284,6 +284,16 @@ fun TalkDetailScreen(
         return
     }
 
+    val continueTalk: (() -> Unit)? = onContinue?.let { go -> { go(s.topic ?: s.displayTitle.orEmpty()) } }
+    if (showingTranscript) {
+        // In place of the page, like Say it again: back returns to the cover.
+        TalkTranscriptScreen(
+            session = s, language = language, level = level,
+            onBack = { showingTranscript = false; StoreEvents.bump() },
+            onContinue = continueTalk)
+        return
+    }
+
     if (showingGrammarReview) {
         GrammarReviewSheet(
             axis = sm?.scorecard?.grammar,
@@ -335,10 +345,8 @@ fun TalkDetailScreen(
                             progressLabel = stringResource(R.string.lld_of_lld_mastered,
                                 curriculum.masteredCount, curriculum.totalCount),
                             mastered = curriculum.isMastered,
-                            onReplay = { showingTranscript = !showingTranscript },
-                            onContinue = onContinue?.let { go ->
-                                { go(s.topic ?: s.displayTitle.orEmpty()) }
-                            },
+                            onReplay = { showingTranscript = true },
+                            onContinue = continueTalk,
                             // No gate: nothing in a run is synthesized or
                             // metered (see `SayItAgainScreen`).
                             onSayItAgain = if (sayItAgain.steps.any { it.isSpoken })
@@ -394,19 +402,6 @@ fun TalkDetailScreen(
                                     .padding(top = 2.dp, bottom = 8.dp))
                         }
                         CarryoverBlock(sm?.carryovers.orEmpty())
-                        if (showingTranscript) {
-                            PageTitle(stringResource(R.string.transcript))
-                            Column(Modifier.padding(horizontal = 20.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                // The BRANDED line (bubbles, speaker sides) —
-                                // the one dialogue surface, same as the live
-                                // call and the Watch scene. The flat overload
-                                // this used to call is the legacy one.
-                                s.turns.forEach {
-                                    DialogueLine(turn = it, scale = DialogueScale.STANDARD)
-                                }
-                            }
-                        }
                     }
 
                     TalkChapter.WORDS -> {
