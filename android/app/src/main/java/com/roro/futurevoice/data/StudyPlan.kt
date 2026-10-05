@@ -460,22 +460,32 @@ data class StudyPlan(
         fun isSameDay(a: Long, b: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
             startOfDay(a, zone) == startOfDay(b, zone)
 
-        /** The routine's week runs Monday–Sunday whatever the locale (iOS's
-         *  weekly plan, CLAUDE.md "Monday–Sunday"); stored weekdays stay
-         *  1 = Sunday … 7 = Saturday. */
-        val ROUTINE_WEEK_ORDER: List<Int> = listOf(2, 3, 4, 5, 6, 7, 1)
-
-        /** The Monday that starts the routine week holding [at]. */
-        fun startOfRoutineWeek(at: Long, zone: TimeZone = TimeZone.getDefault()): Long {
-            val c = cal(startOfDay(at, zone), zone)
-            val back = (c.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
-            return addDays(c.timeInMillis, -back, zone)
+        /** The phone's first weekday (1 = Sunday … 7 = Saturday) — iOS's
+         *  `Calendar.current.firstWeekday`, which follows the DEVICE region,
+         *  not the app language (Sunday in Korea and the US, Monday in most
+         *  of Europe). `Locale.getDefault()` is the app language here
+         *  (`UILanguage.wrap`), so the device locale is read from the system
+         *  resources instead. */
+        fun firstWeekday(): Int {
+            val device = runCatching {
+                android.content.res.Resources.getSystem().configuration.locales
+                    .let { if (it.isEmpty) null else it.get(0) }
+            }.getOrNull() ?: java.util.Locale.getDefault()
+            return Calendar.getInstance(device).firstDayOfWeek
         }
 
-        /** The week holding [at], from the locale's first weekday. */
+        /** The seven weekdays from [firstWeekday] — iOS's
+         *  `(0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }`. */
+        fun weekOrder(): List<Int> {
+            val first = firstWeekday()
+            return (0 until 7).map { (first - 1 + it) % 7 + 1 }
+        }
+
+        /** The week holding [at], from the phone's first weekday (iOS
+         *  `PlannerSnapshot.startOfWeek`: `Calendar.current` weekOfYear). */
         fun startOfWeek(at: Long, zone: TimeZone = TimeZone.getDefault()): Long {
             val c = cal(startOfDay(at, zone), zone)
-            val back = (c.get(Calendar.DAY_OF_WEEK) - c.firstDayOfWeek + 7) % 7
+            val back = (c.get(Calendar.DAY_OF_WEEK) - firstWeekday() + 7) % 7
             return addDays(c.timeInMillis, -back, zone)
         }
     }

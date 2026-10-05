@@ -743,7 +743,7 @@ private fun periodsFor(mode: Mode, today: Long): List<Long> {
 private fun daysIn(month: Long): List<Long?> {
     val first = startOfMonth(month)
     val c = cal(first)
-    val lead = (c.get(Calendar.DAY_OF_WEEK) - c.firstDayOfWeek + 7) % 7
+    val lead = (c.get(Calendar.DAY_OF_WEEK) - StudyPlan.firstWeekday() + 7) % 7
     val count = c.getActualMaximum(Calendar.DAY_OF_MONTH)
     val days = (0 until count).map { StudyPlan.addDays(first, it) }
     val cells: List<Long?> = List(lead) { null } + days
@@ -759,7 +759,7 @@ private fun periodDays(anchor: Long, mode: Mode): List<Long> = when (mode) {
 
 private fun weekdayLabels(): List<String> {
     val fmt = SimpleDateFormat("EEEEE", Locale.getDefault())
-    val c = Calendar.getInstance().apply { set(Calendar.DAY_OF_WEEK, firstDayOfWeek) }
+    val c = Calendar.getInstance().apply { set(Calendar.DAY_OF_WEEK, StudyPlan.firstWeekday()) }
     return (0 until 7).map { fmt.format(c.time).also { c.add(Calendar.DAY_OF_YEAR, 1) } }
 }
 

@@ -717,10 +717,11 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     }
 }
 
-/** Seven weekday chips, Monday first like the rest of the routine; lit = on. */
+/** Seven weekday chips from the phone's first weekday (iOS PlanEditorSheets
+ *  `cal.firstWeekday`); lit = on. */
 @Composable
 private fun WeekdayChips(on: Set<Int>, lit: (Int) -> Boolean, onTap: (Int) -> Unit) {
-    val order = StudyPlan.ROUTINE_WEEK_ORDER
+    val order = StudyPlan.weekOrder()
     val fmt = SimpleDateFormat("EEEEE", Locale.getDefault())
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         order.forEach { wd ->
