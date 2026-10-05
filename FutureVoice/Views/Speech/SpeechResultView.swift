@@ -144,7 +144,7 @@ struct SpeechResultView: View {
     private func playbackSection(_ take: SpeechTake) -> some View {
         if let video = take.videoFilename {
             Section {
-                VideoPlayer(player: player)
+                SpeechTakeVideo(player: player)
                     .aspectRatio(videoAspect ?? 9 / 19.5, contentMode: .fit)
                     .frame(maxHeight: 520)
                     .frame(maxWidth: .infinity)
@@ -246,5 +246,82 @@ struct SpeechResultView: View {
                 photoError = error.localizedDescription
             }
         }
+    }
+}
+
+/// The take's video: the picture, and one tap to play or pause — no control
+/// bar to bring up first (founder, 2026-10-05: the system player's first tap
+/// only showed its controls). A play glyph shows while it is stopped; at the
+/// end a tap plays it again from the start.
+private struct SpeechTakeVideo: View {
+    let player: AVPlayer?
+    @State private var playing = false
+
+    var body: some View {
+        ZStack {
+            Color.black
+            if let player {
+                PlayerLayerView(player: player)
+            }
+            if !playing {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 68, height: 68)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .environment(\.colorScheme, .dark)
+                    .transition(.opacity)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { toggle() }
+        .animation(.easeOut(duration: 0.15), value: playing)
+        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
+            guard (note.object as? AVPlayerItem) === player?.currentItem else { return }
+            playing = false
+        }
+        .onDisappear { player?.pause(); playing = false }
+        .accessibilityElement()
+        .accessibilityLabel(playing ? Text("Pause") : Text("Play"))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { toggle() }
+    }
+
+    private func toggle() {
+        guard let player else { return }
+        if playing {
+            player.pause()
+            playing = false
+        } else {
+            if let item = player.currentItem,
+               item.duration.isNumeric,
+               player.currentTime().seconds >= item.duration.seconds - 0.1 {
+                player.seek(to: .zero)
+            }
+            player.play()
+            playing = true
+        }
+    }
+}
+
+/// An `AVPlayerLayer`, aspect-fit, with no controls of its own.
+private struct PlayerLayerView: UIViewRepresentable {
+    let player: AVPlayer
+
+    final class LayerView: UIView {
+        override class var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+
+    func makeUIView(context: Context) -> LayerView {
+        let view = LayerView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspect
+        view.backgroundColor = .black
+        return view
+    }
+
+    func updateUIView(_ view: LayerView, context: Context) {
+        if view.playerLayer.player !== player { view.playerLayer.player = player }
     }
 }
