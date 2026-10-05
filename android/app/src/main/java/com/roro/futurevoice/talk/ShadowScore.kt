@@ -49,6 +49,37 @@ object ShadowScore {
         return Analysis(score, steps, targetTokens.size, learnerTokens.size, matches)
     }
 
+    /**
+     * True when what the live recognizer heard ENDS with the line's last
+     * words — the learner reached the end of the line (iOS `a4fa2dc6`). Ends
+     * an attempt on content rather than on a silence a noisy room may never
+     * give. Words for spaced languages (the last two, in order, inside the
+     * last five heard), characters for ko/ja/zh (the last three, inside the
+     * last eight heard). Digits spelled out first, as the diff does. False
+     * for a line too short to tell its end from its middle.
+     */
+    fun heardLineEnd(target: String, heard: String, language: String): Boolean {
+        val style = LanguageCatalog.tokenStyle(language)
+        val t = tokenize(expandForDiff(target, language), LanguageCatalog.TokenStyle.WORD)
+        val h = tokenize(expandForDiff(heard, language), LanguageCatalog.TokenStyle.WORD)
+        val key: (String) -> String =
+            if (language.startsWith("ja")) com.roro.futurevoice.data.JapaneseMorph::soundSpelling else { x -> x }
+        return when (style) {
+            LanguageCatalog.TokenStyle.WORD -> {
+                if (t.size < 2 || h.size < 2) return false
+                val end = t.takeLast(2).map(key)
+                val tail = h.takeLast(5).map(key)
+                (0 until tail.size - 1).any { tail[it] == end[0] && tail[it + 1] == end[1] }
+            }
+            LanguageCatalog.TokenStyle.SYLLABLE -> {
+                val tc = t.joinToString("").map { key(it.toString()) }.joinToString("")
+                val hc = h.joinToString("").map { key(it.toString()) }.joinToString("")
+                if (tc.length < 4) return false
+                hc.takeLast(8).contains(tc.takeLast(3))
+            }
+        }
+    }
+
     /** Ops in TARGET order (`ins` skipped) — indexes align with [tokenSpans]. */
     fun targetOps(steps: List<DiffStep>): List<DiffOp> =
         steps.filter { it.op != DiffOp.INS }.map { it.op }

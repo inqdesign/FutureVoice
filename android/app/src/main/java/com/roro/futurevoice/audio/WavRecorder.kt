@@ -68,6 +68,16 @@ class WavRecorder {
         }
     }
 
+    /** True when the system silenced this capture for another app's — a live
+     *  recognizer's — benefit (Android 10+). */
+    fun isSilenced(context: android.content.Context): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return false
+        val id = record?.audioSessionId ?: return false
+        val am = context.getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+            ?: return false
+        return am.activeRecordingConfigurations.any { it.clientAudioSessionId == id && it.isClientSilenced }
+    }
+
     /** Stops and finalizes the WAV header; safe to call twice. */
     fun stop() {
         if (!isRecording) return

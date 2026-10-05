@@ -168,6 +168,8 @@ private val coachScope = kotlinx.coroutines.CoroutineScope(
 
 /** iOS `ShadowDrillView.stillSpeakingSeconds` — a breath is 0.5–1.5 s. */
 internal const val STILL_SPEAKING_MS = 1_500L
+/** The pause that ends an attempt once the line's last words were heard (iOS `endOfLineQuietSeconds`). */
+internal const val END_OF_LINE_QUIET_MS = 600L
 
 /** Mic level (the recorder's own 0…1 curve) that counts as someone talking. */
 internal const val VOICED_LEVEL = 0.35f
@@ -491,7 +493,23 @@ fun ShadowScreen(
             // The mic is up before "2", and anything before "0" is cut from
             // the file afterwards (iOS records from the go beat — the 3-2-1
             // never reaches the scored audio or the take played back).
+            // The live recognizer, for ending the attempt on CONTENT (iOS
+            // `a4fa2dc6`). Opened BEFORE the recorder: where a device can't
+            // feed two mic users, the later one wins, and the scored file
+            // must be the one that does.
+            var heard = ""
+            val live = runCatching {
+                com.roro.futurevoice.audio.LiveTranscriber(context).also {
+                    it.start(com.roro.futurevoice.data.LanguageCatalog.sttLocale(targetLanguage)) { t -> heard = t }
+                }
+            }.getOrNull()
+            // A take cancelled mid-count (closing the screen) must not leave
+            // the recognizer listening. Stopping twice is harmless.
+            kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion {
+                android.os.Handler(android.os.Looper.getMainLooper()).post { runCatching { live?.stop() } }
+            }
             if (runCatching { recorder.start(takeFile) }.isFailure) {
+                runCatching { live?.stop() }
                 error = context.getString(R.string.microphone_or_speech_permission_denied)
                 countdown = 0
                 phase = ShadowPhase.IDLE
@@ -511,14 +529,29 @@ fun ShadowScreen(
             syncStartedAt = System.currentTimeMillis()
             phase = ShadowPhase.RECORDING
             val targetMs = if (attemptTargetDurationMs > 0) attemptTargetDurationMs else durationFromText(words.size)
-            val earliest = maxOf(1_000, targetMs)
+            val earliest = syncStartedAt + maxOf(1_000, targetMs)
             val hardStop = syncStartedAt + attemptCutoffMs(targetMs)
-            delay(earliest.toLong())
-            var lastVoiced = System.currentTimeMillis()
-            while (System.currentTimeMillis() < hardStop) {
-                if (recorder.level >= VOICED_LEVEL) lastVoiced = System.currentTimeMillis()
-                if (System.currentTimeMillis() - lastVoiced >= STILL_SPEAKING_MS) break
-                delay(100)
+            // Two ways the attempt ends, whichever comes first (iOS
+            // `a4fa2dc6`): by CONTENT — the recognizer heard the line's last
+            // words and they paused 0.6 s (a room that keeps the level up used
+            // to hold attempts open to the ceiling); by SILENCE — past the
+            // line's own length, 1.5 s of quiet (a breath runs 0.5–1.5 s).
+            var lastVoiced = syncStartedAt
+            var liveOn = live != null
+            try {
+                while (System.currentTimeMillis() < hardStop) {
+                    val now = System.currentTimeMillis()
+                    if (recorder.level >= VOICED_LEVEL) lastVoiced = now
+                    val quiet = now - lastVoiced
+                    if (liveOn && quiet >= END_OF_LINE_QUIET_MS &&
+                        ShadowScore.heardLineEnd(attemptTargetText, heard, targetLanguage)) break
+                    if (now >= earliest && quiet >= STILL_SPEAKING_MS) break
+                    // The system gave the mic to the recognizer: keep the take.
+                    if (liveOn && recorder.isSilenced(context)) { runCatching { live?.stop() }; liveOn = false }
+                    delay(100)
+                }
+            } finally {
+                runCatching { live?.stop() }
             }
             val wallMs = (System.currentTimeMillis() - syncStartedAt).toInt()
 
