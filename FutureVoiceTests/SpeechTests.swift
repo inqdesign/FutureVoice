@@ -260,3 +260,65 @@ final class SpeechKoreanFollowTests: XCTestCase {
         XCTAssertLessThan(c, 12)
     }
 }
+
+final class PrompterMotionTests: XCTestCase {
+    /// A reader at a steady 3.5 words a second, six words a line, 44 pt a
+    /// line, heard by a recognizer that reports in BURSTS (every 0.5–1.1 s,
+    /// 0.6 s late). While they speak the text must never stop, must not
+    /// fall more than about a line behind, and the line being read must never
+    /// rise above the top.
+    func testFollowingIsContinuousUnderBurstyReports() {
+        var m = PrompterMotion()
+        let line: CGFloat = 44, wordsPerLine = 6.0, wps = 3.5
+        m.plannedPace = line * CGFloat(wps / wordsPerLine)
+        func spot(_ words: Double) -> (CGFloat, CGFloat) {
+            let l = floor(words / wordsPerLine)
+            let across = (words - l * wordsPerLine) / wordsPerLine
+            return (CGFloat(l) * line + CGFloat(across) * line, CGFloat(l) * line)
+        }
+        m.setTarget(0, lineTop: 0, lineAdvance: line)
+        m.snap()
+        var rng = SystemRandomNumberGenerator()
+        var nextReport = 0.6
+        let dt = 1.0 / 60
+        var minSpeed = CGFloat.infinity, maxLag: CGFloat = 0, maxLead: CGFloat = -1000
+        var t = 0.0
+        while t < 20 {
+            t += dt
+            if t >= nextReport {
+                let (y, top) = spot(max(0, (t - 0.6) * wps))
+                m.setTarget(y, lineTop: top, lineAdvance: line)
+                nextReport = t + Double.random(in: 0.5...1.1, using: &rng)
+            }
+            m.step(dt: CGFloat(dt), .init(recording: true, follow: true, speed: 1, speaking: true, held: false))
+            if t > 3 {
+                minSpeed = min(minSpeed, m.velocity)
+                let (truth, top) = spot(t * wps)
+                maxLag = max(maxLag, (truth - m.position) / line)
+                maxLead = max(maxLead, (m.position - top) / line)
+            }
+        }
+        XCTAssertGreaterThan(minSpeed, m.plannedPace * 0.25, "the text stalled while the reader was speaking")
+        XCTAssertLessThan(maxLag, 1.6, "fell too far behind the reader")
+        XCTAssertLessThanOrEqual(maxLead, 1.0001, "the line being read went above the top")
+    }
+
+    func testStopsWhenTheReaderStops() {
+        var m = PrompterMotion()
+        m.plannedPace = 25
+        m.setTarget(0, lineTop: 0, lineAdvance: 44)
+        m.snap()
+        for _ in 0..<120 { m.step(dt: 1.0 / 60, .init(recording: true, follow: true, speed: 1, speaking: true, held: false)) }
+        for _ in 0..<90 { m.step(dt: 1.0 / 60, .init(recording: true, follow: true, speed: 1, speaking: false, held: false)) }
+        XCTAssertLessThan(m.velocity, 1)
+    }
+
+    func testHoldStopsTheSteadyScroll() {
+        var m = PrompterMotion()
+        m.plannedPace = 30
+        for _ in 0..<60 { m.step(dt: 1.0 / 60, .init(recording: true, follow: false, speed: 1, speaking: false, held: false)) }
+        XCTAssertGreaterThan(m.velocity, 20)
+        for _ in 0..<90 { m.step(dt: 1.0 / 60, .init(recording: true, follow: false, speed: 1, speaking: false, held: true)) }
+        XCTAssertLessThan(m.velocity, 1)
+    }
+}

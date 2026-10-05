@@ -622,56 +622,32 @@ final class PrompterScroller: NSObject, ObservableObject {
     /// Read every frame: recording, following the voice, steady-speed
     /// multiplier, and whether someone is speaking right now.
     var inputs: () -> (recording: Bool, follow: Bool, speed: CGFloat, speaking: Bool) = { (false, true, 1, false) }
-    /// The language's ordinary reading pace, in column points per second —
-    /// where the prompter starts, and the band the reader's pace is kept in.
-    var plannedPace: CGFloat = 0
+    var plannedPace: CGFloat {
+        get { motion.plannedPace }
+        set { motion.plannedPace = newValue }
+    }
+    /// The reader is holding the text still (steady speed).
+    var held = false
 
-    private var target: CGFloat = 0
-    /// Top of the line being read: the highest the column may rise.
-    private var ceiling: CGFloat = .greatestFiniteMagnitude
-    private var lastTarget: CGFloat = 0
-    private var lineAdvance: CGFloat = 40
-    /// The reader's own pace: a LONG average, so a recognizer delivering
-    /// words in bursts (and Korean late or not at all) never shows as speed.
-    private var pace: CGFloat = 0
-    private var velocity: CGFloat = 0
+    private var motion = PrompterMotion()
     private var link: CADisplayLink?
     private var lastTick: CFTimeInterval = 0
 
-    /// The reader is holding the text still.
-    var held = false
-    /// How far behind the reader's spot the text trails, in seconds.
-    private let followTime: CGFloat = 0.45
-    /// The fastest the text moves when catching up.
-    private let maxLinesPerSecond: CGFloat = 2.5
-    /// Seconds the reader's pace is averaged over.
-    private let paceWindow: CGFloat = 6
-    /// Seconds a change of speed takes.
-    private let speedWindow: CGFloat = 0.8
-    /// The most the text speeds up or slows down to meet the reader: a line
-    /// behind is +25%, capped at ±40%. A prompter that lurches is unreadable.
-    private let pullPerLine: CGFloat = 0.25
-    private let maxPull: CGFloat = 0.4
-
     func setTarget(_ y: CGFloat, lineTop: CGFloat, lineAdvance: CGFloat, snap: Bool) {
-        if lineAdvance > 0 { self.lineAdvance = lineAdvance }
-        ceiling = lineTop
         // Moving the column by a fraction of a point re-rounds the layout to
         // the pixel grid, which moves the measured word by that fraction,
         // which moved the column again — an endless loop the moment the
         // prompter opened (measured: 0.067 pt back and forth). Changes under
         // a point are not movement.
-        guard abs(y - target) >= 1 || (snap && abs(y - position) >= 1) else { return }
-        target = y
+        guard abs(y - motion.target) >= 1 || (snap && abs(y - position) >= 1) else { return }
+        motion.setTarget(y, lineTop: lineTop, lineAdvance: lineAdvance)
         if snap { snapToTarget() }
     }
 
     /// Back onto the current word, at rest.
     func snapToTarget() {
-        position = target
-        lastTarget = target
-        pace = 0
-        velocity = 0
+        motion.snap()
+        position = motion.position
     }
 
     func start() {
@@ -690,37 +666,12 @@ final class PrompterScroller: NSObject, ObservableObject {
     @objc private func tick(_ link: CADisplayLink) {
         let now = link.timestamp
         defer { lastTick = now }
-        guard lastTick > 0 else { lastTarget = target; return }
+        guard lastTick > 0 else { return }
         let dt = CGFloat(min(0.05, now - lastTick))
-        guard dt > 0 else { return }
-        let (recording, follow, speed, _) = inputs()
-        let planned = plannedPace > 0 ? plannedPace : lineAdvance / 2
-
-        var next = position
-        if !recording {
-            // Still between takes.
-        } else if !follow {
-            // Steady speed: exactly that, whatever is said — eased, so a
-            // press-and-hold stops it gently and letting go starts it again.
-            let wanted = held ? 0 : planned * speed
-            velocity += (wanted - velocity) * min(1, dt / 0.3)
-            next = position + velocity * dt
-        } else {
-            // Follow the voice, nothing more: ease toward where the reader
-            // is (their word, and how far across its line), a short lag
-            // behind. Speaking moves it, stopping stops it. The versions
-            // before ran ahead on a learned pace and then waited at a line,
-            // which read as drifting out of step with the voice (founder,
-            // 2026-10-05). A long catch-up after the recognizer missed a
-            // stretch is speed-capped so it glides rather than jumps.
-            let gap = target - position
-            var step = gap * (1 - exp(-dt / followTime))
-            let cap = max(1, lineAdvance) * maxLinesPerSecond * dt
-            step = min(max(step, -cap * 0.5), cap)
-            next = position + step
-        }
-        lastTarget = target
-        if abs(next - position) > 0.01 { position = next }
+        let i = inputs()
+        motion.step(dt: dt, .init(recording: i.recording, follow: i.follow, speed: i.speed,
+                                  speaking: i.speaking, held: held))
+        if abs(motion.position - position) > 0.01 { position = motion.position }
     }
 }
 
