@@ -42,6 +42,9 @@ struct StarterSituation: Identifiable, Hashable {
     var learnerFirst: [String: String]? = nil
     /// That line in the APP language, for the coach's meaning row.
     var learnerFirstMeaning: String? = nil
+    /// Prompt-only: the LEARNER's side of the situation, for the "try
+    /// saying" coach, which otherwise sees only the title and the role.
+    var learnerSide: String? = nil
 
     /// The starter a scenario was minted from, if any.
     static func of(_ scenario: Scenario?) -> StarterSituation? {
@@ -54,6 +57,29 @@ struct StarterSituation: Identifiable, Hashable {
         learnerFirst.map { $0[LanguageCatalog.base(language)] ?? $0["en"] ?? "" }
     }
 
+    /// Meeting someone new is the one starter that is NOT open (founder,
+    /// 2026-10-05): with only `openNote` the stranger "followed whatever the
+    /// learner brought up", nobody brought anything up, and the call drifted
+    /// into what TV shows they'd been watching — a chat between friends. What
+    /// actually happens when a learner meets a native is getting to know each
+    /// other: name, where from, work or study, why this language. And the
+    /// stranger has to ASK for it — the persona block above it otherwise
+    /// reads as "you already know this, never quiz them".
+    private static let meetingNote = """
+        You're a native speaker meeting the learner for the first time — at a \
+        get-together, a class, through a friend. They're from another country \
+        and learning your language, and you're curious about them. Whatever \
+        this prompt says about the user, YOU know none of it yet: you find out \
+        by asking. Spend the call getting to know each other the way two people \
+        really do at a first meeting: their name, where they're from, whether \
+        they work or study and what, how long they've been here and what \
+        brought them, why they're learning the language. One thing at a time, \
+        follow up on what they answer, and give your own answer too (your name, \
+        your work, where you're from) so it's an exchange, not an interview. \
+        Stay on getting to know each other — no TV, films, news or other small \
+        talk unless they bring it up. One short line at a time, no speech.
+        """
+
     private static let openNote = "Keep it open and easygoing: one short line the way this person really talks at work (no \"welcome\" speech, no script), then follow whatever the learner brings up. Never push a task, a checklist or specifics they haven't raised."
 
     static var all: [StarterSituation] {
@@ -62,13 +88,14 @@ struct StarterSituation: Identifiable, Hashable {
                 id: "introduce-yourself", icon: "hand.wave.fill",
                 title: explain("Meeting someone new"),
                 role: explain("someone you just met"), showsRole: false,
-                notes: "You've just met the learner for the first time. " + openNote,
+                notes: meetingNote,
                 openers: [
                     "en": ["Hi! I don't think we've met yet.", "Hello! Nice to meet you."],
                     "ko": ["안녕하세요! 처음 뵙는 것 같네요.", "안녕하세요, 반가워요!"],
                     "ja": ["こんにちは！初めてですよね？", "はじめまして！よろしくお願いします。"],
                     "de": ["Hallo! Wir kennen uns noch nicht, oder?", "Hi, freut mich! Wie geht's?"],
-                ]),
+                ],
+                learnerSide: "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example) and often asks the same thing back."),
             StarterSituation(
                 id: "order-cafe", icon: "cup.and.saucer.fill",
                 title: explain("At a café"),

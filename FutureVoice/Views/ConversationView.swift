@@ -1662,7 +1662,9 @@ struct ConversationView: View {
         guard let sid = sessionScenarioId,
               let s = appState.scenarios.first(where: { $0.id == sid }) else { return nil }
         let role = s.role.trimmingCharacters(in: .whitespaces)
-        return role.isEmpty ? s.environment : "\(s.environment) — talking with \(role)"
+        let place = role.isEmpty ? s.environment : "\(s.environment) — talking with \(role)"
+        guard let side = StarterSituation.of(s)?.learnerSide else { return place }
+        return "\(place). \(side)"
     }
 
     /// The example first line when this call's situation is one the learner
