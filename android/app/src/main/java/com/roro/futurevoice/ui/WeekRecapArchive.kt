@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.layout.fillMaxHeight
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,7 +84,9 @@ fun WeekRecapArchiveSheet(level: CefrLevel, onDismiss: (WeekRecapAction?) -> Uni
 
     ModalBottomSheet(onDismissRequest = { onDismiss(null) }, sheetState = sheet,
         containerColor = AppSurfaces.ground) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+        // iOS: a plain `.sheet` — the large detent, full height however short
+        // the list. Sized to content, two rows read as a half sheet.
+        Column(Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
             SheetHeader(stringResource(R.string.wr_your_week),
                 trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
