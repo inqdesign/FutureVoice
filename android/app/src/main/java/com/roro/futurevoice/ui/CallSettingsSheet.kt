@@ -1,5 +1,9 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.ui.brand.AppSurfaces
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Box
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,14 +76,17 @@ fun CallSettingsSheet(
 ) {
     val context = LocalContext.current
     var speed by remember { mutableStateOf(SpeechSpeed.current(context)) }
+    // iOS: an inset-grouped Form — rounded cards on the grouped ground, a
+    // centred title with Done at the trailing edge.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = onDismiss, containerColor = AppSurfaces.ground) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding()
+            .verticalScroll(rememberScrollState())) {
+            Box(Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.call_settings), style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f))
-                TextButton(onClick = onDismiss) {
+                    modifier = Modifier.align(Alignment.Center))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterEnd)) {
                     Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
                 }
             }
@@ -89,52 +96,60 @@ fun CallSettingsSheet(
             // or dropdown closed before it could take a tap. A plain row is a
             // tap, nothing to dismiss — and the rung names are words, longer
             // in every language but English, so they get the full width.
-            SectionHeader(stringResource(R.string.speaking_speed))
-            SpeechSpeed.entries.forEach { s ->
-                SpeedRow(stringResource(s.label), selected = speed == s) {
-                    if (speed != s) { speed = s; SpeechSpeed.set(context, s); onSpeedChange(s) }
+            GroupedSectionHeader(stringResource(R.string.speaking_speed))
+            GroupedCard {
+                SpeechSpeed.entries.forEachIndexed { i, s ->
+                    if (i > 0) GroupedRowDivider(inset = false)
+                    SpeedRow(stringResource(s.label), selected = speed == s) {
+                        if (speed != s) { speed = s; SpeechSpeed.set(context, s); onSpeedChange(s) }
+                    }
                 }
             }
-            Footer(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
+            GroupedFooter(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
 
             // On by default for A1/A2: it trades a little of the call's pace
             // for being walked toward the words being studied (`CoachMode`).
-            androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
-            ToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.cm_coach_mode), coachMode) {
-                onCoachMode(it)
-            }
-            Footer(stringResource(R.string.cm_coach_mode_footer))
-
-            SectionHeader(stringResource(R.string.screen))
-            ToggleRow(Icons.Filled.ChatBubbleOutline, stringResource(R.string.subtitles), showsTranscript) {
-                onFlag(CallSettings.SHOWS_TRANSCRIPT, it)
-            }
-            if (showsTranscript) {
-                ToggleRow(Icons.Filled.AutoAwesome, stringResource(R.string.corrections), showsCorrections) {
-                    onFlag(CallSettings.SHOWS_CORRECTIONS, it)
+            GroupedSectionSpacer()
+            GroupedCard {
+                ToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.cm_coach_mode), coachMode) {
+                    onCoachMode(it)
                 }
-            } else {
-                Footer(stringResource(R.string.corrections_sit_inside_your_own_lines_so_they_re_hidden_too))
             }
-            ToggleRow(Icons.Filled.Checklist, stringResource(R.string.words_to_use), showsGoalChips) {
-                onFlag(CallSettings.SHOWS_GOAL_CHIPS, it)
+            GroupedFooter(stringResource(R.string.cm_coach_mode_footer))
+
+            GroupedSectionHeader(stringResource(R.string.screen))
+            GroupedCard {
+                ToggleRow(Icons.Filled.ChatBubbleOutline, stringResource(R.string.subtitles), showsTranscript) {
+                    onFlag(CallSettings.SHOWS_TRANSCRIPT, it)
+                }
+                GroupedRowDivider()
+                // With the transcript off this row is replaced by the reason
+                // rather than disabled (iOS): the correction lives inside the
+                // learner's own line and goes where it goes.
+                if (showsTranscript) {
+                    ToggleRow(Icons.Filled.AutoAwesome, stringResource(R.string.corrections), showsCorrections) {
+                        onFlag(CallSettings.SHOWS_CORRECTIONS, it)
+                    }
+                } else {
+                    Text(stringResource(R.string.corrections_sit_inside_your_own_lines_so_they_re_hidden_too),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+                }
+                GroupedRowDivider()
+                ToggleRow(Icons.Filled.Checklist, stringResource(R.string.words_to_use), showsGoalChips) {
+                    onFlag(CallSettings.SHOWS_GOAL_CHIPS, it)
+                }
             }
-            Footer(stringResource(R.string.nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b))
-            androidx.compose.foundation.layout.Spacer(Modifier.size(16.dp))
+            GroupedFooter(stringResource(R.string.nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b))
+            androidx.compose.foundation.layout.Spacer(Modifier.size(24.dp))
         }
     }
 }
 
 @Composable
-private fun SectionHeader(text: String) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp))
-}
-
-@Composable
 private fun SpeedRow(text: String, selected: Boolean, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         if (selected) Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp),
@@ -144,8 +159,9 @@ private fun SpeedRow(text: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun ToggleRow(icon: ImageVector, text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary)
         Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -153,8 +169,4 @@ private fun ToggleRow(icon: ImageVector, text: String, checked: Boolean, onChang
     }
 }
 
-@Composable
-private fun Footer(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
+
