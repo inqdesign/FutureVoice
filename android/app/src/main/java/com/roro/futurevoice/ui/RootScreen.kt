@@ -255,6 +255,10 @@ fun RootScreen() {
     val sayAgainPending by com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.collectAsStateWithLifecycle()
     var showAssessment by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
+    /** The sentence-card list (iOS `SentencesView`), and whether the deck
+     *  above it was pushed from one of its rows (back, not Done). */
+    var showSentences by remember { mutableStateOf(false) }
+    var deckPushed by remember { mutableStateOf(false) }
     val paywalled by BillingGate.showPaywall.collectAsStateWithLifecycle()
     val gateScope = rememberCoroutineScope()
     /** Run a metered action, or raise the paywall. See [BillingGate]. */
@@ -284,7 +288,7 @@ fun RootScreen() {
     LaunchedEffect(speechPending) {
         if (!speechPending) return@LaunchedEffect
         com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = false
-        showActivity = false; showMe = false; showDeck = false; library = null
+        showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
         tab = HomeTab.SPEECH
     }
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
@@ -331,19 +335,19 @@ fun RootScreen() {
         when (route) {
             // Streak widget: the Talk tab itself, not a page left open over it.
             DeepLinkInbox.WidgetRoute.Talk -> {
-                showMe = false; showDeck = false; library = null; detailSessionId = null
+                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
                 bookScenarioId = null; watchScenarioId = null; shadowLine = null
                 tab = HomeTab.TALK
             }
             is DeepLinkInbox.WidgetRoute.Book -> {
                 tab = HomeTab.PRACTICE
-                showMe = false; showDeck = false; library = null; watchScenarioId = null
+                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; watchScenarioId = null
                 if (route.kind == "watch") bookScenarioId = route.id else detailSessionId = route.id
             }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK
                 gate {
-                    showMe = false; showDeck = false; library = null; detailSessionId = null
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
                     bookScenarioId = null; watchScenarioId = null; shadowLine = null
                     callTopic = ""; callFacts = emptyList(); callScenarioId = null
                     inCall = true
@@ -619,7 +623,8 @@ fun RootScreen() {
             onShadow = { showDeck = false; focusCardId = null; deckSessionId = null; shadowLine = it },
             focusCardId = focusCardId,
             sessionId = deckSessionId,
-            onBack = { showDeck = false; focusCardId = null; deckSessionId = null },
+            onBack = { showDeck = false; focusCardId = null; deckSessionId = null; deckPushed = false },
+            pushed = deckPushed,
         )
 
         detailSessionId != null -> TalkDetailScreen(
@@ -663,6 +668,14 @@ fun RootScreen() {
         // Above everything: an account that cannot spend must not be looking
         // at a call screen behind a sheet.
         paywalled -> PaywallScreen(onDismiss = { BillingGate.showPaywall.value = false })
+
+        // Under the deck, so a row's card opens over the list and back
+        // returns to it (iOS pushes `DrillView(source: .card)`).
+        showSentences -> SentencesScreen(
+            language = state.targetLanguage,
+            onOpenCard = { id -> focusCardId = id; deckPushed = true; showDeck = true },
+            onBack = { showSentences = false },
+        )
 
         library != null -> LibraryScreen(
             kind = library!!,
@@ -960,6 +973,7 @@ fun RootScreen() {
             // at all — only the widget's deep link reached it.
             onOpenWordsAll = { library = LibraryKind.WORDS },
             onOpenExpressionsAll = { library = LibraryKind.EXPRESSIONS },
+            onOpenSentencesAll = { showSentences = true },
             onOpenDueReview = { showDueReview = true },
             // A book's Grammar chapter: that talk's sentence cards.
             onOpenSessionDeck = { deckSessionId = it; showDeck = true },
@@ -1174,6 +1188,7 @@ internal fun HomeScreen(
     onShadowAll: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
+    onOpenSentencesAll: () -> Unit = {},
     onOpenDueReview: () -> Unit = {},
     onOpenSessionDeck: (String) -> Unit = {},
     onSwitchLanguage: (String) -> Unit = {},
@@ -1456,6 +1471,7 @@ internal fun HomeScreen(
                         onShadowAll = onShadowAll,
                         onOpenWordsAll = onOpenWordsAll,
                         onOpenExpressionsAll = onOpenExpressionsAll,
+                        onOpenSentencesAll = onOpenSentencesAll,
                         onOpenDueReview = onOpenDueReview,
                         onOpenSessionDeck = onOpenSessionDeck,
                         nativeLanguage = state.nativeLanguage,

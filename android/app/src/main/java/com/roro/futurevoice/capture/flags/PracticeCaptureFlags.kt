@@ -24,6 +24,9 @@ object PracticeCaptureFlags {
     /** Study deck opens revealed and frozen mid-drag (folders out). */
     @JvmField var previewStudyTray = false
 
+    /** The Sentences list opens on its Known lens. */
+    @JvmField var sentencesKnown = false
+
     /** The word cloud opens with this word's card already up. */
     @JvmField var cloudOpenWord: String? = null
 

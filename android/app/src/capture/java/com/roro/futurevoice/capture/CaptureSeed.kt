@@ -163,6 +163,12 @@ object CaptureSeed {
                 createdAt = t - DAY, lastReviewedAt = t,
                 nextReviewAt = t + delay, box = box))
         }
+        // A retired card the learner then SAID in a talk — the Sentences
+        // list's filled check (USED outranks KNOWN).
+        seedCard(context, DrillCard(
+            sourcePhrase = "I'm agree with you", targetPhrase = "I agree with you.",
+            reason = "agree is already a verb", createdAt = t - 2 * DAY, lastReviewedAt = t,
+            nextReviewAt = t + 30 * DAY, box = 5, usedInTalkAt = t - DAY))
         for (i in 0 until 22) {
             seedCard(context, DrillCard(
                 sourcePhrase = "I have went there ${i + 1} times",

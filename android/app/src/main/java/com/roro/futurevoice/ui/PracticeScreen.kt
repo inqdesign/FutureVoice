@@ -116,6 +116,8 @@ fun PracticeBody(
     onShadowAll: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
+    /** The Sentences tile: the sentence-card LIST (iOS `SentencesView`). */
+    onOpenSentencesAll: () -> Unit = onOpenDeck,
     onOpenDueReview: () -> Unit = {},
     /** One talk's sentence cards — a book's Grammar chapter (iOS
      *  `DrillView(source: .session)`). */
@@ -212,7 +214,7 @@ fun PracticeBody(
                     stats = d?.stats ?: LibraryStats(),
                     onWords = onOpenWordsAll,
                     onExpressions = onOpenExpressionsAll,
-                    onSentences = onOpenDeck,
+                    onSentences = onOpenSentencesAll,
                     onShadowing = onShadowAll,
                 )
                 d?.feed?.forEach { book ->

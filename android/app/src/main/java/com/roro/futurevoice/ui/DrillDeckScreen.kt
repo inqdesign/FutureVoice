@@ -119,6 +119,9 @@ fun DrillDeckScreen(
      *  "Review" from Practice and a talk book, "Grammar" from a chapter,
      *  "Sentences" from the old DrillSheet. Null = "Review". */
     title: String? = null,
+    /** Pushed from the Sentences list onto one card (iOS NavigationLink to
+     *  `DrillView(source: .card)`): a back chevron and no title, not Done. */
+    pushed: Boolean = false,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -261,11 +264,16 @@ fun DrillDeckScreen(
             androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    Text(title ?: stringResource(R.string.review),
+                    if (!pushed) Text(title ?: stringResource(R.string.review),
                         style = MaterialTheme.typography.titleMedium)
                 },
+                navigationIcon = {
+                    if (pushed) IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
                 actions = {
-                    androidx.compose.material3.TextButton(onClick = onBack) {
+                    if (!pushed) androidx.compose.material3.TextButton(onClick = onBack) {
                         Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
                     }
                 },

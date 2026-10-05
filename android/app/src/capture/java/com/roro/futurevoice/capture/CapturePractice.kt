@@ -318,6 +318,14 @@ object CapturePractice {
         }) { DueDeck(it) },
 
         "drills" to mode({ seedDrills(it) }) { Drills(it) },
+        // Android-only: iOS's harness has no mode for `SentencesView` (the
+        // Studying page's Sentences tile). To study, then Known.
+        "sentences" to mode({ seedDrills(it); PracticeCaptureFlags.sentencesKnown = false }) {
+            com.roro.futurevoice.ui.SentencesScreen(language = lang(it), onOpenCard = {}, onBack = {})
+        },
+        "sentences-known" to mode({ seedDrills(it); PracticeCaptureFlags.sentencesKnown = true }) {
+            com.roro.futurevoice.ui.SentencesScreen(language = lang(it), onOpenCard = {}, onBack = {})
+        },
         "drills-tray" to mode({ seedDrills(it); PracticeCaptureFlags.previewDrillTray = true }) { Drills(it) },
         "drills-folder" to mode({ seedDrills(it); PracticeCaptureFlags.previewDrillFolder = true }) { Drills(it) },
 
