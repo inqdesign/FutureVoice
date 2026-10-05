@@ -366,7 +366,7 @@ private fun GuidePage(page: Page, i: Int) {
                 listOf(c(R.string.guide_cards_you_put_off, R.string.guide_every_card_you_sent_to_10),
                     c(R.string.guide_your_week, R.string.guide_when_a_new_week_starts_a),
                     c(R.string.guide_weekly_test, R.string.guide_once_a_week_a_test_made)),
-                note = R.string.guide_what_you_get_wrong_comes_back,
+                note = R.string.what_you_get_wrong_comes_back_in_the_next_weeks_tests_until_3b41bd,
             ) { ReviewWeekMock() }
         }
         Page.PROGRESS -> when (i) {

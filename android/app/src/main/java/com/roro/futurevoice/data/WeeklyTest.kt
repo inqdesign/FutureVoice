@@ -45,6 +45,9 @@ data class WeeklyTest(
      *  finished test is applied exactly once. */
     @Serializable(with = IsoDateMillisSerializer::class) val appliedAt: Long? = null,
 ) {
+    /** `MONTHLY` survives only so papers saved before iOS 70dd26a9
+     *  (2026-10-05) still decode — there is one test now, and every reader
+     *  skips a monthly one. */
     @Serializable
     enum class Kind { @SerialName("weekly") WEEKLY, @SerialName("monthly") MONTHLY }
 
@@ -185,10 +188,14 @@ object WeeklyTestEngine {
      *  the deck hasn't been opened yet. The writing carries on past it (and
      *  lands in the report); the paper just goes without. */
     const val COACH_WAIT_MS = 25_000L
-    /** Wrong answers of the previous test dealt again this week. */
-    const val MAX_RETAKE = 3
-    /** The monthly paper's ceiling. */
-    const val MAX_MONTHLY = 20
+    /** Wrong answers of recent tests dealt again this week (iOS 70dd26a9:
+     *  the weekly paper absorbed the monthly one). */
+    const val MAX_RETAKE = 5
+    /** How many finished weekly papers the retakes are drawn from — about a
+     *  month, which is what the monthly paper used to gather. */
+    const val RETAKE_WEEKS = 4
+    /** Ceiling for a paper of one test's own misses ([retryPaper]). */
+    const val MAX_RETRY = 20
     /** A spoken line passes at the shadow browser's own retry bar. */
     const val SPEAK_PASS_SCORE = ShadowPicks.RETRY_THRESHOLD
     /** Below this the week is too thin to be a test. */
@@ -316,6 +323,8 @@ object WeeklyTestEngine {
         level: CefrLevel,
         now: Long = System.currentTimeMillis(),
         id: String = StoreJson.newId(),
+        /** The finished weekly papers the retakes come from (with [lastTest]). */
+        recentTests: List<WeeklyTest> = emptyList(),
         gloss: suspend (String) -> String?,
     ): WeeklyTest? {
         val (start, end) = window(lastTest, now)
@@ -343,10 +352,16 @@ object WeeklyTestEngine {
         // words leaned on too often (iOS `9617756`).
         items += grammarItems(material, userTurns, language, rng)
         items += upgradeItems(material, userTurns, language, level, rng)
-        // What last week got wrong is asked again first.
-        if (lastTest != null && lastTest.isFinished && !lastTest.isMonthly) {
+        // What recent weeks got wrong is asked again — the test is a review,
+        // and a miss is the most certain material there is.
+        val recent = (recentTests + listOfNotNull(lastTest))
+            .filter { it.isFinished && !it.isMonthly }
+            .associateBy { it.id }.values
+            .sortedByDescending { it.createdAt }
+            .take(RETAKE_WEEKS)
+        if (recent.isNotEmpty()) {
             val fresh = items.map(::itemKey).toSet()
-            items += retakes(listOf(lastTest), MAX_RETAKE, fresh, language, rng)
+            items += retakes(recent, MAX_RETAKE, fresh, language, rng)
         }
         if (items.size < MIN_ITEMS) return null
         items.shuffle(rng)
@@ -359,38 +374,21 @@ object WeeklyTestEngine {
             createdAt = now, items = items)
     }
 
-    // ── Monthly
-
-    /** Every item the given weekly tests got wrong, each asked once; null
-     *  under [MIN_ITEMS]. */
-    fun buildMonthly(tests: List<WeeklyTest>, targetLanguage: String,
-                     now: Long = System.currentTimeMillis(), id: String = StoreJson.newId()): WeeklyTest? {
-        val rng = WeeklyTestRandom(id)
-        val items = retakes(tests, MAX_MONTHLY, emptySet(), targetLanguage, rng).toMutableList()
-        if (items.size < MIN_ITEMS) return null
-        items.shuffle(rng)
-        fun audible(i: WeeklyTestItem) = i.kind == WeeklyTestItem.Kind.LISTEN || i.kind == WeeklyTestItem.Kind.SPEAK
-        if (audible(items.first())) {
-            val swap = items.indexOfFirst { !audible(it) }
-            if (swap > 0) java.util.Collections.swap(items, 0, swap)
-        }
-        val start = tests.mapNotNull { it.finishedAt }.minOrNull() ?: now
-        return WeeklyTest(id = id, targetLanguage = targetLanguage, kind = WeeklyTest.Kind.MONTHLY,
-            periodStart = start, periodEnd = now, createdAt = now, items = items)
-    }
-
     /** Wrong answers of [tests], newest test first, one per distinct answer,
-     *  as fresh items with their choices reshuffled. */
-    private fun retakes(tests: List<WeeklyTest>, limit: Int, excluding: Set<String>,
+     *  as fresh items with their choices reshuffled. A miss that a NEWER test
+     *  asked again is that test's to report: answered right there, it is done
+     *  and never comes back; wrong again, the newer miss is the one dealt. */
+    fun retakes(tests: List<WeeklyTest>, limit: Int, excluding: Set<String>,
                         language: String, rng: Random): List<WeeklyTestItem> {
         val out = ArrayList<WeeklyTestItem>()
         val seen = excluding.toHashSet()
         for (test in tests.sortedByDescending { it.createdAt }) {
             val wrong = test.answers.filter { !it.correct }.map { it.itemId }.toSet()
+            val asked = test.items.map(::itemKey)
             for (item in test.items) {
                 if (item.id !in wrong || !isValid(item, language)) continue
                 if (out.size >= limit) return out
-                if (!seen.add(itemKey(item))) continue
+                if (itemKey(item) in seen) continue
                 // Build tiles are dealt afresh, so a stored item picks up
                 // today's decoy rule instead of its old tiles.
                 val options = when (item.kind) {
@@ -400,7 +398,9 @@ object WeeklyTestEngine {
                     else -> item.options.shuffled(rng)
                 }
                 out += item.copy(id = StoreJson.newId(), options = options, isRetake = true)
+                seen += itemKey(item)
             }
+            seen += asked
         }
         return out
     }
@@ -408,7 +408,7 @@ object WeeklyTestEngine {
     /** This test's misses dealt again as a paper of their own — played in
      *  place, never saved. Null when nothing was missed. */
     fun retryPaper(test: WeeklyTest, now: Long = System.currentTimeMillis()): WeeklyTest? {
-        val items = retakes(listOf(test), MAX_MONTHLY, emptySet(), test.targetLanguage,
+        val items = retakes(listOf(test), MAX_RETRY, emptySet(), test.targetLanguage,
             WeeklyTestRandom(StoreJson.newId()))
         if (items.isEmpty()) return null
         return WeeklyTest(targetLanguage = test.targetLanguage, kind = test.kind,

@@ -127,7 +127,6 @@
     <string name="guide_when_a_new_week_starts_a">"新的一周开始时，会出现一次上周的简短报告：学习了哪些天、连续记录、通话多久，以及哪些变成了你自己的。过去的每一周都保存在这里，没打开过的会有圆点标记。"</string>
     <string name="guide_weekly_test">"每周测验"</string>
     <string name="guide_once_a_week_a_test_made">"每周一次，只用当周自己的对话出题的测验：单词意思、缺失的用语、重组纠正后的句子、听写、开口说一句，还有周报里提到的语法。有圆点说明测验已开放。"</string>
-    <string name="guide_what_you_get_wrong_comes_back">"答错的题会在下周测验里再出现；每月初还有一次月度测验，汇总当月答错的题。测验时间默认是周六 10:00，可以修改。"</string>
     <string name="guide_its_hard_to_keep_going_when">"看不出有没有效果，就很难坚持。而考试分数也说明不了你口语怎么样。"</string>
     <string name="guide_progress_never_asks_you_to_sit">"进度页从不要你考试。它测定你在通话中实际用过的单词、句型和流利度，并以 CEFR 水平显示。"</string>
     <string name="guide_reading_your_level">"怎么看水平"</string>

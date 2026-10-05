@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,8 +55,9 @@ import com.roro.futurevoice.ui.brand.IosGlassButton
  * week's things live here — they are the week's, not today's, and the page
  * below is the books. Icons with a dot, never numbers: put off (a stack of
  * cards, orange dot when something is due), the week's report (calendar, dot
- * while a closed week hasn't been opened), the monthly test while it is open,
- * and the weekly test as its host's face, apart at the far right.
+ * while a closed week hasn't been opened), and the weekly test as its host's
+ * face, apart at the far right. There is no monthly test (iOS 70dd26a9): a
+ * month's misses come back in the weekly paper.
  *
  * It owns the screens those open (the test, the archive), and the two inboxes
  * that route to them — the weekly reminder's tap and a notice tapped for a
@@ -71,13 +71,11 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
     val testInbox by WeeklyTestInbox.pending.collectAsStateWithLifecycle()
     val archiveAsked by WeekRecapInbox.archive.collectAsStateWithLifecycle()
     var weekly by remember { mutableStateOf<WeeklyTestSchedule.State>(WeeklyTestSchedule.State.Ready) }
-    var monthly by remember { mutableStateOf<WeeklyTestSchedule.MonthlyState>(WeeklyTestSchedule.MonthlyState.None) }
     var dueBack by remember { mutableIntStateOf(0) }
     var week by remember { mutableStateOf<WeekInProgress?>(null) }
     var hasPastWeeks by remember { mutableStateOf(false) }
     var hasUnseenWeek by remember { mutableStateOf(false) }
-    /** false = weekly, true = monthly. */
-    var openTest by remember { mutableStateOf<Boolean?>(null) }
+    var openTest by remember { mutableStateOf(false) }
     var showingArchive by remember { mutableStateOf(false) }
     var reload by remember { mutableIntStateOf(0) }
 
@@ -85,7 +83,6 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
         val tests = WeeklyTestStore.shared(context).load(language)
         val schedule = WeeklyTestSettings.schedule(context)
         weekly = schedule.state(tests, { WeeklyTestSettings.isThin(context, it) })
-        monthly = schedule.monthlyState(tests)
         // Alarms don't survive a reboot; the tab re-arms the next opening.
         WeeklyTestReminder.reschedule(context)
         dueBack = putOffDueCount(context, language)
@@ -97,7 +94,7 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
     }
     // `futurevoice://weeklytest` (the reminder's tap) lands here.
     LaunchedEffect(testInbox) {
-        if (testInbox) { WeeklyTestInbox.pending.value = false; openTest = false }
+        if (testInbox) { WeeklyTestInbox.pending.value = false; openTest = true }
     }
     // A notice tapped for a week already seen lands here.
     LaunchedEffect(archiveAsked) {
@@ -105,26 +102,20 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
     }
 
     val weeklyNeedsYou = weekly is WeeklyTestSchedule.State.Ready || weekly is WeeklyTestSchedule.State.InProgress
-    val monthlyOpen = monthly is WeeklyTestSchedule.MonthlyState.Ready ||
-        monthly is WeeklyTestSchedule.MonthlyState.InProgress
     val w = week
     val showsWeekArchive = w != null && (w.hasActivity || hasPastWeeks)
     val accent = MaterialTheme.colorScheme.primary
 
     Row(Modifier.padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        // The two lists and the month's paper share one glass capsule; the
-        // test sits apart — a different kind of thing.
+        // The two lists share one glass capsule; the test sits apart — a
+        // different kind of thing.
         GlassCapsule {
             HeaderIcon(Icons.Outlined.Layers, stringResource(R.string.back_from_earlier),
                 dot = if (dueBack > 0) Color(0xFFFF9500) else null, onClick = onOpenPutOff)
             if (showsWeekArchive) {
                 HeaderIcon(Icons.Outlined.CalendarMonth, stringResource(R.string.wr_your_week),
                     dot = if (hasUnseenWeek) accent else null) { showingArchive = true }
-            }
-            if (monthlyOpen) {
-                HeaderIcon(Icons.Outlined.EventAvailable, stringResource(R.string.monthly_test),
-                    dot = accent) { openTest = true }
             }
         }
         // The weekly test is its host's face — the same eyes the test itself
@@ -135,7 +126,7 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
                 .semantics { contentDescription = testLabel },
             contentAlignment = Alignment.Center,
         ) {
-            IosGlassButton(onClick = { openTest = false }, circle = true) {
+            IosGlassButton(onClick = { openTest = true }, circle = true) {
                 WeeklyTestCharacter(WeeklyTestHost.Mood.WAITING, 0L, Modifier.size(32.dp),
                     tile = com.roro.futurevoice.ui.brand.iosFill())
             }
@@ -143,14 +134,13 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
         }
     }
 
-    val which = openTest
-    if (which != null) {
+    if (openTest) {
         Dialog(
-            onDismissRequest = { openTest = null; reload++ },
+            onDismissRequest = { openTest = false; reload++ },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
-            WeeklyTestScreen(language = language, level = level, monthly = which,
-                onClose = { openTest = null; reload++; StoreEvents.bump() })
+            WeeklyTestScreen(language = language, level = level,
+                onClose = { openTest = false; reload++; StoreEvents.bump() })
         }
     }
     if (showingArchive) {

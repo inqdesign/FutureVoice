@@ -35,8 +35,7 @@ import java.time.ZonedDateTime
 /**
  * The weekly test's pure rules (iOS `WeeklyTestTests` + `WordClassTests` +
  * `MeaningDecoyTests`): how an answer is graded, how a blank and a tile set
- * are made, which week a moment belongs to, and what the monthly paper
- * collects. Nothing here touches a store or the network.
+ * are made, which week a moment belongs to, and which misses come back. Nothing here touches a store or the network.
  *
  * Not ported: the Japanese tile round trip — segmentation is `android.icu`'s
  * `BreakIterator`, which a JVM test cannot reach (the same reason
@@ -318,38 +317,36 @@ class WeeklyTestTest {
             createdAt = finishedAt, items = items, finishedAt = finishedAt,
             answers = items.mapIndexed { i, it -> WeeklyTestAnswer(it.id, "", i !in wrong, finishedAt) })
 
-    /** Every distinct wrong answer of its sources, nothing under the minimum. */
-    @Test fun monthlyCollectsDistinctMisses() {
+    /** The weekly paper's retakes span the last few weeks (it absorbed the
+     *  monthly paper, iOS 70dd26a9): every distinct miss once, newest first —
+     *  and a miss a newer test asked again and got RIGHT never comes back. */
+    @Test fun retakesSpanRecentWeeksUntilAnsweredRight() {
         val a = item(WeeklyTestItem.Kind.MEANING, "chore", listOf("chore", "errand", "hobby", "shift"))
         val b = item(WeeklyTestItem.Kind.GAP, "end up", listOf("end up", "push back on", "catch up on", "walk you through"),
             prompt = "Did you ${WeeklyTestEngine.BLANK_MARK} hiring movers?")
         val c = item(WeeklyTestItem.Kind.BUILD, "I really like it", listOf("I", "like", "really", "it", "very"),
             prompt = "I very like it")
         val d = item(WeeklyTestItem.Kind.SPEAK, "Give yourself a day off.")
-        val e = item(WeeklyTestItem.Kind.LISTEN, "Kitchens are the worst part.",
-            listOf("Kitchens are the worst part.", "x", "y"))
         val now = System.currentTimeMillis()
         val week1 = paper(listOf(a, b, c), setOf(0, 1, 2), now - 14 * 86_400_000L)
-        val week2 = paper(listOf(item(WeeklyTestItem.Kind.MEANING, "Chore", a.options), d, e), setOf(0, 1, 2),
+        // Week 2 asked "chore" again and got it right, and missed d.
+        val week2 = paper(listOf(item(WeeklyTestItem.Kind.MEANING, "Chore", a.options), d), setOf(1),
             now - 7 * 86_400_000L)
-        val monthly = WeeklyTestEngine.buildMonthly(listOf(week1, week2), "en")
-        assertNotNull(monthly)
-        assertEquals(WeeklyTest.Kind.MONTHLY, monthly!!.kind)
-        assertEquals(5, monthly.items.size)   // "chore" and "Chore" are one item
-        assertTrue(monthly.items.all { it.isRetake == true })
+        val items = WeeklyTestEngine.retakes(listOf(week1, week2), WeeklyTestEngine.MAX_RETAKE,
+            emptySet(), "en", WeeklyTestRandom("seed"))
+        assertEquals(setOf("Give yourself a day off.", "end up", "I really like it"), items.map { it.answer }.toSet())
+        assertEquals("Give yourself a day off.", items.first().answer)
+        assertTrue(items.all { it.isRetake == true })
         // A stored pick-one listen item comes back as dictation tiles.
-        val listen = monthly.items.first { it.kind == WeeklyTestItem.Kind.LISTEN }
+        val e = item(WeeklyTestItem.Kind.LISTEN, "Kitchens are the worst part.",
+            listOf("Kitchens are the worst part.", "x", "y"))
+        val listen = WeeklyTestEngine.retakes(listOf(paper(listOf(e), setOf(0), now)), 5, emptySet(), "en",
+            WeeklyTestRandom("seed")).single()
         assertEquals(WordSplitter.words(listen.answer, "en").sorted(), listen.options.sorted())
-        assertNull(WeeklyTestEngine.buildMonthly(listOf(week1), "en"))
     }
 
-    @Test fun monthOpeningIsTheFirstOpeningOfTheMonth() {
-        val s = WeeklyTestSchedule(7, 10, 0)
-        val opening = dayOf(s.monthOpening(at(2026, 9, 23, 12), berlin))
-        assertEquals(9, opening.monthValue); assertEquals(5, opening.dayOfMonth)
-    }
-
-    /** A monthly paper never becomes the weekly's window anchor (iOS `07170af`). */
+    /** A monthly paper saved before iOS 70dd26a9 never becomes the weekly's
+     *  window anchor (iOS `07170af`). */
     @Test fun monthlyPaperNeverAnchorsTheWeeklyWindow() {
         val now = System.currentTimeMillis()
         val day = 86_400_000L
@@ -362,30 +359,6 @@ class WeeklyTestTest {
         assertNull(WeeklyTestStore.latestWeekly(listOf(monthly)))
         assertEquals(weekly.periodEnd, WeeklyTestEngine.window(weekly, now).first)
         assertEquals(now - WeeklyTestEngine.DEFAULT_WINDOW_MS, WeeklyTestEngine.window(monthly, now).first)
-    }
-
-    /** Nothing before a month has passed; ready once five distinct misses sit
-     *  in last month's finished weeklies; a monthly paper owns the state. */
-    @Test fun monthlyStateFollowsLastMonthsMisses() {
-        val s = WeeklyTestSchedule(7, 10, 0)
-        val now = at(2026, 10, 8, 12)
-        val sep = at(2026, 9, 12, 11)
-        val aug = at(2026, 8, 29, 11)
-        fun six() = (0 until 6).map { item(WeeklyTestItem.Kind.MEANING, "w$it") }
-        fun p(at: Long, wrong: Int, kind: WeeklyTest.Kind? = null) = paper(six(), (0 until wrong).toSet(), at, kind)
-        assertEquals(WeeklyTestSchedule.MonthlyState.None, s.monthlyState(emptyList(), now, berlin))
-        assertEquals(WeeklyTestSchedule.MonthlyState.None, s.monthlyState(listOf(p(sep, 4)), now, berlin))
-        assertEquals(WeeklyTestSchedule.MonthlyState.None, s.monthlyState(listOf(p(aug, 5)), now, berlin))
-        val september = p(sep, 5)
-        val ready = s.monthlyState(listOf(september), now, berlin)
-        assertTrue(ready is WeeklyTestSchedule.MonthlyState.Ready)
-        assertEquals(listOf(september.id), (ready as WeeklyTestSchedule.MonthlyState.Ready).sources.map { it.id })
-        val inProgress = p(now - 3_600_000, 0, WeeklyTest.Kind.MONTHLY).copy(finishedAt = null)
-        assertEquals(WeeklyTestSchedule.MonthlyState.InProgress(inProgress),
-            s.monthlyState(listOf(inProgress, september), now, berlin))
-        val done = inProgress.copy(finishedAt = now)
-        assertEquals(WeeklyTestSchedule.MonthlyState.Done(done), s.monthlyState(listOf(done, september), now, berlin))
-        assertEquals(0, WeeklyTestStore.weekStreak(listOf(done), s, now, berlin))
     }
 
     @Test fun nextItemWalksTheUnanswered() {

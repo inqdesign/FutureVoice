@@ -127,7 +127,6 @@
     <string name="guide_when_a_new_week_starts_a">"When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened."</string>
     <string name="guide_weekly_test">"Weekly test"</string>
     <string name="guide_once_a_week_a_test_made">"Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open."</string>
-    <string name="guide_what_you_get_wrong_comes_back">"What you get wrong comes back in next week's test, and at the start of each month a monthly test gathers that month's misses. The test day is Saturday at 10:00 unless you change it."</string>
     <string name="guide_its_hard_to_keep_going_when">"It's hard to keep going when you can't tell whether it's working. And a test score doesn't tell you how well you speak."</string>
     <string name="guide_progress_never_asks_you_to_sit">"Progress never asks you to sit a test. It measures the words, sentence structures and fluency you actually used in your calls, and shows them as a CEFR level."</string>
     <string name="guide_reading_your_level">"Reading your level"</string>

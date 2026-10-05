@@ -127,7 +127,6 @@
     <string name="guide_when_a_new_week_starts_a">"新的一週開始時，會出現一次上週的簡短報告：讀書的天數、連續紀錄、通話時間，以及變成你的單字和用語。過去每一週都會留在這裡，還沒打開的那週會有圓點。"</string>
     <string name="guide_weekly_test">"每週測驗"</string>
     <string name="guide_once_a_week_a_test_made">"每週一次，只用你當週對話出的測驗：選單字意思、填空格裡的用語、重組修正過的句子、聽寫、開口說一句，還有每週報告裡的文法。看到圓點代表測驗已開放。"</string>
-    <string name="guide_what_you_get_wrong_comes_back">"答錯的題目會在下週測驗再出現，每月月初還會有一份只收集當月錯題的每月測驗。沒改的話，測驗在每週六上午 10:00 開放。"</string>
     <string name="guide_its_hard_to_keep_going_when">"不知道有沒有進步，就很難堅持下去。而且考試分數也看不出你說得好不好。"</string>
     <string name="guide_progress_never_asks_you_to_sit">"進度分頁不用另外考試。它會評估你在通話中實際用到的單字、句型和流利度，以 CEFR 程度呈現。"</string>
     <string name="guide_reading_your_level">"怎麼看程度"</string>

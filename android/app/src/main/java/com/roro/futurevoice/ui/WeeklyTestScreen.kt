@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Hearing
@@ -166,7 +165,6 @@ private const val MAX_RECORD_MS = 12_000L
 fun WeeklyTestScreen(
     language: String,
     level: CefrLevel,
-    monthly: Boolean = false,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -266,7 +264,7 @@ fun WeeklyTestScreen(
         current = null
         phase = TestPhase.Result(t)
         if (firstTime) {
-            Analytics.capture(if (t.isMonthly) "monthly_test_finished" else "weekly_test_finished",
+            Analytics.capture("weekly_test_finished",
                 mapOf("score" to t.score, "total" to t.total, "best_streak" to t.bestStreak))
             SoundEffects.play(context, SoundEffects.Cue.DONE); haptic(true)
         }
@@ -311,7 +309,8 @@ fun WeeklyTestScreen(
         // the screen long enough for an ANR (seen in the capture build).
         var test = withContext(Dispatchers.Default) {
             val material = WeeklyTestEngine.gather(context, language, level, native)
-            WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level) { word ->
+            WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level,
+                recentTests = tests) { word ->
                 WeeklyTestCaptureFlags.glosses?.let { return@build it[word] }
                 PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
                     ?.senses?.firstOrNull()?.meaning
@@ -359,25 +358,6 @@ fun WeeklyTestScreen(
     suspend fun start() {
         val tests = store.load(language)
         val schedule = WeeklyTestSettings.schedule(context)
-        if (monthly) {
-            when (val s = schedule.monthlyState(tests)) {
-                is WeeklyTestSchedule.MonthlyState.InProgress -> {
-                    val cleaned = WeeklyTestEngine.pruned(s.test)
-                    if (cleaned != null) { store.save(cleaned); resume(cleaned) } else resume(s.test)
-                }
-                is WeeklyTestSchedule.MonthlyState.Done -> phase = TestPhase.Result(s.test)
-                is WeeklyTestSchedule.MonthlyState.Ready -> {
-                    val built = WeeklyTestEngine.buildMonthly(s.sources, language)
-                    if (built == null) { phase = TestPhase.Thin; return }
-                    val t = built.copy(startedAt = System.currentTimeMillis())
-                    store.save(t)
-                    Analytics.capture("monthly_test_started", mapOf("items" to t.total))
-                    resume(t)
-                }
-                WeeklyTestSchedule.MonthlyState.None -> phase = TestPhase.Thin
-            }
-            return
-        }
         // A capture run asks for a specific kind: always deal a fresh paper.
         if (WeeklyTestCaptureFlags.kind != null) { buildNew(); return }
         when (val s = schedule.state(tests, { WeeklyTestSettings.isThin(context, it) })) {
@@ -567,7 +547,7 @@ fun WeeklyTestScreen(
             CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    Text(stringResource(if (monthly) R.string.monthly_test else R.string.weekly_test),
+                    Text(stringResource(R.string.weekly_test),
                         style = MaterialTheme.typography.titleMedium)
                 },
                 actions = {
@@ -596,7 +576,7 @@ fun WeeklyTestScreen(
                     Text(stringResource(R.string.making_your_test),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                TestPhase.Thin -> ThinState(monthly) { scope.launch { buildNew() } }
+                TestPhase.Thin -> ThinState { scope.launch { buildNew() } }
                 is TestPhase.Result -> WeeklyTestResult(ph.test, isRetry = retry != null,
                     language = language, onRetry = { startRetry(ph.test) })
                 is TestPhase.Playing -> {
@@ -661,25 +641,21 @@ fun WeeklyTestScreen(
 // ── Pieces
 
 @Composable
-private fun ThinState(monthly: Boolean, onTryAgain: () -> Unit) {
+private fun ThinState(onTryAgain: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(if (monthly) Icons.Filled.EventAvailable else Icons.Filled.EventNote, contentDescription = null,
+        Icon(Icons.Filled.EventNote, contentDescription = null,
             modifier = Modifier.size(44.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
-        Text(stringResource(if (monthly) R.string.nothing_to_collect_yet else R.string.a_talk_or_two_first),
+        Text(stringResource(R.string.a_talk_or_two_first),
             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp))
-        Text(stringResource(if (monthly)
-            R.string.a_month_s_missed_items_land_here_finish_a_few_weekly_tests_f_e23722
-            else R.string.the_test_is_made_from_your_week_s_talks_after_the_next_one_i_0a9c48),
+        Text(stringResource(R.string.the_test_is_made_from_your_week_s_talks_after_the_next_one_i_0a9c48),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        if (!monthly) {
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = onTryAgain) { Text(stringResource(R.string.try_again)) }
-        }
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onTryAgain) { Text(stringResource(R.string.try_again)) }
     }
 }
 

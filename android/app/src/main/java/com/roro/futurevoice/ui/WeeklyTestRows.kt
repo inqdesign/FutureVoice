@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,8 +43,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /**
- * The weekly test's row on the Today card, and the monthly paper's when there
- * is something to collect (iOS `weeklyTestRow` / `monthlyTestRow`). Same row
+ * The weekly test's row on the Today card (iOS `weeklyTestRow`; the monthly
+ * paper's row went with iOS 70dd26a9). Same row
  * shape as "Back from earlier": what it is, where it stands, one tap in. A
  * finished test shows its score until the next opening, so the week has a
  * place to be looked at. The test itself opens full screen over the tab.
@@ -57,21 +56,19 @@ fun WeeklyTestRows(language: String, level: CefrLevel) {
     val settingsRevision by WeeklyTestSettings.revision.collectAsStateWithLifecycle()
     val inbox by WeeklyTestInbox.pending.collectAsStateWithLifecycle()
     var weekly by remember { mutableStateOf<WeeklyTestSchedule.State>(WeeklyTestSchedule.State.Ready) }
-    var monthly by remember { mutableStateOf<WeeklyTestSchedule.MonthlyState>(WeeklyTestSchedule.MonthlyState.None) }
-    var open by remember { mutableStateOf<Boolean?>(null) }   // false = weekly, true = monthly
+    var open by remember { mutableStateOf(false) }
     var reload by remember { mutableStateOf(0) }
 
     LaunchedEffect(language, revision, settingsRevision, reload) {
         val tests = WeeklyTestStore.shared(context).load(language)
         val schedule = WeeklyTestSettings.schedule(context)
         weekly = schedule.state(tests, { WeeklyTestSettings.isThin(context, it) })
-        monthly = schedule.monthlyState(tests)
         // Alarms don't survive a reboot; the tab re-arms the next opening.
         WeeklyTestReminder.reschedule(context)
     }
     // `futurevoice://weeklytest` (the reminder's tap) lands here.
     LaunchedEffect(inbox) {
-        if (inbox) { WeeklyTestInbox.pending.value = false; open = false }
+        if (inbox) { WeeklyTestInbox.pending.value = false; open = true }
     }
 
     val locale = Locale.forLanguageTag(com.roro.futurevoice.core.UILanguage.current(context) ?: "en")
@@ -90,27 +87,16 @@ fun WeeklyTestRows(language: String, level: CefrLevel) {
     // The week behind, as cards — reachable until the next one turns.
     WeekRecapRow(level, reloadKey = settingsRevision to reload)
     TestRow(Icons.Filled.Checklist, stringResource(R.string.weekly_test), weeklySubtitle, weeklyTrailing) {
-        open = false
-    }
-    if (monthly != WeeklyTestSchedule.MonthlyState.None) {
-        val (sub, trailing) = when (val m = monthly) {
-            is WeeklyTestSchedule.MonthlyState.InProgress ->
-                stringResource(R.string.pick_up_where_you_left_off) to ("${m.test.answers.size}/${m.test.total}" to false)
-            is WeeklyTestSchedule.MonthlyState.Done ->
-                stringResource(R.string.done_for_this_month) to ("${m.test.score}/${m.test.total}" to true)
-            else -> stringResource(R.string.everything_you_missed_this_month) to null
-        }
-        TestRow(Icons.Filled.EventAvailable, stringResource(R.string.monthly_test), sub, trailing) { open = true }
+        open = true
     }
 
-    val which = open
-    if (which != null) {
+    if (open) {
         Dialog(
-            onDismissRequest = { open = null; reload++ },
+            onDismissRequest = { open = false; reload++ },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
-            WeeklyTestScreen(language = language, level = level, monthly = which,
-                onClose = { open = null; reload++; StoreEvents.bump() })
+            WeeklyTestScreen(language = language, level = level,
+                onClose = { open = false; reload++; StoreEvents.bump() })
         }
     }
 }

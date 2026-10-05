@@ -41,14 +41,16 @@ import java.io.File
 import java.util.UUID
 
 /**
- * Capture modes for the weekly and monthly test (iOS `DebugCaptureHarness`,
+ * Capture modes for the weekly test (iOS `DebugCaptureHarness`,
  * the same names):
  *
  *   weekly-test, weekly-test-word, weekly-test-gap, weekly-test-build,
  *   weekly-test-listen, weekly-test-speak, weekly-test-word-right,
  *   weekly-test-gap-wrong, weekly-test-build-wrong, weekly-test-build-right,
  *   weekly-test-grammar[-right|-wrong], weekly-test-upgrade[-right|-wrong],
- *   weekly-test-result, practice-weekly, monthly-test, practice-monthly
+ *   weekly-test-result, practice-weekly
+ *
+ * (monthly-test / practice-monthly went with the monthly paper, iOS 70dd26a9.)
  *
  * The material is one seeded week (iOS `seedWeeklyTestWeek`): notebook words,
  * a talk whose summary offered phrases the fluent self actually said,
@@ -147,25 +149,6 @@ object CaptureWeeklyTest {
         WeeklyTestItem(kind = WeeklyTestItem.Kind.SPEAK, prompt = "", answer = "Give yourself a day off."),
     )
 
-    /** Two finished weekly tests with misses, inside the month the monthly
-     *  paper collects from (iOS `seedMonthOfMisses`). */
-    private suspend fun seedMonthOfMisses(c: Context) {
-        val language = lang(c)
-        val store = WeeklyTestStore.shared(c)
-        store.removeAll(language)
-        val opening = WeeklyTestSettings.schedule(c).monthOpening()
-        for (weeksBack in listOf(1, 2)) {
-            val at = opening - weeksBack * 7 * DAY + 3_600_000L
-            val items = sampleItems(weeksBack)
-            store.save(WeeklyTest(targetLanguage = language, periodStart = at - 7 * DAY, periodEnd = at,
-                createdAt = at, startedAt = at, finishedAt = at + 600_000, appliedAt = at + 600_000, items = items,
-                answers = items.mapIndexed { i, item ->
-                    val ok = i == 1 && weeksBack == 2
-                    WeeklyTestAnswer(item.id, if (ok) item.answer else "", ok, at + i * 30_000L)
-                }))
-        }
-    }
-
     /** A finished test on file for this week (iOS `seedFinishedWeeklyTest`). */
     private suspend fun seedFinished(c: Context) {
         val language = lang(c)
@@ -245,15 +228,6 @@ object CaptureWeeklyTest {
         "practice-weekly" to mode({ c ->
             CaptureSeed.once("practice-weekly") {
                 CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c); CaptureSeed.seedScenarios(c); seedFinished(c)
-            }
-        }) { Practice(it) },
-        "monthly-test" to mode({ c ->
-            CaptureSeed.once("monthly-test") { seedWeek(c); seedMonthOfMisses(c) }
-        }) { c -> WeeklyTestScreen(language = lang(c), level = level(c), monthly = true, onClose = {}) },
-        "practice-monthly" to mode({ c ->
-            CaptureSeed.once("practice-monthly") {
-                CaptureSeed.seedVocab(c); CaptureSeed.seedSessions(c); CaptureSeed.seedScenarios(c)
-                seedMonthOfMisses(c)
             }
         }) { Practice(it) },
     )

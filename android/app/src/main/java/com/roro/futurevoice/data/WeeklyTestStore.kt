@@ -156,48 +156,6 @@ data class WeeklyTestSchedule(val weekday: Int, val hour: Int, val minute: Int) 
         if (isThin(opening)) return State.Thin(next)
         return State.Ready
     }
-
-    // ── Monthly
-
-    sealed interface MonthlyState {
-        data object None : MonthlyState
-        data class Ready(val sources: List<WeeklyTest>) : MonthlyState
-        data class InProgress(val test: WeeklyTest) : MonthlyState
-        data class Done(val test: WeeklyTest) : MonthlyState
-    }
-
-    /** The first opening in the calendar month [currentOpening] falls in. */
-    fun monthOpening(now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): Long {
-        var opening = Instant.ofEpochMilli(currentOpening(now, zone)).atZone(zone)
-        val month = YearMonth.from(opening)
-        while (true) {
-            val previous = opening.minusWeeks(1)
-            if (YearMonth.from(previous) != month) return opening.toInstant().toEpochMilli()
-            opening = previous
-        }
-    }
-
-    /** It opens with the FIRST weekly opening of each calendar month and
-     *  collects the misses of every weekly test finished since the previous
-     *  month's first opening. */
-    fun monthlyState(tests: List<WeeklyTest>, now: Long = System.currentTimeMillis(),
-                     zone: ZoneId = ZoneId.systemDefault()): MonthlyState {
-        val opening = monthOpening(now, zone)
-        tests.sortedByDescending { it.createdAt }
-            .firstOrNull { it.isMonthly && it.createdAt >= opening }?.let {
-                return if (it.isFinished) MonthlyState.Done(it) else MonthlyState.InProgress(it)
-            }
-        val previousOpening = monthOpening(opening - 1, zone)
-        val sources = tests.filter { t ->
-            val finished = t.finishedAt ?: return@filter false
-            !t.isMonthly && finished >= previousOpening && finished < opening
-        }
-        val wrong = sources.flatMap { t ->
-            val missed = t.answers.filter { !it.correct }.map { it.itemId }.toSet()
-            t.items.filter { it.id in missed }.map(WeeklyTestEngine::itemKey)
-        }.toSet()
-        return if (wrong.size >= WeeklyTestEngine.MIN_ITEMS) MonthlyState.Ready(sources) else MonthlyState.None
-    }
 }
 
 /**

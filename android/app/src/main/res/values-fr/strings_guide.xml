@@ -127,7 +127,6 @@
     <string name="guide_when_a_new_week_starts_a">"Au début d’une nouvelle semaine, un court bilan de la précédente s’affiche une fois : les jours où tu as étudié, ta série, combien de temps tu as parlé et ce qui est devenu à toi. Toutes les semaines passées restent ici, et un point marque celles que tu n’as pas ouvertes."</string>
     <string name="guide_weekly_test">"Test hebdo"</string>
     <string name="guide_once_a_week_a_test_made">"Une fois par semaine, un test tiré uniquement des conversations de la semaine : le sens d’un mot, l’expression manquante, une phrase corrigée à reconstruire, ce que tu entends à écrire, une phrase à dire à voix haute, et la grammaire de ton bilan de la semaine. Un point signifie qu’il est ouvert."</string>
-    <string name="guide_what_you_get_wrong_comes_back">"Ce que tu rates revient dans le test de la semaine suivante, et au début de chaque mois, un test du mois rassemble les erreurs du mois. Le test ouvre le samedi à 10:00 sauf si tu le changes."</string>
     <string name="guide_its_hard_to_keep_going_when">"Difficile de continuer quand on ne sait pas si ça marche. Et une note d’examen ne dit pas comment tu parles."</string>
     <string name="guide_progress_never_asks_you_to_sit">"Progression ne te fait jamais passer d’examen. Elle mesure les mots, les structures de phrase et la fluidité que tu as vraiment employés dans tes appels, et les affiche comme un niveau CECR."</string>
     <string name="guide_reading_your_level">"Lire ton niveau"</string>
