@@ -558,6 +558,29 @@
 
 ---
 
+## 2e단계 · 스피치 탭 (iOS `34e25c0e`…`cf89d935`, 가이드 `6f2ccd53` `1a2b5e86`, 문구 `797ec302` `0eb960e3`, 원고 `fedae316` `a4e617b9`, Plus 시트 `d5566b32`, 루틴 `8f135c24`)
+
+iOS 1.1.4 (74)의 다섯째 탭. 탭 순서는 iOS `RootTabView` 그대로 **대화 · 스피치 · 상황연습 · 복습 · 성장**, 아이콘 `music.mic` → Material `MicExternalOn`.
+iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저장소·원고·트랙·움직임·분석·세션·카메라·영상), `SpeechTests.swift`.
+
+**안드로이드 대응 — 왜 이렇게:**
+- **마이크 하나, 두 소비자.** 채점 파일은 우리 `AudioRecord`(16 kHz mono WAV, 앱 녹음 계약)가 쓴다. 목소리 따라가기는 iOS처럼 실시간 인식(`SpeechRecognizer`, 기존 `LiveTranscriber`)의 부분 결과로 위치를 받는다. 안드로이드 10+ 동시 녹음 규칙상 둘 다 듣지 못하는 기기에선 **나중에 연 쪽이 이긴다** — 그래서 인식기를 먼저, `AudioRecord`를 마지막에 연다(채점 파일이 항상 이긴다). `AudioRecordingCallback.isClientSilenced`로 우리 녹음이 막히면 그 테이크 동안 인식기를 끈다. 인식기가 굶으면 따라가기는 우리 레벨 미터의 "말하는 중"만으로 계획 속도로 흐른다(위치 신호 없이 속도 흐르기 — iOS `PrompterMotion`이 원래 위치가 아니라 속도로 흐르므로 그대로 동작).
+- **읽는 동안 받아쓰기**: 같은 `AudioRecord`가 12초마다 쉼(0.35초 조용)에서 조각 WAV를 끊어 Gemini(`purpose: transcribe`, flash-3.6, fastThinking)로 보낸다. 조각 하나라도 실패하면 전체 파일을 AAC(ADTS 32 kbps, `MediaCodec`)로 한 번에 읽고, 그것도 안 되면 실시간 인식 글.
+- **영상은 앱이 직접 그린다**(iOS `c91d87e5` `a214c3ad`): CameraX `ImageAnalysis`(RGBA, 720p) 프레임마다 9:16 1080×1920 캔버스에 위 원고·아래 카메라 카드(둥근 모서리)를 `Surface.lockHardwareCanvas()`로 그려 `MediaCodec` H.264 입력 서피스로 인코딩 → `MediaMuxer`. 원고는 화면과 **같은 줄바꿈 레이아웃**(화면도 영상도 `android.text` Paint로 잰 단어 위치 하나를 그린다)이라 화면과 영상이 똑같이 감긴다. 멈춘 뒤 WAV를 AAC로 인코딩해 영상과 다시 먹싱(목소리 시작 기준으로 리드인 잘라냄). Media3 Transformer는 프레임마다 위치가 바뀌는 원고 + 둥근 카드 합성에 커스텀 GL 효과가 필요해 오히려 크고, 화면 녹화(MediaProjection)는 iOS가 버린 방식(권한 창·버튼이 찍힘)이라 반려.
+- **새 의존성: CameraX**(`camera-core`·`camera-camera2`·`camera-lifecycle`·`camera-view`) — 미리보기 + 프레임 분석을 한 카메라에 묶는 가장 작은 방법(Camera2 직접은 수백 줄). 권한 `CAMERA`(카메라 켤 때만 요청).
+- 채점·코치·원고 작성 프롬프트는 iOS 텍스트 그대로 손 이식(`talk/SpeechPrompts.kt`, 출처 sha 표기), 숫자는 전부 코드(`SpeechAnalyzer`), 정확도는 기존 `ShadowScore.analyze` 차이.
+
+- ☐ 2e.1 데이터·규칙: `SpeechScript/Take/Metrics` 모델(iOS JSON 키), `SpeechStore`(`files/lang/<code>/speech_*.json`, 미디어 `files/Speech/`), `SpeechLibrary`(언어별 기본 원고 — 언어마다 새로 쓴 '왜 소리 내어 연습해야 할까', 말 속도 단위·범위, 필러), `SpeechPrompterTrack`(한국어 이어진 음절 매칭 `2fd5df6d`), `PrompterMotion`(속도로 흐르기 `8c6b8ea4`, 누르고 있으면 멈춤), `SpeechAnalyzer`(정확도·속도·쉼·필러·꾸준함·종합) + iOS `SpeechTests` 이식
+- ☐ 2e.2 탭: 탭 바 둘째 자리, inlineLarge 헤더 + 오른쪽 +, 원고 목록(기본 원고 "샘플"·최고점), 탭하면 바로 프롬프터(상세 페이지 없음 `2ec50658`), + → AI로 쓰기 / 내 원고 넣기(붙여넣기·예상 길이·제목 비우면 첫 문장), 스와이프 편집·삭제, 프롬프터의 원고 보기에서 편집(`67e60a53`), 테이크 목록
+- ☐ 2e.3 프롬프터: 한 줄씩 일정한 속도(`675fb2be` `14928855` `446de4f0`), 목소리 따라가기가 기본·매번(`01afc3f0`), 고정 속도에선 화면 어디든 누르고 있으면 멈춤(`8b788fb8`), 읽는 줄은 카메라 바로 아래(`e66c11ea` `440ad90e` `574a4dda`), 3-2-1은 카메라 영역 가운데·"3" 먼저 뜨고 그 사이 마이크 준비(`34eca23a`), 스크롤 방식 바꾸면 버튼 위 문구(`6c490642`), 가라오케 색칠 없음(`2e9873f2`), 마지막 단어를 들은 뒤 1초·마지막 단어 앞이면 3초에 종료(`a20a4030` — 0.6초는 쉐도잉 규칙 `a4fa2dc6`), 녹화 중 취소·다시(`446de4f0`)
+- ☐ 2e.4 녹음·채점: 읽는 동안 조각 받아쓰기(`625f13d5`), 결과(점수 원·코치 한 줄+팁·측정 다섯 줄·건너뛴 말·마이크가 들은 것), 테이크 오디오 재생, 코치 노트는 결과 뒤에 도착
+- ☐ 2e.5 카메라·영상: 9:16 1080×1920 위 원고·아래 카메라 반반(`a214c3ad`), 결과 영상은 탭하면 재생/정지(`cf89d935`), 사진첩 저장·영상만 삭제, "영상 준비 중…"
+- ☐ 2e.6 나머지: 무료·Light의 + → Plus 안내 시트 먼저(`d5566b32`, Light "Plus로 업그레이드"·무료 "요금제 보기" → 페이월), 루틴 블록 종류 Speech(`8f135c24`, 보라, 저장된 테이크 1회, 알림·줄 → 스피치 탭), 첫 방문 가이드 4쪽(`6f2ccd53` `1a2b5e86`), 문구 카탈로그 동기화(8개 언어), 캡처 `speech` `speech-composer` `speech-prompter` `speech-open` `speech-plus` `speech-script-sheet` `speech-script-edit` `speech-own` `speech-result`, 페이월 "+ 스피치 기능" 줄(`63817b73`, 확인만)
+
+**안 하는 것 / 폰에서만 확인되는 것:** 동시 녹음이 되는 기기인지(인식기·AudioRecord), 영상 싱크(카메라 프레임 시각과 목소리 시작 시각이 같은 `System.nanoTime` 기준), 앞카메라 좌우 반전·회전, 녹화 중 발열. 기기 모서리 반경 표(`574a4dda`)는 안드로이드에 공개 API(`RoundedCorner`, API 31+)가 있어 그걸 쓴다.
+
+---
+
 ## 3단계 · 첫 기준선 측정
 
 - ☐ **3.1** 갤러리를 네 가지로 돌린다: 한국어·영어 × 라이트·다크. (한국어·라이트는
