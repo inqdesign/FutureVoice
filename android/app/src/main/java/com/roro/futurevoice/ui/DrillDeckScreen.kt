@@ -304,6 +304,12 @@ fun DrillDeckScreen(
                     )
                 }
             } else {
+                // The panel FLOATS over the bottom of the deck (iOS
+                // `cardDeck.overlay`): the card keeps its at-rest size mid-drag,
+                // so its own Hear it · Shadow · Examples row still shows under
+                // the folders, and the card never moves out from under the finger.
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center) {
                     // A peek of the next card, so the hand reads as a DECK.
@@ -429,23 +435,37 @@ fun DrillDeckScreen(
                     )
                 }
 
-                if (!dragging) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.TouchApp, contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colorScheme.outline)
-                        Spacer(Modifier.size(6.dp))
-                        Text(stringResource(
-                            if (revealed) R.string.drag_the_card_into_a_folder
-                            else R.string.say_it_out_loud_then_tap_the_card_to_check),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    .graphicsLayer { alpha = if (dragging) 0f else 1f },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.TouchApp, contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(
+                        if (revealed) R.string.drag_the_card_into_a_folder
+                        else R.string.say_it_out_loud_then_tap_the_card_to_check),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-
-                if (dragging) {
+                // At rest the folders are quiet counters; mid-drag the panel
+                // takes their place, so these keep their room but go clear.
+                VerdictRow(
+                    dragging = false,
+                    tappable = revealed,
+                    counts = { bin -> scheduled[bin] ?: 0 },
+                    onOpen = { bin ->
+                        if (dragging) Unit
+                        else if (revealed && top != null) file(top, bin)
+                        else openFolder = bin
+                    },
+                    onBounds = { _, _ -> },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        .graphicsLayer { alpha = if (dragging) 0f else 1f },
+                )
+                }
+                if (dragging) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
                     // Above the row and centred: the folders are a decision,
                     // and this is the way past it, so it sits on the path back
                     // to the card rather than at the end of the row where it
@@ -464,22 +484,16 @@ fun DrillDeckScreen(
                                 else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                }
-                VerdictRow(
-                    dragging = dragging,
-                    active = activeBin.takeIf { dragging && !cancelActive },
-                    tappable = revealed,
-                    counts = { bin -> scheduled[bin] ?: 0 },
-                    onOpen = { bin ->
-                        if (revealed && top != null) file(top, bin)
-                        else openFolder = bin
-                    },
-                    onBounds = { bin, rect -> binBounds = binBounds + (bin to rect) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-                // What happens if you let go HERE. Named, so the decision is
-                // readable before it is made.
-                if (dragging) {
+                    VerdictRow(
+                        dragging = true,
+                        active = activeBin.takeIf { !cancelActive },
+                        tappable = revealed,
+                        counts = { bin -> scheduled[bin] ?: 0 },
+                        onBounds = { bin, rect -> binBounds = binBounds + (bin to rect) },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                    // What happens if you let go HERE. Named, so the decision is
+                    // readable before it is made.
                     Row(Modifier.fillMaxWidth().padding(bottom = 6.dp),
                         horizontalArrangement = Arrangement.Center) {
                         Text(
@@ -495,6 +509,7 @@ fun DrillDeckScreen(
                                 .padding(horizontal = 12.dp, vertical = 5.dp),
                         )
                     }
+                }
                 }
             }
         }
