@@ -451,9 +451,7 @@ private fun ScenarioCover(
                         contentPadding = pad) {
                         Icon(Icons.Filled.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.talk), maxLines = 1, softWrap = false,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodyLarge)
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.talk))
                     }
                 }
                 if (onWatch != null) {
@@ -461,9 +459,7 @@ private fun ScenarioCover(
                         modifier = Modifier.weight(1f), contentPadding = pad, colors = tonal) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.watch), maxLines = 1, softWrap = false,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodyLarge)
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.watch))
                     }
                 }
             }

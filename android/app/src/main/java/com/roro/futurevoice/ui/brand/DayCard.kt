@@ -98,6 +98,23 @@ fun DayCard(
     format: DayCardFormat = DayCardFormat.FEED,
     theme: Int = 0,
 ) {
+    // A picture of fixed size, so its type is pinned as iOS pins Dynamic Type
+    // on `DayCardView.render`: at a 1.3 font the numbers row ran together
+    // ("25 min7 days").
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, 1f),
+    ) { DayCardBody(data, photo, modifier, format, theme) }
+}
+
+@Composable
+private fun DayCardBody(
+    data: DayCardData,
+    photo: ImageBitmap?,
+    modifier: Modifier,
+    format: DayCardFormat,
+    theme: Int,
+) {
     val isFeed = format == DayCardFormat.FEED
     val margin = if (isFeed) 24.dp else 21.dp
     Box(

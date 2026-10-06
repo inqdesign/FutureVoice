@@ -691,9 +691,9 @@ private fun VerdictButton(
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
         // One line. The verdict's name is the only thing that says which
-        // button this is, so it never wraps and never gets cut.
-        Text(label, style = MaterialTheme.typography.labelLarge,
-            maxLines = 1, softWrap = false, overflow = TextOverflow.Visible,
-            modifier = Modifier.padding(start = 6.dp))
+        // button this is, so it never wraps and never gets cut — at a large
+        // font it shrinks instead ("알아요" drew as "알아으" clipped at 1.3).
+        androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
+        com.roro.futurevoice.ui.brand.FitButtonLabel(label, MaterialTheme.typography.labelLarge)
     }
 }

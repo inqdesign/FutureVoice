@@ -348,8 +348,9 @@ fun TalkTranscriptScreen(
                     Icon(if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(if (isPlaying) R.string.pause else R.string.replay),
-                        style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    com.roro.futurevoice.ui.brand.FitButtonLabel(
+                        stringResource(if (isPlaying) R.string.pause else R.string.replay),
+                        MaterialTheme.typography.titleMedium)
                 }
                 if (onContinue != null) {
                     Button(
@@ -359,8 +360,8 @@ fun TalkTranscriptScreen(
                         Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null,
                             modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.continue_),
-                            style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.continue_),
+                            MaterialTheme.typography.titleMedium)
                     }
                 }
             }

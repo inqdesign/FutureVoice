@@ -408,8 +408,12 @@ private fun ValueRow(icon: ImageVector, title: String, value: String, subtitle: 
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Text(value, style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // The value may wrap; the title keeps its share. Unweighted, a long
+        // value ("55분 사용 · 95분 남음") at a 1.3 font squeezed the title to
+        // "통화 시 / 간".
+        Text(value, Modifier.weight(1.2f, fill = false), style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End)
     }
 }
 

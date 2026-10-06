@@ -186,8 +186,8 @@ fun FirstCallCheckSheet(
                         val mod = Modifier.weight(1f).heightIn(min = 64.dp)
                         val pad = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                         val text: @Composable () -> Unit = {
-                            Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
-                                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                            com.roro.futurevoice.ui.brand.FitButtonLabel(label,
+                                MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                         }
                         // The picked one is FILLED — the system's own "selected"; the
                         // others are `.bordered` tinted `.secondary`: a grey fill, grey words.

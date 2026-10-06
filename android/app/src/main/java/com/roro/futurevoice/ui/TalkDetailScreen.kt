@@ -718,9 +718,7 @@ private fun CoverBlock(
                     Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null,
                         modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.continue_), maxLines = 1, softWrap = false,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyLarge)
+                    com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.continue_))
                 }
             }
             FilledTonalButton(
@@ -736,9 +734,7 @@ private fun CoverBlock(
                 Icon(Icons.Filled.PlayArrow, contentDescription = null,
                     modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.replay), maxLines = 1, softWrap = false,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyLarge)
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.replay))
             }
         }
         // The third door, on its own row as on iOS: a different kind of act

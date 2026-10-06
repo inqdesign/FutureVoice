@@ -82,3 +82,22 @@ fun IosOutlinedButton(
     content: @Composable RowScope.() -> Unit,
 ) = androidx.compose.material3.OutlinedButton(onClick, modifier.defaultMinSize(minHeight = IosLargeButtonHeight),
     enabled, shape, colors, elevation, border, contentPadding, interactionSource, content)
+
+/**
+ * A button label on one line that SHRINKS rather than truncates (iOS's
+ * `.minimumScaleFactor`). Two buttons share a row on the book pages, and at a
+ * 1.3 font on a narrow phone "상황연습" came out "상황연…" — a button nobody can
+ * read is the squeezed button again, sideways.
+ */
+@Composable
+fun FitButtonLabel(text: String, style: androidx.compose.ui.text.TextStyle =
+    androidx.compose.material3.MaterialTheme.typography.bodyLarge) {
+    val color = androidx.compose.material3.LocalContentColor.current
+    androidx.compose.foundation.text.BasicText(
+        text, maxLines = 1, softWrap = false,
+        style = style.merge(androidx.compose.ui.text.TextStyle(color = color)),
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+            minFontSize = androidx.compose.ui.unit.TextUnit(11f, androidx.compose.ui.unit.TextUnitType.Sp),
+            maxFontSize = style.fontSize),
+    )
+}
