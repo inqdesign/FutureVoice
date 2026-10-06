@@ -681,6 +681,40 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 
 ---
 
+## 2j단계 · 저절로 뜨는 시트 — iOS `1f7cc014`와 대조 (2026-10-06)
+
+사장님: "첫 로그인 때 떠야 할 시트, 상황에 따라 떠야 할 시트를 전부 정리해서 iOS처럼." 버튼으로 연 것이 아니라 앱이 **스스로** 띄우는 것만 모았다. iOS 소스: `RootView`·`RootTabView`·`ConversationHome`·`ConversationView`·`FreeTalkWelcomeSheet`·`FirstCallCheckSheet`·`FeedbackSheet`·`PageIntroSheet`.
+
+**iOS 우선순위(탭 도착, `RootTabView.onAppear`, 한 번):** ① 목소리 있음 + 이 기기에 나이 기록 없음 → 나이 확인만(가이드는 그 뒤, 무료 시간 환영은 **다음 실행**) ② 아니면 Talk 탭 가이드가 남았으면 가이드 → 닫히면 환영(`welcomeAfterIntro`) ③ 아니면 환영 확인. 주간 덱은 1.2초 뒤, 나이 확인·환영·소개 미리보기·레벨업·초대·업데이트·통화가 떠 있으면 이번엔 건너뜀. 가이드는 다른 시트가 내려가면 다시 시도.
+**iOS 통화 끝(`ConversationView`):** 요약 닫힘 → (처음 말한 통화면) 첫 통화 점검 → 요금제 제안(무료 소진 때만, 제안 = 출구) → 아니면 피드백 질문(돌아온 날 두 번째 통화, 1분 이상) → 아니면 평점 요청. 요약 없는 출구(저장 안 하고 닫기)도 첫 통화 점검을 묻는다.
+
+| 시트 | iOS 조건 · 키 · 위치 | 안드로이드 전 | 지금 |
+|---|---|---|---|
+| 웰컴·설정·프로필·목소리·이번 주·매일 전화·온보딩 요금제 | `RootView` 게이트 순서, 키는 2i 표 | 2i에서 맞춤 | ☑ 2i (`d88a382c` 외) |
+| 나이 확인 `AgeCheckSheet` | 탭 도착 때, 목소리 있음 + `ConsentStore.isAgeVerified` 아님, 실행당 한 번(밀어 닫으면 다음 실행에) | ☑ 탭 셸이 다시 그려질 때마다(Me·덱·통화에서 돌아올 때마다) 다시 뜸 | 실행당 한 번, 도착 순서 ① (`TabArrival`, 단위 테스트) |
+| 탭 가이드 `PageIntroSheet` | 탭마다 첫 방문, `futurevoice.pageIntro.seen.v2.<page>`, 450ms 뒤, 다른 시트 위엔 안 뜸 | 이미 같음 | ☑ 변경 없음 |
+| 무료 시간 환영 `FreeTalkWelcomeSheet` | 도착 때 한 번(가이드 뒤로 보류), `futurevoice.freeTalkWelcome.shown`·`seenSeconds`, 미구독·잔액 ≥60초·첫 패스는 대화 없음·이후 60초 이상 늘면; Start talking = 게이트 거쳐 자유 통화; 닫힘 이벤트 started true/false | ☑ 가이드 표시가 바뀔 때마다·나이 확인 직후에도 재확인(다른 탭 가이드를 닫아도 계정 조회), `free_talk_welcome_shown` 두 번 기록, 닫힘은 started=true만, Start talking이 게이트 없이 통화 | 도착 순서 ②③으로만, 보류는 가이드가 내려간 뒤 풀림, 이벤트 한 번(minutes+kind), 닫힘 둘 다, 게이트 거침 |
+| 주간 덱 `WeekRecapSheet` | 탭 도착·포그라운드마다, 지난주에 활동 있고 안 본 주만, 1.2초 뒤, 막힘 목록에 나이 확인·환영 포함 | ☑ 온보딩 중에도 `ready`, 나이 확인 위에 뜰 수 있음 | 탭 도착 뒤에만, 나이 확인도 막힘 |
+| 레벨업 `LevelUpSheet` · 초대 합류 `ReferralJoinSheet` | `RootTabView` 시트 — 온보딩 위엔 못 뜸 | ☑ 루트 어디서나(온보딩 화면 위 포함) | 탭에 도착한 뒤에만 |
+| 소개 미리보기 `PublicIntroPreviewSheet` | Watch 탭으로 바꿀 때 `needsIntroDecision` | 이미 같음 | ☑ 변경 없음 |
+| 업데이트 `UpdateAvailableSheet` | 탭 루트, 마지막 | `UpdateGate`(루트, 이유 주석 있음) | ☑ 변경 없음(설치 직후엔 말할 게 없음) |
+| 프로필 더 알려주기 `PersonaDeepenSheet` | **Talk 홈 카드(시나리오·뉴스)로 연 통화가 닫힌 뒤** 0.7초, `futurevoice.personaDeepenPrompted`, 대화 ≥1, 기억된 줄 없음 + 세 칸 비었음. 링의 자유 통화는 아님 | ☑ 홈이 그려질 때마다(앱 열자마자 환영·주간 덱·나이 확인 위로) | 카드 통화가 닫힐 때만(`CallRoute.fromHomeCard`), 0.7초 뒤 |
+| 첫 통화 점검 `FirstCallCheckSheet` | `futurevoice.firstCallCheck.shown`, 말한 통화 ≤1; 요약 닫힘 뒤(→ 요금제 제안) **그리고** 요약 없는 출구(→ 그냥 닫기) | ☑ 요약 경로만; "저장 안 하고 닫기"는 묻지 않음 — 게다가 그 버튼이 **저장을 해버림**(화면 dispose → `end()` → 저장) | 두 경로 다, 닫기 경로는 먼저 끊고(`TalkViewModel.discard`, 아무것도 저장 안 함) 0.35초 뒤 |
+| 통화 뒤 요금제 제안 | 무료 소진(이번 통화) 또는 구독 필요일 때, 제안이 곧 출구 — 피드백·평점 없음 | ☑ 페이월을 띄우고도 `leave()` → 피드백 시트가 페이월에 가려진 통화 화면에 걸리고, 닫으면 책이 다시 열림 | 제안이면 바로 나감 |
+| 피드백 `FeedbackSheet(.returningTalk)` | `futurevoice.betaFeedback.returning_talk`, 1분+, 두 번째 끝난 통화, 첫 통화가 오늘 아님 | 이미 같음 | ☑ 변경 없음 |
+| 평점 요청 | `ReviewRequest.shouldAsk`, 피드백과 같은 통화엔 안 함 | Play 인앱 리뷰, 같음 | ☑ 변경 없음 |
+| 다 쓴 시간 `DailyAllowanceSheet` · 공정 사용 · 끊김 | 벽에 부딪힐 때 | `AllowanceSpentSheet`·배너·"The call dropped" | ☑ 변경 없음 |
+| 마이크 선택 `MicChoiceSheet` | 첫 통화(마이크 표면) 한 번 | 같음 | ☑ 변경 없음 |
+| 매일 전화 응답 · 다시 말하기 고르기 | 알림 → 통화 / `SayItAgainPicker` | 같음 | ☑ 변경 없음 |
+| 목소리 보관 복원 `VoiceRevivalView` | 유료 탭에서 | `VoiceRevivalHost` | ☑ 변경 없음 |
+| 회수된 목소리 "Let's make your voice again" | 시계·서버 확인 → 목소리 화면 | 있음 | ☑ 변경 없음 |
+| 알림 권한 | 리마인더 흐름에서만 | 첫 통화 화면에서도(안드로이드 13+ 통화 알림이 잠금 화면의 유일한 조작이라) | 안드로이드 전용 — 유지 |
+| iCloud 백업 제안 `BackupOfferSheet` · 동기화 제안·다른 기기 안내 · `SyncQuotaNotice` | iCloud | 동기화 없음 | n/a |
+| 체험 알림 `TrialReminder` | 체험 시작 때 | 체험 없음(09-26 제거) | n/a |
+| 코어 합류 | 로컬 알림(시트 아님) | `CoreArrivals` | ☑ 변경 없음 |
+
+**검증**: `assembleDebug`·`assembleCapture`·`rules-check` 통과, `TabArrivalTest` 4건. 에뮬레이터(capture)로 `first-call-check`·`free-minutes-welcome`·`deepen`·`week-recap`·`intro-preview`가 그려지는 것 확인. **순서·트리거 변경 자체는 코드로만** — debug 앱이 로그인돼 있지 않고 실제 로그인·통화는 금지라 탭 도착·통화 종료 흐름을 에뮬레이터에서 돌리지 못함.
+
 ## 3단계 · 첫 기준선 측정
 
 - ☐ **3.1** 갤러리를 네 가지로 돌린다: 한국어·영어 × 라이트·다크. (한국어·라이트는
