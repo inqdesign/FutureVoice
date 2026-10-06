@@ -671,7 +671,12 @@ fun RootScreen() {
             (state.signedIn && state.isAnonymous) -> CloneFlowScreen(
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
-            onCloned = { id -> app.onVoiceCloned(id); app.holdVoiceOnboarding(false) },
+            // iOS `finishMeet`: release the hold, then bake the first call's
+            // opener — once, at the rung the learner just chose, instead of
+            // at the default and again after the pick.
+            onCloned = { id ->
+                app.onVoiceCloned(id); app.holdVoiceOnboarding(false); app.warmFreeTalkOpeners()
+            },
             signedIn = state.signedIn && !state.isAnonymous,
             sessionAnonymous = state.signedIn && state.isAnonymous,
             existingVoiceId = state.voiceId,
@@ -1168,8 +1173,9 @@ internal fun HomeScreen(
         if (tab != HomeTab.TALK) return@LaunchedEffect
         val voice = state.voiceId ?: return@LaunchedEffect
         runCatching {
-            com.roro.futurevoice.talk.FreeTalkOpeners(context)
-                .warmAudio(state.targetLanguage, state.persona?.displayName, voice)
+            com.roro.futurevoice.talk.FreeTalkOpeners(context).warmFirstCall(
+                state.targetLanguage, state.persona?.displayName, state.level, voice,
+                firstMeeting = state.persona?.metAt == null)
         }
     }
 

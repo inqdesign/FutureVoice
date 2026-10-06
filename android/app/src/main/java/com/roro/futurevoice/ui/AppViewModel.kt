@@ -471,6 +471,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         if (newId == old) return
         _state.update { it.copy(voiceId = newId, voiceAccentId = accentId) }
         prefs.edit().putString(ACCENT_KEY, accentId).apply()
+        warmFreeTalkOpeners()
         viewModelScope.launch {
             if (old != null) {
                 runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
@@ -486,6 +487,29 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         // The clone flow writes the accent it ended on (the meet act's pills);
         // a fresh recording with none picked is the voice as recorded.
         _state.update { it.copy(voiceId = voiceId, voiceAccentId = prefs.getString(ACCENT_KEY, null)) }
+        // A re-record from Me bakes now; during onboarding the hold makes
+        // this a no-op and the meet act's "Start talking" bakes instead.
+        warmFreeTalkOpeners()
+    }
+
+    /**
+     * Fire-and-forget: make the next free talk open on cached audio (iOS
+     * `AppState.warmFreeTalkOpeners`). Held while a voice act is on stage
+     * (`holdVoiceOnboarding`) — the meet act is where the speed is CHOSEN,
+     * and baking the openers at the default first would make every one of
+     * them be paid for twice once the pick moved it (`needsBake`).
+     */
+    fun warmFreeTalkOpeners() {
+        val st = _state.value
+        if (st.holdVoiceOnboarding) return
+        val voice = st.voiceId ?: return
+        viewModelScope.launch {
+            runCatching {
+                com.roro.futurevoice.talk.FreeTalkOpeners(appContext).warmFirstCall(
+                    st.targetLanguage, st.persona?.displayName, st.level, voice,
+                    firstMeeting = st.persona?.metAt == null)
+            }
+        }
     }
 
     /** Last time the server was asked whether this phone's voice is parked. */

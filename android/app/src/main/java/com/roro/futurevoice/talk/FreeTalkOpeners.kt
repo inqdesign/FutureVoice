@@ -64,6 +64,9 @@ class FreeTalkOpeners(private val context: Context) {
          *  cap only stops a long history of renames from growing the file. */
         private const val MAX_POOLS = 8
 
+        /** iOS `FreeTalkOpeners.warmAhead`. */
+        const val WARM_AHEAD = 2
+
         private fun key(language: String, personaName: String?) =
             "v$POOL_VERSION|" + language.take(2) + "|" + personaName.orEmpty().trim()
 
@@ -92,48 +95,82 @@ class FreeTalkOpeners(private val context: Context) {
         load(key(language, personaName))?.lines?.isNotEmpty() == true
 
     /**
-     * Synthesize every line of the pool into the phrase cache, so the call's
-     * FIRST word is already on the phone when the learner taps — the greeting
-     * used to wait on the gateway's own ElevenLabs round trip for a line that
-     * could have been on disk since the tab was opened (iOS `26a246c`).
-     *
-     * A line already cached costs nothing; the lineage is deliberately NOT
-     * consulted, because a greeting has to be in the CURRENT voice.
+     * How many upcoming pool lines are kept synthesized ahead of the rotation
+     * (iOS `warmAhead`, 2026-10-02). The whole pool of six used to be paid
+     * for up front — and again on every speed change or new voice — while a
+     * call only ever opens on the next one.
+     */
+    fun upcomingLines(language: String, personaName: String?, count: Int = WARM_AHEAD): List<String> {
+        val pool = load(key(language, personaName)) ?: return emptyList()
+        if (pool.lines.isEmpty()) return emptyList()
+        val n = minOf(count, pool.lines.size)
+        return (0 until n).map { pool.lines[(pool.cursor + it) % pool.lines.size] }
+    }
+
+    /**
+     * The first call's opener, ready before the tap (iOS `warmFirstCall`):
+     * the INTRO line for a learner not yet met (it is what their call opens
+     * on), the fallback while no pool exists, the pool itself, then the next
+     * [WARM_AHEAD] pool lines' audio. Everything is cache-checked, so repeat
+     * calls cost nothing.
+     */
+    suspend fun warmFirstCall(language: String, personaName: String?, level: CefrLevel,
+                              voiceId: String?, firstMeeting: Boolean) {
+        if (!voiceId.isNullOrBlank() && firstMeeting) {
+            if (!warmLine(introOpener(language), voiceId)) return
+        }
+        if (!voiceId.isNullOrBlank() && !hasPool(language, personaName)) {
+            if (!warmLine(fallbackOpener(language), voiceId)) return
+        }
+        if (!hasPool(language, personaName)) runCatching { generatePool(language, personaName, level) }
+        warmAudio(language, personaName, voiceId)
+    }
+
+    /**
+     * Synthesize the next [WARM_AHEAD] pool lines that aren't cached yet, so
+     * the call's FIRST word is already on the phone when the learner taps
+     * (iOS `26a246c`). Called again after calls, so the window walks with the
+     * rotation. A failure aborts the sweep (the rest would fail the same way).
      */
     suspend fun warmAudio(language: String, personaName: String?, voiceId: String?) {
         if (voiceId.isNullOrBlank()) return
+        for (line in upcomingLines(language, personaName)) {
+            if (!warmLine(line, voiceId)) return
+        }
+    }
+
+    /**
+     * ONE line into the phrase cache — a no-op when it's already there at the
+     * speed in force now. The lineage is deliberately NOT consulted, because a
+     * greeting has to be in the CURRENT voice. False on failure.
+     */
+    private suspend fun warmLine(line: String, voiceId: String): Boolean {
         val store = com.roro.futurevoice.data.PhraseAudioStore.shared(context)
-        val lines = buildList {
-            add(introOpener(language))
-            add(fallbackOpener(language))
-            load(key(language, personaName))?.let { addAll(it.lines) }
+        // The ONE exception to "produced audio is kept": the lines that open
+        // a call are re-made whenever the speed moves, or the greeting plays
+        // at the old speed and every answer after it at the new one (iOS
+        // `needsBake`, 2026-09-25).
+        if (store.data(line, voiceId) != null && !needsBake(line)) return true
+        val audio = try {
+            // A line of several sentences is made sentence by sentence so it
+            // breathes like the answers after it (see `PacedSpeech`). Billed
+            // as "opener", not "turn" (iOS 2026-10-02): priced the same, but
+            // a warm-up filed as "turn" read in the ledger as a call's reply.
+            PacedSpeech.synthesizeWav(
+                voiceId = voiceId, text = line,
+                modelId = com.roro.futurevoice.net.ElevenLabsClient.CONVERSATION_MODEL_ID,
+                purpose = "opener",
+            ) ?: com.roro.futurevoice.net.ElevenLabsClient(com.roro.futurevoice.data.AuthRepository())
+                .synthesize(voiceId = voiceId, text = line, purpose = "opener")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            report("opener_audio_failed", null, e)
+            return false   // no network, or a wall — try again later
         }
-        for (line in lines.distinct()) {
-            // The ONE exception to "produced audio is kept": the lines that
-            // open a call are re-made whenever the speed moves, or the
-            // greeting plays at the old speed and every answer after it at
-            // the new one — on every call (iOS `needsBake`, 2026-09-25).
-            if (store.data(line, voiceId) != null && !needsBake(line)) continue
-            val audio = try {
-                // A line of several sentences is made sentence by sentence so
-                // it breathes like the answers after it (see `PacedSpeech`);
-                // a one-sentence line, or an edge with no streaming, takes the
-                // ordinary single synthesis.
-                PacedSpeech.synthesizeWav(
-                    voiceId = voiceId, text = line,
-                    modelId = com.roro.futurevoice.net.ElevenLabsClient.CONVERSATION_MODEL_ID,
-                    purpose = "turn",
-                ) ?: com.roro.futurevoice.net.ElevenLabsClient(com.roro.futurevoice.data.AuthRepository())
-                    .synthesize(voiceId = voiceId, text = line, purpose = "turn")
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                report("opener_audio_failed", null, e)
-                return   // no network, or a wall — try again later
-            }
-            store.save(audio, line, voiceId)
-            markBaked(line)
-        }
+        store.save(audio, line, voiceId)
+        markBaked(line)
+        return true
     }
 
     private val bakePrefs get() = context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
