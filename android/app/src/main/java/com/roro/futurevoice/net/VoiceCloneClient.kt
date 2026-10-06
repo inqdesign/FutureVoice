@@ -21,6 +21,13 @@ import java.util.UUID
  */
 class VoiceCloneClient(private val auth: AuthRepository) {
 
+    /** The sample upload's own client: HTTP/1.1 — on the A34 an HTTP/2
+     *  upload of the ~2 MB take was never answered (read timeout waiting for
+     *  headers) while the same request from curl came back in 4 s. */
+    private val uploadClient = Edge.client.newBuilder()
+        .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
+        .build()
+
     @Serializable
     private data class CloneResponse(val voice_id: String)
 
@@ -44,7 +51,10 @@ class VoiceCloneClient(private val auth: AuthRepository) {
             .header("X-Idempotency-Key", UUID.randomUUID().toString())
             .post(body)
             .build()
-        Edge.client.newCall(request).execute().use { resp ->
+        val started = System.currentTimeMillis()
+        android.util.Log.i("VoiceClone", "upload ${sample.length()} bytes, denoise=$removeBackgroundNoise")
+        uploadClient.newCall(request).execute().use { resp ->
+            android.util.Log.i("VoiceClone", "response ${resp.code} ${resp.protocol} after ${System.currentTimeMillis() - started} ms")
             val text = resp.body.string()
             if (resp.code !in 200..299) {
                 // Upstream 400 carrying voice_limit_reached is OUR capacity

@@ -472,6 +472,7 @@ fun CloneFlowScreen(
                 act = CloneAct.MEET
                 openMeet()
             } catch (e: Exception) {
+                android.util.Log.w("CloneFlow", "clone failed", e)
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
                 error = when {
                     e is VoiceCloneClient.VoiceLimitReached ->
