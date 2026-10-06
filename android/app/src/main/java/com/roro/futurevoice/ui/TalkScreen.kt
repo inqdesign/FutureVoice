@@ -60,6 +60,7 @@ import androidx.compose.ui.res.stringResource
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
+import com.roro.futurevoice.data.DeepLinkInbox
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
@@ -123,6 +124,16 @@ fun TalkScreen(
     counterpartId: String? = null,
     onExit: () -> Unit,
 ) {
+    // "Go to Review" on the spent sheet (iOS `routeToPracticeOnClose`):
+    // whichever way the call then leaves — the summary's Done, the plans, a
+    // back swipe — it lands on Review.
+    var routeToPractice by remember { mutableStateOf(false) }
+    val exitParam = onExit
+    @Suppress("NAME_SHADOWING")
+    val onExit: () -> Unit = {
+        exitParam()
+        if (routeToPractice) DeepLinkInbox.pending.value = DeepLinkInbox.Destination.PRACTICE
+    }
     val context = LocalContext.current
     // Capture build only: a prepared call, drawn without starting one.
     val preview = remember { com.roro.futurevoice.capture.flags.TalkCaptureFlags.callPreview }
@@ -277,9 +288,61 @@ fun TalkScreen(
     }
     /** A spent allowance: a sheet, never an error and never a bare paywall. */
     var spent by remember { mutableStateOf<SpentPool?>(null) }
-    var canUpgrade by remember { mutableStateOf(false) }
-    LaunchedEffect(spent) {
-        if (spent != null) canUpgrade = AccountStatus.load(AuthRepository()).upgradeTier != null
+    /** Fair use: an alert, not a sheet and not an upsell (iOS `fairUseHalted`). */
+    var fairUseHalted by remember { mutableStateOf(false) }
+    // Which wall it was decides the ANSWER, raised once (iOS ConversationView
+    // `.onChange(of: realtime.state)` / `meter.onWallHit`). Nothing is drawn
+    // in the transcript — the sheet, the alert or the wrap-up says it.
+    // The view model outlives one call (it is the activity's), so the first
+    // frame of a NEW call can still carry the last call's wall — which raised
+    // the last call's sheet over this one. Walls count only once this call
+    // has started.
+    var callStarted by remember { mutableStateOf(preview != null) }
+    LaunchedEffect(state.phase) {
+        if (state.phase != TalkPhase.IDLE && state.phase != TalkPhase.ENDED) callStarted = true
+    }
+    LaunchedEffect(state.wall, state.wallBeforeSpeaking, callStarted) {
+        if (!callStarted) return@LaunchedEffect
+        when (state.wall) {
+            // The free pool ran out with something said: the call is wrapping
+            // ITSELF up and the plans come after the summary
+            // (`pitchThenLeave`) — a paywall here would land on the board and
+            // take the book with it (iOS `600d406`). Nothing said: nothing to
+            // wrap up, so the plans ARE the answer and the call leaves with
+            // them (iOS `closeAfterPaywall`, `talk_wall_before_speaking`).
+            TalkWall.OUT_OF_MINUTES -> {
+                BillingGate.invalidate()
+                if (state.wallBeforeSpeaking && preview == null) {
+                    BillingGate.showPaywall.value = true
+                    onExit()
+                }
+            }
+            TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
+            TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
+            TalkWall.FAIR_USE -> fairUseHalted = true
+            null -> Unit
+        }
+    }
+    if (fairUseHalted) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { fairUseHalted = false },
+            title = { Text(stringResource(R.string.we_ve_paused_talking_on_this_account)) },
+            text = { Text(stringResource(R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca)) },
+            confirmButton = { TextButton(onClick = { fairUseHalted = false }) { Text(stringResource(R.string.ok)) } },
+        )
+    }
+    /**
+     * "Go to Review" on the spent sheet (iOS `leaveForPractice`): a talk with
+     * something said and not yet saved is wrapped up first — the summary,
+     * the book — and the exit then lands on Review; otherwise straight there.
+     */
+    fun leaveForPractice() {
+        routeToPractice = true
+        if (state.turns.any { it.role == TurnRole.USER } && state.phase != TalkPhase.ENDED) {
+            vm.end()
+            // Nothing saved (set synchronously) → no board to wait on.
+            if (vm.state.value.endedSessionId == null) onExit()
+        } else { vm.discard(); onExit() }
     }
     val listState = rememberLazyListState()
     // Call settings (iOS `CallSettingsSheet`): screen state the learner can
@@ -738,45 +801,6 @@ fun TalkScreen(
                         }
                     }
 
-                    // A spent allowance is not an error — it gets its own line, in
-                    // the body colour, and a subscriber never reads the word "credits".
-                    state.wall?.let { wall ->
-                        // The call is over and saved either way — the line below says
-                        // so. What differs is the ANSWER, raised on top of it once.
-                        LaunchedEffect(wall) {
-                            when (wall) {
-                                // The free pool ran out: the call is wrapping
-                                // ITSELF up, and the plans come after the summary
-                                // (`pitchThenLeave`). A paywall thrown up here lands
-                                // on top of the wrap-up board and takes the book with
-                                // it — which is how a 42-turn first call ended with
-                                // nothing saved (iOS `600d406`).
-                                TalkWall.OUT_OF_MINUTES -> BillingGate.invalidate()
-                                TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
-                                TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
-                                // Nothing to sell and nothing spent: a person is
-                                // reading the admin console. The line below is the
-                                // whole answer.
-                                TalkWall.FAIR_USE -> Unit
-                            }
-                        }
-                        Text(
-                            stringResource(
-                                when (wall) {
-                                    TalkWall.OUT_OF_MINUTES ->
-                                        R.string.talk_time_used_up_call_saved
-                                    TalkWall.ALLOWANCE_SPENT ->
-                                        R.string.this_month_s_talk_time_is_used_up
-                                    TalkWall.SCENES_SPENT ->
-                                        R.string.thats_your_watch_scenes_for_this_period
-                                    TalkWall.FAIR_USE ->
-                                        R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca
-                                }
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
 
                     // A failed reply is answerable: the learner said something and
                     // heard nothing back, and the fix is one tap.
@@ -906,45 +930,6 @@ fun TalkScreen(
                     }
                 }
 
-                // A spent allowance is not an error — it gets its own line, in
-                // the body colour, and a subscriber never reads the word "credits".
-                state.wall?.let { wall ->
-                    // The call is over and saved either way — the line below says
-                    // so. What differs is the ANSWER, raised on top of it once.
-                    LaunchedEffect(wall) {
-                        when (wall) {
-                            // The free pool ran out: the call is wrapping
-                            // ITSELF up, and the plans come after the summary
-                            // (`pitchThenLeave`). A paywall thrown up here lands
-                            // on top of the wrap-up board and takes the book with
-                            // it — which is how a 42-turn first call ended with
-                            // nothing saved (iOS `600d406`).
-                            TalkWall.OUT_OF_MINUTES -> BillingGate.invalidate()
-                            TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
-                            TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
-                            // Nothing to sell and nothing spent: a person is
-                            // reading the admin console. The line below is the
-                            // whole answer.
-                            TalkWall.FAIR_USE -> Unit
-                        }
-                    }
-                    Text(
-                        stringResource(
-                            when (wall) {
-                                TalkWall.OUT_OF_MINUTES ->
-                                    R.string.talk_time_used_up_call_saved
-                                TalkWall.ALLOWANCE_SPENT ->
-                                    R.string.this_month_s_talk_time_is_used_up
-                                TalkWall.SCENES_SPENT ->
-                                    R.string.thats_your_watch_scenes_for_this_period
-                                TalkWall.FAIR_USE ->
-                                    R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca
-                            }
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
 
                 // A failed reply is answerable: the learner said something and
                 // heard nothing back, and the fix is one tap.
@@ -981,8 +966,7 @@ fun TalkScreen(
     spent?.let { pool ->
         AllowanceSpentSheet(
             pool = pool,
-            canUpgrade = canUpgrade,
-            onReview = { spent = null; onExit() },
+            onReview = { spent = null; leaveForPractice() },
             onUpgrade = { spent = null; BillingGate.showPaywall.value = true },
             onDismiss = { spent = null },
         )

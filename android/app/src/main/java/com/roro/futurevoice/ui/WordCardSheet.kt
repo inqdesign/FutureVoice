@@ -211,6 +211,12 @@ fun WordCardSheet(
                     idempotencyKey = InstallSalt.ttsKey(term, id, timestamps = false),
                     purpose = "library")
                 mp3.play(audio)
+            }.onFailure { e ->
+                // Nothing to spend (a spent free pool, or a PARKED voice —
+                // both answer as the spent pool): the plans, not silence
+                // (iOS `parkedPaywall`).
+                if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
+                    com.roro.futurevoice.data.BillingGate.showPaywall.value = true
             }
             speaking = false
         }

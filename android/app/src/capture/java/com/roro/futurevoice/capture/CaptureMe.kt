@@ -105,27 +105,27 @@ object CaptureMe {
             MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount
             CreditGuideScreen(onBack = {})
         },
-        "day-spent" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = true, CaptureSeed.sampleLightAccount) },
-        "day-spent-scenes" to { _ -> DaySpent(SpentPool.SCENES, canUpgrade = true, CaptureSeed.sampleLightAccount) },
+        "day-spent" to { _ -> DaySpent(SpentPool.TALK, onSale(CaptureSeed.sampleLightAccount)) },
+        "day-spent-scenes" to { _ -> DaySpent(SpentPool.SCENES, onSale(CaptureSeed.sampleLightAccount)) },
         // iOS: the same sheet with nothing left to sell (Unlimited/Plus) —
         // same numbers, `canUpgrade: false`.
         // iOS: the talk sheet with the invite line, which only a subscriber
         // on a counted pool with rewards left ever sees.
         "day-spent-invite" to { _ ->
-            DaySpent(SpentPool.TALK, canUpgrade = true, CaptureSeed.sampleLightAccount, sampleInvite)
+            DaySpent(SpentPool.TALK, onSale(CaptureSeed.sampleLightAccount), sampleInvite)
         },
         // iOS: what a Plus subscriber meets today — the month's pool (300 min
         // in iOS's sample) spent, nothing to upgrade to, no minute pack on
         // sale, so the invite is the only free way forward.
-        "day-spent-plus" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, plusSpentAccount, sampleInvite) },
+        "day-spent-plus" to { _ -> DaySpent(SpentPool.TALK, plusSpentAccount, sampleInvite) },
         // Android only: the Plus sheet once the pack HAS a price — the pack
         // takes the lead slot, review steps back to tonal, and the line above
         // names the pack (iOS shows this state only with a live ASC price).
         "day-spent-pack" to { _ ->
             seedPack()
-            DaySpent(SpentPool.TALK, canUpgrade = false, plusSpentAccount, sampleInvite)
+            DaySpent(SpentPool.TALK, plusSpentAccount, sampleInvite)
         },
-        "day-spent-unlimited" to { _ -> DaySpent(SpentPool.TALK, canUpgrade = false, CaptureSeed.sampleLightAccount) },
+        "day-spent-unlimited" to { _ -> DaySpent(SpentPool.TALK, CaptureSeed.sampleLightAccount) },
         // iOS: a TRIAL meets the Light pool pro-rated 7/30 (35 min), dated at
         // the trial's end (+4 days, already `sampleTrialAccount.periodEnd`).
         // The sheet says when the plan starts and, where the client knows it,
@@ -133,11 +133,11 @@ object CaptureMe {
         // trial, unknown on iOS's Plus sample). A trialer sees the invite line
         // too — the one free way forward besides review.
         "day-spent-trial" to { _ ->
-            DaySpent(SpentPool.TALK, canUpgrade = true,
-                trialAccount.copy(planMonthlySeconds = 150 * 60), sampleInvite)
+            DaySpent(SpentPool.TALK,
+                onSale(trialAccount.copy(planMonthlySeconds = 150 * 60)), sampleInvite)
         },
         "day-spent-trial-plus" to { _ ->
-            DaySpent(SpentPool.TALK, canUpgrade = false,
+            DaySpent(SpentPool.TALK,
                 trialAccount.copy(planId = "plus_monthly"), sampleInvite)
         },
         "update" to { _ -> Update(required = false) },
@@ -242,13 +242,18 @@ object CaptureMe {
             planId = "plus_monthly", secondsUsedPeriod = 300 * 60, monthlyCapSeconds = 300 * 60,
             monthlyScenesCap = 30)
 
+    /** The sheet resolves "anything to sell?" from the account's own
+     *  `upgradeTier` now, so a sample that should offer Plus says Plus is on
+     *  sale (iOS's samples predate Max: Light → Plus, Plus at the top). */
+    private fun onSale(a: AccountStatus) = a.copy(tiersOnSale = setOf("light", "plus"))
+
     @Composable
-    private fun DaySpent(pool: SpentPool, canUpgrade: Boolean, account: AccountStatus,
+    private fun DaySpent(pool: SpentPool, account: AccountStatus,
                          invite: InviteOffer? = null) {
         MeCaptureFlags.previewAccount = account
         MeCaptureFlags.previewInvite = invite
         OverGround {
-            AllowanceSpentSheet(pool = pool, canUpgrade = canUpgrade,
+            AllowanceSpentSheet(pool = pool,
                 onReview = {}, onUpgrade = {}, onDismiss = {})
         }
     }

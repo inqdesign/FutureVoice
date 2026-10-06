@@ -86,6 +86,16 @@ sealed class EdgeError(message: String) : Exception(message) {
     object SceneCapReached :
         EdgeError("Your Watch scenes for this period are used up.")
 
+    /**
+     * 402 `fair_use_limit` — an UNCAPPED plan crossed the abuse line. Not a
+     * spent allowance and never a paywall: nothing ran out, a person is
+     * reading the admin console (iOS `ElevenLabsError.fairUseLimit`). Until
+     * this existed the body fell through to [InsufficientCredits] and showed
+     * a paying subscriber the plans.
+     */
+    object FairUseLimit :
+        EdgeError("We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out.")
+
     companion object {
         /**
          * The ONE place a 402 body is read. iOS learned this the hard way
@@ -94,8 +104,9 @@ sealed class EdgeError(message: String) : Exception(message) {
          * subscriber they were out of credits.
          */
         fun wall(body: String): EdgeError = when {
-            body.contains("daily_cap_reached") -> DailyCapReached
             body.contains("scene_cap_reached") -> SceneCapReached
+            body.contains("fair_use_limit") -> FairUseLimit
+            body.contains("daily_cap_reached") -> DailyCapReached
             else -> InsufficientCredits
         }
     }

@@ -125,6 +125,9 @@ fun PracticeBody(
     nativeLanguage: String = "en",
     /** Which shelf the page opens on (iOS `PracticeTab(initialShelf:)`). */
     initialShelf: Shelf = Shelf.STUDYING,
+    /** A scenario card's long-press "Talk now" (iOS `scenarioCard` context
+     *  menu) — a metered launch, so the host runs it through the gate. */
+    onTalkScenario: ((Scenario) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -187,7 +190,8 @@ fun PracticeBody(
                 tall = tall, modifier = modifier)
         }
         book.scenario?.let {
-            ScenarioCard(it, onOpenScenarioBook, personaName = it.counterpartId?.let(counterparts::get),
+            ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
+                personaName = it.counterpartId?.let(counterparts::get),
                 tall = tall, modifier = modifier)
         }
     }
@@ -262,7 +266,7 @@ fun PracticeBody(
             }
             Shelf.WATCH -> {
                 BookGrid(scenarios) { sc, m ->
-                    ScenarioCard(sc, onOpenScenarioBook, modifier = m,
+                    ScenarioCard(sc, onOpenScenarioBook, onTalk = onTalkScenario, modifier = m,
                         personaName = sc.counterpartId?.let(counterparts::get),
                         onArchive = { id, on -> scope.launch {
                             ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
@@ -271,7 +275,7 @@ fun PracticeBody(
                 }
                 ArchiveSection(archivedScenarios.isNotEmpty()) {
                     archivedScenarios.forEach {
-                        ScenarioCard(it, onOpenScenarioBook,
+                        ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
                             personaName = it.counterpartId?.let(counterparts::get),
                             onArchive = { id, on -> scope.launch {
                                 ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },

@@ -408,8 +408,13 @@ fun RootScreen() {
     var onboardingNeedsPlan by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(state.voiceId, dailyCallOnboarded) {
         if (state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == null) {
-            val account = runCatching { AccountStatus.load(AuthRepository()) }.getOrNull()
-                ?.also { BillingGate.remember(it) }
+            // No session is "couldn't ask", never "no plan" (iOS
+            // `BillingGate.load`): a signed-out read answers with an empty
+            // account, which would pitch someone we merely failed to identify.
+            val auth = AuthRepository()
+            val account = if (auth.userId == null) null
+                else runCatching { AccountStatus.load(auth) }.getOrNull()
+                    ?.also { BillingGate.remember(it) }
             // Couldn't ask, or nothing to sell — step aside for good. A failed
             // lookup must not park the learner on a paywall forever; the
             // first paid tap asks the server again anyway.
@@ -827,10 +832,6 @@ fun RootScreen() {
             pushed = deckPushed,
         )
 
-        // Above everything: an account that cannot spend must not be looking
-        // at a call screen behind a sheet.
-        paywalled -> PaywallScreen(onDismiss = { BillingGate.showPaywall.value = false })
-
         // Under the deck, so a row's card opens over the list and back
         // returns to it (iOS pushes `DrillView(source: .card)`).
         showSentences -> SentencesScreen(
@@ -1103,6 +1104,13 @@ fun RootScreen() {
             }
         }
     }
+    // The plans, OVER whatever raised them (iOS presents `PaywallView` as a
+    // sheet from the screen on top). It used to be one branch of the page
+    // switch above, BELOW the shadow, scene and deck pages — so a 402 there
+    // set the flag and nothing appeared until the page was closed, and a
+    // branch that replaced the page would have thrown away a scene mid-play
+    // (re-entering it writes a fresh take, a second scene count).
+    if (paywalled) PaywallDialog(onDismiss = { BillingGate.showPaywall.value = false })
     TalkMorphOverlay(inCall = inCall)
     }
 }
@@ -1533,6 +1541,7 @@ internal fun HomeScreen(
                         onOpenDueReview = onOpenDueReview,
                         onOpenSessionDeck = onOpenSessionDeck,
                         nativeLanguage = state.nativeLanguage,
+                        onTalkScenario = { sc -> onStartCall(sc.promptBlurb, emptyList(), sc.id) },
                     )
 
                     HomeTab.PROGRESS -> ProgressBody(

@@ -419,6 +419,11 @@ fun WeeklyTestScreen(
                 cachedSynthesis(context, voiceId = voiceId, text = item.answer,
                     idempotencyKey = InstallSalt.ttsKey(item.answer, voiceId, timestamps = false),
                     purpose = "shadow")
+            }.onFailure { e ->
+                // Out of allowance (or a parked voice): the plans (iOS
+                // `parkedPaywall`); offline stays silent.
+                if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
+                    com.roro.futurevoice.data.BillingGate.showPaywall.value = true
             }.getOrNull()
             loadingLineAudio = false
             // Offline or out of allowance: the line is still on screen to read.

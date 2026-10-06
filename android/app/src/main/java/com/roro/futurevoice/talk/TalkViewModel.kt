@@ -98,6 +98,10 @@ data class TalkUiState(
      */
     val dropped: String? = null,
     val wall: TalkWall? = null,
+    /** The free pool's wall arrived before the learner said a word (iOS
+     *  `talk_wall_before_speaking`): nothing to wrap up, so the screen leaves
+     *  with the plans instead of a board. */
+    val wallBeforeSpeaking: Boolean = false,
     /** Null until the first tick lands, and null throughout on a plan that doesn't count down. */
     val minutesRemaining: Int? = null,
     /**
@@ -171,6 +175,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** "Close without saving": the call ends and nothing is kept (iOS
      *  `close()` → `tearDown()`, which never reaches `endSession`). */
     @Volatile private var discardOnEnd = false
+    /** DEBUG: the current call is a staged wall (no service, no gateway). */
+    private var stagedCall = false
     /** When the call last put ITSELF back together after a transport drop. */
     @Volatile private var lastAutoReconnectAt = 0L
     /** The greeting to speak from the phone once the gateway says ready —
@@ -261,6 +267,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun start(config: TalkConfig) {
         endRequested = false
         discardOnEnd = false
+        stagedCall = false
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
         this.config = config
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
@@ -288,6 +295,10 @@ class TalkViewModel(context: Context) : ViewModel() {
         loadGrammarFocus(config)
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
+        // DEBUG only: a staged wall in place of a real call (see DebugBilling).
+        com.roro.futurevoice.data.DebugBilling.consumeCallWall()?.let { staged ->
+            startStagedWall(staged); return
+        }
         // The meter runs on BOTH paths; on the realtime one the gateway does
         // the charging and this only writes the day's seconds down.
         meter.isBillable = { isBillableMoment() }
@@ -589,7 +600,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         // A reconnect must not inherit a clock that already ran out.
         lastActivityAt = System.currentTimeMillis()
         startIdleWatch()
-        _state.update { it.copy(phase = TalkPhase.CONNECTING, pausedForIdle = false) }
+        _state.update { it.copy(phase = TalkPhase.CONNECTING, pausedForIdle = false, wall = null) }
         viewModelScope.launch {
             connectRealtime(cfg, null,
                 _state.value.turns.map {
@@ -780,15 +791,72 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private fun handleWall(kind: TalkWall) {
         val spoke = _state.value.turns.any { it.role == TurnRole.USER }
-        _state.update { it.copy(wall = kind, partial = "") }
-        com.roro.futurevoice.core.Analytics.capture("talk_free_call_spent",
-            mapOf("turns" to _state.value.turns.size, "spoke" to spoke))
-        if (!spoke) {
-            _state.update { it.copy(phase = TalkPhase.ENDED) }
-            persist()
+        if (kind != TalkWall.OUT_OF_MINUTES) {
+            // A SUBSCRIBER's spent pool is its own sheet and fair use its own
+            // alert — and neither wraps the call up (iOS `dailyCapReached` /
+            // `fairUseHalted`): the gateway has hung up, the transcript stays,
+            // and End is what summarizes. Only the free pool's wall puts the
+            // call down by itself.
+            stopForWall()
+            _state.update { it.copy(wall = kind, phase = TalkPhase.PAUSED, pausedForIdle = false,
+                partial = "", level = 0f) }
+            if (!stagedCall) config?.let { updateCallNotification(it, TalkPhase.PAUSED) }
             return
         }
+        if (!spoke) {
+            // Nothing was said, so nothing to wrap up — the plans are the
+            // honest answer and the call screen leaves with them.
+            com.roro.futurevoice.core.Telemetry.log("talk_wall_before_speaking",
+                mapOf("turns" to _state.value.turns.size.toString()))
+            _state.update { it.copy(wall = kind, wallBeforeSpeaking = true, partial = "") }
+            end()
+            return
+        }
+        com.roro.futurevoice.core.Telemetry.log("talk_free_call_spent",
+            mapOf("turns" to _state.value.turns.size.toString()))
+        _state.update { it.copy(wall = kind, partial = "") }
         end()
+    }
+
+    /** Everything a wall stops without ending the talk (iOS `onWallHit`). */
+    private fun stopForWall() {
+        if (REALTIME) { realtime.hangUp(); flushRealtimeReply() }
+        meter.stop()
+        cancelIdleWatch()
+        endpointJob?.cancel(); endpointJob = null
+        runCatching { live.stop() }
+        pcm.stop()
+        mp3.stop()
+    }
+
+    /**
+     * DEBUG only: two staged lines (or one, for a wall before the learner
+     * speaks), then the wall the gateway would have sent — through the same
+     * [handleWall]. No gateway, no mic, no meter; never saved or summarized.
+     */
+    private fun startStagedWall(staged: com.roro.futurevoice.data.DebugBilling.CallWall) {
+        if (!BuildConfig.DEBUG) return
+        discardOnEnd = true
+        stagedCall = true
+        val lines = buildList {
+            add(Turn(role = TurnRole.FLUENT_SELF, transcript = "Hey, it's you. How was your day?"))
+            if (staged.learnerSpoke) add(Turn(role = TurnRole.USER, transcript = "Pretty good, I went to the park."))
+        }
+        _state.update { it.copy(phase = TalkPhase.LISTENING, turns = lines) }
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(staged.afterSeconds * 1000L)
+            handleWall(when (staged.code) {
+                "daily_cap_reached" -> TalkWall.ALLOWANCE_SPENT
+                "fair_use_limit" -> TalkWall.FAIR_USE
+                else -> TalkWall.OUT_OF_MINUTES
+            })
+            // The board needs a subject: stand in for the save the staged call skips.
+            if (_state.value.phase == TalkPhase.ENDED && staged.learnerSpoke &&
+                staged.code == "insufficient_credits") {
+                SessionSummarizer.stageBoard(sessionId)
+                _state.update { it.copy(endedSessionId = sessionId) }
+            }
+        }
     }
 
     /** The reply still in flight when the call was put down — without this
@@ -1407,7 +1475,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (e is CancellationException) return   // end() cancelling a job is not a failure
         // A 402 from a turn is the same wall the meter reports, and it is not
         // an error — route it to the same place.
-        if (e is EdgeError.InsufficientCredits || e is EdgeError.DailyCapReached) {
+        if (e is EdgeError.InsufficientCredits || e is EdgeError.DailyCapReached ||
+            e is EdgeError.FairUseLimit) {
             hitWall(e); return
         }
         meter.stop()
@@ -1466,19 +1535,16 @@ class TalkViewModel(context: Context) : ViewModel() {
      * WHICH wall it was so a subscriber is never shown a paywall.
      */
     private fun hitWall(wall: EdgeError) {
-        meter.stop()
-        cancelIdleWatch()
-        endpointJob?.cancel()
-        runCatching { live.stop() }
-        pcm.stop()
-        mp3.stop()
+        if (!REALTIME) callJob?.cancel()
         val kind = when (wall) {
             is EdgeError.DailyCapReached -> TalkWall.ALLOWANCE_SPENT
             is EdgeError.SceneCapReached -> TalkWall.SCENES_SPENT
+            is EdgeError.FairUseLimit -> TalkWall.FAIR_USE
             else -> TalkWall.OUT_OF_MINUTES
         }
-        _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", wall = kind) }
-        persist()
+        // The same three answers the gateway's walls get (iOS routes the
+        // meter's `onWallHit` and the realtime wall to one place).
+        handleWall(kind)
     }
 
     private fun humanMessage(e: Exception): String = when (e) {

@@ -208,7 +208,8 @@ class TalkMeter(
                     secondsLeft / 60
                 }
         }.onFailure { e ->
-            if (e is EdgeError.InsufficientCredits || e is EdgeError.DailyCapReached) {
+            if (e is EdgeError.InsufficientCredits || e is EdgeError.DailyCapReached ||
+                e is EdgeError.FairUseLimit) {
                 stop()
                 _minutesRemaining.value = 0
                 onWallHit?.invoke(e)

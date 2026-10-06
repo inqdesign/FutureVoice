@@ -355,6 +355,12 @@ fun DrillDeckScreen(
                                             val audio = com.roro.futurevoice.data.cachedSynthesis(
                                                 context, voiceId, top.targetPhrase, purpose = "drill")
                                             player.play(audio)
+                                        }.onFailure { e ->
+                                            // Grading stays free on-device; HEARING a
+                                            // never-synthesized line is what the plans
+                                            // are for (iOS `parkedPaywall`).
+                                            if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
+                                                com.roro.futurevoice.data.BillingGate.showPaywall.value = true
                                         }
                                         hearing = false
                                     }

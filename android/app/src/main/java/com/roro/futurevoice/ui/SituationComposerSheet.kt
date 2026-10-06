@@ -94,8 +94,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
@@ -386,8 +384,13 @@ internal fun ScenarioComposer(
             // The CTA is the paid tap: the account is asked HERE, before
             // anything is generated. Blocked means the plans and nothing
             // else — no categorize call, no scenario minted.
+            // Talk host = a call (iOS `blocks()`); Watch host = a scene,
+            // which a free account with its free scenes spent can't start
+            // (iOS `blocksScene()`) — it can still talk off its balance.
             val allowed = BillingGate.start(
-                AuthRepository(), com.roro.futurevoice.data.VoiceRevival.Purpose.SCENE) { }
+                AuthRepository(),
+                if (host == ComposerHost.WATCH) com.roro.futurevoice.data.VoiceRevival.Purpose.SCENE
+                else com.roro.futurevoice.data.VoiceRevival.Purpose.CALL) { }
             if (!allowed && !BillingGate.showPaywall.value) {
                 // Not the paywall: a PARKED voice's revival screen was closed
                 // (see `VoiceRevival`). Nothing to buy; stay on the sheet.
@@ -887,12 +890,7 @@ internal fun ScenarioComposer(
 
         // The plans, when the CTA can't be paid for — from HERE, so the sheet
         // (and the situation in it) survives being told no.
-        if (showPaywall) {
-            Dialog(
-                onDismissRequest = { showPaywall = false },
-                properties = DialogProperties(usePlatformDefaultWidth = false),
-            ) { PaywallScreen(onDismiss = { showPaywall = false }) }
-        }
+        if (showPaywall) PaywallDialog(onDismiss = { showPaywall = false })
     }
 }
 

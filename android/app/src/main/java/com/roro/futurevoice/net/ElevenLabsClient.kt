@@ -180,7 +180,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         viaTimestamps.getOrElse { e ->
             // A wall is a wall on either endpoint — never retried as plain.
             if (e === EdgeError.InsufficientCredits || e === EdgeError.DailyCapReached ||
-                e === EdgeError.SceneCapReached) throw e
+                e === EdgeError.SceneCapReached || e === EdgeError.FairUseLimit) throw e
             synthesize(voiceId, text, modelId, idempotencyKey = key, purpose = purpose) to emptyList()
         }
     }

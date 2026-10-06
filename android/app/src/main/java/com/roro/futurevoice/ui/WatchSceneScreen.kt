@@ -162,6 +162,12 @@ fun WatchSceneScreen(
                         is EdgeError.DailyCapReached -> {
                             spent = SpentPool.TALK; return
                         }
+                        // Nothing ran out and nothing is for sale: iOS lands
+                        // this in the scene's error alert, with the line
+                        // that says a person is checking.
+                        is EdgeError.FairUseLimit -> {
+                            error = e.message; return
+                        }
                         else -> null   // one failed line must not kill the scene
                     }
                 }
@@ -426,15 +432,17 @@ fun WatchSceneScreen(
     }
 
     spent?.let { pool ->
-        // Whether there is anything left to SELL is resolved client-side: the
-        // 402 body carries no tier, and on Plus the upgrade half must be
-        // absent rather than disabled.
-        var canUpgrade by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) { canUpgrade = AccountStatus.load(AuthRepository()).upgradeTier != null }
+        // Whether there is anything left to SELL is resolved by the sheet
+        // (the 402 body carries no tier). "Go to Review" switches to Review
+        // (iOS `pendingPracticeRoute = .studying`); this page has no tab
+        // stack to stay pushed on, so it closes on the way.
         AllowanceSpentSheet(
             pool = pool,
-            canUpgrade = canUpgrade,
-            onReview = { spent = null; onBack() },
+            onReview = {
+                spent = null; onBack()
+                com.roro.futurevoice.data.DeepLinkInbox.pending.value =
+                    com.roro.futurevoice.data.DeepLinkInbox.Destination.PRACTICE
+            },
             onUpgrade = { spent = null; BillingGate.showPaywall.value = true },
             onDismiss = { spent = null },
         )

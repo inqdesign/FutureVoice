@@ -71,7 +71,6 @@ private val DoneGreen = Color(0xFF34C759)
 @Composable
 fun AllowanceSpentSheet(
     pool: SpentPool,
-    canUpgrade: Boolean,
     onReview: () -> Unit,
     onUpgrade: () -> Unit,
     onDismiss: () -> Unit,
@@ -80,17 +79,29 @@ fun AllowanceSpentSheet(
     // hardcoded: a spent allowance whose size the learner cannot see reads as
     // an arbitrary stop, and the size was on the card before the purchase.
     // Loaded here rather than passed in, so every caller gets the same sheet.
+    //
+    // The sheet waits for both answers before it appears (iOS resolves the
+    // account and the invite offer BEFORE raising it, "so no button grows
+    // under the learner's thumb"): drawn first and filled in after, the plan
+    // move and the invite row arrived a beat late under a finger already
+    // reaching for "Go to Review".
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var inviteOffer by remember { mutableStateOf<InviteOffer?>(null) }
+    var resolved by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         // Screenshot harness only: a sample account instead of the network.
         account = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewAccount
-            ?: AccountStatus.load(AuthRepository())
+            ?: runCatching { AccountStatus.load(AuthRepository()) }.getOrNull()
         if (pool == SpentPool.TALK) account?.let {
             inviteOffer = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewInvite
-                ?: InviteOffer.load(it)
+                ?: runCatching { InviteOffer.load(it) }.getOrNull()
         }
+        resolved = true
     }
+    if (!resolved) return
+    // A bigger plan is on sale for this account (iOS `canUpgradePlan =
+    // account.upgradeTier != nil`) — resolved here, never by the caller.
+    val canUpgrade = account?.upgradeTier != null
 
     // Same line every billing surface uses, so one date format reaches them all.
     val locale = LocalConfiguration.current.locales[0]
