@@ -1020,16 +1020,15 @@ internal fun SignInScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            // Google first — the PRIMARY provider on Android; Apple stays for
-            // iPhone switchers (their clone follows the account).
+            // Apple first, then Google — iOS's order.
+            Button(onClick = onSignIn, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_apple))
+            }
             if (googleAvailable) {
                 Button(onClick = { onGoogleSignIn(activityContext) }, enabled = !state.busy,
                     modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_google))
                 }
-            }
-            Button(onClick = onSignIn, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(if (state.busy) R.string.opening_ellipsis else R.string.continue_with_apple))
             }
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
@@ -1116,7 +1115,7 @@ internal fun AccountScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.save_this_voice_to_your_account),
                 fontSize = 22.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-            Text(stringResource(R.string.account_step_voice_stays),
+            Text(stringResource(R.string.it_s_built_and_it_s_yours_sign_in_and_it_stays_with_your_pro_d0da3f),
                 fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.widthIn(max = 300.dp))
@@ -1136,8 +1135,8 @@ internal fun AccountScreen(
                     Text(stringResource(label), color = onInk, fontSize = 19.sp, fontWeight = FontWeight.Medium)
                 }
             }
-            if (googleAvailable) provider(R.string.continue_with_google) { onGoogleSignIn(context) }
             provider(R.string.continue_with_apple, onAppleSignIn)
+            if (googleAvailable) provider(R.string.continue_with_google) { onGoogleSignIn(context) }
         }
     }
 }

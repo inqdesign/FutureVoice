@@ -375,7 +375,7 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                     if (done.trialDays > 0 && trialTalkMinutes != null) stringResource(
                         R.string.your_trial_is_on_lld_minutes_of_talk_over_the_next_lld_days_4dffb5,
                         trialTalkMinutes, done.trialDays)
-                    else stringResource(R.string.your_subscription_is_active_google_play))
+                    else stringResource(R.string.your_subscription_is_active_your_talk_time_lands_on_your_acc_75b9a5))
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = close) {

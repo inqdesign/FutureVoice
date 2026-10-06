@@ -192,8 +192,6 @@
     <!-- A used/total count. Punctuation only — nothing here is language. -->
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">Cancela cuando quieras antes de esa fecha en Google Play</string>
-    <!-- iOS "Your subscription is active…" names Apple; the Play build names Play. -->
-    <string name="your_subscription_is_active_google_play">La suscripción está activa. El tiempo de conversación entra en tu cuenta en cuanto Google Play confirme la compra.</string>
     <string name="manage_in_google_play">Administrar en Google Play</string>
     <!-- What picking a fully translated native language buys, said
          BEFORE the tap. -->
@@ -564,6 +562,4 @@
     <string name="grammar_measures_two_reads">Dos lecturas, gana la más baja: las estructuras que de verdad construyes en una conversación y los errores verificados en la transcripción por cada 100 palabras, sin contar fallos de reconocimiento ni sugerencias de estilo. Las frases cortas y correctas dan un nivel bajo, no alto.</string>
     <string name="grammar_improve_longer_sentences">Di más en una sola frase: una razón, una condición, lo que pasó antes. Son las frases más largas las que mueven este nivel.</string>
     <string name="grammar_trend_caption_ceiling">Errores verificados por cada 100 palabras, un punto por conversación: tu precisión. El nivel de arriba sale de las estructuras que construyes, así que esta curva sola no puede moverlo.</string>
-    <!-- The account step's body (iOS "It's built and it's yours…"), with the iPhone made a phone. -->
-    <string name="account_step_voice_stays">"La voz que acabas de crear ya es tuya. Inicia sesión y se queda en tu cuenta con tu progreso, aunque cambies de teléfono."</string>
 </resources>

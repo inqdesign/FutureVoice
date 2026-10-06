@@ -306,26 +306,25 @@ fun WelcomeScreen(
 }
 
 /** The account buttons, in the Get started button's place (iOS
- *  `signInButtons`): Google first (Android's primary provider, in the slot
- *  iOS gives Apple), then Apple, then the way back to Get started. */
+ *  `signInButtons`): Apple first, then Google, both black pills — the same
+ *  order and look as iOS — then the way back to Get started. */
 @Composable
 private fun SignInButtons(onGoogle: (() -> Unit)?, onApple: (() -> Unit)?, busy: Boolean, onBack: () -> Unit) {
     val shape = RoundedCornerShape(50)
     Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        onApple?.let {
+            Box(Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.Black)
+                .clickable(enabled = !busy, onClick = it), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.continue_with_apple), color = Color.White,
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
         onGoogle?.let {
             Box(Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.Black)
                 .clickable(enabled = !busy, onClick = it), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.continue_with_google), color = Color.White,
-                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-        onApple?.let {
-            Box(Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.White)
-                .border(0.5.dp, StoryInk.copy(alpha = 0.25f), shape)
-                .clickable(enabled = !busy, onClick = it), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.continue_with_apple), color = StoryInk,
                     fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
         }

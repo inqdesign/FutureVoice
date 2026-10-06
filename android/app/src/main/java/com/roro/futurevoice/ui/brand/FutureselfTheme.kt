@@ -14,9 +14,10 @@ enum class FutureselfTheme(@androidx.annotation.StringRes private val labelRes: 
     EMERALD(com.roro.futurevoice.R.string.theme_emerald), AMBER(com.roro.futurevoice.R.string.theme_amber),
     CORAL(com.roro.futurevoice.R.string.theme_coral), AQUA(com.roro.futurevoice.R.string.theme_aqua);
 
-    /** The palette's name in the app language (only ever drawn; the stored
-     *  preference is the ordinal). */
-    val label: String @Composable get() = androidx.compose.ui.res.stringResource(labelRes)
+    /** The palette's name — iOS `FutureselfTheme.label`: plain English
+     *  ("Blue", "Mono"…) in every app language, as iOS draws it. Only ever
+     *  drawn; the stored preference is the ordinal. */
+    val label: String @Composable get() = name.lowercase().replaceFirstChar { it.uppercase() }
 
     /**
      * Chrome that must match the shader surface (the call button's outline).

@@ -178,8 +178,6 @@
          Play, so the catalog's App Store wording cannot be reused. -->
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">在那之前，随时可以到 Google Play 取消</string>
-    <!-- iOS "Your subscription is active…" names Apple; the Play build names Play. -->
-    <string name="your_subscription_is_active_google_play">订阅已生效。Google Play 确认付款后，通话时间就会进到账号。</string>
     <string name="manage_in_google_play">在 Google Play 管理</string>
     <!-- What picking a fully translated native language buys, said
          BEFORE the tap. -->
@@ -545,6 +543,4 @@
     <string name="grammar_measures_two_reads">两种判断取较低者：你在对话中实际造出的句子结构，以及经文字记录确认、每 100 词的语法错误（不含识别错误和用词建议）。简短又正确的句子会被判得低，而不是高。</string>
     <string name="grammar_improve_longer_sentences">试着在一句话里多说一点：原因、条件、之前发生的事。能让这个等级上升的是更长的句子。</string>
     <string name="grammar_trend_caption_ceiling">每 100 词经确认的错误，每次对话一个点——这是你的准确度。上方的等级取决于你造出的句子结构，所以单靠这条曲线无法让它变化。</string>
-    <!-- The account step's body (iOS "It's built and it's yours…"), with the iPhone made a phone. -->
-    <string name="account_step_voice_stays">"刚做好的声音已经是你的了。登录后会连同学习记录一起留在账号里，换了手机也不会不见。"</string>
 </resources>
