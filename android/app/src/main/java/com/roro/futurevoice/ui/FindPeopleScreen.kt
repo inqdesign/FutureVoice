@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.ui.draw.clip
@@ -103,7 +104,13 @@ fun FindPeopleScreen(
     language: String,
     /** For the editor behind the learner's own row. */
     persona: com.roro.futurevoice.talk.UserPersona? = null,
-    onTalk: (PublicPersonaClient.PublicPersona) -> Unit,
+    /** Talk on a card. [meet] persists the person — called by the host only
+     *  once its gate has passed (iOS `start { onTalk(savedPerson()) }`). */
+    onTalk: (person: PublicPersonaClient.PublicPersona, meet: () -> Unit) -> Unit,
+    /** Watch on a person's card: a scene of the two of them, in THEIR preset
+     *  voice (iOS `FindPeopleSheet(onWatch:)`). The host gates it as a scene
+     *  and calls [meet] only after the gate (iOS `startScene { onWatch(savedPerson()) }`). */
+    onWatch: (meet: () -> Counterpart) -> Unit = {},
     onOpenPerson: (String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -214,7 +221,8 @@ fun FindPeopleScreen(
             seated = badges[open.owner_user_id?.lowercase()]?.seated == true,
             bookmarked = bookmarks.contains(open.id),
             onToggleBookmark = { bookmarks = toggleBookmark(context, open.id) },
-            onTalk = { onTalk(it) },
+            onTalk = onTalk,
+            onWatch = onWatch,
             onPersonSaved = { scope.launch { reloadOwn(); StoreEvents.bump() } },
             onBack = { card = null },
         )
@@ -458,7 +466,8 @@ private fun FindPersonCard(
     seated: Boolean,
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
-    onTalk: (PublicPersonaClient.PublicPersona) -> Unit,
+    onTalk: (PublicPersonaClient.PublicPersona, () -> Unit) -> Unit,
+    onWatch: (() -> Counterpart) -> Unit,
     onPersonSaved: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -483,11 +492,17 @@ private fun FindPersonCard(
     /** Meeting them persists the person, so sessions can link to a stable
      *  local id and they join "People you've met". Idempotent — the local id
      *  IS the remote one, and the store dedupes on `remoteId`. */
-    fun persist(voice: String) {
+    fun persist(voice: String): Counterpart {
         val base = saved ?: person.asCounterpart(metLabel)
         val next = base.copy(voicePresetId = voice)
         saved = next
-        scope.launch { store.save(next); onPersonSaved() }
+        // Not the card's scope: the gate's action usually closes this page
+        // in the same frame, and a save launched on a scope being disposed
+        // never runs.
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            store.save(next); onPersonSaved()
+        }
+        return next
     }
 
     Scaffold(
@@ -514,17 +529,30 @@ private fun FindPersonCard(
         bottomBar = {
             Column(Modifier.background(AppSurfaces.ground).bottomBarInsets()
                 .padding(horizontal = 20.dp, vertical = 10.dp)) {
-                Button(
-                    onClick = {
-                        persist(voiceId)
-                        // The learner's pick wins over the pool's row.
-                        onTalk(person.copy(voice_preset_id = voiceId))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text(stringResource(R.string.talk))
+                // Same weight on both (iOS: two `.bordered` buttons, Watch
+                // first): watching and talking are two ways in, not a main
+                // action and a lesser one. Both spend, so both are gated by
+                // the host — Watch as a scene, Talk as a call.
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.roro.futurevoice.ui.brand.IosTonalButton(
+                        onClick = { onWatch { persist(voiceId) } },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(R.string.watch))
+                    }
+                    com.roro.futurevoice.ui.brand.IosTonalButton(
+                        onClick = {
+                            // The learner's pick wins over the pool's row.
+                            onTalk(person.copy(voice_preset_id = voiceId)) { persist(voiceId) }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(R.string.talk))
+                    }
                 }
             }
         },

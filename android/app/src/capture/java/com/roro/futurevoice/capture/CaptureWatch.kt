@@ -110,7 +110,7 @@ object CaptureWatch {
         // from sample rows, since the live table is out of reach offline.
         "people" to @Composable { c: Context ->
             Seeded({ WatchCaptureFlags.samplePool = CaptureSeed.samplePublicPersonas }) {
-                FindPeopleScreen(language = lang(c), onTalk = {}, onOpenPerson = {}, onBack = {})
+                FindPeopleScreen(language = lang(c), onTalk = { _, _ -> }, onOpenPerson = {}, onBack = {})
             }
         },
         // The guided new-person intake on its first card, blank — iOS

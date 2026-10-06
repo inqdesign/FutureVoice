@@ -59,6 +59,7 @@ import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.nameIn
 import com.roro.futurevoice.talk.identityIn
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
@@ -308,6 +309,12 @@ fun WatchSceneScreen(
     }
 
     val otherPhoto = rememberPersonPhoto(otherId)
+    var other by remember { mutableStateOf<com.roro.futurevoice.data.Counterpart?>(null) }
+    LaunchedEffect(otherId) {
+        other = otherId?.let { id ->
+            com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -358,10 +365,17 @@ fun WatchSceneScreen(
                 item {
                     Column(Modifier.padding(bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        val who = listOfNotNull(
-                            scene?.role?.takeIf { it.isNotBlank() },
-                            scene?.environment?.takeIf { it.isNotBlank() },
-                        ).joinToString(" · ")
+                        // iOS `WatchView.header`: who the other side is —
+                        // the person's name · relationship, or for a scene
+                        // with no person its stock voice's name · the role —
+                        // then the title. Never the scenario's notes: those
+                        // are instructions to the scene writer (a meeting
+                        // scene's "Build the scene on the COMMON GROUND…"
+                        // was printed to the learner).
+                        val who = listOf(
+                            other?.name ?: StockPerson.by(scene?.voicePresetId).nameIn(targetLanguage),
+                            other?.relationship ?: scene?.role.orEmpty(),
+                        ).filter { it.isNotBlank() }.joinToString(" · ")
                         if (who.isNotEmpty()) {
                             Text(who, style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -369,10 +383,6 @@ fun WatchSceneScreen(
                         title?.let {
                             Text(it, style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.SemiBold)
-                        }
-                        scene?.notes?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

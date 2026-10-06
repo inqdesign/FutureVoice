@@ -908,7 +908,7 @@ fun RootScreen() {
             language = state.targetLanguage,
             persona = state.persona,
             onOpenPerson = { personDetailId = it },
-            onTalk = { p ->
+            onTalk = { p, meet ->
                 callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
                     name = p.display_name, intro = p.intro, location = p.location,
                     occupation = p.occupation, interests = p.interests,
@@ -920,10 +920,25 @@ fun RootScreen() {
                 // it for free. The local row's id IS the remote persona's.
                 callCounterpartId = p.id
                 gate {
+                    meet()
                     callTopic = ""; callFacts = emptyList(); callScenarioId = null
                     showPeople = false; inCall = true
                 }
             },
+            // Watch on a person (iOS `WatchTab` → `freeTalkScenario(with:)`):
+            // a scene of the two of them, past the hellos. Gated as a SCENE —
+            // it writes a fresh take — and the scenario is reused per person,
+            // so every watch lands in the same book.
+            onWatch = { meet -> gateScene {
+                val person = meet()
+                gateScope.launch {
+                    // On disk before the scene reads it (the card's own save
+                    // is fire-and-forget; this one is awaited, idempotent).
+                    com.roro.futurevoice.data.CounterpartStore.shared(context).save(person)
+                    val sc = meetingScenario(context, person, state.targetLanguage)
+                    showPeople = false; watchReplay = false; watchScenarioId = sc.id
+                }
+            } },
             onBack = { showPeople = false },
         )
 
@@ -2465,3 +2480,45 @@ enum class TabArrival {
         }
     }
 }
+
+
+/**
+ * The scenario behind "Watch" on a Find-people card (iOS
+ * `WatchTab.freeTalkScenario(with:)`): no situation to build, just the two of
+ * them talking. Reused, never re-minted, per person — the study material from
+ * meeting them accumulates in one book. Kept deliberately short: the person's
+ * intro and style already ride in the scene engine's counterpart block. The
+ * voice is the person's preset (iOS reads it off the Counterpart; the Android
+ * scene reads it off the scenario).
+ */
+internal suspend fun meetingScenario(
+    context: android.content.Context, person: com.roro.futurevoice.data.Counterpart, language: String,
+): Scenario {
+    val store = com.roro.futurevoice.data.ScenarioStore.shared(context)
+    store.load(language).firstOrNull {
+        it.counterpartId == person.id && it.category == MEETING_CATEGORY
+    }?.let { existing ->
+        if (existing.voicePresetId == person.voicePresetId) return existing
+        return existing.copy(voicePresetId = person.voicePresetId).also { store.save(it, language) }
+    }
+    val s = Scenario(
+        environment = "Talking with someone you've just met, already past the hellos",
+        role = person.relationship.ifBlank { person.name },
+        notes = "Build the scene on the COMMON GROUND given below — that is " +
+            "the subject. Get specific about it fast. NOT a " +
+            "get-to-know-you interview: no running through where are you " +
+            "from / what do you do / what are your hobbies. Land " +
+            "mid-subject, the way real talk does.",
+        counterpartId = person.id,
+        voicePresetId = person.voicePresetId,
+        isMeeting = true,
+        category = MEETING_CATEGORY,
+        categoryIcon = "person.2.wave.2",
+        summary = "Free talk with ${person.name}",
+    )
+    store.save(s, language)
+    com.roro.futurevoice.data.StoreEvents.bump()
+    return s
+}
+
+private const val MEETING_CATEGORY = "Meeting"
