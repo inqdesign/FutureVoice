@@ -209,7 +209,15 @@ fun TalkScreen(
                 account.isEntitled || account.unlimited -> log("skipped_entitled")
                 spentThisCall || account.needsSubscription -> {
                     log("shown")
+                    // The plans hold the exit, and their dismissal IS the
+                    // exit — no feedback ask, no rating sheet behind them
+                    // (iOS `closeAfterPaywall` → `close()`). Leaving through
+                    // `leave()` here parked the feedback sheet on a call
+                    // screen the paywall had replaced, and the book reopened
+                    // under it once the plans were closed.
                     com.roro.futurevoice.data.BillingGate.showPaywall.value = true
+                    onExit()
+                    return@launch
                 }
                 else -> log("skipped_minutes_left")
             }
@@ -232,6 +240,28 @@ fun TalkScreen(
                 return@launch
             }
             pitchCore()
+        }
+    }
+    /**
+     * Every OTHER way out — closed without saving, a call nobody wrapped up —
+     * still asks about the first call when the learner spoke in it (iOS
+     * `close()`: "the first call is asked about however it ended"). Its
+     * dismissal is the exit; no plans pitch, which belongs to the summary.
+     */
+    fun exitAskingFirstCall() {
+        if (firstCallCheck != null) return
+        val spoke = vm.state.value.turns.any { it.role == TurnRole.USER }
+        // Torn down first, like iOS `close()`: nothing listens or bills
+        // behind the sheet, and nothing is kept.
+        vm.discard()
+        feedbackScope.launch {
+            if (preview == null && FirstCallCheck.shouldShow(appContext, spoke)) {
+                FirstCallCheck.markShown(appContext)
+                kotlinx.coroutines.delay(350)
+                firstCallCheck = { onExit() }
+                return@launch
+            }
+            onExit()
         }
     }
     firstCallCheck?.let { next ->
@@ -414,7 +444,7 @@ fun TalkScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingDiscard = false; onExit() }) {
+                TextButton(onClick = { confirmingDiscard = false; exitAskingFirstCall() }) {
                     Text(stringResource(R.string.close_without_saving),
                         color = MaterialTheme.colorScheme.error)
                 }

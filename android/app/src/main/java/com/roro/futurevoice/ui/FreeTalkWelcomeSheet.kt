@@ -111,13 +111,18 @@ object FreeTalkWelcome {
             val talked = com.roro.futurevoice.data.LanguageScope.enrolled(context)
                 .any { SessionStore.shared(context).load(it).isNotEmpty() }
             if (prefs.getBoolean(SHOWN_KEY, false) || talked) { markShown(context); return null }
-            com.roro.futurevoice.core.Analytics.capture("free_talk_welcome_shown", mapOf("kind" to "first"))
+            markShown(context)
             return balance / 60
         }
         if (balance < seen + RISE_SECONDS) return null
-        com.roro.futurevoice.core.Analytics.capture("free_talk_welcome_shown", mapOf("kind" to "topup"))
+        markShown(context)
         return balance / 60
     }
+
+    /** Whether this install has been congratulated before — the caller logs
+     *  a first welcome and a top-up as one event with different kinds. */
+    fun hasBeenShown(context: Context): Boolean =
+        context.getSharedPreferences("futurevoice", 0).getBoolean(SHOWN_KEY, false)
 
     fun markShown(context: Context) {
         context.getSharedPreferences("futurevoice", 0).edit()

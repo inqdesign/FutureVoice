@@ -193,11 +193,19 @@ fun RootScreen() {
     var callCastVoice by call.castVoice
     /** Who the call is with, so the saved talk lands on their card. */
     var callCounterpartId by call.counterpartId
+    var callFromHomeCard by call.fromHomeCard
+    /** Set when a Talk-home card's call closes; the home consumes it and
+     *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
+    var deepenPending by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     val referralJoin by com.roro.futurevoice.data.ReferralJoins.pending.collectAsStateWithLifecycle()
-    referralJoin?.let { ReferralJoinSheet(join = it, onDismiss = com.roro.futurevoice.data.ReferralJoins::dismiss) }
+    /** The tab shell has been reached this run (see `arriveAtTabs`). iOS
+     *  hosts the referral and level-up sheets on `RootTabView`, so neither
+     *  can rise over onboarding; here the root is both, so they wait. */
+    var tabsArrived by remember { mutableStateOf(false) }
+    if (tabsArrived) referralJoin?.let { ReferralJoinSheet(join = it, onDismiss = com.roro.futurevoice.data.ReferralJoins::dismiss) }
     // A measured level-up, announced once wherever the learner happens to be.
-    state.levelUp?.let { (from, to) ->
+    if (tabsArrived) state.levelUp?.let { (from, to) ->
         LevelUpSheet(from = from, to = to, onDismiss = app::clearLevelUp)
     }
     var showPublicIntro by remember { mutableStateOf(false) }
@@ -431,32 +439,76 @@ fun RootScreen() {
     // Talk" reads before "here are your minutes" (iOS `welcomeAfterIntro`).
     val guideRevision by com.roro.futurevoice.data.PageIntroStore.revision.collectAsStateWithLifecycle()
     val guideUp by com.roro.futurevoice.data.PageIntroStore.showing.collectAsStateWithLifecycle()
-    LaunchedEffect(state.voiceId, state.setupComplete, guideRevision, guideUp, showAgeCheck) {
-        if (state.voiceId == null || !state.setupComplete || showAgeCheck) return@LaunchedEffect
-        if (guideUp || (tab == HomeTab.TALK && BuildConfig.BUILD_TYPE != "capture" &&
-                com.roro.futurevoice.data.PageIntroStore.isDue(context,
-                    com.roro.futurevoice.data.PageIntroStore.Page.TALK))) return@LaunchedEffect
+    // What the tab root asks for on ARRIVAL (iOS `RootTabView.onAppear`),
+    // once per run — the tab shell here is recomposed after every overlay
+    // (Me, a deck, a call), and an `onAppear` there is not a new arrival:
+    //   1. a voice with no age on record → the age check, and nothing else
+    //      this run (the guide follows it; the welcome waits for next launch);
+    //   2. else on Talk with its guide still due → the guide first, the
+    //      welcome held behind it (`welcomeAfterIntro`);
+    //   3. else the welcome check now.
+    var welcomeAfterIntro by remember { mutableStateOf(false) }
+    var checkWelcome by remember { mutableStateOf(false) }
+    fun arriveAtTabs() {
+        if (tabsArrived) return
+        tabsArrived = true
+        when (TabArrival.decide(
+            hasVoice = state.voiceId != null,
+            ageOnRecord = com.roro.futurevoice.data.ConsentStore.ageConfirmedAt(context) != null,
+            onTalk = tab == HomeTab.TALK,
+            talkGuideDue = BuildConfig.BUILD_TYPE != "capture" &&
+                !com.roro.futurevoice.data.PageIntroStore.wasSeen(context,
+                    com.roro.futurevoice.data.PageIntroStore.Page.TALK),
+        )) {
+            TabArrival.AGE_CHECK -> showAgeCheck = true
+            TabArrival.GUIDE_THEN_WELCOME -> welcomeAfterIntro = true
+            TabArrival.WELCOME -> checkWelcome = true
+        }
+    }
+    // The held welcome follows the guide off screen (iOS `pageIntro`'s
+    // onDismiss / `releaseHeldWelcome`): released once no guide is up and
+    // the tab now showing has none left to offer. Re-checked a beat later,
+    // because a guide is marked seen a frame before it reports itself up.
+    LaunchedEffect(welcomeAfterIntro, guideUp, guideRevision, tab) {
+        if (!welcomeAfterIntro || guideUp) return@LaunchedEffect
+        if (com.roro.futurevoice.data.PageIntroStore.isDue(context, tab.guidePage())) return@LaunchedEffect
+        delay(600)
+        if (com.roro.futurevoice.data.PageIntroStore.showing.value) return@LaunchedEffect
+        welcomeAfterIntro = false
+        checkWelcome = true
+    }
+    LaunchedEffect(checkWelcome) {
+        if (!checkWelcome) return@LaunchedEffect
+        // Asked before the check, which marks the install shown: a repeat is
+        // time ADDED to the pool, and the two read nothing alike in the funnel.
+        val repeatWelcome = FreeTalkWelcome.hasBeenShown(context)
         FreeTalkWelcome.minutesToAnnounce(context)?.let { minutes ->
-            FreeTalkWelcome.markShown(context)
-            com.roro.futurevoice.core.Analytics.capture(
-                "free_talk_welcome_shown", mapOf("minutes" to minutes))
+            com.roro.futurevoice.core.Analytics.capture("free_talk_welcome_shown",
+                mapOf("minutes" to minutes, "kind" to if (repeatWelcome) "topup" else "first"))
             welcomeMinutes = minutes
         }
+        checkWelcome = false
     }
     welcomeMinutes?.let { minutes ->
         FreeTalkWelcomeSheet(
             minutes = minutes,
             onStart = { startAfterWelcome = true; welcomeMinutes = null },
-            onDismiss = { welcomeMinutes = null },
+            onDismiss = {
+                welcomeMinutes = null
+                com.roro.futurevoice.core.Analytics.capture(
+                    "free_talk_welcome_closed", mapOf("started" to false))
+            },
         )
     }
-    // "Start talking" on the sheet opens the call the sheet was about.
+    // "Start talking" on the sheet opens the call the sheet was about —
+    // through the same gate the ring's tap meets (iOS `startFreeTalk`).
     LaunchedEffect(startAfterWelcome) {
         if (startAfterWelcome) {
             startAfterWelcome = false
             com.roro.futurevoice.core.Analytics.capture(
                 "free_talk_welcome_closed", mapOf("started" to true))
-            callTopic = ""; callFacts = emptyList(); callScenarioId = null; inCall = true
+            tab = HomeTab.TALK
+            gate { callTopic = ""; callFacts = emptyList(); callScenarioId = null; inCall = true }
         }
     }
 
@@ -465,9 +517,10 @@ fun RootScreen() {
     // over a call or another sheet.
     val updatePending by com.roro.futurevoice.data.AppUpdateService.pending.collectAsStateWithLifecycle()
     WeekRecapHost(
-        ready = state.setupComplete && state.voiceId != null,
+        ready = state.setupComplete && state.voiceId != null && tabsArrived,
         blocked = inCall || paywalled || showIntroPreview || state.levelUp != null ||
-            referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp,
+            referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
+            showAgeCheck,
         level = state.level,
     )
 
@@ -487,6 +540,7 @@ fun RootScreen() {
         gate {
             fun open() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId
+                callFromHomeCard = topic.isNotEmpty() || scenarioId != null
                 // The FREE talk is the ring's own tap: its surface morphs
                 // into the call pill (iOS). Every other launcher opens flat.
                 if (topic.isEmpty() && scenarioId == null && tab == HomeTab.TALK)
@@ -970,6 +1024,8 @@ fun RootScreen() {
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
+                        if (callFromHomeCard) deepenPending = true
+                        callFromHomeCard = false
                         inCall = false; callTopic = ""; callFacts = emptyList()
                         callScenarioId = null; callOpener = ""; callCast = null
                         callCastVoice = null; callCounterpartId = null
@@ -982,10 +1038,7 @@ fun RootScreen() {
           // Entering the tabs with a voice but no age on record (iOS
           // `RootTabView.onAppear` → `showingAgeCheck`): the age check takes
           // this visit; the tab's guide waits behind it.
-          LaunchedEffect(Unit) {
-              if (state.voiceId != null &&
-                  com.roro.futurevoice.data.ConsentStore.ageConfirmedAt(context) == null) showAgeCheck = true
-          }
+          LaunchedEffect(Unit) { arriveAtTabs() }
           HomeScreen(
             state = state,
             onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },
@@ -1027,6 +1080,8 @@ fun RootScreen() {
             // Adding one asks for a level, which is Me's sheet — the home
             // header is not the place for a form.
             onAddLanguage = { showMe = true },
+            deepenPending = deepenPending,
+            onDeepenConsumed = { deepenPending = false },
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck,
@@ -1170,6 +1225,9 @@ internal fun HomeScreen(
     initialPracticeShelf: Shelf = Shelf.STUDYING,
     /** A root-owned sheet is up — the tab's first-visit guide waits. */
     guideBlocked: Boolean = false,
+    /** A Talk-home card's call has just closed (see [CallRoute.fromHomeCard]). */
+    deepenPending: Boolean = false,
+    onDeepenConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -1194,7 +1252,17 @@ internal fun HomeScreen(
     // Auto-present exactly once, right after the first talk ends — the moment
     // the "richer persona = more real talks" pitch has lived evidence behind
     // it. Before that it is a promise, and asked in onboarding it is a form.
-    LaunchedEffect(state.persona, tab) {
+    // Asked only as a Talk-home card's call closes (iOS `callLaunch`'s
+    // onDismiss → `maybePromptDeepen`, 0.7 s late so the call is gone) —
+    // never on opening the app, where it landed on top of the welcome, the
+    // week's deck or the age check.
+    var deepenAsk by remember { mutableStateOf(false) }
+    LaunchedEffect(deepenPending) {
+        if (deepenPending) { onDeepenConsumed(); deepenAsk = true }
+    }
+    LaunchedEffect(deepenAsk) {
+        if (!deepenAsk) return@LaunchedEffect
+        kotlinx.coroutines.delay(700)
         val prefs = context.getSharedPreferences("futurevoice", 0)
         val prompted = prefs.getBoolean("futurevoice.personaDeepenPrompted", false)
         val talks = com.roro.futurevoice.data.SessionStore.shared(context)
@@ -1203,6 +1271,7 @@ internal fun HomeScreen(
             prefs.edit().putBoolean("futurevoice.personaDeepenPrompted", true).apply()
             showDeepen = true
         }
+        deepenAsk = false
     }
 
     if (showDeepen) {
@@ -2265,6 +2334,10 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val cast = mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null)
     val castVoice = mutableStateOf<String?>(null)
     val counterpartId = mutableStateOf<String?>(null)
+    /** Launched from a Talk-home card (a scenario or a news story) — iOS
+     *  `ConversationHome.callLaunch`, whose dismissal is the one moment the
+     *  persona-deepen sheet is offered. The ring's free talk is not one. */
+    val fromHomeCard = mutableStateOf(false)
 }
 
 /**
@@ -2351,4 +2424,23 @@ private fun bookPageTransition(from: BookPage, to: BookPage): androidx.compose.a
         // The page leaving sits ON TOP of the one coming back.
         targetContentZIndex = -1f,
     )
+}
+
+/**
+ * What the tab root asks for on ARRIVAL, in iOS `RootTabView.onAppear`'s
+ * order: a voice with no age on record takes the whole arrival (the guide
+ * follows the age check, the free-minutes welcome waits for the next run);
+ * otherwise on Talk with its guide still due the welcome is held behind the
+ * guide; otherwise the welcome is checked at once.
+ */
+enum class TabArrival {
+    AGE_CHECK, GUIDE_THEN_WELCOME, WELCOME;
+
+    companion object {
+        fun decide(hasVoice: Boolean, ageOnRecord: Boolean, onTalk: Boolean, talkGuideDue: Boolean) = when {
+            hasVoice && !ageOnRecord -> AGE_CHECK
+            onTalk && talkGuideDue -> GUIDE_THEN_WELCOME
+            else -> WELCOME
+        }
+    }
 }

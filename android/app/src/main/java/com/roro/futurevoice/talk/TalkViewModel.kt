@@ -168,6 +168,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** The learner asked for the call to stop — a socket closing after that
      *  is the hang-up itself, never a drop to reconnect from. */
     @Volatile private var endRequested = false
+    /** "Close without saving": the call ends and nothing is kept (iOS
+     *  `close()` → `tearDown()`, which never reaches `endSession`). */
+    @Volatile private var discardOnEnd = false
     /** When the call last put ITSELF back together after a transport drop. */
     @Volatile private var lastAutoReconnectAt = 0L
     /** The greeting to speak from the phone once the gateway says ready —
@@ -257,6 +260,7 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     fun start(config: TalkConfig) {
         endRequested = false
+        discardOnEnd = false
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
         this.config = config
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
@@ -363,7 +367,14 @@ class TalkViewModel(context: Context) : ViewModel() {
      * not a talk, and saving one would mint an empty book and a summary with
      * nothing to read.
      */
+    /** Hang up and keep nothing — "Close without saving". */
+    fun discard() {
+        discardOnEnd = true
+        end()
+    }
+
     private fun persist() {
+        if (discardOnEnd) return
         val cfg = config ?: return
         val turns = _state.value.turns
         if (turns.none { it.role == TurnRole.USER }) return
