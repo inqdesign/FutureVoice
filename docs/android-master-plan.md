@@ -664,7 +664,7 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 | 마이크 권한은 Mic 단계 | ☑ 녹음 버튼에서 — 방 확인이 귀머거리 | Mic Next에서 요청, 거부 문구 (`d88a382c`) |
 | Spot Next 항상, Record here 라벨, 두 줄 | ☑ 통과 전엔 버튼 없음(벽) | iOS 그대로 (`d88a382c`) |
 | 녹음: Start over/Stop & review·세 문구·링 | ☑ 비활성 Stop | iOS 그대로, 75초 권장 (`d88a382c`) |
-| 리뷰: Re-record | Use this voice, Listen/Stop, 앱 재시작 복귀 | ☑ Start over, 복귀 없음 | iOS 그대로, 녹음은 `clone-take.wav`, 쓰기로 한 것만 `clone-sample.wav` (`d88a382c`) |
+| 리뷰: Re-record · Use this voice, Listen/Stop, 앱 재시작 복귀 | ☑ Start over, 복귀 없음 | iOS 그대로, 녹음은 `clone-take.wav`, 쓰기로 한 것만 `clone-sample.wav` (`d88a382c`) |
 | Becoming 문구·팔레트 순환 | ☑ 진행 막대 | iOS 그대로 (`d88a382c`) |
 | Meet: 오브 탭 재생, 색은 무음+앱 강조색, Doesn't sound like you → 비교 → 다시 녹음 | ☑ 인사 텍스트·Listen 버튼, "Pick your look", 강조색 미반영, 비교 없음 | iOS 그대로(`FutureselfTheme.pick`), 다시 녹음 중 Back/"Keep my current voice"는 지금 목소리로 (`d88a382c`) |
 | 계정: 같은 화면의 Apple·Google, 머리 Back, 끝나면 자동 진행 | ☑ Continue → 열리지 않는 화면 | 같은 화면, 연결이면 Start talking과 같은 마무리, 다른 계정이면 재복제 (`d88a382c`) |
