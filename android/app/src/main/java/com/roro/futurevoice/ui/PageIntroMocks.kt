@@ -297,11 +297,13 @@ private fun Bubble(widths: List<Dp>, mine: Boolean) {
 @Composable
 internal fun CallSettingsMock() {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically) {
+        // The call's own bottom bar: the settings button pinned LEFT, laid
+        // over the row, so the pill is centred whatever sits beside it.
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Futureself(mode = FutureselfMode.IDLE, level = 0f, theme = futureselfTheme(),
                 modifier = Modifier.size(112.dp, 42.dp).clip(CircleShape))
-            Callout(1, corner = 19.dp, trailing = true) {
+            Callout(1, corner = 19.dp, trailing = true,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp)) {
                 Box(Modifier.size(38.dp).background(mockCard, CircleShape), contentAlignment = Alignment.Center) {
                     Glyph(Icons.Filled.Tune, 16.dp, secondaryInk)
                 }
