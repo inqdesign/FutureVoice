@@ -157,7 +157,7 @@ internal fun TalkRingMock() {
                     drawArc(a, -90f, 360f * 0.62f, false, Offset(inset, inset), sz,
                         style = Stroke(w, cap = StrokeCap.Round))
                 }
-                Callout(1, corner = 49.dp, trailing = true) {
+                Callout(1, corner = 49.dp, centered = true) {
                     Futureself(mode = FutureselfMode.IDLE, level = 0f, theme = futureselfTheme(),
                         virtualHeight = 64f, modifier = Modifier.size(98.dp).clip(CircleShape))
                 }

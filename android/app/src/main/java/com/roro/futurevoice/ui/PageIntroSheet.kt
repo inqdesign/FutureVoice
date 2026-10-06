@@ -628,6 +628,10 @@ internal fun Callout(
     number: Int,
     corner: Dp = 12.dp,
     trailing: Boolean = false,
+    /** The badge sits in the MIDDLE of what it marks — for a target you tap
+     *  dead centre (the Talk ring's circle), where a corner badge would land
+     *  on the ring around it instead. */
+    centered: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -641,9 +645,13 @@ internal fun Callout(
             cornerRadius = CornerRadius((corner + inset).toPx()))
     }) {
         content()
-        Box(Modifier.matchParentSize(), contentAlignment = if (trailing) Alignment.TopEnd else Alignment.TopStart) {
-            CalloutBadge(number, lit,
-                Modifier.offset(x = if (trailing) 9.dp + inset else -9.dp - inset, y = -9.dp - inset))
+        if (centered) {
+            Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) { CalloutBadge(number, lit) }
+        } else {
+            Box(Modifier.matchParentSize(), contentAlignment = if (trailing) Alignment.TopEnd else Alignment.TopStart) {
+                CalloutBadge(number, lit,
+                    Modifier.offset(x = if (trailing) 9.dp + inset else -9.dp - inset, y = -9.dp - inset))
+            }
         }
     }
 }
