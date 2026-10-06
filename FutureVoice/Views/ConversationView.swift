@@ -2774,6 +2774,18 @@ struct ConversationView: View {
     /// the reply is prose and the correction is a separate, later request. It
     /// must stay that way: the voice is already playing by the time this
     /// fires, so nothing the learner hears ever waits on coaching.
+    private static func correctionErrorKind(_ error: Error) -> String {
+        switch error {
+        case GeminiError.truncated:                 return "truncated"
+        case GeminiError.malformedJSON:             return "malformed_json"
+        case GeminiError.jsonNotFound:              return "json_not_found"
+        case GeminiError.httpError(let status, _):  return "http_\(status)"
+        case is CancellationError:                  return "cancelled"
+        case let e as URLError:                     return "url_\(e.code.rawValue)"
+        default:                                    return String(describing: error).prefix(60).description
+        }
+    }
+
     private func requestRealtimeSuggestion(for turnId: UUID, said: String) {
         // Words, not spaces: a Japanese line is one space-free run, and
         // counting on " " gave every Japanese turn a length of one — no
@@ -2791,15 +2803,30 @@ struct ConversationView: View {
             ? "They said: \"\(said)\""
             : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
         Task { @MainActor in
-            let payload: ConversationTurnPayload? = try? await GeminiClient.background.sendJSON(
-                system: ConversationEngine.correctionOnlyPrompt(
-                    targetLanguage: target, nativeLanguage: native,
-                    level: appState.proficiency, counterpart: counterpart,
-                    inScene: sessionScenarioId != nil),
-                messages: [GeminiClient.Message(role: .user, content: content)],
-                maxTokens: 900,
-                purpose: "turn",
-                idempotencyKey: "rt-suggest:\(turnId.uuidString)")
+            let payload: ConversationTurnPayload?
+            do {
+                payload = try await GeminiClient.background.sendJSON(
+                    system: ConversationEngine.correctionOnlyPrompt(
+                        targetLanguage: target, nativeLanguage: native,
+                        level: appState.proficiency, counterpart: counterpart,
+                        inScene: sessionScenarioId != nil),
+                    messages: [GeminiClient.Message(role: .user, content: content)],
+                    // Headroom, not a length: thinking spends from the same
+                    // ceiling, and a long turn's whole rewrite plus its fixes
+                    // was cut off at 900 — a truncation loses the WHOLE
+                    // correction, and Say it again then reads the turn raw.
+                    maxTokens: 2048,
+                    purpose: "turn",
+                    idempotencyKey: "rt-suggest:\(turnId.uuidString)")
+            } catch {
+                // Was invisible until 2026-10-06. One row per failed turn;
+                // `words` says whether it is the long turns that fail.
+                Telemetry.log("talk_correction_failed", [
+                    "error": Self.correctionErrorKind(error),
+                    "words": String(WordSplitter.count(said)),
+                ])
+                payload = nil
+            }
             guard !isTornDown, let payload,
                   let suggestion = payload.turnSuggestion(for: said),
                   let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }

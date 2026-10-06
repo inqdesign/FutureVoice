@@ -26,6 +26,9 @@ import Foundation
 ///    put one back inside a single-sentence turn honestly, so a fragment is
 ///    demoted: the prompter reads what they SAID and the better wording
 ///    rides along as the note. Nothing is lost and nothing is invented.
+/// 1b. **A whole-turn rewrite written afterwards** (`SayItAgainRewrites`)
+///    for a turn the call left without one — a pre-2026-09-27 fragment or a
+///    live correction call that failed. Practice text: no attempt id.
 /// 2. **The summary's phrase fixes spliced in** (`SessionSummary.phrasesUsed`).
 ///    Those are PHRASES, not lines — `userSaid` is a verified quote from this
 ///    turn — so the fix is put back where it was said and the rest of the
@@ -78,6 +81,7 @@ enum SayItAgainScript {
     /// passing read is filed under has to be the book's own.
     @MainActor
     static func build(session: Session,
+                      rewrites: [UUID: SayItAgainRewrites.Entry] = [:],
                       hasAudio: (UUID) -> Bool = { TurnAudioStore.shared.url(for: $0) != nil }) -> [Step] {
         let fixes = session.summary?.phrasesUsed ?? []
         var out: [Step] = []
@@ -102,6 +106,16 @@ enum SayItAgainScript {
                 out.append(Step(id: turn.id, isSpoken: true, text: rewrite,
                                 said: transcript, note: turn.suggestion?.reason ?? "",
                                 attemptId: TalkCurriculum.correctionId(for: turn.id)))
+                continue
+            }
+            // No whole-turn rewrite from the call: one written for this
+            // screen afterwards (`SayItAgainRewrites`). Practice text only —
+            // no attempt id, because nothing in the book is filed under it.
+            if let later = rewrites[turn.id]?.alternative?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !later.isEmpty {
+                out.append(Step(id: turn.id, isSpoken: true, text: later,
+                                said: transcript, note: rewrites[turn.id]?.reason ?? "",
+                                attemptId: nil))
                 continue
             }
             // Their own line, with whatever the summary verified put back

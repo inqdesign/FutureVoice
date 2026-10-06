@@ -1095,6 +1095,20 @@ beside Replay (다시 듣기) the pair says listen-again / speak-again.
   outright: its transcript is the recognizer's mistake, and a prompter showing
   it would ask them to say something they never said. The fluent self's answer
   to it stays — it is still what happened next.
+- **A turn the call left without a whole-turn rewrite gets one HERE**
+  (2026-10-06, `SayItAgainRewrites`). Reported from a 90-word turn read back
+  with every "um" in it: the live correction call ran with `try?` and a
+  900-token ceiling that thinking spends from, so long turns — the ones that
+  need it most — failed invisibly, and pre-09-27 fragments are refused by
+  `coversWholeTurn`. Opening the screen asks the live `correctionOnlyPrompt`
+  for each such turn (one per request, 4 at a time — the measured contract,
+  not a batched one), and a line waits behind "Getting your line ready…"
+  (≤20 s, then read as said). The answers live in
+  `Documents/say_again_rewrites.json`, NEVER in the session: new `fixes` there
+  would give the book Drill items with no cards (ingest already ran) and a
+  book that can never finish. Practice text only — no attempt id. The live
+  call now uses 2048 tokens and logs `talk_correction_failed` (error kind +
+  words).
 - **Only a line that IS material becomes an attempt on file.** A turn
   correction carries `TalkCurriculum.correctionId(for:)`, so a passing read
   masters the book's Drill chapter exactly as a shadow take on that line does.

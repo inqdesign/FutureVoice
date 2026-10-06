@@ -107,6 +107,47 @@ final class SayItAgainScriptTests: XCTestCase {
         XCTAssertNil(steps[0].attemptId, "a fragment is not the book's correction")
     }
 
+    // MARK: - A rewrite written afterwards (2026-10-06)
+
+    /// A turn the call left with no whole-turn rewrite — the live correction
+    /// failed, or it is a legacy fragment — reads the rewrite this screen
+    /// asked for later, never the raw line with its fillers. It is practice
+    /// text: nothing in the book is filed under it.
+    func testARewriteWrittenLaterReplacesTheRawLine() {
+        let id = UUID()
+        let said = "Yeah, I think it it's really challenging. I it's yeah, how much do you trust it"
+        let steps = SayItAgainScript.build(
+            session: session([turn(said, id: id)]),
+            rewrites: [id: .init(alternative: "Yeah, I think it's really challenging. How much do you trust it?",
+                                 reason: "반복을 정리")])
+        XCTAssertEqual(steps[0].text, "Yeah, I think it's really challenging. How much do you trust it?")
+        XCTAssertEqual(steps[0].said, said)
+        XCTAssertEqual(steps[0].note, "반복을 정리")
+        XCTAssertNil(steps[0].attemptId)
+    }
+
+    func testTheCallsOwnRewriteOutranksOneWrittenLater() {
+        let id = UUID()
+        let steps = SayItAgainScript.build(
+            session: session([turn("it go really well",
+                                   suggestion: TurnSuggestion(alternative: "it went really well",
+                                                              reason: "past tense", fixes: []),
+                                   id: id)]),
+            rewrites: [id: .init(alternative: "something else", reason: "")])
+        XCTAssertEqual(steps[0].text, "it went really well")
+        XCTAssertNotNil(steps[0].attemptId)
+    }
+
+    /// Asked and found clean: read as said.
+    func testACleanAnswerLeavesTheLineAsSaid() {
+        let id = UUID()
+        let steps = SayItAgainScript.build(
+            session: session([turn("I felt prepared for it.", id: id)]),
+            rewrites: [id: .init(alternative: nil, reason: "")])
+        XCTAssertEqual(steps[0].text, "I felt prepared for it.")
+        XCTAssertFalse(steps[0].isCorrected)
+    }
+
     func testAWholeTurnRewriteIsWhatTheLearnerReads() {
         let id = UUID()
         let said = "Hey, um yeah, we can definitely do so, but I had a bad experience "

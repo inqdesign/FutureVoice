@@ -50,6 +50,11 @@ struct SayItAgainView: View {
         let otherName: String
         var otherAvatar: UIImage? = nil
         let steps: [SayItAgainScript.Step]
+        /// The talk itself, when some of the learner's turns came back from
+        /// the call with no whole-turn rewrite: the screen asks for those
+        /// (`SayItAgainRewrites`) and swaps them in before they are read.
+        /// Nil for a scene, and for a talk with nothing missing.
+        var session: Session? = nil
         /// The other side's line as it was ALREADY recorded. Nil means the
         /// line is read, never synthesized: a talk replays for free and a
         /// scene's lines are claimed by count, so a new synthesis here would
@@ -62,7 +67,9 @@ struct SayItAgainView: View {
                    title: session.displayTitle,
                    targetLanguage: session.targetLanguage,
                    otherName: chrome("Future self"),
-                   steps: SayItAgainScript.build(session: session),
+                   steps: SayItAgainScript.build(session: session,
+                                                 rewrites: SayItAgainRewrites.shared.all),
+                   session: SayItAgainRewrites.shared.missing(in: session).isEmpty ? nil : session,
                    audio: { TurnAudioStore.shared.data(for: $0.id) })
         }
 
@@ -103,8 +110,11 @@ struct SayItAgainView: View {
         guard seen, let first = source.steps.first,
               source.steps.contains(where: { $0.isSpoken }) else { return }
         _index = State(initialValue: 0)
-        _phase = State(initialValue: first.isSpoken ? .reading : .listening)
-        if first.isSpoken { _promptStep = State(initialValue: first) }
+        // A first line still being rewritten waits on the prompter's
+        // "getting ready" rather than flashing the line as it was said.
+        let waits = first.isSpoken && source.session != nil
+        _phase = State(initialValue: waits ? .preparing : first.isSpoken ? .reading : .listening)
+        if first.isSpoken, !waits { _promptStep = State(initialValue: first) }
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -147,10 +157,21 @@ struct SayItAgainView: View {
     @State private var micError: String?
     @State private var askingMicChoice = false
     @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
+    /// The background request for the learner turns the call left without
+    /// a whole-turn rewrite. `rewritesDone` is what a step waits on.
+    @State private var fillTask: Task<Void, Never>?
+    @State private var rewritesDone = true
+    /// Set once a line has waited the full `rewriteWait`: the rest of the
+    /// run doesn't wait again, and takes whatever lands when it lands.
+    @State private var stoppedWaiting = false
+    /// How long one line may wait for its rewrite before it is read as it
+    /// was said. A single request lands in ~2–4 s; this only covers a
+    /// network that has gone away.
+    private static let rewriteWait: TimeInterval = 20
 
     /// Where a run is. Scoring is deliberately NOT a phase: a take is graded
     /// behind the fluent self's answer, which is the pause a call already has.
-    private enum Phase { case intro, listening, reading, finished }
+    private enum Phase { case intro, listening, preparing, reading, finished }
 
     /// One read line. `heardNothing` is not a 0 — the same rule
     /// `ShadowDrillView` holds: nothing is saved, counted or coached.
@@ -222,6 +243,7 @@ struct SayItAgainView: View {
             // photograph either one by flipping `introSeenKey`.
             guard !DebugCapture.isCapturing else { return }
             #endif
+            startRewritesIfNeeded()
             // `init` skipped the intro, so the run is already on screen and
             // only needs to start. Guarded so a re-appear can't restart it.
             if phase != .intro, runTask == nil { start(from: 0) }
@@ -238,7 +260,7 @@ struct SayItAgainView: View {
     /// history stays whole underneath it.
     private var history: [SayItAgainScript.Step] {
         guard phase != .intro else { return [] }
-        let upTo = (phase == .reading && !oneOffRetry) ? index : index + 1
+        let upTo = ((phase == .reading || phase == .preparing) && !oneOffRetry) ? index : index + 1
         return Array(steps.prefix(max(0, min(upTo, steps.count))))
     }
 
@@ -320,6 +342,7 @@ struct SayItAgainView: View {
             switch phase {
             case .intro:     introPanel
             case .listening: listeningPanel
+            case .preparing: preparingPanel
             case .reading:   readingPanel
             case .finished:  finishedPanel
             }
@@ -377,6 +400,17 @@ struct SayItAgainView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
             }
+        }
+    }
+
+    /// A line whose rewrite hasn't landed yet. Shown instead of the line as
+    /// it was said, which would be read and then replaced.
+    private var preparingPanel: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+            Text("Getting your line ready…").font(.subheadline).foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
         }
     }
 
@@ -526,13 +560,16 @@ struct SayItAgainView: View {
         // and it would sit behind the sheet as the thing they came to skip.
         if steps.indices.contains(start) {
             index = start
-            if steps[start].isSpoken { promptStep = steps[start] }
-            phase = steps[start].isSpoken ? .reading : .listening
+            let waits = steps[start].isSpoken && !rewritesDone && !stoppedWaiting
+            if steps[start].isSpoken, !waits { promptStep = steps[start] }
+            phase = waits ? .preparing : steps[start].isSpoken ? .reading : .listening
         }
         await askMicChoiceIfNeeded()
         var i = start
         while !Task.isCancelled, i < steps.count {
             index = i
+            if steps[i].isSpoken { await waitForRewrites() }
+            guard !Task.isCancelled else { return }
             let step = steps[i]
             if step.isSpoken { await readStep(step) } else { await listenStep(step) }
             guard !Task.isCancelled else { return }
@@ -802,7 +839,56 @@ struct SayItAgainView: View {
     /// Deliberately complete: a run left with the recognizer alive keeps the
     /// mic hot, and a late completion would chain into a step whose screen is
     /// gone (the trap `TalkTranscriptView` and `WatchView` both document).
+    // MARK: - Rewrites the call never made
+
+    /// Ask for the learner turns the call left with no whole-turn rewrite.
+    /// Runs while the first answers play; each finished batch is applied to
+    /// every line not yet read, so a line is never swapped under the learner.
+    private func startRewritesIfNeeded() {
+        guard fillTask == nil, let session = source.session else { return }
+        rewritesDone = false
+        let native = appState.nativeLanguage
+        let level = appState.proficiency
+        fillTask = Task { @MainActor in
+            await SayItAgainRewrites.shared.fill(session: session,
+                                                 nativeLanguage: native, level: level)
+            applyRewrites(session: session)
+            rewritesDone = true
+        }
+    }
+
+    /// Rebuild the script with the new rewrites and take every line from the
+    /// one not yet read onward. The step ids are the turn ids, so the two
+    /// scripts line up exactly; if they somehow don't, the run keeps the
+    /// one it has.
+    private func applyRewrites(session: Session) {
+        let rebuilt = SayItAgainScript.build(session: session,
+                                             rewrites: SayItAgainRewrites.shared.all)
+        guard rebuilt.map(\.id) == steps.map(\.id) else { return }
+        let from: Int
+        switch phase {
+        case .intro, .preparing: from = phase == .intro ? 0 : index
+        case .listening:         from = index
+        case .reading, .finished: from = index + 1
+        }
+        guard from < steps.count else { return }
+        steps = Array(steps.prefix(from)) + rebuilt.dropFirst(from)
+    }
+
+    /// Hold a learner line until the rewrites have landed — or until
+    /// `rewriteWait` has passed, after which the line is read as it is.
+    private func waitForRewrites() async {
+        guard !rewritesDone, !stoppedWaiting else { return }
+        phase = .preparing
+        let deadline = Date().addingTimeInterval(Self.rewriteWait)
+        while !rewritesDone, Date() < deadline, !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        if !rewritesDone { stoppedWaiting = true }
+    }
+
     private func tearDown() {
+        fillTask?.cancel()
         runTask?.cancel()
         runTask = nil
         for task in scoreTasks.values { task.cancel() }
