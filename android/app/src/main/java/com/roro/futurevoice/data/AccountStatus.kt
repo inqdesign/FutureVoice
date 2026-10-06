@@ -189,6 +189,8 @@ data class AccountStatus(
          * only drift.
          */
         suspend fun load(auth: AuthRepository): AccountStatus = withContext(Dispatchers.IO) {
+            // DEBUG only: a staged account in place of the server (see [DebugBilling]).
+            DebugBilling.account()?.let { return@withContext it }
             val userId = auth.userId ?: return@withContext AccountStatus()
             var out = AccountStatus()
 

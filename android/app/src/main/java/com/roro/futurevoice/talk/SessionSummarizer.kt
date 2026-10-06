@@ -76,6 +76,12 @@ object SessionSummarizer {
         _progressBySession.update { it + (sessionId to p) }
     }
 
+    /** DEBUG only: an empty board for a staged call that is never summarized
+     *  (`DebugBilling`), so the wrap-up's wall banner can be seen. */
+    internal fun stageBoard(sessionId: String) {
+        if (com.roro.futurevoice.BuildConfig.DEBUG) publish(sessionId, Progress())
+    }
+
     data class Progress(
         val readBack: Boolean = false,
         val wroteCorrections: Boolean = false,

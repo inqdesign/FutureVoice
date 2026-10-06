@@ -24,6 +24,9 @@ suspend fun cachedSynthesis(
      *  voice preview): no fallback to a take an older voice made. */
     allowLineage: Boolean = true,
 ): ByteArray {
+    // DEBUG only: a staged 402 for the next line, ahead of the cache so a
+    // replay of owned audio can still stage the wall (see [DebugBilling]).
+    DebugBilling.consume402()?.let { throw it }
     val store = PhraseAudioStore.shared(context)
     store.data(text, voiceId, allowLineage)?.let { return it }
     val audio = ElevenLabsClient(AuthRepository()).synthesize(

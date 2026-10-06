@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
         Supa.client.handleDeeplinks(intent)
         DailyCallInbox.deliver(intent, this)
         DeepLinkInbox.deliver(intent)
+        com.roro.futurevoice.data.DebugBilling.apply(intent)
         // Screenshot harness: only the `capture` build type answers; every
         // other build gets null and starts normally.
         val capture = com.roro.futurevoice.capture.CaptureRouter
@@ -105,5 +106,6 @@ class MainActivity : ComponentActivity() {
         Supa.client.handleDeeplinks(intent)
         DailyCallInbox.deliver(intent, this)
         DeepLinkInbox.deliver(intent)
+        com.roro.futurevoice.data.DebugBilling.apply(intent)
     }
 }

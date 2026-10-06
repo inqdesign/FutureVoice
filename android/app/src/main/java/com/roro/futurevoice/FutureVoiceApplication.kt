@@ -16,6 +16,7 @@ class FutureVoiceApplication : Application() {
         com.roro.futurevoice.core.Analytics.start(this)
         com.roro.futurevoice.core.Telemetry.start(this)
         InstallSalt.init(this)
+        com.roro.futurevoice.data.DebugBilling.init(this)
         CoreVocabulary.init(this)
         com.roro.futurevoice.data.WordClass.init(this)
         com.roro.futurevoice.data.SpeechSpeed.init(this)
