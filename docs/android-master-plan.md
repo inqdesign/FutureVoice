@@ -673,7 +673,10 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 | 매일 전화: 알림 안내 줄, Not now도 권한 요청 | ☑ 없음 / 주간 알림 원할 때만 | iOS 그대로 (`9c17b373`) |
 | 주간: 시간 라벨 숨김 | ☑ "Opens at" 표시 | 숨김 (`9c17b373`) |
 
-남은 것(이번에 안 함): 탭 진입 시 나이 확인 시트(iOS `showingAgeCheck` — 목소리가 있는데 나이 기록 없는 기존 사용자), 녹음 중 입력 장치 표시(안드로이드는 클론에 내장 마이크를 강제하므로 경고할 일이 없음), Start talking 뒤 오프너 굽기 순서(`warmFreeTalkOpeners`) 대조.
+| 탭 진입 나이 확인(iOS `AgeCheckSheet`: 목소리 있음 + 이 기기에 나이 기록 없음 → 시트, 나이만 기록, 스위치는 꺼진 채 시작, 닫으면 다음 진입에 다시) | ☑ 없음 | `AgeCheckSheet` + `ConsentStore.confirmAge`(나이·정책 버전만, 한 번, 감사 기록, `age_declared`), 탭 진입마다 확인, 그동안 탭 안내·무료 통화 환영은 대기 (`e9741bfb`) — 코드만(실제 계정 로그인 금지) |
+| 오프너 굽기 시점(iOS `warmFreeTalkOpeners`: 보류 중엔 안 함, `finishMeet`에서 한 번, 다음 2줄만 `purpose: "opener"`) | ☑ Talk 탭에서 풀 전체를 `turn`으로 | `warmFreeTalkOpeners`(보류면 무시)를 Start talking·재녹음·억양 적용 뒤에, `FreeTalkOpeners.warmFirstCall`(인트로·폴백·풀 생성·다음 `WARM_AHEAD`=2줄), 과금 표시 `opener` (`30a2157a`) — 코드만(실제 복제 금지) |
+
+남은 것: 녹음 중 입력 장치 표시(안드로이드는 클론에 내장 마이크를 강제하므로 경고할 일이 없음).
 
 **검증**: 에뮬레이터(debug, `pm clear`)에서 웰컴 → Get started(세션 없음 확인 — 공유 설정에 Supabase 세션 없음) → 설정 Back이 웰컴으로·`onboardingStarted` false → 레벨 각주 → 프로필 두 장 입력 후 강제 종료·재실행 → 3번째 카드에서 이어짐 → 목소리 Intro Back → 프로필이 채워진 채 열림 → 동의(스위치 전 Next 꺼짐) → Mic Next에서 권한 대화상자 → Spot 실측(-78 dB quiet, clap to check) → Script → 녹음 0:06 Start over·1:15 초록 Stop & review → 리뷰 75s → 강제 종료 후 리뷰로 복귀. 실제 복제·가입·통화는 하지 않음(비용 규칙) — Meet·Account·Becoming은 `--es cloneStage meet|account|uploading`(iOS `-cloneStage`)로 화면만 확인, 가입 후 연결/재복제·초대 적용·요금제 건너뛰기는 코드로만. 웰컴 초대 입력란 → `futurevoice.pendingInviteCode` 저장 확인. `assembleDebug`·`assembleCapture`·`rules-check` 457/0.
 
