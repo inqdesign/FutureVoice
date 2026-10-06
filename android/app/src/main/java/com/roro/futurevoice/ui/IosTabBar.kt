@@ -59,8 +59,11 @@ import androidx.compose.ui.unit.sp
  * chart.bar.fill.
  */
 /** How much room the floating bar needs below a page's last item, above the
- *  navigation inset: the capsule plus its margins. */
-internal val IosTabBarClearance = 62.dp + 6.dp + 8.dp + 12.dp
+ *  navigation inset: the capsule plus its margins (the bar's own height, as
+ *  iOS's safe-area inset is), then 24 dp of air — iOS Talk's
+ *  `.contentMargins(.bottom, 24)`. With 12 dp the last card ended inside the
+ *  scroll feather and read as cut off under the bar. */
+internal val IosTabBarClearance = 62.dp + 6.dp + 8.dp + 24.dp
 
 @Composable
 internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit, modifier: Modifier = Modifier) {
