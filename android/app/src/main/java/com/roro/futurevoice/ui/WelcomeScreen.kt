@@ -107,8 +107,6 @@ fun WelcomeScreen(
     signInError: String? = null,
     /** Debug only: the developer sign-in screen (email/password). */
     onDevSignIn: (() -> Unit)? = null,
-    /** An invite is redeemed at the sign-in moment, so it is asked here. */
-    onInviteCode: (() -> Unit)? = null,
     /** Capture only (iOS `-welcomePage <n>`): hold on one beat;
      *  `beats.size` is the closing frame. */
     initialBeat: Int = 0,
@@ -274,7 +272,7 @@ fun WelcomeScreen(
                     ) {
                         if (!showingSignIn) {
                             if (canSignIn) Link(stringResource(R.string.already_have_an_account_sign_in), tint) { showingSignIn = true }
-                            if (onInviteCode != null) Link(stringResource(R.string.have_an_invite_code), tint, onInviteCode)
+                            InviteArea(tint)
                         }
                         // Testing only — the developer sign-in, where iOS keeps
                         // its "Skip sign-in (debug)". Never in release.
@@ -392,3 +390,49 @@ fun welcomeClosingChips(): List<Pair<ImageVector, String>> = listOf(
     Icons.Filled.MicExternalOn to stringResource(R.string.speech_d00d85),
     Icons.Outlined.DocumentScanner to stringResource(R.string.say_it_again),
 )
+
+/**
+ * "Have an invite code?" (iOS `inviteArea`): the field opens in place, and the
+ * code is held on the device until an account owns the session — redeeming
+ * needs one, and the sign-up comes several steps later, after the voice.
+ */
+@Composable
+private fun InviteArea(tint: Color) {
+    val context = LocalContext.current
+    var open by remember { mutableStateOf(com.roro.futurevoice.data.PendingInvite.code(context) != null) }
+    var code by remember { mutableStateOf(com.roro.futurevoice.data.PendingInvite.code(context) ?: "") }
+    if (!open) {
+        Link(stringResource(R.string.have_an_invite_code), tint) { open = true }
+        return
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        androidx.compose.foundation.text.BasicTextField(
+            value = code,
+            onValueChange = {
+                code = it.uppercase()
+                com.roro.futurevoice.data.PendingInvite.save(context, code)
+            },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center, color = StoryInk),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters,
+                autoCorrectEnabled = false),
+            modifier = Modifier.padding(horizontal = 32.dp).fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp)).background(StoryInk.copy(alpha = 0.06f))
+                .padding(vertical = 11.dp),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.Center) {
+                    if (code.isEmpty()) Text(stringResource(R.string.invite_code), fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold, color = StoryInk.copy(alpha = 0.3f))
+                    inner()
+                }
+            },
+        )
+        Text(stringResource(R.string.you_ll_both_get_lld_minutes_of_talk_time_when_you_sign_in,
+            com.roro.futurevoice.net.ReferralClient.bonusMinutes),
+            fontSize = 12.sp, color = StoryInk.copy(alpha = 0.6f), textAlign = TextAlign.Center)
+    }
+}
