@@ -721,6 +721,79 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 5. Me·Review → Words 다녀오기 → Talk로 돌아와도 어떤 시트도 다시 안 뜸 ☑
 iOS 시뮬레이터와 나란히 찍지는 않음(시트 겉모양은 이전 포팅에서 대조됨, 이번 변경은 시점·순서). 통화 끝 흐름(첫 통화 점검, 제안이 곧 출구, 저장 안 하고 닫기)은 실제 통화가 필요해 코드로만.
 
+## 2k단계 · 결제·벽·요금제·평점 — iOS `1f7cc014`와 대조 (2026-10-06)
+
+사장님: "무료 통화가 끝날 때 나오는 안내, 요금제 로직, 평점 로직 — 전부 확인했어?" iOS `BillingGate`·`ConversationView`(`handleTalkPoolSpent`·`endAndClose`·`leaveForPractice`)·`DailyAllowanceSheet`·`WatchView`·`ElevenLabsError.wall`·플레이어들(`parkedPaywall`)·`OnboardingPaywallView`·`ReviewRequest`·`FeedbackPrompt`를 읽고 안드로이드와 줄마다 맞췄다. 고침 `f26db113`, 디버그 훅 `fb09a903`.
+
+**확인 방법** — 에뮬레이터 `emulator-5554`, DEBUG 앱, 개발 계정 세션 그대로. 돈·통화·프로드 쓰기 없이 상태를 세우는 훅(`DebugBilling`, `BuildConfig.DEBUG` 안에서만 읽음):
+`am start -n com.roro.futurevoice/.MainActivity --es debugAccount <free|nosub|freescenes|light|lightspent|lightcancel|plus|plusspent|max|trial|uncapped|clear>` (AccountStatus.load 대신), `--es debug402 <insufficient_credits|daily_cap_reached|scene_cap_reached|fair_use_limit|voice_parked>` (다음 합성 한 번), `--es debugCallWall <초>:<코드>[:silent]` (다음 통화를 게이트웨이·마이크·저장·요약 없이 두 줄로 세우고, 실제 벽과 같은 `handleWall`로). Play 상품이 없어 **실제 구매·팩 구매는 확인 불가**(구독 버튼은 "Google Play isn't offering this plan here yet").
+표기: ☑화면 = 에뮬레이터 화면으로 확인, ☑코드 = 코드 대조만.
+
+### (a) 탭에서 묻는 게이트 (`BillingGate.start` — needsSubscription만, 장면은 + 무료 장면 소진; 예는 캐시, 아니오는 새로 읽기, 세션 없으면 통과; 쓸 수 있는데 목소리가 멈췄으면 `VoiceRevival`)
+
+| 런처 | iOS | 안드로이드 전 | 지금 |
+|---|---|---|---|
+| 자유 통화 링 | `RootTabView.startFreeTalk` → start | 같음 | ☑화면 (nosub → 탭 즉시 요금제, 통화 화면 없음) |
+| 뉴스·시나리오·스타터 카드 | `ConversationHome.runScenario/runNews` → start, 스타터는 통과 뒤 저장 | `startCall` 한 곳 | ☑코드 |
+| 컴포저 CTA | Talk 쪽 `blocks()`, Watch 쪽 `blocksScene()`, 막히면 시트 자기 요금제, 아무것도 안 만듦 | 두 쪽 다 장면 게이트(무료 장면 소진이 **통화**도 막음) | Talk=통화 게이트 · Watch=장면 게이트; ☑화면 (freescenes → Watch 박스 CTA → 시트 위 요금제) |
+| Find people Talk | start | 같음 | ☑코드 |
+| Find people Watch | `startScene` | **버튼 없음**(안드로이드 사람 카드에 Watch가 없음 — 기능 격차, 이번에 안 만듦) | ☐ 별도 항목 |
+| 책 Talk · Continue | start | 같음 | ☑코드 |
+| 책 Watch(저장된 장면 다시 보기) | 게이트 없음 | 같음 | ☑코드 |
+| Watch 탭 장면 카드(새 테이크) | `startScene` | `gateScene` | ☑코드 |
+| 복습 시나리오 카드 길게 누르기 "Talk now" | start | **메뉴 항목 안 나옴**(`onTalk` 미연결) | 연결, 게이트 거침 ☑코드(개발 계정에 시나리오 없음) |
+| 위젯 자유 통화 딥링크 | 같은 게이트 | 같음 | ☑코드 |
+| 매일 전화 받기 | 게이트 없음(바로 통화) | 같음 | ☑코드 |
+| 스피치 새 대본 | `allowsSpeechScripts`(Plus 이상, 같은 캐시 규칙) | `SpeechGate` | ☑코드 |
+
+### (b) 통화 중 풀 소진 → 마무리 → 요약 → 제안
+
+| 경우 | iOS | 안드로이드 전 | 지금 |
+|---|---|---|---|
+| 무료 풀 벽, 말한 뒤 | 게이트웨이가 줄 끝까지 벽 보류 + 클라이언트 재생 소진 → `handleTalkPoolSpent` → 스스로 `endSession`, 보드에 "Your free talk time is used up" | 같음(재생 소진 `HELD_WALL_MS`) | ☑화면 (debugCallWall 4:insufficient_credits → 보드+배너) |
+| 무료 풀 벽, 말하기 전 | 요금제 즉시, 닫으면 통화도 닫힘(`talk_wall_before_speaking`) | 통화 종료 + 본문에 "통화 저장됨" 줄, **요금제 안 뜸** | ☑화면 (…:silent → 요금제, 닫으면 Talk 홈) |
+| 구독자 월 소진(daily_cap) | 시트, 통화는 **끝나지 않음**(End가 요약) | 시트 + **통화를 스스로 끝내고 요약** | 시트, 일시정지 상태로 둠 ☑화면 |
+| fair use | 알림 "We've paused talking on this account" + OK, 통화 안 끝남 | 본문 한 줄만, 그리고 통화 끝냄; 402 본문은 insufficient로 읽혀 **요금제** | 알림, 일시정지 ☑화면 (uncapped + fair_use_limit) |
+| 본문의 벽 안내 줄 | 없음(시트·알림·보드가 말함) | 전사 안에 한 줄 | 제거 |
+| 이전 통화의 벽 | — | 액티비티 범위 VM이라 새 통화 첫 프레임에 지난 시트가 뜸(에뮬레이터에서 발견) | 이번 통화가 시작된 뒤의 벽만 |
+| 요약 뒤 제안 | Done/스와이프 → (처음 말한 통화) 첫 통화 점검 → 엔타이틀이면 건너뜀 / 조회 실패 건너뜀 / `freeCallSpent` 또는 needsSubscription이면 요금제(닫으면 통화 닫힘) / 아니면 피드백 → 평점 | 같음 | ☑화면 (Done → 첫 통화 점검 → Later → 요금제) |
+| "복습하러 가기" | `leaveForPractice`: 말했고 미저장이면 요약 후, 아니면 바로 — 출구는 복습 탭 | 그냥 나가기(Talk 탭) | 복습 탭으로 ☑화면 |
+
+### (c) 402 종류별 화면
+
+| 코드 | 통화 | Watch 장면 | 단어·드릴·주간 테스트 재생 |
+|---|---|---|---|
+| insufficient_credits | (b) 무료 풀 | 요금제 — 전: 루트 분기가 장면 화면 **아래**라 장면을 닫을 때까지 안 보임 → 지금 위에 덮음 ☑코드 | iOS `parkedPaywall`; 전: 조용히 실패 → 지금 요금제 ☑화면(단어 카드 위, 닫으면 카드 그대로) |
+| daily_cap_reached | 시트(TALK) ☑화면 | 시트(TALK) ☑코드 | — |
+| scene_cap_reached | — | 시트(SCENES) ☑화면(캡처 `day-spent-scenes`) | — |
+| fair_use_limit | 알림 ☑화면 | 오류 알림(iOS 일반 catch) — 전: insufficient로 요금제 ☑코드 | — |
+| voice_parked (insufficient + reason) | 게이트웨이 402 → (b) | 요금제 | 요금제 ☑화면(debug402 voice_parked) |
+| 쓸 수 있는데 멈춘 목소리, 탭 | `VoiceRevival` 다시 만들기 화면 | 같음(2026-10-04) | ☑코드 |
+
+### (d) 소진 시트 `DailyAllowanceSheet` 변형 (전부 ☑화면, 개발 앱 debugAccount 또는 캡처)
+
+| 변형 | iOS | 안드로이드 |
+|---|---|---|
+| Light 월 소진 | "That's this month's talk time" · 150분 · "Move to Plus" 진한 · 복습 · 초대 · refill 날짜 | 같음 — 단 전엔 업그레이드·초대 버튼이 시트가 뜬 **뒤에** 자라남 → 지금 계정·초대를 읽고 나서 뜸 |
+| Plus 월 소진 | Max가 판매 중이면 "Move to Max" | 같음 |
+| Max(맨 위) | 업그레이드 없음, 복습이 진한 버튼, "Review stays free…" | 같음 |
+| 해지 예약 | "Your plan ends on …" | 같음 |
+| 체험 | "That's your trial's talk time" · 35분 · "Your plan starts on … with 150 minutes…" · 업그레이드 없음 · 초대는 보임 | 같음 |
+| 장면 | "That's this month's scenes", 초대 없음 | 같음 |
+| 팩 | 가격이 있어야 선두 | 같음(`onAvailability`) — Play 상품 없어 실물은 ☐ |
+
+### (e) 첫 통화 무료 / 제안 규칙 ☑코드
+첫 통화 비용은 서버(무료 1200초). 제안은 횟수 제한 없이 "소진됐을 때만": `freeCallSpent`(이번 통화에서 무료 벽) 또는 needsSubscription(남은 1분 미만). 엔타이틀·관리자는 건너뜀, 조회 실패도 건너뜀(출구를 붙잡지 않음). 안드로이드 `pitchCore` 같음 — 단 iOS는 캐시가 엔타이틀이면 조회 없이 건너뛰고 안드로이드는 늘 조회(결과 같음).
+
+### (f) 온보딩 요금제 건너뛰기 ☑코드
+iOS: 매일 전화 단계 뒤 `BillingGate.blocks()` — 못 물어봄(세션 없음·실패)이나 팔 것 없음(엔타이틀·관리자·잔액 ≥60초)이면 영구 건너뜀 + `onboarding_paywall_skipped`(이유). 안드로이드 같음 — 세션 없을 때 빈 계정을 "플랜 없음"으로 읽던 것만 고침.
+
+### (g) 평점·피드백 ☑코드 (변경 없음)
+- 평점(`ReviewRequest`, Play In-App Review): 이번 통화 ≥ 3분 · 총 통화 ≥ 20분(`TalkTimeLog`) · 통화한 날 ≥ 3일 · 이 앱 버전에 아직 안 물음(`futurevoice.reviewRequest.askedVersion`) — 물을 때 버전 기록, 화면이 사라진 1.2초 뒤. 피드백과 같은 통화엔 안 물음, 감정으로 거르지 않음. 요약 출구에서만(요금제 제안이 뜨면 안 물음).
+- 피드백(`FeedbackSheet(.returningTalk)`): 통화 ≥ 60초 · 끝난 통화 ≥ 2개(등록 언어 전부) · 첫 통화가 오늘이 아님 · 한 번만(`futurevoice.betaFeedback.returning_talk`). 피드백이 이기고 평점은 다음 통화로.
+
+**남은 것**: Find people 사람 카드의 Watch(iOS `freeTalkScenario`) — 기능 자체가 없음. 실제 Play 구매·팩 구매·환불은 상품이 생긴 뒤(7.1).
+
 ## 3단계 · 첫 기준선 측정
 
 - ☐ **3.1** 갤러리를 네 가지로 돌린다: 한국어·영어 × 라이트·다크. (한국어·라이트는
