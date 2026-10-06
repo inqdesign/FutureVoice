@@ -184,9 +184,28 @@ object CapturePractice {
             FinishedBooksScreen(books = books, onOpen = {}, onBack = { finished = null })
             return
         }
-        com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _ -> }, onOpenMe = {},
-            tab = tab, onTabChange = { tab = it }, initialPracticeShelf = shelf,
-            onOpenFinished = { finished = it })
+        // A shelf card opens its book through the root's own push (tap one
+        // on the emulator to see the transition).
+        var page by androidx.compose.runtime.remember {
+            androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.ui.BookPage>(
+                com.roro.futurevoice.ui.BookPage.Under(still = false))
+        }
+        val under = com.roro.futurevoice.ui.BookPage.Under(still = false)
+        com.roro.futurevoice.ui.BookPushHost(page) { p ->
+            when (p) {
+                is com.roro.futurevoice.ui.BookPage.Talk -> com.roro.futurevoice.ui.TalkDetailScreen(
+                    sessionId = p.id, language = lang(c), level = level(c), onBack = { page = under })
+                is com.roro.futurevoice.ui.BookPage.Scenario -> com.roro.futurevoice.ui.ScenarioBookScreen(
+                    scenarioId = p.id, language = lang(c), onWatch = {}, onShadow = {},
+                    onBack = { page = under })
+                is com.roro.futurevoice.ui.BookPage.Under ->
+                    com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _ -> }, onOpenMe = {},
+                        tab = tab, onTabChange = { tab = it }, initialPracticeShelf = shelf,
+                        onOpenFinished = { finished = it },
+                        onOpenTalk = { page = com.roro.futurevoice.ui.BookPage.Talk(it) },
+                        onOpenBook = { page = com.roro.futurevoice.ui.BookPage.Scenario(it) })
+            }
+        }
     }
 
     @Composable

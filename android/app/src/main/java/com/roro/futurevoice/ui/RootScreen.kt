@@ -493,6 +493,60 @@ fun RootScreen() {
         }
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    // A book opens the way a pushed page does on iOS (`navigationDestination`
+    // from a shelf card): it slides in from the right over the page it came
+    // from, which drifts left a little; back reverses it. Only the book
+    // pages move — every other screen swaps as before, and a screen that
+    // sits ABOVE a book (shadowing, the deck, a scene) never animates.
+    val coveredAbove = welcomePreview || clonePreview || recloning || state.resolvingSession ||
+        !state.signedIn || !state.setupComplete || editProfile || shadowHand.isNotEmpty() ||
+        shadowLine != null || watchScenarioId != null || showDeck
+    val bookPage: BookPage = when {
+        coveredAbove -> BookPage.Under(still = true)
+        detailSessionId != null -> BookPage.Talk(detailSessionId!!)
+        bookScenarioId != null -> BookPage.Scenario(bookScenarioId!!)
+        else -> BookPage.Under(still = inCall && state.voiceId != null)
+    }
+    BookPushHost(bookPage) { page ->
+        when (page) {
+            is BookPage.Talk -> TalkDetailScreen(
+                sessionId = page.id,
+                language = state.targetLanguage,
+                level = state.level,
+                onBack = { detailSessionId = null },
+                onShadow = { shadowLine = it },
+                onReviewTalk = { id -> deckSessionId = id; showDeck = true },
+                // Picking a talk back up is a metered call, so it goes through
+                // the same gate every other launcher does.
+                onContinue = { topic ->
+                    gate {
+                        detailSessionId = null
+                        callTopic = topic; callFacts = emptyList(); callScenarioId = null
+                        inCall = true
+                    }
+                },
+            )
+
+            is BookPage.Scenario -> ScenarioBookScreen(
+                scenarioId = page.id,
+                language = state.targetLanguage,
+                // A fresh take costs a scene count, so the wall is asked at the
+                // tap here exactly as it is on the Watch tab.
+                // Watch on the book replays THE scene the book was extracted
+                // from (iOS `WatchView(savedDialogue:)`): free after the first
+                // listen, so no gate and no new take.
+                onWatch = { id -> watchReplay = true; watchScenarioId = id },
+                onTalk = { sc -> gate {
+                    bookScenarioId = null
+                    callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
+                    inCall = true
+                } },
+                onShadow = { shadowLine = it },
+                onBack = { bookScenarioId = null },
+                // The talk page sits above the book, so back returns here.
+                onOpenTalk = { id -> detailSessionId = id },
+            )
+            is BookPage.Under -> {
     when {
         welcomePreview -> WelcomeScreen(onGetStarted = { welcomePreview = false })
 
@@ -625,44 +679,6 @@ fun RootScreen() {
             sessionId = deckSessionId,
             onBack = { showDeck = false; focusCardId = null; deckSessionId = null; deckPushed = false },
             pushed = deckPushed,
-        )
-
-        detailSessionId != null -> TalkDetailScreen(
-            sessionId = detailSessionId!!,
-            language = state.targetLanguage,
-            level = state.level,
-            onBack = { detailSessionId = null },
-            onShadow = { shadowLine = it },
-            onReviewTalk = { id -> deckSessionId = id; showDeck = true },
-            // Picking a talk back up is a metered call, so it goes through
-            // the same gate every other launcher does.
-            onContinue = { topic ->
-                gate {
-                    detailSessionId = null
-                    callTopic = topic; callFacts = emptyList(); callScenarioId = null
-                    inCall = true
-                }
-            },
-        )
-
-        bookScenarioId != null -> ScenarioBookScreen(
-            scenarioId = bookScenarioId!!,
-            language = state.targetLanguage,
-            // A fresh take costs a scene count, so the wall is asked at the
-            // tap here exactly as it is on the Watch tab.
-            // Watch on the book replays THE scene the book was extracted
-            // from (iOS `WatchView(savedDialogue:)`): free after the first
-            // listen, so no gate and no new take.
-            onWatch = { id -> watchReplay = true; watchScenarioId = id },
-            onTalk = { sc -> gate {
-                bookScenarioId = null
-                callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
-                inCall = true
-            } },
-            onShadow = { shadowLine = it },
-            onBack = { bookScenarioId = null },
-            // The talk page sits above the book, so back returns here.
-            onOpenTalk = { id -> detailSessionId = id },
         )
 
         // Above everything: an account that cannot spend must not be looking
@@ -985,6 +1001,9 @@ fun RootScreen() {
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null,
         )
+    }
+            }
+        }
     }
     TalkMorphOverlay(inCall = inCall)
     }
@@ -2316,4 +2335,64 @@ private fun DiscoverHeaderButton(onClick: () -> Unit, content: @Composable () ->
     ) {
         content()
     }
+}
+
+/** What the root shows at the book layer: a book page, or whatever lies
+ *  under the books. `still` marks an "under" that must not animate — a
+ *  screen above the books (shadowing, the deck, a scene) or a call. */
+internal sealed interface BookPage {
+    data class Talk(val id: String) : BookPage
+    data class Scenario(val id: String) : BookPage
+    data class Under(val still: Boolean) : BookPage
+}
+
+/** iOS's push curve (UINavigationController: ~0.35 s, ease-out). */
+/** The book layer: a book page pushed over what lies under the books, or
+ *  popped back off it (see [bookPageTransition]). */
+@Composable
+internal fun BookPushHost(page: BookPage, content: @Composable (BookPage) -> Unit) {
+    androidx.compose.animation.AnimatedContent(
+        targetState = page,
+        contentKey = { if (it is BookPage.Under) "under" else it },
+        transitionSpec = { bookPageTransition(initialState, targetState) },
+        label = "book-push",
+    ) { p ->
+        // A book page is opaque paper: its header must hide the page it
+        // slides over (and, on the way back, the page sliding in under it).
+        if (p is BookPage.Under) content(p)
+        else Box(Modifier.fillMaxSize().background(com.roro.futurevoice.ui.brand.AppSurfaces.ground)) { content(p) }
+    }
+}
+
+private val PushEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.9f, 0.3f, 1f)
+private const val PUSH_MS = 380
+
+private fun bookPageTransition(from: BookPage, to: BookPage): androidx.compose.animation.ContentTransform {
+    fun <T> spec() = androidx.compose.animation.core.tween<T>(PUSH_MS, easing = PushEasing)
+    val none = androidx.compose.animation.ContentTransform(
+        androidx.compose.animation.EnterTransition.None, androidx.compose.animation.ExitTransition.None)
+    val fromBook = from !is BookPage.Under
+    val toBook = to !is BookPage.Under
+    val push = when {
+        from is BookPage.Under && !from.still && toBook -> true
+        // A scene book opens its talk page on top of it.
+        from is BookPage.Scenario && to is BookPage.Talk -> true
+        fromBook && to is BookPage.Under && !to.still -> false
+        from is BookPage.Talk && to is BookPage.Scenario -> false
+        else -> return none
+    }
+    return if (push) androidx.compose.animation.ContentTransform(
+        // The new page comes in from the right edge; the one under it
+        // drifts a third of the way left, as iOS's parallax does.
+        androidx.compose.animation.slideInHorizontally(spec()) { it },
+        androidx.compose.animation.slideOutHorizontally(spec()) { -it / 3 } +
+            androidx.compose.animation.fadeOut(spec(), targetAlpha = 0.9f),
+        targetContentZIndex = 1f,
+    ) else androidx.compose.animation.ContentTransform(
+        androidx.compose.animation.slideInHorizontally(spec()) { -it / 3 } +
+            androidx.compose.animation.fadeIn(spec(), initialAlpha = 0.9f),
+        androidx.compose.animation.slideOutHorizontally(spec()) { it },
+        // The page leaving sits ON TOP of the one coming back.
+        targetContentZIndex = -1f,
+    )
 }
