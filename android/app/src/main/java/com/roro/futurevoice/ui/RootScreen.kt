@@ -418,6 +418,9 @@ fun RootScreen() {
         }
     }
     var welcomePreview by remember { mutableStateOf(false) }
+    /** iOS `showingAgeCheck` — see [AgeCheckSheet]. */
+    var showAgeCheck by remember { mutableStateOf(false) }
+    if (showAgeCheck) AgeCheckSheet(onDismiss = { showAgeCheck = false })
     // "Here is time to talk with your fluent self." The grant is otherwise
     // invisible — onboarding's paywall steps aside for any account with a
     // balance, so without this nobody is told the minutes exist (iOS
@@ -428,8 +431,8 @@ fun RootScreen() {
     // Talk" reads before "here are your minutes" (iOS `welcomeAfterIntro`).
     val guideRevision by com.roro.futurevoice.data.PageIntroStore.revision.collectAsStateWithLifecycle()
     val guideUp by com.roro.futurevoice.data.PageIntroStore.showing.collectAsStateWithLifecycle()
-    LaunchedEffect(state.voiceId, state.setupComplete, guideRevision, guideUp) {
-        if (state.voiceId == null || !state.setupComplete) return@LaunchedEffect
+    LaunchedEffect(state.voiceId, state.setupComplete, guideRevision, guideUp, showAgeCheck) {
+        if (state.voiceId == null || !state.setupComplete || showAgeCheck) return@LaunchedEffect
         if (guideUp || (tab == HomeTab.TALK && BuildConfig.BUILD_TYPE != "capture" &&
                 com.roro.futurevoice.data.PageIntroStore.isDue(context,
                     com.roro.futurevoice.data.PageIntroStore.Page.TALK))) return@LaunchedEffect
@@ -975,7 +978,15 @@ fun RootScreen() {
             )
           }
 
-        else -> HomeScreen(
+        else -> {
+          // Entering the tabs with a voice but no age on record (iOS
+          // `RootTabView.onAppear` → `showingAgeCheck`): the age check takes
+          // this visit; the tab's guide waits behind it.
+          LaunchedEffect(Unit) {
+              if (state.voiceId != null &&
+                  com.roro.futurevoice.data.ConsentStore.ageConfirmedAt(context) == null) showAgeCheck = true
+          }
+          HomeScreen(
             state = state,
             onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },
             onStartStarter = { sc -> startCall(sc.promptBlurb, emptyList(), sc.id, sc) },
@@ -1018,8 +1029,9 @@ fun RootScreen() {
             onAddLanguage = { showMe = true },
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
-                referralJoin != null || welcomeMinutes != null || updatePending != null,
+                referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck,
         )
+        }
     }
             }
         }

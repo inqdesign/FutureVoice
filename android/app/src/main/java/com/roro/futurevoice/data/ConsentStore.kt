@@ -91,6 +91,21 @@ object ConsentStore {
     }
 
     /**
+     * The AGE alone (iOS `ConsentStore.confirmAge`) — the retroactive check
+     * for a learner whose voice was made before the consent step existed, or
+     * on another device ([com.roro.futurevoice.ui.AgeCheckSheet]). The voice
+     * consent stays on the clone flow: agreeing to a clone that already exists
+     * would be a worse kind of consent than none. Written once.
+     */
+    fun confirmAge(c: Context, now: Long = System.currentTimeMillis()) {
+        val p = c.getSharedPreferences(PREFS, 0)
+        if (p.getLong(AGE, 0L) > 0) return
+        p.edit().putLong(AGE, now).putString(POLICY, POLICY_VERSION).apply()
+        writeAuditRecord(c)
+        com.roro.futurevoice.core.Analytics.capture("age_declared")
+    }
+
+    /**
      * Withdrawal has to be as easy as consent (GDPR Art. 7(3)). The caller is
      * responsible for actually deleting the voice model — this only forgets
      * the permission, which is what forces the clone flow to ask again.
