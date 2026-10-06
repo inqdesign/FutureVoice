@@ -51,6 +51,9 @@ fun SetupFlowScreen(
     initialNative: String,
     initialTarget: String,
     initialLevel: CefrLevel,
+    /** A real account is behind the session — going back to Welcome then
+     *  means signing out, so it is confirmed first (iOS). */
+    signedIn: Boolean = false,
     onBackToWelcome: () -> Unit,
     /**
      * Called the moment a native language is tapped, not at the end. This
@@ -74,7 +77,7 @@ fun SetupFlowScreen(
     ) {
         SetupFlowBody(
             initialNative = initialNative, initialTarget = initialTarget,
-            initialLevel = initialLevel, onBackToWelcome = onBackToWelcome,
+            initialLevel = initialLevel, signedIn = signedIn, onBackToWelcome = onBackToWelcome,
             onPickNative = { native0 = it; onPickNative(it) }, onFinish = onFinish)
     }
 }
@@ -85,6 +88,7 @@ private fun SetupFlowBody(
     initialNative: String,
     initialTarget: String,
     initialLevel: CefrLevel,
+    signedIn: Boolean,
     onBackToWelcome: () -> Unit,
     onPickNative: (String) -> Unit,
     onFinish: (native: String, target: String, level: CefrLevel, goalMinutes: Int) -> Unit,
@@ -107,7 +111,42 @@ private fun SetupFlowBody(
      *  language is their choice, not a default to move. */
     var targetPickedByHand by remember { mutableStateOf(false) }
     var level by remember { mutableStateOf(initialLevel) }
-    var goal by remember { mutableIntStateOf(10) }
+    // Same key the Talk home ring and Me's picker read — the ring's 100%.
+    val goalContext = androidx.compose.ui.platform.LocalContext.current
+    var goal by remember {
+        mutableIntStateOf(goalContext.getSharedPreferences("futurevoice", 0)
+            .getInt("futurevoice.dailyGoalMinutes", 10))
+    }
+    /** Backing out of step one crosses the auth boundary — asked first
+     *  instead of silently signing out. */
+    var confirmingSignOut by remember { mutableStateOf(false) }
+    fun back() {
+        when {
+            step > 0 -> step -= 1
+            // Account-free onboarding (the normal path): Welcome is just the
+            // previous screen — no auth boundary to cross.
+            !signedIn -> onBackToWelcome()
+            else -> confirmingSignOut = true
+        }
+    }
+    androidx.activity.compose.BackHandler { back() }
+    if (confirmingSignOut) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmingSignOut = false },
+            title = { Text(stringResource(R.string.back_to_the_welcome_screen)) },
+            text = { Text(stringResource(R.string.this_signs_you_out_your_answers_stay_on_this_device)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmingSignOut = false; onBackToWelcome() }) {
+                    Text(stringResource(R.string.sign_out_go_back), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmingSignOut = false }) {
+                    Text(stringResource(R.string.stay))
+                }
+            },
+        )
+    }
 
     /** Leaving the language step: move a pre-selection that now matches the
      *  app language. Leaving the target step with it is the learner's own
@@ -132,7 +171,7 @@ private fun SetupFlowBody(
             Row(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { if (step > 0) step -= 1 else onBackToWelcome() },
+                    onClick = { back() },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.back)) }
                 Button(
@@ -192,7 +231,9 @@ private fun SetupFlowBody(
                 }
                 2 -> ChoiceList(CefrLevel.entries.toList(), selected = level,
                     title = { LanguageCatalog.levelLabel(it, target) },
-                    subtitle = { levelBlurb(it) }) { level = it }
+                    subtitle = { levelBlurb(it) },
+                    footer = stringResource(R.string.you_re_about_to_build_your_fluent_self_another_you_that_alre_1eac72,
+                        LanguageCatalog.ownName(target, native))) { level = it }
                 else -> ChoiceList(listOf(5, 10, 15, 20, 30), selected = goal,
                     title = { stringResource(R.string.lld_min_a_day, it) },
                     subtitle = { goalBlurb(it) },
