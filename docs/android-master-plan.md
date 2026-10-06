@@ -672,7 +672,6 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 | 초대 코드(웰컴 → 가입 시 적용, 계정 단계·Meet 표시) | ☑ 없음 | `PendingInvite` + 입력란 + 표시 (`ab3b251a`, `d88a382c`) |
 | 매일 전화: 알림 안내 줄, Not now도 권한 요청 | ☑ 없음 / 주간 알림 원할 때만 | iOS 그대로 (`9c17b373`) |
 | 주간: 시간 라벨 숨김 | ☑ "Opens at" 표시 | 숨김 (`9c17b373`) |
-
 | 탭 진입 나이 확인(iOS `AgeCheckSheet`: 목소리 있음 + 이 기기에 나이 기록 없음 → 시트, 나이만 기록, 스위치는 꺼진 채 시작, 닫으면 다음 진입에 다시) | ☑ 없음 | `AgeCheckSheet` + `ConsentStore.confirmAge`(나이·정책 버전만, 한 번, 감사 기록, `age_declared`), 탭 진입마다 확인, 그동안 탭 안내·무료 통화 환영은 대기 (`e9741bfb`) — 코드만(실제 계정 로그인 금지) |
 | 오프너 굽기 시점(iOS `warmFreeTalkOpeners`: 보류 중엔 안 함, `finishMeet`에서 한 번, 다음 2줄만 `purpose: "opener"`) | ☑ Talk 탭에서 풀 전체를 `turn`으로 | `warmFreeTalkOpeners`(보류면 무시)를 Start talking·재녹음·억양 적용 뒤에, `FreeTalkOpeners.warmFirstCall`(인트로·폴백·풀 생성·다음 `WARM_AHEAD`=2줄), 과금 표시 `opener` (`30a2157a`) — 코드만(실제 복제 금지) |
 
