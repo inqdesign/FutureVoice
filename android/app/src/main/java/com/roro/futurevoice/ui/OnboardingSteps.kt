@@ -100,7 +100,11 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) finish(enable = true) else denied = true }
-    // Skipping the call still owes the weekly notice its one permission ask.
+    // Declining the CALL is not declining to be reached (iOS 2026-09-26):
+    // this is the only place onboarding asks about notifications, so the
+    // prompt is asked on BOTH exits — otherwise everyone who tapped Not now
+    // could never be told anything (their plan, an announcement), and the
+    // weekly step's notice would never be armed either.
     val skipPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { finish(enable = false) }
@@ -128,6 +132,12 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
         Text(stringResource(R.string.it_rings_even_on_silent_and_i_remember_how_the_last_call_wen_b28e80),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+        // Said on this screen because this is where the prompt comes from, on
+        // EITHER exit — a permission asked for one feature and then used for
+        // another is a thing learners are right to resent.
+        Text(stringResource(R.string.even_if_you_d_rather_i_didn_t_call_notifications_are_how_i_r_dc2b11),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
         // The dial, not the compact field: TimeInput takes focus and raises
         // the keyboard over the very button this screen exists to offer.
         TimePicker(state = time)
@@ -149,8 +159,7 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
         // Skipping still sets the flag: a screen you cannot get past is a
         // wall, and this one is an offer.
         TextButton(onClick = {
-            if (com.roro.futurevoice.data.WeeklyTestSettings.reminderOn(context) &&
-                Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
+            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
                     android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 skipPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             } else finish(enable = false)

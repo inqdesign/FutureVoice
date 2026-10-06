@@ -130,8 +130,7 @@ fun WeeklyRhythmOnboardingScreen(context: Context, onDone: () -> Unit) {
                     }
                 }
             }
-            Text(stringResource(R.string.opens_at), style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // The wheel speaks for itself — iOS hides its "Opens at" label.
             TimePicker(state = time)
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
