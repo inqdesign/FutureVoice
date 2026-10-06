@@ -99,6 +99,24 @@ class AuthRepository {
             .getCredential(context, request)
         val credential = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
             .createFrom(result.credential.data)
+        // An anonymous session on stage gets Google LINKED to it instead of
+        // a fresh sign-in (iOS `AuthService.signInWithGoogle`): same user id,
+        // so the voice clone, consent record and credit row minted before the
+        // sign-up stay attached. A refused link means the identity already
+        // owns an account (the reinstall case) — signing into it is what the
+        // person wants; the throwaway clone is collected server-side, and the
+        // clone flow rebuilds the voice under the account from the take on
+        // disk (it sees the user id change).
+        if (isAnonymous) {
+            val linked = runCatching {
+                Supa.client.auth.linkIdentityWithIdToken(
+                    io.github.jan.supabase.auth.providers.Google, credential.idToken)
+                // The link updates the user, not necessarily the session
+                // event — re-read it so `isAnonymous` turns false now.
+                Supa.client.auth.retrieveUserForCurrentSession(updateSession = true)
+            }.isSuccess
+            if (linked) return
+        }
         Supa.client.auth.signInWith(io.github.jan.supabase.auth.providers.builtin.IDToken) {
             idToken = credential.idToken
             provider = io.github.jan.supabase.auth.providers.Google
