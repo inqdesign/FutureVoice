@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"Der Ring ist dein Tagesziel"</string>
     <string name="guide_the_whole_ring_is_the_daily">"Der ganze Ring ist dein tägliches Sprechziel – 10 Minuten, wenn du es unter Ich nicht änderst. Der farbige Teil füllt sich, während du heute sprichst, und der Ring schließt sich, wenn du es erreichst."</string>
     <string name="guide_not_sure_what_to_say">"Weißt du nicht, was du sagen sollst?"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"Scroll nach unten zu Situationen wie Bestellen im Café oder einem Vorstellungsgespräch und zu den Nachrichten von heute. Tipp auf eine, und der Anruf startet mit diesem Thema."</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"Scroll nach unten zu den News von heute, Alltagsthemen und Situationen wie Bestellen im Café oder einem Vorstellungsgespräch. Tipp auf eins, und der Anruf startet mit diesem Thema."</string>
     <string name="guide_the_buttons_at_the_top">"Die Buttons oben"</string>
     <string name="guide_three_things_youll_reach_for_often">"Drei Dinge, die du oft brauchen wirst."</string>
     <string name="guide_switch_language">"Sprache wechseln"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"Jede Uhrzeit an dem Tag zählt. Die Zeiten sind ein Plan, keine Frist."</string>
     <string name="guide_an_empty_day_is_a_rest">"Ein leerer Tag ist ein Ruhetag – deine Serie reißt nicht."</string>
     <string name="guide_heres_how_this_tab_helps">"So hilft dir dieser Tab"</string>
-    <string name="guide_scenarios">"Situationen"</string>
-    <string name="guide_news">"News"</string>
     <string name="guide_more_natural">"Natürlicher"</string>
     <string name="guide_listening">"Hört zu…"</string>
     <string name="guide_your_own_situation">"Deine eigene Situation"</string>

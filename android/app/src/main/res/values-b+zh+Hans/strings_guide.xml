@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"圆环是今天的目标"</string>
     <string name="guide_the_whole_ring_is_the_daily">"整个圆环就是你设定的每日通话目标，如果没在“我的”里改过，就是 10 分钟。今天说得越多，彩色部分越满，达到目标时圆环合上。"</string>
     <string name="guide_not_sure_what_to_say">"不知道说什么？"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"往下滑可以看到咖啡馆点单、求职面试等情境，以及今天的新闻。点一下，就以那个话题开始通话。"</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"往下滑可以看到今天的新闻、日常话题，以及咖啡馆点单、求职面试等情境。点一下，就以那个话题开始通话。"</string>
     <string name="guide_the_buttons_at_the_top">"顶部的按钮"</string>
     <string name="guide_three_things_youll_reach_for_often">"三个你会常用的功能。"</string>
     <string name="guide_switch_language">"切换语言"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"当天任何时间完成都算。时间只是计划，不是截止。"</string>
     <string name="guide_an_empty_day_is_a_rest">"空着的日子是休息日，不会中断连续记录。"</string>
     <string name="guide_heres_how_this_tab_helps">"这个页面能帮你什么"</string>
-    <string name="guide_scenarios">"情境"</string>
-    <string name="guide_news">"新闻"</string>
     <string name="guide_more_natural">"更自然"</string>
     <string name="guide_listening">"正在听…"</string>
     <string name="guide_your_own_situation">"我的情境"</string>

@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -164,9 +165,12 @@ internal fun TalkRingMock() {
             }
         }
         Callout(3) {
+            // The Talk page's three Discover tabs, in its order: News ·
+            // Everyday · Scenarios, under the same words the chips use.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TalkTile(Icons.Filled.LocalCafe, stringResource(R.string.guide_scenarios), Modifier.weight(1f))
-                TalkTile(Icons.Filled.Newspaper, stringResource(R.string.guide_news), Modifier.weight(1f))
+                TalkTile(Icons.Filled.Newspaper, stringResource(R.string.news), Modifier.weight(1f))
+                TalkTile(Icons.Filled.WbSunny, stringResource(R.string.everyday), Modifier.weight(1f))
+                TalkTile(Icons.Filled.LocalCafe, stringResource(R.string.scenarios), Modifier.weight(1f))
             }
         }
     }
@@ -178,7 +182,7 @@ private fun TalkTile(icon: ImageVector, label: String, modifier: Modifier) {
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Glyph(icon, 16.dp)
         Caption(label)
-        TextBar(64.dp, 6.dp)
+        TextBar(44.dp, 6.dp)
     }
 }
 

@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"The ring is today's goal"</string>
     <string name="guide_the_whole_ring_is_the_daily">"The whole ring is the daily talk goal you set, 10 minutes unless you change it in Me. The coloured part fills as you talk today, and the ring closes when you reach it."</string>
     <string name="guide_not_sure_what_to_say">"Not sure what to say?"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"Scroll down for situations like ordering at a café or a job interview, and for today's news. Tap one and the call starts on that topic."</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"Scroll down for today\'s News, Everyday topics, and Scenarios like ordering at a café or a job interview. Tap one and the call starts on that topic."</string>
     <string name="guide_the_buttons_at_the_top">"The buttons at the top"</string>
     <string name="guide_three_things_youll_reach_for_often">"Three things you'll reach for often."</string>
     <string name="guide_switch_language">"Switch language"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"Any time that day counts. The times are a plan, not a deadline."</string>
     <string name="guide_an_empty_day_is_a_rest">"An empty day is a rest day, so it doesn't break your streak."</string>
     <string name="guide_heres_how_this_tab_helps">"Here's how this tab helps"</string>
-    <string name="guide_scenarios">"Scenarios"</string>
-    <string name="guide_news">"News"</string>
     <string name="guide_more_natural">"More natural"</string>
     <string name="guide_listening">"Listening…"</string>
     <string name="guide_your_own_situation">"Your own situation"</string>

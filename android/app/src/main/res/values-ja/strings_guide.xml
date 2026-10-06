@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"リングは今日の目標"</string>
     <string name="guide_the_whole_ring_is_the_daily">"リング全体は自分で決めた1日のトーク目標です。変えていなければ10分です。今日話すほど色が満ちていき、目標に届くとリングが閉じます。"</string>
     <string name="guide_not_sure_what_to_say">"何を言えばいいか迷ったら"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"下にスクロールすると、カフェでの注文や面接などの状況と、今日のニュースがあります。どれかをタップすると、そのテーマで通話が始まります。"</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"下にスクロールすると、今日のニュース、日常の話題、カフェでの注文や面接などのシチュエーションがあります。どれかをタップすると、そのテーマで通話が始まります。"</string>
     <string name="guide_the_buttons_at_the_top">"上のボタン"</string>
     <string name="guide_three_things_youll_reach_for_often">"よく使う3つです。"</string>
     <string name="guide_switch_language">"言語を切り替える"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"その日のうちにやれば大丈夫。時間は締め切りではなく計画です。"</string>
     <string name="guide_an_empty_day_is_a_rest">"何も入れていない日は休みの日なので、連続記録は途切れません。"</string>
     <string name="guide_heres_how_this_tab_helps">"このタブでできること"</string>
-    <string name="guide_scenarios">"シチュエーション"</string>
-    <string name="guide_news">"ニュース"</string>
     <string name="guide_more_natural">"もっと自然に"</string>
     <string name="guide_listening">"聞いています…"</string>
     <string name="guide_your_own_situation">"自分の場面をつくる"</string>

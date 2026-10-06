@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"圓環是今天的目標"</string>
     <string name="guide_the_whole_ring_is_the_daily">"整個圓環是你設定的每日對話目標，沒改的話是 10 分鐘。今天說得越多，顏色就填得越滿，達到目標時圓環就會閉合。"</string>
     <string name="guide_not_sure_what_to_say">"不知道要說什麼時"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"往下滑可以看到咖啡廳點餐、面試等情境，還有今天的新聞。點一下，就會以那個主題開始通話。"</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"往下滑可以看到今天的新聞、日常話題，還有咖啡廳點餐、面試等情境。點一下，就會以那個主題開始通話。"</string>
     <string name="guide_the_buttons_at_the_top">"上方按鈕"</string>
     <string name="guide_three_things_youll_reach_for_often">"三個你會常用到的地方。"</string>
     <string name="guide_switch_language">"切換語言"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"當天做完就好。時間是計畫，不是截止期限。"</string>
     <string name="guide_an_empty_day_is_a_rest">"沒排計畫的日子是休息日，連續紀錄不會中斷。"</string>
     <string name="guide_heres_how_this_tab_helps">"這個分頁能幫你什麼"</string>
-    <string name="guide_scenarios">"情境"</string>
-    <string name="guide_news">"新聞"</string>
     <string name="guide_more_natural">"更自然"</string>
     <string name="guide_listening">"正在聽…"</string>
     <string name="guide_your_own_situation">"我的情境"</string>

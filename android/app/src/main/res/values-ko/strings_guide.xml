@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"링은 오늘의 목표예요"</string>
     <string name="guide_the_whole_ring_is_the_daily">"링 전체는 내가 정한 하루 통화 목표예요. 따로 바꾸지 않았다면 10분이에요. 오늘 통화할수록 색이 채워지고, 목표를 채우면 링이 닫혀요."</string>
     <string name="guide_not_sure_what_to_say">"무슨 말을 할지 막막하면"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"아래로 내리면 카페 주문, 면접 같은 상황과 오늘의 뉴스가 있어요. 하나를 누르면 그 주제로 통화가 시작돼요."</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"아래로 내리면 오늘의 뉴스, 일상 주제, 카페 주문·면접 같은 상황이 있어요. 하나를 누르면 그 주제로 통화가 시작돼요."</string>
     <string name="guide_the_buttons_at_the_top">"위쪽 버튼"</string>
     <string name="guide_three_things_youll_reach_for_often">"자주 쓰게 될 세 가지예요."</string>
     <string name="guide_switch_language">"언어 바꾸기"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"그날 안에만 하면 돼요. 시간은 마감이 아니라 계획이에요."</string>
     <string name="guide_an_empty_day_is_a_rest">"비워 둔 날은 쉬는 날이라 연속 기록이 끊기지 않아요."</string>
     <string name="guide_heres_how_this_tab_helps">"이 탭이 도와주는 것"</string>
-    <string name="guide_scenarios">"상황"</string>
-    <string name="guide_news">"뉴스"</string>
     <string name="guide_more_natural">"더 자연스럽게"</string>
     <string name="guide_listening">"듣는 중…"</string>
     <string name="guide_your_own_situation">"내 상황 만들기"</string>

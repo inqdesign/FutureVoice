@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"El anillo es la meta de hoy"</string>
     <string name="guide_the_whole_ring_is_the_daily">"El anillo completo es la meta diaria de conversación que fijaste, 10 minutos salvo que la cambies en Mi perfil. La parte de color se llena mientras hablas hoy, y el anillo se cierra cuando la alcanzas."</string>
     <string name="guide_not_sure_what_to_say">"¿No sabes qué decir?"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"Desliza hacia abajo para ver situaciones como pedir en una cafetería o una entrevista de trabajo, y las noticias del día. Toca una y la llamada empieza con ese tema."</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"Desliza hacia abajo para ver las noticias del día, temas del día a día y situaciones como pedir en una cafetería o una entrevista de trabajo. Toca uno y la llamada empieza con ese tema."</string>
     <string name="guide_the_buttons_at_the_top">"Los botones de arriba"</string>
     <string name="guide_three_things_youll_reach_for_often">"Tres cosas que vas a usar a menudo."</string>
     <string name="guide_switch_language">"Cambiar de idioma"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"Vale cualquier hora de ese día. Las horas son un plan, no una fecha límite."</string>
     <string name="guide_an_empty_day_is_a_rest">"Un día vacío es de descanso, así que no rompe tu racha."</string>
     <string name="guide_heres_how_this_tab_helps">"Así te ayuda esta pestaña"</string>
-    <string name="guide_scenarios">"Situaciones"</string>
-    <string name="guide_news">"Noticias"</string>
     <string name="guide_more_natural">"Más natural"</string>
     <string name="guide_listening">"Escuchando…"</string>
     <string name="guide_your_own_situation">"Tu propia situación"</string>

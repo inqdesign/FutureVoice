@@ -29,7 +29,7 @@
     <string name="guide_the_ring_is_todays_goal">"L’anneau, c’est l’objectif du jour"</string>
     <string name="guide_the_whole_ring_is_the_daily">"L’anneau entier est l’objectif de conversation quotidien que tu as fixé, 10 minutes sauf si tu le changes dans Mon profil. La partie colorée se remplit à mesure que tu parles aujourd’hui, et l’anneau se ferme quand tu l’atteins."</string>
     <string name="guide_not_sure_what_to_say">"Tu ne sais pas quoi dire ?"</string>
-    <string name="guide_scroll_down_for_situations_like_ordering">"Fais défiler vers le bas pour des situations comme commander au café ou un entretien d’embauche, et pour l’actu du jour. Touches-en une et l’appel démarre sur ce sujet."</string>
+    <string name="guide_scroll_down_for_situations_like_ordering">"Fais défiler vers le bas pour les actus du jour, des sujets du quotidien et des situations comme commander au café ou un entretien d’embauche. Touches-en un et l’appel démarre sur ce sujet."</string>
     <string name="guide_the_buttons_at_the_top">"Les boutons en haut"</string>
     <string name="guide_three_things_youll_reach_for_often">"Trois choses dont tu te serviras souvent."</string>
     <string name="guide_switch_language">"Changer de langue"</string>
@@ -164,8 +164,6 @@
     <string name="guide_any_time_that_day_counts_the">"N’importe quel moment de la journée compte. Les horaires sont un plan, pas une échéance."</string>
     <string name="guide_an_empty_day_is_a_rest">"Un jour vide est un jour de repos : il ne casse pas ta série."</string>
     <string name="guide_heres_how_this_tab_helps">"Ce que cet onglet t’apporte"</string>
-    <string name="guide_scenarios">"Situations"</string>
-    <string name="guide_news">"Actus"</string>
     <string name="guide_more_natural">"Plus naturel"</string>
     <string name="guide_listening">"À l’écoute…"</string>
     <string name="guide_your_own_situation">"Ta propre situation"</string>
