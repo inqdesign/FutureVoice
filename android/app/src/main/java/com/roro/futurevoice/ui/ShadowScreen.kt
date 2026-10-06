@@ -2,7 +2,6 @@ package com.roro.futurevoice.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -78,7 +77,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -224,7 +222,6 @@ fun ShadowScreen(
     seed: ShadowSeed? = null,
 ) {
     val context = LocalContext.current
-    val view = LocalView.current
     val scope = rememberCoroutineScope()
     val target = remember { TargetPlayer() }
     val takePlayer = remember { Mp3Player(context.cacheDir, source = "shadow") }
@@ -417,7 +414,7 @@ fun ShadowScreen(
         said = ""; activeRange = null
         resetResult()
         phase = ShadowPhase.IDLE
-        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        HapticEngine.selection(context)
         com.roro.futurevoice.core.Telemetry.log("shadow_attempt_cancelled")
     }
 
@@ -488,7 +485,7 @@ fun ShadowScreen(
             val countStartedAt = System.currentTimeMillis()
             phase = ShadowPhase.COUNTDOWN
             countdown = 3
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            HapticEngine.countdownTick(context)
             delay(30)   // let "3" draw first
             // The mic is up before "2", and anything before "0" is cut from
             // the file afterwards (iOS records from the go beat — the 3-2-1
@@ -518,12 +515,12 @@ fun ShadowScreen(
             delay(maxOf(0L, 700L - (System.currentTimeMillis() - countStartedAt)))
             for (n in 2 downTo 1) {
                 countdown = n
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                HapticEngine.countdownTick(context)
                 delay(700)
             }
             countdown = 0
             val goSeconds = recorder.elapsedSeconds
-            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            HapticEngine.countdownGo(context)
             delay(350)
 
             syncStartedAt = System.currentTimeMillis()
@@ -614,11 +611,7 @@ fun ShadowScreen(
             coachPending = coachable
             takeRecording = takeFile.absolutePath
             phase = ShadowPhase.RESULT
-            view.performHapticFeedback(when {
-                overall >= 80 -> HapticFeedbackConstants.CONFIRM
-                overall >= 50 -> HapticFeedbackConstants.CLOCK_TICK
-                else -> HapticFeedbackConstants.REJECT
-            })
+            HapticEngine.shadowComplete(context, overall)
             com.roro.futurevoice.core.Analytics.capture("shadow_attempted", mapOf("score" to overall))
 
             // Saved BEFORE the coach call, so an attempt whose bullets never

@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import android.Manifest
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import android.content.pm.PackageManager
-import android.os.Build
-import android.view.HapticFeedbackConstants
-import android.view.View
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -88,7 +85,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -168,7 +164,6 @@ fun WeeklyTestScreen(
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    val view = LocalView.current
     val scope = rememberCoroutineScope()
     val player = remember { Mp3Player(context.cacheDir, source = "weekly_test") }
     val recorder = remember { WavRecorder() }
@@ -215,16 +210,6 @@ fun WeeklyTestScreen(
         }
     }
 
-    fun haptic(right: Boolean?) {
-        val c = when {
-            Build.VERSION.SDK_INT >= 30 && right == true -> HapticFeedbackConstants.CONFIRM
-            Build.VERSION.SDK_INT >= 30 && right == false -> HapticFeedbackConstants.REJECT
-            right == null -> HapticFeedbackConstants.CLOCK_TICK
-            else -> HapticFeedbackConstants.LONG_PRESS
-        }
-        view.performHapticFeedback(c)
-    }
-
     fun resume(test: WeeklyTest) {
         var run = 0
         for (a in test.answers.reversed()) { if (!a.correct) break; run++ }
@@ -246,7 +231,7 @@ fun WeeklyTestScreen(
         if (retry != null) retry = t else scope.launch { store.save(t) }
         phase = TestPhase.Playing(t)
         SoundEffects.play(context, if (correct) SoundEffects.Cue.RIGHT else SoundEffects.Cue.WRONG)
-        haptic(correct)
+        if (correct) HapticEngine.drillCorrect(context) else HapticEngine.drillIncorrect(context)
     }
 
     fun finish(test: WeeklyTest) {
@@ -255,7 +240,7 @@ fun WeeklyTestScreen(
             // Practice only: nothing saved, nothing written to the loop.
             val t = test.copy(finishedAt = now)
             retry = t; current = null; phase = TestPhase.Result(t)
-            SoundEffects.play(context, SoundEffects.Cue.DONE); haptic(true)
+            SoundEffects.play(context, SoundEffects.Cue.DONE); HapticEngine.success(context)
             return
         }
         var t = test.copy(finishedAt = test.finishedAt ?: now)
@@ -266,7 +251,7 @@ fun WeeklyTestScreen(
         if (firstTime) {
             Analytics.capture("weekly_test_finished",
                 mapOf("score" to t.score, "total" to t.total, "best_streak" to t.bestStreak))
-            SoundEffects.play(context, SoundEffects.Cue.DONE); haptic(true)
+            SoundEffects.play(context, SoundEffects.Cue.DONE); HapticEngine.success(context)
         }
         scope.launch {
             if (firstTime) WeeklyTestEngine.apply(context, t)
@@ -483,7 +468,7 @@ fun WeeklyTestScreen(
         if (runCatching { recorder.start(file) }.isFailure) { speakPhase = SpeakPhase.MIC_OFF; return }
         recordingFile = file
         speakPhase = SpeakPhase.RECORDING
-        haptic(null)
+        HapticEngine.countdownGo(context)
         autoStop?.cancel()
         autoStop = scope.launch {
             delay(MAX_RECORD_MS)
@@ -524,7 +509,7 @@ fun WeeklyTestScreen(
         val at = cursor.coerceIn(0, laid.size)
         laid.add(at, index)
         cursor = at + 1
-        SoundEffects.play(context, SoundEffects.Cue.TAP); haptic(null)
+        SoundEffects.play(context, SoundEffects.Cue.TAP); HapticEngine.selection(context)
     }
 
     /** First tap on a placed tile moves the cursor after it; a second tap on
@@ -535,7 +520,7 @@ fun WeeklyTestScreen(
             laid.removeAt(position)
             cursor = if (position < laid.size) position else laid.size
         } else cursor = position + 1
-        SoundEffects.play(context, SoundEffects.Cue.TAP); haptic(null)
+        SoundEffects.play(context, SoundEffects.Cue.TAP); HapticEngine.selection(context)
     }
 
     val recording = speakPhase == SpeakPhase.RECORDING
