@@ -723,7 +723,7 @@ iOS 시뮬레이터와 나란히 찍지는 않음(시트 겉모양은 이전 포
 
 ## 2k단계 · 결제·벽·요금제·평점 — iOS `1f7cc014`와 대조 (2026-10-06)
 
-사장님: "무료 통화가 끝날 때 나오는 안내, 요금제 로직, 평점 로직 — 전부 확인했어?" iOS `BillingGate`·`ConversationView`(`handleTalkPoolSpent`·`endAndClose`·`leaveForPractice`)·`DailyAllowanceSheet`·`WatchView`·`ElevenLabsError.wall`·플레이어들(`parkedPaywall`)·`OnboardingPaywallView`·`ReviewRequest`·`FeedbackPrompt`를 읽고 안드로이드와 줄마다 맞췄다. 고침 `f26db113`, 디버그 훅 `fb09a903`.
+사장님: "무료 통화가 끝날 때 나오는 안내, 요금제 로직, 평점 로직 — 전부 확인했어?" iOS `BillingGate`·`ConversationView`(`handleTalkPoolSpent`·`endAndClose`·`leaveForPractice`)·`DailyAllowanceSheet`·`WatchView`·`ElevenLabsError.wall`·플레이어들(`parkedPaywall`)·`OnboardingPaywallView`·`ReviewRequest`·`FeedbackPrompt`를 읽고 안드로이드와 줄마다 맞췄다. 고침 `f26db113` `8a90b608`, 디버그 훅 `fb09a903`.
 
 **확인 방법** — 에뮬레이터 `emulator-5554`, DEBUG 앱, 개발 계정 세션 그대로. 돈·통화·프로드 쓰기 없이 상태를 세우는 훅(`DebugBilling`, `BuildConfig.DEBUG` 안에서만 읽음):
 `am start -n com.roro.futurevoice/.MainActivity --es debugAccount <free|nosub|freescenes|light|lightspent|lightcancel|plus|plusspent|max|trial|uncapped|clear>` (AccountStatus.load 대신), `--es debug402 <insufficient_credits|daily_cap_reached|scene_cap_reached|fair_use_limit|voice_parked>` (다음 합성 한 번), `--es debugCallWall <초>:<코드>[:silent]` (다음 통화를 게이트웨이·마이크·저장·요약 없이 두 줄로 세우고, 실제 벽과 같은 `handleWall`로). Play 상품이 없어 **실제 구매·팩 구매는 확인 불가**(구독 버튼은 "Google Play isn't offering this plan here yet").
@@ -736,8 +736,8 @@ iOS 시뮬레이터와 나란히 찍지는 않음(시트 겉모양은 이전 포
 | 자유 통화 링 | `RootTabView.startFreeTalk` → start | 같음 | ☑화면 (nosub → 탭 즉시 요금제, 통화 화면 없음) |
 | 뉴스·시나리오·스타터 카드 | `ConversationHome.runScenario/runNews` → start, 스타터는 통과 뒤 저장 | `startCall` 한 곳 | ☑코드 |
 | 컴포저 CTA | Talk 쪽 `blocks()`, Watch 쪽 `blocksScene()`, 막히면 시트 자기 요금제, 아무것도 안 만듦 | 두 쪽 다 장면 게이트(무료 장면 소진이 **통화**도 막음) | Talk=통화 게이트 · Watch=장면 게이트; ☑화면 (freescenes → Watch 박스 CTA → 시트 위 요금제) |
-| Find people Talk | start | 같음 | ☑코드 |
-| Find people Watch | `startScene` | **버튼 없음**(안드로이드 사람 카드에 Watch가 없음 — 기능 격차, 이번에 안 만듦) | ☐ 별도 항목 |
+| Find people Talk | start, 사람 저장은 게이트 **뒤** (`savedPerson()`) | 저장이 게이트 앞 | 게이트 뒤 저장 (`8a90b608`) ☑코드 |
+| Find people Watch | `startScene` → 그 사람과의 "Meeting" 시나리오(사람마다 하나·재사용, `freeTalkScenario` 문구, 그 사람의 프리셋 목소리)로 새 테이크; 카드 아래 Watch·Talk 같은 무게(Watch 먼저) | **버튼 없음** | 추가 (`8a90b608`): ☑화면 — 버튼 둘 나란히; freescenes → Watch → 요금제, 카드 그대로·사람 저장 안 됨; light + 네트워크 끔 → 장면 화면 열림(생성은 오프라인으로 실패, 비용 0), 시나리오 1개 저장(목소리 = 사람의 프리셋), 두 번째 Watch도 같은 시나리오 재사용 |
 | 책 Talk · Continue | start | 같음 | ☑코드 |
 | 책 Watch(저장된 장면 다시 보기) | 게이트 없음 | 같음 | ☑코드 |
 | Watch 탭 장면 카드(새 테이크) | `startScene` | `gateScene` | ☑코드 |
@@ -792,7 +792,11 @@ iOS: 매일 전화 단계 뒤 `BillingGate.blocks()` — 못 물어봄(세션 �
 - 평점(`ReviewRequest`, Play In-App Review): 이번 통화 ≥ 3분 · 총 통화 ≥ 20분(`TalkTimeLog`) · 통화한 날 ≥ 3일 · 이 앱 버전에 아직 안 물음(`futurevoice.reviewRequest.askedVersion`) — 물을 때 버전 기록, 화면이 사라진 1.2초 뒤. 피드백과 같은 통화엔 안 물음, 감정으로 거르지 않음. 요약 출구에서만(요금제 제안이 뜨면 안 물음).
 - 피드백(`FeedbackSheet(.returningTalk)`): 통화 ≥ 60초 · 끝난 통화 ≥ 2개(등록 언어 전부) · 첫 통화가 오늘이 아님 · 한 번만(`futurevoice.betaFeedback.returning_talk`). 피드백이 이기고 평점은 다음 통화로.
 
-**남은 것**: Find people 사람 카드의 Watch(iOS `freeTalkScenario`) — 기능 자체가 없음. 실제 Play 구매·팩 구매·환불은 상품이 생긴 뒤(7.1).
+**덤으로 고친 것** (`8a90b608`): 장면 머리말이 시나리오 `notes`(장면 작성자용 지시문 — 사람 장면이면 "Build the scene on the COMMON GROUND…")를 학습자에게 보이고 있었다. iOS `WatchView.header`대로 "이름 · 관계"(사람 없는 장면은 목소리 이름 · 역할) + 제목만. ☑화면 ("holly · Met on nawana").
+
+**디버그 훅은 릴리스에서 아무것도 안 함**: `DebugBilling`의 모든 입구(`init`·`apply`·`account`·`consume402`·`consumeCallWall`)가 첫 줄에서 `BuildConfig.DEBUG`를 본다 — 릴리스에선 `static final false` 상수라 `init`은 컨텍스트도 저장하지 않고, 나머지는 null/즉시 반환. 릴리스는 `isMinifyEnabled = false`라 클래스 자체는 APK에 남지만 실행되는 코드는 없음.
+
+**남은 것**: 실제 Play 구매·팩 구매·환불은 상품이 생긴 뒤(7.1).
 
 ## 3단계 · 첫 기준선 측정
 
