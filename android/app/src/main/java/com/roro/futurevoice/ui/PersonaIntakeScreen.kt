@@ -65,15 +65,26 @@ fun PersonaIntakeScreen(
     onFinish: (UserPersona) -> Unit,
     /** Where the pages open — Me's remembered lines open on the home page. */
     startStep: Int = 0,
+    /**
+     * First run only (iOS `PersonaIntakeView`'s draft): answers + the current
+     * card survive an app kill and a cross-stage Back, so a relaunch resumes
+     * where the learner left off instead of re-asking the cards. Saved at
+     * every step transition, cleared on finish. Me's profile editor edits
+     * the saved persona directly and keeps no draft.
+     */
+    persistDraft: Boolean = false,
 ) {
-    var step by remember { mutableIntStateOf(startStep.coerceIn(0, 3)) }
-    androidx.activity.compose.BackHandler { if (step > 0) step -= 1 else onBackToSetup() }
-    var name by remember { mutableStateOf(initial.displayName) }
-    var city by remember { mutableStateOf(initial.city) }
-    var country by remember { mutableStateOf(initial.country) }
-    var stay by remember { mutableStateOf(initial.lengthOfStay) }
-    var interests by remember { mutableStateOf(initial.interests.toSet()) }
-    var situations by remember { mutableStateOf(initial.situations.toSet()) }
+    val context = LocalContext.current
+    // A draft from an interrupted run wins over [initial].
+    val seed = remember { if (persistDraft) PersonaDraft.load(context) else null }
+    val from = seed?.first ?: initial
+    var step by remember { mutableIntStateOf((seed?.second ?: startStep).coerceIn(0, 3)) }
+    var name by remember { mutableStateOf(from.displayName) }
+    var city by remember { mutableStateOf(from.city) }
+    var country by remember { mutableStateOf(from.country) }
+    var stay by remember { mutableStateOf(from.lengthOfStay) }
+    var interests by remember { mutableStateOf(from.interests.toSet()) }
+    var situations by remember { mutableStateOf(from.situations.toSet()) }
     // What the fluent self remembers, with each line's rung — edited here,
     // saved with the rest on Finish (iOS `rememberedSection`).
     var notes by remember { mutableStateOf(initial.learnedNotes) }
@@ -83,6 +94,13 @@ fun PersonaIntakeScreen(
         interests = interests.toList(), situations = situations.toList(),
         learnedNotes = notes,
     )
+    fun saveDraft() { if (persistDraft) PersonaDraft.save(context, draft(), step) }
+    /** Back: a step within the cards, or — on the first — reopen setup.
+     *  Answers survive either way: the draft here, the app state there. */
+    fun back() {
+        if (step > 0) { step -= 1; saveDraft() } else { saveDraft(); onBackToSetup() }
+    }
+    androidx.activity.compose.BackHandler { back() }
 
     val canAdvance = when (step) {
         0 -> name.isNotBlank()
@@ -96,14 +114,17 @@ fun PersonaIntakeScreen(
             Row(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { if (step > 0) step -= 1 else onBackToSetup() },
+                    onClick = { back() },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.back)) }
                 Button(
                     enabled = canAdvance,
                     onClick = {
-                        if (step < 3) step += 1
-                        else onFinish(draft().committingNotes(initial.learnedNotes))
+                        if (step < 3) { step += 1; saveDraft() }
+                        else {
+                            if (persistDraft) PersonaDraft.clear(context)
+                            onFinish(draft().committingNotes(initial.learnedNotes))
+                        }
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.next)) }
@@ -206,3 +227,33 @@ private val SITUATION_PRESETS = listOf(
     "Customer service", "Streaming / shows", "Reading articles",
     "Daily small talk",
 )
+
+/**
+ * The first-run intake's draft (iOS `futurevoice.personaDraft` /
+ * `futurevoice.personaDraftStep`): the answers and the card they were on.
+ */
+internal object PersonaDraft {
+    private const val KEY = "futurevoice.personaDraft"
+    private const val STEP_KEY = "futurevoice.personaDraftStep"
+
+    fun load(c: android.content.Context): Pair<UserPersona, Int>? {
+        val p = c.getSharedPreferences("futurevoice", 0)
+        val raw = p.getString(KEY, null) ?: return null
+        val persona = runCatching {
+            com.roro.futurevoice.data.StoreJson.json.decodeFromString(UserPersona.serializer(), raw)
+        }.getOrNull() ?: return null
+        // A step from an older, longer flow can point past the end — clamp
+        // instead of silently restarting at card one.
+        return persona to p.getInt(STEP_KEY, 0).coerceIn(0, 3)
+    }
+
+    fun save(c: android.content.Context, persona: UserPersona, step: Int) {
+        c.getSharedPreferences("futurevoice", 0).edit()
+            .putString(KEY, com.roro.futurevoice.data.StoreJson.json.encodeToString(UserPersona.serializer(), persona))
+            .putInt(STEP_KEY, step).apply()
+    }
+
+    fun clear(c: android.content.Context) {
+        c.getSharedPreferences("futurevoice", 0).edit().remove(KEY).remove(STEP_KEY).apply()
+    }
+}
