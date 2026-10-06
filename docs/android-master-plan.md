@@ -624,6 +624,59 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 - ☑ 2h.4 예문 길게 눌러 문장 카드로 (`71c5e2da`) — `9e6d257b`: `DrillStore.bookmarkSentence`(→ `saveIfNew`, 원문 없음, 바로 복습)·`sentenceKeys`·`sentenceKey`, 단어·표현 카드(`WordCardSheet`)와 문장 카드 예문 시트(`DrillEnrichmentSheet`) 예문에 "문장에 저장"/"문장에 저장됨". 에뮬레이터 `expr-card`에서 저장→drills.json 확인. 메뉴 전체를 iOS `saveActions`와 같게 `e9e5c4f6`: 문장에 저장 → 표현에 저장(`VocabStore.addExpression` = 북마크, count 0 행만, 숙달 아님, `ExpressionBookmarkTest` 3) → 이 문장 섀도잉, 단어 카드의 구는 문장 항목 없이. 에뮬레이터에서 표현 저장(vocab_expressions.json `used`/count 0, 메뉴 "표현에 저장됨")·섀도잉 화면 열림 확인
 - ☑ 2h.5 체험 중 다 쓴 통화 시간 시트 (iOS `DailyAllowanceSheet(isTrial:planMinutesAfterTrial:)`, CLAUDE.md "A TRIAL's pool is said before the purchase", 2026-09-25) — `AllowanceSpentSheet`가 `isTrialing`이면 "체험 통화 시간은 여기까지"·"체험 통화 N분을 다 썼어요"·"<날짜>에 구독이 시작되고, 그때부터 매달 통화 N분…", 플랜 이동·팩 없음, 날짜 줄은 해지된 체험만(`SpentSheetCopy`, `SpentSheetCopyTest` 5), 초대 줄은 그대로. `AccountStatus.planMonthlySeconds`(별도 쿼리 `subscription_plans.monthly_seconds`, 무제한이면 null), 사용 내역 "체험 통화 시간" + "플랜 시작 후 매달 N분", 페이월 "You're in" 알림(체험이면 체험 크기, 아니면 Google Play 문구 `your_subscription_is_active_google_play`). 페이월 카드·CTA 각주·타임라인 체험 줄은 `61f079e7`에 이미 있음(iOS는 카드 "During the trial" 줄을 지금 안 씀). 에뮬레이터 ko `day-spent-trial`·`day-spent-trial-plus`·`plan-trial`이 iOS 샷과 일치
 
+
+## 2i단계 · 온보딩 흐름 — iOS `1f7cc014`와 한 단계씩 대조 (2026-10-06)
+
+사장님: "안드로이드 온보딩 흐름이 제대로 안 돼 있다." iOS `RootView`·`VoiceCloneOnboardingView`·`SetupFlowView`·`PersonaIntakeView`·`WeeklyRhythmOnboardingView`·`DailyCallOnboardingView`·`OnboardingPaywallView`·`AuthService`를 처음부터 읽고, 안드로이드를 같은 순서로 맞췄다.
+
+### iOS 지도 (새 설치 → Talk 탭)
+
+1. **런치 화면 쌍둥이** — 세션 확인 전, `onboardingStarted`·`holdVoiceOnboarding`가 꺼져 있을 때만.
+2. **웰컴**(`session == nil && !onboardingStarted && !hold`) — 영화(Skip / Watch again), 마지막 프레임에 Get started(→ `onboardingStarted = true`, 계정 없음·세션 없음), "Already have an account? Sign in"(Apple·Google, "New here? Get started instead"), "Have an invite code?"(입력란 + "You'll both get N minutes…", 기기에 보관).
+3. (동기화 제안 / 다른 기기 안내 — 안드로이드엔 동기화가 없어 제외)
+4. **설정** `!setupComplete` — 4장: Your native language?(번역된 언어 / "Corrections and notes only" 두 그룹, 누르는 즉시 앱 언어 적용) → Learn which language? → Your level?(각주 "You're about to build your fluent self…") → Your daily goal?(5·10·15·20·30, 저장된 목표가 기본). Back: 단계 뒤로, 첫 단계에서 세션 없으면 웰컴으로(`onboardingStarted = false`), 계정 있으면 "Back to the welcome screen?" 확인(Sign out & go back / Stay).
+5. **프로필 카드** `persona == nil` — About you: What should I call you?(사진+이름, 필수) → Where's home these days?(도시 필수·나라·기간) → What are you into?(칩) → What do you want to be able to do in X?(칩). 초안이 단계마다 저장되어 앱이 죽어도 이어지고, 첫 카드 Back은 초안을 저장한 채 설정을 다시 연다.
+6. **목소리** `voiceCloneId == nil || hold || 익명 세션` — 한 무대(픽셀 제목·오브·타이머 줄) + 아래 고정 액션 바(Back + 주 버튼):
+   Intro(Another you. Already fluent. · Back = 프로필 카드 다시) → Consent(이미 기록돼 있으면 건너뜀. "Your voice is handled with care." 두 줄, 토글 하나, 개인정보처리방침, 토글 전엔 Next 꺼짐) → Mic(Next에서 마이크 권한, 거부 시 "Microphone access denied…") → Spot(소음·울림 두 게이트, 둘 다 통과면 "Record here." 라벨, Next는 언제나 가능, "Can't record now…"·"Not happy with a take…") → Script(읽기 언어 세그먼트, "1 minute. Vary your pitch a little.", Record my voice) → Recording(링·m:ss, 60초 전엔 Start over만, 이후 Stop & review 빨강→75초부터 초록, "Keep going — Ns more"/"Good. Ns more…"/"That's enough…", 90초 자동 정지) → Review("Ns recorded", 판정+문제, Listen/Stop, Re-record | Use this voice, 앱이 죽어도 리뷰로 복귀) → **Use this voice에서 익명 세션 시작**(실패하면 가입 먼저) → Becoming(팔레트 순환, 문구 5줄, "About half a minute.", 비활성 "Cloning your voice…") → Meet("It's you — fluent." 인사는 도착 때 한 번, 오브 탭 = 다시 듣기 "Tap to hear it again", 색 6개는 소리 없음, 속도 알약, 억양 알약, "Doesn't sound like you?" → 비교 시트 → 다시 녹음, 초대 적용 표시, 계정 있으면 Start talking / 없으면 Save this voice) → Account(머리 Back, "Save this voice to your account.", 보류 중 초대 코드, Apple·Google — 익명 사용자에 **연결**, 이미 계정이면 그 계정으로 로그인하고 디스크의 녹음으로 다시 복제). 가입이 끝나면 두 번째 탭 없이 다음으로.
+7. **이번 주**(`!dailyCall.onboarded && !weeklyRhythm.onboarded`, 새 설치만) — Once a week…, 요일·시간, "Tell me when it's ready", Set my week. 권한은 묻지 않음.
+8. **매일 전화**(`!dailyCall.onboarded`) — 이름 부르는 제목, 세 줄 + "Even if you'd rather I didn't call, notifications are how I reach you…", 시간, Call me every day(권한 → 거부면 빨간 줄, 화면 유지) / Not now(그래도 알림 권한은 물음). 두 출구 모두 플래그.
+9. **요금제**(`!paywall.onboarded`) — 결정 전엔 빈 화면, 살 게 없거나 조회 실패면 조용히 건너뛰고 `onboarding_paywall_skipped`, 아니면 페이월(닫으면 플래그).
+10. **탭** — Talk 안내 → 무료 통화 환영 시트 순서(이미 포팅됨, `FreeTalkWelcome`).
+
+### 안드로이드 이전 지도 (`88a1b827`)
+
+웰컴(Get started = **익명 세션 즉시 시작**, 기억 안 되는 `welcomeDone`, 초대 코드 없음) → 세션 실패 시 개발용 `SignInScreen` → 설정(첫 단계 Back = 그냥 로그아웃, 레벨 각주 없음, 목표 기본 10 고정) → 프로필 카드(초안 없음 — 앱이 죽거나 설정으로 돌아가면 다 지워짐) → 목소리(상단 앱바 제목, 버튼이 본문 안, Back 없음, 동의 매번, **마이크 권한은 녹음 버튼에서야** — 그래서 방 확인이 권한 없이 -90 dB "조용함"을 보여줌, 방 확인 다음 버튼은 두 게이트 통과 전엔 없음(벽), 녹음 중 Stop 비활성 + "탭해서 끝내기", 리뷰는 Start over, 인사 문구 텍스트 + Listen 버튼, "Pick your look" 제목, 색 선택이 앱 강조색에 반영 안 됨, Doesn't sound like you 없음, Becoming은 진행 막대뿐) → Save this voice → 계정 단계 Continue → `pendingAccount`… 그런데 게이트 순서상 목소리 화면이 앞에 있어 **가입 화면이 열리지 않음**(앱을 죽여야만 보임). 가입은 Google을 새 사용자로 로그인 → 익명 사용자의 목소리를 잃고 다시 녹음. 요금제 판정 중엔 홈이 잠깐 보임.
+
+### 차이 → 지금
+
+| iOS 단계 | 안드로이드 전 | 지금 |
+|---|---|---|
+| 세션은 Use this voice에서 | ☑ Get started에서 익명 세션(재회수 시계가 웰컴부터 돎) | `startOnboarding`는 플래그만, `ensureAnonymousSession`은 리뷰의 Use this voice에서, 실패면 가입 먼저 (`d88a382c`) |
+| 웰컴 게이트 = onboardingStarted(저장) | ☑ 메모리 `welcomeDone` | `futurevoice.onboardingStarted` 저장, 로그아웃·설정 첫 단계 Back에서 해제, 개발 로그인은 별도 플래그 (`d88a382c`) |
+| 게이트 순서 setup→persona→voice→week→call→paywall | ☑ persona·voice가 Me·덱 등 다른 화면 뒤에 | 설정 바로 뒤로 이동, 페르소나 로딩 중 대기 (`d88a382c`) |
+| 보류(hold)·익명이면 목소리 화면 유지 | ☑ 없음 — 세션이 열리면 화면이 빠짐, 가입 화면 도달 불가 | `holdVoiceOnboarding`, 익명+목소리면 목소리 화면이 계정 단계로 다시 열림, 별도 `AccountScreen` 삭제 (`d88a382c`) |
+| 요금제 판정 중 빈 화면, 실패는 건너뜀 | ☑ 판정 중 홈 노출, 실패 처리 없음 | 대기 화면, 실패=건너뜀, `onboarding_paywall_skipped` (`d88a382c`) |
+| 설정 첫 단계 Back(계정이면 확인) | ☑ 무조건 로그아웃 | 세션 없으면 웰컴, 계정이면 확인 대화상자, 시스템 Back 동일 (`36a7a26d`) |
+| 레벨 각주·저장된 목표 | ☑ 없음 / 10 고정 | 각주 추가, `dailyGoalMinutes` 기본값 (`36a7a26d`) |
+| 프로필 초안·교차 Back | ☑ 없음 | `PersonaDraft`(키 iOS와 같음), 목소리 Intro Back = 저장된 프로필로 카드 다시 (`c96b7e20`, `d88a382c`) |
+| 목소리: 무대 + 고정 액션 바 + Back | ☑ 앱바·본문 버튼·Back 없음 | 픽셀 제목·오브·타이머 줄, Back+Next 바, 시스템 Back도 같은 규칙 (`d88a382c`) |
+| 동의 건너뛰기·머리글·토글 | ☑ 매번, 체크박스 | 기록돼 있으면 Mic로, "Your voice is handled with care.", 스위치 (`d88a382c`) |
+| 마이크 권한은 Mic 단계 | ☑ 녹음 버튼에서 — 방 확인이 귀머거리 | Mic Next에서 요청, 거부 문구 (`d88a382c`) |
+| Spot Next 항상, Record here 라벨, 두 줄 | ☑ 통과 전엔 버튼 없음(벽) | iOS 그대로 (`d88a382c`) |
+| 녹음: Start over/Stop & review·세 문구·링 | ☑ 비활성 Stop | iOS 그대로, 75초 권장 (`d88a382c`) |
+| 리뷰: Re-record | Use this voice, Listen/Stop, 앱 재시작 복귀 | ☑ Start over, 복귀 없음 | iOS 그대로, 녹음은 `clone-take.wav`, 쓰기로 한 것만 `clone-sample.wav` (`d88a382c`) |
+| Becoming 문구·팔레트 순환 | ☑ 진행 막대 | iOS 그대로 (`d88a382c`) |
+| Meet: 오브 탭 재생, 색은 무음+앱 강조색, Doesn't sound like you → 비교 → 다시 녹음 | ☑ 인사 텍스트·Listen 버튼, "Pick your look", 강조색 미반영, 비교 없음 | iOS 그대로(`FutureselfTheme.pick`), 다시 녹음 중 Back/"Keep my current voice"는 지금 목소리로 (`d88a382c`) |
+| 계정: 같은 화면의 Apple·Google, 머리 Back, 끝나면 자동 진행 | ☑ Continue → 열리지 않는 화면 | 같은 화면, 연결이면 Start talking과 같은 마무리, 다른 계정이면 재복제 (`d88a382c`) |
+| 가입 = 익명 사용자에 연결 | ☑ 새 사용자로 로그인 | Google은 `linkIdentityWithIdToken`, 거절이면 로그인 + 재복제 (`f21b1056`). Apple(웹 OAuth)은 연결 실패를 받을 길이 없어 로그인 + 사용자 id 변화 감지로 재복제 — 코드만 |
+| 초대 코드(웰컴 → 가입 시 적용, 계정 단계·Meet 표시) | ☑ 없음 | `PendingInvite` + 입력란 + 표시 (`ab3b251a`, `d88a382c`) |
+| 매일 전화: 알림 안내 줄, Not now도 권한 요청 | ☑ 없음 / 주간 알림 원할 때만 | iOS 그대로 (`9c17b373`) |
+| 주간: 시간 라벨 숨김 | ☑ "Opens at" 표시 | 숨김 (`9c17b373`) |
+
+남은 것(이번에 안 함): 탭 진입 시 나이 확인 시트(iOS `showingAgeCheck` — 목소리가 있는데 나이 기록 없는 기존 사용자), 녹음 중 입력 장치 표시(안드로이드는 클론에 내장 마이크를 강제하므로 경고할 일이 없음), Start talking 뒤 오프너 굽기 순서(`warmFreeTalkOpeners`) 대조.
+
+**검증**: 에뮬레이터(debug, `pm clear`)에서 웰컴 → Get started(세션 없음 확인 — 공유 설정에 Supabase 세션 없음) → 설정 Back이 웰컴으로·`onboardingStarted` false → 레벨 각주 → 프로필 두 장 입력 후 강제 종료·재실행 → 3번째 카드에서 이어짐 → 목소리 Intro Back → 프로필이 채워진 채 열림 → 동의(스위치 전 Next 꺼짐) → Mic Next에서 권한 대화상자 → Spot 실측(-78 dB quiet, clap to check) → Script → 녹음 0:06 Start over·1:15 초록 Stop & review → 리뷰 75s → 강제 종료 후 리뷰로 복귀. 실제 복제·가입·통화는 하지 않음(비용 규칙) — Meet·Account·Becoming은 `--es cloneStage meet|account|uploading`(iOS `-cloneStage`)로 화면만 확인, 가입 후 연결/재복제·초대 적용·요금제 건너뛰기는 코드로만. 웰컴 초대 입력란 → `futurevoice.pendingInviteCode` 저장 확인. `assembleDebug`·`assembleCapture`·`rules-check` 457/0.
+
 ---
 
 ## 3단계 · 첫 기준선 측정
