@@ -95,10 +95,19 @@ object FreeTalkWelcome {
     private const val SHOWN_KEY = "futurevoice.freeTalkWelcome.shown"
     private const val SEEN_KEY = "futurevoice.freeTalkWelcome.seenSeconds"
     private const val RISE_SECONDS = 60
+    private const val DEBUG_MINUTES_KEY = "futurevoice.debug.welcomeMinutes"
 
     /** Whole minutes to announce, or null when the sheet shouldn't show. */
     suspend fun minutesToAnnounce(context: Context): Int? {
         val prefs = context.getSharedPreferences("futurevoice", 0)
+        // Debug only: a stand-in grant, so the sheet's ORDER can be checked
+        // on an account that has nothing to announce. Used once.
+        if (com.roro.futurevoice.BuildConfig.DEBUG && prefs.contains(DEBUG_MINUTES_KEY)) {
+            val m = prefs.getInt(DEBUG_MINUTES_KEY, 0)
+            prefs.edit().remove(DEBUG_MINUTES_KEY).apply()
+            markShown(context)
+            return m
+        }
         val account = runCatching { AccountStatus.load(AuthRepository()) }.getOrNull() ?: return null
         if (account.isEntitled || account.unlimited) return null
         val balance = account.secondsBalance

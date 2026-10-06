@@ -197,6 +197,12 @@ fun RootScreen() {
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
+    // Debug only: `--ez debugHomeCardCallEnded true` plays the moment a
+    // Talk-home card's call has just closed, without a call.
+    LaunchedEffect(Unit) {
+        if (BuildConfig.DEBUG && (context as? android.app.Activity)?.intent
+                ?.getBooleanExtra("debugHomeCardCallEnded", false) == true) deepenPending = true
+    }
     var showPrivacy by remember { mutableStateOf(false) }
     val referralJoin by com.roro.futurevoice.data.ReferralJoins.pending.collectAsStateWithLifecycle()
     /** The tab shell has been reached this run (see `arriveAtTabs`). iOS
@@ -1038,7 +1044,13 @@ fun RootScreen() {
           // Entering the tabs with a voice but no age on record (iOS
           // `RootTabView.onAppear` → `showingAgeCheck`): the age check takes
           // this visit; the tab's guide waits behind it.
-          LaunchedEffect(Unit) { arriveAtTabs() }
+          // The arrival waits for the voice: a restore from the cloud puts
+          // the tabs up before the voice id is known, and judged then the
+          // age check (voice + no age) was always skipped. iOS only ever
+          // reaches `RootTabView` with a voice.
+          LaunchedEffect(state.voiceId, state.restoringVoice) {
+              if (state.voiceId != null && !state.restoringVoice) arriveAtTabs()
+          }
           HomeScreen(
             state = state,
             onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },

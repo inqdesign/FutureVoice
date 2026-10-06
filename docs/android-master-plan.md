@@ -691,7 +691,7 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 | 시트 | iOS 조건 · 키 · 위치 | 안드로이드 전 | 지금 |
 |---|---|---|---|
 | 웰컴·설정·프로필·목소리·이번 주·매일 전화·온보딩 요금제 | `RootView` 게이트 순서, 키는 2i 표 | 2i에서 맞춤 | ☑ 2i (`d88a382c` 외) |
-| 나이 확인 `AgeCheckSheet` | 탭 도착 때, 목소리 있음 + `ConsentStore.isAgeVerified` 아님, 실행당 한 번(밀어 닫으면 다음 실행에) | ☑ 탭 셸이 다시 그려질 때마다(Me·덱·통화에서 돌아올 때마다) 다시 뜸 | 실행당 한 번, 도착 순서 ① (`TabArrival`, 단위 테스트) |
+| 나이 확인 `AgeCheckSheet` | 탭 도착 때, 목소리 있음 + `ConsentStore.isAgeVerified` 아님, 실행당 한 번(밀어 닫으면 다음 실행에) | ☑ 탭 셸이 다시 그려질 때마다(Me·덱·통화에서 돌아올 때마다) 다시 뜸; 그리고 클라우드에서 목소리를 복원하는 동안 탭이 먼저 떠서 목소리 없음으로 판정 → **나이 확인이 한 번도 안 뜸**(에뮬레이터에서 발견) | 실행당 한 번, 도착 순서 ① (`TabArrival`, 단위 테스트), 도착 판정은 목소리 복원이 끝난 뒤 |
 | 탭 가이드 `PageIntroSheet` | 탭마다 첫 방문, `futurevoice.pageIntro.seen.v2.<page>`, 450ms 뒤, 다른 시트 위엔 안 뜸 | 이미 같음 | ☑ 변경 없음 |
 | 무료 시간 환영 `FreeTalkWelcomeSheet` | 도착 때 한 번(가이드 뒤로 보류), `futurevoice.freeTalkWelcome.shown`·`seenSeconds`, 미구독·잔액 ≥60초·첫 패스는 대화 없음·이후 60초 이상 늘면; Start talking = 게이트 거쳐 자유 통화; 닫힘 이벤트 started true/false | ☑ 가이드 표시가 바뀔 때마다·나이 확인 직후에도 재확인(다른 탭 가이드를 닫아도 계정 조회), `free_talk_welcome_shown` 두 번 기록, 닫힘은 started=true만, Start talking이 게이트 없이 통화 | 도착 순서 ②③으로만, 보류는 가이드가 내려간 뒤 풀림, 이벤트 한 번(minutes+kind), 닫힘 둘 다, 게이트 거침 |
 | 주간 덱 `WeekRecapSheet` | 탭 도착·포그라운드마다, 지난주에 활동 있고 안 본 주만, 1.2초 뒤, 막힘 목록에 나이 확인·환영 포함 | ☑ 온보딩 중에도 `ready`, 나이 확인 위에 뜰 수 있음 | 탭 도착 뒤에만, 나이 확인도 막힘 |
@@ -713,7 +713,13 @@ iOS 원본: `Views/Speech/*`(탭·프롬프터·결과), `Services/Speech/*`(저
 | 체험 알림 `TrialReminder` | 체험 시작 때 | 체험 없음(09-26 제거) | n/a |
 | 코어 합류 | 로컬 알림(시트 아님) | `CoreArrivals` | ☑ 변경 없음 |
 
-**검증**: `assembleDebug`·`assembleCapture`·`rules-check` 통과, `TabArrivalTest` 4건. 에뮬레이터(capture)로 `first-call-check`·`free-minutes-welcome`·`deepen`·`week-recap`·`intro-preview`가 그려지는 것 확인. **순서·트리거 변경 자체는 코드로만** — debug 앱이 로그인돼 있지 않고 실제 로그인·통화는 금지라 탭 도착·통화 종료 흐름을 에뮬레이터에서 돌리지 못함.
+**검증**: `assembleDebug`·`assembleCapture`·`rules-check` 461/0, `TabArrivalTest` 4건. 에뮬레이터 debug 앱(개발 계정 세션 주입, 상태는 `run-as`로 공유 설정·`sessions.json` 픽스처를 경우마다 다시 씀). 디버그 전용 장치 둘: `futurevoice.debug.welcomeMinutes`(구독 계정이라 환영이 안 뜨므로 한 번 쓰는 가짜 잔액), `--ez debugHomeCardCallEnded true`(통화 없이 "홈 카드 통화가 막 닫힘").
+1. Talk 가이드 미확인 + 지난주 활동 있음 → 홈 다음 프레임에 가이드, 주간 덱은 가이드에 막혀 안 뜸, Maybe later → 환영 "Congratulations! 10 min" → 닫으면 아무것도 안 뜸 ☑
+2. 나이 기록 삭제 → 나이 확인("One quick thing")만, 밀어 닫아도 환영 없음(대기 중인 가짜 잔액이 그대로 남음 = 확인 자체가 안 돎), Me 다녀와도 다시 안 뜸 ☑ — 처음엔 환영이 떴음 → 위 복원 버그를 고침
+3. 다른 것 없음 → 홈이 그려지고 약 1.2초 뒤 주간 덱 "Your week Sep 26 – Oct 2", 닫고 Me 다녀와도 다시 안 뜸 ☑
+4. 그냥 실행 → 프로필 시트 없음(전에는 대화가 있으면 열자마자 떴음), 디버그 extra로 실행 → 홈 약 0.7초 뒤 "Make me sound more like you", `personaDeepenPrompted` 기록 ☑
+5. Me·Review → Words 다녀오기 → Talk로 돌아와도 어떤 시트도 다시 안 뜸 ☑
+iOS 시뮬레이터와 나란히 찍지는 않음(시트 겉모양은 이전 포팅에서 대조됨, 이번 변경은 시점·순서). 통화 끝 흐름(첫 통화 점검, 제안이 곧 출구, 저장 안 하고 닫기)은 실제 통화가 필요해 코드로만.
 
 ## 3단계 · 첫 기준선 측정
 
