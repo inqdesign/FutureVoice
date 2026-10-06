@@ -47,10 +47,12 @@ object CaptureOnboarding {
         "welcome-signin" to { _ ->
             WelcomeScreen(onGetStarted = {}, onGoogleSignIn = {}, onAppleSignIn = {}, initialSignIn = true)
         },
-        // The account step after the clone: keep the voice you just heard.
+        // The account step after the clone: keep the voice you just heard —
+        // the voice act's own last stage, as iOS's `-cloneStatus account`.
         "signup-account" to { _ ->
-            com.roro.futurevoice.ui.AccountScreen(
-                googleAvailable = true, onGoogleSignIn = {}, onAppleSignIn = {}, onBack = {})
+            com.roro.futurevoice.ui.CloneFlowScreen(
+                targetLanguage = "en", onCloned = {}, googleAvailable = true,
+                onGoogleSignIn = {}, onAppleSignIn = {}, debugStage = "account")
         },
     )
 

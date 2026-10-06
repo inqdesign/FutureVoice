@@ -242,7 +242,13 @@ fun RootScreen() {
     var recloning by remember { mutableStateOf(false) }
     var personDetailId by remember { mutableStateOf<String?>(null) }
     var clonePreview by remember { mutableStateOf(false) }
-    var welcomeDone by remember { mutableStateOf(false) }
+    /** Debug only: the developer email sign-in screen, opened from Welcome. */
+    var devSignInOpen by remember { mutableStateOf(false) }
+    /** Debug only (iOS `-cloneStage`): `--es cloneStage meet` opens the
+     *  voice act on one stage with stand-in data. */
+    val debugCloneStage = remember {
+        if (BuildConfig.DEBUG) (context as? android.app.Activity)?.intent?.getStringExtra("cloneStage") else null
+    }
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
     /** A per-item reminder's target (iOS `.reviewItem`): the card or word it named. */
@@ -373,7 +379,6 @@ fun RootScreen() {
     }
     var editProfile by remember { mutableStateOf(false) }
     var editProfileStep by remember { mutableStateOf(0) }
-    var pendingAccount by remember { mutableStateOf(false) }
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
@@ -387,19 +392,28 @@ fun RootScreen() {
     // out to have nothing to buy, so it waits for the answer rather than
     // guessing at one.
     var onboardingNeedsPlan by remember { mutableStateOf<Boolean?>(null) }
-    // Sign-up landed: the account act resolves itself with no second tap.
-    LaunchedEffect(state.signedIn, state.isAnonymous) {
-        if (state.signedIn && !state.isAnonymous) pendingAccount = false
-    }
     LaunchedEffect(state.voiceId, dailyCallOnboarded) {
         if (state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == null) {
-            onboardingNeedsPlan = AccountStatus.load(AuthRepository())
-                .also { BillingGate.remember(it) }
-                .needsSubscription
-            // Nothing to sell: mark it seen now, so the check is paid once.
+            val account = runCatching { AccountStatus.load(AuthRepository()) }.getOrNull()
+                ?.also { BillingGate.remember(it) }
+            // Couldn't ask, or nothing to sell — step aside for good. A failed
+            // lookup must not park the learner on a paywall forever; the
+            // first paid tap asks the server again anyway.
+            onboardingNeedsPlan = account?.needsSubscription ?: false
             if (onboardingNeedsPlan == false) {
                 OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
                 onboardingPaywallSeen = true
+                // The skip is silent on screen, so it has to be loud here: a
+                // free-call grant makes EVERY new account take this branch.
+                val reason = when {
+                    account == null -> "lookup_failed"
+                    account.isEntitled -> "entitled"
+                    account.unlimited -> "unlimited"
+                    account.secondsBalance > 0 -> "balance"
+                    else -> "unknown"
+                }
+                com.roro.futurevoice.core.Analytics.capture("onboarding_paywall_skipped",
+                    mapOf("reason" to reason, "balance_s" to (account?.secondsBalance ?: -1).toString()))
             }
         }
     }
@@ -565,37 +579,34 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onCloned = { id -> app.onVoiceCloned(id); recloning = false },
             signedIn = state.signedIn && !state.isAnonymous,
-            onSaveVoice = { pendingAccount = true },
+            onBack = { recloning = false },
         )
 
-        state.resolvingSession -> Loading()
+        // Match the launch screen until we know whether there's a stored
+        // session — but never while onboarding is under way or a voice act
+        // is on stage (iOS `launchScreenTwin`'s vetoes).
+        state.resolvingSession && !state.onboardingStarted && !state.holdVoiceOnboarding -> Loading()
         // The pitch before the ask — the short film the fluent self narrates
-        // (iOS WelcomeView). Returning users (stored session) never see it.
-        !state.signedIn && !welcomeDone -> WelcomeScreen(
-            onGetStarted = {
-                welcomeDone = true
-                // Account-free entry (iOS order): the server needs a session,
-                // not an account — the sign-up asks to KEEP the voice, after
-                // Meet.
-                app.startAnonymous()
-            },
-            // A returning learner signs in right there — the account buttons
-            // take the Get started button's place, as on iOS — so their voice
-            // and progress come back with them.
-            onGoogleSignIn = if (app.isGoogleConfigured) app::signInWithGoogle else null,
-            onAppleSignIn = app::signIn,
-            signInBusy = state.busy,
-            signInError = state.error,
-            // The developer email sign-in stays on SignInScreen, debug only.
-            onDevSignIn = if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
-                { welcomeDone = true }
-            } else null,
-            // No invite link yet: redeeming needs an account, and iOS's
-            // "capture the code, then sign in" path has no Android half. A
-            // button that can only land on the sign-in screen would be the
-            // sign-in link wearing a second name.
-        )
-        !state.signedIn -> SignInScreen(
+        // (iOS WelcomeView). Welcome gates on "has the journey begun", NOT on
+        // the session: "Get started" enters onboarding account-free, and the
+        // session only opens at the clone's "Use this voice". The sign-in
+        // here is for returning users restoring.
+        !state.signedIn && !state.onboardingStarted && !state.holdVoiceOnboarding && !devSignInOpen ->
+            WelcomeScreen(
+                onGetStarted = app::startOnboarding,
+                // A returning learner signs in right there — the account
+                // buttons take the Get started button's place, as on iOS.
+                onGoogleSignIn = if (app.isGoogleConfigured) app::signInWithGoogle else null,
+                onAppleSignIn = app::signIn,
+                signInBusy = state.busy,
+                signInError = state.error,
+                // Debug only: the developer email sign-in (iOS keeps "Skip
+                // sign-in (debug)" in the same spot).
+                onDevSignIn = if (BuildConfig.DEBUG && BuildConfig.BUILD_TYPE != "capture") {
+                    { devSignInOpen = true }
+                } else null,
+            )
+        !state.signedIn && devSignInOpen -> SignInScreen(
             state,
             googleAvailable = app.isGoogleConfigured,
             onGoogleSignIn = app::signInWithGoogle,
@@ -603,13 +614,19 @@ fun RootScreen() {
             onDevSignIn = app::devSignIn,
         )
         // First-run answers before anything else — what to teach and how to
-        // calibrate. (iOS order puts Welcome before sign-in; Android's
-        // account-free entry arrives with the Google-auth work.)
+        // calibrate.
         !state.setupComplete -> SetupFlowScreen(
             initialNative = state.nativeLanguage,
             initialTarget = state.targetLanguage,
             initialLevel = state.level,
-            onBackToWelcome = app::signOut,
+            // Account-free onboarding (the normal path): Welcome is just the
+            // previous screen. A real account crossing back means signing
+            // out, which the screen confirms first.
+            signedIn = state.signedIn && !state.isAnonymous,
+            onBackToWelcome = {
+                devSignInOpen = false
+                if (state.signedIn) app.signOut() else app.setOnboardingStarted(false)
+            },
             // The pick lands NOW: this screen is the language picker, and a
             // choice that only arrives at the end leaves the learner
             // answering in a language they just said they cannot read.
@@ -629,6 +646,67 @@ fun RootScreen() {
                     (want.language != have.language || want.script != have.script)) activity.recreate()
             },
         )
+        // The persona store is still being read — hold, never flash a gate.
+        !state.personaResolved -> Loading()
+        // Light taps before the heavy ask (iOS order): persona cards build
+        // the investment and the first call's context BEFORE the recording.
+        state.persona == null -> PersonaIntakeScreen(
+            initial = state.reopenedPersona ?: com.roro.futurevoice.talk.UserPersona(),
+            targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            onBackToSetup = { app.reopenSetup() },
+            onFinish = app::savePersona,
+            persistDraft = true,
+        )
+        // An anonymous session is being looked at for a voice it already
+        // made — hold rather than flash the intro before the account act.
+        state.signedIn && state.isAnonymous && state.restoringVoice && !state.holdVoiceOnboarding -> Loading()
+        // The voice. `holdVoiceOnboarding` keeps this screen up through the
+        // meet act and the sign-up after the clone id has already landed.
+        // The anonymous clause is the crash/kill guard: a session is not an
+        // account, and letting it through would hand someone an app whose
+        // data dies with the install — the flow reopens on its sign-up act.
+        // An Android user with no voice starts HERE — they clone on Android.
+        (!state.restoringVoice && state.voiceId == null) || state.holdVoiceOnboarding ||
+            (state.signedIn && state.isAnonymous) -> CloneFlowScreen(
+            targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            onCloned = { id -> app.onVoiceCloned(id); app.holdVoiceOnboarding(false) },
+            signedIn = state.signedIn && !state.isAnonymous,
+            sessionAnonymous = state.signedIn && state.isAnonymous,
+            existingVoiceId = state.voiceId,
+            adoptedExistingAccount = state.adoptedExistingAccount,
+            // Cross-stage back: reopen the persona cards, pre-filled.
+            onBack = app::reopenPersona,
+            onStartSession = app::ensureAnonymousSession,
+            onHold = app::holdVoiceOnboarding,
+            googleAvailable = app.isGoogleConfigured,
+            onGoogleSignIn = app::signInWithGoogle,
+            onAppleSignIn = app::signIn,
+            signInBusy = state.busy,
+            signInError = state.error,
+            redeemedInvite = state.redeemedInvite,
+            debugStage = debugCloneStage,
+        )
+        // The week's rhythm before the day's: when the week is looked back on
+        // and tested, then (next screen) when the daily call rings. Gated on
+        // the daily call too, so an existing install never sees it.
+        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded ->
+            WeeklyRhythmOnboardingScreen(context) { weeklyRhythmOnboarded = true }
+        // The clone's first real job, introduced right after it exists — so
+        // it reads as a promise rather than a permissions request.
+        state.voiceId != null && !dailyCallOnboarded ->
+            DailyCallOnboardingScreen(context) { dailyCallOnboarded = true }
+        // The plans, offered ONCE at the end — LAST, and only for an account
+        // with something to buy. While the answer is unknown: the same blank
+        // hold, never a flash of a pitch (or of the tabs) at someone who
+        // isn't going to be shown one.
+        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan != false ->
+            if (onboardingNeedsPlan == true) PaywallScreen(onDismiss = {
+                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
+                onboardingPaywallSeen = true
+            }) else Loading()
+
         editProfile -> PersonaIntakeScreen(
             initial = state.persona ?: com.roro.futurevoice.talk.UserPersona(),
             targetLanguage = state.targetLanguage,
@@ -865,70 +943,6 @@ fun RootScreen() {
             onBack = { showMe = false },
         )
 
-        // Light taps before the heavy ask (iOS order): persona cards build
-        // the investment and the first call's context BEFORE the recording.
-        state.personaResolved && state.persona == null -> PersonaIntakeScreen(
-            initial = com.roro.futurevoice.talk.UserPersona(),
-            targetLanguage = state.targetLanguage,
-            nativeLanguage = state.nativeLanguage,
-            onBackToSetup = { app.reopenSetup() },
-            onFinish = app::savePersona,
-        )
-
-        // The crash/kill guard (iOS `resumeUnclaimedVoice`): an anonymous
-        // session with a voice must not reach the tabs — its data dies with
-        // the install. The flow reopens on the account step.
-        state.signedIn && state.isAnonymous && state.voiceId != null && !state.restoringVoice ->
-            AccountScreen(
-                googleAvailable = app.isGoogleConfigured,
-                onGoogleSignIn = app::signInWithGoogle,
-                onAppleSignIn = app::signIn,
-            )
-
-        // No voice on the account: an Android user starts HERE — they clone
-        // on Android (roadmap §1.2), they are not sent to an iPhone. Mic
-        // permission is asked by the flow's record button via HomeScreen's
-        // launcher pattern; the screen itself only records after it.
-        !state.restoringVoice && state.voiceId == null -> CloneFlowScreen(
-            targetLanguage = state.targetLanguage,
-            nativeLanguage = state.nativeLanguage,
-            onCloned = app::onVoiceCloned,
-            // The sign-up is the flow's LAST act, not a gate in front of it:
-            // by then the learner has heard the voice they are being asked to
-            // keep. An anonymous session gets the ask; a real account skips
-            // straight into the first call.
-            signedIn = state.signedIn && !state.isAnonymous,
-            onSaveVoice = { pendingAccount = true },
-        )
-
-        // The sign-up itself, raised by the clone flow's last act.
-        pendingAccount -> AccountScreen(
-            googleAvailable = app.isGoogleConfigured,
-            onGoogleSignIn = app::signInWithGoogle,
-            onAppleSignIn = app::signIn,
-            onBack = { pendingAccount = false },
-        )
-
-        // The week's rhythm before the day's: when the week is looked back on
-        // and tested, then (next screen) when the daily call rings. Gated on
-        // the daily call too, so an existing install never sees it.
-        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded ->
-            WeeklyRhythmOnboardingScreen(context) { weeklyRhythmOnboarded = true }
-
-        // The clone's first real job, introduced right after it exists — so
-        // it reads as a promise rather than a permissions request.
-        state.voiceId != null && !dailyCallOnboarded ->
-            DailyCallOnboardingScreen(context) { dailyCallOnboarded = true }
-
-        // The plans, offered ONCE at the end — so the first tap on Talk stops
-        // being where the hard paywall introduces itself. Skipped silently
-        // for anyone who has nothing to buy (already subscribed, or credited).
-        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == true ->
-            PaywallScreen(onDismiss = {
-                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
-                onboardingPaywallSeen = true
-            })
-
         inCall && state.voiceId != null ->
           Box(Modifier.fillMaxSize().graphicsLayer {
               alpha = if (TalkMorph.active) TalkMorph.callAlpha.value else 1f }) {
@@ -1083,82 +1097,6 @@ internal fun SignInScreen(
 private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?,
                                   /** An unsaved ready-made situation, saved once the gate passes. */
                                   val mint: Scenario? = null)
-
-/**
- * "Make it yours" — the sign-up AFTER the clone: keep a voice already in the
- * learner's ears. No skip: a session is not an account, and data on one dies
- * with the install.
- */
-@Composable
-internal fun AccountScreen(
-    googleAvailable: Boolean,
-    onGoogleSignIn: (android.content.Context) -> Unit,
-    onAppleSignIn: () -> Unit,
-    /** iOS's Back in the page's leading corner — to the voice this step
-     *  interrupted. Null where there is nothing behind it (the kill guard). */
-    onBack: (() -> Unit)? = null,
-) {
-    val context = LocalContext.current
-    val theme = remember { FutureselfTheme.stored(context) }
-    // iOS `VoiceCloneOnboardingView`'s account act: the stage (pixel title +
-    // the idle orb) on top, the hook and its support line, and the two
-    // providers stacked full-width at the BOTTOM.
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding()) {
-        Box(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 12.dp),
-            contentAlignment = Alignment.CenterStart) {
-            if (onBack != null) {
-                Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onBack)
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary,
-                        fontSize = 17.sp)
-                }
-            }
-        }
-        val title = stringResource(R.string.make_it_yours)
-        Text(title, style = DisplayFace.style(title, TextStyle(fontSize = 24.sp)),
-            maxLines = 1, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 64.dp))
-        Spacer(Modifier.height(20.dp))
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            com.roro.futurevoice.ui.brand.Futureself(
-                mode = FutureselfMode.IDLE, level = 0f, theme = theme, virtualHeight = 64f,
-                modifier = Modifier.size(168.dp).clip(CircleShape)
-                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape))
-        }
-        Spacer(Modifier.weight(0.6f))
-        Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.save_this_voice_to_your_account),
-                fontSize = 22.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-            Text(stringResource(R.string.it_s_built_and_it_s_yours_sign_in_and_it_stays_with_your_pro_d0da3f),
-                fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.widthIn(max = 300.dp))
-        }
-        Spacer(Modifier.weight(1f))
-        // Google first — Android's primary provider, in the slot iOS gives
-        // Apple. (Order not settled by the founder yet; iOS leads with Apple.)
-        Column(Modifier.fillMaxWidth().background(AppSurfaces.ground)
-            .padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val pill = RoundedCornerShape(50)
-            val ink = if (isSystemInDarkTheme()) Color.White else Color.Black
-            val onInk = if (isSystemInDarkTheme()) Color.Black else Color.White
-            @Composable fun provider(label: Int, onClick: () -> Unit) {
-                Box(Modifier.fillMaxWidth().height(50.dp).clip(pill).background(ink)
-                    .clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-                    Text(stringResource(label), color = onInk, fontSize = 19.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-            provider(R.string.continue_with_apple, onAppleSignIn)
-            if (googleAvailable) provider(R.string.continue_with_google) { onGoogleSignIn(context) }
-        }
-    }
-}
 
 /** The four verbs, in the order the product does them. Internal so the
  *  capture build can open the shell on a tab. */

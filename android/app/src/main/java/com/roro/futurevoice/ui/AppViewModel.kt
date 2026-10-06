@@ -28,6 +28,32 @@ data class AppState(
     /** Null iff persona onboarding never completed — routes to the intake. */
     val persona: com.roro.futurevoice.talk.UserPersona? = null,
     val personaResolved: Boolean = false,
+    /**
+     * "Get started" was tapped (iOS `AppState.onboardingStarted`). Welcome
+     * gates on THIS, not on the session: onboarding runs account-free, and
+     * the session only opens at "Use this voice". Persisted, so a relaunch
+     * mid-setup does not drop the learner back on the film.
+     */
+    val onboardingStarted: Boolean = false,
+    /**
+     * A voice-clone act is on stage — don't move (iOS `holdVoiceOnboarding`).
+     * Set from the moment the clone starts until "Start talking", so a
+     * session opening mid-flow, a restore, or the voice id landing can't
+     * swap the screen out from under the meet act or the sign-up.
+     */
+    val holdVoiceOnboarding: Boolean = false,
+    /** The persona the intake reopens on after the clone intro's Back
+     *  (iOS nils the published persona; the store keeps the data). */
+    val reopenedPersona: com.roro.futurevoice.talk.UserPersona? = null,
+    /**
+     * The sign-up landed on a DIFFERENT user than the anonymous one on stage
+     * — the identity was already an account (iOS
+     * `AuthService.adoptedExistingAccount`). The clone flow reads it to
+     * rebuild the voice under the account that now owns the session.
+     */
+    val adoptedExistingAccount: Boolean = false,
+    /** A Welcome invite code that redeemed — the meet act confirms it. */
+    val redeemedInvite: com.roro.futurevoice.net.ReferralClient.Redeemed? = null,
     val email: String? = null,
     val busy: Boolean = false,
     val restoringVoice: Boolean = false,
@@ -54,6 +80,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     private val _state = MutableStateFlow(AppState(
         setupComplete = prefs.getBoolean(SETUP_COMPLETE_KEY, false),
+        onboardingStarted = prefs.getBoolean(ONBOARDING_STARTED_KEY, false),
         targetLanguage = prefs.getString("futurevoice.targetLanguage", null) ?: "en",
         // A bare "zh" was stored before Chinese was split by script.
         nativeLanguage = prefs.getString(NATIVE_KEY, null)
@@ -168,7 +195,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                         // An account now owns the session: a linked anonymous
                         // user keeps its id and its voice is off the clock.
                         if (!auth.isAnonymous) com.roro.futurevoice.data.VoiceReclaim.clear(appContext)
+                        settleAdoption()
                         restoreVoiceClone()
+                        // A code typed on Welcome is applied the moment an
+                        // ACCOUNT owns the session (iOS `redeemPendingInviteIfAny`).
+                        if (!auth.isAnonymous) viewModelScope.launch {
+                            com.roro.futurevoice.data.PendingInvite.redeemIfAny(appContext, auth)?.let { r ->
+                                _state.update { it.copy(redeemedInvite = r) }
+                            }
+                        }
                     }
 
                     is SessionStatus.Initializing ->
@@ -188,29 +223,74 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     fun signIn() {
+        noteSignInStart()
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             runCatching { auth.signInWithApple() }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
+            refreshAccountState()
             _state.update { it.copy(busy = false) }
         }
     }
 
     val isGoogleConfigured: Boolean get() = auth.isGoogleConfigured
 
-    /** "Get started": onboard account-free; sign-up comes after the clone. */
-    fun startAnonymous() {
-        com.roro.futurevoice.core.Analytics.capture("onboarding_started")
-        _state.update { it.copy(busy = true, error = null) }
-        viewModelScope.launch {
-            runCatching { auth.startAnonymousSession() }
-                .onFailure { e -> _state.update { it.copy(error = e.message) } }
-            _state.update { it.copy(busy = false) }
-        }
+    /**
+     * "Get started" (iOS `WelcomeView` → `onboardingStarted = true`): the
+     * journey begins account-free. No session yet — that opens at "Use this
+     * voice" ([ensureAnonymousSession]), so the anonymous user's clock (and
+     * the 30-minute reclaim of an unclaimed voice) starts with the voice,
+     * not with the film.
+     */
+    fun startOnboarding() = setOnboardingStarted(true)
+
+    fun setOnboardingStarted(on: Boolean) {
+        val was = _state.value.onboardingStarted
+        prefs.edit().putBoolean(ONBOARDING_STARTED_KEY, on).apply()
+        _state.update { it.copy(onboardingStarted = on) }
+        if (on && !was) com.roro.futurevoice.core.Analytics.capture("onboarding_started")
+    }
+
+    /**
+     * Open the pre-signup session (iOS `AuthService.startAnonymousSession`).
+     * No-op once any session exists. Throws when anonymous sign-ins are
+     * unavailable — the clone flow then falls back to the old order (sign
+     * up, then clone).
+     */
+    suspend fun ensureAnonymousSession() {
+        if (auth.userId != null) return
+        auth.startAnonymousSession()
+    }
+
+    fun holdVoiceOnboarding(on: Boolean) = _state.update { it.copy(holdVoiceOnboarding = on) }
+
+    /** After a sign-in call returns: the link may have turned the anonymous
+     *  user into an account without a fresh session event. */
+    private fun refreshAccountState() {
+        _state.update { it.copy(isAnonymous = auth.isAnonymous, email = auth.email) }
+        settleAdoption()
+    }
+
+    /** The anonymous user a sign-in started from, until it resolves. */
+    private var anonUidAtSignIn: String? = null
+
+    private fun noteSignInStart() {
+        anonUidAtSignIn = if (auth.isAnonymous) auth.userId else null
+    }
+
+    /** Once an account owns the session: did it keep the anonymous user's id
+     *  (linked) or land on another one (adopted)? Apple's web flow resolves
+     *  through a deep link, so this runs on the session event too. */
+    private fun settleAdoption() {
+        val from = anonUidAtSignIn ?: return
+        if (auth.isAnonymous || auth.userId == null) return
+        anonUidAtSignIn = null
+        _state.update { it.copy(adoptedExistingAccount = auth.userId != from) }
     }
 
     /** Needs an ACTIVITY context — Credential Manager shows UI from it. */
     fun signInWithGoogle(activityContext: android.content.Context) {
+        noteSignInStart()
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             runCatching { auth.signInWithGoogle(activityContext) }
@@ -222,6 +302,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                     android.util.Log.w("Auth", "google sign-in failed", e)
                     _state.update { it.copy(error = activityContext.getString(com.roro.futurevoice.R.string.google_sign_in_failed)) }
                 }
+            refreshAccountState()
             _state.update { it.copy(busy = false) }
         }
     }
@@ -230,6 +311,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         com.roro.futurevoice.core.Analytics.reset()   // drop identity so the next user isn't merged in
         viewModelScope.launch {
             runCatching { auth.signOut() }
+            // Welcome gates on "has the journey begun", not on the session —
+            // leaving this set drops a signed-out learner straight back into
+            // the flow (iOS MeTab / SetupFlowView reset it the same way).
+            setOnboardingStarted(false)
         }
     }
 
@@ -251,8 +336,17 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         _state.update { it.copy(setupComplete = false) }
     }
 
+    /**
+     * Cross-stage Back from the clone intro (iOS `appState.persona = nil`):
+     * reopen the persona cards. Only the published persona is cleared — the
+     * store keeps the data and the intake reopens pre-filled from it.
+     */
+    fun reopenPersona() {
+        _state.update { it.copy(reopenedPersona = it.persona, persona = null) }
+    }
+
     fun savePersona(persona: com.roro.futurevoice.talk.UserPersona) {
-        _state.update { it.copy(persona = persona) }
+        _state.update { it.copy(persona = persona, reopenedPersona = null) }
         viewModelScope.launch {
             PersonaStore.shared(appContext).save(persona)
             // Keep the learner's Find-people presence in step with their
@@ -622,6 +716,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     private companion object {
         const val SETUP_COMPLETE_KEY = "futurevoice.setupComplete"
+        /** Same key name as iOS's defaults key. */
+        const val ONBOARDING_STARTED_KEY = "futurevoice.onboardingStarted"
         const val NATIVE_KEY = "futurevoice.nativeLanguage"
         /** Same key name as iOS's defaults key. */
         const val ACCENT_KEY = "futurevoice.voiceAccentId"
