@@ -25,8 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,8 +68,8 @@ import java.time.temporal.WeekFields
 @Composable
 fun WeeklyRhythmOnboardingScreen(context: Context, onDone: () -> Unit) {
     var weekday by remember { mutableIntStateOf(WeeklyTestSettings.weekday(context)) }
-    val time = rememberTimePickerState(initialHour = WeeklyTestSettings.hour(context),
-        initialMinute = WeeklyTestSettings.minute(context), is24Hour = true)
+    var hour by remember { mutableIntStateOf(WeeklyTestSettings.hour(context)) }
+    var minute by remember { mutableIntStateOf(WeeklyTestSettings.minute(context)) }
     var remind by remember { mutableStateOf(true) }
     val locale = weekLocale(context)
     // The week in the app language, starting where the learner's calendar
@@ -88,11 +86,11 @@ fun WeeklyRhythmOnboardingScreen(context: Context, onDone: () -> Unit) {
 
     fun save() {
         WeeklyTestSettings.setWeekday(context, weekday)
-        WeeklyTestSettings.setTime(context, time.hour, time.minute)
+        WeeklyTestSettings.setTime(context, hour, minute)
         // A wish until the next screen asks for notifications; settled there.
         WeeklyTestSettings.setReminderOn(context, remind)
         com.roro.futurevoice.core.Analytics.capture("weekly_rhythm_onboarding",
-            mapOf("weekday" to weekday, "hour" to time.hour, "remind" to remind))
+            mapOf("weekday" to weekday, "hour" to hour, "remind" to remind))
         OnboardingFlags.markSeen(context, OnboardingFlags.WEEKLY_RHYTHM)
         onDone()
     }
@@ -131,7 +129,9 @@ fun WeeklyRhythmOnboardingScreen(context: Context, onDone: () -> Unit) {
                 }
             }
             // The wheel speaks for itself — iOS hides its "Opens at" label.
-            TimePicker(state = time)
+            // iOS's wheel, not Material's 400 dp dial.
+            com.roro.futurevoice.ui.brand.IosWheelTimePicker(hour = hour, minute = minute,
+                onChange = { h, m -> hour = h; minute = m })
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {

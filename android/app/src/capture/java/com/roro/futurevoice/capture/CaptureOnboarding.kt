@@ -2,6 +2,8 @@ package com.roro.futurevoice.capture
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.ui.SetupFlowScreen
@@ -53,6 +55,20 @@ object CaptureOnboarding {
             com.roro.futurevoice.ui.CloneFlowScreen(
                 targetLanguage = "en", onCloned = {}, googleAvailable = true,
                 onGoogleSignIn = {}, onAppleSignIn = {}, debugStage = "account")
+        },
+        // Not iOS mode names: the bottom-inset survey's own shots (master
+        // plan "Bottom insets survey"). The two steps after the voice, and the
+        // retroactive age check over an empty page.
+        "daily-call-onboarding" to { c ->
+            com.roro.futurevoice.ui.DailyCallOnboardingScreen(c, onDone = {})
+        },
+        "weekly-rhythm-onboarding" to { c ->
+            com.roro.futurevoice.ui.WeeklyRhythmOnboardingScreen(c, onDone = {})
+        },
+        "age-check" to { _ ->
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                .background(com.roro.futurevoice.ui.brand.AppSurfaces.ground))
+            com.roro.futurevoice.ui.AgeCheckSheet(onDismiss = {})
         },
     )
 

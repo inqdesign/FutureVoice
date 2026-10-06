@@ -30,8 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
+import com.roro.futurevoice.ui.brand.IosWheelTimePicker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -76,7 +75,8 @@ object OnboardingFlags {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
-    val time = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = true)
+    var hour by remember { mutableStateOf(8) }
+    var minute by remember { mutableStateOf(0) }
     // By NAME when there is one: everything on this screen is the future self
     // speaking, and being called by name is what separates that from an app
     // announcing a feature (`DailyCallOnboardingView`).
@@ -89,8 +89,8 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
     var denied by remember { mutableStateOf(false) }
     fun finish(enable: Boolean) {
         com.roro.futurevoice.core.Analytics.capture("daily_call_onboarding",
-            mapOf("enabled" to enable, "hour" to time.hour))
-        DailyCallStore.set(context, enable, time.hour, time.minute)
+            mapOf("enabled" to enable, "hour" to hour))
+        DailyCallStore.set(context, enable, hour, minute)
         OnboardingFlags.markSeen(context, OnboardingFlags.DAILY_CALL)
         // The weekly step before this one may have asked for its notice: arm
         // it, or switch the wish off if notifications can't post.
@@ -109,62 +109,64 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { finish(enable = false) }
 
-    Column(
-        // A full-screen step of its own: the app draws edge to edge, so this
-        // is the only thing keeping the buttons off the gesture pill.
-        Modifier.fillMaxSize().systemBarsPadding().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(Modifier.weight(1f))
-        Icon(Icons.Filled.PhoneCallback, contentDescription = null,
-            modifier = Modifier.size(52.dp), tint = MaterialTheme.colorScheme.primary)
-        // The title is the FUTURE SELF talking, in the first person — not a
-        // feature name. "A call every day" described the mechanism and sold
-        // nothing.
-        Text(name?.let { stringResource(R.string.i_ll_help_you_keep_it_up_d1116e, it) }
-                ?: stringResource(R.string.i_ll_help_you_keep_it_up_fe0fae),
-            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center)
-        Text(stringResource(R.string.speaking_once_is_easy_every_day_is_the_hard_part_so_i_ll_cal_ce0232),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-        Text(stringResource(R.string.it_rings_even_on_silent_and_i_remember_how_the_last_call_wen_b28e80),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
-        // Said on this screen because this is where the prompt comes from, on
-        // EITHER exit — a permission asked for one feature and then used for
-        // another is a thing learners are right to resent.
-        Text(stringResource(R.string.even_if_you_d_rather_i_didn_t_call_notifications_are_how_i_r_dc2b11),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
-        // The dial, not the compact field: TimeInput takes focus and raises
-        // the keyboard over the very button this screen exists to offer.
-        TimePicker(state = time)
-        if (denied) {
-            Text(stringResource(R.string.android_is_blocking_the_call),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.weight(1f))
-        Button(onClick = {
-            denied = false
-            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
-                    android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            } else finish(enable = true)
-        }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.call_me_every_day))
-        }
-        // Skipping still sets the flag: a screen you cannot get past is a
-        // wall, and this one is an offer.
-        TextButton(onClick = {
-            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
-                    android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                skipPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            } else finish(enable = false)
-        }) {
-            Text(stringResource(R.string.not_now))
-        }
-    }
+    // iOS's shape: the message and the wheel centred and free to scroll, the
+    // two buttons pinned at the foot above the navigation bar. A
+    // non-scrolling column with the 400 dp dial squeezed the CTA into a bar.
+    BottomActionLayout(
+        content = {
+            Icon(Icons.Filled.PhoneCallback, contentDescription = null,
+                modifier = Modifier.size(52.dp), tint = MaterialTheme.colorScheme.primary)
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(horizontal = 8.dp)) {
+                // The title is the FUTURE SELF talking, in the first person —
+                // not a feature name.
+                Text(name?.let { stringResource(R.string.i_ll_help_you_keep_it_up_d1116e, it) }
+                        ?: stringResource(R.string.i_ll_help_you_keep_it_up_fe0fae),
+                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center)
+                Text(stringResource(R.string.speaking_once_is_easy_every_day_is_the_hard_part_so_i_ll_cal_ce0232),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Text(stringResource(R.string.it_rings_even_on_silent_and_i_remember_how_the_last_call_wen_b28e80),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+                // Said on this screen because this is where the prompt comes
+                // from, on EITHER exit.
+                Text(stringResource(R.string.even_if_you_d_rather_i_didn_t_call_notifications_are_how_i_r_dc2b11),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+            }
+            // iOS's wheel (150 pt), not Material's dial: the dial alone was
+            // taller than half a short phone.
+            IosWheelTimePicker(hour = hour, minute = minute,
+                onChange = { h, m -> hour = h; minute = m })
+            if (denied) {
+                Text(stringResource(R.string.android_is_blocking_the_call),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+            }
+        },
+        actions = {
+            Button(onClick = {
+                denied = false
+                if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
+                        android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else finish(enable = true)
+            }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.call_me_every_day))
+            }
+            // Skipping still sets the flag: a screen you cannot get past is a
+            // wall, and this one is an offer.
+            TextButton(onClick = {
+                if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
+                        android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    skipPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else finish(enable = false)
+            }) {
+                Text(stringResource(R.string.not_now))
+            }
+        },
+    )
 }

@@ -50,9 +50,12 @@ fun AgeCheckSheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
     /** Starts OFF, always. A pre-ticked age box confirms nothing. */
     var declared by remember { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Fully expanded, always: half-open, the sheet put Continue below the
+    // screen's edge on a short phone, under the navigation bar.
+    ModalBottomSheet(onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
-            Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 24.dp).padding(bottom = 20.dp),
+            Modifier.sheetBody().padding(horizontal = 24.dp).padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
