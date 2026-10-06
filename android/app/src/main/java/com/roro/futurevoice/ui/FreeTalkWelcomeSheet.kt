@@ -57,7 +57,7 @@ fun FreeTalkWelcomeSheet(minutes: Int, onStart: () -> Unit, onDismiss: () -> Uni
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().bottomBarInsets()
+            Modifier.sheetBody()
                 .padding(horizontal = 24.dp).padding(top = 12.dp, bottom = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),

@@ -386,7 +386,7 @@ fun StudyDeckScreen(
     verdictFor?.let { item ->
         ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { verdictFor = null }) {
-            Column(Modifier.bottomBarInsets().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.sheetBody().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(item.text, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.when_should_it_come_back),
                     style = MaterialTheme.typography.bodySmall,

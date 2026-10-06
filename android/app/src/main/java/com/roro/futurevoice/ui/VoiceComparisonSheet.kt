@@ -146,7 +146,7 @@ fun VoiceComparisonSheet(voiceId: String, targetLanguage: String, onRerecord: ()
     }
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { stopAll(); onDismiss() }) {
-        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp),
+        Column(Modifier.sheetBody().padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.same_words_both_voices), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

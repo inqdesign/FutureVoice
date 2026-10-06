@@ -139,7 +139,7 @@ fun GrammarFocusPair(mistake: String, correction: String, maxLines: Int = 1) {
 fun GrammarFocusSheet(focus: GrammarFocus, repeats: Int, onDismiss: () -> Unit) {
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding(),
+        Column(Modifier.sheetBody().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.cm_this_calls_focus), style = MaterialTheme.typography.titleMedium,

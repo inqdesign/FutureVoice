@@ -61,7 +61,7 @@ fun InterestsEditorSheet(
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().bottomBarInsets()
+            Modifier.sheetBody()
                 .padding(horizontal = 20.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

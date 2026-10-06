@@ -82,7 +82,7 @@ fun LevelUpSheet(from: CefrLevel, to: CefrLevel, onDismiss: () -> Unit) {
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().bottomBarInsets()
+            Modifier.sheetBody()
                 .padding(horizontal = 24.dp).padding(bottom = 32.dp, top = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp),

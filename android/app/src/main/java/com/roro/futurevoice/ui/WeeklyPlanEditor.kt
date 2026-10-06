@@ -348,7 +348,7 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
     if (showTest) {
         ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             onDismissRequest = { showTest = false }) {
-            Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+            Column(Modifier.sheetBody().padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
                 Text(RoutineText.label(res, StudyPlan.Kind.TEST), style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 8.dp))
                 WeeklyTestSettingsSection()
@@ -774,7 +774,7 @@ private fun StudyDaysSheet(plan: StudyPlan, onDismiss: () -> Unit, onUpdate: (St
     }
     fun setOff(days: Set<Int>) = onUpdate(plan.copy(offWeekdays = days))
     ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 32.dp),
+        Column(Modifier.sheetBody().padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.routine_study_days), style = MaterialTheme.typography.titleLarge,

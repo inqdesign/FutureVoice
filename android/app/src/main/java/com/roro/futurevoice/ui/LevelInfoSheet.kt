@@ -38,7 +38,7 @@ fun LevelInfoSheet(level: CefrLevel, onDismiss: () -> Unit) {
     )
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(),
+        Column(Modifier.sheetBody().padding(horizontal = 20.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Header(stringResource(R.string.how_your_future_self_talks))
             Text(stringResource(R.string.your_future_self_speaks_mostly_at_your_level_and_lets_a_word_2bb6d2),

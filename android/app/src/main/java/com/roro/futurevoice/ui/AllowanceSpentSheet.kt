@@ -139,7 +139,7 @@ fun AllowanceSpentSheet(
     ModalBottomSheet(
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().bottomBarInsets()
+            Modifier.sheetBody()
                 .padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp),

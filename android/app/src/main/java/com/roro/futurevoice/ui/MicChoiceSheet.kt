@@ -36,7 +36,7 @@ fun MicChoiceSheet(onChoose: (String) -> Unit) {
         onDismissRequest = { onChoose(MicPreference.EARPHONE) },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 24.dp)
+        Column(Modifier.sheetBody().padding(horizontal = 24.dp)
             .padding(bottom = 32.dp), horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(stringResource(R.string.which_mic), style = MaterialTheme.typography.titleLarge)
