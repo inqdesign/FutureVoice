@@ -176,8 +176,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
     var levelReport by remember { mutableStateOf<WeeklyReport?>(null) }
     var unlock by remember { mutableStateOf<WeeklyReportEngine.Unlock?>(null) }
     var generating by remember { mutableStateOf(false) }
-    var dim by remember { mutableStateOf(initialDim) }
-    var carryoverTotal by remember { mutableStateOf(0) }
+        var carryoverTotal by remember { mutableStateOf(0) }
     var carryoverWeek by remember { mutableStateOf(0) }
     var material by remember { mutableStateOf(0 to 0) }
     var streak by remember { mutableStateOf(0) }
@@ -232,21 +231,20 @@ fun ProgressBody(language: String, nativeLanguage: String,
         }
         loaded = true
     }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // The skill chips run FULL-BLEED, like iOS's tab bar under the title:
-        // the row is widened past the page's 20 dp gutters and scrolls to the
-        // very edge of the screen, with the gutter moved inside as content
-        // padding so the first and last chips still line up with the cards.
-        Row(
-            Modifier.fullBleed(PAGE_GUTTER)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = PAGE_GUTTER, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Dim.entries.forEach { d ->
-                PillChip(label = stringResource(d.labelRes), selected = d == dim) { dim = d }
-            }
-        }
+    // The skills are PAGES (iOS: a paging ScrollView under the chip bar):
+    // swipe sideways between them, or tap a chip.
+    val pager = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = initialDim.ordinal) { Dim.entries.size }
+    // A skill row jumps straight to its page (iOS `selected = dim`, no
+    // animation).
+    fun open(d: Dim) { scope.launch { pager.scrollToPage(d.ordinal) } }
+    ChipPager(
+        state = pager,
+        chip = { i, selected, onClick ->
+            PillChip(label = stringResource(Dim.entries[i].labelRes), selected = selected, onClick = onClick)
+        },
+    ) { page ->
+        val dim = Dim.entries[page]
 
         // Deliberately NOT the empty state: it says nothing has been
         // measured, which is a lie for anyone with a history, and it is what
@@ -256,7 +254,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
             Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            return@Column
+            return@ChipPager
         }
 
         val seeWords = { DeepLinkInbox.pending.value = DeepLinkInbox.Destination.VOCABULARY }
@@ -273,7 +271,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
                 onReviewSlips = reviewSlips,
                 onStartTalk = onStartTalk,
                 onBrowseExpressions = browseExpressions)
-            return@Column
+            return@ChipPager
         }
 
         // A level shows ONLY once a pooled read exists. No early guess from a
@@ -382,15 +380,13 @@ fun ProgressBody(language: String, nativeLanguage: String,
             ProgressPanel {
                 Text(stringResource(R.string.across_skills), style = PT.headline)
                 SkillRow(stringResource(R.string.vocabulary),
-                    metrics.vocabLevel?.code?.uppercase()) { dim = Dim.VOCABULARY }
+                    metrics.vocabLevel?.code?.uppercase()) { open(Dim.VOCABULARY) }
                 SkillRow(stringResource(R.string.fluency),
-                    metrics.fluencyLevel?.let { "≈" + it.code.uppercase() }) { dim = Dim.FLUENCY }
+                    metrics.fluencyLevel?.let { "≈" + it.code.uppercase() }) { open(Dim.FLUENCY) }
                 SkillRow(stringResource(R.string.grammar),
-                    metrics.grammarLevel?.let { "≈" + it.code.uppercase() }) { dim = Dim.GRAMMAR }
+                    metrics.grammarLevel?.let { "≈" + it.code.uppercase() }) { open(Dim.GRAMMAR) }
                 SkillRow(stringResource(R.string.expressiveness),
-                    metrics.expressionLevel?.let { "≈" + it.code.uppercase() }) {
-                    dim = Dim.EXPRESSIVENESS
-                }
+                    metrics.expressionLevel?.let { "≈" + it.code.uppercase() }) { open(Dim.EXPRESSIVENESS) }
                 Text(stringResource(R.string.same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d),
                     style = PT.caption2, color = tertiary)
             }
@@ -578,25 +574,6 @@ fun ProgressBody(language: String, nativeLanguage: String,
 /** A level assessed longer ago than this reads as stale — dimmed, with a
  *  "talk again and it refreshes" line, rather than posing as today's truth. */
 private const val LEVEL_STALE_DAYS = 28L
-
-/** The page gutter the host column puts around every tab (RootScreen). */
-private val PAGE_GUTTER = 20.dp
-
-/**
- * Widen a child past its parent's horizontal padding by [bleed] on each side,
- * so a horizontally scrolling row reaches the screen edges. The row's content
- * padding puts the gutter back inside the scroll.
- */
-internal fun Modifier.fullBleed(bleed: androidx.compose.ui.unit.Dp): Modifier =
-    this.layout { measurable, constraints ->
-        val extra = bleed.roundToPx() * 2
-        val placeable = measurable.measure(constraints.copy(
-            minWidth = (constraints.minWidth + extra),
-            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra
-            else constraints.maxWidth))
-        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else placeable.width
-        layout(width, placeable.height) { placeable.place(-extra / 2, 0) }
-    }
 
 /**
  * iOS's text styles by their iOS names, for this tab and its skill pages —

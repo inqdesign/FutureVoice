@@ -128,7 +128,6 @@ fun PracticeBody(
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var shelf by remember { mutableStateOf(initialShelf) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     val scope = rememberCoroutineScope()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
@@ -193,21 +192,30 @@ fun PracticeBody(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ShelfChips(
-            selected = shelf,
-            counts = { s ->
-                when (s) {
-                    Shelf.STUDYING -> data?.feed?.size?.takeIf { it > 0 }
-                    Shelf.TALK -> talks.size.takeIf { it > 0 }
-                    Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
-                    Shelf.FINISHED -> data?.finished?.size?.takeIf { it > 0 }
-                }
-            },
-            onSelect = { shelf = it },
-        )
-
-        when (shelf) {
+    fun count(s: Shelf): Int? = when (s) {
+        Shelf.STUDYING -> data?.feed?.size?.takeIf { it > 0 }
+        Shelf.TALK -> talks.size.takeIf { it > 0 }
+        Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+        Shelf.FINISHED -> data?.finished?.size?.takeIf { it > 0 }
+    }
+    // The shelves are PAGES (iOS: a paging ScrollView under the chip bar):
+    // swipe sideways between them, or tap a chip.
+    val pager = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = initialShelf.ordinal) { Shelf.entries.size }
+    ChipPager(
+        state = pager,
+        chip = { i, selected, onClick ->
+            val s = Shelf.entries[i]
+            // Neutral for every shelf (iOS `912d6f4`): the page keeps colour
+            // for its progress bars alone.
+            com.roro.futurevoice.ui.brand.IosChip(
+                label = stringResource(s.labelRes),
+                count = count(s),
+                selected = selected,
+                onClick = onClick)
+        },
+    ) { page ->
+        when (Shelf.entries[page]) {
             Shelf.STUDYING -> {
                 val d = data
                 LibraryTiles(

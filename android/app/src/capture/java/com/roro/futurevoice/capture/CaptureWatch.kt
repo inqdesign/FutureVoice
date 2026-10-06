@@ -352,12 +352,8 @@ private fun Seeded(seed: suspend () -> Unit, content: @Composable () -> Unit) {
  */
 @Composable
 private fun TabPage(content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
-            .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
+    // The Review body is a chip pager that scrolls its own pages.
+    Column(Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()) {
         content()
-        Spacer(Modifier.height(16.dp))
     }
 }

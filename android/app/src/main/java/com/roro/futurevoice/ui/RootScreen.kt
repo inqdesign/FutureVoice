@@ -1388,13 +1388,16 @@ internal fun HomeScreen(
             if (t == HomeTab.TALK && com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab != null) {
                 LaunchedEffect(pageScroll.maxValue) { pageScroll.scrollTo(pageScroll.maxValue) }
             }
+            // Review and Progress are chip-tab PAGERS: each page scrolls
+            // itself under a pinned chip bar (iOS), so the tab itself doesn't.
+            val paged = t == HomeTab.PRACTICE || t == HomeTab.PROGRESS
             Column(
                 Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
                     // A hidden tab stays composed but is neither measured nor
                     // placed: nothing drawn, no touches.
                     .then(if (t == tab) Modifier else Modifier.layout { _, _ -> layout(0, 0) {} })
-                    .verticalScroll(pageScroll)
-                    .padding(horizontal = 20.dp),
+                    .then(if (paged) Modifier
+                        else Modifier.verticalScroll(pageScroll).padding(horizontal = 20.dp)),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 when (t) {
@@ -1491,7 +1494,7 @@ internal fun HomeScreen(
                     )
                 }
                 // Room to scroll the last item up past the floating bar.
-                Spacer(Modifier.height(IosTabBarClearance)
+                if (!paged) Spacer(Modifier.height(IosTabBarClearance)
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars))
             }
 

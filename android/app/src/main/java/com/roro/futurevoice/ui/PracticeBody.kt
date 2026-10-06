@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,29 +66,6 @@ enum class Shelf(val labelRes: Int) {
     /** Books taken all the way to mastered — a chip of its own since iOS
      *  `790099d` (it was the header's seal and a page behind it). */
     FINISHED(R.string.finished),
-}
-
-@Composable
-fun ShelfChips(selected: Shelf, counts: (Shelf) -> Int?, onSelect: (Shelf) -> Unit) {
-    // Scrolls sideways: four chips with counts don't fit a narrow phone in
-    // every language (iOS's chip bar is a horizontal ScrollView too).
-    // Runs to the screen edges (as Progress's skill chips do): the page's
-    // gutter goes INSIDE the scroll, so the last chip isn't cut off 20 dp
-    // short of the edge.
-    Row(Modifier.fullBleed(PAGE_GUTTER)
-            .horizontalScroll(androidx.compose.foundation.rememberScrollState())
-            .padding(horizontal = PAGE_GUTTER),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Shelf.entries.forEach { s ->
-            // Neutral for every shelf (iOS `912d6f4`): the page keeps colour
-            // for its progress bars alone.
-            com.roro.futurevoice.ui.brand.IosChip(
-                label = stringResource(s.labelRes),
-                count = counts(s),
-                selected = s == selected,
-                onClick = { onSelect(s) })
-        }
-    }
 }
 
 /**

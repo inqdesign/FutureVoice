@@ -114,15 +114,13 @@ object CaptureProgress {
     val notPorted: Map<String, String> = mapOf(
     )
 
-    /** The Progress tab's body inside the host's scroll column and 20 dp
-     *  gutters. Body only: the tab's top and bottom bars live in
-     *  `HomeScreen`, private to RootScreen.kt. */
+    /** The Progress tab's body as the host lays it out: a chip pager that
+     *  scrolls its own pages. Body only: the tab's top and bottom bars live
+     *  in `HomeScreen`, private to RootScreen.kt. */
     @Composable
     private fun ProgressPage(c: Context, dim: Dim = Dim.OVERALL) {
         Column(
-            Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding()
-                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            Modifier.fillMaxSize().background(AppSurfaces.ground).statusBarsPadding(),
         ) {
             ProgressBody(
                 language = lang(c),
@@ -135,7 +133,6 @@ object CaptureProgress {
                 onStartTalk = {},
                 initialDim = dim,
             )
-            Spacer(Modifier.height(16.dp))
         }
     }
 
