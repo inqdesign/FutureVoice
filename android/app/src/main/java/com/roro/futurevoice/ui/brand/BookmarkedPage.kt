@@ -55,7 +55,9 @@ fun <ID> BookmarkedPage(
 ) {
     Row(modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
         Column(
-            Modifier.width(44.dp).padding(top = 4.dp),
+            // Flush with the page's top: the first ribbon and the page are
+            // one sheet of paper (iOS `HStack(alignment: .top)`, no inset).
+            Modifier.width(44.dp),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
