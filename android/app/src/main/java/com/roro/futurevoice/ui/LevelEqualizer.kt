@@ -32,7 +32,7 @@ object LevelEqualizer {
     private val bands = listOf("C2", "C1", "B2", "B1", "A2", "A1")   // top → bottom
     private val blockHeight = 15.dp
     private val blockSpacing = 4.dp
-    private val labelHeight = 34.dp
+    private val labelHeight = 30.dp
 
     @Composable
     fun View(bars: List<Bar>, modifier: Modifier = Modifier) {
@@ -41,7 +41,7 @@ object LevelEqualizer {
             // The CEFR scale — one y-axis shared by every column.
             Column(verticalArrangement = Arrangement.spacedBy(blockSpacing)) {
                 bands.forEach { band ->
-                    Text(band, style = MaterialTheme.typography.labelSmall,
+                    Text(band, style = PT.caption2,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.height(blockHeight))
@@ -63,11 +63,15 @@ object LevelEqualizer {
                                     RoundedCornerShape(3.5.dp)))
                         }
                     }
-                    Column(Modifier.height(labelHeight), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(bar.name, style = MaterialTheme.typography.labelSmall,
+                    // iOS: caption2 name over a caption-bold level, 1 pt
+                    // apart, in a 30 pt slot. Larger Material slots (12/16 +
+                    // 17/22) overflowed the slot and cut the level's bottom.
+                    Column(Modifier.height(labelHeight), horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(bar.name, style = PT.caption2,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1, textAlign = TextAlign.Center)
-                        Text(bar.level, style = MaterialTheme.typography.labelLarge,
+                        Text(bar.level, style = PT.caption,
                             fontWeight = FontWeight.Bold,
                             color = if (bar.lit > 0) bar.color else MaterialTheme.colorScheme.outline)
                     }
