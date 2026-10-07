@@ -328,6 +328,7 @@ fun <K : Any> IosNavStack(
         val u = under
         val pages: List<K> = if (m != null && u != null) listOf(u, m) else listOf(top)
         val inert = remember { InertBackOwner() }
+        val realOwner = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current ?: inert
         CompositionLocalProvider(LocalNavEdgeRegistry provides registry) {
             for (p in pages) {
                 val isMover = m != null && p == m
@@ -344,14 +345,22 @@ fun <K : Any> IosNavStack(
                                 holder.SaveableStateProvider(stableKey(pageKey(p))) { content(p) }
                             }
                         }
-                        if (isUnder) {
-                            CompositionLocalProvider(
-                                androidx.activity.compose.LocalOnBackPressedDispatcherOwner provides inert,
-                            ) { body() }
-                            // iOS dims the page being covered, a touch.
-                            Box(Modifier.fillMaxSize().graphicsLayer { alpha = 0.10f * (1f - f) }
-                                .background(Color.Black))
-                        } else CompositionLocalProvider(LocalNavOwnsBack provides (if (ownsBack && p == currentStack.last()) true else if (p == currentStack.first()) parentOwns else false)) { body() }
+                        // ONE provider shape whatever the page's role: a
+                        // page that changed shape between "under" and "top"
+                        // would be torn down and rebuilt mid-transition,
+                        // losing its state (the Talk greeting flashed its
+                        // first-talk line that way).
+                        val owns = if (isUnder) false
+                            else if (ownsBack && p == currentStack.last()) true
+                            else if (p == currentStack.first()) parentOwns else false
+                        CompositionLocalProvider(
+                            androidx.activity.compose.LocalOnBackPressedDispatcherOwner provides
+                                (if (isUnder) inert else realOwner),
+                            LocalNavOwnsBack provides owns,
+                        ) { body() }
+                        // iOS dims the page being covered, a touch.
+                        if (isUnder) Box(Modifier.fillMaxSize().graphicsLayer { alpha = 0.10f * (1f - f) }
+                            .background(Color.Black))
                     }
                     if (isMover && f < 1f) {
                         // The leading-edge shadow the top page throws.
