@@ -25,6 +25,10 @@ const TEST_IDS = new Set([
   // predecessor (c7565d27-…) was already flagged; this id replaced it.
   "b28ca7b1-dbd8-46de-bfd2-5857e05665bc",
 ]);
+// Store review accounts, matched by email so a re-created account stays
+// filtered: Google Play's reviewer signs in as this one (2026-10-06,
+// `20261006150000_play_review_account_comp`).
+const TEST_EMAILS = new Set(["nawana.review@gmail.com"]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
@@ -276,7 +280,7 @@ export function assemble(raw: any, truth: Truth | null = null) {
       id: u.id,
       label: u.display_name || (u.email ? u.email.split("@")[0] : u.id.slice(0, 8)),
       email: u.email,
-      dev: TEST_IDS.has(u.id),
+      dev: TEST_IDS.has(u.id) || TEST_EMAILS.has((u.email ?? "").toLowerCase()),
       owner: u.id === OWNER_ID,
       appVersion: appBuildOf.get(u.id)?.version ?? null,
       appBuild: appBuildOf.get(u.id)?.build ?? null,
