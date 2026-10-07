@@ -3,6 +3,7 @@ package com.roro.futurevoice.ui
 import androidx.compose.ui.text.withStyle
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
@@ -28,12 +29,15 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  */
 @Composable
 fun GroupedSectionHeader(text: String) {
-    // Grouped list headers are uppercased by the system on iOS.
+    // iOS 26 dropped the uppercase caption: an inset-grouped header is now
+    // sentence case, Headline-sized, grey, and lined up with the row text
+    // inside the card (measured off the iOS 26 simulator — "Learning",
+    // "Say hello", "Developer"). Same as `FormSection`'s header.
     Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
+        text,
+        style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 6.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 8.dp),
     )
 }
 
@@ -41,15 +45,17 @@ fun GroupedSectionHeader(text: String) {
  *  section spacing. An empty header would leave a taller, uneven gap. */
 @Composable
 fun GroupedSectionSpacer() {
-    Spacer(Modifier.height(22.dp))
+    Spacer(Modifier.height(36.dp))
 }
 
 @Composable
 fun GroupedCard(content: @Composable () -> Unit) {
     Column(
         Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, ContinuousShape(com.roro.futurevoice.ui.brand.IosRadius.groupedCard))
-            .padding(vertical = 4.dp),
+            // No inner padding: iOS rows meet the card's edge (a two-row
+            // card is exactly two row heights tall).
+            .clip(ContinuousShape(com.roro.futurevoice.ui.brand.IosRadius.groupedCard))
+            .background(AppSurfaces.card),
     ) { content() }
 }
 
@@ -57,8 +63,11 @@ fun GroupedCard(content: @Composable () -> Unit) {
  *  past a row's leading content. */
 @Composable
 fun GroupedRowDivider(inset: Boolean = true) {
+    // iOS 26 insets the separator on BOTH sides — it stops short of the
+    // card's trailing edge by the row's own margin.
     HorizontalDivider(
-        Modifier.padding(start = if (inset) 52.dp else 0.dp),
+        Modifier.padding(start = if (inset) 52.dp else 0.dp, end = if (inset) 16.dp else 0.dp),
+        thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant,
     )
 }
@@ -72,7 +81,7 @@ fun GroupedFooter(text: String) {
         markdownBold(text),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 6.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp),
     )
 }
 

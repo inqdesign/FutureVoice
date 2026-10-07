@@ -43,6 +43,10 @@ import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 
 /**
  * The stock iOS controls this app is drawn with, measured off the iOS build
@@ -204,4 +208,87 @@ fun IosGlassTextButton(text: String, onClick: () -> Unit, modifier: Modifier = M
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
             fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal)
     }
+}
+
+/**
+ * iOS 26's back button on a pushed page: a glass circle with a chevron.
+ * Settings and every page it pushes use it, as iOS's NavigationStack does.
+ */
+@Composable
+fun IosBackButton(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    IosGlassButton(onBack, modifier.padding(start = 8.dp), circle = true) {
+        androidx.compose.material3.Icon(
+            androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.back),
+            modifier = Modifier.size(30.dp),
+            tint = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+/**
+ * iOS 26's slider: a thin accent track filling from the left over a grey
+ * one, and a white CAPSULE knob (~36×22 pt) with a soft shadow. Material's
+ * slider draws a thick split track with a vertical bar thumb, which reads as
+ * a different control. Drag or tap anywhere on it; [onValueChangeFinished]
+ * fires when the finger lifts.
+ */
+@Composable
+fun IosSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onValueChangeFinished: () -> Unit = {},
+) {
+    val dark = isDark()
+    val accent = MaterialTheme.colorScheme.primary
+    val knobW = 36.dp
+    val knobH = 22.dp
+    val latest = androidx.compose.runtime.rememberUpdatedState(onValueChange)
+    val finished = androidx.compose.runtime.rememberUpdatedState(onValueChangeFinished)
+    BoxWithConstraints(modifier.fillMaxWidth().height(32.dp)) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val travelPx = with(density) { (maxWidth - knobW).toPx() }.coerceAtLeast(1f)
+        val halfKnob = with(density) { (knobW / 2).toPx() }
+        val span = valueRange.endInclusive - valueRange.start
+        val fraction = ((value - valueRange.start) / span).coerceIn(0f, 1f)
+        fun at(x: Float) = valueRange.start + ((x - halfKnob) / travelPx).coerceIn(0f, 1f) * span
+        Box(
+            Modifier.fillMaxSize().pointerInput(valueRange, travelPx) {
+                detectTapGestures { latest.value(at(it.x)); finished.value() }
+            }.pointerInput(valueRange, travelPx) {
+                detectHorizontalDragGestures(
+                    onDragStart = { latest.value(at(it.x)) },
+                    onDragEnd = { finished.value() },
+                    onDragCancel = { finished.value() },
+                ) { change, _ -> latest.value(at(change.position.x)) }
+            },
+        ) {
+            // Track: grey whole, accent up to the knob's centre.
+            Box(Modifier.align(Alignment.CenterStart).padding(horizontal = knobW / 2 - 2.dp)
+                .fillMaxWidth().height(5.dp).clip(CircleShape)
+                .background(Color(0xFF787880).copy(alpha = if (dark) 0.36f else 0.2f)))
+            Box(Modifier.align(Alignment.CenterStart).padding(start = 0.dp)
+                .width(knobW / 2 + with(density) { (travelPx * fraction).toDp() })
+                .height(5.dp).clip(CircleShape).background(accent))
+            Box(Modifier.align(Alignment.CenterStart)
+                .offset(x = with(density) { (travelPx * fraction).toDp() })
+                .size(knobW, knobH)
+                .shadow(7.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.3f),
+                    spotColor = Color.Black.copy(alpha = 0.35f))
+                .background(Color.White, CircleShape)
+                .border(0.5.dp, Color.Black.copy(alpha = 0.06f), CircleShape))
+        }
+    }
+}
+
+/**
+ * An inline navigation title (iOS `roundedNavFont(17)`: the app's pixel
+ * display face on every nav bar — RootView sets it through the appearance
+ * proxy, so Settings and the pages it pushes wear it too).
+ */
+@Composable
+fun IosNavTitle(text: String) {
+    Text(text, style = DisplayFace.style(text, MaterialTheme.typography.bodyLarge), maxLines = 1,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }

@@ -43,9 +43,20 @@ val CoreClubColor = Color(0xFF5856D6)   // systemIndigo
 @Composable
 fun CoreSeal(size: Dp = 13.dp) {
     val label = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.the_core)
-    Canvas(Modifier.size(size).semantics { contentDescription = label }) {
+    SealGlyph(Modifier.size(size).semantics { contentDescription = label }, CoreClubColor, filled = true)
+}
+
+/**
+ * SF Symbols' `seal` / `seal.fill` as a plain GLYPH in any colour — what the
+ * Settings row draws in the accent (outline until seated). Not the badge:
+ * the badge is [CoreSeal], indigo, filled, and only for a seated member.
+ */
+@Composable
+fun SealGlyph(modifier: Modifier, color: Color, filled: Boolean) {
+    Canvas(modifier) {
         // A scalloped disc — SF Symbols' `seal.fill`, drawn.
-        val r = this.size.minDimension / 2f
+        val stroke = this.size.minDimension * 0.09f
+        val r = this.size.minDimension / 2f - if (filled) 0f else stroke
         val cx = this.size.width / 2f
         val cy = this.size.height / 2f
         val lobes = 11
@@ -59,6 +70,7 @@ fun CoreSeal(size: Dp = 13.dp) {
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path, CoreClubColor)
+        if (filled) drawPath(path, color)
+        else drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
     }
 }
