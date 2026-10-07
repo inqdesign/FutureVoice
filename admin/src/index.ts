@@ -166,6 +166,18 @@ async function fetchData(env: Env) {
     if (offers[u.id]) u.offer = offers[u.id];
     if (langs[u.id]) { u.native = langs[u.id].native; u.target = langs[u.id].target; }
   }
+  // Speech (스피치 탭, 2026-10): its events go to PostHog only
+  // (`speech_take` per finished take, `speech_take_cancelled`, the script
+  // events), so they are read there and keyed by user index. Optional.
+  {
+    const uidx = new Map((data.users as { id: string }[]).map((u, i) => [u.id, i]));
+    (data as any).speech = await speechRows(env).then((rows) => rows
+      .filter((r) => uidx.has(r.u))
+      .map((r) => ({ ...r, u: uidx.get(r.u) }))).catch((e) => {
+      console.log(`speech: ${(e as Error).message}`);
+      return null;
+    });
+  }
   // ElevenLabs voice slots (2026-10-04): the account's own count beside who
   // holds them in voice_clones. Optional — a failure leaves the card empty.
   (data as any).voiceSlots = await voiceSlots(env, truth?.voices ?? null,
@@ -423,6 +435,40 @@ async function recentLedger(env: Env): Promise<unknown[]> {
     if (batch.length < page) break;
   }
   return rows;
+}
+
+/** Every Speech-tab event in PostHog, oldest first. distinct_id is the
+ *  Supabase UUID uppercased, so it is lowered to join. */
+async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
+  if (!env.POSTHOG_API_KEY) throw new Error("no_key");
+  const project = env.POSTHOG_PROJECT_ID || "@current";
+  const query = `
+    select distinct_id, timestamp, event,
+      properties.seconds, properties.overall, properties.accuracy,
+      properties.genre, properties.built_in, properties.camera
+    from events
+    where event in ('speech_take', 'speech_take_cancelled', 'speech_script_written',
+                    'speech_script_added', 'speech_plus_sheet')
+      and timestamp > now() - interval 180 day
+      and properties.app = 'nawana'
+    order by timestamp
+    limit 50000`;
+  const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
+  });
+  if (!r.ok) throw new Error(`posthog ${r.status}`);
+  const body = await r.json() as { results?: unknown[][] };
+  const n = (v: unknown) => (v === null || v === "" || v === undefined ? null : Number(v));
+  const b = (v: unknown) => v === true || v === 1 || String(v).toLowerCase() === "true";
+  return (body.results ?? []).map((x) => ({
+    u: String(x[0] ?? "").toLowerCase(),
+    at: new Date(String(x[1]).replace(" ", "T") + (/Z|[+-]\d\d:?\d\d$/.test(String(x[1])) ? "" : "Z")).toISOString(),
+    event: String(x[2]),
+    seconds: n(x[3]), overall: n(x[4]), accuracy: n(x[5]),
+    genre: (x[6] as string) || null, builtIn: b(x[7]), camera: b(x[8]),
+  }));
 }
 
 // ---- PostHog: where people are, and whether the app is open --------------
