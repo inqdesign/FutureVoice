@@ -42,6 +42,15 @@ class SessionStore private constructor(context: Context) {
     private fun file(language: String): File =
         File(LanguageScope.directory(appContext, language), FILE_NAME)
 
+    /**
+     * How many talks [language] holds, if they are already in memory — read
+     * without waiting, so a screen's first frame can be written from the real
+     * count (iOS reads its stores synchronously for the hero line). Null when
+     * the store hasn't been read for that language yet.
+     */
+    fun cachedCount(language: String): Int? =
+        cache?.takeIf { cachedLanguage == language }?.size
+
     /** All talks in [language], newest-ended-first. */
     suspend fun load(language: String = LanguageScope.active(appContext)): List<Session> =
         mutex.withLock { all(language).toList() }

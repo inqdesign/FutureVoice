@@ -768,22 +768,24 @@ fun RootScreen() {
         personDetailId?.let { add(RootRoute.Person(it)) }
         if (showPeople) add(RootRoute.People)
         finishedBooks?.let { add(RootRoute.Finished(it)) }
-        if (showCreditGuide) add(RootRoute.CreditGuide)
-        if (showPlanPage) add(RootRoute.PlanPage)
-        if (showInvite) add(RootRoute.Invite)
+        // Settings is a SHEET over the tabs (iOS `.sheet` from the Talk
+        // header), and what it pushes lives inside it — see [meSheetStack].
+        if (!showMe) {
+            if (showCreditGuide) add(RootRoute.CreditGuide)
+            if (showPlanPage) add(RootRoute.PlanPage)
+            if (showInvite) add(RootRoute.Invite)
+        }
         if (showShadowBrowser) add(RootRoute.ShadowBrowser)
-        if (showPublicIntro) add(RootRoute.PublicIntro)
-        if (showPrivacy) add(RootRoute.Privacy)
-        if (showMe) add(RootRoute.Me)
+        if (!showMe) {
+            if (showPublicIntro) add(RootRoute.PublicIntro)
+            if (showPrivacy) add(RootRoute.Privacy)
+        }
         if (inCall && state.voiceId != null) add(RootRoute.Call)
         add(RootRoute.Tabs)
     }.reversed()
-    IosNavStack(
-        stack = rootStack,
-        // A committed back (system back, predictive gesture, edge swipe):
-        // exactly what the page's own back button does.
-        onPop = {
-            when (rootStack.last()) {
+    /** What a committed back on [top] does — exactly its own back button. */
+    fun popRoute(top: RootRoute) {
+            when (top) {
                 is RootRoute.TalkBook -> detailSessionId = null
                 is RootRoute.ScenarioBook -> bookScenarioId = null
                 is RootRoute.Watch -> watchScenarioId = null
@@ -806,10 +808,26 @@ fun RootScreen() {
                 RootRoute.Privacy -> showPrivacy = false
                 else -> Unit
             }
-        },
-        animates = { from, to -> rootPushes(from, to, deckPushed) },
-        pageKey = { it.key },
-    ) { r ->
+    }
+    /** Settings, and everything it pushes inside its sheet (iOS `MeTab`'s
+     *  own NavigationStack), bottom → top. */
+    val meSheetStack: List<RootRoute> = buildList {
+        add(RootRoute.Me)
+        if (showPlanPage) add(RootRoute.PlanPage)
+        if (showInvite) add(RootRoute.Invite)
+        if (showCreditGuide) add(RootRoute.CreditGuide)
+        if (showPrivacy) add(RootRoute.Privacy)
+        if (showPublicIntro) add(RootRoute.PublicIntro)
+    }
+    /** The whole sheet goes, whichever of its pages is showing. */
+    fun dismissMe() {
+        showMe = false
+        showPlanPage = false; showInvite = false; showCreditGuide = false
+        showPrivacy = false
+        if (showPublicIntro) popRoute(RootRoute.PublicIntro)
+    }
+    @Composable
+    fun DrawRoute(r: RootRoute) {
     when (r) {
         RootRoute.Gate -> gateScreen?.invoke()
         is RootRoute.TalkBook -> TalkDetailScreen(
@@ -1094,7 +1112,7 @@ fun RootScreen() {
             onSignOut = { showMe = false; app.signOut() },
             onOpenPrivacy = { showPrivacy = true },
             onRestored = app::adoptRestoredData,
-            onBack = { showMe = false },
+            onBack = { dismissMe() },
         )
 
         RootRoute.Call ->
@@ -1137,6 +1155,14 @@ fun RootScreen() {
           LaunchedEffect(state.voiceId, state.restoringVoice) {
               if (state.voiceId != null && !state.restoringVoice) arriveAtTabs()
           }
+          IosSheetHost(
+            presented = showMe,
+            onDismiss = { dismissMe() },
+            sheet = {
+                IosNavStack(stack = meSheetStack, onPop = { popRoute(meSheetStack.last()) },
+                    pageKey = { it.key }) { DrawRoute(it) }
+            },
+            background = {
           HomeScreen(
             state = state,
             onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },
@@ -1184,9 +1210,19 @@ fun RootScreen() {
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck,
         )
+            },
+          )
         }
     }
     }
+    IosNavStack(
+        stack = rootStack,
+        // A committed back (system back, predictive gesture, edge swipe):
+        // exactly what the page's own back button does.
+        onPop = { popRoute(rootStack.last()) },
+        animates = { from, to -> rootPushes(from, to, deckPushed) },
+        pageKey = { it.key },
+    ) { r -> DrawRoute(r) }
     // The plans, OVER whatever raised them (iOS presents `PaywallView` as a
     // sheet from the screen on top). It used to be one branch of the page
     // switch above, BELOW the shadow, scene and deck pages — so a 402 there
@@ -1670,8 +1706,19 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                      onOpenActivity: () -> Unit) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var seconds by remember { mutableStateOf(0) }
-    var sessionCount by remember { mutableStateOf(0) }
+    // The FIRST frame is written from the real numbers (iOS `heroLine`:
+    // `HeroGreeting.live()` reads the stores directly rather than painting a
+    // placeholder that a later read corrects). Zero as a placeholder read as
+    // "no talks yet", so coming back to Talk flashed "Ready for your first
+    // talk?" before the real line. Saveable, so a page pushed over the tabs
+    // and popped finds them still here. -1 = not known yet: no line at all
+    // rather than a wrong one.
+    var seconds by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(TalkTimeLog.secondsToday(context))
+    }
+    var sessionCount by androidx.compose.runtime.saveable.rememberSaveable(state.targetLanguage) {
+        mutableStateOf(SessionStore.shared(context).cachedCount(state.targetLanguage) ?: -1)
+    }
     val goalMinutes = remember {
         context.getSharedPreferences("futurevoice", 0).getInt("futurevoice.dailyGoalMinutes", 10)
     }
@@ -1704,7 +1751,10 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
     // by half their height.
     val screenHeightPx = androidx.compose.ui.platform.LocalWindowInfo.current
         .containerSize.height.toFloat()
-    var heroTopPx by remember { mutableStateOf(0f) }
+    // Saveable: the tabs leave composition under a pushed page, and a hero
+    // re-solved from zero on the way back jumped the greeting and ring down,
+    // then back up a beat later.
+    var heroTopPx by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0f) }
     // Every report, kept WITHOUT laying out from it (iOS `latestHeroTopReport`).
     val latestTop = remember { floatArrayOf(0f) }
     // Adopted once, when it is plausible (a status bar is always above it) and
@@ -1713,6 +1763,7 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
     // and the hero came out ~46 dp too tall: the ring sat that far below the
     // midline.
     LaunchedEffect(Unit) {
+        if (heroTopPx > 0f) return@LaunchedEffect
         val floor = with(density) { 40.dp.toPx() }
         var previous = Float.NaN
         while (true) {
@@ -1746,11 +1797,16 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         // 20 dp off the midline the height is solved for.
     ) {
         Spacer(Modifier.weight(1f))
-        val line = HeroGreeting.text(HeroGreeting.Input(
+        // Cached once written (iOS `@State heroLine`): the line never
+        // changes while it is on screen, only when its inputs do.
+        val computed = if (sessionCount < 0) "" else HeroGreeting.text(HeroGreeting.Input(
             sessionCount = sessionCount,
             todaySpokenSeconds = seconds,
             dailyGoalMinutes = goalMinutes,
         ))
+        var heroLine by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+        if (computed.isNotEmpty() && computed != heroLine) heroLine = computed
+        val line = heroLine
         Text(
             line,
             // The display face — the brand's voice, not the reading font. Big
@@ -2495,8 +2551,8 @@ internal sealed interface RootRoute {
  * Whether going from [from] to [to] is an iOS PUSH (slides, swipes back)
  * rather than a cover, a sheet or the call (swaps in place). Read off where
  * iOS presents each page — `docs/android-master-plan.md` "Pushed pages".
- * Me itself is a SHEET on iOS (so Tabs ↔ Me swaps), but everything Me
- * pushes inside that sheet is a push here too.
+ * Me is a SHEET over the tabs ([IosSheetHost]) with its own stack inside it,
+ * so it never appears here.
  */
 internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Boolean {
     val pageUnder = from !is RootRoute.Gate && from !is RootRoute.Call && from !is RootRoute.ShadowHand &&
