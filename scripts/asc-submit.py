@@ -206,6 +206,15 @@ def main() -> None:
             print("dry run — re-run with --send")
         return
 
+    # 0. Android is not left behind (2026-10-07). What reaches iOS learners
+    # reaches Android's next build, so a submission refuses any commit Android
+    # still owes or nobody classified. Printed on the dry run, enforced on
+    # --send; ANDROID_GATE=skip passes it (and says so).
+    gate = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                        "android-sync", "ledger.py"), "--gate", "store"])
+    if gate.returncode and send:
+        sys.exit("Android gate refused the submission — see above.")
+
     # 1. The build, processed.
     build = None
     for _ in range(90):

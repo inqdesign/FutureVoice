@@ -2339,6 +2339,39 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
   then a one-time offer of coach mode on the wrap-up for low levels or
   repeated mistakes — offered, never switched on silently.
 
+## Android moves WITH iOS (2026-10-07)
+
+Android (`/Users/eunggyuelee/FutureVoice-android`, branch `feat/android`) has
+caught up with iOS, and from here an iOS change is not finished until Android
+has it or someone decided it doesn't need it. Founder decision; the 2026-09-21
+rule (only money / privacy / the learning loop ported in-session, free-text
+trailer for the rest, a delta read at each release) let the gap regrow, and
+its trailer was invisible to git whenever it sat in its own paragraph.
+
+- **Every commit touching `FutureVoice/`, `FutureVoiceWidget/`, `supabase/` or
+  `gateway/` carries ONE of three lines** above Co-Authored-By, and the
+  commit-msg hook refuses it otherwise (`scripts/hooks/commit-msg`, installed
+  into the shared hooks dir by `scripts/hooks/install.sh`, so every worktree
+  runs it; it stands down on `feat/android`, merges and release/i18n/admin
+  chores):
+  - `Android: <android-sha>` — ported in this session. **The default.**
+    Commit Android first, then name it here.
+  - `Android: todo <what>` — owed. Allowed for polish; money, privacy and the
+    learning loop are still ported in the same session.
+  - `Android: n/a <why>` — nothing to port (AlarmKit, CloudKit, a widget, a
+    server-only change, an iOS-only bug).
+- **A `todo` closes when an Android commit names the iOS sha** — `iOS: <sha>`,
+  or "(iOS <sha>)" in the subject as feat/android already writes it.
+- **`scripts/android-sync/ledger.py` is the one list** of what Android owes,
+  from `scripts/android-sync/start` (history before it was the master plan's
+  catch-up). Commits made without a valid line are classified in
+  `overrides.tsv`. A commit that changes a Swift file the golden vectors are
+  built from (`CONTRACT_FILES`) can never be `n/a`.
+- **Gates.** `beta.sh` (TestFlight) refuses an UNCLASSIFIED commit;
+  `asc-submit.py --send` (App Store) and `play-release.py --send --track
+  production` also refuse anything OWED. `ANDROID_GATE=skip` passes, out loud
+  — tell the founder why. Testing tracks on Play only print the list.
+
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.

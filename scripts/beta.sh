@@ -195,6 +195,13 @@ if [[ -n "$live_version" && "$live_version" == "$VERSION" ]]; then
   exit 1
 fi
 
+# --- 1a'. Android has been told ---------------------------------------------
+# Every iOS commit since the ledger's start says what it means for Android
+# (2026-10-07, scripts/android-sync/ledger.py). A TestFlight build may carry
+# work Android still owes — iteration doesn't wait — but not a commit nobody
+# classified. The App Store submission (asc-submit.py) also refuses owed work.
+python3 "$ROOT/scripts/android-sync/ledger.py" --gate testflight | sed -n '/^## 안드로이드가/,/^## 옮김/{/^## 옮김/!p;}' || exit 1
+
 # --- 1b. Release notes -----------------------------------------------------
 # Shown to every install behind this build (UpdateAvailableSheet) and pasted
 # into App Store Connect. A placeholder here is a placeholder on both. Checked

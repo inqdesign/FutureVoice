@@ -1,0 +1,6 @@
+# Commits already made without a valid `Android:` trailer (a commit can't be
+# re-messaged once shared). One line each: <sha><TAB><trailer value>, the value
+# written exactly as the trailer would have been — `n/a <why>`, `todo <what>`,
+# or the Android commit's sha.
+c454a8e8	n/a 안드로이드는 2l단계에서 짧은 화면을 따로 전수조사(같은 기기 조건)
+1f7cc014	todo 다시 말하기: 통화가 전체 재작성을 못 남긴 턴은 열 때 채우기(say_again_rewrites.json 별도 캐시) + 통화 교정 maxTokens 2048·talk_correction_failed

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Every iOS commit that touches the app, the widget, the server or the gateway
+# says what it means for Android (2026-10-07). See scripts/android-sync/ledger.py
+# for the three forms and how a `todo` is closed. Installed into the shared
+# hooks dir by scripts/hooks/install.sh, so it runs in every worktree — and
+# stands down on the Android branch, whose commits are the other half.
+set -euo pipefail
+msg_file=$1
+
+branch=$(git symbolic-ref --short -q HEAD || true)
+[[ "$branch" == "feat/android" ]] && exit 0
+[[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]] && exit 0
+
+git diff --cached --quiet -- FutureVoice FutureVoiceWidget supabase gateway && exit 0
+
+subject=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -1)
+[[ "$subject" =~ ^(chore\((release|i18n)\)|[a-z]+\(admin\)|fixup!|squash!) ]] && exit 0
+
+value=$(grep -v '^#' "$msg_file" | sed -n 's/^[Aa]ndroid:[[:space:]]*//p' | tail -1)
+lower=$(printf '%s' "$value" | tr 'A-Z' 'a-z')
+if [[ "$lower" =~ ^n/a ]] || [[ "$lower" =~ ^todo[[:space:]]+[^[:space:]] ]] || [[ "$lower" =~ ^(done[[:space:]]+)?[0-9a-f]{7,40}($|[[:space:]]) ]]; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+✗ This commit touches iOS app/server code and needs an `Android:` line
+  (just above Co-Authored-By):
+
+    Android: <android-sha>     ported in this session (commit Android first)
+    Android: todo <what>       owed — the release gate counts it until an
+                               Android commit names this one (`iOS: <sha>`)
+    Android: n/a <why>         nothing to port (AlarmKit, CloudKit, widget,
+                               server-only, iOS-only bug…)
+
+  Money, privacy and the learning loop are ported in the SAME session.
+  Report: scripts/android-sync/ledger.py
+EOF
+[[ -n "$value" ]] && echo "  (found \"Android: $value\" — free text is no longer a form; prefix it with todo)" >&2
+exit 1
