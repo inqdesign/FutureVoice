@@ -23,8 +23,6 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -265,15 +263,18 @@ private fun LevelRow(level: CefrLevel, target: String, onPick: (CefrLevel) -> Un
                 tint = MaterialTheme.colorScheme.primary)
             Text(stringResource(R.string.your_level_0ad2c2), style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f))
-            Text(LanguageCatalog.levelLabel(level, target), style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Icon(Icons.Filled.ExpandMore, contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            CefrLevel.entries.forEach { l ->
-                DropdownMenuItem(text = { Text(LanguageCatalog.levelLabel(l, target)) },
-                    onClick = { onPick(l); open = false })
+            Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(LanguageCatalog.levelLabel(level, target), style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Filled.ExpandMore, contentDescription = null, modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                // The shared iOS menu, hanging off this value.
+                com.roro.futurevoice.ui.brand.IosPickerMenu(
+                    expanded = open, onDismissRequest = { open = false },
+                    options = CefrLevel.entries.map { it to LanguageCatalog.levelLabel(it, target) },
+                    selected = level, onPick = onPick)
             }
         }
     }

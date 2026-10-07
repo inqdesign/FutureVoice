@@ -19,8 +19,6 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -88,17 +86,16 @@ fun WeeklyTestSettingsSection() {
 
     GroupedSectionHeader(stringResource(R.string.weekly_test))
     GroupedCard {
-        Box {
-            SettingRow(Icons.Filled.Checklist, stringResource(R.string.test_day),
-                Modifier.clickable { dayMenu = true }) {
-                Text(dayName(weekday), color = MaterialTheme.colorScheme.primary)
-            }
-            DropdownMenu(expanded = dayMenu, onDismissRequest = { dayMenu = false },
-                modifier = Modifier.align(Alignment.TopEnd)) {
-                for (w in 1..7) {
-                    DropdownMenuItem(text = { Text(dayName(w)) },
-                        onClick = { dayMenu = false; WeeklyTestSettings.setWeekday(context, w) })
-                }
+        // iOS `Picker(.menu)`: the whole row opens it, the menu hangs off the
+        // trailing value (the shared iOS menu, never Material's dropdown).
+        SettingRow(Icons.Filled.Checklist, stringResource(R.string.test_day),
+            Modifier.clickable { dayMenu = true }) {
+            Box {
+                MePickerValue(dayName(weekday))
+                com.roro.futurevoice.ui.brand.IosPickerMenu(
+                    expanded = dayMenu, onDismissRequest = { dayMenu = false },
+                    options = (1..7).map { it to dayName(it) }, selected = weekday,
+                    onPick = { WeeklyTestSettings.setWeekday(context, it) })
             }
         }
         GroupedRowDivider()

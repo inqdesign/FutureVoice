@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.UnfoldMore
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,23 +92,19 @@ internal fun RegisterMenuRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(label(selection), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Icon(Icons.Filled.UnfoldMore, contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp).size(18.dp))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false },
-            modifier = Modifier.align(Alignment.TopEnd)) {
-            (listOf<SpeechRegister?>(null) + SpeechRegister.entries).forEach { r ->
-                DropdownMenuItem(
-                    text = { Text(label(r)) },
-                    leadingIcon = {
-                        if (r == selection) Icon(Icons.Filled.Check, contentDescription = null)
-                        else Box(Modifier.size(24.dp))
-                    },
-                    onClick = { open = false; onSelect(r) },
-                )
+            // The menu hangs off the trailing VALUE (shared iOS menu).
+            Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label(selection), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Filled.UnfoldMore, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp).size(18.dp))
+                }
+                com.roro.futurevoice.ui.brand.IosPickerMenu(
+                    expanded = open, onDismissRequest = { open = false },
+                    options = (listOf<SpeechRegister?>(null) + SpeechRegister.entries).map { it to label(it) },
+                    selected = selection, onPick = onSelect)
             }
         }
     }
