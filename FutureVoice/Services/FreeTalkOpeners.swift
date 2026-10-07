@@ -71,8 +71,11 @@ final class FreeTalkOpeners {
     /// phones must not outlive: a pool is otherwise kept until the language
     /// or name changes, i.e. forever. v2 (2026-09-30): `selfWarmth` — pools
     /// held "너무 보고싶어". An old pool is simply not found; its audio stays
-    /// on disk (produced audio is never deleted).
-    private static let poolVersion = 2
+    /// on disk (produced audio is never deleted). v3 (2026-10-07): pools
+    /// joined two sentences with a bare comma ("…that project, how is it
+    /// going?"), which `PacedSpeech` can't split, so the opener ran on with
+    /// no pause — `breathPunctuation` now names the comma splice.
+    private static let poolVersion = 3
 
     private static func key(language: String, personaName: String?) -> String {
         "v\(poolVersion)|\(language)|\(personaName ?? "")"

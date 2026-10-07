@@ -90,7 +90,14 @@ enum CoachingLanguage {
         exclamation mark, never a comma. In Korean, a sentence-final ending \
         (~어, ~아, ~야, ~지, ~네, ~다, ~자, ~래) is followed by . ? or !, \
         never by a comma. Wrong: "목소리 들으니까 반갑다, 어떻게 지내?" \
-        Right: "목소리 들으니까 반갑다. 어떻게 지내?" A comma belongs only \
+        Right: "목소리 들으니까 반갑다. 어떻게 지내?" The same in every \
+        language: two sentences that could each stand alone are NEVER joined \
+        by a bare comma — the voice runs straight through it with no pause. \
+        Wrong: "I was thinking about your project, how is it going?" / "Ich \
+        bin neugierig, was machst du gerade?" / 「調子はどう、何してた？」 \
+        Right: "I was thinking about your project. How is it going?" / "Ich \
+        bin neugierig. Was machst du gerade?" / 「調子はどう？何してた？」 \
+        A comma belongs only \
         INSIDE a sentence, where the voice should hang and breathe: after a \
         connective ending that leaves the sentence open (Korean ~는데, ~서, \
         ~니까, ~고, ~던지, ~면; Japanese ~て, ~けど, ~から; their equivalents \
@@ -100,7 +107,9 @@ enum CoachingLanguage {
         voice fall three times and read as staccato. When two of them are \
         really ONE thought — a reason and what it led to, a worry and the \
         question it raises — join them into a single sentence with a \
-        connective ending and a comma: not "아까 전화 안 받았지? 별일 없는 \
+        connective (a connective ending, or a word like because, so, and, \
+        but, weil, und) and a comma; a comma alone never joins: not "아까 \
+        전화 안 받았지? 별일 없는 \
         거지. 오늘 하루는 어땠어?" but "아까 전화 안 받아서 걱정했는데, 별일 \
         없는 거지? 오늘 하루는 어땠어?". This is never a licence to exceed \
         the turn's sentence ceiling: if you are over it, drop an idea instead.
