@@ -852,7 +852,15 @@ iOS: 매일 전화 단계 뒤 `BillingGate.blocks()` — 못 물어봄(세션 �
 | 다른 기기에서 이어서 하기 | iCloud | — | 해당 없음(안드로이드에 iCloud 없음) |
 | 계정 꼬리말의 이메일 | 없음 | 있음 | 유지 — 안드로이드엔 계정 행이 없어 이전에 일부러 둔 것 |
 
-남은 것: 언어 자기 이름 중 ICU와 Apple CLDR이 다른 것(「Melayu」 vs 「Bahasa Melayu」 등), 주간 테스트 「여는 시각」이 Material 시계 다이얼(iOS는 compact DatePicker), 홈 상단 언어 메뉴·책 내보내기 등 설정 밖의 Material 드롭다운(같은 `IosMenu`로 옮길 수 있음), 다시 만들기 실패 시 iOS는 오류 문장을 그대로 보여 주지만 안드로이드는 「문제가 생겼어요」.
+후속(같은 날, "안드로이드만의 선택 없이 iOS와 똑같이"):
+
+| 항목 | iOS | 안드로이드 전 | 지금 |
+|---|---|---|---|
+| 언어 이름 전부 | `LanguageCatalog.name(_:in:)`(Apple 데이터): 「español」「Bahasa Melayu」「isiZulu」「繁體中文」 | Android ICU: 「Español」「Melayu」「IsiZulu」「中文（繁體）」 | `data/LanguageNames.kt` — iOS 함수를 Apple Foundation(macOS 26)에서 그대로 돌려 뽑은 표(자기 이름 66개 + UI 8개 언어별 이름). ICU는 표에 없는 조합만. 앱 언어 행 부제도 `endonym`. 재생성: `swift`로 `name(code, locale)`를 iOS 코드 그대로 돌림 ☑(화면: 앱 언어 페이지) |
+| 주간 테스트 「여는 시간」·루틴 블록 「시간」 | `DatePicker(.hourAndMinute)` compact — 회색 캡슐, 누르면 휠 | Material 시계 다이얼 | `IosCompactTimePicker`(캡슐 + `IosWheelTimePicker` 팝오버) ☑(화면: 공부 목표 시트) |
+| 설정 밖 Material 드롭다운 전부(17개 파일: 대화 홈 언어, 책 ⋯ 내보내기, 단어·표현 길게 누르기, 기억 줄 공개 단계, 사진, 라이브러리·어휘 필터, 섀도잉 속도·⋯, 기록 오인식, 서랍 재분류, 컴포저, 루틴 추가, 스피치 ⋯·프롬프터) | 전부 `Menu`(삭제 확인만 `confirmationDialog` — 안드로이드는 이미 알림 대화상자) | Material `DropdownMenu`, 아이콘 앞쪽 | `IosDropdownMenu`/`IosDropdownMenuItem`(같은 호출 모양, 아이콘은 뒤쪽 = iOS `Label` 배치), 고르는 메뉴는 `IosMenuItem(checked)`(앞쪽 체크), 구역 구분은 `IosMenuDivider`. 화면 왼쪽 절반의 컨트롤(대화 홈 언어 칩)은 메뉴 앞끝을 맞추고 아래로 덮으며 열림 ☑(화면: 홈 언어, 책 ⋯, 주간 테스트 요일). 앱에 Material 드롭다운은 이제 없음 |
+| 목소리 다시 만들기 실패 | `error.localizedDescription` | 「문제가 생겼어요」 | 실제 오류 문장 ☑(코드) |
+| 계정 삭제 꼬리말의 이메일 | 없음 | 안드로이드만 표시 | 삭제 ☑(화면) |
 
 ## 3단계 · 첫 기준선 측정
 
