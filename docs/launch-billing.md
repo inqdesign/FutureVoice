@@ -64,8 +64,8 @@ Korea's ₩0→정가 consent sheet. EL burn was ~$89/mo against ~$59/mo net.
 | **Light monthly** | 150 min + 10 scenes | $4.5 + $1.2 = $5.7 | **$9.99** (unchanged) | ₩15,000 | €9.99 | **33% / 31% / 27%** |
 | **Plus monthly** | 600 min + 30 scenes | $18.2 + $2.2 = $20.4 | **$24.99** (raised 2026-09-26) | ₩29,000 | €28.99 (auto) | **+$0.8 / −$4.4 / +$2.1** |
 | +100 min (consumable `talk_100`) — **not on sale yet** | 100 min | $3.0 | $4.99 | ₩7,500 | €4.99 | 29% / 27% / 25% |
-| ~~Light annual~~ **off sale** | same pool | $5.7/mo | $79.99 | ₩110,000 | €89.99 | −$0.03/mo (break-even) |
-| ~~Plus annual~~ **off sale** | same pool | $21.6/mo | $143.99 | ₩209,000 | €149.99 | **−$11.40/mo = −$137/yr** |
+| **Light annual** (back on sale 2026-10-07, "2 months free") | same pool | $5.7/mo | $99.99 | ₩149,000 | €99.99 | **+$17/yr** (US) |
+| **Plus annual** (back on sale 2026-10-07, "2 months free") | same pool | $21.6/mo | $249.99 | ₩290,000 | €229.99 | **−$47 / −$99 / −$68 per yr** |
 
 - **Light keeps its 150 minutes; the SCENES paid for them.** A scene costs
   $0.12 against a talk minute's $0.03, so ten scenes buy back forty minutes —
