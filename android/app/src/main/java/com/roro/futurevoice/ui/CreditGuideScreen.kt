@@ -75,14 +75,10 @@ fun CreditGuideScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.what_uses_talk_time)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+                title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.what_uses_talk_time)) },
+                navigationIcon = { com.roro.futurevoice.ui.brand.IosBackButton(onBack) },
             )
         }
     ) { padding ->

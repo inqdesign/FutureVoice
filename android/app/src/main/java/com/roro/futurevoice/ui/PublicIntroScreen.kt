@@ -136,14 +136,10 @@ fun PublicIntroScreen(
     Scaffold(
         contentWindowInsets = fieldScaffoldInsets,
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.find_people)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+                title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.find_people)) },
+                navigationIcon = { com.roro.futurevoice.ui.brand.IosBackButton(onBack) },
             )
         }
     ) { padding ->
@@ -161,7 +157,7 @@ fun PublicIntroScreen(
                 FieldRow(displayName, { displayName = it },
                     stringResource(R.string.name), singleLine = true)
             }
-            GroupedFooter(stringResource(R.string.the_name_other_learners_will_see))
+            GroupedFooter(stringResource(R.string.the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17))
 
             GroupedSectionHeader(stringResource(R.string.introduction))
             GroupedCard {
@@ -232,7 +228,7 @@ fun PublicIntroScreen(
                                     onDecided?.invoke()
                                 }.onFailure {
                                     error = context.getString(
-                                        R.string.couldnt_publish_check_your_connection)
+                                        R.string.couldn_t_publish_check_your_connection_and_try_again)
                                 }
                                 saving = false
                             }
@@ -271,7 +267,7 @@ fun PublicIntroScreen(
         AlertDialog(
             onDismissRequest = { confirmingWithdraw = false },
             title = { Text(stringResource(R.string.take_down)) },
-            text = { Text(stringResource(R.string.take_your_intro_out_of_the_pool)) },
+            text = { Text(stringResource(R.string.take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmingWithdraw = false; saving = true
@@ -285,7 +281,7 @@ fun PublicIntroScreen(
                                 onDecided?.invoke()
                             }
                             .onFailure {
-                                error = context.getString(R.string.couldnt_take_it_down)
+                                error = context.getString(R.string.couldn_t_take_it_down_check_your_connection_and_try_again)
                             }
                         saving = false
                     }

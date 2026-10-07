@@ -94,14 +94,10 @@ fun InviteScreen(onBack: () -> Unit) {
     Scaffold(
         contentWindowInsets = fieldScaffoldInsets,
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.invite_talk_time)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+                title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.invite_talk_time)) },
+                navigationIcon = { com.roro.futurevoice.ui.brand.IosBackButton(onBack) },
             )
         }
     ) { padding ->

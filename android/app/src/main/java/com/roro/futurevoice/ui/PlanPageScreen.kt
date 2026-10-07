@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -112,14 +113,10 @@ fun PlanPageScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.usage)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+                title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.usage)) },
+                navigationIcon = { com.roro.futurevoice.ui.brand.IosBackButton(onBack) },
             )
         }
     ) { padding ->
@@ -411,7 +408,9 @@ private fun ValueRow(icon: ImageVector, title: String, value: String, subtitle: 
         // The value may wrap; the title keeps its share. Unweighted, a long
         // value ("55분 사용 · 95분 남음") at a 1.3 font squeezed the title to
         // "통화 시 / 간".
-        Text(value, Modifier.weight(1.2f, fill = false), style = MaterialTheme.typography.bodyMedium,
+        // A share CAP, not a weight: a weighted value split the row with the
+        // title and parked "18분" mid-row instead of at the trailing edge.
+        Text(value, Modifier.widthIn(max = 190.dp), style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.End)
     }
