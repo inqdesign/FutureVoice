@@ -84,7 +84,7 @@ fun PlanPageScreen(
     onOpenInvite: () -> Unit,
     onBack: () -> Unit,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var inviteOffer by remember { mutableStateOf<InviteOffer?>(null) }
     var receipt by remember { mutableStateOf<SubscriptionReceipt?>(null) }

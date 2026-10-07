@@ -72,7 +72,7 @@ fun CounterpartDetailScreen(
      */
     onPickIdea: ((Counterpart, String) -> Unit)? = null,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val store = remember { CounterpartStore.shared(context) }

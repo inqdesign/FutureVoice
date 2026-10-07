@@ -98,7 +98,7 @@ fun ScenarioBookScreen(
     /** Open one of the talks run on this book (the cover's study record). */
     onOpenTalk: ((String) -> Unit)? = null,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var scenario by remember { mutableStateOf<Scenario?>(null) }

@@ -64,7 +64,7 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreditGuideScreen(onBack: () -> Unit) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     LaunchedEffect(Unit) {
         // Screenshot harness only: a sample account instead of the network.

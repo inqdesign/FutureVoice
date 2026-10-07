@@ -94,7 +94,7 @@ fun WatchSceneScreen(
      *  play filled. The Watch tab leaves this off and writes a fresh take. */
     replaySaved: Boolean = false,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     var feedback by remember { mutableStateOf<FeedbackContext?>(null) }
     feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null }) }

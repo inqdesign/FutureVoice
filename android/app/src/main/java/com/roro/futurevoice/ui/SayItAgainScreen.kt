@@ -240,6 +240,7 @@ fun SayItAgainScreen(
     /** Capture only: park the screen in "reading" or "done". */
     captureStage: String? = null,
 ) {
+    NavCoverGuard()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // No `source`: the run is one ANALYTICS event, not one per line played.

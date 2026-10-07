@@ -1,7 +1,6 @@
 package com.roro.futurevoice.ui
 
 import android.content.Context
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.VectorConverter
@@ -119,7 +118,7 @@ fun VocabularyCloudScreen(
     onShadow: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
-    BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val density = LocalDensity.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()

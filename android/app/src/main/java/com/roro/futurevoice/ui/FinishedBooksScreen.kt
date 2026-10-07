@@ -1,7 +1,6 @@
 package com.roro.futurevoice.ui
 
 import android.content.Context
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,7 +65,7 @@ private val FinishedGreen = Color(0xFF34C759)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinishedBooksScreen(books: List<FinishedBook>, onOpen: (FinishedBook) -> Unit, onBack: () -> Unit) {
-    BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     Scaffold(
         containerColor = AppSurfaces.ground,
         topBar = {

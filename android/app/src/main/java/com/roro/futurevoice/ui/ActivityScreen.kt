@@ -136,7 +136,7 @@ fun ActivityScreen(
     initialMode: String? = null,
     startEditing: Boolean = false,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     val plan by StudyPlanStore.plan.collectAsStateWithLifecycle()

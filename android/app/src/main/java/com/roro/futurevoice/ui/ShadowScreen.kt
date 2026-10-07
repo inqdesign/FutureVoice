@@ -219,6 +219,7 @@ fun ShadowScreen(
     /** Capture only. */
     seed: ShadowSeed? = null,
 ) {
+    NavCoverGuard()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val target = remember { TargetPlayer() }

@@ -72,7 +72,7 @@ fun SentencesScreen(
     onOpenCard: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var cards by remember(language) { mutableStateOf<List<DrillCard>>(emptyList()) }

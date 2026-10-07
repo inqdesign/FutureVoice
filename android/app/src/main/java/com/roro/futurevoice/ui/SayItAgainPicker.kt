@@ -52,6 +52,7 @@ import java.util.Locale
 @Composable
 fun SayItAgainPicker(language: String, onClose: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onClose)
+    NavCoverGuard()
     val context = LocalContext.current
     var talks by remember { mutableStateOf<List<Session>?>(null) }
     var picked by remember { mutableStateOf<String?>(null) }

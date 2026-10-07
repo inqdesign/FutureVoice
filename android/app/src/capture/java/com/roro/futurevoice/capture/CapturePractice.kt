@@ -184,26 +184,29 @@ object CapturePractice {
             FinishedBooksScreen(books = books, onOpen = {}, onBack = { finished = null })
             return
         }
-        // A shelf card opens its book through the root's own push (tap one
-        // on the emulator to see the transition).
+        // A shelf card opens its book through the shared push host (tap one
+        // on the emulator to see the transition, or swipe from the edge).
         var page by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.ui.BookPage>(
-                com.roro.futurevoice.ui.BookPage.Under(still = false))
+            androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.ui.RootRoute>(
+                com.roro.futurevoice.ui.RootRoute.Tabs)
         }
-        val under = com.roro.futurevoice.ui.BookPage.Under(still = false)
-        com.roro.futurevoice.ui.BookPushHost(page) { p ->
+        val stack = if (page == com.roro.futurevoice.ui.RootRoute.Tabs) listOf(page)
+            else listOf(com.roro.futurevoice.ui.RootRoute.Tabs, page)
+        com.roro.futurevoice.ui.IosNavStack(stack = stack,
+            onPop = { page = com.roro.futurevoice.ui.RootRoute.Tabs }, pageKey = { it.key }) { p ->
             when (p) {
-                is com.roro.futurevoice.ui.BookPage.Talk -> com.roro.futurevoice.ui.TalkDetailScreen(
-                    sessionId = p.id, language = lang(c), level = level(c), onBack = { page = under })
-                is com.roro.futurevoice.ui.BookPage.Scenario -> com.roro.futurevoice.ui.ScenarioBookScreen(
+                is com.roro.futurevoice.ui.RootRoute.TalkBook -> com.roro.futurevoice.ui.TalkDetailScreen(
+                    sessionId = p.id, language = lang(c), level = level(c),
+                    onBack = { page = com.roro.futurevoice.ui.RootRoute.Tabs })
+                is com.roro.futurevoice.ui.RootRoute.ScenarioBook -> com.roro.futurevoice.ui.ScenarioBookScreen(
                     scenarioId = p.id, language = lang(c), onWatch = {}, onShadow = {},
-                    onBack = { page = under })
-                is com.roro.futurevoice.ui.BookPage.Under ->
+                    onBack = { page = com.roro.futurevoice.ui.RootRoute.Tabs })
+                else ->
                     com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _ -> }, onOpenMe = {},
                         tab = tab, onTabChange = { tab = it }, initialPracticeShelf = shelf,
                         onOpenFinished = { finished = it },
-                        onOpenTalk = { page = com.roro.futurevoice.ui.BookPage.Talk(it) },
-                        onOpenBook = { page = com.roro.futurevoice.ui.BookPage.Scenario(it) })
+                        onOpenTalk = { page = com.roro.futurevoice.ui.RootRoute.TalkBook(it) },
+                        onOpenBook = { page = com.roro.futurevoice.ui.RootRoute.ScenarioBook(it) })
             }
         }
     }

@@ -57,7 +57,7 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShadowBrowserScreen(language: String, onShadow: (Turn) -> Unit, onBack: () -> Unit) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()

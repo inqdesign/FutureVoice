@@ -122,7 +122,7 @@ fun TalkTranscriptScreen(
      *  when the host has nowhere to start a call from. */
     onContinue: (() -> Unit)?,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsState()

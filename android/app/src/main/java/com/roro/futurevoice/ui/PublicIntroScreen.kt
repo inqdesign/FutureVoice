@@ -77,7 +77,7 @@ fun PublicIntroScreen(
      *  first" uses it to close once the editor has ended in a decision. */
     onDecided: (() -> Unit)? = null,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val client = remember { PublicPersonaClient(AuthRepository()) }

@@ -575,66 +575,15 @@ fun RootScreen() {
         }
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-    // A book opens the way a pushed page does on iOS (`navigationDestination`
-    // from a shelf card): it slides in from the right over the page it came
-    // from, which drifts left a little; back reverses it. Only the book
-    // pages move — every other screen swaps as before, and a screen that
-    // sits ABOVE a book (shadowing, the deck, a scene) never animates.
-    val coveredAbove = welcomePreview || clonePreview || recloning || state.resolvingSession ||
-        !state.signedIn || !state.setupComplete || editProfile || shadowHand.isNotEmpty() ||
-        shadowLine != null || watchScenarioId != null || showDeck
-    val bookPage: BookPage = when {
-        coveredAbove -> BookPage.Under(still = true)
-        detailSessionId != null -> BookPage.Talk(detailSessionId!!)
-        bookScenarioId != null -> BookPage.Scenario(bookScenarioId!!)
-        else -> BookPage.Under(still = inCall && state.voiceId != null)
-    }
-    BookPushHost(bookPage) { page ->
-        when (page) {
-            is BookPage.Talk -> TalkDetailScreen(
-                sessionId = page.id,
-                language = state.targetLanguage,
-                level = state.level,
-                onBack = { detailSessionId = null },
-                onShadow = { shadowLine = it },
-                onReviewTalk = { id -> deckSessionId = id; showDeck = true },
-                // Picking a talk back up is a metered call, so it goes through
-                // the same gate every other launcher does.
-                onContinue = { topic ->
-                    gate {
-                        detailSessionId = null
-                        callTopic = topic; callFacts = emptyList(); callScenarioId = null
-                        inCall = true
-                    }
-                },
-            )
-
-            is BookPage.Scenario -> ScenarioBookScreen(
-                scenarioId = page.id,
-                language = state.targetLanguage,
-                // A fresh take costs a scene count, so the wall is asked at the
-                // tap here exactly as it is on the Watch tab.
-                // Watch on the book replays THE scene the book was extracted
-                // from (iOS `WatchView(savedDialogue:)`): free after the first
-                // listen, so no gate and no new take.
-                onWatch = { id -> watchReplay = true; watchScenarioId = id },
-                onTalk = { sc -> gate {
-                    bookScenarioId = null
-                    callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
-                    inCall = true
-                } },
-                onShadow = { shadowLine = it },
-                onBack = { bookScenarioId = null },
-                // The talk page sits above the book, so back returns here.
-                onOpenTalk = { id -> detailSessionId = id },
-            )
-            is BookPage.Under -> {
-    when {
-        welcomePreview -> WelcomeScreen(onGetStarted = { welcomePreview = false })
+    // Everything before the app proper — previews, onboarding, the gates —
+    // is ONE still page: it swaps in place and is never swiped.
+    val gateScreen: (@Composable () -> Unit)? = when {
+        welcomePreview -> {{ WelcomeScreen(onGetStarted = { welcomePreview = false })
 
         // DEBUG-only preview of the clone flow (iOS: `-onboardingPreview`):
         // the dev account already has a voice, so the real gate never shows.
-        clonePreview -> CloneFlowScreen(
+        }}
+        clonePreview -> {{ CloneFlowScreen(
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
             onCloned = { clonePreview = false },
@@ -642,7 +591,8 @@ fun RootScreen() {
 
         // Re-record from Me: the same flow as the first clone; the new voice
         // replaces the old one only once it is kept.
-        recloning -> CloneFlowScreen(
+        }}
+        recloning -> {{ CloneFlowScreen(
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
             onCloned = { id -> app.onVoiceCloned(id); recloning = false },
@@ -653,13 +603,15 @@ fun RootScreen() {
         // Match the launch screen until we know whether there's a stored
         // session — but never while onboarding is under way or a voice act
         // is on stage (iOS `launchScreenTwin`'s vetoes).
-        state.resolvingSession && !state.onboardingStarted && !state.holdVoiceOnboarding -> Loading()
+        }}
+        state.resolvingSession && !state.onboardingStarted && !state.holdVoiceOnboarding -> {{ Loading()
         // The pitch before the ask — the short film the fluent self narrates
         // (iOS WelcomeView). Welcome gates on "has the journey begun", NOT on
         // the session: "Get started" enters onboarding account-free, and the
         // session only opens at the clone's "Use this voice". The sign-in
         // here is for returning users restoring.
-        !state.signedIn && !state.onboardingStarted && !state.holdVoiceOnboarding && !devSignInOpen ->
+        }}
+        !state.signedIn && !state.onboardingStarted && !state.holdVoiceOnboarding && !devSignInOpen -> {{
             WelcomeScreen(
                 onGetStarted = app::startOnboarding,
                 // A returning learner signs in right there — the account
@@ -674,7 +626,8 @@ fun RootScreen() {
                     { devSignInOpen = true }
                 } else null,
             )
-        !state.signedIn && devSignInOpen -> SignInScreen(
+        }}
+        !state.signedIn && devSignInOpen -> {{ SignInScreen(
             state,
             googleAvailable = app.isGoogleConfigured,
             onGoogleSignIn = app::signInWithGoogle,
@@ -683,7 +636,8 @@ fun RootScreen() {
         )
         // First-run answers before anything else — what to teach and how to
         // calibrate.
-        !state.setupComplete -> SetupFlowScreen(
+        }}
+        !state.setupComplete -> {{ SetupFlowScreen(
             initialNative = state.nativeLanguage,
             initialTarget = state.targetLanguage,
             initialLevel = state.level,
@@ -715,10 +669,12 @@ fun RootScreen() {
             },
         )
         // The persona store is still being read — hold, never flash a gate.
-        !state.personaResolved -> Loading()
+        }}
+        !state.personaResolved -> {{ Loading()
         // Light taps before the heavy ask (iOS order): persona cards build
         // the investment and the first call's context BEFORE the recording.
-        state.persona == null -> PersonaIntakeScreen(
+        }}
+        state.persona == null -> {{ PersonaIntakeScreen(
             initial = state.reopenedPersona ?: com.roro.futurevoice.talk.UserPersona(),
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
@@ -728,15 +684,17 @@ fun RootScreen() {
         )
         // An anonymous session is being looked at for a voice it already
         // made — hold rather than flash the intro before the account act.
-        state.signedIn && state.isAnonymous && state.restoringVoice && !state.holdVoiceOnboarding -> Loading()
+        }}
+        state.signedIn && state.isAnonymous && state.restoringVoice && !state.holdVoiceOnboarding -> {{ Loading()
         // The voice. `holdVoiceOnboarding` keeps this screen up through the
         // meet act and the sign-up after the clone id has already landed.
         // The anonymous clause is the crash/kill guard: a session is not an
         // account, and letting it through would hand someone an app whose
         // data dies with the install — the flow reopens on its sign-up act.
         // An Android user with no voice starts HERE — they clone on Android.
+        }}
         (!state.restoringVoice && state.voiceId == null) || state.holdVoiceOnboarding ||
-            (state.signedIn && state.isAnonymous) -> CloneFlowScreen(
+            (state.signedIn && state.isAnonymous) -> {{ CloneFlowScreen(
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
             // iOS `finishMeet`: release the hold, then bake the first call's
@@ -764,23 +722,135 @@ fun RootScreen() {
         // The week's rhythm before the day's: when the week is looked back on
         // and tested, then (next screen) when the daily call rings. Gated on
         // the daily call too, so an existing install never sees it.
-        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded ->
+        }}
+        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded -> {{
             WeeklyRhythmOnboardingScreen(context) { weeklyRhythmOnboarded = true }
         // The clone's first real job, introduced right after it exists — so
         // it reads as a promise rather than a permissions request.
-        state.voiceId != null && !dailyCallOnboarded ->
+        }}
+        state.voiceId != null && !dailyCallOnboarded -> {{
             DailyCallOnboardingScreen(context) { dailyCallOnboarded = true }
         // The plans, offered ONCE at the end — LAST, and only for an account
         // with something to buy. While the answer is unknown: the same blank
         // hold, never a flash of a pitch (or of the tabs) at someone who
         // isn't going to be shown one.
-        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan != false ->
+        }}
+        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan != false -> {{
             if (onboardingNeedsPlan == true) PaywallScreen(onDismiss = {
                 OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
                 onboardingPaywallSeen = true
             }) else Loading()
 
-        editProfile -> PersonaIntakeScreen(
+        }}
+        else -> null
+    }
+    // Every page of the app proper, as iOS's navigation stack would hold it:
+    // the order below is the stack, top first — the page drawn is the first
+    // one whose flag is up, and the one under it is what its back reveals.
+    // Pages iOS PUSHES (see [rootPushes]) slide in and swipe back; covers,
+    // sheets and the call swap in place, as before.
+    val rootStack: List<RootRoute> = if (gateScreen != null) listOf(RootRoute.Gate) else buildList {
+        if (editProfile) add(RootRoute.EditProfile)
+        if (shadowHand.isNotEmpty()) add(RootRoute.ShadowHand)
+        shadowLine?.let { add(RootRoute.ShadowLine(it)) }
+        watchScenarioId?.let { add(RootRoute.Watch(it)) }
+        if (showDeck) add(RootRoute.Deck)
+        detailSessionId?.let { add(RootRoute.TalkBook(it)) }
+        bookScenarioId?.let { add(RootRoute.ScenarioBook(it)) }
+        if (showSentences) add(RootRoute.Sentences)
+        library?.let { add(RootRoute.Library(it)) }
+        if (showAssessment) add(RootRoute.Assessment)
+        if (sayAgainPending) add(RootRoute.SayAgainPick)
+        if (routineEditorOpen) add(RootRoute.RoutineEditor)
+        if (showActivity) add(RootRoute.Activity)
+        if (showDueReview) add(RootRoute.DueReview)
+        studyDeckKind?.let { add(RootRoute.StudyDeck(it)) }
+        personDetailId?.let { add(RootRoute.Person(it)) }
+        if (showPeople) add(RootRoute.People)
+        finishedBooks?.let { add(RootRoute.Finished(it)) }
+        if (showCreditGuide) add(RootRoute.CreditGuide)
+        if (showPlanPage) add(RootRoute.PlanPage)
+        if (showInvite) add(RootRoute.Invite)
+        if (showShadowBrowser) add(RootRoute.ShadowBrowser)
+        if (showPublicIntro) add(RootRoute.PublicIntro)
+        if (showPrivacy) add(RootRoute.Privacy)
+        if (showMe) add(RootRoute.Me)
+        if (inCall && state.voiceId != null) add(RootRoute.Call)
+        add(RootRoute.Tabs)
+    }.reversed()
+    IosNavStack(
+        stack = rootStack,
+        // A committed back (system back, predictive gesture, edge swipe):
+        // exactly what the page's own back button does.
+        onPop = {
+            when (rootStack.last()) {
+                is RootRoute.TalkBook -> detailSessionId = null
+                is RootRoute.ScenarioBook -> bookScenarioId = null
+                is RootRoute.Watch -> watchScenarioId = null
+                RootRoute.Deck -> { showDeck = false; focusCardId = null; deckSessionId = null; deckPushed = false }
+                RootRoute.Sentences -> showSentences = false
+                is RootRoute.Library -> library = null
+                RootRoute.Assessment -> showAssessment = false
+                RootRoute.Activity -> showActivity = false
+                is RootRoute.Person -> personDetailId = null
+                is RootRoute.Finished -> finishedBooks = null
+                RootRoute.CreditGuide -> showCreditGuide = false
+                RootRoute.PlanPage -> showPlanPage = false
+                RootRoute.Invite -> showInvite = false
+                RootRoute.ShadowBrowser -> showShadowBrowser = false
+                RootRoute.PublicIntro -> {
+                    showPublicIntro = false
+                    if (introEditFromPreview && app.needsIntroDecision()) showIntroPreview = true
+                    introEditFromPreview = false
+                }
+                RootRoute.Privacy -> showPrivacy = false
+                else -> Unit
+            }
+        },
+        animates = { from, to -> rootPushes(from, to, deckPushed) },
+        pageKey = { it.key },
+    ) { r ->
+    when (r) {
+        RootRoute.Gate -> gateScreen?.invoke()
+        is RootRoute.TalkBook -> TalkDetailScreen(
+                sessionId = r.id,
+                language = state.targetLanguage,
+                level = state.level,
+                onBack = { detailSessionId = null },
+                onShadow = { shadowLine = it },
+                onReviewTalk = { id -> deckSessionId = id; showDeck = true },
+                // Picking a talk back up is a metered call, so it goes through
+                // the same gate every other launcher does.
+                onContinue = { topic ->
+                    gate {
+                        detailSessionId = null
+                        callTopic = topic; callFacts = emptyList(); callScenarioId = null
+                        inCall = true
+                    }
+                },
+            )
+
+
+        is RootRoute.ScenarioBook -> ScenarioBookScreen(
+                scenarioId = r.id,
+                language = state.targetLanguage,
+                // A fresh take costs a scene count, so the wall is asked at the
+                // tap here exactly as it is on the Watch tab.
+                // Watch on the book replays THE scene the book was extracted
+                // from (iOS `WatchView(savedDialogue:)`): free after the first
+                // listen, so no gate and no new take.
+                onWatch = { id -> watchReplay = true; watchScenarioId = id },
+                onTalk = { sc -> gate {
+                    bookScenarioId = null
+                    callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
+                    inCall = true
+                } },
+                onShadow = { shadowLine = it },
+                onBack = { bookScenarioId = null },
+                // The talk page sits above the book, so back returns here.
+                onOpenTalk = { id -> detailSessionId = id },
+            )
+        RootRoute.EditProfile -> PersonaIntakeScreen(
             initial = state.persona ?: com.roro.futurevoice.talk.UserPersona(),
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
@@ -789,7 +859,7 @@ fun RootScreen() {
             startStep = editProfileStep,
         )
 
-        shadowHand.isNotEmpty() -> ShadowScreen(
+        RootRoute.ShadowHand -> ShadowScreen(
             line = shadowHand[shadowAt].turn.transcript,
             turnId = shadowHand[shadowAt].turn.id,
             voiceId = state.voiceId ?: "",
@@ -799,15 +869,15 @@ fun RootScreen() {
             onBack = { shadowHand = emptyList(); shadowAt = 0 },
         )
 
-        shadowLine != null -> ShadowScreen(
-            line = shadowLine!!,
+        is RootRoute.ShadowLine -> ShadowScreen(
+            line = r.line,
             voiceId = state.voiceId ?: "",
             targetLanguage = state.targetLanguage,
             onBack = { shadowLine = null },
         )
 
-        watchScenarioId != null -> WatchSceneScreen(
-            scenarioId = watchScenarioId!!,
+        is RootRoute.Watch -> WatchSceneScreen(
+            scenarioId = r.id,
             onShadow = { watchScenarioId = null; shadowLine = it },
             onStudy = { id -> watchScenarioId = null; bookScenarioId = id },
             voiceId = state.voiceId ?: "",
@@ -820,7 +890,7 @@ fun RootScreen() {
 
         // Above the book: "Review this talk" opens the deck from a book page,
         // and back from the deck returns to that page.
-        showDeck -> DrillDeckScreen(
+        RootRoute.Deck -> DrillDeckScreen(
             language = state.targetLanguage,
             persona = state.persona,
             nativeLanguage = state.nativeLanguage,
@@ -834,37 +904,37 @@ fun RootScreen() {
 
         // Under the deck, so a row's card opens over the list and back
         // returns to it (iOS pushes `DrillView(source: .card)`).
-        showSentences -> SentencesScreen(
+        RootRoute.Sentences -> SentencesScreen(
             language = state.targetLanguage,
             onOpenCard = { id -> focusCardId = id; deckPushed = true; showDeck = true },
             onBack = { showSentences = false },
         )
 
-        library != null -> LibraryScreen(
-            kind = library!!,
+        is RootRoute.Library -> LibraryScreen(
+            kind = r.kind,
             language = state.targetLanguage,
             onShadow = { library = null; shadowLine = it },
             onBack = { library = null },
         )
 
-        showAssessment -> AssessmentScreen(
+        RootRoute.Assessment -> AssessmentScreen(
             language = state.targetLanguage,
             onBack = { showAssessment = false },
         )
 
         // A routine reminder's "say it again": which talk (iOS `SayItAgainPicker`).
-        sayAgainPending -> SayItAgainPicker(
+        RootRoute.SayAgainPick -> SayItAgainPicker(
             language = state.targetLanguage,
             onClose = { com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.value = false },
         )
 
         // The routine editor opened from somewhere other than the routine page
         // (the Review tab's Today card — iOS `e1b3501`).
-        routineEditorOpen -> WeeklyPlanEditor(onClose = { RoutineNav.editorOpen.value = false })
+        RootRoute.RoutineEditor -> WeeklyPlanEditor(onClose = { RoutineNav.editorOpen.value = false })
 
-        showActivity -> ActivityScreen(
+        RootRoute.Activity -> ActivityScreen(
             language = state.targetLanguage,
-            onOpenTalk = { showActivity = false; detailSessionId = it },
+            onOpenTalk = { detailSessionId = it },
             onBack = { showActivity = false },
             // Every routine line is a door to that kind of practice.
             onStartTalk = { showActivity = false; DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk },
@@ -874,7 +944,7 @@ fun RootScreen() {
 
         // Everything snoozed whose time has come, both kinds together — the
         // promise the learner made to themselves, kept.
-        showDueReview -> StudyDeckHost(
+        RootRoute.DueReview -> StudyDeckHost(
             kind = null,
             language = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
@@ -883,16 +953,16 @@ fun RootScreen() {
             onBack = { showDueReview = false; focusStudyItem = null },
         )
 
-        studyDeckKind != null -> StudyDeckHost(
-            kind = studyDeckKind!!,
+        is RootRoute.StudyDeck -> StudyDeckHost(
+            kind = r.kind,
             language = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
             level = state.level,
             onBack = { studyDeckKind = null },
         )
 
-        personDetailId != null -> CounterpartDetailScreen(
-            counterpartId = personDetailId!!,
+        is RootRoute.Person -> CounterpartDetailScreen(
+            counterpartId = r.id,
             language = state.targetLanguage,
             onOpenBook = { bookScenarioId = it },
             onBack = { personDetailId = null },
@@ -904,7 +974,7 @@ fun RootScreen() {
             },
         )
 
-        showPeople -> FindPeopleScreen(
+        RootRoute.People -> FindPeopleScreen(
             language = state.targetLanguage,
             persona = state.persona,
             onOpenPerson = { personDetailId = it },
@@ -945,25 +1015,25 @@ fun RootScreen() {
         // Above Me, so backing out of these lands on Me rather than the tabs.
         // Below the book branches on purpose: a book opened from here comes
         // back to this page, as a pushed page does on iOS.
-        finishedBooks != null -> FinishedBooksScreen(
-            books = finishedBooks!!,
+        is RootRoute.Finished -> FinishedBooksScreen(
+            books = r.books,
             onOpen = { book ->
                 if (book.isTalk) detailSessionId = book.id else bookScenarioId = book.id
             },
             onBack = { finishedBooks = null },
         )
 
-        showCreditGuide -> CreditGuideScreen(onBack = { showCreditGuide = false })
+        RootRoute.CreditGuide -> CreditGuideScreen(onBack = { showCreditGuide = false })
 
-        showPlanPage -> PlanPageScreen(
+        RootRoute.PlanPage -> PlanPageScreen(
             onOpenCreditGuide = { showCreditGuide = true },
             onOpenInvite = { showInvite = true },
             onBack = { showPlanPage = false },
         )
 
-        showInvite -> InviteScreen(onBack = { showInvite = false })
+        RootRoute.Invite -> InviteScreen(onBack = { showInvite = false })
 
-        showShadowBrowser -> ShadowBrowserScreen(
+        RootRoute.ShadowBrowser -> ShadowBrowserScreen(
             language = state.targetLanguage,
             onShadow = { turn ->
                 showShadowBrowser = false
@@ -972,7 +1042,7 @@ fun RootScreen() {
             onBack = { showShadowBrowser = false },
         )
 
-        showPublicIntro -> PublicIntroScreen(
+        RootRoute.PublicIntro -> PublicIntroScreen(
             persona = state.persona,
             targetLanguage = state.targetLanguage,
             onBack = {
@@ -985,7 +1055,7 @@ fun RootScreen() {
             }) else null,
         )
 
-        showPrivacy -> PrivacyScreen(
+        RootRoute.Privacy -> PrivacyScreen(
             voiceId = state.voiceId,
             // Withdrawing deletes the model, so the app has no voice to hold
             // a call with — the flow has to ask for a new one, which is what
@@ -994,7 +1064,7 @@ fun RootScreen() {
             onBack = { showPrivacy = false },
         )
 
-        showMe -> MeScreen(
+        RootRoute.Me -> MeScreen(
             email = state.email,
             persona = state.persona,
             targetLanguage = state.targetLanguage,
@@ -1027,11 +1097,11 @@ fun RootScreen() {
             onBack = { showMe = false },
         )
 
-        inCall && state.voiceId != null ->
+        RootRoute.Call ->
           Box(Modifier.fillMaxSize().graphicsLayer {
               alpha = if (TalkMorph.active) TalkMorph.callAlpha.value else 1f }) {
             TalkScreen(
-                voiceId = state.voiceId!!,
+                voiceId = state.voiceId ?: "",
                 targetLanguage = state.targetLanguage,
                 nativeLanguage = state.nativeLanguage,
                 level = state.level,
@@ -1056,7 +1126,7 @@ fun RootScreen() {
             )
           }
 
-        else -> {
+        RootRoute.Tabs -> {
           // Entering the tabs with a voice but no age on record (iOS
           // `RootTabView.onAppear` → `showingAgeCheck`): the age check takes
           // this visit; the tab's guide waits behind it.
@@ -1116,8 +1186,6 @@ fun RootScreen() {
         )
         }
     }
-            }
-        }
     }
     // The plans, OVER whatever raised them (iOS presents `PaywallView` as a
     // sheet from the screen on top). It used to be one branch of the page
@@ -2386,64 +2454,77 @@ private fun DiscoverHeaderButton(onClick: () -> Unit, content: @Composable () ->
     }
 }
 
-/** What the root shows at the book layer: a book page, or whatever lies
- *  under the books. `still` marks an "under" that must not animate — a
- *  screen above the books (shadowing, the deck, a scene) or a call. */
-internal sealed interface BookPage {
-    data class Talk(val id: String) : BookPage
-    data class Scenario(val id: String) : BookPage
-    data class Under(val still: Boolean) : BookPage
+/**
+ * A page of the app proper, as iOS's navigation stack would hold it. Each
+ * carries what it needs to draw itself, so a page can still be drawn while
+ * it slides away after its flag is already down.
+ */
+internal sealed interface RootRoute {
+    val key: String
+    data object Gate : RootRoute { override val key = "gate" }
+    data object EditProfile : RootRoute { override val key = "editProfile" }
+    data object ShadowHand : RootRoute { override val key = "shadowHand" }
+    data class ShadowLine(val line: String) : RootRoute { override val key = "shadowLine" }
+    data class Watch(val id: String) : RootRoute { override val key = "watch:$id" }
+    data object Deck : RootRoute { override val key = "deck" }
+    data class TalkBook(val id: String) : RootRoute { override val key = "talk:$id" }
+    data class ScenarioBook(val id: String) : RootRoute { override val key = "scenario:$id" }
+    data object Sentences : RootRoute { override val key = "sentences" }
+    data class Library(val kind: LibraryKind) : RootRoute { override val key = "library:$kind" }
+    data object Assessment : RootRoute { override val key = "assessment" }
+    data object SayAgainPick : RootRoute { override val key = "sayAgainPick" }
+    data object RoutineEditor : RootRoute { override val key = "routineEditor" }
+    data object Activity : RootRoute { override val key = "activity" }
+    data object DueReview : RootRoute { override val key = "dueReview" }
+    data class StudyDeck(val kind: StudyScheduleStore.Kind) : RootRoute { override val key = "studyDeck:$kind" }
+    data class Person(val id: String) : RootRoute { override val key = "person:$id" }
+    data object People : RootRoute { override val key = "people" }
+    data class Finished(val books: List<FinishedBook>) : RootRoute { override val key = "finished" }
+    data object CreditGuide : RootRoute { override val key = "creditGuide" }
+    data object PlanPage : RootRoute { override val key = "planPage" }
+    data object Invite : RootRoute { override val key = "invite" }
+    data object ShadowBrowser : RootRoute { override val key = "shadowBrowser" }
+    data object PublicIntro : RootRoute { override val key = "publicIntro" }
+    data object Privacy : RootRoute { override val key = "privacy" }
+    data object Me : RootRoute { override val key = "me" }
+    data object Call : RootRoute { override val key = "call" }
+    data object Tabs : RootRoute { override val key = "tabs" }
 }
 
-/** iOS's push curve (UINavigationController: ~0.35 s, ease-out). */
-/** The book layer: a book page pushed over what lies under the books, or
- *  popped back off it (see [bookPageTransition]). */
-@Composable
-internal fun BookPushHost(page: BookPage, content: @Composable (BookPage) -> Unit) {
-    androidx.compose.animation.AnimatedContent(
-        targetState = page,
-        contentKey = { if (it is BookPage.Under) "under" else it },
-        transitionSpec = { bookPageTransition(initialState, targetState) },
-        label = "book-push",
-    ) { p ->
-        // A book page is opaque paper: its header must hide the page it
-        // slides over (and, on the way back, the page sliding in under it).
-        if (p is BookPage.Under) content(p)
-        else Box(Modifier.fillMaxSize().background(com.roro.futurevoice.ui.brand.AppSurfaces.ground)) { content(p) }
+/**
+ * Whether going from [from] to [to] is an iOS PUSH (slides, swipes back)
+ * rather than a cover, a sheet or the call (swaps in place). Read off where
+ * iOS presents each page — `docs/android-master-plan.md` "Pushed pages".
+ * Me itself is a SHEET on iOS (so Tabs ↔ Me swaps), but everything Me
+ * pushes inside that sheet is a push here too.
+ */
+internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Boolean {
+    val pageUnder = from !is RootRoute.Gate && from !is RootRoute.Call && from !is RootRoute.ShadowHand &&
+        from !is RootRoute.ShadowLine && from !is RootRoute.EditProfile && from !is RootRoute.SayAgainPick &&
+        from !is RootRoute.RoutineEditor && from !is RootRoute.DueReview && from !is RootRoute.StudyDeck
+    if (!pageUnder) return false
+    return when (to) {
+        // Books: `navigationDestination` from a shelf card, Activity, a
+        // person, the finished shelf, a scene book's study record.
+        is RootRoute.TalkBook, is RootRoute.ScenarioBook -> from !is RootRoute.People && from !is RootRoute.Me
+        // A scene: `SceneWatchView` / `WatchView` are pushed (Watch tab, book).
+        is RootRoute.Watch -> from is RootRoute.Tabs || from is RootRoute.ScenarioBook || from is RootRoute.Person
+        // "Review this talk" (book) and a Sentences row push `DrillView`;
+        // every other deck is a sheet.
+        RootRoute.Deck -> from is RootRoute.TalkBook || (deckPushed && from is RootRoute.Sentences)
+        // Practice's library tiles; Progress's latest assessment; the
+        // streak's Activity; the finished shelf.
+        RootRoute.Sentences, is RootRoute.Library, RootRoute.ShadowBrowser,
+        RootRoute.Assessment, RootRoute.Activity, is RootRoute.Finished -> from is RootRoute.Tabs
+        // Find people's own-people rows push the person.
+        is RootRoute.Person -> from is RootRoute.People
+        // Inside the Me sheet: Usage, Privacy, the public intro; inside
+        // Usage: the guide and the invite.
+        RootRoute.PlanPage, RootRoute.Privacy -> from is RootRoute.Me
+        RootRoute.PublicIntro -> from is RootRoute.Me || from is RootRoute.People
+        RootRoute.CreditGuide, RootRoute.Invite -> from is RootRoute.PlanPage
+        else -> false
     }
-}
-
-private val PushEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.9f, 0.3f, 1f)
-private const val PUSH_MS = 380
-
-private fun bookPageTransition(from: BookPage, to: BookPage): androidx.compose.animation.ContentTransform {
-    fun <T> spec() = androidx.compose.animation.core.tween<T>(PUSH_MS, easing = PushEasing)
-    val none = androidx.compose.animation.ContentTransform(
-        androidx.compose.animation.EnterTransition.None, androidx.compose.animation.ExitTransition.None)
-    val fromBook = from !is BookPage.Under
-    val toBook = to !is BookPage.Under
-    val push = when {
-        from is BookPage.Under && !from.still && toBook -> true
-        // A scene book opens its talk page on top of it.
-        from is BookPage.Scenario && to is BookPage.Talk -> true
-        fromBook && to is BookPage.Under && !to.still -> false
-        from is BookPage.Talk && to is BookPage.Scenario -> false
-        else -> return none
-    }
-    return if (push) androidx.compose.animation.ContentTransform(
-        // The new page comes in from the right edge; the one under it
-        // drifts a third of the way left, as iOS's parallax does.
-        androidx.compose.animation.slideInHorizontally(spec()) { it },
-        androidx.compose.animation.slideOutHorizontally(spec()) { -it / 3 } +
-            androidx.compose.animation.fadeOut(spec(), targetAlpha = 0.9f),
-        targetContentZIndex = 1f,
-    ) else androidx.compose.animation.ContentTransform(
-        androidx.compose.animation.slideInHorizontally(spec()) { -it / 3 } +
-            androidx.compose.animation.fadeIn(spec(), initialAlpha = 0.9f),
-        androidx.compose.animation.slideOutHorizontally(spec()) { it },
-        // The page leaving sits ON TOP of the one coming back.
-        targetContentZIndex = -1f,
-    )
 }
 
 /**

@@ -123,7 +123,7 @@ fun DrillDeckScreen(
      *  `DrillView(source: .card)`): a back chevron and no title, not Done. */
     pushed: Boolean = false,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val store = remember { DrillStore.shared(context) }

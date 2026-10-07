@@ -41,7 +41,7 @@ import java.util.Date
  */
 @Composable
 fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Unit) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uri = LocalUriHandler.current

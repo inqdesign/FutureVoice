@@ -133,6 +133,7 @@ sealed interface BlockTarget {
 @Composable
 fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
     androidx.activity.compose.BackHandler(onBack = onClose)
+    NavCoverGuard()
     val context = LocalContext.current
     val res = context.resources
     val haptic = LocalHapticFeedback.current

@@ -51,7 +51,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssessmentScreen(language: String, onBack: () -> Unit) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     var report by remember { mutableStateOf<WeeklyReport?>(null) }
     LaunchedEffect(language) { report = WeeklyReportStore.shared(context).latest(language) }
