@@ -710,6 +710,22 @@ fun TalkScreen(
                         bottom = 16.dp + with(LocalDensity.current) { floatingBarHeight.toDp() }),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    // The first seconds of a call have nothing on them yet: say
+                    // what is happening, where the first line will appear (iOS
+                    // `feed`: top of the transcript, centred, 40 pt down, the
+                    // grey wheel — it sat in the bottom bar, left, in Material).
+                    if (state.turns.isEmpty()) item(key = "starting") {
+                        Row(Modifier.fillMaxWidth().padding(top = 24.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
+                            com.roro.futurevoice.ui.brand.IosActivityIndicator()
+                            Text(stringResource(
+                                if (topic.isBlank()) R.string.starting_your_conversation
+                                else R.string.setting_the_scene),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     // Subtitles off: the call is audio only, like a phone call —
                     // the pill still shows whose turn it is.
                     if (!showsTranscript && state.turns.isNotEmpty()) item(key = "subtitles-off") {
@@ -800,20 +816,6 @@ fun TalkScreen(
                             drawRect(page)
                         },
                 ) {
-                    // The first seconds of a call had nothing on them: an empty list
-                    // and no bottom bar. Say what is happening instead.
-                    if (state.phase == TalkPhase.CONNECTING && state.turns.isEmpty()) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Text(stringResource(
-                                if (topic.isBlank()) R.string.starting_your_conversation
-                                else R.string.setting_the_scene),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
 
 
                     // A failed reply is answerable: the learner said something and
