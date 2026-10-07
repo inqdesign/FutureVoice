@@ -29,8 +29,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -583,7 +581,7 @@ private fun FilterMenu(
     open: Boolean, lens: Lens, source: SourceFilter, level: CefrLevel?,
     onSource: (SourceFilter) -> Unit, onLevel: (CefrLevel?) -> Unit, onDismiss: () -> Unit,
 ) {
-    DropdownMenu(expanded = open, onDismissRequest = onDismiss) {
+    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = onDismiss) {
         // Known words are all the learner's own, so the source picker only
         // means something on the study pile.
         if (lens == Lens.TO_STUDY) {
@@ -598,7 +596,7 @@ private fun FilterMenu(
                     checked = source == option,
                 ) { onSource(option); onDismiss() }
             }
-            HorizontalDivider()
+            com.roro.futurevoice.ui.brand.IosMenuDivider()
         }
         MenuLabel(stringResource(R.string.level_7c7f5d))
         CheckedMenuItem(stringResource(R.string.all_levels), checked = level == null) {
@@ -614,24 +612,13 @@ private fun FilterMenu(
 
 @Composable
 private fun MenuLabel(text: String) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp))
+    com.roro.futurevoice.ui.brand.IosMenuHeader(text)
 }
 
 @Composable
 private fun CheckedMenuItem(label: String, checked: Boolean, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(label) },
-        leadingIcon = {
-            // The column stays reserved whether or not the row is the chosen
-            // one, so picking another doesn't shuffle the labels sideways.
-            Icon(Icons.Filled.Check, contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = if (checked) MaterialTheme.colorScheme.primary else Color.Transparent)
-        },
-        onClick = onClick,
-    )
+    // iOS picker-in-menu row: the tick leading, the column always reserved.
+    com.roro.futurevoice.ui.brand.IosMenuItem(label, onClick = onClick, checked = checked)
 }
 
 @Composable

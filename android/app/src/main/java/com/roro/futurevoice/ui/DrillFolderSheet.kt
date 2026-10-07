@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -85,14 +83,13 @@ fun DrillFolderSheet(
                              else returnLabel(card.nextReviewAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DrillBin.entries.filterNot { it == bin && it == DrillBin.GOT_IT }.forEach { target ->
-                                DropdownMenuItem(
+                                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                     text = { Text(stringResource(target.titleRes)) },
                                     leadingIcon = {
                                         if (target == bin) {
-                                            Icon(Icons.Filled.Check, contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary)
+                                            Icon(Icons.Filled.Check, contentDescription = null)
                                         }
                                     },
                                     onClick = { menu = false; onRefile(card, target) })

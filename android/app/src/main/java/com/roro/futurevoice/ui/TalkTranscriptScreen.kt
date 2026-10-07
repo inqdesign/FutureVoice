@@ -34,8 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -303,8 +301,8 @@ fun TalkTranscriptScreen(
                             }
                         }
                     }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(
+                    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                             text = { Text(stringResource(R.string.misheard_exclude_from_scoring),
                                 color = MaterialTheme.colorScheme.error) },
                             leadingIcon = { Icon(Icons.Filled.MicOff, contentDescription = null,

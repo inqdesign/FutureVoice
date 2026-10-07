@@ -99,13 +99,11 @@ fun WeeklyTestSettingsSection() {
             }
         }
         GroupedRowDivider()
-        SettingRow(Icons.Filled.Schedule, stringResource(R.string.opens_at), Modifier.clickable {
-            TimePickerDialog(context, { _, h, m -> WeeklyTestSettings.setTime(context, h, m) },
-                hour, minute, DateFormat.is24HourFormat(context)).show()
-        }) {
-            Text(LocalTime.of(hour, minute).format(
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)),
-                color = MaterialTheme.colorScheme.primary)
+        // iOS `DatePicker(.hourAndMinute)`: compact capsule + wheel popover.
+        SettingRow(Icons.Filled.Schedule, stringResource(R.string.opens_at)) {
+            com.roro.futurevoice.ui.brand.IosCompactTimePicker(hour, minute) { h, m ->
+                WeeklyTestSettings.setTime(context, h, m)
+            }
         }
         GroupedRowDivider()
         SettingRow(Icons.Filled.Notifications, stringResource(R.string.remind_me)) {

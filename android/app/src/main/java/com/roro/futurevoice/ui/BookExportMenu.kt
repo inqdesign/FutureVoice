@@ -4,8 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -51,12 +49,12 @@ fun BookExportMenu(
     IconButton(onClick = { open = true }, enabled = !working) {
         Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.export))
     }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
         // The workbook — writing space, answers at the back, index tabs
         // ([com.roro.futurevoice.data.WorkbookPdf]). It is the only PDF there
         // is (iOS 25e4d8e2): the plain reader layout sat beside it as "Print
         // or save as PDF" while the redesign hid under a second row.
-        DropdownMenuItem(
+        com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
             text = { Text(stringResource(R.string.pdf)) },
             leadingIcon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null) },
             onClick = {
@@ -71,7 +69,7 @@ fun BookExportMenu(
                 }
             },
         )
-        DropdownMenuItem(
+        com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
             text = { Text(stringResource(R.string.markdown)) },
             leadingIcon = { Icon(Icons.Filled.Notes, contentDescription = null) },
             onClick = {

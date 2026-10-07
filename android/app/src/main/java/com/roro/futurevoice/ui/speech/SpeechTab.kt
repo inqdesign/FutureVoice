@@ -43,8 +43,6 @@ import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -140,11 +138,11 @@ internal fun SpeechHeaderAction() {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_script),
                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.write_with_ai)) },
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.write_with_ai)) },
                 leadingIcon = { Icon(Icons.Filled.AutoAwesome, null) },
                 onClick = { menu = false; SpeechTabRequests.pending.value = SpeechTabRequests.Kind.WRITE })
-            DropdownMenuItem(text = { Text(stringResource(R.string.add_my_own_script)) },
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.add_my_own_script)) },
                 leadingIcon = { Icon(Icons.Outlined.EditNote, null) },
                 onClick = { menu = false; SpeechTabRequests.pending.value = SpeechTabRequests.Kind.OWN })
         }

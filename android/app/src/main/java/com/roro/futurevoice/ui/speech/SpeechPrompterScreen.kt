@@ -52,8 +52,6 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -498,18 +496,18 @@ private fun PrompterSettingsMenu(
     expanded: Boolean, onDismiss: () -> Unit, follow: Boolean, speed: Float, textSize: Float,
     onFollow: (Boolean) -> Unit, onSpeed: (Float) -> Unit, onTextSize: (Float) -> Unit,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         MenuHeader(stringResource(R.string.scrolling))
         CheckItem(stringResource(R.string.follow_my_voice), follow) { onFollow(true) }
         CheckItem(stringResource(R.string.steady_speed), !follow) { onFollow(false) }
         if (!follow) {
-            HorizontalDivider()
+            com.roro.futurevoice.ui.brand.IosMenuDivider()
             MenuHeader(stringResource(R.string.speed))
             CheckItem(stringResource(R.string.slower), speed == 0.8f) { onSpeed(0.8f) }
             CheckItem(stringResource(R.string.normal), speed == 1f) { onSpeed(1f) }
             CheckItem(stringResource(R.string.faster), speed == 1.2f) { onSpeed(1.2f) }
         }
-        HorizontalDivider()
+        com.roro.futurevoice.ui.brand.IosMenuDivider()
         MenuHeader(stringResource(R.string.text_size))
         CheckItem(stringResource(R.string.small), textSize == 22f) { onTextSize(22f) }
         CheckItem(stringResource(R.string.medium), textSize == 28f) { onTextSize(28f) }
@@ -519,14 +517,12 @@ private fun PrompterSettingsMenu(
 
 @Composable
 private fun MenuHeader(text: String) {
-    Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+    com.roro.futurevoice.ui.brand.IosMenuHeader(text)
 }
 
 @Composable
 private fun CheckItem(text: String, checked: Boolean, onClick: () -> Unit) {
-    DropdownMenuItem(text = { Text(text) }, onClick = onClick,
-        trailingIcon = if (checked) ({ Icon(Icons.Filled.Check, null) }) else null)
+    com.roro.futurevoice.ui.brand.IosMenuItem(text, onClick = onClick, checked = checked)
 }
 
 @Composable

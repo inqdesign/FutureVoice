@@ -63,8 +63,6 @@ import androidx.compose.material.icons.filled.UnfoldMore
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -915,17 +913,17 @@ private fun AttachMenuButton(actions: AttachActions) {
         ) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.attach_material))
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.paste_a_link)) },
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.paste_a_link)) },
                 leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
                 onClick = { open = false; actions.link() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.pick_a_file)) },
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.pick_a_file)) },
                 leadingIcon = { Icon(Icons.Filled.Description, contentDescription = null) },
                 onClick = { open = false; actions.file() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.photo_library)) },
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.photo_library)) },
                 leadingIcon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = null) },
                 onClick = { open = false; actions.photo() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.take_a_photo)) },
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.take_a_photo)) },
                 leadingIcon = { Icon(Icons.Filled.CameraAlt, contentDescription = null) },
                 onClick = { open = false; actions.camera() })
         }
@@ -982,9 +980,9 @@ private fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
             Icon(Icons.Filled.UnfoldMore, contentDescription = stringResource(R.string.language),
                 tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(14.dp))
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             choices.forEach { code ->
-                DropdownMenuItem(text = { Text(LanguageCatalog.endonym(code)) },
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(LanguageCatalog.endonym(code)) },
                     onClick = { onPick(code); open = false })
             }
         }
@@ -1063,17 +1061,17 @@ private fun MaterialSection(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary)
                 }
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.paste_a_link)) },
+                com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.paste_a_link)) },
                         leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
                         onClick = { open = false; actions.link() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.pick_a_file)) },
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.pick_a_file)) },
                         leadingIcon = { Icon(Icons.Filled.Description, contentDescription = null) },
                         onClick = { open = false; actions.file() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.photo_library)) },
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.photo_library)) },
                         leadingIcon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = null) },
                         onClick = { open = false; actions.photo() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.take_a_photo)) },
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.take_a_photo)) },
                         leadingIcon = { Icon(Icons.Filled.CameraAlt, contentDescription = null) },
                         onClick = { open = false; actions.camera() })
                 }

@@ -79,6 +79,10 @@ fun IosMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    /** A fixed width for content that can't be measured intrinsically (a
+     *  lazy wheel) — iOS's DatePicker popover; the menu is otherwise as wide
+     *  as its longest item. */
+    fixedWidth: androidx.compose.ui.unit.Dp? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val state = remember { MutableTransitionState(false) }
@@ -118,10 +122,9 @@ fun IosMenu(
                     ambientColor = Color.Black.copy(alpha = 0.18f),
                     spotColor = Color.Black.copy(alpha = 0.22f))
                 .background(fill, ContinuousShape(IosMenuRadius))
-                .widthIn(min = 250.dp, max = 300.dp)
-                .width(IntrinsicSize.Max)
-                .heightIn(max = 520.dp)
-                .verticalScroll(rememberScrollState())
+                .then(if (fixedWidth != null) Modifier.width(fixedWidth)
+                    else Modifier.widthIn(min = 250.dp, max = 300.dp).width(IntrinsicSize.Max)
+                        .heightIn(max = 520.dp).verticalScroll(rememberScrollState()))
                 .padding(vertical = 6.dp),
             content = content,
         )
@@ -228,8 +231,16 @@ private class IosMenuPositionProvider(
         val margin = with(density) { 8.dp.roundToPx() }
         // Flush with the anchor's trailing edge (the value's chevron), as iOS.
         val nudge = 0
-        val right = if (layoutDirection == LayoutDirection.Ltr) anchorBounds.right + nudge + shadowPad
-            else anchorBounds.left - nudge - shadowPad + popupContentSize.width
+        // A control on the LEADING half of the window (the Talk home's
+        // language chip) opens with the menu's leading edge on its leading
+        // edge, as iOS's Menu does; everything else is trailing-aligned.
+        val leadingHalf = (anchorBounds.left + anchorBounds.right) / 2 < windowSize.width / 2
+        val ltr = layoutDirection == LayoutDirection.Ltr
+        val right = when {
+            ltr && leadingHalf -> anchorBounds.left - shadowPad + popupContentSize.width
+            ltr -> anchorBounds.right + nudge + shadowPad
+            else -> anchorBounds.left - nudge - shadowPad + popupContentSize.width
+        }
         val x = (right - popupContentSize.width)
             .coerceIn(margin - shadowPad, windowSize.width - popupContentSize.width - margin + shadowPad)
         val topLimit = with(density) { 40.dp.roundToPx() }
@@ -239,5 +250,78 @@ private class IosMenuPositionProvider(
         val y = if (growsUp) upY else (anchorBounds.top - shadowPad)
             .coerceAtMost(windowSize.height - popupContentSize.height - margin + shadowPad)
         return IntOffset(x, y)
+    }
+}
+
+/**
+ * iOS `DatePicker(.hourAndMinute)` in a Form (compact style): the time in a
+ * grey rounded capsule at the row's trailing edge; tapping it opens the wheel
+ * in a popover hanging off the capsule — never Material's clock dialog.
+ */
+@Composable
+fun IosCompactTimePicker(hour: Int, minute: Int, onChange: (Int, Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val label = java.time.LocalTime.of(hour, minute).format(
+        java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT).withLocale(locale))
+    Box {
+        Text(label,
+            Modifier.background(iosFill(), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .clickable { open = true }.padding(horizontal = 11.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (open) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+        IosMenu(open, { open = false }, fixedWidth = 300.dp) {
+            IosWheelTimePicker(hour, minute, onChange, Modifier.padding(horizontal = 8.dp))
+        }
+    }
+}
+
+
+/**
+ * Drop-in for Material's `DropdownMenu` — same call shape, iOS's menu.
+ * Every menu in the app goes through here or [IosMenu]; Material's own is
+ * not used anywhere (2026-10-07: "exactly iOS, no Android-only choices").
+ */
+@Composable
+fun IosDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) = IosMenu(expanded, onDismissRequest, modifier, content = content)
+
+/**
+ * Drop-in for `DropdownMenuItem`, laid out as an iOS menu row: the label
+ * leading, the glyph TRAILING (iOS puts a `Label`'s icon on the right of a
+ * menu row, whichever slot Material called it).
+ */
+@Composable
+fun IosDropdownMenuItem(
+    text: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
+) {
+    val ink = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.35f)
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.material3.LocalContentColor provides ink,
+        androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.bodyLarge,
+    ) {
+        Row(
+            modifier.fillMaxWidth()
+                .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+                .heightIn(min = 44.dp)
+                .padding(start = 20.dp, end = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.weight(1f).padding(vertical = 10.dp)) { text() }
+            val icon = trailingIcon ?: leadingIcon
+            if (icon != null) {
+                Spacer(Modifier.width(16.dp))
+                Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) { icon() }
+            }
+        }
     }
 }

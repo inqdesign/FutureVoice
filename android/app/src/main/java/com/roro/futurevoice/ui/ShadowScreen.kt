@@ -53,8 +53,6 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.AlertDialog
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -1062,8 +1060,8 @@ private fun PastAttemptRow(a: ShadowAttempt, fill: Color, onPlay: (String) -> Un
                 modifier = Modifier.size(28.dp).clip(CircleShape)
                     .clickable(enabled = path != null) { path?.let(onPlay) })
         }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.delete), color = Color(0xFFFF3B30)) },
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(text = { Text(stringResource(R.string.delete), color = Color(0xFFFF3B30)) },
                 onClick = { menu = false; onDelete() })
         }
     }

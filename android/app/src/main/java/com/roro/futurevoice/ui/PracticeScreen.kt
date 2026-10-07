@@ -16,8 +16,6 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -328,10 +326,10 @@ private fun BookMenu(
     items: List<Triple<String, ImageVector, () -> Unit>>,
     destructiveLast: Boolean = true,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         items.forEachIndexed { i, (label, icon, action) ->
             val destructive = destructiveLast && i == items.lastIndex
-            DropdownMenuItem(
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                 text = {
                     Text(label, color = if (destructive) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurface)

@@ -25,8 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -190,9 +188,9 @@ fun VocabularyCloudScreen(
                             Icon(Icons.Filled.FilterList,
                                 contentDescription = stringResource(R.string.level_7c7f5d))
                         }
-                        DropdownMenu(expanded = filterOpen,
+                        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = filterOpen,
                             onDismissRequest = { filterOpen = false }) {
-                            DropdownMenuItem(
+                            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                 text = { Text(stringResource(R.string.hide_words_i_know)) },
                                 trailingIcon = {
                                     com.roro.futurevoice.ui.brand.IosSwitch(checked = hideKnown, onCheckedChange = null)
@@ -202,7 +200,7 @@ fun VocabularyCloudScreen(
                                     prefs.edit().putBoolean(HIDE_KNOWN_KEY, hideKnown).apply()
                                 },
                             )
-                            HorizontalDivider()
+                            com.roro.futurevoice.ui.brand.IosMenuDivider()
                             LevelRow(null, level == null) { level = null; filterOpen = false }
                             CefrLevel.entries.forEach { lv ->
                                 LevelRow(lv, level == lv) { level = lv; filterOpen = false }
@@ -351,15 +349,8 @@ private const val HIDE_KNOWN_KEY = "futurevoice.vocab.hideKnown"
 
 @Composable
 private fun LevelRow(level: CefrLevel?, checked: Boolean, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(level?.code?.uppercase() ?: stringResource(R.string.all_levels)) },
-        leadingIcon = {
-            // The column stays reserved whether or not the row is the chosen
-            // one, so picking another doesn't shuffle the labels sideways.
-            Icon(Icons.Filled.Check, contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = if (checked) MaterialTheme.colorScheme.primary else Color.Transparent)
-        },
+    com.roro.futurevoice.ui.brand.IosMenuItem(
+        level?.code?.uppercase() ?: stringResource(R.string.all_levels), checked = checked,
         onClick = onClick,
     )
 }

@@ -45,8 +45,6 @@ import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -326,9 +324,9 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                         Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.routine_add_block),
                             tint = Color.White, modifier = Modifier.size(28.dp))
                     }
-                    DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
+                    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
                         StudyPlan.Kind.placeable.forEach { k ->
-                            DropdownMenuItem(
+                            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                 text = { Text(RoutineText.label(res, k)) },
                                 leadingIcon = { Icon(k.icon(), null, tint = k.color()) },
                                 onClick = { addMenu = false; addBlock(k) })
@@ -677,13 +675,14 @@ fun PlanBlockSheet(target: BlockTarget, onDismiss: () -> Unit, onRefused: () -> 
                 SwitchRow(stringResource(R.string.routine_any_time_of_day), anytime) { anytime = it }
                 if (!anytime) {
                     GroupedRowDivider()
-                    Row(Modifier.fillMaxWidth().clickable {
-                        android.app.TimePickerDialog(context, { _, h, m -> minuteOfDay = h * 60 + m },
-                            minuteOfDay / 60, minuteOfDay % 60, true).show()
-                    }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // iOS `DatePicker("Time", .hourAndMinute)`: compact capsule
+                    // + wheel popover, not Material's clock dialog.
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.routine_time), Modifier.weight(1f))
-                        Text(String.format(Locale.US, "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60),
-                            color = MaterialTheme.colorScheme.primary)
+                        com.roro.futurevoice.ui.brand.IosCompactTimePicker(minuteOfDay / 60, minuteOfDay % 60) { h, m ->
+                            minuteOfDay = h * 60 + m
+                        }
                     }
                 }
                 GroupedRowDivider()

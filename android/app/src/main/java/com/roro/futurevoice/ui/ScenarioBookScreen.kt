@@ -240,12 +240,12 @@ fun ScenarioBookScreen(
                         nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
                         targetLanguage = language,
                         extra = { close ->
-                            androidx.compose.material3.DropdownMenuItem(
+                            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                 text = { Text(stringResource(if (archived) R.string.unarchive else R.string.archive)) },
                                 leadingIcon = { Icon(if (archived) Icons.Filled.Unarchive else Icons.Filled.Archive,
                                     contentDescription = null) },
                                 onClick = { close(); setArchived(!archived) })
-                            androidx.compose.material3.DropdownMenuItem(
+                            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                 text = { Text(stringResource(R.string.delete),
                                     color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,

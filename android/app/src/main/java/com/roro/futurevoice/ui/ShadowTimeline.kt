@@ -25,8 +25,6 @@ import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOn
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -256,9 +254,9 @@ fun ShadowTimeline(
                         color = if (rate == 1f) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.clip(CircleShape).background(iosFill())
                             .clickable { speedMenu = true }.padding(horizontal = 12.dp, vertical = 9.dp))
-                    DropdownMenu(expanded = speedMenu, onDismissRequest = { speedMenu = false }) {
+                    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = speedMenu, onDismissRequest = { speedMenu = false }) {
                         TL.speeds.forEach { r ->
-                            DropdownMenuItem(text = { Text(speedLabel(r)) },
+                            com.roro.futurevoice.ui.brand.IosMenuItem(speedLabel(r), checked = rate == r,
                                 onClick = { rate = r; player.rate = r; speedMenu = false })
                         }
                     }

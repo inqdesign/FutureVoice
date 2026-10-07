@@ -16,8 +16,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -117,24 +115,24 @@ fun PersonPhotoButton(
     }
     Box {
         Box(Modifier.clip(CircleShape).clickable { open = true }) { content() }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                 text = { Text(stringResource(R.string.photo_library)) },
                 leadingIcon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = null) },
                 onClick = {
                     open = false
                     library.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 })
-            DropdownMenuItem(
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                 text = { Text(stringResource(R.string.take_a_photo)) },
                 leadingIcon = { Icon(Icons.Filled.CameraAlt, contentDescription = null) },
                 onClick = { open = false; runCatching { camera.launch(null) } })
-            DropdownMenuItem(
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                 text = { Text(stringResource(R.string.pick_a_file)) },
                 leadingIcon = { Icon(Icons.Filled.Folder, contentDescription = null) },
                 onClick = { open = false; files.launch(arrayOf("image/*")) })
             if (onRemove != null) {
-                DropdownMenuItem(
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                     text = { Text(stringResource(R.string.remove_photo), color = MaterialTheme.colorScheme.error) },
                     leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
                         tint = MaterialTheme.colorScheme.error) },

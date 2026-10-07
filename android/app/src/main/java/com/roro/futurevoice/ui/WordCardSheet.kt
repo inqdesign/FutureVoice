@@ -542,15 +542,15 @@ internal fun ExampleMenu(
         })
     }) {
         content()
-        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             if (sentenceReason != null) {
                 if (key in savedSentences) {
-                    androidx.compose.material3.DropdownMenuItem(
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                         text = { Text(stringResource(R.string.saved_to_sentences)) },
                         leadingIcon = { Icon(Icons.Filled.Check, null) },
                         enabled = false, onClick = {})
                 } else {
-                    androidx.compose.material3.DropdownMenuItem(
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                         text = { Text(stringResource(R.string.save_to_sentences)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Chat, null) },
                         onClick = {
@@ -565,12 +565,12 @@ internal fun ExampleMenu(
             }
             if (onShadow != null) {
                 if (savedExpression) {
-                    androidx.compose.material3.DropdownMenuItem(
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                         text = { Text(stringResource(R.string.saved_to_expressions)) },
                         leadingIcon = { Icon(Icons.Filled.Check, null) },
                         enabled = false, onClick = {})
                 } else {
-                    androidx.compose.material3.DropdownMenuItem(
+                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                         text = { Text(stringResource(R.string.save_to_expressions)) },
                         leadingIcon = { Icon(Icons.Filled.Bookmark, null) },
                         onClick = {
@@ -581,7 +581,7 @@ internal fun ExampleMenu(
                             }
                         })
                 }
-                androidx.compose.material3.DropdownMenuItem(
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                     text = { Text(stringResource(R.string.shadow_this)) },
                     leadingIcon = { Icon(Icons.Filled.GraphicEq, null) },
                     onClick = { open = false; onShadow(text) })

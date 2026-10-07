@@ -27,8 +27,6 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Newspaper
 import com.roro.futurevoice.talk.PathIdeasContent
@@ -1384,20 +1382,21 @@ internal fun HomeScreen(
                             HeaderButton(state.targetLanguage.uppercase(),
                                 icon = Icons.Filled.Language,
                                 onClick = { languageMenu = true })
-                            DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
+                            com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
                                 state.enrolledLanguages.forEach { code ->
-                                    DropdownMenuItem(
+                                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                         text = { Text(LanguageCatalog.endonym(code)) },
                                         leadingIcon = {
+                                            // iOS: `Label(name, systemImage: "checkmark")` — the
+                                            // tick in ink, on the trailing side of the row.
                                             if (code == state.targetLanguage) {
-                                                Icon(Icons.Filled.Check, contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary)
+                                                Icon(Icons.Filled.Check, contentDescription = null)
                                             }
                                         },
                                         onClick = { languageMenu = false; onSwitchLanguage(code) })
                                 }
-                                HorizontalDivider()
-                                DropdownMenuItem(
+                                com.roro.futurevoice.ui.brand.IosMenuDivider()
+                                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                                     text = { Text(stringResource(R.string.add_a_language)) },
                                     leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
                                     onClick = { languageMenu = false; onAddLanguage() })
@@ -2030,8 +2029,8 @@ private fun DiscoverSection(
                             },
                             onLongClick = { rowMenu = true }),
                     )
-                    DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
-                        DropdownMenuItem(
+                    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
+                        com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                             text = { Text(stringResource(R.string.delete),
                                 color = MaterialTheme.colorScheme.error) },
                             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,

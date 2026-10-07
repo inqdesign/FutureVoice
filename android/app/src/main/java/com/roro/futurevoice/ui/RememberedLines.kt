@@ -16,8 +16,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -192,24 +190,24 @@ private fun NoteRow(n: PersonaNote, onChange: (PersonaNote) -> Unit, onForget: (
                         else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp))
                 }
-                DropdownMenu(expanded = rungMenu, onDismissRequest = { rungMenu = false }) {
+                com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = rungMenu, onDismissRequest = { rungMenu = false }) {
                     RungItems(n) { onChange(n.copy(share = it)); rungMenu = false }
                 }
             }
         }
         // The long-press menu: the rungs, "That's over now" for a line that
         // fades, and forgetting it outright.
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             RungItems(n) { onChange(n.copy(share = it)); menu = false }
-            HorizontalDivider()
+            com.roro.futurevoice.ui.brand.IosMenuDivider()
             if (n.kind == PersonaNote.Kind.NOW) {
-                DropdownMenuItem(
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                     text = { Text(stringResource(R.string.that_s_over_now)) },
                     leadingIcon = { Icon(Icons.Filled.Check, null) },
                     onClick = { menu = false; onForget() },
                 )
             }
-            DropdownMenuItem(
+            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
                 text = { Text(stringResource(R.string.forget_this), color = MaterialTheme.colorScheme.error) },
                 leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
                 onClick = { menu = false; onForget() },
@@ -226,12 +224,8 @@ private fun NoteRow(n: PersonaNote, onChange: (PersonaNote) -> Unit, onForget: (
 private fun RungItems(n: PersonaNote, onPick: (PersonaNote.Share) -> Unit) {
     val hasGist = !n.gist.isNullOrBlank()
     @Composable
-    fun item(share: PersonaNote.Share, title: String) = DropdownMenuItem(
-        text = { Text(title) },
-        leadingIcon = { Icon(shareIcon(share), null) },
-        trailingIcon = if (n.share == share) ({ Icon(Icons.Filled.Check, null) }) else null,
-        onClick = { onPick(share) },
-    )
+    fun item(share: PersonaNote.Share, title: String) = com.roro.futurevoice.ui.brand.IosMenuItem(
+        title, onClick = { onPick(share) }, checked = n.share == share, icon = shareIcon(share))
     item(PersonaNote.Share.NOTHING, stringResource(R.string.nothing_448194))
     if (hasGist || n.share == PersonaNote.Share.GIST) {
         item(PersonaNote.Share.GIST, stringResource(R.string.just_the_gist))
