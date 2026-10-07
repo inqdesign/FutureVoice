@@ -24,8 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -152,27 +150,42 @@ internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit, modifier:
 
 /** Each Material glyph's box, sized so its INK is as tall as the SF Symbol's
  *  on iOS (waveform 24 · music.mic 23.3 · play.circle 23 · book 20.7 ·
- *  chart.bar 21.3 pt); Material's ink fills 84% of the box for the waveform
- *  and the play circle, ~70% for the book. The mic and the chart are drawn
- *  here at their iOS size (24 and 32 box). */
+ *  chart.bar 21.3 pt); Material's play circle fills 84% of its box. The
+ *  waveform, mic, book and chart are drawn here at their iOS size. */
 private val HomeTab.symbolSize: androidx.compose.ui.unit.Dp
     get() = when (this) {
-        HomeTab.TALK -> 28.5.dp
+        HomeTab.TALK -> 32.dp
         HomeTab.SPEECH -> 24.dp
         HomeTab.WATCH -> 27.3.dp
-        HomeTab.PRACTICE -> 29.6.dp
+        HomeTab.PRACTICE -> 32.dp
         HomeTab.PROGRESS -> 32.dp
     }
 
 private val HomeTab.symbol: ImageVector
     get() = when (this) {
-        HomeTab.TALK -> Icons.Filled.GraphicEq
+        HomeTab.TALK -> TabWaveform
         // SF `music.mic`: a hand-held stage mic.
         HomeTab.SPEECH -> MusicMic
         HomeTab.WATCH -> Icons.Filled.PlayCircle
-        HomeTab.PRACTICE -> Icons.Filled.MenuBook
+        HomeTab.PRACTICE -> BookFill
         HomeTab.PROGRESS -> ChartBarFill
     }
+
+/** SF `book.fill` — two solid pages split by a thin spine, each with a
+ *  domed top and a bottom edge that bows up in the middle (traced off the
+ *  iOS bar). Material's MenuBook draws text lines on the pages, which iOS
+ *  doesn't. */
+private val BookFill: ImageVector by lazy {
+    ImageVector.Builder(name = "book.fill", defaultWidth = 24.dp, defaultHeight = 24.dp,
+        viewportWidth = 24f, viewportHeight = 24f)
+        .addPath(pathData = addPathNodes(
+            "M2,7C2,5.3 4.1,4.3 6.7,4.3C9.3,4.3 11.4,5.3 11.4,7V19.6" +
+                "C10.2,18.3 8.6,17.6 6.7,17.6C4.8,17.6 3.2,18.3 2,19.6Z" +
+                "M22,7C22,5.3 19.9,4.3 17.3,4.3C14.7,4.3 12.6,5.3 12.6,7V19.6" +
+                "C13.8,18.3 15.4,17.6 17.3,17.6C19.2,17.6 20.8,18.3 22,19.6Z"),
+            fill = SolidColor(Color.Black))
+        .build()
+}
 
 /** SF `chart.bar.fill` — three thick rounded bars, measured off the iOS
  *  bar: 29 × 21.3pt of ink, bars 8 · 8.3 · 8.3 wide with 2.3 / 2 gaps and
@@ -187,6 +200,25 @@ private val ChartBarFill: ImageVector by lazy {
         .addPath(pathData = addPathNodes(
             bar(1.5f, 11.95f, 9.5f, 26.65f) + bar(11.8f, 8.65f, 20.1f, 26.65f) +
                 bar(22.1f, 5.35f, 30.5f, 26.65f)), fill = SolidColor(Color.Black))
+        .build()
+}
+
+/** SF `waveform` — six thin rounded bars, measured off the iOS bar:
+ *  1.7–2pt wide on a ~3.8pt pitch, 6 · 15 · 24 · 12 · 18.7 · 8pt tall about
+ *  one centre line, 21 × 24pt of ink, centred in a 32 box. Material's
+ *  GraphicEq has five fat bars and read as a different glyph. */
+private val TabWaveform: ImageVector by lazy {
+    val bars = listOf(5.5f to 6f, 9.17f to 15f, 13.17f to 24f, 16.83f to 12f, 20.83f to 18.7f, 24.5f to 8f)
+    val w = 1.85f
+    val r = w / 2
+    val d = bars.joinToString("") { (x, h) ->
+        val t = 16f - h / 2
+        val b = 16f + h / 2
+        "M$x,${t + r}A$r,$r 0 0 1 ${x + w},${t + r}V${b - r}A$r,$r 0 0 1 $x,${b - r}Z"
+    }
+    ImageVector.Builder(name = "waveform", defaultWidth = 32.dp, defaultHeight = 32.dp,
+        viewportWidth = 32f, viewportHeight = 32f)
+        .addPath(pathData = addPathNodes(d), fill = SolidColor(Color.Black))
         .build()
 }
 
