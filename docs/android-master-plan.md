@@ -798,6 +798,29 @@ iOS: 매일 전화 단계 뒤 `BillingGate.blocks()` — 못 물어봄(세션 �
 
 **남은 것**: 실제 Play 구매·팩 구매·환불은 상품이 생긴 뒤(7.1).
 
+## 2l단계 · 하단 인셋·짧은 화면 전수조사 (2026-10-07)
+
+신고 두 건: 온보딩 "매일 전화해 주세요"가 얇은 막대로 눌림(스크롤 없는 전체 화면 Column + Material 다이얼 ~400dp + weight 스페이서), "나이만 확인할게요" 시트가 내비 바 뒤에 숨음(반만 열린 시트). 그래서 모든 화면·시트를 **최악 조건(720×1280 · 320dpi · 3버튼 내비 · 글꼴 1.3)**에서 캡처로 찍어 봤다 — iOS 모드 156개 + 새 모드 18개(daily-call-onboarding, weekly-rhythm-onboarding, age-check, clone-<단계> 9개, sheet-interests/level-info/level-up/mic-choice/referral-join/study-goals). 고친 뒤 핵심 18개를 같은 조건 + **제스처 내비**로, 8개를 **기본 화면(1080×2424 · 420dpi · 1.0)**으로 다시 찍었다. 설정은 전부 원복(wm size/density reset, font 1.0, gestural만 켬).
+
+공용 도구 (`ui/BottomInsets.kt`): `BottomActionLayout`(내용 가운데·스크롤, 버튼은 내비 바·키보드 위 고정), `Modifier.sheetBody()`(시트 본문 = 스크롤 + safeDrawing 하단), `fieldScaffoldInsets`(Scaffold 인셋 = 시스템 바 ∪ IME). `brand/IosButtons.kt`의 `FitButtonLabel`(iOS `.minimumScaleFactor`처럼 11sp까지 줄이고 자르지 않음). `brand/IosWheelTimePicker.kt`(iOS `.wheel` 150pt).
+
+| 화면·시트 | 문제 | 고침 | 확인 |
+|---|---|---|---|
+| 매일 전화 온보딩 `DailyCallOnboardingScreen` | CTA가 최소 높이 아래로 눌림, 다이얼이 화면 절반 | `BottomActionLayout` + iOS 휠(150dp) | 최악·제스처·기본 ☑ |
+| 주간 리듬 온보딩 | Material 다이얼 | iOS 휠 | 최악·제스처·기본 ☑ |
+| 나이 확인 `AgeCheckSheet` | 반만 열려 계속 버튼이 화면 밖 | `skipPartiallyExpanded` + `sheetBody` | 최악·제스처·기본 ☑ |
+| 스크롤 없던 시트 13개 (요금 소진·첫 무료·문법 초점·관심사·레벨 안내·레벨 업·마이크 선택·초대 도착·덱 판정·문법 복습·통화 단어·목소리 비교·루틴 시험/쉬는 날) | 창 높이에서 본문이 잘림 | `sheetBody` | 최악 ☑ (목소리 비교는 열면 합성 호출이라 미촬영, 코드만) |
+| 한 주 돌아보기 덱 | "다음"이 내비 바 밑, 닫기 ✕가 밀려남 | 하단 버튼 `bottomBarInsets`, 날짜가 양보 | 최악·제스처·기본 ☑ |
+| 책 표지(대화/상황연습·계속/다시 듣기), 대화 기록 하단 바, 단어·표현 카드(공부/알아요), 첫 통화 점검 3단, 녹음 확인(다시 녹음/이 목소리로 하기), 속도·억양 알약 | 1.3 글꼴에서 "…"로 잘림 | `FitButtonLabel` (+알약 패딩) | 최악·제스처 ☑ |
+| 오늘의 카드 `DayCard` | 숫자 줄이 붙음("25 min7 days") | 고정 크기 그림이라 글꼴 배율 1 고정(iOS와 같음) | 최악 ☑ |
+| 사용 내역 행 | "통화 시 / 간" | 값이 줄바꿈, 제목이 제 몫 | 최악 ☑ |
+| 레벨 안내 표 | "A1 ·/A2" | 한 줄 고정 | 최악·제스처 ☑ |
+| 설정 하위 페이지 전부 `MeSubpage`, 초대, 공개 소개, 단어장 검색 | 키보드가 칸을 덮음(edge-to-edge라 adjustResize 무효) | `fieldScaffoldInsets` | 코드 ☑ — 에뮬은 하드웨어 키보드라 Gboard가 떠 있는 창(인셋 없음)으로만 떠서 실측 불가 |
+| 웰컴 초대 코드 칸 | 화면 맨 아래 칸, 키보드에 가려질 자리 | safeDrawing 패딩 + 넘칠 때만 스크롤 | 레이아웃 불변 최악·제스처·기본 ☑, 키보드는 위와 같은 이유로 실측 불가 |
+| 그 외 (통화·세 탭·책·덱·섀도잉·스피치·요금제·클론 9단계·주간 테스트·루틴·요금 소진 등 ~150) | 없음 — 바닥 버튼은 내비 바 위, 넘치는 건 스크롤 | — | 최악 ☑ |
+
+남은 것(인셋 아님, 이번 범위 밖): `level-header` 캡처(통화 IDLE 단계)의 하단 검은 띠, 문법 진척 차트 선이 칸 밖으로 그려짐(`progress-beginner-grammar`), 계정 저장 단계 머리말 "뒤로"와 제목이 붙음(1.3).
+
 ## 3단계 · 첫 기준선 측정
 
 - ☐ **3.1** 갤러리를 네 가지로 돌린다: 한국어·영어 × 라이트·다크. (한국어·라이트는
