@@ -776,6 +776,11 @@ fun TalkScreen(
                     Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                         .onSizeChanged { floatingBarHeight = it.height }
                         .drawBehind {
+                            // Nothing in the bar (before the call connects):
+                            // no wash either. A gradient brush on an EMPTY draw
+                            // size makes no shader, and the paint falls back to
+                            // solid black — a 64 dp black band over the page.
+                            if (size.height <= 0f) return@drawBehind
                             // Longer than iOS's pre-26 fallback (36 pt): iOS 26's
                             // soft edge dissolves over about a bubble's height,
                             // and 36 read as a cut on a phone this size.
