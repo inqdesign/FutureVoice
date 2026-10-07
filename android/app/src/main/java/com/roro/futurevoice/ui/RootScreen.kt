@@ -1775,9 +1775,18 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             delay(250)
         }
     }
+    // An unfolded foldable or a tablet (≥ 600 dp across) is the one
+    // exception: the ring is a fixed 280 dp, so centring it on a screen that
+    // wide left it floating in empty space with the list pushed to the
+    // bottom edge (founder, 2026-10-08, on a Z Fold). There the hero takes
+    // only its own floor and the list below rises into view.
+    val wideWindow = with(density) {
+        androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp()
+    } >= 600.dp
     val heroHeight = with(density) {
         val offset = (RING_DIAMETER / 2 + RING_TAIL).toPx()
-        maxOf(380.dp.toPx(), screenHeightPx / 2f + offset - heroTopPx).toDp()
+        if (wideWindow) 380.dp
+        else maxOf(380.dp.toPx(), screenHeightPx / 2f + offset - heroTopPx).toDp()
     }
 
     Column(
