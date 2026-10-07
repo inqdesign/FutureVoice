@@ -109,7 +109,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MeScreen(
-    email: String?,
+    @Suppress("UNUSED_PARAMETER") email: String?,
     persona: UserPersona?,
     targetLanguage: String,
     nativeLanguage: String,
@@ -421,7 +421,8 @@ fun MeScreen(
                     )
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.Language, stringResource(R.string.app_language),
-                        AppLanguageNames.of(nativeLanguage),
+                        // iOS: `LanguageCatalog.endonym(nativeLanguage)`.
+                        LanguageCatalog.endonym(nativeLanguage.ifBlank { "en" }),
                         onClick = { page = MePage.APP_LANGUAGE })
                 }
                 GroupedFooter(stringResource(
@@ -524,13 +525,8 @@ fun MeScreen(
                         }) else null,
                         onClick = { confirmingDelete = true })
                 }
-                // Which account this is — iOS has no row for it; on Android the
-                // email was on this card, so it rides in the footer instead.
-                GroupedFooter(listOfNotNull(
-                    stringResource(
-                        R.string.deleting_your_account_permanently_removes_your_voice_clone_t_43bafb),
-                    email?.takeIf { it.isNotBlank() },
-                ).joinToString("\n\n"))
+                GroupedFooter(stringResource(
+                    R.string.deleting_your_account_permanently_removes_your_voice_clone_t_43bafb))
 
                 // Never in a capture build — a dev button is gallery noise.
                 if (com.roro.futurevoice.BuildConfig.DEBUG &&
@@ -910,22 +906,4 @@ private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
     core?.member == null -> stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter)
     core.seated -> stringResource(R.string.in_the_core_lld_days, core.member?.days_total ?: 0)
     else -> stringResource(R.string.no_seat_right_now)
-}
-
-/**
- * The app's language, named in itself. Foundation drops the SCRIPT from a
- * display name, so both Chinese scripts come back as plain 中文 — the one
- * that ships is Traditional, and it says so.
- */
-object AppLanguageNames {
-    fun of(code: String?): String = when (com.roro.futurevoice.core.UILanguage.normalize(code)) {
-        "ko" -> "한국어"
-        "ja" -> "日本語"
-        "zh-Hant" -> "繁體中文"
-        "zh-Hans" -> "简体中文"
-        "es" -> "Español"
-        "fr" -> "Français"
-        "de" -> "Deutsch"
-        else -> "English"
-    }
 }

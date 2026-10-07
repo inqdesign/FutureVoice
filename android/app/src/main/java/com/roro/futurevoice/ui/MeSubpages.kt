@@ -356,12 +356,18 @@ fun VoicePage(
                     confirmingRebuild = false
                     rebuilding = true
                     scope.launch {
-                        val fresh = rebuiltFromSample(context)
+                        // iOS shows the failure's own words
+                        // (`error.localizedDescription`), never a generic line.
+                        runCatching {
+                            com.roro.futurevoice.net.VoiceCloneClient(com.roro.futurevoice.data.AuthRepository())
+                                .cloneVoice(
+                                    name = com.roro.futurevoice.data.VoiceName.display(context, personaName),
+                                    sample = VoiceComparison.sampleFile(context.filesDir),
+                                    removeBackgroundNoise = false,
+                                )
+                        }.onSuccess { onRebuilt(it) }
+                            .onFailure { rebuildError = it.localizedMessage ?: it.toString() }
                         rebuilding = false
-                        // This used to be silent on iOS too — a spinner that
-                        // stopped with nothing changed. Say it.
-                        if (fresh == null) rebuildError = context.getString(R.string.something_went_wrong)
-                        else onRebuilt(fresh)
                     }
                 }) {
                     Text(stringResource(R.string.rebuild), color = MaterialTheme.colorScheme.error)
