@@ -164,8 +164,10 @@ object LanguageCatalog {
         "en" to ("Chinese, Traditional" to "Chinese, Simplified"),
         "ko" to ("중국어(번체)" to "중국어(간체)"),
         "ja" to ("中国語（繁体字）" to "中国語（簡体字）"),
-        "zh-Hant" to ("中文（繁體）" to "中文（簡體）"),
-        "zh-Hans" to ("中文（繁体）" to "中文（简体）"),
+        // Read off the iOS 26 simulator's App language page: in Chinese,
+        // `localizedString(forIdentifier:)` names the script first.
+        "zh-Hant" to ("繁體中文" to "簡體中文"),
+        "zh-Hans" to ("繁体中文" to "简体中文"),
         "es" to ("Chino tradicional" to "Chino simplificado"),
         "fr" to ("Chinois traditionnel" to "Chinois simplifié"),
         "de" to ("Chinesisch (traditionell)" to "Chinesisch (vereinfacht)"),

@@ -37,6 +37,14 @@ class CoreClubClient(private val auth: AuthRepository) {
         val queue_ahead: Int? = null,
         val waiting_for_seat: Boolean = false,
         val member: Member? = null,
+        /** Missed days inside the keep window, and how many are forgiven —
+         *  only meaningful once seated. */
+        val missed_recent: Int = 0,
+        val keep_grace: Int = 1,
+        /** Days until a seatless member is back over the keep bar. */
+        val days_to_return: Int? = null,
+        /** A long absence means the full streak has to be run again. */
+        val requalifying: Boolean = false,
     ) {
         @Serializable
         data class Member(val seated: Boolean = false, val days_total: Int = 0)
@@ -44,6 +52,20 @@ class CoreClubClient(private val auth: AuthRepository) {
         /** The badge IS the seat: worn only by a member seated right now. */
         val seated: Boolean get() = member?.seated == true
     }
+
+    /**
+     * The hundred seats as colours: `themes[i]` is the palette worn by the
+     * member in seat `i`, oldest first; everything past `taken` is empty.
+     * No id, name or number — the room is drawable, its roster is not.
+     */
+    @Serializable
+    data class SeatMap(
+        val seats: Int = 100,
+        val taken: Int = 0,
+        val themes: List<Int> = emptyList(),
+        /** Index of the caller's own seat, if they hold one. */
+        val mine: Int? = null,
+    )
 
     @Serializable
     data class Badge(val user_id: String = "", val seated: Boolean = false)
@@ -66,6 +88,21 @@ class CoreClubClient(private val auth: AuthRepository) {
         Edge.json.decodeFromString(Progress.serializer(),
             rpc("core_my_progress", buildJsonObject { put("p_language", language) }))
     }.getOrNull()
+
+    suspend fun seatMap(language: String): SeatMap? = runCatching {
+        Edge.json.decodeFromString(SeatMap.serializer(),
+            rpc("core_seat_map", buildJsonObject { put("p_language", language) }))
+    }.getOrNull()
+
+    /**
+     * Publish the palette this device wears, so the member's seat is drawn
+     * in their own colour on everyone else's grid. Fired without checking
+     * membership: a non-member's call updates nothing (iOS does it on every
+     * foreground).
+     */
+    suspend fun publishTheme(theme: Int) {
+        runCatching { rpc("core_set_theme", buildJsonObject { put("p_theme", theme) }) }
+    }
 
     /**
      * Seated members only, keyed by LOWERCASE user id — a lapsed member has

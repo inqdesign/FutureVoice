@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.util.UUID
 
@@ -64,6 +65,23 @@ class VoiceCloneClient(private val auth: AuthRepository) {
                 throw EdgeError.Http(resp.code, text.take(512))
             }
             Edge.json.decodeFromString(CloneResponse.serializer(), text).voice_id
+        }
+    }
+
+    /** `elevenlabs-voice-rename` (iOS `ElevenLabsClient.renameVoice`). */
+    suspend fun renameVoice(voiceId: String, name: String) = withContext(Dispatchers.IO) {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("voice_id", kotlinx.serialization.json.JsonPrimitive(voiceId))
+            put("name", kotlinx.serialization.json.JsonPrimitive(name))
+        }.toString()
+        val request = Request.Builder()
+            .url(Config.functionUrl("elevenlabs-voice-rename"))
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("X-Idempotency-Key", UUID.randomUUID().toString())
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
+        Edge.client.newCall(request).execute().use { resp ->
+            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))
         }
     }
 }

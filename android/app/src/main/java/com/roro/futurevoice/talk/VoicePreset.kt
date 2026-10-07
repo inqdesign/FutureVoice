@@ -73,6 +73,13 @@ object VoicePreset {
     fun name(voiceId: String, englishName: String, language: String): String =
         localNames[key(language)]?.get(voiceId) ?: englishName
 
+    /** Me → Voice → "Scene partner voice": who plays a Watch scene with no
+     *  saved person (iOS `VoicePreset.sceneDefault`, same defaults key).
+     *  Null until the learner picks — then the first person, as before. */
+    const val SCENE_DEFAULT_KEY = "futurevoice.defaultSceneVoice"
+    fun sceneDefaultId(): String? =
+        appContext?.getSharedPreferences("futurevoice", 0)?.getString(SCENE_DEFAULT_KEY, null)
+
     fun activeLanguage(): String =
         appContext?.let { com.roro.futurevoice.data.LanguageScope.active(it) } ?: "en"
 

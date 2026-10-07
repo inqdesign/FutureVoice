@@ -841,7 +841,11 @@ data class StockPerson(val voiceId: String, val name: String, val identity: Stri
             StockPerson("L0Dsvb3SLTyegXwtm47J", "James",
                 "James — British, forties; calm and courteous, unhurried, gently witty"),
         )
-        fun by(voiceId: String?): StockPerson =
-            catalog.firstOrNull { it.voiceId == voiceId } ?: catalog[0]
+        /** A scenario's stored voice; nil = the Me-tab scene default
+         *  (iOS `StockPerson.by(voiceId:)`). */
+        fun by(voiceId: String?): StockPerson {
+            val id = voiceId ?: VoicePreset.sceneDefaultId()
+            return catalog.firstOrNull { it.voiceId == id } ?: catalog[0]
+        }
     }
 }
