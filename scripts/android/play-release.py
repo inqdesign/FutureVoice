@@ -86,6 +86,27 @@ def build() -> None:
         sys.exit("The bundle is not signed — check RELEASE_* in android/local.properties.")
 
 
+def android_gate(track: str, send: bool) -> None:
+    """The same ledger the iOS release reads (2026-10-07), run in the main iOS
+    worktree so HEAD is the iOS tip: every iOS commit Android still owes is
+    listed. A production release refuses while any is open; a testing track
+    only prints them. ANDROID_GATE=skip passes it and says so."""
+    first = subprocess.run(["git", "-C", pl.ROOT, "worktree", "list", "--porcelain"],
+                           text=True, capture_output=True).stdout.splitlines()
+    ios = next((l.split(" ", 1)[1] for l in first if l.startswith("worktree ")), "")
+    ledger = os.path.join(ios, "scripts/android-sync/ledger.py")
+    if not os.path.exists(ledger):
+        print("! Android ledger not found in the iOS worktree — not checked.")
+        return
+    strict = track == "production"
+    r = subprocess.run([sys.executable, ledger] + (["--gate", "store"] if strict else []),
+                       text=True, capture_output=True)
+    out = r.stdout.split("## 옮김")[0].strip()
+    print(out + ("\n" + r.stderr.strip() if r.stderr.strip() else ""))
+    if strict and r.returncode and send:
+        sys.exit("Android owes iOS work — a production release waits for it.")
+
+
 def main() -> None:
     args = sys.argv[1:]
     send = "--send" in args
@@ -94,6 +115,7 @@ def main() -> None:
         print(f"versionCode → {bump()}")
     code, name = version()
     rel_notes = notes(code)
+    android_gate(track, send)
 
     if "--no-build" not in args:
         print(f"Building {name} ({code})…")
