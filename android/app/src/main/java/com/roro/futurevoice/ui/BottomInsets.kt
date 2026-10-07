@@ -2,7 +2,9 @@ package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Arrangement
@@ -91,3 +93,15 @@ fun BottomActionLayout(
 @Composable
 fun Modifier.sheetBody(): Modifier =
     this.fillMaxWidth().verticalScroll(rememberScrollState()).bottomBarInsets()
+
+/**
+ * `Scaffold(contentWindowInsets = …)` for a page with a text field. The
+ * default is the system bars only — the app draws edge to edge, so
+ * `adjustResize` does nothing and the keyboard was drawn OVER the page: a
+ * field near the bottom (an invite code, a profile line) sat under it with
+ * no way to scroll it up. With the keyboard in the insets the content's
+ * viewport shrinks and the focused field is brought into view.
+ */
+val fieldScaffoldInsets: WindowInsets
+    @Composable get() = androidx.compose.material3.ScaffoldDefaults.contentWindowInsets
+        .union(WindowInsets.ime)

@@ -92,6 +92,7 @@ fun InviteScreen(onBack: () -> Unit) {
     val bonus = ReferralClient.bonusMinutes
 
     Scaffold(
+        contentWindowInsets = fieldScaffoldInsets,
         topBar = {
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),

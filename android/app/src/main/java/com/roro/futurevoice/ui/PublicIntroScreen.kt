@@ -134,6 +134,7 @@ fun PublicIntroScreen(
     }
 
     Scaffold(
+        contentWindowInsets = fieldScaffoldInsets,
         topBar = {
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),

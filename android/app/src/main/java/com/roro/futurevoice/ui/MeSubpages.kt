@@ -85,6 +85,7 @@ enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, GUIDE }
 @Composable
 fun MeSubpage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Scaffold(
+        contentWindowInsets = fieldScaffoldInsets,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),

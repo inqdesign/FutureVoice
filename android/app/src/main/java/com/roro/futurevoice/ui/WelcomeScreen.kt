@@ -28,6 +28,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -182,8 +186,14 @@ fun WelcomeScreen(
     val shiftPx = with(LocalDensity.current) { 14.dp.roundToPx() }
     Box(Modifier.fillMaxSize()) {
         StoryBackdrop(Modifier.fillMaxSize(), still = still)
+        // The keyboard is in the padding (an invite code is typed at the very
+        // foot of this screen) and the column scrolls only when it no longer
+        // fits — the weighted spacers still fill the screen otherwise.
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) {
+        val minH = maxHeight
         Column(
-            Modifier.fillMaxSize().systemBarsPadding()
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = minH)
                 .clickable(remember { MutableInteractionSource() }, indication = null) {
                     // Tap anywhere to move on — the film is never a wall.
                     if (!isClosing) { autoplay = true; step(); tick++ }
@@ -299,6 +309,7 @@ fun WelcomeScreen(
                 )
             }
             }
+        }
         }
     }
 }

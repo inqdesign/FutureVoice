@@ -266,6 +266,7 @@ fun LibraryScreen(kind: LibraryKind, language: String,
     val filtering = (lens == Lens.TO_STUDY && source != SourceFilter.ALL) || level != null
 
     Scaffold(
+        contentWindowInsets = fieldScaffoldInsets,
         topBar = {
             // Pushed from Practice on iOS: the system back chevron leading,
             // the page's name centred (`.navigationBarTitleDisplayMode(.inline)`).
