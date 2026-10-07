@@ -7,6 +7,7 @@
     scripts/android/play-release.py --send              # upload to internal
     scripts/android/play-release.py --send --track alpha   # closed testing
     scripts/android/play-release.py --no-build --send   # upload the AAB already built
+    scripts/android/play-release.py --match-ios         # versionName = the iOS marketing version
 
 Release notes ride on the release, one per language, from
 android/fastlane/metadata/android/<folder>/changelogs/<versionCode>.txt —
@@ -86,6 +87,19 @@ def build() -> None:
         sys.exit("The bundle is not signed — check RELEASE_* in android/local.properties.")
 
 
+def ios_version(ios: str) -> str:
+    """The iOS marketing version in the main worktree — the version whose
+    features Android carries once the ledger is clear."""
+    r = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleShortVersionString",
+                        os.path.join(ios, "FutureVoice/Resources/Info.plist")], text=True, capture_output=True)
+    return r.stdout.strip()
+
+
+def set_version_name(name: str) -> None:
+    src = open(GRADLE_FILE).read()
+    open(GRADLE_FILE, "w").write(re.sub(r'versionName\s*=\s*"[^"]+"', f'versionName = "{name}"', src, count=1))
+
+
 def android_gate(track: str, send: bool) -> None:
     """The same ledger the iOS release reads (2026-10-07), run in the main iOS
     worktree so HEAD is the iOS tip: every iOS commit Android still owes is
@@ -106,6 +120,21 @@ def android_gate(track: str, send: bool) -> None:
     if strict and r.returncode and send:
         sys.exit("Android owes iOS work — a production release waits for it.")
 
+    # One version number for one feature set (2026-10-07): Android's
+    # versionName is the iOS marketing version it matches, so "1.1.4" means
+    # the same app on both stores and in analytics' app_version. versionCode
+    # stays Play's own counter. --match-ios writes it.
+    want = ios_version(ios)
+    _, have = version()
+    if "--match-ios" in sys.argv and want and want != have:
+        set_version_name(want)
+        print(f"versionName {have} → {want} (iOS)")
+        have = want
+    if want and have != want:
+        print(f"! versionName {have} ≠ iOS {want} — run with --match-ios once the ledger is clear.")
+        if strict and send:
+            sys.exit("A production release carries the iOS version it matches.")
+
 
 def main() -> None:
     args = sys.argv[1:]
@@ -116,6 +145,7 @@ def main() -> None:
     code, name = version()
     rel_notes = notes(code)
     android_gate(track, send)
+    code, name = version()
 
     if "--no-build" not in args:
         print(f"Building {name} ({code})…")
