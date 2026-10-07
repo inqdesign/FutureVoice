@@ -43,6 +43,17 @@ class MainActivity : ComponentActivity() {
             return
         }
         setContent {
+            // Me → Appearance (System / Light / Dark). The bars are re-tinted
+            // so a forced mode doesn't leave light icons on a light page.
+            com.roro.futurevoice.ui.AppearanceHost(onDark = { dark ->
+                val clear = android.graphics.Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = if (dark) androidx.activity.SystemBarStyle.dark(clear)
+                        else androidx.activity.SystemBarStyle.light(clear, clear),
+                    navigationBarStyle = if (dark) androidx.activity.SystemBarStyle.dark(clear)
+                        else androidx.activity.SystemBarStyle.light(clear, clear),
+                )
+            }) {
             FutureVoiceTheme {
                 Surface(Modifier.fillMaxSize()) { RootScreen() }
                 // Asks the server once per launch whether this build is
@@ -50,6 +61,7 @@ class MainActivity : ComponentActivity() {
                 // rather than inside it: the notice belongs to the app, not
                 // to whichever tab happens to be open.
                 com.roro.futurevoice.ui.UpdateGate()
+            }
             }
         }
     }
