@@ -49,7 +49,12 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
     var working by remember { mutableStateOf(false) }
     val ageAt = remember { ConsentStore.ageConfirmedAt(context) }
     var voiceAt by remember { mutableStateOf(ConsentStore.voiceConsentAt(context)) }
-    val df = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
+    // iOS `.formatted(date: .abbreviated, time: .omitted)`: "Oct 1, 2026",
+    // "2026년 10월 1일" — not Java's MEDIUM ("2026. 10. 1.").
+    val loc = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val df = remember(loc) {
+        java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "yMMMd"), loc)
+    }
 
     MeSubpage(stringResource(R.string.privacy), onBack) {
         GroupedSectionHeader(stringResource(R.string.consent))
@@ -57,7 +62,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
             GroupedCard {
                 voiceAt?.let {
                     MeRow(Icons.Outlined.GraphicEq, stringResource(R.string.voice_model_consent),
-                        stringResource(R.string.given_lld, df.format(Date(it))),
+                        stringResource(R.string.given, df.format(Date(it))),
                         kind = MeRowKind.PLAIN)
                 }
                 if (voiceAt != null && ageAt != null) GroupedRowDivider()
@@ -68,7 +73,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                 }
             }
         }
-        GroupedFooter(stringResource(R.string.your_voice_model_is_biometric_data))
+        GroupedFooter(stringResource(R.string.your_voice_model_is_biometric_data_it_s_used_only_to_speak_y_b3256f))
 
         if (voiceAt != null || voiceId != null) {
             GroupedSectionSpacer()
@@ -81,7 +86,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                     }) else null,
                     onClick = { confirming = true })
             }
-            GroupedFooter(stringResource(R.string.this_deletes_your_voice_model_here_and_at_elevenlabs))
+            GroupedFooter(stringResource(R.string.this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b))
         }
 
         GroupedSectionSpacer()
@@ -94,7 +99,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                 ConsentStore.CONTACT_EMAIL, kind = MeRowKind.ACTION,
                 onClick = { uri.openUri("mailto:${ConsentStore.CONTACT_EMAIL}") })
         }
-        GroupedFooter(stringResource(R.string.write_to_us_to_see_or_correct_what_we_hold))
+        GroupedFooter(stringResource(R.string.write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2))
     }
 
     // The confirmation states the two things that make this irreversible —
@@ -103,7 +108,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
         AlertDialog(
             onDismissRequest = { confirming = false },
             title = { Text(stringResource(R.string.delete_your_voice)) },
-            text = { Text(stringResource(R.string.your_voice_model_is_deleted_here_and_at_elevenlabs)) },
+            text = { Text(stringResource(R.string.your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false

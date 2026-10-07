@@ -433,7 +433,8 @@ fun CloneFlowScreen(
                 val snr = SampleQuality.analyze(normalized)?.estimatedSnrDb
                 val auth = AuthRepository()
                 val voiceId = VoiceCloneClient(auth).cloneVoice(
-                    name = "Future Self",
+                    // iOS sends `voiceDisplayName` — the library entry says whose it is.
+            name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                     sample = normalized,
                     removeBackgroundNoise = (snr ?: 0f) < 22f,
                 )
@@ -947,7 +948,8 @@ fun CloneFlowScreen(
                                         scope.launch {
                                             runCatching {
                                                 VoiceCloneClient(AuthRepository()).cloneVoice(
-                                                    name = "Future Self",
+                                                    // iOS sends `voiceDisplayName` — the library entry says whose it is.
+            name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                                                     sample = sampleFile,
                                                     removeBackgroundNoise = false,
                                                 )

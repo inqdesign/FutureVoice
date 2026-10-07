@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.UnfoldMore
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.roro.futurevoice.ui.brand.IosPickerMenu
 
 /**
  * iOS `MeTab.row(icon:title:subtitle:value:)`, and the four ways a row in a
@@ -38,13 +37,17 @@ import androidx.compose.ui.unit.dp
  *   chevron — it opens a page.
  * - A Button ([MeRowKind.ACTION]) is tinted WHOLE: the title in the accent,
  *   the subtitle in the accent at secondary strength, no chevron — it acts.
- * - A destructive Button ([MeRowKind.DESTRUCTIVE]) is the same in red.
+ * - A destructive Button ([MeRowKind.DESTRUCTIVE]) is the same in red —
+ *   but its icon keeps the accent, because iOS's `row(…)` tints the glyph
+ *   explicitly (Re-record voice, Withdraw consent).
+ * - A destructive `Label` ([MeRowKind.DESTRUCTIVE_LABEL]: Sign out, Delete
+ *   account) is red throughout, with Label's larger glyph and wider slot.
  * - A plain row ([MeRowKind.PLAIN]) states a fact and goes nowhere.
  *
  * The icon column is iOS's: a subheadline-sized glyph in a 22-wide slot, so
  * titles line up down the card whatever the glyph's own width.
  */
-enum class MeRowKind { NAV, ACTION, DESTRUCTIVE, PLAIN }
+enum class MeRowKind { NAV, ACTION, DESTRUCTIVE, PLAIN, DESTRUCTIVE_LABEL }
 
 @Composable
 fun MeRow(
@@ -65,26 +68,28 @@ fun MeRow(
     val ink = MaterialTheme.colorScheme.onSurface
     val tint: Color = when (kind) {
         MeRowKind.ACTION -> accent
-        MeRowKind.DESTRUCTIVE -> MaterialTheme.colorScheme.error
+        MeRowKind.DESTRUCTIVE, MeRowKind.DESTRUCTIVE_LABEL -> MaterialTheme.colorScheme.error
         else -> ink
     }
+    val label = kind == MeRowKind.DESTRUCTIVE_LABEL
     val alpha = if (enabled) 1f else 0.4f
     val subColor = when (kind) {
-        MeRowKind.ACTION, MeRowKind.DESTRUCTIVE -> tint.copy(alpha = 0.6f)
+        MeRowKind.ACTION, MeRowKind.DESTRUCTIVE, MeRowKind.DESTRUCTIVE_LABEL -> tint.copy(alpha = 0.6f)
         else -> secondary
     }
     Row(
         Modifier.fillMaxWidth()
             .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            // iOS 26 list rows: 52 pt for one line, 66 pt with a caption.
+            .heightIn(min = 52.dp)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(22.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.width(if (label) 29.dp else 22.dp), contentAlignment = Alignment.Center) {
             if (leading != null) leading()
             else if (icon != null) Icon(icon, contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = (if (kind == MeRowKind.DESTRUCTIVE) tint else accent).copy(alpha = alpha))
+                modifier = Modifier.size(if (label) 22.dp else 18.dp),
+                tint = (if (label) tint else accent).copy(alpha = alpha))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -117,7 +122,9 @@ fun MeChevron(tint: Color = MaterialTheme.colorScheme.outline) {
 
 /**
  * A menu-style `Picker` row: the title in primary ink, the current value in
- * the accent with the small up-down chevron, and the list opening on it.
+ * the accent with the small up-down chevron. The WHOLE row opens the menu, as
+ * on iOS, but the menu is anchored to the trailing VALUE ([IosPickerMenu]) —
+ * anchoring it to the row is what made it open from the left edge.
  */
 @Composable
 fun <T> MePickerRow(
@@ -126,21 +133,18 @@ fun <T> MePickerRow(
     subtitle: String? = null,
     value: String,
     options: List<Pair<T, String>>,
+    selected: T?,
     onPick: (T) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        MeRow(icon = icon, title = title, subtitle = subtitle, kind = MeRowKind.PLAIN,
-            trailing = { MePickerValue(value) }, onClick = { expanded = true })
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (item, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = { expanded = false; onPick(item) },
-                )
+    MeRow(icon = icon, title = title, subtitle = subtitle, kind = MeRowKind.PLAIN,
+        trailing = {
+            Box {
+                MePickerValue(value)
+                IosPickerMenu(expanded, { expanded = false }, options, selected, onPick)
             }
-        }
-    }
+        },
+        onClick = { expanded = true })
 }
 
 /** The accent value + up-down chevron a menu picker shows. */

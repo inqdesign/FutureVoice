@@ -264,12 +264,13 @@ fun VoiceAccentSheet(
  * Null when there is no recording to rebuild from, which leaves the live
  * voice in place.
  */
-private suspend fun rebuiltFromSample(context: android.content.Context): String? {
+internal suspend fun rebuiltFromSample(context: android.content.Context): String? {
     val sample = VoiceComparison.sampleFile(context.filesDir)
     if (!sample.exists()) return null
     return runCatching {
         com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
-            name = "Future Self",
+            // iOS sends `voiceDisplayName` — the library entry says whose it is.
+            name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
             sample = sample,
             removeBackgroundNoise = false,
         )

@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,8 +50,6 @@ import androidx.compose.material3.AlertDialog
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -62,6 +62,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -173,7 +174,6 @@ fun MeScreen(
     var addingLanguage by remember { mutableStateOf(false) }
     var pickingAccent by remember { mutableStateOf(false) }
     var comparingVoice by remember { mutableStateOf(false) }
-    var pickingAppLanguage by remember { mutableStateOf(false) }
     var confirmingRerecord by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the page says where it has got to.
@@ -192,8 +192,8 @@ fun MeScreen(
                     // has since replaced, so it has to be re-read.
                     onRestored()
                     backupResult = if (r.files == 0)
-                        context.getString(R.string.that_file_held_no_practice_data)
-                    else context.getString(R.string.restored_lld_files_and_lld_settings, r.files, r.defaults)
+                        context.getString(R.string.that_file_held_no_practice_data_nothing_was_restored_export_0321b7)
+                    else context.getString(R.string.restored_lld_files_and_lld_settings_quit_the_app_completely_d71fd8, r.files, r.defaults)
                 }
                 .onFailure { backupResult = it.message ?: "" }
             backupStep = null
@@ -207,7 +207,6 @@ fun MeScreen(
         mutableStateOf(context.getSharedPreferences("futurevoice", 0)
             .getInt("futurevoice.dailyGoalMinutes", 10))
     }
-    var showingCore by remember { mutableStateOf(false) }
     // Every enrolled language's level, read once.
     var levels by remember { mutableStateOf(mapOf<String, CefrLevel>()) }
     LaunchedEffect(enrolledLanguages) {
@@ -246,14 +245,52 @@ fun MeScreen(
         MePage.VOICE -> VoicePage(
             hasVoice = hasVoice, voiceId = voiceId, targetLanguage = targetLanguage,
             voiceAccentId = voiceAccentId,
+            personaName = persona?.displayName,
             onPickAccent = { pickingAccent = true },
             onCompare = { comparingVoice = true },
             onRerecord = { confirmingRerecord = true },
+            onPickSceneVoice = { page = MePage.SCENE_VOICE },
+            onRebuilt = { onAccentApplied(it, "") },
             onBack = { page = null },
         )
+        // iOS pushes `VoicePresetPickerView` from the Voice page; back
+        // returns there, not to the main list.
+        MePage.SCENE_VOICE -> {
+            var picked by remember {
+                mutableStateOf(com.roro.futurevoice.talk.VoicePreset.sceneDefaultId()
+                    ?: com.roro.futurevoice.talk.StockPerson.catalog.first().voiceId)
+            }
+            BackHandler { page = MePage.VOICE }
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground)
+                .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)) {
+                VoicePresetPicker(
+                    selection = picked,
+                    targetLanguage = targetLanguage,
+                    onSelect = { id ->
+                        picked = id
+                        context.getSharedPreferences("futurevoice", 0).edit()
+                            .putString(com.roro.futurevoice.talk.VoicePreset.SCENE_DEFAULT_KEY, id).apply()
+                    },
+                    onBack = { page = MePage.VOICE },
+                )
+            }
+        }
         MePage.SOUND -> SoundPage(onBack = { page = null })
         MePage.GUIDE -> AppGuidePage(onBack = { page = null })
-        MePage.APPEARANCE -> AppearancePage(onPicked = { theme = it }, onBack = { page = null })
+        MePage.CORE -> CoreClubPage(language = targetLanguage, onBack = {
+            page = null
+            scope.launch { coreProgress = CoreClubClient(AuthRepository()).progress(targetLanguage) }
+        })
+        // Picking pops back first: the activity is recreated to speak the
+        // new language, and Settings must come back on its main list.
+        MePage.APP_LANGUAGE -> AppLanguagePage(current = nativeLanguage,
+            onPick = { code -> page = null; onPickAppLanguage(code) },
+            onBack = { page = null })
+        MePage.APPEARANCE -> AppearancePage(onPicked = {
+            theme = it
+            // A seated member's cell wears this palette on everyone's grid.
+            scope.launch { CoreClubClient(AuthRepository()).publishTheme(it.ordinal) }
+        }, onBack = { page = null })
         MePage.DATA -> DataPage(
             step = backupStep,
             exported = exportedBackup,
@@ -275,16 +312,13 @@ fun MeScreen(
             topBar = {
                 CenterAlignedTopAppBar(
                     colors = AppSurfaces.topBarColors(),
-                    title = { Text(stringResource(R.string.settings),
-                        style = MaterialTheme.typography.titleMedium) },
+                    title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.settings)) },
                     // A sheet that closes with Done, as on iOS — no back arrow.
                     // The system back gesture still closes it.
                     actions = {
-                        TextButton(onClick = onBack) {
-                            Text(stringResource(R.string.done),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold)
-                        }
+                        com.roro.futurevoice.ui.brand.IosGlassTextButton(
+                            stringResource(R.string.done), onClick = onBack,
+                            modifier = Modifier.padding(end = 8.dp))
                     },
                 )
             }
@@ -328,11 +362,16 @@ fun MeScreen(
                     GroupedRowDivider()
                     // Filled seal only while seated — the seal is current
                     // membership, never a past one.
-                    MeRow(Icons.Outlined.WorkspacePremium, stringResource(R.string.the_core),
+                    // iOS draws `seal` / `seal.fill` in the row's tint — the
+                    // accent, not indigo: this is the row's icon, not the badge.
+                    val accent = MaterialTheme.colorScheme.primary
+                    MeRow(null, stringResource(R.string.the_core),
                         coreSubtitle(coreProgress),
-                        leading = if (coreProgress?.seated == true) ({ CoreSeal(size = 18.dp) })
-                        else null,
-                        onClick = { showingCore = true })
+                        leading = {
+                            com.roro.futurevoice.ui.brand.SealGlyph(Modifier.size(18.dp), accent,
+                                filled = coreProgress?.seated == true)
+                        },
+                        onClick = { page = MePage.CORE })
                 }
 
                 // ── Learning ──
@@ -373,6 +412,7 @@ fun MeScreen(
                         value = stringResource(R.string.lld_min_b61908, goal),
                         options = listOf(5, 10, 15, 20, 30, 45, 60)
                             .map { it to stringResource(R.string.lld_min_b61908, it) },
+                        selected = goal,
                         onPick = { m ->
                             goal = m
                             context.getSharedPreferences("futurevoice", 0).edit()
@@ -382,7 +422,7 @@ fun MeScreen(
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.Language, stringResource(R.string.app_language),
                         AppLanguageNames.of(nativeLanguage),
-                        onClick = { pickingAppLanguage = true })
+                        onClick = { page = MePage.APP_LANGUAGE })
                 }
                 GroupedFooter(stringResource(
                     R.string.tap_a_language_to_practice_it_its_level_calibrates_every_con_1ff279))
@@ -396,28 +436,35 @@ fun MeScreen(
                         } else stringResource(R.string.off),
                         onClick = { page = MePage.DAILY_CALL })
                     GroupedRowDivider()
+                    // The clone's NAME, as iOS (`voiceDisplayName`).
                     MeRow(Icons.Outlined.RecordVoiceOver, stringResource(R.string.voice),
-                        stringResource(if (hasVoice) R.string.your_cloned_voice
-                            else R.string.not_set_up_yet),
+                        remember(persona?.displayName, page) {
+                            com.roro.futurevoice.data.VoiceName.display(context, persona?.displayName)
+                        },
                         onClick = { page = MePage.VOICE })
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.VolumeUp, stringResource(R.string.sound_mic),
                         soundSummary(), onClick = { page = MePage.SOUND })
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.Groups, stringResource(R.string.find_people),
-                        stringResource(R.string.publish_your_intro),
+                        stringResource(R.string.publish_your_intro_others_practice_with_you),
                         onClick = onOpenPublicIntro)
                 }
 
                 // ── Appearance, data, privacy ──
                 GroupedSectionSpacer()
                 GroupedCard {
+                    // The MODE, as iOS (`appState.appearance.label`) — not
+                    // the palette, which the page itself shows.
+                    val appearance by com.roro.futurevoice.data.AppAppearance.live(context)
+                        .collectAsStateWithLifecycle()
                     MeRow(Icons.Outlined.Palette, stringResource(R.string.appearance),
-                        theme.label, onClick = { page = MePage.APPEARANCE })
+                        stringResource((appearance ?: com.roro.futurevoice.data.AppAppearance.SYSTEM).labelRes),
+                        onClick = { page = MePage.APPEARANCE })
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.Storage, stringResource(R.string.practice_data),
                         backupStep?.let { backupStepLabel(it) }
-                            ?: stringResource(R.string.export_or_import_this_devices_practice),
+                            ?: stringResource(R.string.export_or_import_this_device_s_practice),
                         onClick = { page = MePage.DATA })
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.PanTool, stringResource(R.string.privacy),
@@ -467,11 +514,11 @@ fun MeScreen(
                 GroupedSectionSpacer()
                 GroupedCard {
                     MeRow(Icons.AutoMirrored.Filled.Logout, stringResource(R.string.sign_out_dc1649),
-                        kind = MeRowKind.DESTRUCTIVE, onClick = { confirmingSignOut = true })
+                        kind = MeRowKind.DESTRUCTIVE_LABEL, onClick = { confirmingSignOut = true })
                     GroupedRowDivider()
                     // Play requires an in-app, reachable path to deletion.
                     MeRow(Icons.Outlined.Delete, stringResource(R.string.delete_account),
-                        kind = MeRowKind.DESTRUCTIVE, enabled = !deleting,
+                        kind = MeRowKind.DESTRUCTIVE_LABEL, enabled = !deleting,
                         trailing = if (deleting) ({
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                         }) else null,
@@ -493,6 +540,7 @@ fun MeScreen(
                         MeRow(Icons.Filled.NotificationsActive, "Ring now (debug)",
                             kind = MeRowKind.ACTION,
                             onClick = { com.roro.futurevoice.data.DailyCallScheduler.ring(context) })
+                        GroupedRowDivider()
                         // "Your week" rings once a week and slides up once a
                         // week; these three reach every path of it on demand.
                         MeRow(Icons.Filled.NotificationsActive, "Open Your week",
@@ -505,6 +553,7 @@ fun MeScreen(
                                         com.roro.futurevoice.data.WeekRecapBuilder.build(context, end - 7 * 86_400_000L, end)
                                 }
                             })
+                        GroupedRowDivider()
                         MeRow(Icons.Filled.NotificationsActive, "Slide up Your week again",
                             subtitle = "Next time the app opens, as if the week just turned",
                             kind = MeRowKind.ACTION,
@@ -516,6 +565,7 @@ fun MeScreen(
                                     com.roro.futurevoice.data.WeekRecapInbox.reoffer.value++
                                 }
                             })
+                        GroupedRowDivider()
                         MeRow(Icons.Filled.NotificationsActive, "Week notification in 10 s",
                             subtitle = "Lock the phone or leave the app to see it",
                             kind = MeRowKind.ACTION,
@@ -530,10 +580,6 @@ fun MeScreen(
                 }
             }
         }
-    }
-
-    if (showingCore) {
-        CoreClubSheet(coreProgress) { showingCore = false }
     }
 
     if (confirmingSignOut) {
@@ -589,7 +635,7 @@ fun MeScreen(
     deleteError?.let { msg ->
         AlertDialog(
             onDismissRequest = { deleteError = null },
-            title = { Text(stringResource(R.string.couldnt_delete_account)) },
+            title = { Text(stringResource(R.string.couldn_t_delete_account)) },
             text = { Text(msg) },
             confirmButton = {
                 TextButton(onClick = { deleteError = null }) { Text(stringResource(R.string.ok)) }
@@ -608,22 +654,20 @@ fun MeScreen(
         )
     }
 
-    if (pickingAppLanguage) {
-        AppLanguageSheet(current = nativeLanguage, onPick = { code ->
-            pickingAppLanguage = false
-            onPickAppLanguage(code)
-        }, onDismiss = { pickingAppLanguage = false })
-    }
     if (comparingVoice && voiceId != null) {
         VoiceComparisonSheet(voiceId = voiceId, targetLanguage = targetLanguage,
             onRerecord = { confirmingRerecord = true }, onDismiss = { comparingVoice = false })
     }
     // Outside onboarding a re-record is the full destructive path.
     if (confirmingRerecord) {
+        // iOS: all three consequences on the confirm — it costs talk time,
+        // it replaces, and the old voice can't come back.
         AlertDialog(onDismissRequest = { confirmingRerecord = false },
-            title = { Text(stringResource(R.string.re_record_voice)) },
-            text = { Text(stringResource(R.string.replace_your_current_clone_with_a_new_one)) },
-            confirmButton = { TextButton(onClick = { confirmingRerecord = false; onRerecordVoice() }) { Text(stringResource(R.string.re_record_voice)) } },
+            title = { Text(stringResource(R.string.re_record_your_voice)) },
+            text = { Text(stringResource(
+                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
+            confirmButton = { TextButton(onClick = { confirmingRerecord = false; onRerecordVoice() }) {
+                Text(stringResource(R.string.start_over), color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmingRerecord = false }) { Text(stringResource(R.string.cancel)) } })
     }
     if (pickingAccent && voiceId != null) {
@@ -659,7 +703,7 @@ private fun ProfileHeader(persona: UserPersona?, onClick: () -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -807,14 +851,10 @@ private fun LanguageRow(
                 .padding(horizontal = 8.dp, vertical = 12.dp)) {
                 MePickerValue(LanguageCatalog.levelLabel(level, code))
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                CefrLevel.entries.forEach { l ->
-                    DropdownMenuItem(
-                        text = { Text(LanguageCatalog.levelLabel(l, code)) },
-                        onClick = { expanded = false; onLevel(l) },
-                    )
-                }
-            }
+            com.roro.futurevoice.ui.brand.IosPickerMenu(
+                expanded = expanded, onDismissRequest = { expanded = false },
+                options = CefrLevel.entries.map { it to LanguageCatalog.levelLabel(it, code) },
+                selected = level, onPick = onLevel)
         }
     }
 }
@@ -873,83 +913,6 @@ private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
 }
 
 /**
- * The Core, from wherever the learner stands: their own standing first,
- * then the rules, then what a seat is actually worth.
- *
- * NUMBERS, NOT A PICTURE. A grid of thirty days was tried on iOS and
- * retired: it scored a month already spent, and nothing in a field of dots
- * can say which absence was forgiven. A streak is a rule people already hold
- * in their heads, and a streak is one number.
- *
- * Never add a perk row, and never add a line explaining why there isn't one.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CoreClubSheet(p: CoreClubClient.Progress?, onDismiss: () -> Unit) {
-    ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().bottomBarInsets()
-                .padding(horizontal = 20.dp).padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(stringResource(R.string.the_core), style = MaterialTheme.typography.titleLarge)
-            if (p == null) {
-                Text(stringResource(R.string.the_core_is_unavailable_right_now),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                return@Column
-            }
-            // Where you stand. The streak is shown in every state — it is the
-            // one number that answers "what do I do today".
-            CoreStat(stringResource(R.string.current_streak), "${p.streak}")
-            if (p.seated) {
-                CoreStat(stringResource(R.string.days_in_the_core),
-                    "${p.member?.days_total ?: 0}")
-            } else {
-                p.days_to_entry?.let { CoreStat(stringResource(R.string.days_to_go), "$it") }
-            }
-            GroupedSectionHeader(stringResource(R.string.how_it_works))
-            // Every rule, once each — as points, because a point can't hedge.
-            listOf(
-                stringResource(R.string.talk_lld_minutes_a_day_lld_days_in_a_row,
-                    p.bar_seconds / 60, p.entry_streak),
-                stringResource(R.string.miss_a_day_and_the_count_starts_again_at_zero),
-                stringResource(R.string.finishing_puts_you_in_line_it_doesn_t_seat_you),
-                stringResource(
-                    R.string.lld_seats_one_opens_only_when_the_person_in_it_stops_never_b_60a60d,
-                    p.seats),
-                stringResource(R.string.whoever_qualified_first_takes_it),
-                stringResource(R.string.once_you_re_in_one_missed_day_a_month_is_forgiven),
-            ).forEach {
-                Text(it, style = MaterialTheme.typography.bodyMedium)
-            }
-            GroupedSectionHeader(stringResource(R.string.what_you_get))
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                CoreSeal(size = 16.dp)
-                Text(stringResource(R.string.a_badge_next_to_your_name_where_you_meet_people),
-                    style = MaterialTheme.typography.bodyMedium)
-            }
-            GroupedFooter(stringResource(
-                R.string.it_s_there_while_you_re_in_the_core_and_it_s_a_promise_to_yo_970f83))
-        }
-    }
-}
-
-/** One number with a name. */
-@Composable
-private fun CoreStat(title: String, value: String) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-
-/**
  * The app's language, named in itself. Foundation drops the SCRIPT from a
  * display name, so both Chinese scripts come back as plain 中文 — the one
  * that ships is Traditional, and it says so.
@@ -964,66 +927,5 @@ object AppLanguageNames {
         "fr" -> "Français"
         "de" -> "Deutsch"
         else -> "English"
-    }
-}
-
-/** Picking pops the sheet, the way a pushed settings list does. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AppLanguageSheet(current: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    // Full height and scrolling: the second group is sixty languages long,
-    // and a half sheet with no scroll simply cut them off.
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(
-            skipPartiallyExpanded = true),
-    ) {
-        Column(Modifier.fillMaxWidth().bottomBarInsets()
-            .verticalScroll(androidx.compose.foundation.rememberScrollState())
-            .padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            Text(stringResource(R.string.app_language), style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 8.dp))
-            // The same two groups the setup step shows, for the same reason:
-            // a name under "Corrections and notes only" buys the coaching
-            // text and leaves the app's own screens in English, and that has
-            // to be readable BEFORE the tap. The footer used to sit here with
-            // no list under it, so those sixty languages had no way in at all.
-            val groups = remember { LanguageCatalog.nativeGroups() }
-            fun isCurrent(code: String): Boolean {
-                val now = com.roro.futurevoice.core.UILanguage.normalize(current)
-                return current == code || now == code || (now == null && code == "en")
-            }
-            groups.translated.forEach { code ->
-                Row(Modifier.fillMaxWidth().clickable { onPick(code) }.padding(vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(LanguageCatalog.endonym(code), Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge)
-                    if (isCurrent(code)) {
-                        Icon(Icons.Filled.Check, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-            GroupedFooter(stringResource(R.string.everything_you_read_in_the_app))
-            GroupedSectionHeader(stringResource(R.string.corrections_and_notes_only))
-            groups.coachingOnly.forEach { code ->
-                Row(Modifier.fillMaxWidth().clickable { onPick(code) }.padding(vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(LanguageCatalog.endonym(code),
-                            style = MaterialTheme.typography.bodyLarge)
-                        Text(LanguageCatalog.ownName(code, current),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (isCurrent(code)) {
-                        Icon(Icons.Filled.Check, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-            GroupedFooter(stringResource(
-                R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21))
-        }
     }
 }

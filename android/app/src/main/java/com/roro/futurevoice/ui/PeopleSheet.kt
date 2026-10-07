@@ -456,7 +456,7 @@ internal fun PersonEditor(
  * speak) and cached per voice + text, so each voice costs one synthesis ever.
  */
 @Composable
-private fun VoicePresetPicker(
+internal fun VoicePresetPicker(
     selection: String,
     targetLanguage: String,
     onSelect: (String) -> Unit,

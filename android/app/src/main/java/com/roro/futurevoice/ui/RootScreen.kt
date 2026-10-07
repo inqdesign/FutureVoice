@@ -263,7 +263,9 @@ fun RootScreen() {
     val debugCloneStage = remember {
         if (BuildConfig.DEBUG) (context as? android.app.Activity)?.intent?.getStringExtra("cloneStage") else null
     }
-    var showMe by remember { mutableStateOf(false) }
+    // Saveable: picking an app language recreates the activity, and iOS
+    // comes back on Settings with the new language — not on the Talk tab.
+    var showMe by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
     /** A per-item reminder's target (iOS `.reviewItem`): the card or word it named. */
     var focusCardId by remember { mutableStateOf<String?>(null) }

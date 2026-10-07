@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -61,6 +62,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.TextFields
 import kotlin.math.roundToInt
 import com.roro.futurevoice.data.AudioPrefs
 import com.roro.futurevoice.data.BackupService
@@ -75,7 +80,7 @@ import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
 
 /** The Settings pages a row pushes (iOS `MeTab`'s NavigationLinks). */
-enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, GUIDE }
+enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, GUIDE, CORE, APP_LANGUAGE, SCENE_VOICE }
 
 /**
  * One pushed Settings page: back arrow, a centred inline title (iOS
@@ -89,12 +94,8 @@ fun MeSubpage(title: String, onBack: () -> Unit, content: @Composable ColumnScop
         topBar = {
             CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(title, style = MaterialTheme.typography.titleMedium) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+                title = { com.roro.futurevoice.ui.brand.IosNavTitle(title) },
+                navigationIcon = { com.roro.futurevoice.ui.brand.IosBackButton(onBack) },
             )
         }
     ) { padding ->
@@ -159,7 +160,7 @@ fun DailyCallPage(
                 }
                 callTimes.forEach { m ->
                     GroupedRowDivider()
-                    MeRow(Icons.Filled.Schedule, "%02d:%02d".format(m / 60, m % 60),
+                    MeRow(Icons.Filled.PhoneCallback, "%02d:%02d".format(m / 60, m % 60),
                         kind = MeRowKind.PLAIN,
                         trailing = {
                             Text(routineWeekdaySummary(plan.callWeekdays(m)),
@@ -188,51 +189,83 @@ fun DailyCallPage(
             }
         }
         GroupedFooter(stringResource(
-            if (enabled) R.string.your_phone_rings_at_every_time_you_set_here_even_on_silent_c_b210fc
-            else R.string.instead_of_a_reminder_your_fluent_self_phones_you_once_a_day_30a288))
+            if (enabled) R.string.every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441
+            else R.string.instead_of_a_reminder_your_fluent_self_phones_you_at_your_ro_b08a01))
     }
 }
 
 // ── Voice ──────────────────────────────────────────────────────────────────
 
-/** iOS `voiceSection`, as far as Android has its parts. */
+/**
+ * iOS `voiceSection`, row for row: the clone's name, who plays a scene with
+ * no saved person, accent, speaking speed, "Doesn't sound like you?", then
+ * the two ways to a NEW clone — re-record, or rebuild from the recording
+ * kept on the phone — each behind the same warning (it costs talk time and
+ * the old voice is gone for good).
+ */
 @Composable
 fun VoicePage(
     hasVoice: Boolean,
     voiceId: String?,
     targetLanguage: String,
     voiceAccentId: String?,
+    personaName: String?,
     onPickAccent: () -> Unit,
     onCompare: () -> Unit,
     onRerecord: () -> Unit,
+    onPickSceneVoice: () -> Unit,
+    /** A clone rebuilt from the saved recording replaces the live one. */
+    onRebuilt: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var nameTick by remember { mutableStateOf(0) }
+    val displayName = remember(nameTick, personaName) {
+        com.roro.futurevoice.data.VoiceName.display(context, personaName)
+    }
+    var renaming by remember { mutableStateOf(false) }
+    var renameWarning by remember { mutableStateOf<String?>(null) }
+    var confirmingRebuild by remember { mutableStateOf(false) }
+    var rebuilding by remember { mutableStateOf(false) }
+    var rebuildError by remember { mutableStateOf<String?>(null) }
+    val hasSample = VoiceComparison.exists(context.filesDir)
     MeSubpage(stringResource(R.string.voice), onBack) {
         GroupedSectionHeader(stringResource(R.string.voice))
         GroupedCard {
-            var first = true
-            @Composable fun divider() { if (!first) GroupedRowDivider(); first = false }
+            MeRow(Icons.Filled.TextFields, stringResource(R.string.voice_name_f1c3a3, displayName),
+                stringResource(R.string.what_your_clone_is_called_here_and_on_elevenlabs),
+                kind = MeRowKind.ACTION, onClick = { renaming = true })
+            GroupedRowDivider()
+            val sceneId = com.roro.futurevoice.talk.VoicePreset.sceneDefaultId()
+            MeRow(Icons.Filled.RecordVoiceOver,
+                stringResource(R.string.scene_partner_voice,
+                    com.roro.futurevoice.talk.StockPerson.by(sceneId).let {
+                        com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                    }),
+                stringResource(R.string.for_watch_scenes_without_a_saved_person),
+                onClick = onPickSceneVoice)
             val accents = VoiceAccentCatalog.options(targetLanguage)
             if (hasVoice && accents.isNotEmpty()) {
-                divider()
+                GroupedRowDivider()
                 val applied = accents.firstOrNull { it.id == voiceAccentId }
                 MeRow(Icons.Outlined.Language,
                     applied?.let { stringResource(R.string.accent_746770, it.label) }
-                        ?: stringResource(R.string.accent),
+                        ?: stringResource(R.string.accent_233064),
                     stringResource(R.string.same_voice_the_accent_you_choose),
                     kind = MeRowKind.ACTION, onClick = onPickAccent)
             }
             // Under Accent because it is the same kind of question: the voice
             // stays theirs, only how it speaks changes. SYNTHESIS, not
             // playback — the pitch is untouched.
-            divider()
+            GroupedRowDivider()
             var speed by remember { mutableStateOf(SpeechSpeed.current(context)) }
             MePickerRow(
                 icon = Icons.Filled.Speed,
                 title = stringResource(R.string.speaking_speed),
                 value = stringResource(speed.label),
                 options = SpeechSpeed.entries.map { it to stringResource(it.label) },
+                selected = speed,
                 onPick = { s ->
                     speed = s
                     SpeechSpeed.set(context, s)
@@ -241,19 +274,117 @@ fun VoicePage(
                 })
             // Above the re-record: it is the question people arrive with, and
             // most of the time what sounds foreign is the language.
-            if (hasVoice && voiceId != null && VoiceComparison.exists(context.filesDir)) {
-                divider()
+            if (hasVoice && voiceId != null && hasSample) {
+                GroupedRowDivider()
                 MeRow(Icons.Filled.GraphicEq, stringResource(R.string.doesn_t_sound_like_you),
                     stringResource(R.string.hear_your_recording_and_your_clone_side_by_side),
                     kind = MeRowKind.ACTION, onClick = onCompare)
             }
-            if (hasVoice) {
-                divider()
-                MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
-                    stringResource(R.string.replace_your_current_clone_with_a_new_one),
-                    kind = MeRowKind.DESTRUCTIVE, onClick = onRerecord)
+            GroupedRowDivider()
+            MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
+                stringResource(R.string.replace_your_current_clone_with_a_new_one),
+                kind = MeRowKind.DESTRUCTIVE, onClick = onRerecord)
+            if (hasSample) {
+                GroupedRowDivider()
+                MeRow(Icons.Filled.Sync, stringResource(R.string.regenerate_from_saved_recording),
+                    stringResource(R.string.rebuild_the_clone_from_your_last_recording),
+                    kind = MeRowKind.ACTION, enabled = !rebuilding,
+                    trailing = if (rebuilding) ({
+                        androidx.compose.material3.CircularProgressIndicator(
+                            Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }) else null,
+                    onClick = { confirmingRebuild = true })
             }
         }
+    }
+
+    if (renaming) {
+        var draft by remember { mutableStateOf(displayName) }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text(stringResource(R.string.voice_name_0e3b82)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(
+                        R.string.names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48))
+                    androidx.compose.material3.OutlinedTextField(draft, { draft = it },
+                        singleLine = true, placeholder = { Text("Future Self") })
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    renaming = false
+                    scope.launch {
+                        runCatching {
+                            com.roro.futurevoice.data.VoiceName.rename(context, draft, personaName, voiceId)
+                        }.onFailure {
+                            renameWarning = context.getString(
+                                R.string.saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24,
+                                it.message ?: "")
+                        }
+                        nameTick++
+                    }
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { renaming = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+    renameWarning?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { renameWarning = null },
+            title = { Text(stringResource(R.string.renamed_on_this_device_only)) },
+            text = { Text(msg) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { renameWarning = null }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+        )
+    }
+    if (confirmingRebuild) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmingRebuild = false },
+            title = { Text(stringResource(R.string.rebuild_your_voice)) },
+            text = { Text(stringResource(
+                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    confirmingRebuild = false
+                    rebuilding = true
+                    scope.launch {
+                        val fresh = rebuiltFromSample(context)
+                        rebuilding = false
+                        // This used to be silent on iOS too — a spinner that
+                        // stopped with nothing changed. Say it.
+                        if (fresh == null) rebuildError = context.getString(R.string.something_went_wrong)
+                        else onRebuilt(fresh)
+                    }
+                }) {
+                    Text(stringResource(R.string.rebuild), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmingRebuild = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+    rebuildError?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { rebuildError = null },
+            title = { Text(stringResource(R.string.couldn_t_rebuild_your_voice)) },
+            text = { Text(msg) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { rebuildError = null }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+        )
     }
 }
 
@@ -299,10 +430,9 @@ fun SoundPage(onBack: () -> Unit) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Slider(
+                com.roro.futurevoice.ui.brand.IosSlider(
                     value = volume,
-                    // 5% steps, snapped by hand: Material's `steps` draws a
-                    // dot per stop, which iOS's slider never shows.
+                    // 5% steps, snapped by hand (iOS `step: 0.05`, no dots).
                     onValueChange = { volume = (it * 20).roundToInt() / 20f },
                     onValueChangeFinished = { AudioPrefs.setTalkVoiceVolume(context, volume) },
                     // Never to zero: a slider that can silence the fluent self
@@ -319,6 +449,7 @@ fun SoundPage(onBack: () -> Unit) {
                 options = listOf(
                     MicPreference.EARPHONE to stringResource(R.string.earphone_mic),
                     MicPreference.PHONE to stringResource(R.string.phone_mic)),
+                selected = mic,
                 // Choosing here answers the one-time question for good.
                 onPick = { mic = it; MicPreference.set(context, it) },
             )
@@ -330,14 +461,26 @@ fun SoundPage(onBack: () -> Unit) {
 
 /**
  * iOS `appearancePage`: the Futureself palette as iOS's 3×2 grid of live
- * surfaces (`FutureselfThemePicker`). (iOS also has a Light/Dark/System segment; Android follows
- * the system and has no such setting.)
+ * surfaces (`FutureselfThemePicker`), under iOS's System / Light / Dark segment.
  */
 @Composable
 fun AppearancePage(onPicked: (FutureselfTheme) -> Unit, onBack: () -> Unit) {
     MeSubpage(stringResource(R.string.appearance), onBack) {
+        val context = LocalContext.current
+        val mode by com.roro.futurevoice.data.AppAppearance.live(context).collectAsStateWithLifecycle()
         Spacer(Modifier.padding(top = 12.dp))
         GroupedCard {
+            // iOS: `Picker("Theme")` segmented — System · Light · Dark — in
+            // the same card as the palettes, above them.
+            val modes = com.roro.futurevoice.data.AppAppearance.entries
+            com.roro.futurevoice.ui.brand.IosSegmented(
+                options = modes.map { stringResource(it.labelRes) },
+                selected = modes.indexOf(mode ?: com.roro.futurevoice.data.AppAppearance.SYSTEM),
+                onSelect = { com.roro.futurevoice.data.AppAppearance.set(context, modes[it]) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+            androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = 16.dp),
+                thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 FutureselfThemePicker(onPicked)
             }
@@ -424,5 +567,58 @@ private fun routineWeekdaySummary(days: Set<Int>): String = when (days) {
         listOf(2, 3, 4, 5, 6, 7, 1).filter { it in days }.joinToString(" ") { wd ->
             fmt.format(java.util.Calendar.getInstance().apply { set(java.util.Calendar.DAY_OF_WEEK, wd) }.time)
         }
+    }
+}
+
+// ── App language ───────────────────────────────────────────────────────────
+
+/**
+ * iOS `AppLanguagePage`: a PUSHED list, not a sheet — two sections because
+ * the app can only half-keep the promise its name makes. A handful of
+ * languages are translated end to end; the other sixty get coaching text in
+ * their language while the app's own screens stay English, and the footers
+ * say so BEFORE the tap. Each row is the language's own name and nothing
+ * else (a tinted Button row, the tick trailing). Picking pops back, the way
+ * a pushed Settings list does.
+ */
+@Composable
+fun AppLanguagePage(current: String, onPick: (String) -> Unit, onBack: () -> Unit) {
+    val groups = remember { com.roro.futurevoice.data.LanguageCatalog.nativeGroups() }
+    fun isCurrent(code: String): Boolean {
+        val now = com.roro.futurevoice.core.UILanguage.normalize(current)
+        return current == code || now == code || (now == null && current.isBlank() && code == "en")
+    }
+    MeSubpage(stringResource(R.string.app_language), onBack) {
+        @Composable fun section(codes: List<String>) {
+            GroupedCard {
+                codes.forEachIndexed { i, code ->
+                    if (i > 0) androidx.compose.material3.HorizontalDivider(
+                        Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant)
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(code) }
+                            .heightIn(min = 52.dp).padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(com.roro.futurevoice.data.LanguageCatalog.endonym(code),
+                            Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary)
+                        if (isCurrent(code)) {
+                            Icon(Icons.Filled.Check, contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+        }
+        GroupedSectionHeader(stringResource(R.string.fully_translated))
+        section(groups.translated)
+        GroupedFooter(stringResource(
+            R.string.everything_you_read_in_the_app_menus_buttons_corrections_not_493dbb))
+        GroupedSectionHeader(stringResource(R.string.corrections_and_notes_only))
+        section(groups.coachingOnly)
+        GroupedFooter(stringResource(
+            R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21))
     }
 }
