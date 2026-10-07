@@ -601,16 +601,14 @@ fun CloneFlowScreen(
         Column(Modifier.fillMaxWidth().padding(top = if (shortScreen) 12.dp else 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(if (shortScreen) 10.dp else 20.dp)) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(stageTitle, style = DisplayFace.style(stageTitle, TextStyle(fontSize = 24.sp)),
-                    maxLines = 1, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = if (act == CloneAct.ACCOUNT) 64.dp else 16.dp))
-                // The account step's Back sits in this row's leading corner —
-                // to whatever the step interrupted.
-                if (act == CloneAct.ACCOUNT) {
-                    Row(Modifier.align(Alignment.CenterStart).padding(start = 12.dp)
-                        .clip(RoundedCornerShape(8.dp)).clickable {
+            // The account step's Back sits on its OWN row above the title,
+            // leading — to whatever the step interrupted (iOS: the nav bar's
+            // back button over the stage title). Sharing the title's row, a
+            // large font pushed "뒤로" into the title.
+            Column(Modifier.fillMaxWidth()) {
+            if (act == CloneAct.ACCOUNT) {
+                Row(Modifier.fillMaxWidth().padding(start = 12.dp)) {
+                    Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable {
                             error = null
                             act = if (clonedVoiceId == null) CloneAct.REVIEW else CloneAct.MEET
                         }.padding(horizontal = 4.dp, vertical = 6.dp),
@@ -621,6 +619,11 @@ fun CloneFlowScreen(
                             fontSize = 17.sp)
                     }
                 }
+            }
+            Text(stageTitle, style = DisplayFace.style(stageTitle, TextStyle(fontSize = 24.sp)),
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
             }
             Box(Modifier.size(orbSize + 14.dp), contentAlignment = Alignment.Center) {
                 if (act == CloneAct.RECORDING) {
