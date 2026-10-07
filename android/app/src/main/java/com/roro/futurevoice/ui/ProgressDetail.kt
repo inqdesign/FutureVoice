@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -352,19 +353,30 @@ fun TrendChart(
     val last = points.last().at
     val timeSpan = (last - first).coerceAtLeast(1L)
 
-    Canvas(modifier.fillMaxWidth().height(height)) {
-        fun y(v: Double) = (size.height * (1 - ((v - lo) / (hi - lo))).toFloat())
-        fun x(i: Int, at: Long) =
-            if (last == first) size.width * i / (points.size - 1).coerceAtLeast(1)
-            else size.width * ((at - first).toFloat() / timeSpan)
+    // The plot is the box: everything is clipped to it, and the data is
+    // mapped into it inset by a point's radius (+ the stroke), so a talk at
+    // the domain's edge — a clean talk at 0 slips — sits ON the edge
+    // instead of drawing half a dot and the line's end outside the chart
+    // (iOS's Chart keeps its marks inside the plot area the same way).
+    Canvas(modifier.fillMaxWidth().height(height).clipToBounds()) {
+        val inset = 4.dp.toPx()
+        val plotH = size.height - 2 * inset
+        val plotW = size.width - 2 * inset
+        fun y(v: Double) = inset + (plotH * (1 - ((v.coerceIn(lo, hi) - lo) / (hi - lo)))).toFloat()
+        fun x(i: Int, at: Long) = inset +
+            if (last == first) plotW * i / (points.size - 1).coerceAtLeast(1)
+            else plotW * ((at - first).toFloat() / timeSpan)
 
         bands.forEachIndexed { i, b ->
             val bLo = maxOf(b.from, lo)
             val bHi = minOf(b.to, hi)
             if (bLo >= bHi) return@forEachIndexed
-            val top = y(bHi)
+            // A zone at the domain's edge runs on to the box's edge, so the
+            // inset never shows as an unbanded strip.
+            val top = if (bHi >= hi) 0f else y(bHi)
+            val bottom = if (bLo <= lo) size.height else y(bLo)
             drawRect(zone.copy(alpha = if (i % 2 == 0) 0.55f else 0.25f),
-                topLeft = Offset(0f, top), size = Size(size.width, y(bLo) - top))
+                topLeft = Offset(0f, top), size = Size(size.width, bottom - top))
             if ((bHi - bLo) / (hi - lo) >= 0.14) {
                 drawText(measurer, b.level.code.uppercase(),
                     topLeft = Offset(4.dp.toPx(), top + 1.dp.toPx()), style = labelStyle)
