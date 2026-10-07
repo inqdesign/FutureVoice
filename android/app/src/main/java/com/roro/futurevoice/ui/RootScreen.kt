@@ -2131,15 +2131,8 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
     }
     // A capsule, and tappable: the streak is a claim about a history, so it
     // opens the record rather than asking to be taken on trust.
-    Row(
-        Modifier
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    // The same glass capsule as Speech's + and the two buttons beside it.
+    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onClick) {
         val lit = days > 0 || keptToday
         Icon(
             if (lit) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
@@ -2147,11 +2140,12 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
             // iOS: `flame.fill`, orange only once today is kept.
             tint = if (keptToday) androidx.compose.ui.graphics.Color(0xFFFF9500)
             else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp))
+            modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(5.dp))
         Text(
             if (lit) stringResource(R.string.lld_day_streak_94de2a, maxOf(days, 1))
             else stringResource(R.string.activity),
-            style = MaterialTheme.typography.bodySmall.copy(
+            style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
     }
 }
@@ -2181,13 +2175,8 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
     // iOS: a 44pt glass circle, the 38pt ring inside its rim, the avatar
     // 2pt inside the ring. Drawn as a raised white disc — the glass over the
     // grouped ground reads as exactly that.
-    Box(
-        Modifier.padding(end = 8.dp).size(44.dp)
-            .shadow(2.dp, CircleShape, clip = false)
-            .clip(CircleShape).background(AppSurfaces.card)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
+    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onClick,
+        modifier = Modifier.padding(end = 12.dp), circle = true) {
         val a = account
         if (a != null && !a.isUncappedTalk && (a.monthlyCapSeconds != null || !a.isEntitled)) {
             // The full tank is this account's own pool, never a constant: the
@@ -2248,22 +2237,16 @@ private fun HeaderButton(
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
 ) {
-    Row(
-        Modifier
-            .padding(horizontal = 8.dp)
-            .shadow(2.dp, CircleShape, clip = false)
-            .clip(CircleShape)
-            .background(AppSurfaces.card)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    // The same glass capsule as Speech's + (iOS 26 toolbar glass).
+    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onClick,
+        modifier = Modifier.padding(start = 12.dp)) {
         icon?.let {
-            Icon(it, contentDescription = null, modifier = Modifier.size(14.dp),
+            Icon(it, contentDescription = null, modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(5.dp))
         }
-        Text(label, style = MaterialTheme.typography.labelLarge,
+        Text(label, style = MaterialTheme.typography.bodyLarge,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary)
     }
 }
