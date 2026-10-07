@@ -317,10 +317,12 @@ internal fun AccentPill(
     val content: @Composable () -> Unit = {
         Box(contentAlignment = Alignment.Center) {
             if (loading) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-            else Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
+            // Four pills share a row: the label shrinks before it is cut, and
+            // the pill's padding is a pill's, not a CTA's ("그…", "미…" at 1.3).
+            else com.roro.futurevoice.ui.brand.FitButtonLabel(label, MaterialTheme.typography.labelMedium)
         }
     }
-    if (selected) Button(onClick = onClick, enabled = enabled, modifier = modifier) { content() }
-    else OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier) { content() }
+    val pad = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 10.dp)
+    if (selected) Button(onClick = onClick, enabled = enabled, modifier = modifier, contentPadding = pad) { content() }
+    else OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier, contentPadding = pad) { content() }
 }

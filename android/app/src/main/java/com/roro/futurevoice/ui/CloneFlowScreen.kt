@@ -1111,12 +1111,12 @@ fun CloneFlowScreen(
                         OutlinedButton(onClick = { reRecord() }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Filled.Replay, null, Modifier.size(18.dp))
                             Spacer(Modifier.size(6.dp))
-                            Text(stringResource(R.string.re_record), maxLines = 1)
+                            com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.re_record), androidx.compose.material3.LocalTextStyle.current)
                         }
                         Button(onClick = { useThisVoice() }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Filled.Check, null, Modifier.size(18.dp))
                             Spacer(Modifier.size(6.dp))
-                            Text(stringResource(R.string.use_this_voice), maxLines = 1)
+                            com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.use_this_voice), androidx.compose.material3.LocalTextStyle.current)
                         }
                     }
                     // Escape hatch for the second pass — including after a
@@ -1352,10 +1352,12 @@ internal fun SpeedAudition(
                 }
                 val label: @Composable () -> Unit = {
                     if (loading == s) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(s.label), maxLines = 1)
+                    else com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(s.label),
+                        MaterialTheme.typography.labelLarge)
                 }
-                if (selected == s) Button(onClick = onClick, modifier = Modifier.weight(1f)) { label() }
-                else OutlinedButton(onClick = onClick, modifier = Modifier.weight(1f)) { label() }
+                val pad = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+                if (selected == s) Button(onClick = onClick, modifier = Modifier.weight(1f), contentPadding = pad) { label() }
+                else OutlinedButton(onClick = onClick, modifier = Modifier.weight(1f), contentPadding = pad) { label() }
             }
         }
         Text(line, style = MaterialTheme.typography.labelSmall,

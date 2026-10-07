@@ -271,7 +271,9 @@ fun WeekRecapDeck(
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp, top = 4.dp)) {
+        // The deck's one button clears the navigation bar wherever the deck is
+        // drawn (a sheet, or the capture's full page, where Next sat under it).
+        Box(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 12.dp, top = 4.dp)) {
             if (cards.getOrNull(pager.currentPage) == RecapCard.TEST) {
                 when (testState) {
                     WeeklyTestSchedule.State.Ready ->
@@ -322,9 +324,12 @@ private fun TopBar(recap: WeekRecap, count: Int, page: Int, onSelect: (Int) -> U
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.wr_your_week), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
+            // The date gives way, never the close button (at a 1.3 font it
+            // pushed the ✕ off the row).
             Text(dateRange(recap, locale), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.weight(1f))
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f))
             Box(Modifier.size(32.dp).background(tertiaryFill(), CircleShape).clickable(onClick = onClose),
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close),

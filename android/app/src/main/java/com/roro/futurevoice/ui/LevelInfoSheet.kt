@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,7 +47,8 @@ fun LevelInfoSheet(level: CefrLevel, onDismiss: () -> Unit) {
             Header(stringResource(R.string.by_level))
             bands.forEach { (band, levels, detail) ->
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(band, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(62.dp))
+                    Text(band, style = MaterialTheme.typography.titleSmall, maxLines = 1, softWrap = false,
+                        modifier = Modifier.widthIn(min = 62.dp))
                     Text(stringResource(detail), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                     if (level in levels) Icon(Icons.Filled.Check, contentDescription = null,

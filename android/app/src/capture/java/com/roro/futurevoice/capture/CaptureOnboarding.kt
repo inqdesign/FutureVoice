@@ -22,7 +22,7 @@ import com.roro.futurevoice.ui.WelcomeScreen
  * names the master-plan item), or absent (still NOT WIRED in the gallery).
  */
 object CaptureOnboarding {
-    val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
+    val wired: Map<String, @Composable (Context) -> Unit> = mapOf<String, @Composable (Context) -> Unit>(
         // The first screen, primary path — with the sign-in link RootScreen
         // gives it (no invite path on Android, so that button is absent there too).
         // `--es welcomePage <n>` holds on one beat of the film, as iOS's
@@ -65,6 +65,28 @@ object CaptureOnboarding {
         "weekly-rhythm-onboarding" to { c ->
             com.roro.futurevoice.ui.WeeklyRhythmOnboardingScreen(c, onDone = {})
         },
+        // The voice act, one stage each (the debug app's `--es cloneStage`,
+        // which only answers on an install that isn't set up yet).
+    ) + listOf("intro", "consent", "mic", "spot", "script", "recording", "reviewing", "uploading", "meet")
+        .associate<String, String, @Composable (Context) -> Unit> { st ->
+            "clone-$st" to @Composable { _: Context ->
+                com.roro.futurevoice.ui.CloneFlowScreen(
+                    targetLanguage = "en", onCloned = {}, googleAvailable = true,
+                    onGoogleSignIn = {}, onAppleSignIn = {}, debugStage = st)
+            }
+        } + mapOf<String, @Composable (Context) -> Unit>(
+        // Sheets no iOS mode reaches, for the same survey: each over an empty
+        // page, no network.
+        "sheet-interests" to { _ -> SheetPage { com.roro.futurevoice.ui.InterestsEditorSheet(
+            com.roro.futurevoice.talk.UserPersona(), onSave = {}, onDismiss = {}) } },
+        "sheet-level-info" to { _ -> SheetPage { com.roro.futurevoice.ui.LevelInfoSheet(
+            com.roro.futurevoice.data.CefrLevel.B1, onDismiss = {}) } },
+        "sheet-level-up" to { _ -> SheetPage { com.roro.futurevoice.ui.LevelUpSheet(
+            com.roro.futurevoice.data.CefrLevel.A2, com.roro.futurevoice.data.CefrLevel.B1, onDismiss = {}) } },
+        "sheet-mic-choice" to { _ -> SheetPage { com.roro.futurevoice.ui.MicChoiceSheet(onChoose = {}) } },
+        "sheet-referral-join" to { _ -> SheetPage { com.roro.futurevoice.ui.ReferralJoinSheet(
+            com.roro.futurevoice.data.ReferralJoins.Join("x", "Jiwoo", 1, 1, 30), onDismiss = {}) } },
+        "sheet-study-goals" to { _ -> SheetPage { com.roro.futurevoice.ui.StudyGoalsSheet(onDismiss = {}) } },
         "age-check" to { _ ->
             androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
                 .background(com.roro.futurevoice.ui.brand.AppSurfaces.ground))
@@ -74,4 +96,11 @@ object CaptureOnboarding {
 
     /** mode → why Android can't show it yet (name the master-plan item). */
     val notPorted: Map<String, String> = mapOf()
+}
+
+@Composable
+private fun SheetPage(sheet: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+        .background(com.roro.futurevoice.ui.brand.AppSurfaces.ground))
+    sheet()
 }
