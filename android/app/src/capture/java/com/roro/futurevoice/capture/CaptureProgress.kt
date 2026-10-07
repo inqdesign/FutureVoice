@@ -80,10 +80,10 @@ object CaptureProgress {
         // sentences, no slips — used to read ≈C2. The talks carry a range of
         // a2, so the Grammar row must show ≈A2 with the range line under it.
         "progress-beginner" to @Composable { c: Context ->
-            Seeded({ CaptureSeed.once("progress-beginner") { seedBeginner(c) } }) { ProgressPage(c) }
+            Seeded({ CaptureSeed.once("progress-beginner-v2") { seedBeginner(c) } }) { ProgressPage(c) }
         },
         "progress-beginner-grammar" to @Composable { c: Context ->
-            Seeded({ CaptureSeed.once("progress-beginner") { seedBeginner(c) } }) {
+            Seeded({ CaptureSeed.once("progress-beginner-v2") { seedBeginner(c) } }) {
                 ProgressPage(c, Dim.GRAMMAR)
             }
         },
@@ -177,8 +177,17 @@ object CaptureProgress {
         val now = System.currentTimeMillis()
         val origins = listOf(SessionOrigin.FREE, SessionOrigin.NEWS, SessionOrigin.SCENARIO)
         val uid = StoreJson.newId()
-        for (day in 0 until 3) {
-            val ended = now - day * 86_400_000L + 3_600_000L
+        // FIVE talks, the newest on file, half an hour apart, all after a
+        // prior assessment that closes at `now`. The ≈Grammar read takes
+        // the five most recent talks for its range and the latest
+        // assessment's window for its slip density; with iOS's three talks
+        // a day apart, whatever another mode left on this install fell into
+        // both — talks with slips pulled accuracy down to A2, the a2 range
+        // was no longer the lower read, and the page lost its range line
+        // and drew accuracy zones. The capture has to show the case it
+        // exists for (a range ceiling) whatever ran before it.
+        for (day in 0 until 5) {
+            val ended = now + 9_000_000L - day * 1_800_000L
             val started = ended - 600_000L
             val turns = listOf(
                 Turn(role = TurnRole.FLUENT_SELF, transcript = "How are you today?",
@@ -195,7 +204,8 @@ object CaptureProgress {
                 // The SAME ids `CaptureSeed.seedSessions` writes, as iOS's
                 // `seedSessions(beginner:)` does: the beginner talks replace the
                 // ordinary ones instead of joining them on the trend.
-                id = UUID.nameUUIDFromBytes("capture:session:sessions-$day".toByteArray())
+                id = UUID.nameUUIDFromBytes((if (day < 3) "capture:session:sessions-$day"
+                    else "capture:session:beginner-$day").toByteArray())
                     .toString().uppercase(),
                 userId = uid, targetLanguage = "en", mode = SessionMode.CONVERSATION,
                 topic = when (origin) {
@@ -210,9 +220,16 @@ object CaptureProgress {
                     expressionsOffered = listOf("what surprised you most", "how did it go"))))
         }
         WeeklyReportStore.shared(c).save(WeeklyReport(
-            id = UUID.nameUUIDFromBytes("capture:report:beginner".toByteArray()).toString().uppercase(),
-            periodStart = now - 7 * 86_400_000L, periodEnd = now,
+            id = UUID.nameUUIDFromBytes("capture:report:beginner-prior".toByteArray()).toString().uppercase(),
+            periodStart = now - 14 * 86_400_000L, periodEnd = now,
             sessionCount = 3, targetLanguage = "en",
+            summary = "Short, clear sentences.",
+            cefrLevel = "a2", generatedAt = now - 7 * 86_400_000L,
+        ), lang(c))
+        WeeklyReportStore.shared(c).save(WeeklyReport(
+            id = UUID.nameUUIDFromBytes("capture:report:beginner".toByteArray()).toString().uppercase(),
+            periodStart = now, periodEnd = now + 10_800_000L,
+            sessionCount = 5, targetLanguage = "en",
             summary = "Short, clear sentences — start linking two ideas in one.",
             cefrLevel = "a2", generatedAt = now,
         ), lang(c))
