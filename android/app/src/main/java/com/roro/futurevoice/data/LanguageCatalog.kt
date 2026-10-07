@@ -174,6 +174,15 @@ object LanguageCatalog {
     )
 
     private fun name(code: String, locale: String): String {
+        // iOS's own spellings first (generated table), Android's ICU only for
+        // a pair the table doesn't hold.
+        if (code == locale) LanguageNames.endonyms[code]?.let { return it }
+        val ui = when {
+            locale in LanguageNames.inLocale -> locale
+            locale.startsWith("zh") -> if (locale.contains("Hans") || locale.endsWith("CN")) "zh-Hans" else "zh-Hant"
+            else -> locale.substringBefore('-')
+        }
+        LanguageNames.inLocale[ui]?.get(code)?.let { return it }
         if (code == "zh-Hant" || code == "zh-Hans") {
             val loc = java.util.Locale.forLanguageTag(locale)
             val key = if (loc.language == "zh") (if (loc.script == "Hans" || locale.endsWith("Hans")) "zh-Hans" else "zh-Hant")
