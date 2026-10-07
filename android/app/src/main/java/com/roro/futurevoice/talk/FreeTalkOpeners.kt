@@ -57,8 +57,11 @@ class FreeTalkOpeners(private val context: Context) {
          * or name changes, i.e. forever. v2 (iOS `a212c70`, 2026-09-30):
          * `selfWarmth` — pools held "너무 보고싶어". An old pool is simply not
          * found; its audio stays on disk (produced audio is never deleted).
+         * v3 (2026-10-07): pools joined two sentences with a bare comma, which
+         * the sentence splitter can't cut, so the opener ran on with no pause
+         * — `breathPunctuation` now names the comma splice.
          */
-        private const val POOL_VERSION = 2
+        private const val POOL_VERSION = 3
 
         /** Languages × persona names a learner actually uses is a handful; the
          *  cap only stops a long history of renames from growing the file. */
