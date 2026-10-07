@@ -326,6 +326,16 @@ object DailyCallScheduler {
             Intent(context, DailyCallDeclineReceiver::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
+    private fun ringScreenIntent(context: Context): PendingIntent =
+        PendingIntent.getActivity(context, REQUEST + 30,
+            Intent(context, com.roro.futurevoice.DailyCallRingActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    /** Bumped whenever the ring is dismissed (answered or declined from any
+     *  surface), so an open ring screen can close itself. */
+    val ringEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
+
     private fun contentIntent(context: Context): PendingIntent =
         PendingIntent.getActivity(context, REQUEST,
             Intent(context, MainActivity::class.java).putExtra(ANSWER_EXTRA, true)
@@ -374,7 +384,10 @@ object DailyCallScheduler {
             .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.your_future_self))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setFullScreenIntent(answer, true)
+            // A dark or locked screen gets the RING (Answer / Decline), never
+            // the answer itself — the system fires this intent unasked, and
+            // pointing it at `answer` opened the call on a locked phone.
+            .setFullScreenIntent(ringScreenIntent(context), true)
             .setOngoing(true)
             .setAutoCancel(true)
             // Decline runs in the background — the app never opens for a no.
@@ -394,6 +407,7 @@ object DailyCallScheduler {
     }
 
     fun dismissRing(context: Context) {
+        ringEnded.value += 1
         DailyCallRingService.stop(context)
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(REQUEST)
     }

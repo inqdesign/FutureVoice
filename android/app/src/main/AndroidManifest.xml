@@ -89,6 +89,19 @@
             android:exported="false"
             android:foregroundServiceType="microphone|mediaPlayback" />
 
+        <!-- The daily call ringing on a dark or locked screen: Answer /
+             Decline, nothing starts until one is pressed. Its own task, so
+             declining never brings the app forward. -->
+        <activity
+            android:name=".DailyCallRingActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.FutureVoice" />
+
         <receiver
             android:name=".data.DailyCallReceiver"
             android:exported="false" />
