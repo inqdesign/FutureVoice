@@ -13,7 +13,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -113,14 +112,20 @@ internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit, modifier:
                     .width(PillWidth).height(62.dp - PillInsetY * 2)
                     .background(pill, shape),
             )
-            Row(Modifier.fillMaxSize().padding(horizontal = edge - step / 2)) {
+            // Each tab's slot is one `step` wide, centred where the pill
+            // stops for it. Placed by offset, not by padding the row: on a
+            // wide screen (an unfolded Fold, a tablet) `edge - step / 2` goes
+            // negative and Compose refuses a negative padding — the app died
+            // on the first frame of the tab bar.
+            Box(Modifier.fillMaxSize()) {
                 tabs.forEachIndexed { i, t ->
                     // Colour follows the pill as it passes, rather than
                     // snapping when the tap lands.
                     val nearness = (1f - kotlin.math.abs(index - i)).coerceIn(0f, 1f)
                     val tint = lerp(scheme.onSurface, scheme.primary, nearness)
                     Box(
-                        Modifier.weight(1f).fillMaxHeight()
+                        Modifier.offset(x = edge + step * i - step / 2)
+                            .width(step).fillMaxHeight()
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null, role = Role.Tab,
