@@ -1,7 +1,6 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -27,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -338,11 +338,17 @@ fun TrendChart(
     if (points.size < 2) return
     val line = MaterialTheme.colorScheme.primary
     val zone = MaterialTheme.colorScheme.surfaceVariant
-    val label = MaterialTheme.colorScheme.outline
+    val bandLabel = MaterialTheme.colorScheme.outline
+    val axisLabel = MaterialTheme.colorScheme.onSurfaceVariant
+    val grid = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f)
     val rule = MaterialTheme.colorScheme.onSurfaceVariant
     val measurer = rememberTextMeasurer()
-    val labelStyle = PT.caption2.copy(color = label)
+    val bandStyle = PT.caption2.copy(color = bandLabel)
+    val axisStyle = PT.caption2.copy(color = axisLabel)
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
 
+    // Y-domain from the data (plus the goal line), padded — the same numbers
+    // as iOS `trendChart`'s `chartYScale(domain: lo...hi)`.
     val values = points.map { it.value } + listOfNotNull(target)
     val vMin = values.minOrNull() ?: 0.0
     val vMax = values.maxOrNull() ?: 1.0
@@ -351,55 +357,154 @@ fun TrendChart(
     val hi = vMax + span * 0.25
     val first = points.first().at
     val last = points.last().at
-    val timeSpan = (last - first).coerceAtLeast(1L)
+    val yTicks = TrendAxis.valueTicks(lo, hi)
+    val xTicks = remember(first, last, locale) { TrendAxis.timeTicks(first, last, locale) }
 
-    // The plot is the box: everything is clipped to it, and the data is
-    // mapped into it inset by a point's radius (+ the stroke), so a talk at
-    // the domain's edge — a clean talk at 0 slips — sits ON the edge
-    // instead of drawing half a dot and the line's end outside the chart
-    // (iOS's Chart keeps its marks inside the plot area the same way).
-    Canvas(modifier.fillMaxWidth().height(height).clipToBounds()) {
-        val inset = 4.dp.toPx()
-        val plotH = size.height - 2 * inset
-        val plotW = size.width - 2 * inset
-        fun y(v: Double) = inset + (plotH * (1 - ((v.coerceIn(lo, hi) - lo) / (hi - lo)))).toFloat()
-        fun x(i: Int, at: Long) = inset +
-            if (last == first) plotW * i / (points.size - 1).coerceAtLeast(1)
-            else plotW * ((at - first).toFloat() / timeSpan)
+    // Not clipped: as in Swift Charts, a point ON the plot's edge draws its
+    // whole dot (into the card's padding / the axis gutter) — clipping cut
+    // the first talk's dot in half. Nothing else reaches past the plot.
+    Canvas(modifier.fillMaxWidth().height(height)) {
+        // Swift Charts' default axes: values on the TRAILING edge, times
+        // under the plot, a grid line at every tick. The plot is what's left.
+        val gap = 6.dp.toPx()
+        val yLabels = yTicks.map { measurer.measure(TrendAxis.valueLabel(it, yTicks), axisStyle) }
+        val yGutter = (yLabels.maxOfOrNull { it.size.width } ?: 0) + gap
+        val xGutter = measurer.measure("0", axisStyle).size.height + gap
+        val plot = androidx.compose.ui.geometry.Rect(0f, 0f, size.width - yGutter, size.height - xGutter)
+        fun y(v: Double) = plot.top + (plot.height * (1 - ((v - lo) / (hi - lo)))).toFloat()
+        fun x(i: Int, at: Long) = plot.left +
+            if (last == first) plot.width * i / (points.size - 1)
+            else plot.width * ((at - first).toFloat() / (last - first))
 
+        // CEFR zones behind the curve, clipped to the visible domain.
         bands.forEachIndexed { i, b ->
             val bLo = maxOf(b.from, lo)
             val bHi = minOf(b.to, hi)
             if (bLo >= bHi) return@forEachIndexed
-            // A zone at the domain's edge runs on to the box's edge, so the
-            // inset never shows as an unbanded strip.
-            val top = if (bHi >= hi) 0f else y(bHi)
-            val bottom = if (bLo <= lo) size.height else y(bLo)
+            val top = y(bHi)
             drawRect(zone.copy(alpha = if (i % 2 == 0) 0.55f else 0.25f),
-                topLeft = Offset(0f, top), size = Size(size.width, bottom - top))
+                topLeft = Offset(plot.left, top), size = Size(plot.width, y(bLo) - top))
             if ((bHi - bLo) / (hi - lo) >= 0.14) {
                 drawText(measurer, b.level.code.uppercase(),
-                    topLeft = Offset(4.dp.toPx(), top + 1.dp.toPx()), style = labelStyle)
+                    topLeft = Offset(plot.left + 4.dp.toPx(), top + 1.dp.toPx()), style = bandStyle)
             }
         }
 
-        val path = androidx.compose.ui.graphics.Path()
-        points.forEachIndexed { i, p ->
-            val px = x(i, p.at)
-            val py = y(p.value)
-            if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        // Grid + axis labels.
+        val hair = 0.5.dp.toPx().coerceAtLeast(1f)
+        yTicks.forEachIndexed { i, v ->
+            val gy = y(v)
+            drawLine(grid, Offset(plot.left, gy), Offset(plot.right, gy), strokeWidth = hair)
+            val l = yLabels[i]
+            drawText(l, topLeft = Offset(plot.right + gap,
+                (gy - l.size.height / 2f).coerceIn(0f, size.height - l.size.height)))
         }
-        drawPath(path, line, style = Stroke(width = 2.dp.toPx()))
-        points.forEachIndexed { i, p ->
-            drawCircle(line, radius = 3.dp.toPx(), center = Offset(x(i, p.at), y(p.value)))
+        if (last > first) xTicks.forEach { (at, text) ->
+            val gx = plot.left + plot.width * ((at - first).toFloat() / (last - first))
+            drawLine(grid, Offset(gx, plot.top), Offset(gx, plot.bottom), strokeWidth = hair)
+            val room = (size.width - gx - 2.dp.toPx()).toInt()
+            if (room > 0) {
+                val l = measurer.measure(text, axisStyle, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = room))
+                drawText(l, topLeft = Offset(gx + 2.dp.toPx(), plot.bottom + gap / 2))
+            }
         }
+
+        // The curve: monotone cubic, like `.interpolationMethod(.monotone)` —
+        // smooth, and never overshooting past a point.
+        val pts = points.mapIndexed { i, p -> Offset(x(i, p.at), y(p.value)) }
+        drawPath(TrendAxis.monotonePath(pts), line, style = Stroke(width = 2.dp.toPx()))
+        pts.forEach { drawCircle(line, radius = 3.dp.toPx(), center = it) }
 
         // The next-band goal — a curve with no finish line says nothing.
         if (target != null && target in lo..hi) {
-            drawLine(rule.copy(alpha = 0.6f), Offset(0f, y(target)), Offset(size.width, y(target)),
+            drawLine(rule, Offset(plot.left, y(target)), Offset(plot.right, y(target)),
                 strokeWidth = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())))
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())))
         }
+    }
+}
+
+/** The axis arithmetic Swift Charts does for `trendChart` — kept pure. */
+internal object TrendAxis {
+    /** "Nice" value ticks inside [lo, hi] (1·2·2.5·5 × 10ⁿ, about four). */
+    fun valueTicks(lo: Double, hi: Double): List<Double> {
+        val raw = (hi - lo) / 4
+        if (raw <= 0) return listOf(lo)
+        val mag = Math.pow(10.0, Math.floor(Math.log10(raw)))
+        val step = listOf(1.0, 2.0, 2.5, 5.0, 10.0).map { it * mag }.first { it >= raw }
+        val out = mutableListOf<Double>()
+        var v = Math.ceil(lo / step - 1e-9) * step
+        while (v <= hi + 1e-9) { out += v; v += step }
+        return out
+    }
+
+    fun valueLabel(v: Double, ticks: List<Double>): String =
+        if (ticks.all { Math.abs(it - Math.rint(it)) < 1e-9 }) Math.rint(v).toLong().toString()
+        else String.format(Locale.getDefault(), "%.1f", v)
+
+    /** Time ticks on round hours, days, weeks or months, about three to five
+     *  across the span, each labelled in the app language. */
+    fun timeTicks(first: Long, last: Long, locale: Locale): List<Pair<Long, String>> {
+        if (last <= first) return emptyList()
+        val zone = java.time.ZoneId.systemDefault()
+        val spanH = (last - first) / 3_600_000.0
+        fun fmt(skeleton: String) = java.time.format.DateTimeFormatter.ofPattern(
+            android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+        val start = java.time.Instant.ofEpochMilli(first).atZone(zone)
+        val ticks = mutableListOf<java.time.ZonedDateTime>()
+        val formatter: java.time.format.DateTimeFormatter
+        if (spanH <= 36) {
+            val step = listOf(1L, 2L, 3L, 6L, 12L).first { spanH / it <= 5 }
+            var t = start.truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+            while (t.hour % step != 0L) t = t.plusHours(1)
+            formatter = fmt("ha")
+            while (t.toInstant().toEpochMilli() <= last) { ticks += t; t = t.plusHours(step) }
+        } else if (spanH <= 24 * 60) {
+            val days = spanH / 24
+            val step = listOf(1L, 2L, 7L, 14L).first { days / it <= 5 }
+            var t = start.toLocalDate().atStartOfDay(zone)
+            formatter = fmt("MMMd")
+            while (t.toInstant().toEpochMilli() <= last) { ticks += t; t = t.plusDays(step) }
+        } else {
+            var t = start.toLocalDate().withDayOfMonth(1).atStartOfDay(zone)
+            val months = spanH / 24 / 30
+            val step = listOf(1L, 2L, 3L, 6L).first { months / it <= 5 }
+            formatter = fmt("MMM")
+            while (t.toInstant().toEpochMilli() <= last) { ticks += t; t = t.plusMonths(step) }
+        }
+        return ticks.map { it.toInstant().toEpochMilli() }.filter { it > first }
+            .map { at -> at to java.time.Instant.ofEpochMilli(at).atZone(zone).format(formatter) }
+    }
+
+    /** Fritsch–Carlson monotone cubic through [pts] (x strictly increasing
+     *  when time moves; equal x falls back to straight segments). */
+    fun monotonePath(pts: List<Offset>): androidx.compose.ui.graphics.Path {
+        val path = androidx.compose.ui.graphics.Path()
+        if (pts.isEmpty()) return path
+        path.moveTo(pts[0].x, pts[0].y)
+        val n = pts.size
+        if (n < 3 || (1 until n).any { pts[it].x <= pts[it - 1].x }) {
+            for (i in 1 until n) path.lineTo(pts[i].x, pts[i].y)
+            return path
+        }
+        val d = FloatArray(n - 1) { (pts[it + 1].y - pts[it].y) / (pts[it + 1].x - pts[it].x) }
+        val m = FloatArray(n)
+        m[0] = d[0]; m[n - 1] = d[n - 2]
+        for (i in 1 until n - 1) m[i] = if (d[i - 1] * d[i] <= 0f) 0f else (d[i - 1] + d[i]) / 2
+        for (i in 0 until n - 1) {
+            if (d[i] == 0f) { m[i] = 0f; m[i + 1] = 0f; continue }
+            val a = m[i] / d[i]; val b = m[i + 1] / d[i]
+            val s = a * a + b * b
+            if (s > 9f) { val t = 3f / Math.sqrt(s.toDouble()).toFloat(); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i] }
+        }
+        for (i in 0 until n - 1) {
+            val h = (pts[i + 1].x - pts[i].x) / 3
+            path.cubicTo(pts[i].x + h, pts[i].y + m[i] * h,
+                pts[i + 1].x - h, pts[i + 1].y - m[i + 1] * h, pts[i + 1].x, pts[i + 1].y)
+        }
+        return path
     }
 }
 
