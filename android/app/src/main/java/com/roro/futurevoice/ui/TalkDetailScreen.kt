@@ -116,9 +116,39 @@ private enum class TalkChapter { INTRO, WORDS, EXPRESSIONS, LINES, CARDS }
  * The raw conversation sits behind Replay, as it does on iOS — a book opens
  * on what there is to learn, not on the log of the call.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TalkDetailScreen(
+    sessionId: String,
+    language: String,
+    level: com.roro.futurevoice.data.CefrLevel = com.roro.futurevoice.data.CefrLevel.B1,
+    onBack: () -> Unit,
+    onShadow: (String) -> Unit = {},
+    onContinue: ((String) -> Unit)? = null,
+    onDone: (() -> Unit)? = null,
+    onReviewTalk: ((String) -> Unit)? = null,
+) {
+    // Replay PUSHES the transcript (iOS `navigationDestination` →
+    // `TalkTranscriptView`): the book page and its transcript are one small
+    // navigation stack, drawn by the shared host.
+    var transcript by remember(sessionId) { mutableStateOf<Session?>(null) }
+    val pages: List<String> = if (transcript == null) listOf("book") else listOf("book", "transcript")
+    IosNavStack(stack = pages, onPop = { transcript = null; StoreEvents.bump() }) { page ->
+        val shown = transcript
+        if (page == "transcript" && shown != null) {
+            TalkTranscriptScreen(
+                session = shown, language = language, level = level,
+                onBack = { transcript = null; StoreEvents.bump() },
+                onContinue = onContinue?.let { go -> { go(shown.topic ?: shown.displayTitle.orEmpty()) } })
+        } else if (page == "book") {
+            TalkDetailPage(sessionId, language, level, onBack, onShadow, onContinue, onDone, onReviewTalk,
+                onReplay = { transcript = it })
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TalkDetailPage(
     sessionId: String,
     language: String,
     /** Decides which pickup words are worth keeping and which lines teach. */
@@ -132,8 +162,10 @@ fun TalkDetailScreen(
     onDone: (() -> Unit)? = null,
     /** This talk's cards as a deck (iOS `DrillView(source: .session)`). */
     onReviewTalk: ((String) -> Unit)? = null,
+    /** Replay: push this talk's transcript. */
+    onReplay: (Session) -> Unit,
 ) {
-    androidx.activity.compose.BackHandler(onBack = onDone ?: onBack)
+    NavPageBackHandler(onBack = onDone ?: onBack)
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -290,14 +322,8 @@ fun TalkDetailScreen(
     }
 
     val continueTalk: (() -> Unit)? = onContinue?.let { go -> { go(s.topic ?: s.displayTitle.orEmpty()) } }
-    if (showingTranscript) {
-        // In place of the page, like Say it again: back returns to the cover.
-        TalkTranscriptScreen(
-            session = s, language = language, level = level,
-            onBack = { showingTranscript = false; StoreEvents.bump() },
-            onContinue = continueTalk)
-        return
-    }
+    // A capture asks for the transcript up front: push it once.
+    LaunchedEffect(showingTranscript) { if (showingTranscript) { showingTranscript = false; onReplay(s) } }
 
     if (showingGrammarReview) {
         GrammarReviewSheet(
@@ -405,7 +431,7 @@ fun TalkDetailScreen(
                             progressLabel = stringResource(R.string.lld_of_lld_mastered,
                                 curriculum.masteredCount, curriculum.totalCount),
                             mastered = curriculum.isMastered,
-                            onReplay = { showingTranscript = true },
+                            onReplay = { onReplay(s) },
                             onContinue = continueTalk,
                             // No gate: nothing in a run is synthesized or
                             // metered (see `SayItAgainScreen`).

@@ -151,7 +151,6 @@ fun MeScreen(
     var page by rememberSaveable { mutableStateOf<MePage?>(null) }
     // Registered first, so the subpage's handler below wins while one is open.
     BackHandler(onBack = onBack)
-    BackHandler(enabled = page != null) { page = null }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -231,7 +230,24 @@ fun MeScreen(
         if (on) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    when (page) {
+    // Every Settings subpage is a push inside the Settings sheet on iOS
+    // (MeTab's own NavigationStack): one stack, drawn by the shared host —
+    // slide in, slide back, swipe from the left edge.
+    fun popPage() {
+        when (page) {
+            MePage.DAILY_CALL -> callTimes = DailyCallStore.times(context)
+            MePage.CORE -> scope.launch { coreProgress = CoreClubClient(AuthRepository()).progress(targetLanguage) }
+            else -> Unit
+        }
+        page = if (page == MePage.SCENE_VOICE) MePage.VOICE else null
+    }
+    val meStack: List<Any> = when (val p = page) {
+        null -> listOf(MeRoot)
+        MePage.SCENE_VOICE -> listOf(MeRoot, MePage.VOICE, MePage.SCENE_VOICE)
+        else -> listOf(MeRoot, p)
+    }
+    IosNavStack(stack = meStack, onPop = ::popPage) { key ->
+    when (key as? MePage) {
         MePage.DAILY_CALL -> DailyCallPage(
             enabled = callEnabled,
             times = callTimes,
@@ -260,7 +276,6 @@ fun MeScreen(
                 mutableStateOf(com.roro.futurevoice.talk.VoicePreset.sceneDefaultId()
                     ?: com.roro.futurevoice.talk.StockPerson.catalog.first().voiceId)
             }
-            BackHandler { page = MePage.VOICE }
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)
                 .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)) {
                 VoicePresetPicker(
@@ -576,6 +591,7 @@ fun MeScreen(
                 }
             }
         }
+    }
     }
 
     if (confirmingSignOut) {
@@ -907,3 +923,6 @@ private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
     core.seated -> stringResource(R.string.in_the_core_lld_days, core.member?.days_total ?: 0)
     else -> stringResource(R.string.no_seat_right_now)
 }
+
+/** The Settings list itself — the bottom page of its navigation stack. */
+private data object MeRoot

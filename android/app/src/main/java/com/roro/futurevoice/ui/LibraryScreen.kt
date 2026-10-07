@@ -216,13 +216,31 @@ private data class Material(
 private const val MAX_GLOSSES = 40
 private const val GLOSS_SETTLE_MS = 250L
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(kind: LibraryKind, language: String,
                   /** Shadowing runs its own screen; the card hands it one line. */
                   onShadow: (String) -> Unit = {},
                   onBack: () -> Unit) {
-    androidx.activity.compose.BackHandler(onBack = onBack)
+    // The word cloud is PUSHED from the Words page on iOS (a toolbar
+    // NavigationLink to `VocabularyView`): one small stack, the shared host.
+    var showCloud by remember { mutableStateOf(false) }
+    IosNavStack(stack = if (showCloud) listOf("list", "cloud") else listOf("list"),
+        onPop = { showCloud = false }) { page ->
+        if (page == "cloud") VocabularyCloudScreen(
+            language = language,
+            onShadow = { line -> showCloud = false; onShadow(line) },
+            onBack = { showCloud = false },
+        ) else LibraryPage(kind, language, onShadow, onBack, onOpenCloud = { showCloud = true })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibraryPage(kind: LibraryKind, language: String,
+                  onShadow: (String) -> Unit,
+                  onBack: () -> Unit,
+                  onOpenCloud: () -> Unit) {
+    NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     val lore = remember { WordLore(AuthRepository()) }
@@ -248,7 +266,6 @@ fun LibraryScreen(kind: LibraryKind, language: String,
     var openTerm by remember { mutableStateOf<String?>(null) }
     var openList by remember { mutableStateOf<List<String>>(emptyList()) }
     /** The explorable cloud over the whole graded pool — words only. */
-    var showCloud by remember { mutableStateOf(false) }
 
     LaunchedEffect(kind, language, revision) {
         material = if (kind == LibraryKind.WORDS) loadWords(context, language)
@@ -286,7 +303,7 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                     // vocabulary. Expressions have no graded pool behind them,
                     // so the button only means something on the words page.
                     if (kind == LibraryKind.WORDS) {
-                        IconButton(onClick = { showCloud = true }) {
+                        IconButton(onClick = onOpenCloud) {
                             Icon(
                                 Icons.Filled.BlurOn,
                                 contentDescription =
@@ -423,13 +440,6 @@ fun LibraryScreen(kind: LibraryKind, language: String,
         }
     }
 
-    if (showCloud) {
-        VocabularyCloudScreen(
-            language = language,
-            onShadow = { line -> showCloud = false; onShadow(line) },
-            onBack = { showCloud = false },
-        )
-    }
 
     openTerm?.let { term ->
         WordCardSheet(

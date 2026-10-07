@@ -183,8 +183,9 @@ fun FindPeopleScreen(
     }
     LaunchedEffect(language, reloadToken) { loadPool() }
 
-    // Back closes the card first — it is a page, not a sheet over this one.
-    androidx.activity.compose.BackHandler { if (card != null) card = null else onBack() }
+    // Back on the list closes the page; a card or the intro is a PUSH (iOS
+    // `navigationDestination` in FindPeopleSheet), popped by the host.
+    NavPageBackHandler(onBack = onBack)
 
     if (intake) {
         CounterpartIntakeScreen(
@@ -201,7 +202,19 @@ fun FindPeopleScreen(
         return
     }
 
-    if (editingIntro) {
+    // The card stays drawable while it slides away after `card` is cleared.
+    var lastCard by remember { mutableStateOf<PublicPersonaClient.PublicPersona?>(null) }
+    card?.let { lastCard = it }
+    val peopleStack: List<String> = buildList {
+        add("list")
+        if (editingIntro) add("intro")
+        card?.let { add("card:${it.id}") }
+    }
+    IosNavStack(stack = peopleStack, onPop = {
+        if (card != null) card = null
+        else if (editingIntro) { editingIntro = false; reloadToken++ }
+    }) { page ->
+    if (page == "intro") {
         PublicIntroScreen(
             persona = persona,
             targetLanguage = language,
@@ -210,11 +223,10 @@ fun FindPeopleScreen(
             onBack = { editingIntro = false; reloadToken++ },
             onDecided = { scope.launch { mine = runCatching { client.fetchMine(language) }.getOrNull() } },
         )
-        return
+        return@IosNavStack
     }
-
-    val open = card
-    if (open != null) {
+    val open = lastCard
+    if (page.startsWith("card:") && open != null) {
         FindPersonCard(
             person = open,
             language = language,
@@ -226,7 +238,7 @@ fun FindPeopleScreen(
             onPersonSaved = { scope.launch { reloadOwn(); StoreEvents.bump() } },
             onBack = { card = null },
         )
-        return
+        return@IosNavStack
     }
 
     val groupPool = pool.filter { PoolGroup.of(it) == group }
@@ -446,6 +458,7 @@ fun FindPeopleScreen(
             initialPhoto = intakePhoto,
             isNew = editingIsNew,
         )
+    }
     }
 }
 
