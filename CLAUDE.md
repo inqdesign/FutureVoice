@@ -2371,6 +2371,11 @@ its trailer was invisible to git whenever it sat in its own paragraph.
   `asc-submit.py --send` (App Store) and `play-release.py --send --track
   production` also refuse anything OWED. `ANDROID_GATE=skip` passes, out loud
   — tell the founder why. Testing tracks on Play only print the list.
+- **One version number.** Android's `versionName` is the iOS marketing version
+  it matches (1.1.4 today), so a version means the same app on both stores and
+  in analytics' `app_version`; `versionCode` stays Play's own counter.
+  `play-release.py` compares it with iOS's Info.plist, blocks a production
+  send on a mismatch, and `--match-ios` writes it.
 
 ## Source of truth
 
