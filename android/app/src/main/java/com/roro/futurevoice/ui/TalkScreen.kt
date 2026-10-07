@@ -563,10 +563,16 @@ fun TalkScreen(
         return
     }
 
+    // The call is on the PLAIN page, not the grouped ground (iOS
+    // `ConversationView`: `.background(Color(.systemBackground))`) — white in
+    // light, black in dark, header and feed one surface.
+    val callPage = MaterialTheme.colorScheme.surface
     Scaffold(
+        containerColor = callPage,
         topBar = {
             androidx.compose.material3.CenterAlignedTopAppBar(
-                colors = AppSurfaces.topBarColors(),
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = callPage, scrolledContainerColor = callPage),
                 title = {
                     // WHAT the call is, not what it is doing. The phase reads
                     // under the control at the bottom, where the hand is, and
@@ -630,7 +636,10 @@ fun TalkScreen(
                         TextButton(onClick = { pitchThenLeave() }, modifier = chip) {
                             Text(stringResource(R.string.done), style = MaterialTheme.typography.titleMedium)
                         }
-                    } else {
+                    } else if (state.turns.isNotEmpty()) {
+                        // Only once there is a line on screen (iOS: `if
+                        // !turns.isEmpty`) — before the call connects there is
+                        // nothing to hang up; the close button leaves.
                         TextButton(onClick = {
                             vm.end()
                             // A call nobody spoke in has nothing to wrap up —
@@ -769,7 +778,7 @@ fun TalkScreen(
                     }
                 }
 
-                val page = MaterialTheme.colorScheme.background
+                val page = callPage
                 Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(24.dp)
                     .background(Brush.verticalGradient(listOf(page, page.copy(alpha = 0f)))))
                 Column(
