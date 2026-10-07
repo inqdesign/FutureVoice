@@ -862,6 +862,55 @@ iOS: 매일 전화 단계 뒤 `BillingGate.blocks()` — 못 물어봄(세션 �
 | 목소리 다시 만들기 실패 | `error.localizedDescription` | 「문제가 생겼어요」 | 실제 오류 문장 ☑(코드) |
 | 계정 삭제 꼬리말의 이메일 | 없음 | 안드로이드만 표시 | 삭제 ☑(화면) |
 
+## 2n단계 · 푸시 페이지 — 오른쪽에서 들어오고, 왼쪽 끝에서 밀어 뒤로 (2026-10-07)
+
+신고: "안드로이드는 하위 페이지가 오른쪽에서 안 들어오고, 왼쪽 끝을 밀어도 안 돌아간다 — 원래 그런가?" 아니다. iOS에서 `NavigationLink`/`navigationDestination`으로 여는 페이지는 전부 같은 움직임이어야 한다.
+
+**공용 호스트 하나**: `ui/IosNavStack.kt`(`IosNavStack`). 책 전용이던 `BookPushHost`(9fb32a89)를 일반화해 없앴다.
+- 푸시: 새 페이지가 오른쪽 끝에서 들어오고 아래 페이지는 1/3 왼쪽으로 밀리며 살짝 어두워짐, 380ms ease-out(`CubicBezier(0.2, 0.9, 0.3, 1)`). 팝은 같은 움직임 거꾸로.
+- 손가락 따라 뒤로: 위 페이지가 손가락을 따라 오른쪽으로, 아래 페이지가 −1/3에서 돌아오고, 위 페이지 앞끝에 그림자. 놓을 때 폭 절반 넘거나 빠르게 튕기면(500dp/s) 팝, 아니면 제자리로.
+- 시스템 뒤로: `PredictiveBackHandler` + 매니페스트 `android:enableOnBackInvokedCallback="true"` — 안드로이드 14+ 제스처 내비에선 시스템 뒤로 제스처의 진행이 같은 애니메이션을 끌고 감(손가락 x 기준), 그 아래 버전·뒤로 버튼은 확정 시 팝 애니메이션. 3버튼 내비(시스템 제스처 인셋 0)에선 왼쪽 20dp에서 시작하는 드래그를 앱이 직접 잡음 — 모든 버전. 제스처 내비에선 시스템이 왼쪽 끝을 가지므로 앱 감지기는 꺼짐(둘이 같이 돌면 싸움).
+- 뒤로는 언제나 한 단계: 하위 페이지에서 앱이 닫히지 않음. 전환 중 뒤로는 삼킴. 페이지의 맨 뒤로는 `NavPageBackHandler`(호스트가 팝할 수 있을 때는 비키고, 아니면 스스로 처리).
+- 덮개(풀스크린 커버·시트)를 페이지 안에서 그릴 때는 `NavCoverGuard()` — 그동안 아래 호스트를 밀어 닫을 수 없음(다시 말하기·루틴 편집기·다시 말하기 고르기·섀도잉).
+- 덮인 페이지는 저장 상태(스크롤 위치)를 유지하고, 팝되면 버림 — iOS처럼 돌아오면 그 자리.
+- 중첩: 안쪽 스택이 팝할 수 있으면 왼쪽 끝과 뒤로를 안쪽이 가짐.
+
+루트는 플래그들의 우선순위 `when`이 곧 스택이라 그대로 `RootRoute` 목록으로 바꿈(맨 위 = 그려지는 페이지, 그 아래 = 뒤로가 드러낼 페이지). 푸시인지 아닌지는 `rootPushes(from, to)`가 iOS 표대로 정함.
+
+| iOS 화면 | iOS 표시 방식 (위치) | 안드로이드 | 지금 |
+|---|---|---|---|
+| 설정 `MeTab` | **시트** (대화 홈 아바타, `ConversationHome.swift:187`) | 루트 `Me` | 제자리 교체 유지(시트는 아래로 닫는 것 — 가장자리 밀기 없음). 슬라이드업 시트 모양은 미이식 |
+| 사용 내역 `PlanPageView` | 푸시 (`MeTab.swift:117`) | 루트 `PlanPage` (Me 위) | 푸시 ☑(화면) |
+| 사용하는 것 `CreditGuideView` · 초대 `InviteView` | 푸시 (`PlanPageView.swift:166/180`) | 루트 `CreditGuide`/`Invite` | 푸시 ☑(코드) |
+| 코어 · 앱 언어 · 매일 전화 · 목소리 · 소리와 마이크 · 화면 모드 · 연습 데이터 · 앱 안내 | 푸시 (`MeTab.swift:132/717/151/158/165/182/196/213`) | `MeScreen` 안쪽 스택 | 푸시 ☑(화면: 코어 끌기·팝) |
+| 상황연습 상대 목소리 `VoicePresetPickerView` | 푸시 (목소리 페이지에서, `MeTab.swift:823`) | 안쪽 스택 3단(설정→목소리→고르기) | 푸시, 뒤로는 목소리 페이지로 ☑(코드) |
+| 개인정보 | 푸시 (`MeTab.swift:203`) | 루트 `Privacy` | 푸시 ☑(코드) |
+| 공개 소개 `PublicIntroView` | 푸시 (설정 「사람 찾기」 행, 사람 찾기 시트의 내 줄) | 루트 `PublicIntro` / `FindPeopleScreen` 안쪽 | 푸시 ☑(코드) |
+| 프로필 편집 · 요금제 · 억양 · 목소리 비교 · 언어 추가 | 시트 | 페르소나 편집 화면 / 다이얼로그 / 시트 | 시트·교체 유지 |
+| 사람 찾기 `FindPeopleSheet` | **시트** (Watch 탭, `WatchTab.swift:147`) | 루트 `People` | 교체 유지 |
+| 사람 카드 `FindPersonCard` | 푸시 (`FindPeopleSheet.swift:129`) | `FindPeopleScreen` 안쪽 스택 | 푸시 ☑(코드) |
+| 내 사람 `CounterpartDetailView` | 푸시 (`FindPeopleSheet.swift:186`) | 루트 `Person` (People 위) | 푸시 ☑(코드) |
+| 단어 · 표현 · 문장 · 섀도잉 목록 | 푸시 (복습 탭 서재 타일, `PracticeTab.swift:912–927`) | 루트 `Library`/`Sentences`/`ShadowBrowser` | 푸시 ☑(코드) |
+| 단어 구름 `VocabularyView` | 푸시 (단어 목록 툴바, `WordsView.swift:217`) | `LibraryScreen` 안쪽 스택 | 푸시 ☑(코드) — 전엔 목록 위에 겹쳐 그림 |
+| 대화 책 `ConversationDetailView` | 푸시 (책장 카드·행·활동·사람·장면 책의 학습 기록) | 루트 `TalkBook` | 푸시 ☑(코드) |
+| 장면 책 `ScenarioDetailView` | 푸시 (`PracticeTab.swift:243`) | 루트 `ScenarioBook` | 푸시 ☑(코드) |
+| 대본 `TalkTranscriptView` (다시 듣기) | 푸시 (`ConversationDetailView.swift:121`) | `TalkDetailScreen` 안쪽 스택 | 푸시 ☑(코드) — 전엔 제자리 교체 |
+| 다시 말하기 `SayItAgainView` | 풀스크린 커버 | 책 안 제자리 | 유지 + 가장자리 밀기 차단 ☑ |
+| 「이 대화 복습」 `DrillView(.session)` | 푸시 (`ConversationDetailView.swift:835`) | 루트 `Deck` (대화 책 위) | 푸시 ☑(코드) |
+| 문장 카드 `DrillView(.card)` | 푸시 (문장 목록 행, `SentencesView.swift:55`) | 루트 `Deck` (`deckPushed`) | 푸시 ☑(코드) |
+| 그 밖의 덱(오늘 복습·단어/표현 덱·미룬 것·챕터 덱) | 시트 | 루트 `DueReview`/`StudyDeck`/`Deck` | 교체 유지 |
+| 장면 보기 `SceneWatchView`/`WatchView` | 푸시 (Watch 탭, 장면 책, 사람) | 루트 `Watch` | 그 셋에서 푸시 ☑(코드) |
+| 섀도잉 `ShadowDrillView` | 시트/커버 | 루트 `ShadowLine`/`ShadowHand`, 대본 안 | 교체 유지 + 가장자리 밀기 차단 ☑ |
+| 활동 `ActivityView` | 푸시 (대화 홈 연속 칩, 성장 탭) | 루트 `Activity` | 푸시 ☑(화면) — 거기서 연 대화 책은 이제 활동 위에 푸시(뒤로 = 활동, iOS와 같음) |
+| 주간 계획 편집 `WeeklyPlanEditor` | 풀스크린 커버 | 루트 `RoutineEditor` / 활동 안 | 교체 유지 + 밀기 차단 ☑ |
+| 다시 말하기 고르기 `SayItAgainPicker` | 시트 | 루트 `SayAgainPick` / 활동 안 | 교체 유지 + 밀기 차단 ☑ |
+| 최근 평가 `WeeklyReportView` | 푸시 (`ProgressTab.swift:635`) | 루트 `Assessment` | 푸시 ☑(코드) |
+| 성장 기술 페이지 | 푸시 아님 — 탭 안 가로 페이징 + 칩 | `ChipPager` | 해당 없음 |
+| 다 읽은 책 | iOS는 책장 안 칩(화면 아님) | 루트 `Finished` 페이지 | 푸시로 둠(안드로이드엔 페이지라 뒤로가 필요) |
+| 주간 테스트 · 지난 주 보관함 · 통화 | 시트 / 커버 | 다이얼로그 / 시트 / 루트 `Call` | 유지 |
+
+검증(에뮬레이터 emulator-5554, API 36, 개발 계정 DEBUG 앱): 제스처 내비(mode 2)에서 활동 푸시·손가락 따라 끌다 되돌림(취소)·끝까지 끌어 팝·뒤로 키 팝, 설정→코어(안쪽 스택) 끌기·팝, 설정→사용 내역(루트 스택) 끌기·팝, 설정에서 뒤로 = 대화 탭(교체), 팝 뒤 설정 스크롤 위치 유지. 3버튼 내비(mode 0)에서 x=3 드래그가 앱 감지기로 손가락을 따라가고 되돌리면 취소, 끝까지 끌면 팝. `assembleDebug`·`assembleCapture`·rules-check 녹색.
+
 ## 3단계 · 첫 기준선 측정
 
 - ☐ **3.1** 갤러리를 네 가지로 돌린다: 한국어·영어 × 라이트·다크. (한국어·라이트는
