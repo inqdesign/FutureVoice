@@ -115,6 +115,11 @@ export class GeminiTranscriber {
     }))
   }
 
+  /** What this socket was billed for (2026-10-08). The live model reports no
+   *  usage of its own, and Google bills it by audio streamed in (plus a few
+   *  percent of text out), so the gateway counts the audio for the ledger. */
+  audioBytesSent = 0
+
   /** Forward one mic frame (16 kHz mono s16le PCM). */
   sendAudio(pcm: ArrayBuffer): void {
     const data = base64Encode(pcm)
@@ -144,6 +149,7 @@ export class GeminiTranscriber {
       ws.send(JSON.stringify({
         realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } },
       }))
+      this.audioBytesSent += Math.floor(data.length * 3 / 4)
     } catch (e) {
       this.buffer(data)
       // workerd may deliver the dead socket's close/error event late or,

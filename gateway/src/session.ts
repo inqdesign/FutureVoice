@@ -23,7 +23,7 @@ import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
-import { verifyUser, ownsVoice, type Env } from "./supabase"
+import { verifyUser, ownsVoice, recordGeminiUsage, type Env } from "./supabase"
 import { TalkBilling, type WallCode } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
@@ -67,6 +67,9 @@ export class CallSession implements DurableObject {
   /** Server-side meter — the gateway charges the call itself (see billing.ts);
    *  the app's TalkMeter stays local-only on this path. */
   private billing: TalkBilling | null = null
+  /** For the ledger rows written at teardown (recordGeminiUsage). */
+  private userId: string | null = null
+  private readonly callId = crypto.randomUUID()
   /** A spent allowance that arrived while a line was still playing — held
    *  until that line ends, then the session ends for it (`wall`). */
   private pendingWall: WallCode | null = null
@@ -669,6 +672,7 @@ export class CallSession implements DurableObject {
         .then((r) => { console.log(`start: preflight ${Date.now() - gateAt}ms`); return r })
       const userId = msg.token ? await verifyUser(this.env, msg.token) : null
       console.log(`start: verify ${Date.now() - gateAt}ms`)
+      this.userId = userId
       if (!userId) {
         void preflight.catch(() => null)
         return this.fail("unauthorized", "invalid session token")
@@ -1707,9 +1711,50 @@ export class CallSession implements DurableObject {
         `spec_fires=${this.specFires} spec_adopted=${this.specAdopted}`)
       this.replyEngine.dispose()
     }
+    this.recordUsage()
     this.transcriber?.close()
     this.eleven?.close()
     try { this.client?.close(1000, "session ended") } catch { /* gone */ }
     this.client = null
+  }
+
+  /** The call's Gemini cost into usage_ledger, one row per model — the only
+   *  record of it outside Google's bill (supabase.ts `recordGeminiUsage`).
+   *  Token counts are Gemini's own for the replies; the live transcriber
+   *  reports none, so its row carries what it is billed by: audio seconds
+   *  streamed (25 tokens a second) and text out at the billed ratio. */
+  private recordUsage(): void {
+    const userId = this.userId
+    if (!userId) return
+    const writes: Promise<void>[] = []
+    for (const [model, u] of this.replyEngine?.usageByModel ?? []) {
+      if (u.calls === 0) continue
+      writes.push(recordGeminiUsage(this.env, userId, `gw:${this.callId}:reply:${model}`, "call-reply", model, {
+        // `prompt_tokens` is plain input only; the cached share is priced apart.
+        prompt_tokens: Math.max(0, u.promptTokens - u.cachedTokens),
+        cached_input_tokens: u.cachedTokens,
+        output_tokens: u.outputTokens,
+        thought_tokens: u.thoughtTokens,
+        total_tokens: u.promptTokens + u.outputTokens + u.thoughtTokens,
+        calls: u.calls,
+        turns: this.turnCount,
+        spec_fires: this.specFires,
+      }))
+    }
+    const t = this.transcriber
+    if (t && t.audioBytesSent > 0) {
+      const seconds = t.audioBytesSent / 32_000
+      const model = (this.env.GEMINI_LIVE_MODEL ?? DEFAULT_TRANSCRIBE_MODEL).replace(/^models\//, "")
+      writes.push(recordGeminiUsage(this.env, userId, `gw:${this.callId}:transcribe`, "call-transcribe", model, {
+        audio_input_tokens: Math.round(seconds * 25),
+        // Text out is not countable from here (every transcript arrives more
+        // than once); priced at the ratio Google billed, 54,873 out to
+        // 1,602,943 audio tokens (Oct 1–8, 2026). It is ~20% of this row.
+        output_tokens: Math.round(seconds * 25 * 0.034),
+        output_estimated: true,
+        audio_seconds: Math.round(seconds),
+      }))
+    }
+    if (writes.length > 0) this.state.waitUntil(Promise.all(writes))
   }
 }

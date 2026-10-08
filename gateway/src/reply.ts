@@ -47,7 +47,24 @@ export class ReplyEngine {
    *  see `steer-turn.ts`). Empty = none. */
   steer = ""
 
-  readonly usage: ReplyUsage = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0 }
+  /** Per model: the hedge's fallback is priced differently from the primary. */
+  readonly usageByModel = new Map<string, ReplyUsage>()
+  get usage(): ReplyUsage {
+    const sum: ReplyUsage = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0 }
+    for (const u of this.usageByModel.values()) {
+      sum.calls += u.calls; sum.promptTokens += u.promptTokens; sum.cachedTokens += u.cachedTokens
+      sum.outputTokens += u.outputTokens; sum.thoughtTokens += u.thoughtTokens
+    }
+    return sum
+  }
+  private usageFor(model: string): ReplyUsage {
+    let u = this.usageByModel.get(model)
+    if (!u) {
+      u = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0 }
+      this.usageByModel.set(model, u)
+    }
+    return u
+  }
 
   /** The system prompt as an explicit Gemini cache (2026-10-08).
    *
@@ -238,7 +255,8 @@ export class ReplyEngine {
     if (!resp.ok || !resp.body) {
       throw new Error(`reply upstream ${model} ${resp.status}: ${(await resp.text()).slice(0, 300)}`)
     }
-    this.usage.calls += 1
+    const usage = this.usageFor(model)
+    usage.calls += 1
 
     let full = ""
     let lastUsage: any = null
@@ -277,10 +295,10 @@ export class ReplyEngine {
     } finally {
       try { reader.releaseLock() } catch { /* released */ }
       if (lastUsage) {
-        this.usage.promptTokens += lastUsage.promptTokenCount ?? 0
-        this.usage.cachedTokens += lastUsage.cachedContentTokenCount ?? 0
-        this.usage.outputTokens += lastUsage.candidatesTokenCount ?? 0
-        this.usage.thoughtTokens += lastUsage.thoughtsTokenCount ?? 0
+        usage.promptTokens += lastUsage.promptTokenCount ?? 0
+        usage.cachedTokens += lastUsage.cachedContentTokenCount ?? 0
+        usage.outputTokens += lastUsage.candidatesTokenCount ?? 0
+        usage.thoughtTokens += lastUsage.thoughtsTokenCount ?? 0
       }
     }
     return full

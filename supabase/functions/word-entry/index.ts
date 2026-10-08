@@ -27,7 +27,9 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { serviceRoleClient } from "../_shared/credits.ts"
+import {
+  serviceRoleClient, recordFreeUsage, recordProviderUsage, geminiUsageFields, background,
+} from "../_shared/credits.ts"
 
 // The word/expression LISTS lazily generate an entry per row scrolled into
 // view (2026-08-18), so a learner walking a 250-word notebook legitimately
@@ -119,7 +121,18 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("GEMINI_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing GEMINI_API_KEY")
 
-  const entry = await generate(word, native, target, kind, apiKey)
+  const { entry, usage } = await generate(word, native, target, kind, apiKey)
+  // Every generation is on the ledger (2026-10-08) — ~450 a week on 3.6-flash
+  // that only Google's bill knew about. A 0-delta row like every free surface;
+  // the cap is counting, not limiting (the hourly limit above is the limit).
+  if (usage) {
+    const idempotencyKey = `word-entry:${crypto.randomUUID()}`
+    background(recordFreeUsage({
+      supabase: svc, userId: user.id, action: "gemini", purpose: "dictionary",
+      dailyCap: 1_000_000, sourceFn: "word-entry", idempotencyKey,
+      metadata: { model: MODEL, purpose: "dictionary", kind, native_lang: native, target_lang: target },
+    }).then(() => recordProviderUsage({ idempotencyKey, usage })))
+  }
   if (!entry) return errorResponse(502, "generation failed")
 
   // Upsert (not insert): a concurrent request for the same word may have won
@@ -232,16 +245,18 @@ contain the chunk word-for-word as sent. 0-2 variants; none is fine. \
 Keep everything concise.`
 }
 
+const MODEL = "gemini-3.6-flash"
+
 async function generate(
   word: string, native: string, target: string, kind: Kind, apiKey: string,
-): Promise<unknown | null> {
+): Promise<{ entry: unknown | null; usage: Record<string, number> | null }> {
   const system = kind === "expression"
     ? expressionPrompt(target, native)
     : wordPrompt(target, native)
 
   try {
     const upstream = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -260,16 +275,22 @@ async function generate(
     )
     if (!upstream.ok) {
       console.error("gemini upstream error", upstream.status, (await upstream.text()).slice(0, 300))
-      return null
+      return { entry: null, usage: null }
     }
     const payload = await upstream.json()
+    // Paid for whether or not the JSON below parses.
+    const usage = geminiUsageFields(payload?.usageMetadata)
     const text: string = payload?.candidates?.[0]?.content?.parts
       ?.map((p: { text?: string }) => p.text ?? "").join("") ?? ""
     const start = text.indexOf("{"), end = text.lastIndexOf("}")
-    if (start < 0 || end < start) return null
-    return JSON.parse(text.slice(start, end + 1))
+    if (start < 0 || end < start) return { entry: null, usage }
+    try {
+      return { entry: JSON.parse(text.slice(start, end + 1)), usage }
+    } catch {
+      return { entry: null, usage }
+    }
   } catch (e) {
     console.error("word-entry generate failed", e)
-    return null
+    return { entry: null, usage: null }
   }
 }

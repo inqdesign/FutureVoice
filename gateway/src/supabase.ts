@@ -74,3 +74,40 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
   if (!Array.isArray(rows) || rows.length === 0) return "forbidden"
   return rows[0]?.parked_at ? "parked" : "ok"
 }
+
+/** One 0-delta `usage_ledger` row with what a call cost upstream (2026-10-08).
+ *
+ *  The call's Gemini work — the live transcriber and every reply — goes
+ *  straight to Google from here, so until this the ledger saw none of it and
+ *  the cost views measured about a quarter of the Gemini bill. Same two RPCs
+ *  the `gemini` edge function uses: `record_free_usage` writes the row (keyed,
+ *  so a retry can't double it), `record_provider_usage` merges the token
+ *  counts in the keys `usage_cost_component` prices. Never throws: a lost row
+ *  is a hole in a dashboard, never a failed call. */
+export async function recordGeminiUsage(
+  env: Env, userId: string, idempotencyKey: string,
+  purpose: string, model: string, usage: Record<string, number | boolean>,
+): Promise<void> {
+  const rpc = (fn: string, body: unknown) => fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+  try {
+    const row = await rpc("record_free_usage", {
+      p_user_id: userId, p_action: "gemini", p_purpose: purpose, p_source_fn: "gateway",
+      p_idempotency_key: idempotencyKey, p_metadata: { model, purpose },
+      // Counting, not limiting: the call's own meter is the limit.
+      p_daily_cap: 1_000_000,
+    })
+    if (!row.ok) { console.log(`ledger ${purpose}: ${row.status} ${(await row.text()).slice(0, 160)}`); return }
+    const merged = await rpc("record_provider_usage", { p_idempotency_key: idempotencyKey, p_usage: usage })
+    if (!merged.ok) console.log(`ledger ${purpose} usage: ${merged.status} ${(await merged.text()).slice(0, 160)}`)
+  } catch (e) {
+    console.log(`ledger ${purpose} failed: ${String(e).slice(0, 120)}`)
+  }
+}
