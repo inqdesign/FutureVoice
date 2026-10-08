@@ -61,6 +61,10 @@ enum Telemetry {
         let defaults = UserDefaults.standard
         return [
             "speed": String(format: "%.2f", SpeechSpeed.current.multiplier),
+            // The RUNG, beside the number (2026-10-08): a rung's multiplier
+            // can be retuned (Slow 0.80 → 0.85), and then the number alone
+            // can't say whether two learners picked the same thing.
+            "speed_rung": SpeechSpeed.current.rawValue,
             "speed_picked": defaults.string(forKey: SpeechSpeed.key) == nil ? "0" : "1",
             "coach": CoachMode.isOn ? "on" : "off",
         ]
