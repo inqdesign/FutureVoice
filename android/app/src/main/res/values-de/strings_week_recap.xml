@@ -121,4 +121,7 @@
     <string name="wt_right_way">"So ist es richtig"</string>
     <string name="wt_your_answer">"Deine Antwort"</string>
     <string name="wt_say_or_type_right_way">"Sag oder schreib es richtig"</string>
+    <string name="wt_say_it_in">"Sag es auf %1$s"</string>
+    <string name="wt_say_or_type_it">"Sag oder schreib es"</string>
+    <string name="wt_last_time_you_said">"Letztes Mal hast du gesagt"</string>
 </resources>

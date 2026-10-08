@@ -222,6 +222,12 @@ object CaptureWeeklyTest {
         "weekly-test-upgrade" to test(WeeklyTestItem.Kind.UPGRADE, null),
         "weekly-test-upgrade-right" to test(WeeklyTestItem.Kind.UPGRADE, true),
         "weekly-test-upgrade-wrong" to test(WeeklyTestItem.Kind.UPGRADE, false),
+        "weekly-test-rewrite" to test(WeeklyTestItem.Kind.REWRITE, null),
+        "weekly-test-rewrite-right" to test(WeeklyTestItem.Kind.REWRITE, true),
+        "weekly-test-rewrite-wrong" to test(WeeklyTestItem.Kind.REWRITE, false),
+        "weekly-test-translate" to test(WeeklyTestItem.Kind.TRANSLATE, null),
+        "weekly-test-translate-right" to test(WeeklyTestItem.Kind.TRANSLATE, true),
+        "weekly-test-translate-wrong" to test(WeeklyTestItem.Kind.TRANSLATE, false),
         "weekly-test-result" to mode({ c -> CaptureSeed.once("weekly-test-result") { seedFinished(c) } }) { c ->
             WeeklyTestScreen(language = lang(c), level = level(c), onClose = {})
         },

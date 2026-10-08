@@ -1,6 +1,7 @@
 package com.roro.futurevoice.data
 
 import android.content.Context
+import com.roro.futurevoice.net.GeminiClient
 import com.roro.futurevoice.net.WeekRecapCoach
 import com.roro.futurevoice.talk.CarryoverDetector
 import com.roro.futurevoice.talk.GrammarFocus
@@ -92,6 +93,11 @@ data class WeeklyTestItem(
     /** upgrade: the learner's line with the better word in it · rewrite:
      *  what it should be (the fix's "now"). */
     val example: String? = null,
+    /** translate: groups of target-language spans, one of each group must be
+     *  in the answer (a group holds the variants: "I've been", "I have been"). */
+    val required: List<List<String>>? = null,
+    /** translate: the wrong forms — the learner's own — that fail an answer. */
+    val avoid: List<String>? = null,
 ) {
     @Serializable
     enum class Kind {
@@ -115,10 +121,17 @@ data class WeeklyTestItem(
          *  with it marked, pick the better word. */
         @SerialName("upgrade") UPGRADE,
         /** A sentence the learner said and was corrected, shown whole with
-         *  the mistake marked: say or type it again the right way, a hint on
-         *  request. `focus` → `example` is the fix, `answer` the sentence
-         *  with it applied. */
+         *  the mistake marked: say or type it again the right way. Dealt for
+         *  one day (2026-10-08) and replaced by [TRANSLATE]; stored papers
+         *  may still hold it. */
         @SerialName("rewrite") REWRITE,
+        /** A grammar point the learner got wrong, asked in a NEW sentence:
+         *  `prompt` is a native-language sentence to say in the target
+         *  language, `answer` a model answer. Right when every `required`
+         *  group is in the answer and nothing in `avoid` is. `rule` names the
+         *  point, `note` is its tip, `focus` → `example` the learner's own
+         *  slip and its fix. */
+        @SerialName("translate") TRANSLATE,
     }
 }
 
@@ -172,9 +185,12 @@ class WeeklyTestRandom(seed: String) : Random() {
  *
  *   meaning  ← the week's talk BOOKS' Words chapter (iOS `36342dd`)
  *   gap      ← the Expressions page's "To study" list, in the line it was heard in
- *   rewrite  ← the corrections (drill cards): the learner's WHOLE sentence as
- *              said, mistake marked, a hint on request — say or type it the
- *              right way (replaced `build`, iOS 2026-10-08)
+ *   translate← the corrections (drill cards) and the profile's recurring
+ *              mistakes, asked in a NEW sentence: a native-language line to say
+ *              in the target language, graded in code against the pattern's
+ *              required spans and the learner's own wrong forms (replaced
+ *              `build`, iOS 2026-10-08 — founder: "a mistake is learned by
+ *              using its pattern again, not by re-reading the sentence it was in")
  *   listen   ← the fluent self's saved lines, heard and rebuilt from tiles
  *   speak    ← the fluent self's lines, said out loud and scored like a shadow take
  *
@@ -198,6 +214,9 @@ object WeeklyTestEngine {
     const val MAX_MEANING = 4
     const val MAX_GAP = 3
     const val MAX_REWRITE = 3
+    const val MAX_TRANSLATE = 3
+    /** How long a paper waits for its translate items to be written. */
+    const val TRANSLATE_WAIT_MS = 30_000L
     const val MAX_LISTEN = 2
     const val MAX_SPEAK = 2
     const val MAX_GRAMMAR = 2
@@ -268,7 +287,26 @@ object WeeklyTestEngine {
         /** A scene's own example line for an expression, by its normalized
          *  key (trimmed, lowercased). */
         val sceneExamples: Map<String, String> = emptyMap(),
+        /** The learner's own language — translate items need it. */
+        val nativeLanguage: String = "",
+        /** Writes the translate items (one model call); null = no network,
+         *  so no translate items (a JVM test). Args: system, user, test id. */
+        val writeTranslate: (suspend (String, String, String) -> TranslatePayload?)? = null,
     )
+
+    @Serializable
+    data class TranslatePayload(val items: List<Item> = emptyList()) {
+        @Serializable
+        data class Item(
+            val source: Int,
+            val point: String,
+            val native: String,
+            val answer: String,
+            val must: List<List<String>>,
+            val avoid: List<String>? = null,
+            val tip: String? = null,
+        )
+    }
 
     suspend fun gather(context: Context, language: String, level: CefrLevel,
                        native: String): Material {
@@ -313,6 +351,20 @@ object WeeklyTestEngine {
                 }
                 out.toMap()
             }.getOrDefault(emptyMap()),
+            nativeLanguage = native,
+            writeTranslate = { system, user, testId ->
+                val job = coachScope.async {
+                    runCatching {
+                        GeminiClient(AuthRepository()).sendJson(
+                            system = system,
+                            messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
+                            serializer = TranslatePayload.serializer(),
+                            maxTokens = 3000, purpose = "weekly-test",
+                            idempotencyKey = "weekly-test-translate:$testId")
+                    }.getOrNull()
+                }
+                withTimeoutOrNull(TRANSLATE_WAIT_MS) { job.await() }
+            },
         )
     }
 
@@ -400,7 +452,7 @@ object WeeklyTestEngine {
         val teachingTurns = fluentTurns.filter { it.second.id !in openers }
         items += gapItems(toStudy, windowSessions, teachingTurns, material.sessions, openers,
             material.sceneExamples, material.libraryExpressions, language, rng)
-        items += rewriteItems(material.cards, start, end, now, material.sessions, language)
+        items += translateItems(material, start, end, now, windowSessions, language, level, id)
         val listens = listenItems(teachingTurns, studyPhrases, material.hasAudio, language, rng)
         items += listens
         items += speakItems(teachingTurns, studyPhrases,
@@ -490,6 +542,7 @@ object WeeklyTestEngine {
             WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.GRAMMAR, WeeklyTestItem.Kind.UPGRADE ->
                 ok(item.prompt) && item.options.all(::ok)
             WeeklyTestItem.Kind.REWRITE -> ok(item.prompt)
+            WeeklyTestItem.Kind.TRANSLATE -> true
             WeeklyTestItem.Kind.GAP -> ok(item.prompt.replace(BLANK_MARK, "")) && item.options.all(::ok)
             WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.LISTEN -> item.options.all(::ok)
             WeeklyTestItem.Kind.SPEAK -> true
@@ -807,6 +860,146 @@ object WeeklyTestEngine {
             sessionId = card.sourceSessionId, turnId = card.sourceTurnId,
             cardId = card.id, note = card.reason, focus = was, example = now)
     }
+
+    // ── translate
+
+    /** One mistake a translate item can be built on: what was said, what it
+     *  should be, why, and the card it came from (for write-back). */
+    data class Slip(val was: String, val now: String, val why: String, val cardId: String?)
+
+    /** The mistakes to build on: this window's correction cards, due first
+     *  then newest, then the profile's recurring mistakes — deduped. */
+    fun slips(cards: List<DrillCard>, mistakes: List<LearnerPattern>, start: Long, end: Long, now: Long,
+              language: String): List<Slip> {
+        val window = cards.filter { card ->
+            if (card.box >= DrillIngest.MAX_BOX || card.sourcePhrase.isBlank()) return@filter false
+            if (!TextScript.isInTargetScript(card.targetPhrase, language) ||
+                !TextScript.isInTargetScript(card.sourcePhrase, language)) return@filter false
+            listOfNotNull(card.createdAt, card.lastReviewedAt).any { it > start && it <= end }
+        }.sortedWith(compareBy<DrillCard> { if (it.nextReviewAt <= now) 0 else 1 }
+            .thenByDescending { it.createdAt })
+        val out = ArrayList<Slip>()
+        val seen = HashSet<String>()
+        fun add(s: Slip) { if (seen.add(CarryoverDetector.normalized(s.was))) out += s }
+        for (c in window) add(Slip(c.sourcePhrase, c.targetPhrase, c.reason, c.id))
+        val fresh = now - GrammarFocus.FRESH_DAYS * 86_400_000L
+        for (p in mistakes) {
+            if (p.frequency < GrammarFocus.MIN_FREQUENCY || p.lastSeenAt < fresh) continue
+            if (!TextScript.isInTargetScript(p.mistake, language) ||
+                !TextScript.isInTargetScript(p.correction, language)) continue
+            add(Slip(p.mistake, p.correction, p.context, null))
+        }
+        return out.take(10)
+    }
+
+    /** New sentences that need the grammar the learner got wrong — one model
+     *  call writes them with the spans that prove the point, and code grades
+     *  against those spans. Nothing when the target IS the native language
+     *  (there is nothing to translate from) or the call fails. */
+    private suspend fun translateItems(material: Material, start: Long, end: Long, now: Long,
+                                       windowSessions: List<Session>, target: String, level: CefrLevel,
+                                       testId: String): List<WeeklyTestItem> {
+        val write = material.writeTranslate ?: return emptyList()
+        val native = material.nativeLanguage
+        if (native.isEmpty() || LanguageCatalog.sameLanguage(target, native)) return emptyList()
+        val list = slips(material.cards, material.mistakes, start, end, now, target)
+        if (list.isEmpty()) return emptyList()
+        val topics = windowSessions.mapNotNull { it.topic }.filter { it.isNotEmpty() }.take(6)
+        val targetName = LanguageCatalog.englishName(target)
+        val nativeName = LanguageCatalog.englishName(native)
+        val system = "You write a short translation quiz for a $targetName learner whose own " +
+            "language is $nativeName, level ${level.code.uppercase()}. " +
+            "You get mistakes they really made. Pick up to $MAX_TRANSLATE of them, " +
+            "each a DIFFERENT grammar point (skip pure word choice or a slip with no " +
+            "rule behind it), and for each write ONE new everyday sentence that " +
+            "cannot be said right without that grammar point.\n" +
+            "\n" +
+            "Return {\"items\":[{\"source\":n,\"point\":\"...\",\"native\":\"...\",\"answer\":\"...\"," +
+            "\"must\":[[\"...\"]],\"avoid\":[\"...\"],\"tip\":\"...\"}]}\n" +
+            "- source: the number of the mistake it is built on.\n" +
+            "- native: the sentence in $nativeName, casual and spoken, the way they'd say it to a friend, 6–14 words, " +
+            "about ordinary life (these were their topics: ${topics.joinToString("; ")}). " +
+            "NOT their original sentence, and not a word-for-word copy of it.\n" +
+            "- answer: the most natural $targetName way to say it, at their level.\n" +
+            "- must: the words in `answer` that show the grammar point and nothing " +
+            "else, 1–4 words each, as groups; a group lists the forms that are " +
+            "equally right (\"I've been\", \"I have been\"). Every group's first form " +
+            "must appear in `answer` exactly. As specific as the point allows (\"explain the problem to\", not \"to\"); never a word the learner could " +
+            "reasonably replace with a synonym.\n" +
+            "- avoid: wrong forms of 2+ words this learner would produce, built the way " +
+            "their mistake was (e.g. \"since five years\"). Each must be wrong in ANY sentence — never a word that is right elsewhere (\"since\" alone, \"finish\" alone). Each must NOT be in answer.\n" +
+            "- point: the grammar point in $nativeName, 2–5 words. tip: one line in " +
+            "$nativeName on when it applies, at most 14 words.\n" +
+            "JSON only."
+        val user = list.mapIndexed { i, s ->
+            "${i + 1}. said \"${s.was}\" → should be \"${s.now}\"" + (if (s.why.isEmpty()) "" else " (${s.why})")
+        }.joinToString("\n")
+        val payload = runCatching { write(system, user, testId) }.getOrNull() ?: return emptyList()
+        val out = ArrayList<WeeklyTestItem>()
+        val points = HashSet<String>()
+        for (it in payload.items) {
+            if (out.size >= MAX_TRANSLATE || it.source - 1 !in list.indices) continue
+            val slip = list[it.source - 1]
+            val item = translateItem(it.native, it.answer, it.must, it.avoid.orEmpty(), it.point, it.tip,
+                slip, target) ?: continue
+            if (!points.add(it.point.lowercase())) continue
+            out += item
+        }
+        return out
+    }
+
+    /** A model-written translate item, kept only if its own answer passes its
+     *  own grade — every required group in it, nothing to avoid — and each
+     *  side is in the language it claims to be. */
+    fun translateItem(native: String, answer: String, must: List<List<String>>, avoid: List<String>,
+                      point: String, tip: String?, slip: Slip, target: String): WeeklyTestItem? {
+        // A group of nothing but a short function word ("to", "a") proves
+        // nothing, and a one-word avoid ("since") fails right sentences — the
+        // prompt asks for neither, and this keeps them out when it slips.
+        val spaced = WordSplitter.spaced(target)
+        val groups = must.map { g -> g.map { it.trim() }.filter { it.isNotEmpty() } }
+            .filter { it.isNotEmpty() }
+            .filter { g -> !spaced || !g.all { WordSplitter.count(it, target) == 1 && it.length <= 3 } }
+        val avoids = avoid.map { it.trim() }
+            .filter { it.isNotEmpty() && (!spaced || WordSplitter.count(it, target) >= 2) }
+        val n = WordSplitter.count(answer, target)
+        if (groups.isEmpty() || n < 3 || n > (if (spaced) 18 else 30) ||
+            !TextScript.isInTargetScript(answer, target) || native.isEmpty() ||
+            CarryoverDetector.normalized(native) == CarryoverDetector.normalized(answer)) return null
+        val item = WeeklyTestItem(kind = WeeklyTestItem.Kind.TRANSLATE, prompt = native, answer = answer,
+            cardId = slip.cardId, note = tip, rule = point, focus = slip.was, example = slip.now,
+            required = groups, avoid = avoids)
+        return if (isCorrectTranslate(item, answer, target)) item else null
+    }
+
+    /** A translate answer: every required group has a form in it, no avoided
+     *  form is in it, and it is a sentence rather than the key words alone.
+     *  Compared without fillers and through `expandForDiff` (dictation's
+     *  "I have" for "I've"), with spaces compared away too. (iOS
+     *  `isCorrect(_:translated:)`.) */
+    fun isCorrectTranslate(item: WeeklyTestItem, translated: String, language: String): Boolean {
+        fun key(t: String) = CarryoverDetector.normalized(
+            ShadowScore.expandForDiff(withoutFillers(t, language), language))
+        val squeezeToo = !WordSplitter.spaced(language) || language.substringBefore('-') == "ko"
+        fun contains(hay: String, needle: String): Boolean {
+            val n = key(needle)
+            if (n.isEmpty()) return false
+            if (" $hay ".contains(" $n ")) return true
+            return squeezeToo && hay.replace(" ", "").contains(n.replace(" ", ""))
+        }
+        val given = key(translated)
+        val groups = item.required
+        if (given.isEmpty() || groups.isNullOrEmpty()) return false
+        val answerWords = WordSplitter.count(item.answer, language)
+        val floor = maxOf(3, answerWords / 2)
+        if (WordSplitter.count(translated, language) < minOf(floor, answerWords)) return false
+        if (!groups.all { g -> g.any { contains(given, it) } }) return false
+        return item.avoid.orEmpty().none { contains(given, it) }
+    }
+
+    /** The required spans as the answer spells them — bolded on the result. */
+    fun requiredSpans(item: WeeklyTestItem): List<String> =
+        item.required.orEmpty().mapNotNull { g -> g.firstOrNull { item.answer.contains(it, ignoreCase = true) } }
 
     /** Past this many words a sentence is cut to the clause holding the slip. */
     fun rewriteClauseFrom(language: String): Int = if (WordSplitter.spaced(language)) 16 else 30
@@ -1202,7 +1395,7 @@ object WeeklyTestEngine {
                         ReviewQueue.retire(context, StudyScheduleStore.Kind.EXPRESSION, phrase, language)
                     }
                 }
-                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE -> {
+                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE -> {
                     val card = item.cardId?.let { cards[it] } ?: continue
                     // Both log the drill rep themselves.
                     if (answer.correct) drills.markCorrect(card, language, now)

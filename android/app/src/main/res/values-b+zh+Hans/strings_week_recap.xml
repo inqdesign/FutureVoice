@@ -118,4 +118,7 @@
     <string name="wt_right_way">"正确说法"</string>
     <string name="wt_your_answer">"你的答案"</string>
     <string name="wt_say_or_type_right_way">"用说的或打字，改成正确的说法"</string>
+    <string name="wt_say_it_in">"用%1$s说说看"</string>
+    <string name="wt_say_or_type_it">"用说的或打字"</string>
+    <string name="wt_last_time_you_said">"你上次是这样说的"</string>
 </resources>

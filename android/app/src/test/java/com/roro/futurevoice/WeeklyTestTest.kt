@@ -131,6 +131,34 @@ class WeeklyTestTest {
         }
     }
 
+    /** A translate item (iOS 2026-10-08): a NEW sentence needing the grammar
+     *  the learner got wrong. Right when the pattern's spans are in the answer
+     *  and the learner's own wrong form isn't — the rest of the wording is
+     *  theirs. The item itself is refused if its model answer fails its own
+     *  grade, and a lone function word / one-word avoid never make it onto
+     *  the item. */
+    @Test fun translateGradesThePatternOnly() {
+        val slip = WeeklyTestEngine.Slip(was = "I am working in a startup since three years",
+            now = "I've been working at a startup for three years", why = "", cardId = null)
+        val it = WeeklyTestEngine.translateItem(
+            "나 이 동네에서 5년째 살고 있어.", answer = "I've been living in this neighborhood for five years.",
+            must = listOf(listOf("I've been living", "I have been living"), listOf("for five years"), listOf("to")),
+            avoid = listOf("since five years", "am living", "since"), point = "현재완료 진행 + for", tip = null,
+            slip = slip, target = "en")
+        assertNotNull("item refused", it)
+        assertEquals("a lone \"to\" group is dropped", 2, it!!.required?.size)
+        assertEquals("a one-word avoid is dropped", listOf("since five years", "am living"), it.avoid)
+        assertTrue(WeeklyTestEngine.isCorrectTranslate(it, "I have been living here for five years", "en"))
+        assertTrue(WeeklyTestEngine.isCorrectTranslate(it, "uh I've been living in this area for five years", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectTranslate(it, "I am living in this neighborhood since five years", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectTranslate(it, "I live here for five years", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectTranslate(it, "been living for five years", "en"))
+        // A model answer that fails its own spans is not an item.
+        assertNull(WeeklyTestEngine.translateItem(
+            "나 이 동네에서 5년째 살고 있어.", answer = "I live here.", must = listOf(listOf("have been living")),
+            avoid = emptyList(), point = "", tip = null, slip = slip, target = "en"))
+    }
+
     /** Right only in the answer's order, with every tile and no decoy left in. */
     @Test fun buildGradingIsOrderSensitive() {
         val card = item(WeeklyTestItem.Kind.BUILD, "I really like it")
@@ -304,9 +332,11 @@ class WeeklyTestTest {
         }
         assertNotNull(test)
         val kinds = test!!.items.map { it.kind }.toSet()
-        // Tile items are no longer dealt (iOS 2026-10-08): corrections are rewrites.
-        for (k in WeeklyTestItem.Kind.entries - WeeklyTestItem.Kind.BUILD) assertTrue("missing $k", k in kinds)
-        assertFalse(WeeklyTestItem.Kind.BUILD in kinds)
+        // Tile and rewrite items are no longer dealt (iOS 2026-10-08), and a
+        // translate item needs the model, which a JVM build doesn't have.
+        val notDealt = setOf(WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE)
+        for (k in WeeklyTestItem.Kind.entries - notDealt) assertTrue("missing $k", k in kinds)
+        assertTrue(kinds.none { it in notDealt })
         // Never opens on the one item that needs the speaker.
         assertNotEquals(WeeklyTestItem.Kind.LISTEN, test.items.first().kind)
         for (i in test.items) {
@@ -315,11 +345,8 @@ class WeeklyTestTest {
                     assertEquals(WeeklyTestEngine.CHOICE_COUNT, i.options.size)
                     assertEquals(1, i.options.count { WeeklyTestEngine.isCorrect(i, it) })
                 }
-                WeeklyTestItem.Kind.BUILD -> error("tile items are no longer dealt")
-                WeeklyTestItem.Kind.REWRITE -> {
-                    assertNotNull(i.cardId)
-                    assertTrue(WeeklyTestEngine.isCorrectRewrite(i, i.answer, "en"))
-                }
+                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE ->
+                    error("${i.kind} is not dealt here")
                 WeeklyTestItem.Kind.LISTEN -> assertEquals(
                     WordSplitter.words(i.answer, "en").sorted(), i.options.sorted())
                 WeeklyTestItem.Kind.SPEAK -> assertTrue(WordSplitter.count(i.answer, "en") in 4..16)
