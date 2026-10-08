@@ -2,6 +2,8 @@ package com.roro.futurevoice
 
 import com.roro.futurevoice.data.ActivityEventLog
 import com.roro.futurevoice.data.PlannerDay
+import com.roro.futurevoice.data.PromiseJudge
+import com.roro.futurevoice.data.PromiseLedger
 import com.roro.futurevoice.data.PromiseStreak
 import com.roro.futurevoice.data.StudyPlan
 import com.roro.futurevoice.data.StudyPlan.Block
@@ -261,5 +263,21 @@ class StudyPlanTest {
         val text = json.encodeToString(StudyPlan.serializer(), plan)
         assertTrue("iOS raw value on disk", "\"sayItAgain\"" in text)
         assertEquals(plan, json.decodeFromString(StudyPlan.serializer(), text))
+    }
+
+    /** Adding a block after the day's plan was done must not take the day
+     *  back (iOS 2026-10-07: a 5-minute talk added at night turned Oct 6 grey). */
+    @Test fun keptDayStaysKeptWhenABlockIsAddedLater() {
+        val now = System.currentTimeMillis()
+        val finished = PromiseLedger.Entry(planned = 3, done = 3, settled = false)
+        val raised = PromiseJudge.carryingKept(PromiseLedger.Entry(4, 3), finished, now)
+        assertTrue(raised.kept)
+        assertEquals(now, raised.keptAt)
+        val later = PromiseJudge.carryingKept(PromiseLedger.Entry(5, 3), raised, now + 60_000)
+        assertEquals(now, later.keptAt)
+        // A day never finished is still judged by its plan.
+        val short = PromiseJudge.carryingKept(PromiseLedger.Entry(4, 3), PromiseLedger.Entry(3, 2), now)
+        assertFalse(short.kept)
+        assertNull(short.keptAt)
     }
 }

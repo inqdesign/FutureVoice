@@ -22,10 +22,18 @@ object PromiseLedger {
         val done: Int,
         /** False while the day is still running; judged again once it is over. */
         val settled: Boolean = true,
+        /**
+         * When the day was first seen with everything done (epoch ms). A kept
+         * day stays kept: adding a block after finishing the day's plan
+         * raises the bar for the days ahead, never takes back the one
+         * already kept (iOS 2026-10-07 — a 5-minute talk added at night
+         * turned a finished day grey). Optional, so older entries decode.
+         */
+        val keptAt: Long? = null,
     ) {
         /** Nothing was planned that day: a rest day. */
-        val isRest: Boolean get() = planned == 0
-        val kept: Boolean get() = planned > 0 && done >= planned
+        val isRest: Boolean get() = planned == 0 && keptAt == null
+        val kept: Boolean get() = keptAt != null || (planned > 0 && done >= planned)
     }
 
     private val serializer = MapSerializer(String.serializer(), Entry.serializer())
@@ -89,20 +97,30 @@ object PromiseJudge {
      * Settle every promise day not yet frozen (up to yesterday) and rewrite
      * today's provisional entry. Cheap when nothing is pending: one entry.
      */
-    suspend fun refresh(c: Context, now: Long = System.currentTimeMillis()) {
-        val plan = StudyPlanStore.current(c)
+    suspend fun refresh(c: Context, now: Long = System.currentTimeMillis(),
+                        plan: StudyPlan = StudyPlanStore.current(c)) {
         val since = plan.streakSince ?: return
         val tests = testDays(c)
         val today = StudyPlan.startOfDay(now)
         var day = maxOf(StudyPlan.startOfDay(since), StudyPlan.addDays(today, -MAX_BACKFILL_DAYS))
         while (day < today) {
-            if (PromiseLedger.entry(c, day)?.settled != true) {
-                PromiseLedger.set(c, day, result(c, day, plan, tests))
+            val old = PromiseLedger.entry(c, day)
+            if (old?.settled != true) {
+                PromiseLedger.set(c, day, carryingKept(result(c, day, plan, tests), old, now))
             }
             day = StudyPlan.addDays(day, 1)
         }
-        PromiseLedger.set(c, today, result(c, today, plan, tests).copy(settled = false))
+        PromiseLedger.set(c, today, carryingKept(result(c, today, plan, tests),
+            PromiseLedger.entry(c, today), now).copy(settled = false))
     }
+
+    /** A day judged again keeps the moment it was first kept. */
+    fun carryingKept(new: PromiseLedger.Entry, old: PromiseLedger.Entry?, now: Long): PromiseLedger.Entry =
+        when {
+            old?.keptAt != null -> new.copy(keptAt = old.keptAt)
+            old?.kept == true || new.kept -> new.copy(keptAt = now)
+            else -> new
+        }
 }
 
 /**

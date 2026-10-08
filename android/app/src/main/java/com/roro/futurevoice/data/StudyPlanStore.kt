@@ -95,7 +95,10 @@ object StudyPlanStore {
             if (next.callTimes.isNotEmpty()) DailyCallStore.mirrorTimes(c, next.callTimes)
             if (DailyCallStore.isEnabled(c)) DailyCallScheduler.schedule(c)
         }
-        afterChange(c)
+        // Judge today by the plan it is leaving first, so a day already kept
+        // is recorded as kept before a new block raises its bar (iOS
+        // `StudyPlanStore.update` → `PromiseJudge.refresh()`).
+        afterChange(c, before = old)
         return true
     }
 
@@ -118,9 +121,12 @@ object StudyPlanStore {
         afterChange(c)
     }
 
-    private fun afterChange(c: Context) {
+    private fun afterChange(c: Context, before: StudyPlan? = null) {
         val app = c.applicationContext
         scope.launch {
+            // A day already kept under the plan being replaced is recorded
+            // as kept first (`keptAt`), then judged by the new one.
+            if (before != null) runCatching { PromiseJudge.refresh(app, plan = before) }
             // The day's promise standing follows the plan it is judged by.
             runCatching { PromiseJudge.refresh(app) }
             runCatching { DrillReminder.reschedule(app) }
