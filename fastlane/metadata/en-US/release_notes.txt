@@ -1,6 +1,7 @@
 New
-• Picked English? You're asked first whether you want an American, British or Australian accent, and your voice is made with it from the start.
+• Picked English? You're asked first whether your voice should speak with an American, British or Australian accent, or stay as you recorded it, and it's made that way from the start.
 • Learning German, your voice now speaks with a standard German accent.
+• Weekly test: a new kind of question turns your own grammar slips into fresh sentences. See a sentence in your language and build it in the one you're learning from word tiles.
 
 Fixed
 • Speech on iPad: the camera picture no longer shows up sideways. Hold it in landscape or turn it mid-take and the video stays upright.
@@ -8,6 +9,8 @@ Fixed
 • Say it again: long turns now come back as a polished line too.
 • In a call, what you say in your own language stays as you said it, and a turn that got cut off is understood as one.
 • The first greeting of a call no longer runs its sentences together.
-• Closing the accent picker and opening it again no longer makes the same accent from scratch.
-• Adding something to your routine after you've finished the day no longer takes the day back.
 • Replies in a call now appear smoothly instead of jumping.
+• This call's focus now comes only from grammar slips you actually made.
+• Adding something to your routine after you've finished the day no longer takes the day back.
+• Close the accent picker and open it again, and the takes you heard are still there.
+• Setting up, you only need to enter your city.

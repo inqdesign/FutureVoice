@@ -1,24 +1,16 @@
 Neu
-• Rede: ein neuer Tab, in dem du deinen Text laut vom Teleprompter abliest, der mit deiner Stimme mitläuft. Mit eingeschalteter Kamera bekommst du ein Hochformat-Video mit Text und Gesicht. Bewertet werden Genauigkeit, Tempo, Pausen und Füllwörter, und ein Coach sagt dir, was du als Nächstes ausprobieren kannst.
-• Max: ein neuer Tarif mit 1.200 Minuten Gespräch im Monat. Brauchst du mehr, kaufst du 50 Minuten dazu, mit oder ohne Abo.
-• Meine Routine: Plane deine Woche direkt im Stundenplan und verschiebe Blöcke per Ziehen. Leg Gespräche, Wiederholungen und Nochmal sagen auf die Tage und Zeiten, die du willst. Der tägliche Anruf klingelt zur Gesprächszeit deiner Routine.
-• Jeder Tab zeigt beim ersten Öffnen eine kurze Anleitung: wofür er da ist und wie du ihn nutzt. Du findest sie jederzeit unter Ich → App-Anleitung.
-• Im Tab „Sprechen“ gibt es jetzt den Bereich „Alltag“: typische Situationen wie Café, Restaurant, Bekleidungsgeschäft oder Anruf in der Arztpraxis, mit einem Tipp gestartet.
-• Die Seite „Wiederholen“ ist neu gestaltet und hilft dir, jedes deiner Bücher leichter zu Ende zu bringen.
-• Exportier ein Buch als PDF und du hast ein Arbeitsheft, in das du sofort reinschreiben kannst.
+• Lernst du Englisch, fragen wir zuerst, ob deine Stimme mit amerikanischem, britischem oder australischem Akzent sprechen soll – oder so bleiben, wie du sie aufgenommen hast. Genau so entsteht sie von Anfang an.
+• Lernst du Deutsch, spricht deine Stimme jetzt mit hochdeutschem Akzent.
+• Wochentest: Eine neue Aufgabe macht aus deinen eigenen Grammatikfehlern neue Sätze. Du siehst einen Satz in deiner Sprache und baust ihn aus Wortkacheln in der Sprache, die du lernst.
 
 Behoben
-• Beim Nachsprechen läuft der Countdown, sobald du auf Aufnehmen tippst, und nach dem letzten Wort ist dein Ergebnis schnell da.
-• Die Begrüßung am Anfang eines Gesprächs brach ab, wenn ein Bluetooth-Gerät in der Nähe war.
-• „Sag mal so“-Vorschläge klingen jetzt natürlicher.
-• Dein fließendes Ich atmet zwischen den Sätzen und klingt natürlicher.
-• Du kannst die Sprechgeschwindigkeit auch während eines Gesprächs ändern.
-• Ein geplanter Anruf konnte während eines laufenden Gesprächs klingeln und es abbrechen.
-• Lernmaterial in einem Buch konnte nach „Nochmal sagen“ verschwinden.
-• Lockeres Koreanisch wurde manchmal in der Höflichkeitsform aufgeschrieben.
-• Dein fließendes Ich blieb manchmal ohne Antwort hängen. Das passiert jetzt viel seltener.
-• Der dritte Tab heißt jetzt richtig „Wiederholen“.
-• Lernst du Koreanisch, werden deine gesprochenen Wörter und Wendungen jetzt genauer erkannt.
-• Dein fließendes Ich spricht Koreanisch mit natürlicherer Aussprache und schreit bei Ausrufezeichen nicht mehr.
-• Bei „Nochmal sagen“ ging es manchmal schon zur nächsten Zeile, wenn du nur kurz nachgedacht hast.
-• Hast du den Coach-Modus während eines Gesprächs ausgeschaltet, kamen trotzdem weiter Vorschläge.
+• Rede auf dem iPad: Das Kamerabild steht nicht mehr seitlich. Hältst du das iPad quer oder drehst es während der Aufnahme, bleibt das Video aufrecht.
+• Rede auf dem iPad: Die Kamera geht jetzt sofort an.
+• Nochmal sagen: Auch lange Beiträge kommen jetzt als ausgefeilter Satz zurück.
+• Was du im Anruf in deiner eigenen Sprache sagst, bleibt so stehen, und ein abgebrochener Beitrag wird als einer verstanden.
+• Die Begrüßung am Anfang eines Anrufs liest ihre Sätze nicht mehr in einem Atemzug.
+• Antworten im Anruf erscheinen jetzt ruhig statt ruckelnd.
+• Der Fokus dieses Anrufs kommt jetzt nur aus Grammatikfehlern, die du wirklich gemacht hast.
+• Fügst du deiner Routine etwas hinzu, nachdem du den Tag geschafft hast, bleibt der Tag geschafft.
+• Schließt du die Akzentauswahl und öffnest sie wieder, sind die gehörten Aufnahmen noch da.
+• Bei der Einrichtung reicht jetzt deine Stadt.

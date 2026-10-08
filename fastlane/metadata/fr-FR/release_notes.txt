@@ -1,24 +1,16 @@
 Nouveautés
-• Discours : un nouvel onglet pour lire ton texte à voix haute sur un prompteur qui avance au fil de ta voix. Active la caméra et tu repars avec une vidéo verticale où l’on voit ton texte et ton visage. Tu reçois une note sur la précision, le débit, les pauses et les mots de remplissage, et un coach te dit quoi essayer ensuite.
-• Max : une nouvelle formule avec 1 200 minutes de conversation par mois. Besoin de plus ? Achète 50 minutes supplémentaires, avec ou sans abonnement.
-• Ma routine : planifie ta semaine directement sur l’emploi du temps et fais glisser les blocs pour les déplacer. Place appels, révisions et Redire aux jours et heures de ton choix ; l’appel quotidien sonne à l’heure de conversation de ta routine.
-• Chaque onglet s’ouvre la première fois sur un court guide : à quoi il sert et comment l’utiliser. Revois-les quand tu veux dans Mon profil → Guide de l’app.
-• Parler a une nouvelle section Quotidien : des situations de tous les jours comme le café, le restaurant, un magasin de vêtements ou un appel au cabinet médical, en un toucher.
-• La page Révision fait peau neuve et t’aide à terminer plus facilement chacun de tes carnets.
-• Exporte un carnet en PDF et tu obtiens un cahier d’exercices prêt à remplir.
+• Tu choisis l’anglais ? On te demande d’abord si ta voix doit parler avec un accent américain, britannique ou australien, ou rester telle que tu l’as enregistrée, et elle est créée ainsi dès le départ.
+• Si tu apprends l’allemand, ta voix parle maintenant avec un accent allemand standard.
+• Test hebdo : un nouveau type de question transforme tes propres fautes de grammaire en phrases nouvelles. Tu vois une phrase dans ta langue et tu la construis avec des étiquettes de mots dans la langue que tu apprends.
 
 Corrections
-• En shadowing, le décompte démarre dès que tu touches Enregistrer, et ton résultat s’affiche vite une fois le dernier mot prononcé.
-• Le salut au début d’un appel pouvait être coupé quand un appareil Bluetooth était à proximité.
-• Les suggestions « Essaie de dire » sont plus naturelles.
-• Ton moi fluide respire entre les phrases et parle plus naturellement.
-• Tu peux changer la vitesse de la voix pendant un appel.
-• Un appel programmé pouvait sonner pendant un appel en cours et le couper.
-• Le matériel de révision d’un carnet pouvait disparaître après « Redire ».
-• Ce que tu disais en coréen familier pouvait être retranscrit en langage poli.
-• Ton moi fluide restait parfois bloqué sans répondre. C’est beaucoup plus rare maintenant.
-• Le troisième onglet s’appelle désormais bien Révision.
-• Si tu apprends le coréen, les mots et expressions que tu prononces sont mieux reconnus.
-• Ton moi fluide parle coréen avec une prononciation plus naturelle et ne crie plus devant un point d’exclamation.
-• Dans Redire, une simple pause pour réfléchir pouvait te faire passer à la ligne suivante.
-• Même après avoir désactivé le mode coach pendant un appel, les suggestions continuaient de s’afficher.
+• Discours sur iPad : l’image de la caméra ne s’affiche plus de travers. Tiens-le à l’horizontale ou tourne-le pendant la prise, la vidéo reste droite.
+• Discours sur iPad : la caméra s’allume tout de suite.
+• Redire : les longues répliques reviennent elles aussi sous forme de phrase soignée.
+• Pendant un appel, ce que tu dis dans ta propre langue reste tel quel, et une réplique coupée est comprise comme une seule.
+• Le salut au début d’un appel n’enchaîne plus ses phrases sans respirer.
+• Les réponses pendant un appel s’affichent en douceur, sans à-coups.
+• L’objectif de cet appel vient maintenant uniquement des fautes de grammaire que tu as vraiment faites.
+• Ajouter quelque chose à ta routine après avoir terminé ta journée ne te fait plus perdre ce jour.
+• Si tu fermes le choix de l’accent et le rouvres, les prises que tu as écoutées sont toujours là.
+• Pendant la configuration, il suffit d’indiquer ta ville.
