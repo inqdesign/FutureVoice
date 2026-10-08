@@ -720,6 +720,24 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <div id="econMissing" class="empty" hidden></div>
 </section>
 
+<section data-tab="money" hidden id="gemSec">
+  <h2>Gemini — 어디에 쓰나 <span class="eurnote" id="gemAsOf"></span></h2>
+  <p class="sub">원장(usage_ledger)이 센 Gemini 원가를 기능별로 나눈 것이에요. <b>10월 8일 전에는 통화의 답변과 실시간 전사가 원장 밖</b>이라
+  (게이트웨이가 Google을 직접 부름) Gemini 청구의 ¼쯤만 보였어요 — 그 전 기간은 Google 청구서 숫자가 맞아요. 10월 8일부터는 통화마다
+  <code>call-reply</code>·<code>call-transcribe</code> 행이, 새 뜻풀이마다 <code>dictionary</code> 행이 남아요.
+  통화 답변의 시스템 프롬프트는 같은 날부터 캐시로 나가요(캐시 토큰은 1/10 가격).</p>
+  <div class="tiles" id="gemTiles"></div>
+  <div class="card scroll" style="margin-top:12px"><table id="gemByFeature"></table></div>
+  <p class="sub" style="margin-top:14px"><b>날마다</b> — 통화 1분당은 통화에 드는 Gemini(답변·전사·교정·요약)를 그날 과금된 통화 분으로 나눈 값이에요.</p>
+  <div class="card scroll"><table id="gemDaily"></table></div>
+  <details class="notes" style="margin-top:12px"><summary>모델 지도와 다른 선택지</summary>
+    <div class="scroll" style="margin-top:8px"><table id="gemModels"></table></div>
+    <div class="scroll" style="margin-top:12px"><table id="gemOptions"></table></div>
+    <p class="sub" style="margin-top:8px">3.6-flash·3.7·3.8은 같은 값이고 <b>2027-01-01에 두 배</b>가 돼요. Claude는 오디오 입력이 없어서
+    실시간 전사·섀도잉/스피치 채점은 바꿀 수 없어요. 가격은 2026-10-08에 각 사의 가격표에서 읽은 것.</p>
+  </details>
+</section>
+
 <section data-tab="money" hidden id="slotSec">
   <h2>ElevenLabs 목소리 슬롯 <span class="eurnote" id="slotAsOf"></span></h2>
   <p class="sub">커스텀 보이스 슬롯은 <b>계정 전체</b>가 나눠 써요 — 학습자 클론 하나가 한 칸. 보관(park)된 목소리는 ElevenLabs에서 지워져 칸을 안 차지하고,
@@ -3056,6 +3074,121 @@ function renderPlanUsage(){
   }
 }
 
+/* ---- Gemini (2026-10-08) -------------------------------------------------
+ * DATA.gemini = admin_gemini(): rows {d, p (purpose), m (model), u (unit),
+ * q, usd, n} by UTC day, and talk {d, min}. Ledger figures — the live call
+ * reached the ledger only from 2026-10-08, so the Google bill (typed in
+ * below, refreshed by hand) is the truth for anything earlier. */
+const GEM_SINCE = '2026-10-08';
+const GEM_BILL = {asOf:'2026-10-08', sepEur:73.42, sepInvoice:87.37, octToDate:36.08, octDays:8, octForecast:128.05};
+const GEM_BUDGETS = '알림 예산 €120/월(€80 · €120 · 예측 €120) + 옛 €30/월';
+const GEM_LABEL = {
+  'call-reply':'통화 답변', 'call-transcribe':'통화 실시간 전사', turn:'통화 교정 카드', summary:'통화 정리',
+  coach:'코치 힌트', opener:'통화 첫마디', 'freetalk-openers':'인사말 모음', 'daily-call-script':'데일리콜 음성메모',
+  dictionary:'단어·표현 뜻풀이', 'scenario-curriculum':'Watch 장면 쓰기', brief:'상황 자료 읽기', topics:'주제 제안',
+  transcribe:'섀도잉·스피치 받아쓰기', shadow:'섀도잉 코치', 'speech-review':'스피치 코치', 'speech-script':'스피치 대본',
+  weekly:'주간 리포트', 'week-recap':'주간 회고', enrichment:'카드 보강', 'public-intro':'공개 소개글', parse:'사람 정보 정리',
+  'mission-course':'미션 코스', 'clone-script':'클론 읽기 대본', gemini_summary:'통화 정리', gemini_weekly:'주간 리포트',
+  gemini_enrichment:'카드 보강', gemini_transcribe:'섀도잉·스피치 받아쓰기', gemini:'기타'};
+const GEM_CALL = new Set(['call-reply','call-transcribe','turn','summary','coach','opener']);
+function renderGemini(){
+  const tiles = document.getElementById('gemTiles');
+  if(!tiles) return;
+  const G = DATA.gemini;
+  if(!G){ tiles.innerHTML='<div class="empty">Gemini 행을 못 읽었어요 (Worker 로그의 admin_gemini).</div>'; return; }
+  const fx = (ECON() && ECON().fx && ECON().fx.USD) || 1.17;
+  const E = v => (v||0)/fx;
+  const today = new Date().toISOString().slice(0,10);
+  const dayAgo = n => new Date(Date.now()-n*86400000).toISOString().slice(0,10);
+  const d7 = dayAgo(7), d30 = dayAgo(30);
+  const rows = G.rows;
+  const sum = (f) => rows.filter(f).reduce((a,r)=>a+(+r.usd||0),0);
+  const unitQ = (f,u) => rows.filter(r=>f(r)&&r.u===u).reduce((a,r)=>a+(+r.q||0),0);
+  const talk = new Map(G.talk.map(t=>[t.d,+t.min]));
+  // Per call minute, only over whole days since the gateway started writing.
+  const since = rows.filter(r=>r.d>GEM_SINCE && r.d<today);
+  const callUsd = since.filter(r=>GEM_CALL.has(r.p)).reduce((a,r)=>a+(+r.usd||0),0);
+  const sinceMin = [...talk].filter(([d])=>d>GEM_SINCE && d<today).reduce((a,[,m])=>a+m,0);
+  const isReply = r => r.p==='call-reply' && r.d>=GEM_SINCE;
+  const cached = unitQ(isReply,'cached_input_token'), plain = unitQ(isReply,'input_token');
+  const cacheShare = cached+plain ? cached/(cached+plain) : null;
+  const week = sum(r=>r.d>=d7);
+  document.getElementById('gemAsOf').textContent = `€ = $ ÷ ${fx.toFixed(2)}`;
+  const t = [
+    {k:'최근 7일 (원장)', v:eur(E(week),2), d:`하루 ${eur(E(week)/7,2)} · 30일 ${eur(E(sum(r=>r.d>=d30)),1)}`},
+    {k:'통화 1분당 Gemini', v: sinceMin>0 ? eur(E(callUsd)/sinceMin,3) : '—',
+      d: sinceMin>0 ? `${GEM_SINCE} 다음 날부터 · ${num(Math.round(sinceMin))}분` : '10월 9일 하루가 끝나면 나와요 · 그 전 청구서 기준 €0.086', good: sinceMin>0 && E(callUsd)/sinceMin < 0.06},
+    {k:'통화 답변 캐시', v: cacheShare==null ? '—' : Math.round(cacheShare*100)+'%', d:'답변 입력 토큰 중 캐시로 나간 몫 (1/10 가격)', good: cacheShare!=null && cacheShare>0.8},
+    {k:'Google 청구 (수동)', v:eur(GEM_BILL.octToDate,2), d:`10월 1–${GEM_BILL.octDays}일 · 월 예측 ${eur(GEM_BILL.octForecast)} · 9월 ${eur(GEM_BILL.sepEur,2)} (VAT 포함 ${eur(GEM_BILL.sepInvoice,2)}) · ${fmtD(GEM_BILL.asOf)} 기준`},
+    {k:'예산 알림', v:'€120', d:GEM_BUDGETS},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+
+  // By feature: last 7 / 30 days, the models, calls.
+  const by = new Map();
+  for(const r of rows){
+    if(r.d<d30) continue;
+    const key = GEM_LABEL[r.p] || r.p;
+    const o = by.get(key) || {k:key, w:0, m30:0, models:new Set(), n:0, call:GEM_CALL.has(r.p)};
+    o.m30 += +r.usd||0; if(r.d>=d7) o.w += +r.usd||0;
+    if(r.m) o.models.add(r.m.replace(/^gemini-/,''));
+    by.set(key, o);
+  }
+  // Calls per feature = distinct ledger rows; counted once per (d,p,m) on its input unit.
+  for(const r of rows) if(r.d>=d30 && (r.u==='input_token' || (r.u==='audio_input_token' && r.p==='call-transcribe'))){
+    const o = by.get(GEM_LABEL[r.p]||r.p); if(o) o.n += r.n;
+  }
+  const total30 = [...by.values()].reduce((a,o)=>a+o.m30,0);
+  const list = [...by.values()].sort((a,b)=>b.m30-a.m30);
+  document.getElementById('gemByFeature').innerHTML =
+    '<tr><th>기능</th><th class="num">7일</th><th class="num">30일</th><th class="num">몫</th><th class="num">호출</th><th>모델</th></tr>'
+    + list.map(o=>`<tr><td>${esc(o.k)}${o.call?' <span class="eurnote">통화</span>':''}</td>`
+      + `<td class="num">${eur(E(o.w),2)}</td><td class="num">${eur(E(o.m30),2)}</td>`
+      + `<td class="num">${total30?Math.round(o.m30/total30*100):0}%</td><td class="num">${num(o.n)}</td>`
+      + `<td>${esc([...o.models].join(' · '))}</td></tr>`).join('')
+    + `<tr><td><b>합계</b></td><td class="num"><b>${eur(E(week),2)}</b></td><td class="num"><b>${eur(E(total30),2)}</b></td><td></td><td></td><td></td></tr>`;
+
+  // Daily, last 14 days.
+  const days = [];
+  for(let i=13;i>=0;i--) days.push(dayAgo(i));
+  document.getElementById('gemDaily').innerHTML =
+    '<tr><th>날(UTC)</th><th class="num">Gemini</th><th class="num">통화 쪽</th><th class="num">통화 분</th><th class="num">1분당</th><th class="num">답변 캐시</th></tr>'
+    + days.map(d=>{
+      const all = sum(r=>r.d===d), call = sum(r=>r.d===d && GEM_CALL.has(r.p)), min = talk.get(d)||0;
+      const c = unitQ(r=>r.d===d && r.p==='call-reply','cached_input_token'), p = unitQ(r=>r.d===d && r.p==='call-reply','input_token');
+      const before = d < GEM_SINCE;
+      return `<tr${before?' style="color:var(--ink-2)"':''}><td>${fmtD(d)}${d===today?' (진행 중)':''}</td>`
+        + `<td class="num">${eur(E(all),2)}</td><td class="num">${eur(E(call),2)}</td><td class="num">${num(Math.round(min))}</td>`
+        + `<td class="num">${min>0 && !before ? eur(E(call)/min,3) : '—'}</td>`
+        + `<td class="num">${c+p ? Math.round(c/(c+p)*100)+'%' : '—'}</td></tr>`;
+    }).join('')
+    + `<tr><td colspan="6" class="eurnote">회색 줄은 통화가 원장 밖이던 날 — 실제보다 적게 보여요.</td></tr>`;
+
+  document.getElementById('gemModels').innerHTML =
+    '<tr><th>쓰임</th><th>모델</th><th>어디서</th></tr>' + [
+    ['통화 답변 (미래의 나)', '3.6-flash · 느리면 3.1-flash-lite가 대신', '게이트웨이'],
+    ['통화 실시간 전사', '3.5-transcribe-live', '게이트웨이'],
+    ['다른 문자로 적힌 말 다시 읽기', '3.1-flash-lite', '게이트웨이'],
+    ['교정 카드 · 통화 정리 · 첫마디 · 코치 힌트', '3.6-flash', '앱 → gemini 함수'],
+    ['Watch 장면 · 자료 읽기 · 주제 제안', '3.6-flash (분류만 3.1-flash-lite)', '앱 → gemini 함수'],
+    ['섀도잉·스피치 받아쓰기 · 코치', '3.6-flash', '앱 → gemini 함수'],
+    ['주간 리포트 · 주간 회고 · 카드 보강', '3.6-flash', '앱 → gemini 함수'],
+    ['데일리콜 음성메모 · 인사말 · 공개 소개 · 사람 정리', '3.1-flash-lite', '앱 → gemini 함수'],
+    ['단어·표현 뜻풀이 (언어쌍마다 한 번, 전원 공유)', '3.6-flash', 'word-entry 함수'],
+    ['문장 번역 · 교정 설명', '3.1-flash-lite · 3.6-flash', 'translate 함수 (원장 밖, 소액)'],
+    ['뉴스 주제', '3.6-flash + 검색', 'news-topics 함수 (원장 밖)'],
+  ].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+  document.getElementById('gemOptions').innerHTML =
+    '<tr><th>모델</th><th class="num">입력 $/1M</th><th class="num">출력</th><th class="num">캐시 읽기</th><th>메모</th></tr>' + [
+    ['Gemini 3.6 / 3.7 / 3.8-flash', '0.75', '3.75', '0.075', '지금 기본 · 2027-01-01부터 1.50 / 7.50'],
+    ['Gemini 3.1-flash-lite', '0.25', '1.50', '0.025', '가벼운 일'],
+    ['Gemini 3.5-transcribe-live', '오디오 3.50', '21.00', '—', '≈ $0.005/분 + 텍스트'],
+    ['Claude Haiku 5.5', '0.10', '0.50', '0.01', '2026-10-07 출시 · 가장 빠름 · 오디오 입력 없음 · 품질 미측정'],
+    ['Claude Sonnet 5.5', '2.00', '10.00', '0.10', '품질 쪽 후보 · 미측정'],
+  ].map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}</td><td class="num">${r[2]}</td><td class="num">${r[3]}</td><td>${r[4]}</td></tr>`).join('');
+}
+
 function renderUnitTiles(){
   const C = DATA.cost;
   document.getElementById('unitTiles').innerHTML = `
@@ -3692,7 +3825,7 @@ function render(){
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
   renderPeopleTiles(users); renderLangs(users); renderLevels(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
-  renderPlanUsage(); renderUnitTiles(); renderTiers();
+  renderPlanUsage(); renderUnitTiles(); renderTiers(); renderGemini();
   renderSpeech(users); renderProspects(users);
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
   renderEcon(); renderSlots(); renderEconCats(); renderEconDaily(); renderEconPlans(); renderPnl();

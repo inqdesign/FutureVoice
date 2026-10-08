@@ -151,6 +151,22 @@ async function fetchData(env: Env) {
     return null;
   });
   const data = assemble(raw, truth);
+  // Gemini by UTC day × feature × model × unit, priced, plus the day's talk
+  // minutes (2026-10-08, admin_gemini). The money tab's Gemini section is
+  // drawn from it. Optional — without it that section says so and the rest
+  // of the tab is untouched.
+  (data as any).gemini = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/admin_gemini`, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  }).then((t) => t.ok ? t.json() : null).catch((e) => {
+    console.log(`admin_gemini: ${(e as Error).message}`);
+    return null;
+  });
   // Same rule as recentLedger: a missing column must not blank the console.
   const offers = await offerCodes(env).catch((e) => {
     console.log(`offerCodes: ${(e as Error).message}`);
