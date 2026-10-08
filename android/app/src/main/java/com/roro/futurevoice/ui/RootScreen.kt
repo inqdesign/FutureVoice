@@ -1592,18 +1592,16 @@ internal fun HomeScreen(
                             onTap = { launch("", emptyList()) },
                             onOpenActivity = onOpenActivity,
                         )
-                        // Before the first talk the page explains itself; after it,
-                        // the only card above Discover is the one asking for the
-                        // learner's life. Never both — iOS's `else if`.
+                        // After the first talk, the only card above Discover is the
+                        // one asking for the learner's life. Before it, nothing: the
+                        // greeting and the ring already say what to do (iOS, 2026-10-08).
                         val revision by StoreEvents.revision.collectAsStateWithLifecycle()
                         var talkCount by remember { mutableStateOf(-1) }
                         LaunchedEffect(state.targetLanguage, revision) {
                             talkCount = com.roro.futurevoice.data.SessionStore.shared(context)
                                 .load(state.targetLanguage).count { it.endedAt != null }
                         }
-                        if (talkCount == 0) {
-                            FirstRunCard()
-                        } else if (personaNeedsDepth(state.persona)) {
+                        if (talkCount > 0 && personaNeedsDepth(state.persona)) {
                             DeepenRow(onClick = { showDeepen = true })
                         }
                         // One Discover section, two chips — what to talk about
@@ -1867,36 +1865,6 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         // Breathing room under the ring — close enough to invite the scroll,
         // far enough not to crowd it.
         Spacer(Modifier.height(RING_TAIL))
-    }
-}
-
-/**
- * Under the hero before the first conversation — what the ring is, and that
- * everything below it is a way in (iOS `firstRunCard`).
- *
- * A CARD on the page grid, not centred prose inside the hero: it belongs to
- * the list it explains, and floating loose under the ring it read as a
- * caption on the ring itself.
- */
-@Composable
-private fun FirstRunCard() {
-    Column(
-        Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, ContinuousShape(20.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Filled.GraphicEq, contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.your_fluent_self_is_ready),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold)
-        }
-        Text(stringResource(R.string.tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
