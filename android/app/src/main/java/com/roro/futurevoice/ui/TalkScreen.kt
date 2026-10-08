@@ -485,13 +485,26 @@ fun TalkScreen(
         androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
             .collect { scrolling -> if (!scrolling) followBottom = !listState.canScrollForward }
     }
+    // A streaming reply changes its text on every delta. An animated scroll
+    // restarted per delta was a second motion on another curve (iOS
+    // 2026-10-08), so the growing fluent-self line is followed WITHOUT
+    // animation — the stand-in for iOS's bottom anchor, which keeps the end
+    // in place in the same frame — and everything else still eases.
+    val streamingReply = state.turns.lastOrNull()?.takeIf { it.role == TurnRole.FLUENT_SELF }
     val contentSize = Triple(state.turns.size, state.partial.length + state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
-        it.transcript.length + (it.suggestion?.alternative?.length ?: 0) + (it.suggestion?.reason?.length ?: 0)
+        (if (it === streamingReply) 0 else it.transcript.length) +
+            (it.suggestion?.alternative?.length ?: 0) + (it.suggestion?.reason?.length ?: 0)
     }
     LaunchedEffect(contentSize) {
         if (state.turns.isNotEmpty() && followBottom) {
             val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
             listState.animateScrollToItem(last, Int.MAX_VALUE)
+        }
+    }
+    LaunchedEffect(streamingReply?.id, streamingReply?.transcript?.length) {
+        if (streamingReply != null && followBottom) {
+            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+            listState.scrollToItem(last, Int.MAX_VALUE)
         }
     }
 
@@ -740,8 +753,16 @@ fun TalkScreen(
                         // arriving, a correction card a second after the line —
                         // moves on one easing instead of jumping the content
                         // and the scroll chasing it (iOS 8b3b45f2).
+                        // The growth animation is for the learner's line only
+                        // (a better transcription replacing the first, a
+                        // correction arriving under it). A fluent-self reply
+                        // streams in dozens of deltas, and animating each
+                        // fought the follow — the bubble grew with a wobble
+                        // (iOS 2026-10-08). It arrives with a fade, no slide.
                         Box(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = tween(250),
-                            fadeOutSpec = tween(250)).animateContentSize(tween(250))) {
+                            fadeOutSpec = tween(250))
+                            .then(if (turn.role == TurnRole.USER) Modifier.animateContentSize(tween(250))
+                                else Modifier)) {
                             DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
                                 showsCorrections = showsCorrections,
                                 focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)
