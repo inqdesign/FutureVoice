@@ -43,7 +43,9 @@ import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.MenuBook
@@ -104,6 +106,7 @@ import com.roro.futurevoice.core.InstallSalt
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.DrillReminder
+import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.PhraseAudioStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.ShadowAttempt
@@ -193,6 +196,10 @@ fun WeeklyTestScreen(
     var playing by remember { mutableStateOf(false) }
     var playJob by remember { mutableStateOf<Job?>(null) }
     var loadingLineAudio by remember { mutableStateOf(false) }
+    /** rewrite: what the learner said or typed, and whether they asked for
+     *  the hint. */
+    var rewriteText by remember { mutableStateOf("") }
+    var showHint by remember { mutableStateOf(false) }
 
     val mood = when (outcome) {
         null -> WeeklyTestHost.Mood.WAITING
@@ -264,6 +271,7 @@ fun WeeklyTestScreen(
     fun advance(test: WeeklyTest) {
         player.stop(); playJob?.cancel(); playing = false
         chosen = null; laid.clear(); cursor = 0; outcome = null
+        rewriteText = ""; showHint = false
         speakPhase = SpeakPhase.IDLE; speakTranscript = null; speakScore = null; recordingFile = null
         val next = test.nextItem
         if (next != null) current = next else finish(test)
@@ -281,6 +289,11 @@ fun WeeklyTestScreen(
         val tiles = laid.map { item.options[it] }
         settle(WeeklyTestEngine.isCorrect(item, tiles, test.targetLanguage),
             WeeklyTestEngine.sentence(tiles, test.targetLanguage), test, item)
+    }
+
+    fun checkRewrite(item: WeeklyTestItem, test: WeeklyTest) {
+        val given = rewriteText.trim()
+        settle(WeeklyTestEngine.isCorrectRewrite(item, given), given, test, item)
     }
 
     suspend fun buildNew() {
@@ -332,6 +345,10 @@ fun WeeklyTestScreen(
                 if (!right && order.size > 1) java.util.Collections.swap(order, 0, order.lastIndex)
                 laid.addAll(order); cursor = laid.size
                 checkBuild(item, test!!)
+            } else if (item.kind == WeeklyTestItem.Kind.REWRITE) {
+                showHint = !right
+                rewriteText = if (right) item.answer else item.prompt
+                checkRewrite(item, test!!)
             } else {
                 val pick = if (right) item.answer
                     else item.options.firstOrNull { !WeeklyTestEngine.isCorrect(item, it) } ?: item.answer
@@ -347,7 +364,8 @@ fun WeeklyTestScreen(
         if (WeeklyTestCaptureFlags.kind != null) { buildNew(); return }
         when (val s = schedule.state(tests, { WeeklyTestSettings.isThin(context, it) })) {
             is WeeklyTestSchedule.State.InProgress -> {
-                val cleaned = WeeklyTestEngine.pruned(s.test)
+                val cleaned = WeeklyTestEngine.pruned(s.test,
+                    WeeklyTestEngine.rewriteLookup(context, s.test.targetLanguage))
                 if (cleaned != null) { store.save(cleaned); resume(cleaned) } else resume(s.test)
             }
             is WeeklyTestSchedule.State.Done -> phase = TestPhase.Result(s.test)
@@ -358,10 +376,13 @@ fun WeeklyTestScreen(
     LaunchedEffect(Unit) { start() }
 
     fun startRetry(test: WeeklyTest) {
-        val paper = WeeklyTestEngine.retryPaper(test) ?: return
-        retry = paper
-        wrongRun = 0
-        resume(paper)
+        scope.launch {
+            val paper = WeeklyTestEngine.retryPaper(test,
+                rewrite = WeeklyTestEngine.rewriteLookup(context, test.targetLanguage)) ?: return@launch
+            retry = paper
+            wrongRun = 0
+            resume(paper)
+        }
     }
 
     // ── Audio
@@ -549,9 +570,10 @@ fun WeeklyTestScreen(
             val p = phase as? TestPhase.Playing
             val item = current
             if (p != null && item != null) {
+                val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE
                 BottomBar(item, outcome, isLast = p.test.nextItem == null,
-                    canCheck = laid.isNotEmpty(),
-                    onCheck = { checkBuild(item, p.test) },
+                    canCheck = if (rewrite) rewriteText.isNotBlank() else laid.isNotEmpty(),
+                    onCheck = { if (rewrite) checkRewrite(item, p.test) else checkBuild(item, p.test) },
                     onContinue = { advance(p.test) })
             }
         },
@@ -597,7 +619,8 @@ fun WeeklyTestScreen(
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Prompt(item, chosen, outcome, playing, loadingLineAudio,
+                            Prompt(item, ph.test.targetLanguage, chosen, outcome, playing, loadingLineAudio,
+                                showHint = showHint, onShowHint = { showHint = true },
                                 speakBusy = speakPhase == SpeakPhase.RECORDING || speakPhase == SpeakPhase.READING,
                                 canHear = PhraseAudioStore.shared(context).ownVoiceLineage.isNotEmpty(),
                                 onPlay = { playListen(item) }, onHear = { hearLine(item) })
@@ -612,6 +635,9 @@ fun WeeklyTestScreen(
                                     BuildArea(item, ph.test.targetLanguage, laid, cursor, outcome,
                                         onLay = ::lay, onTapPlaced = ::tapPlaced,
                                         onTapEnd = { if (outcome == null) cursor = laid.size })
+                                WeeklyTestItem.Kind.REWRITE ->
+                                    RewriteArea(rewriteText, ph.test.targetLanguage, outcome,
+                                        onText = { rewriteText = it })
                                 WeeklyTestItem.Kind.SPEAK ->
                                     SpeakArea(speakPhase, outcome, speakTranscript, speakScore,
                                         level = recorder.level,
@@ -657,6 +683,7 @@ private fun kindIcon(kind: WeeklyTestItem.Kind): ImageVector = when (kind) {
     WeeklyTestItem.Kind.SPEAK -> Icons.Filled.RecordVoiceOver
     WeeklyTestItem.Kind.GRAMMAR -> Icons.Filled.Autorenew
     WeeklyTestItem.Kind.UPGRADE -> Icons.Filled.ArrowCircleUp
+    WeeklyTestItem.Kind.REWRITE -> Icons.Filled.EditNote
 }
 
 @Composable
@@ -671,6 +698,7 @@ private fun Caption(kind: WeeklyTestItem.Kind) {
         WeeklyTestItem.Kind.SPEAK -> R.string.say_it_out_loud
         WeeklyTestItem.Kind.GRAMMAR -> R.string.wt_mistake_you_keep_making
         WeeklyTestItem.Kind.UPGRADE -> R.string.wt_better_word
+        WeeklyTestItem.Kind.REWRITE -> R.string.wt_say_it_right_way
     })
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(kindIcon(kind), contentDescription = null, modifier = Modifier.size(18.dp),
@@ -681,10 +709,12 @@ private fun Caption(kind: WeeklyTestItem.Kind) {
 }
 
 @Composable
-private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, playing: Boolean,
-                   loadingLineAudio: Boolean, speakBusy: Boolean, canHear: Boolean,
+private fun Prompt(item: WeeklyTestItem, language: String, chosen: String?, outcome: Boolean?, playing: Boolean,
+                   loadingLineAudio: Boolean, showHint: Boolean, onShowHint: () -> Unit,
+                   speakBusy: Boolean, canHear: Boolean,
                    onPlay: () -> Unit, onHear: () -> Unit) {
     when (item.kind) {
+        WeeklyTestItem.Kind.REWRITE -> RewritePrompt(item, language, outcome, showHint, onShowHint)
         // iOS .title2 semibold (22 pt).
         WeeklyTestItem.Kind.MEANING -> Text(item.prompt, style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold)
@@ -765,6 +795,104 @@ private fun Prompt(item: WeeklyTestItem, chosen: String?, outcome: Boolean?, pla
                     Text(stringResource(R.string.hear_it), style = MaterialTheme.typography.labelLarge)
                 }
             }
+        }
+    }
+}
+
+// ── Rewrite
+
+/**
+ * The learner's own sentence, whole, with the slip underlined; the hint (why
+ * it was corrected + the words the fix brings) only on request. Once graded:
+ * the right way, with the fix in bold (iOS `rewritePrompt`).
+ */
+@Composable
+private fun RewritePrompt(item: WeeklyTestItem, language: String, outcome: Boolean?,
+                          showHint: Boolean, onShowHint: () -> Unit) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold, color = secondary)
+            Text(buildAnnotatedString {
+                append("“"); append(diffMarked(item.prompt, item.answer, language)); append("”")
+            }, style = MaterialTheme.typography.titleLarge) // iOS .title3
+        }
+        if (outcome == null) {
+            if (showHint) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Outlined.Lightbulb, contentDescription = null,
+                            modifier = Modifier.size(14.dp), tint = secondary)
+                        Text(stringResource(R.string.wt_hint), style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold, color = secondary)
+                    }
+                    WeeklyTestEngine.hintWords(item)?.let {
+                        Text(it, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    }
+                    item.note?.takeIf { it.isNotEmpty() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = secondary)
+                    }
+                }
+            } else {
+                // iOS `.bordered` + `.controlSize(.small)`.
+                Button(onClick = onShowHint, shape = CircleShape,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.primary),
+                    elevation = null) {
+                    Icon(Icons.Outlined.Lightbulb, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.wt_show_hint), style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold)
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.wt_right_way), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = secondary)
+                Text(diffMarked(item.answer, item.prompt, language), style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium, color = RIGHT_GREEN)
+                item.note?.takeIf { it.isNotEmpty() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = secondary)
+                }
+            }
+        }
+    }
+}
+
+/** [text] with the words [other] doesn't share (outside their longest
+ *  common run) bold and underlined — what the fix changed, never the whole
+ *  sentence when a card's source happens to be all of it. */
+private fun diffMarked(text: String, other: String, language: String) = buildAnnotatedString {
+    val words = WordSplitter.words(text, language)
+    val kept = WeeklyTestEngine.tileCheck(words, other, language).correct
+    val gap = if (WordSplitter.spaced(language)) " " else ""
+    words.forEachIndexed { i, word ->
+        if (i > 0) append(gap)
+        if (kept[i]) append(word)
+        else withStyle(SpanStyle(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline)) {
+            append(word)
+        }
+    }
+}
+
+/** Say it (the field's mic dictates in the target language) or type it. */
+@Composable
+private fun RewriteArea(text: String, language: String, outcome: Boolean?, onText: (String) -> Unit) {
+    if (outcome == null) {
+        var usedVoice by remember { mutableStateOf(false) }
+        SpeakOrTypeField(text = text, onText = onText, usedVoice = usedVoice,
+            onUsedVoice = { usedVoice = it },
+            placeholder = stringResource(R.string.wt_say_or_type_right_way),
+            locale = LanguageCatalog.sttLocale(language))
+    } else {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.wt_your_answer), style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -1030,7 +1158,8 @@ private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, 
                       onCheck: () -> Unit, onContinue: () -> Unit) {
     val tiles = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN ||
         item.kind == WeeklyTestItem.Kind.GRAMMAR
-    if (outcome == null && !tiles) return
+    val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE
+    if (outcome == null && !tiles && !rewrite) return
     Column(Modifier.fillMaxWidth().background(AppSurfaces.ground).bottomBarInsets()) {
         HorizontalDivider()
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -1042,7 +1171,7 @@ private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, 
                     Column {
                         Text(stringResource(if (outcome) R.string.right else R.string.not_this_time),
                             style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        if (!outcome && !tiles) {
+                        if (!outcome && !tiles && !rewrite) {
                             Text(item.answer, style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

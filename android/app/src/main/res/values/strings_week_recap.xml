@@ -124,4 +124,10 @@
     <string name="wrh_footnote">"Pick a time you usually have ten quiet minutes."</string>
     <string name="wrh_remind">"Tell me when it's ready"</string>
     <string name="wrh_cta">"Set my week"</string>
+    <string name="wt_say_it_right_way">"Say it the right way"</string>
+    <string name="wt_show_hint">"Show a hint"</string>
+    <string name="wt_hint">"Hint"</string>
+    <string name="wt_right_way">"The right way"</string>
+    <string name="wt_your_answer">"Your answer"</string>
+    <string name="wt_say_or_type_right_way">"Say it or type it the right way"</string>
 </resources>

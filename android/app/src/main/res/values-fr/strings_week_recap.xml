@@ -123,4 +123,10 @@
     <string name="wrh_footnote">"Choisis un moment où tu as souvent dix minutes au calme."</string>
     <string name="wrh_remind">"Préviens-moi quand c’est prêt"</string>
     <string name="wrh_cta">"C’est parti"</string>
+    <string name="wt_say_it_right_way">"Redis-le correctement"</string>
+    <string name="wt_show_hint">"Voir un indice"</string>
+    <string name="wt_hint">"Indice"</string>
+    <string name="wt_right_way">"La bonne version"</string>
+    <string name="wt_your_answer">"Ta réponse"</string>
+    <string name="wt_say_or_type_right_way">"Dis-le ou écris-le correctement"</string>
 </resources>

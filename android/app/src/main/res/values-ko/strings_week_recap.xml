@@ -112,4 +112,10 @@
     <string name="wrh_footnote">"보통 10분쯤 조용히 낼 수 있는 때로 골라 줘."</string>
     <string name="wrh_remind">"준비되면 알려 주세요"</string>
     <string name="wrh_cta">"이렇게 할게요"</string>
+    <string name="wt_say_it_right_way">"바르게 다시 말하기"</string>
+    <string name="wt_show_hint">"힌트 보기"</string>
+    <string name="wt_hint">"힌트"</string>
+    <string name="wt_right_way">"이렇게 말해요"</string>
+    <string name="wt_your_answer">"내 답"</string>
+    <string name="wt_say_or_type_right_way">"말하거나 써서 바르게 고쳐 보세요"</string>
 </resources>

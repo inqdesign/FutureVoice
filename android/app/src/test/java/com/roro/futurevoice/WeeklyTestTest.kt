@@ -71,6 +71,22 @@ class WeeklyTestTest {
         assertFalse(WeeklyTestEngine.isCorrect(gap, "push back"))
     }
 
+    /** A rewrite is right when it carries the fix inside the sentence —
+     *  however the rest is worded — and wrong when it repeats the slip or
+     *  answers with the fixed word alone (iOS 2026-10-08). */
+    @Test fun rewriteGradingNeedsTheFixInASentence() {
+        val it = WeeklyTestItem(kind = WeeklyTestItem.Kind.REWRITE,
+            prompt = "Yesterday I goed to the park with my friends.",
+            answer = "Yesterday I went to the park with my friends.",
+            focus = "I goed to the park", example = "I went to the park")
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "yesterday I went to the park with my friends"))
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "I went to the park with my friends yesterday."))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "Yesterday I goed to the park with my friends."))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "went"))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, ""))
+        assertEquals("went", WeeklyTestEngine.hintWords(it))
+    }
+
     /** Right only in the answer's order, with every tile and no decoy left in. */
     @Test fun buildGradingIsOrderSensitive() {
         val card = item(WeeklyTestItem.Kind.BUILD, "I really like it")
@@ -221,6 +237,7 @@ class WeeklyTestTest {
                 "awful", "amazing", "brilliant") else emptyList() },
             bookWords = { listOf("chore" to false, "exhausting" to false) },
             coach = coach,
+            toStudy = listOf("end up", "push back on", "catch up on", "walk you through"),
         )
     }
 
@@ -243,7 +260,9 @@ class WeeklyTestTest {
         }
         assertNotNull(test)
         val kinds = test!!.items.map { it.kind }.toSet()
-        for (k in WeeklyTestItem.Kind.entries) assertTrue("missing $k", k in kinds)
+        // Tile items are no longer dealt (iOS 2026-10-08): corrections are rewrites.
+        for (k in WeeklyTestItem.Kind.entries - WeeklyTestItem.Kind.BUILD) assertTrue("missing $k", k in kinds)
+        assertFalse(WeeklyTestItem.Kind.BUILD in kinds)
         // Never opens on the one item that needs the speaker.
         assertNotEquals(WeeklyTestItem.Kind.LISTEN, test.items.first().kind)
         for (i in test.items) {
@@ -252,7 +271,11 @@ class WeeklyTestTest {
                     assertEquals(WeeklyTestEngine.CHOICE_COUNT, i.options.size)
                     assertEquals(1, i.options.count { WeeklyTestEngine.isCorrect(i, it) })
                 }
-                WeeklyTestItem.Kind.BUILD -> assertNotNull(i.cardId)
+                WeeklyTestItem.Kind.BUILD -> error("tile items are no longer dealt")
+                WeeklyTestItem.Kind.REWRITE -> {
+                    assertNotNull(i.cardId)
+                    assertTrue(WeeklyTestEngine.isCorrectRewrite(i, i.answer))
+                }
                 WeeklyTestItem.Kind.LISTEN -> assertEquals(
                     WordSplitter.words(i.answer, "en").sorted(), i.options.sorted())
                 WeeklyTestItem.Kind.SPEAK -> assertTrue(WordSplitter.count(i.answer, "en") in 4..16)
@@ -324,8 +347,8 @@ class WeeklyTestTest {
         val a = item(WeeklyTestItem.Kind.MEANING, "chore", listOf("chore", "errand", "hobby", "shift"))
         val b = item(WeeklyTestItem.Kind.GAP, "end up", listOf("end up", "push back on", "catch up on", "walk you through"),
             prompt = "Did you ${WeeklyTestEngine.BLANK_MARK} hiring movers?")
-        val c = item(WeeklyTestItem.Kind.BUILD, "I really like it", listOf("I", "like", "really", "it", "very"),
-            prompt = "I very like it")
+        val c = WeeklyTestItem(kind = WeeklyTestItem.Kind.REWRITE, prompt = "I very like it",
+            answer = "I really like it", focus = "very like", example = "really like")
         val d = item(WeeklyTestItem.Kind.SPEAK, "Give yourself a day off.")
         val now = System.currentTimeMillis()
         val week1 = paper(listOf(a, b, c), setOf(0, 1, 2), now - 14 * 86_400_000L)
@@ -333,7 +356,7 @@ class WeeklyTestTest {
         val week2 = paper(listOf(item(WeeklyTestItem.Kind.MEANING, "Chore", a.options), d), setOf(1),
             now - 7 * 86_400_000L)
         val items = WeeklyTestEngine.retakes(listOf(week1, week2), WeeklyTestEngine.MAX_RETAKE,
-            emptySet(), "en", WeeklyTestRandom("seed"))
+            emptySet(), "en", WeeklyTestRandom("seed")) { null }
         assertEquals(setOf("Give yourself a day off.", "end up", "I really like it"), items.map { it.answer }.toSet())
         assertEquals("Give yourself a day off.", items.first().answer)
         assertTrue(items.all { it.isRetake == true })
@@ -341,8 +364,20 @@ class WeeklyTestTest {
         val e = item(WeeklyTestItem.Kind.LISTEN, "Kitchens are the worst part.",
             listOf("Kitchens are the worst part.", "x", "y"))
         val listen = WeeklyTestEngine.retakes(listOf(paper(listOf(e), setOf(0), now)), 5, emptySet(), "en",
-            WeeklyTestRandom("seed")).single()
+            WeeklyTestRandom("seed")) { null }.single()
         assertEquals(WordSplitter.words(listen.answer, "en").sorted(), listen.options.sorted())
+        // A missed tile item comes back as the rewrite it is now; one whose
+        // card is gone does not come back at all.
+        val tile = item(WeeklyTestItem.Kind.BUILD, "I really like it", listOf("I", "like", "really", "it", "very"),
+            prompt = "I very like it")
+        val tilePaper = paper(listOf(tile), setOf(0), now)
+        assertEquals(listOf(WeeklyTestItem.Kind.REWRITE),
+            WeeklyTestEngine.retakes(listOf(tilePaper), 5, emptySet(), "en", WeeklyTestRandom("seed")) {
+                c.copy(id = it.id)
+            }.map { it.kind })
+        assertTrue(WeeklyTestEngine.retakes(listOf(tilePaper), 5, emptySet(), "en", WeeklyTestRandom("seed")) {
+            null
+        }.isEmpty())
     }
 
     /** A monthly paper saved before iOS 70dd26a9 never becomes the weekly's
@@ -493,7 +528,8 @@ class WeeklyTestTest {
         val books = WeeklyTestEngine.Material(m.sessions, studying = listOf("house", "chore"),
             usedRecently = listOf("house"), recorded = m.recorded, cards = emptyList(),
             libraryExpressions = emptyList(), hasAudio = { false },
-            bookWords = { listOf("exhausting" to true, "chore" to false, "appreciate" to false) })
+            bookWords = { listOf("exhausting" to true, "chore" to false, "appreciate" to false) },
+            toStudy = m.toStudy)
         val glosses = mapOf("chore" to "a tedious task", "exhausting" to "making you very tired",
             "appreciate" to "to be grateful", "house" to "a building to live in")
         val test = WeeklyTestEngine.build(books, null, "en", CefrLevel.B1, now) { glosses[it] }
@@ -502,7 +538,7 @@ class WeeklyTestTest {
         assertEquals(setOf("chore", "appreciate", "exhausting"), words.toSet())
         val noBooks = WeeklyTestEngine.Material(m.sessions, studying = listOf("chore", "exhausting"),
             usedRecently = emptyList(), recorded = m.recorded, cards = m.cards,
-            libraryExpressions = m.libraryExpressions, hasAudio = m.hasAudio)
+            libraryExpressions = m.libraryExpressions, hasAudio = m.hasAudio, toStudy = m.toStudy)
         val plain = WeeklyTestEngine.build(noBooks, null, "en", CefrLevel.B1, now) { glosses[it] }
         assertTrue(plain!!.items.none { it.kind == WeeklyTestItem.Kind.MEANING })
     }
@@ -518,7 +554,8 @@ class WeeklyTestTest {
             mistakes = listOf(
                 LearnerPattern(mistake = "I was very tired", correction = "I was so tired", context = ""),
                 LearnerPattern(mistake = "since two years", correction = "for two years", context = "")),
-            describeMistake = { p -> if (p.mistake.startsWith("I was")) "intensifiers" to "Use so." else null })
+            describeMistake = { p -> if (p.mistake.startsWith("I was")) "intensifiers" to "Use so." else null },
+            toStudy = m.toStudy)
         val test = WeeklyTestEngine.build(fallback, null, "en", CefrLevel.B1, now) { null }
         val grammar = test!!.items.filter { it.kind == WeeklyTestItem.Kind.GRAMMAR }
         assertEquals(1, grammar.size)
@@ -560,7 +597,7 @@ class WeeklyTestTest {
         val last = WeeklyTest(targetLanguage = "en", periodStart = now - 7 * 86_400_000L, periodEnd = now,
             createdAt = now, finishedAt = now, items = listOf(g),
             answers = listOf(WeeklyTestAnswer(g.id, "", false, now)))
-        val paper = WeeklyTestEngine.retryPaper(last)!!
+        val paper = WeeklyTestEngine.retryPaper(last) { null }!!
         assertEquals("Past tense", paper.items[0].rule)
         assertEquals("says", paper.items[0].focus)
         assertEquals(WordSplitter.words(g.answer, "en").map(WeeklyTestEngine::tileKey).sorted(),

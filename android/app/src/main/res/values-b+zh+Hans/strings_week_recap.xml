@@ -112,4 +112,10 @@
     <string name="wrh_footnote">"选一个你通常能安静十分钟的时间。"</string>
     <string name="wrh_remind">"准备好时通知我"</string>
     <string name="wrh_cta">"就这样设置"</string>
+    <string name="wt_say_it_right_way">"正确地再说一次"</string>
+    <string name="wt_show_hint">"看提示"</string>
+    <string name="wt_hint">"提示"</string>
+    <string name="wt_right_way">"正确说法"</string>
+    <string name="wt_your_answer">"你的答案"</string>
+    <string name="wt_say_or_type_right_way">"用说的或打字，改成正确的说法"</string>
 </resources>

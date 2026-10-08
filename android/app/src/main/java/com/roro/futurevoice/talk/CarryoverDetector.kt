@@ -217,6 +217,28 @@ object CarryoverDetector {
         return said.containsAll(added) && removed.none { it in said }
     }
 
+    /** [showsTheFix] over free text (the weekly test's rewrite answer). */
+    fun showsTheFixInText(source: String, target: String, text: String): Boolean =
+        showsTheFix(source, target, tokens(text))
+
+    /** Does the fix add or drop a word, or only move them? */
+    fun fixChangesWords(source: String, target: String): Boolean =
+        tokens(source).toSet() != tokens(target).toSet()
+
+    /** The fix's added words in the target's order, as written in it. */
+    fun addedWords(source: String, target: String): List<String> {
+        val before = tokens(source).toSet()
+        val seen = HashSet<String>()
+        return tokens(target).filter { it !in before && seen.add(it) }
+    }
+
+    /** Share of [reference]'s words that appear in [text]. */
+    fun sharedWordRatio(reference: String, text: String): Double {
+        val ref = tokens(reference).toSet()
+        if (ref.isEmpty()) return 0.0
+        return ref.intersect(tokens(text).toSet()).size.toDouble() / ref.size
+    }
+
     fun isCreditable(phrase: String, language: String? = CoreVocabulary.activeLanguage()): Boolean =
         tokens(phrase).size >= minTokens(language) && contentTokens(phrase).size >= minContentTokens(language) &&
             (language != "ko" || koreanKey(phrase, politeFree = false).length >= MIN_KOREAN_SYLLABLES)

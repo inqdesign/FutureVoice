@@ -112,4 +112,10 @@
     <string name="wrh_footnote">"いつも10分くらい落ち着ける時間を選んでね。"</string>
     <string name="wrh_remind">"できたら知らせてもらう"</string>
     <string name="wrh_cta">"これで決める"</string>
+    <string name="wt_say_it_right_way">"正しく言い直す"</string>
+    <string name="wt_show_hint">"ヒントを見る"</string>
+    <string name="wt_hint">"ヒント"</string>
+    <string name="wt_right_way">"正しくは"</string>
+    <string name="wt_your_answer">"自分の答え"</string>
+    <string name="wt_say_or_type_right_way">"話すか入力して、正しく言い直してみましょう"</string>
 </resources>
