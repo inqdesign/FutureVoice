@@ -255,6 +255,7 @@
     <string name="voice_change_uses_it">목소리는 30일에 한 번 바꿀 수 있어요. 지금 바꾸면 그 한 번을 써요.</string>
     <string name="use_this_voice_q">이 목소리로 할까요?</string>
     <string name="voice_replaced_only_if_kept">새로 만든 목소리를 고를 때만 지금 목소리가 바뀌어요.</string>
+    <string name="getting_your_line_ready">말할 문장을 다듬고 있어요…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">둘은 어떤 말투로 얘기해요?</string>
     <string name="rel_how_do_you_and_s_talk">%1$s하고는 어떤 말투로 얘기해요?</string>

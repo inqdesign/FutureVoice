@@ -245,6 +245,7 @@
     <string name="voice_change_uses_it">Du kannst deine Stimme alle 30 Tage einmal ändern – damit nutzt du diese Änderung.</string>
     <string name="use_this_voice_q">Diese Stimme nehmen?</string>
     <string name="voice_replaced_only_if_kept">Deine jetzige Stimme wird nur ersetzt, wenn du die neue behältst.</string>
+    <string name="getting_your_line_ready">Dein Satz wird vorbereitet…</string>
     <string name="rel_how_do_you_two_talk">Wie sprecht ihr miteinander?</string>
     <string name="rel_how_do_you_and_s_talk">Wie sprecht ihr miteinander, du und %1$s?</string>
     <string name="rel_calls_and_scenes_change_later">So wird in Anrufen und Szenen gesprochen. Du kannst es später ändern.</string>

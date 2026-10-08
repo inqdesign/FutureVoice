@@ -1,5 +1,6 @@
 package com.roro.futurevoice
 
+import com.roro.futurevoice.data.SayItAgainRewrites
 import com.roro.futurevoice.data.SayItAgainScript
 import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.data.TalkCurriculum
@@ -315,5 +316,41 @@ class SayItAgainScriptTest {
             Turn(role = TurnRole.FLUENT_SELF, transcript = "Hi", talkedOver = true))
         assertTrue(flagged.contains("\"talkedOver\""))
         assertTrue(StoreJson.json.decodeFromString(Turn.serializer(), flagged).talkedOver)
+    }
+
+    // ── A rewrite written afterwards (iOS 2026-10-06)
+
+    /** A turn the call left with no whole-turn rewrite — the live correction
+     *  failed, or it is a legacy fragment — reads the rewrite this screen
+     *  asked for later, never the raw line with its fillers. Practice text:
+     *  nothing in the book is filed under it. */
+    @Test fun aRewriteWrittenLaterReplacesTheRawLine() {
+        val id = StoreJson.newId()
+        val said = "Yeah, I think it it's really challenging. I it's yeah, how much do you trust it"
+        val steps = SayItAgainScript.build(session(listOf(turn(said, id = id))),
+            rewrites = mapOf(id to SayItAgainRewrites.Entry(
+                "Yeah, I think it's really challenging. How much do you trust it?", "반복을 정리")))
+        assertEquals("Yeah, I think it's really challenging. How much do you trust it?", steps[0].text)
+        assertEquals(said, steps[0].said)
+        assertEquals("반복을 정리", steps[0].note)
+        assertNull(steps[0].attemptId)
+    }
+
+    @Test fun theCallsOwnRewriteOutranksOneWrittenLater() {
+        val id = StoreJson.newId()
+        val steps = SayItAgainScript.build(session(listOf(turn("it go really well",
+            suggestion = TurnSuggestion("it went really well", "past tense", emptyList()), id = id))),
+            rewrites = mapOf(id to SayItAgainRewrites.Entry("something else", "")))
+        assertEquals("it went really well", steps[0].text)
+        assertNotNull(steps[0].attemptId)
+    }
+
+    /** Asked and found clean: read as said. */
+    @Test fun aCleanAnswerLeavesTheLineAsSaid() {
+        val id = StoreJson.newId()
+        val steps = SayItAgainScript.build(session(listOf(turn("I felt prepared for it.", id = id))),
+            rewrites = mapOf(id to SayItAgainRewrites.Entry(null, "")))
+        assertEquals("I felt prepared for it.", steps[0].text)
+        assertFalse(steps[0].isCorrected)
     }
 }

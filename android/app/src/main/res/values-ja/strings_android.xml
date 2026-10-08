@@ -255,6 +255,7 @@
     <string name="voice_change_uses_it">声は30日に1回変えられます。今変えると、その1回を使います。</string>
     <string name="use_this_voice_q">この声にしますか？</string>
     <string name="voice_replaced_only_if_kept">新しい声を選んだときだけ、今の声が置き換わります。</string>
+    <string name="getting_your_line_ready">セリフを整えています…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">ふたりはどう話していますか？</string>
     <string name="rel_how_do_you_and_s_talk">%1$sとはどう話していますか？</string>

@@ -902,6 +902,16 @@ class TalkViewModel(context: Context) : ViewModel() {
      * playing by the time this fires, so nothing the learner hears ever waits
      * on coaching. Lines under three words are not worth a request.
      */
+    private fun correctionErrorKind(e: Exception): String = when (e) {
+        is com.roro.futurevoice.net.EdgeError.Truncated -> "truncated"
+        is kotlinx.serialization.SerializationException -> "malformed_json"
+        is com.roro.futurevoice.net.EdgeError.JsonNotFound -> "json_not_found"
+        is com.roro.futurevoice.net.EdgeError.Http -> "http_${e.status}"
+        is kotlinx.coroutines.CancellationException -> "cancelled"
+        is java.io.IOException -> "io_${e.javaClass.simpleName}"
+        else -> e.toString().take(60)
+    }
+
     private fun requestRealtimeSuggestion(turnId: String, said: String, cfg: TalkConfig) {
         // Never count words on " ": Japanese writes none, so every turn
         // measured one word and no Japanese line was ever corrected.
@@ -915,7 +925,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         val content = if (heard.isEmpty()) "They said: \"$said\""
             else "They were just told: \"$heard\"\nThey said: \"$said\""
         viewModelScope.launch {
-            val payload = runCatching {
+            val payload = try {
                 GeminiClient(auth).sendJson(
                     system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level,
                         relationshipLine = ConversationCharacter.relationshipRegisterLine(
@@ -924,13 +934,23 @@ class TalkViewModel(context: Context) : ViewModel() {
                             cfg.targetLanguage, cfg.cast?.person, inScene = cfg.scenarioId != null)),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, content)),
                     serializer = ConversationTurnPayload.serializer(),
-                    // Buffered: a truncation loses the WHOLE correction, and
-                    // the whole-turn rewrite plus fixes runs longer than the
-                    // one-sentence answer 512 was sized for.
-                    maxTokens = 900, purpose = "turn",
+                    // Headroom, not a length: thinking spends from the same
+                    // ceiling, and a long turn's whole rewrite plus its fixes
+                    // was cut off at 900 — a truncation loses the WHOLE
+                    // correction, and Say it again then reads the turn raw.
+                    maxTokens = 2048, purpose = "turn",
                     idempotencyKey = "rt-suggest:$turnId",
                 )
-            }.getOrNull() ?: return@launch
+            } catch (e: Exception) {
+                // Was invisible until 2026-10-06 (iOS). One row per failed
+                // turn; `words` says whether it is the long turns that fail.
+                com.roro.futurevoice.core.Telemetry.log("talk_correction_failed", mapOf(
+                    "error" to correctionErrorKind(e),
+                    "words" to com.roro.futurevoice.data.WordSplitter.count(said, cfg.targetLanguage).toString(),
+                ))
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                null
+            } ?: return@launch
             // A turn since joined with its continuation is corrected as the
             // whole line, not as its first half (iOS `transcript == said`).
             if (_state.value.turns.firstOrNull { it.id == turnId }?.transcript != said) return@launch

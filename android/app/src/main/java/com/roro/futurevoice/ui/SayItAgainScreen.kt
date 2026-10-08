@@ -132,6 +132,11 @@ class SayItAgainSource(
     /** Name on the OTHER side's lines, already localized. */
     val otherName: String,
     val steps: List<SayItAgainScript.Step>,
+    /** The talk itself, when some of the learner's turns came back from the
+     *  call with no whole-turn rewrite: the screen asks for those
+     *  ([SayItAgainRewrites]) and swaps them in before they are read. Null
+     *  for a scene, and for a talk with nothing missing. */
+    val session: Session? = null,
     /** The other side's line as it was ALREADY recorded. Null means the line
      *  is read, never synthesized: a talk replays for free and a scene is
      *  claimed by count, so a synthesis here would be the one metered act on
@@ -154,8 +159,12 @@ class SayItAgainSource(
                 title = session.displayTitle ?: app.getString(R.string.conversation),
                 targetLanguage = session.targetLanguage,
                 otherName = otherName,
-                steps = SayItAgainScript.build(session) { id ->
+                steps = SayItAgainScript.build(session,
+                    rewrites = com.roro.futurevoice.data.SayItAgainRewrites.all(app)) { id ->
                     File(File(app.filesDir, "turn-audio"), "$id.wav").let { it.isFile && it.length() > 44 }
+                },
+                session = session.takeIf {
+                    com.roro.futurevoice.data.SayItAgainRewrites.missing(app, session).isNotEmpty()
                 },
                 audio = { step ->
                     val turn = byId[step.id]
@@ -199,7 +208,12 @@ class SayItAgainSource(
 
 /** Where a run is. Scoring is deliberately NOT a phase: a take is graded
  *  behind the other side's answer, which is the pause a call already has. */
-private enum class SayPhase { INTRO, LISTENING, READING, FINISHED }
+private enum class SayPhase { INTRO, LISTENING, PREPARING, READING, FINISHED }
+
+/** How long one line may wait for its rewrite before it is read as it was
+ *  said. A single request lands in ~2–4 s; this only covers a network that
+ *  has gone away. */
+private const val REWRITE_WAIT_MS = 20_000L
 
 /** One read line. `HEARD_NOTHING` is not a 0 — nothing is saved, counted or
  *  scored, the same rule the shadow screen holds. */
@@ -246,8 +260,16 @@ fun SayItAgainScreen(
     // No `source`: the run is one ANALYTICS event, not one per line played.
     val player = remember { Mp3Player(context.cacheDir) }
     val recorder = remember { WavRecorder() }
-    val steps = source.steps
+    /** The script; lines not yet read are swapped for rewrites as they land. */
+    var steps by remember { mutableStateOf(source.steps) }
     val language = source.targetLanguage
+    /** The background request for the learner turns the call left without a
+     *  whole-turn rewrite. `rewritesDone` is what a step waits on. */
+    var fillJob by remember { mutableStateOf<Job?>(null) }
+    var rewritesDone by remember { mutableStateOf(true) }
+    /** Set once a line has waited the full [REWRITE_WAIT_MS]: the rest of the
+     *  run doesn't wait again, and takes whatever lands when it lands. */
+    var stoppedWaiting by remember { mutableStateOf(false) }
 
     var phase by remember { mutableStateOf(SayPhase.INTRO) }
     var index by remember { mutableIntStateOf(0) }
@@ -282,6 +304,7 @@ fun SayItAgainScreen(
         onDispose {
             view.keepScreenOn = false
             flushLog()
+            fillJob?.cancel()
             runJob?.cancel()
             scoreJobs.values.forEach { it.cancel() }
             player.stop()
@@ -303,6 +326,59 @@ fun SayItAgainScreen(
                 index = steps.lastIndex; phase = SayPhase.FINISHED
             }
         }
+    }
+
+    // ── Rewrites the call never made
+
+    /** Rebuild the script with the new rewrites and take every line from the
+     *  one not yet read onward. The step ids are the turn ids, so the two
+     *  scripts line up exactly; if they somehow don't, the run keeps the one
+     *  it has. */
+    fun applyRewrites(session: Session) {
+        val app = context.applicationContext
+        val rebuilt = SayItAgainScript.build(session,
+            rewrites = com.roro.futurevoice.data.SayItAgainRewrites.all(app)) { id ->
+            File(File(app.filesDir, "turn-audio"), "$id.wav").let { it.isFile && it.length() > 44 }
+        }
+        if (rebuilt.map { it.id } != steps.map { it.id }) return
+        val from = when (phase) {
+            SayPhase.INTRO -> 0
+            SayPhase.PREPARING, SayPhase.LISTENING -> index
+            SayPhase.READING, SayPhase.FINISHED -> index + 1
+        }
+        if (from >= steps.size) return
+        steps = steps.take(from) + rebuilt.drop(from)
+    }
+
+    /** Ask for the learner turns the call left with no whole-turn rewrite.
+     *  Runs while the first answers play; the finished batch is applied to
+     *  every line not yet read, so a line is never swapped under the learner. */
+    LaunchedEffect(Unit) {
+        val session = source.session ?: return@LaunchedEffect
+        if (captureStage != null || fillJob != null) return@LaunchedEffect
+        rewritesDone = false
+        val app = context.applicationContext
+        val prefs = app.getSharedPreferences("futurevoice", 0)
+        val native = prefs.getString("futurevoice.nativeLanguage", null)
+            ?: com.roro.futurevoice.data.LanguageCatalog.defaultNative()
+        val level = com.roro.futurevoice.data.CefrLevel.from(
+            prefs.getString("futurevoice.level." + (prefs.getString("futurevoice.targetLanguage", null) ?: "en"),
+                null) ?: prefs.getString("futurevoice.proficiency", null))
+        fillJob = scope.launch {
+            com.roro.futurevoice.data.SayItAgainRewrites.fill(app, session, native, level)
+            applyRewrites(session)
+            rewritesDone = true
+        }
+    }
+
+    /** Hold a learner line until the rewrites have landed — or until
+     *  [REWRITE_WAIT_MS] has passed, after which the line is read as it is. */
+    suspend fun waitForRewrites() {
+        if (rewritesDone || stoppedWaiting) return
+        phase = SayPhase.PREPARING
+        val deadline = System.currentTimeMillis() + REWRITE_WAIT_MS
+        while (!rewritesDone && System.currentTimeMillis() < deadline) delay(150)
+        if (!rewritesDone) stoppedWaiting = true
     }
 
     // ── The run
@@ -465,6 +541,7 @@ fun SayItAgainScreen(
         oneOffRetry = false
         for (i in from until steps.size) {
             index = i
+            if (steps[i].isSpoken) waitForRewrites()
             val step = steps[i]
             if (step.isSpoken) readStep(step) else listenStep(step)
         }
@@ -550,7 +627,8 @@ fun SayItAgainScreen(
     val history = when (phase) {
         SayPhase.INTRO -> emptyList()
         else -> {
-            val upTo = if (phase == SayPhase.READING && !oneOffRetry) index else index + 1
+            val upTo = if ((phase == SayPhase.READING || phase == SayPhase.PREPARING) && !oneOffRetry)
+                index else index + 1
             steps.take(upTo.coerceIn(0, steps.size))
         }
     }
@@ -579,6 +657,7 @@ fun SayItAgainScreen(
                     when (phase) {
                         SayPhase.INTRO -> IntroPanel(spokenCount) { withMic { start(0) } }
                         SayPhase.LISTENING -> ListeningPanel(source.otherName) { skipRequested = true }
+                        SayPhase.PREPARING -> PreparingPanel()
                         SayPhase.READING -> ReadingPanel(promptStep,
                             onSkip = { skipRequested = true })
                         SayPhase.FINISHED -> FinishedPanel(
@@ -749,6 +828,20 @@ private fun IntroPanel(spoken: Int, onStart: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.start))
         }
+    }
+}
+
+/** A line whose rewrite hasn't landed yet. Shown instead of the line as it
+ *  was said, which would be read and then replaced. */
+@Composable
+private fun PreparingPanel() {
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+        Text(stringResource(R.string.getting_your_line_ready),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1, modifier = Modifier.weight(1f))
     }
 }
 

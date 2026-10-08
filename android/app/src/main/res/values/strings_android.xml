@@ -271,6 +271,7 @@
     <string name="voice_change_uses_it">You can change your voice once every 30 days, and this uses it.</string>
     <string name="use_this_voice_q">Use this voice?</string>
     <string name="voice_replaced_only_if_kept">The voice you have now is only replaced if you keep the new one.</string>
+    <string name="getting_your_line_ready">Getting your line ready…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">How do you two talk?</string>
     <string name="rel_how_do_you_and_s_talk">How do you and %1$s talk?</string>

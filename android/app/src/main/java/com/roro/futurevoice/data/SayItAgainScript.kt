@@ -33,6 +33,9 @@ import java.text.Normalizer
  *    the whole-turn contract carries a one-sentence fragment, which is
  *    demoted: the prompter reads what they SAID and the better wording rides
  *    along as the note.
+ * 1b. **A whole-turn rewrite written afterwards** ([SayItAgainRewrites]) for
+ *    a turn the call left without one — a pre-2026-09-27 fragment or a live
+ *    correction call that failed. Practice text: no attempt id.
  * 2. **The summary's phrase fixes spliced in** (`SessionSummary.phrasesUsed`)
  *    — put back where they were said, the rest of the sentence standing. No
  *    attempt id: that curriculum item is minted with a fresh id on every
@@ -72,7 +75,11 @@ object SayItAgainScript {
 
     /** [hasAudio] says whether a turn's recording is on disk
      *  (`turn-audio/<id>.wav`); the screen passes the real check. */
-    fun build(session: Session, hasAudio: (String) -> Boolean = { false }): List<Step> {
+    fun build(session: Session,
+              /** Whole-turn rewrites written for this screen afterwards
+               *  ([SayItAgainRewrites]), by turn id. */
+              rewrites: Map<String, SayItAgainRewrites.Entry> = emptyMap(),
+              hasAudio: (String) -> Boolean = { false }): List<Step> {
         val language = session.targetLanguage
         val fixes = session.summary?.phrasesUsed.orEmpty()
         val out = ArrayList<Step>()
@@ -92,6 +99,16 @@ object SayItAgainScript {
                 out.add(Step(id = turn.id, isSpoken = true, text = rewrite,
                     said = transcript, note = turn.suggestion?.reason.orEmpty(),
                     attemptId = TalkCurriculum.correctionId(turn.id)))
+                continue
+            }
+            // No whole-turn rewrite from the call: one written for this
+            // screen afterwards ([SayItAgainRewrites]). Practice text only —
+            // no attempt id, because nothing in the book is filed under it.
+            val later = rewrites[turn.id]?.alternative?.trim().orEmpty()
+            if (later.isNotEmpty()) {
+                out.add(Step(id = turn.id, isSpoken = true, text = later,
+                    said = transcript, note = rewrites[turn.id]?.reason.orEmpty(),
+                    attemptId = null))
                 continue
             }
             // Their own line, with whatever the summary verified put back
