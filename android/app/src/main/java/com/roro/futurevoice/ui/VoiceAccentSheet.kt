@@ -246,7 +246,7 @@ fun VoiceAccentSheet(
                                 // A remembered take can go stale upstream; the next
                                 // pick of this accent makes fresh ones instead of
                                 // failing again.
-                                chosen?.let { RemixTakeCache.drop(it.id) }
+                                chosen?.let { RemixTakeCache.drop(context, it.id) }
                                 error = context.getString(R.string.couldnt_apply_that_take_try_again)
                             }
                             saving = false
@@ -334,11 +334,37 @@ internal object RemixTakeCache {
         return "${f.length()}-${f.lastModified() / 1000}"
     }
 
+    /** Kept on disk too (iOS 2026-10-08): a memory-only cache was gone after
+     *  the app was closed, and reopening the sheet paid for the same remix
+     *  again. `cacheDir/accent-takes/<recordingKey>/` holds one
+     *  `<accentId>.json` manifest ([{id, file}]) and `<accentId>-<i>.mp3`
+     *  per take — only the current recording's folder is ever there. */
+    private fun root(context: android.content.Context) = java.io.File(context.cacheDir, "accent-takes")
+
+    @kotlinx.serialization.Serializable
+    private data class StoredTake(val id: String, val file: String)
+
+    private val manifestSerializer =
+        kotlinx.serialization.builtins.ListSerializer(StoredTake.serializer())
+
     @Synchronized
     fun get(context: android.content.Context, accentId: String): List<VoiceRemixClient.Preview>? {
         val key = recordingKey(context) ?: return null
-        if (recording != key) return null
-        return takes[accentId]
+        if (recording == key) takes[accentId]?.let { return it }
+        // From disk: only this recording's folder is ever there. Every file
+        // the manifest names must be present, or it is a miss.
+        val dir = java.io.File(root(context), key)
+        val stored = runCatching {
+            kotlinx.serialization.json.Json.decodeFromString(manifestSerializer,
+                java.io.File(dir, "$accentId.json").readText())
+        }.getOrNull() ?: return null
+        val loaded = stored.mapNotNull { t ->
+            runCatching { VoiceRemixClient.Preview(t.id, java.io.File(dir, t.file).readBytes()) }.getOrNull()
+        }
+        if (loaded.size != stored.size || loaded.isEmpty()) return null
+        if (recording != key) { recording = key; takes.clear() }
+        takes[accentId] = loaded
+        return loaded
     }
 
     @Synchronized
@@ -346,10 +372,26 @@ internal object RemixTakeCache {
         val key = recordingKey(context) ?: return
         if (recording != key) { recording = key; takes.clear() }
         if (list.isEmpty()) takes.remove(accentId) else takes[accentId] = list
+        runCatching {
+            val root = root(context)
+            // Another recording's takes can never be shown again.
+            root.listFiles()?.forEach { if (it.name != key) it.deleteRecursively() }
+            val dir = java.io.File(root, key)
+            val manifest = java.io.File(dir, "$accentId.json")
+            if (list.isEmpty()) { manifest.delete(); return@runCatching }
+            dir.mkdirs()
+            val stored = list.mapIndexed { i, take ->
+                val file = "$accentId-$i.mp3"
+                java.io.File(dir, file).writeBytes(take.audio)
+                StoredTake(take.id, file)
+            }
+            manifest.writeText(kotlinx.serialization.json.Json.encodeToString(manifestSerializer, stored))
+        }
     }
 
-    @Synchronized
-    fun drop(accentId: String) { takes.remove(accentId) }
+    /** A remembered take went stale upstream: forget this accent's set,
+     *  on disk too, so the next pick makes fresh ones. */
+    fun drop(context: android.content.Context, accentId: String) = put(context, accentId, emptyList())
 }
 
 /**
