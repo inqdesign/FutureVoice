@@ -34,14 +34,14 @@ TOPICS = ["Moving to a new flat", "Work at a small startup"]
 MAX = 3
 
 t, n = NAMES[target], NAMES[native]
-system = f"""You write a short translation quiz for a {t} learner whose own language is {n}, level {level}. You get mistakes they really made. Pick up to {MAX} of them, each a DIFFERENT grammar point (skip pure word choice or a slip with no rule behind it), and for each write ONE new everyday sentence that cannot be said right without that grammar point.
+system = f"""You write a short translation quiz for a {t} learner whose own language is {n}, level {level}. They answer by laying word tiles in order. You get mistakes they really made. Pick up to {MAX} of them, each a DIFFERENT grammar point (skip pure word choice or a slip with no rule behind it), and for each write ONE new everyday sentence that cannot be said right without that grammar point.
 
-Return {{"items":[{{"source":n,"point":"...","native":"...","answer":"...","must":[["..."]],"avoid":["..."],"tip":"..."}}]}}
+Return {{"items":[{{"source":n,"point":"...","native":"...","answer":"...","orders":["..."],"decoys":["..."],"tip":"..."}}]}}
 - source: the number of the mistake it is built on.
-- native: the sentence in {n}, casual and spoken, the way they'd say it to a friend, 6–14 words, about ordinary life (these were their topics: {"; ".join(TOPICS)}). NOT their original sentence, and not a word-for-word copy of it.
-- answer: the most natural {t} way to say it, at their level.
-- must: the words in `answer` that show the grammar point and nothing else, 1–4 words each, as groups; a group lists the forms that are equally right ("I've been", "I have been"). Every group's first form must appear in `answer` exactly. As specific as the point allows ("explain the problem to", not "to"); never a word the learner could reasonably replace with a synonym.
-- avoid: wrong forms of 2+ words this learner would produce, built the way their mistake was (e.g. "since five years"). Each must be wrong in ANY sentence — never a word that is right elsewhere ("since" alone, "finish" alone). Each must NOT be in answer.
+- native: the sentence in {n}, casual and spoken, the way they'd say it to a friend, 6–12 words, about ordinary life (these were their topics: {"; ".join(TOPICS)}). NOT their original sentence.
+- answer: the most natural {t} way to say it, at their level, 5–12 words. Its words are the tiles, so there must be ONE wording: no optional words, nothing a learner could naturally say differently with other words.
+- orders: every OTHER order of exactly the same words that is just as correct. Go through each time, place and duration phrase ("for two years", "yesterday", "at midnight") and each adverb, and list the sentence with it at the front too wherever that is natural — a learner who lays a right order and is marked wrong stops trusting the test. [] only if the order is truly fixed.
+- decoys: 2–3 single words built from their mistake (e.g. "since", "am" for "I am working here since 2020") that make the sentence WRONG wherever they go, and are not in answer.
 - point: the grammar point in {n}, 2–5 words. tip: one line in {n} on when it applies, at most 14 words.
 JSON only."""
 user = "\n".join(f'{i+1}. said "{w}" → should be "{c}" ({why})' for i, (w, c, why) in enumerate(SLIPS))
@@ -63,11 +63,12 @@ for r in range(runs):
     items = json.loads(text)["items"]
     print(f"\n=== run {r+1}: {len(items)} items")
     for it in items:
-        ok_must = all(any(has(it["answer"], f) for f in g[:1]) for g in it["must"])
-        bad_avoid = [a for a in it.get("avoid") or [] if has(it["answer"], a)]
-        flag = "OK " if ok_must and not bad_avoid else "DROP"
-        print(f"[{flag}] #{it['source']} {it['point']}")
+        words = [norm(w) for w in it["answer"].split()]
+        orders = [o for o in it.get("orders") or [] if sorted(norm(w) for w in o.split()) == sorted(words)]
+        decoys = [d for d in it.get("decoys") or [] if len(d.split()) == 1 and norm(d) not in words]
+        print(f"#{it['source']} {it['point']}")
         print(f"   {it['native']}")
         print(f"   → {it['answer']}")
-        print(f"   must={it['must']} avoid={it.get('avoid')}")
+        print(f"   orders kept={orders} (model gave {len(it.get('orders') or [])})")
+        print(f"   decoys kept={decoys} (model gave {it.get('decoys')})")
         print(f"   tip: {it.get('tip')}")

@@ -101,31 +101,38 @@ final class WeeklyTestTests: XCTestCase {
     }
 
     /// A translate item (2026-10-08): a NEW sentence needing the grammar the
-    /// learner got wrong. Right when the pattern's spans are in the answer and
-    /// the learner's own wrong form isn't — the rest of the wording is theirs.
-    /// The item itself is refused if its model answer fails its own grade,
-    /// and a lone function word / one-word avoid never make it onto the item.
-    func testTranslateGradesThePatternOnly() {
+    /// learner got wrong, laid from tiles — the answer's words plus traps
+    /// built from their mistake. Right in the answer's order or a listed
+    /// equal one, nothing else: the answer set is closed, so the grade is
+    /// exact. A model order with other words, or a decoy the answer uses,
+    /// never reaches the item.
+    func testTranslateIsLaidFromTilesWithTraps() {
         UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey) }
         let slip = WeeklyTestEngine.Slip(was: "I am working in a startup since three years",
                                          now: "I've been working at a startup for three years", why: "", cardId: nil)
+        var rng = WeeklyTestRandom(seed: UUID())
         guard let it = WeeklyTestEngine.translateItem(
-            "나 이 동네에서 5년째 살고 있어.", answer: "I've been living in this neighborhood for five years.",
-            must: [["I've been living", "I have been living"], ["for five years"], ["to"]],
-            avoid: ["since five years", "am living", "since"], point: "현재완료 진행 + for", tip: nil,
-            slip: slip, target: "en") else { return XCTFail("item refused") }
-        XCTAssertEqual(it.required?.count, 2, "a lone \"to\" group is dropped")
-        XCTAssertEqual(it.avoid, ["since five years", "am living"], "a one-word avoid is dropped")
-        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, translated: "I have been living here for five years", language: "en"))
-        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, translated: "uh I've been living in this area for five years", language: "en"))
-        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, translated: "I am living in this neighborhood since five years", language: "en"))
-        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, translated: "I live here for five years", language: "en"))
-        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, translated: "been living for five years", language: "en"))
-        // A model answer that fails its own spans is not an item.
-        XCTAssertNil(WeeklyTestEngine.translateItem(
-            "나 이 동네에서 5년째 살고 있어.", answer: "I live here.", must: [["have been living"]],
-            avoid: [], point: "", tip: nil, slip: slip, target: "en"))
+            "어제 밤 12시에야 이사짐 정리가 끝났어.", answer: "We finished unpacking at midnight yesterday.",
+            orders: ["Yesterday we finished unpacking at midnight.", "We finished packing at midnight yesterday.",
+                     "We finished unpacking at midnight yesterday."],
+            decoys: ["finish", "unpacking", "have finished", "since"], point: "과거 시제", tip: nil,
+            slip: slip, target: "en", rng: &rng) else { return XCTFail("item refused") }
+        XCTAssertEqual(it.orders, ["Yesterday we finished unpacking at midnight."],
+                       "only true reorders of the same words survive")
+        let traps = WeeklyTestEngine.decoyTiles(of: it).map(WeeklyTestEngine.tileKey).sorted()
+        XCTAssertEqual(traps, ["finish", "since"], "a decoy the answer uses, or of two words, is dropped")
+        func lay(_ text: String) -> [String] { WordSplitter.words(text) }
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, tiles: lay("We finished unpacking at midnight yesterday.")))
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, tiles: lay("Yesterday we finished unpacking at midnight.")))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, tiles: lay("We finish unpacking at midnight yesterday.")))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, tiles: lay("We finished unpacking at midnight.")))
+        // Only an unlisted order of exactly the answer's words goes to the
+        // order check — never one with a trap in it or a word left out.
+        XCTAssertTrue(WeeklyTestEngine.isReorder(it, tiles: lay("At midnight yesterday we finished unpacking.")))
+        XCTAssertFalse(WeeklyTestEngine.isReorder(it, tiles: lay("Yesterday we finished unpacking at midnight.")))
+        XCTAssertFalse(WeeklyTestEngine.isReorder(it, tiles: lay("We finish unpacking at midnight yesterday.")))
+        XCTAssertFalse(WeeklyTestEngine.isReorder(it, tiles: lay("We finished unpacking at midnight.")))
     }
 
     func testItemsRequireTheTargetScript() {

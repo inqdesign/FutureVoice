@@ -735,17 +735,22 @@ enum WeeklyTestEngine {
             let point: String
             let native: String
             let answer: String
-            let must: [[String]]
-            let avoid: [String]?
+            let orders: [String]?
+            let decoys: [String]?
             let tip: String?
         }
         let items: [Item]
     }
 
-    /// New sentences that need the grammar the learner got wrong — one
-    /// model call writes them with the spans that prove the point, and code
-    /// grades against those spans. Nothing when the target IS the native
-    /// language (there is nothing to translate from) or the call fails.
+    /// New sentences that need the grammar the learner got wrong, laid from
+    /// word tiles. One model call writes each sentence, the other word orders
+    /// that are just as right, and trap words built from the learner's own
+    /// mistake; code grades the laid tiles against that closed set. A free
+    /// answer (typed or said) was tried first and could not be graded
+    /// exactly: a slip elsewhere passed and a synonym failed (founder,
+    /// 2026-10-08: "that limit can't be there"). Nothing when the target IS
+    /// the native language (there is nothing to translate from) or the call
+    /// fails.
     private static func translateItems(
         start: Date, end: Date, now: Date, sessions: [Session], windowSessions: [Session],
         appState: AppState, testId: UUID
@@ -761,25 +766,31 @@ enum WeeklyTestEngine {
         let system = """
             You write a short translation quiz for a \(targetName) learner whose own \
             language is \(nativeName), level \(appState.proficiency.rawValue.uppercased()). \
-            You get mistakes they really made. Pick up to \(maxTranslate) of them, \
-            each a DIFFERENT grammar point (skip pure word choice or a slip with no \
-            rule behind it), and for each write ONE new everyday sentence that \
-            cannot be said right without that grammar point.
+            They answer by laying word tiles in order. You get mistakes they really \
+            made. Pick up to \(maxTranslate) of them, each a DIFFERENT grammar point \
+            (skip pure word choice or a slip with no rule behind it), and for each \
+            write ONE new everyday sentence that cannot be said right without that \
+            grammar point.
 
             Return {"items":[{"source":n,"point":"...","native":"...","answer":"...",\
-            "must":[["..."]],"avoid":["..."],"tip":"..."}]}
+            "orders":["..."],"decoys":["..."],"tip":"..."}]}
             - source: the number of the mistake it is built on.
-            - native: the sentence in \(nativeName), casual and spoken, the way they'd say it to a friend, 6–14 words, \
-              about ordinary life (these were their topics: \(topics.joined(separator: "; "))). \
-              NOT their original sentence, and not a word-for-word copy of it.
-            - answer: the most natural \(targetName) way to say it, at their level.
-            - must: the words in `answer` that show the grammar point and nothing \
-              else, 1–4 words each, as groups; a group lists the forms that are \
-              equally right ("I've been", "I have been"). Every group's first form \
-              must appear in `answer` exactly. As specific as the point allows (\"explain the problem to\", not \"to\"); never a word the learner could \
-              reasonably replace with a synonym.
-            - avoid: wrong forms of 2+ words this learner would produce, built the way \
-              their mistake was (e.g. "since five years"). Each must be wrong in ANY sentence — never a word that is right elsewhere (\"since\" alone, \"finish\" alone). Each must NOT be in answer.
+            - native: the sentence in \(nativeName), casual and spoken, the way they'd \
+              say it to a friend, 6–12 words, about ordinary life (these were their \
+              topics: \(topics.joined(separator: "; "))). NOT their original sentence.
+            - answer: the most natural \(targetName) way to say it, at their level, \
+              5–12 words. Its words are the tiles, so there must be ONE wording: no \
+              optional words, nothing a learner could naturally say differently \
+              with other words.
+            - orders: every OTHER order of exactly the same words that is just as \
+              correct. Go through each time, place and duration phrase ("for two \
+              years", "yesterday", "at midnight") and each adverb, and list the \
+              sentence with it at the front too wherever that is natural — a \
+              learner who lays a right order and is marked wrong stops trusting \
+              the test. [] only if the order is truly fixed.
+            - decoys: 2–3 single words built from their mistake (e.g. "since", "am" \
+              for "I am working here since 2020") that make the sentence WRONG \
+              wherever they go, and are not in answer.
             - point: the grammar point in \(nativeName), 2–5 words. tip: one line in \
               \(nativeName) on when it applies, at most 14 words.
             JSON only.
@@ -795,76 +806,48 @@ enum WeeklyTestEngine {
                 requestTimeout: translateWait)
         }
         guard let payload = await task.value else { return [] }
+        var rng = WeeklyTestRandom(seed: testId)
         var out: [WeeklyTestItem] = []
         var points = Set<String>()
         for it in payload.items {
             guard out.count < maxTranslate, list.indices.contains(it.source - 1) else { continue }
             let slip = list[it.source - 1]
-            guard let item = translateItem(it.native, answer: it.answer, must: it.must, avoid: it.avoid ?? [],
-                                           point: it.point, tip: it.tip, slip: slip, target: target),
+            guard let item = translateItem(it.native, answer: it.answer, orders: it.orders ?? [],
+                                           decoys: it.decoys ?? [], point: it.point, tip: it.tip,
+                                           slip: slip, target: target, rng: &rng),
                   points.insert(it.point.lowercased()).inserted else { continue }
             out.append(item)
         }
         return out
     }
 
-    /// A model-written translate item, kept only if its own answer passes
-    /// its own grade — every required group in it, nothing to avoid — and
-    /// each side is in the language it claims to be.
-    static func translateItem(_ native: String, answer: String, must: [[String]], avoid: [String],
-                              point: String, tip: String?, slip: Slip, target: String) -> WeeklyTestItem? {
-        // A group of nothing but a short function word ("to", "a") proves
-        // nothing, and a one-word avoid ("since") fails right sentences —
-        // the prompt asks for neither, and this keeps them out when it slips.
-        let groups = must.map { $0.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } }
-            .filter { !$0.isEmpty }
-            .filter { group in !WordSplitter.spaced || !group.allSatisfy { WordSplitter.count($0) == 1 && $0.count <= 3 } }
-        let avoid = avoid.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && (!WordSplitter.spaced || WordSplitter.count($0) >= 2) }
-        let n = WordSplitter.count(answer)
-        guard !groups.isEmpty, n >= 3, n <= (WordSplitter.spaced ? 18 : 30),
+    /// A model-written translate item, or nil. Kept only when the answer is a
+    /// tileable sentence in the target script; `orders` keep only the ones
+    /// made of exactly the answer's words; a decoy must be one target-script
+    /// word the answer doesn't use. Tiles = the answer's words + decoys.
+    static func translateItem(_ native: String, answer: String, orders: [String], decoys: [String],
+                              point: String, tip: String?, slip: Slip, target: String,
+                              rng: inout WeeklyTestRandom) -> WeeklyTestItem? {
+        let words = WordSplitter.words(answer)
+        let keys = words.map(tileKey)
+        guard words.count >= 3, words.count <= (WordSplitter.spaced ? 14 : 20),
               isInTargetScript(answer, language: target), !native.isEmpty,
               CarryoverDetector.normalized(native) != CarryoverDetector.normalized(answer) else { return nil }
-        let item = WeeklyTestItem(id: UUID(), kind: .translate, prompt: native, answer: answer, options: [],
-                                  cardId: slip.cardId, note: tip, rule: point,
-                                  focus: slip.was, example: slip.now,
-                                  required: groups, avoid: avoid)
-        guard isCorrect(item, translated: answer, language: target) else { return nil }
-        return item
-    }
-
-    /// A translate answer: every required group has a form in it, no avoided
-    /// form is in it, and it is a sentence rather than the key words alone.
-    /// Compared without fillers and through `expandForDiff` (dictation's
-    /// "I have" for "I've"), with spaces compared away too.
-    static func isCorrect(_ item: WeeklyTestItem, translated: String,
-                          language: String = LanguageScope.active) -> Bool {
-        func key(_ t: String) -> String {
-            CarryoverDetector.normalized(
-                ShadowEngine.expandForDiff(withoutFillers(t, language: language), language: language))
-        }
-        func contains(_ hay: String, _ needle: String) -> Bool {
-            let n = key(needle)
-            guard !n.isEmpty else { return false }
-            let h = " " + hay + " "
-            if h.contains(" " + n + " ") { return true }
-            return !WordSplitter.spaced || LanguageCatalog.base(language) == "ko"
-                ? hay.replacingOccurrences(of: " ", with: "").contains(n.replacingOccurrences(of: " ", with: ""))
-                : false
-        }
-        let given = key(translated)
-        guard !given.isEmpty, let groups = item.required, !groups.isEmpty else { return false }
-        let floor = max(3, WordSplitter.count(item.answer) / 2)
-        guard WordSplitter.count(translated) >= min(floor, WordSplitter.count(item.answer)) else { return false }
-        guard groups.allSatisfy({ $0.contains { contains(given, $0) } }) else { return false }
-        return !(item.avoid ?? []).contains { contains(given, $0) }
-    }
-
-    /// The required spans as the answer spells them — bolded on the result.
-    static func requiredSpans(_ item: WeeklyTestItem) -> [String] {
-        (item.required ?? []).compactMap { group in
-            group.first { item.answer.range(of: $0, options: [.caseInsensitive]) != nil }
-        }
+        let sameWords = keys.sorted()
+        let kept = dedupe(orders.filter {
+            let k = WordSplitter.words($0).map(tileKey)
+            return k.sorted() == sameWords && k != keys
+        }, key: { WordSplitter.words($0).map(tileKey).joined(separator: " ") })
+        let answerKeys = Set(keys)
+        let traps = dedupe(decoys.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter {
+            !$0.isEmpty && WordSplitter.count($0) == 1 && !answerKeys.contains(tileKey($0))
+                && isInTargetScript($0, language: target)
+        }, key: tileKey).prefix(3)
+        var tiles = (words + traps).shuffled(using: &rng)
+        if tiles.count > 2, tiles.map(tileKey) == keys { tiles.swapAt(0, tiles.count - 1) }
+        return WeeklyTestItem(id: UUID(), kind: .translate, prompt: native, answer: answer, options: tiles,
+                              cardId: slip.cardId, note: tip, rule: point,
+                              focus: slip.was, example: slip.now, orders: kept)
     }
 
     /// A stored tile item (`build`) as the rewrite that replaced it, read
@@ -1094,8 +1077,59 @@ enum WeeklyTestEngine {
     }
 
     /// A build item: the tiles in the order the learner laid them.
+    /// Laid tiles that are exactly the answer's words — no trap, none left
+    /// out — in an order the item doesn't list. The one case code can't
+    /// settle: the grammar point is already proved (every word of the right
+    /// form, no wrong one), and only whether the ORDER is natural is open.
+    static func isReorder(_ item: WeeklyTestItem, tiles: [String]) -> Bool {
+        let laid = tiles.map(tileKey)
+        return laid.sorted() == WordSplitter.words(item.answer).map(tileKey).sorted()
+            && !isCorrect(item, tiles: tiles)
+    }
+
+    private struct OrderVerdict: Decodable { let natural: Bool }
+
+    /// Is `laid` a natural order of the answer's words, meaning the same?
+    /// The model generating the item lists the orders it can think of and
+    /// measurably misses one in about twelve ("For two years I have worked
+    /// here" unlisted beside "I have worked here for two years", probe
+    /// 2026-10-08). Asked only for `isReorder` answers, so it judges word
+    /// order and nothing else; a failed call is the old verdict, wrong.
+    static func orderIsNatural(_ item: WeeklyTestItem, laid: String, language: String) async -> Bool {
+        let name = LanguageCatalog.englishName(language)
+        // Told the point and the learner's slip, or it accepts the slip
+        // itself as "understandable" ("I explained to the landlord the
+        // situation", 2 of 6 on the default model without them; 0 of 3 on
+        // flash-lite with them, which then misses only a debatable order —
+        // 33/36 over 12 cases, probe 2026-10-08).
+        let system = """
+            A learner laid word tiles to say a \(name) sentence. They used exactly \
+            the words of the model answer, in a different order. Judge only the \
+            order: is it grammatical and natural, meaning the same — something a \
+            careful teacher would accept? Unusual but correct emphasis (a time \
+            phrase moved to the front) is fine. The quiz tests one grammar point, \
+            given below with the learner's earlier mistake; an order that repeats \
+            that mistake is NOT acceptable, even if a listener would understand it.
+            Return {"natural": true} or {"natural": false}.
+            """
+        var user = ""
+        if let rule = item.rule { user += "Grammar point: \(rule)\n" }
+        if let was = item.focus, let now = item.example { user += "Their earlier mistake: \(was) → \(now)\n" }
+        user += "Model answer: \(item.answer)\nTheir order: \(laid)"
+        let v: OrderVerdict? = try? await GeminiClient.shared.sendJSON(
+            system: system, messages: [.init(role: .user, content: user)],
+            model: .flashLite31, maxTokens: 400, purpose: "weekly-test",
+            idempotencyKey: "weekly-test-order:\(item.id.uuidString):\(CarryoverDetector.normalized(laid))",
+            requestTimeout: 10, fastThinking: true)
+        return v?.natural ?? false
+    }
+
+    /// A tile item: the tiles in the order the learner laid them — the
+    /// answer's order, or (translate) another order the item lists as just
+    /// as right.
     static func isCorrect(_ item: WeeklyTestItem, tiles: [String]) -> Bool {
-        tiles.map(tileKey) == WordSplitter.words(item.answer).map(tileKey)
+        let laid = tiles.map(tileKey)
+        return ([item.answer] + (item.orders ?? [])).contains { WordSplitter.words($0).map(tileKey) == laid }
     }
 
     /// A rewrite item: what the learner said or typed. Right when it is the

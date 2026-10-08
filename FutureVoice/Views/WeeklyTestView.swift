@@ -50,6 +50,8 @@ struct WeeklyTestView: View {
     /// the hint.
     @State private var rewriteText = ""
     @State private var showHint = false
+    /// translate: an unlisted order of the answer's words is being read.
+    @State private var checkingOrder = false
     @FocusState private var rewriteFocused: Bool
     /// Where the next tile goes: an insertion index into `laid`, 0…count.
     /// Tapping a placed tile puts the cursor right after it, so a word can be
@@ -367,11 +369,11 @@ struct WeeklyTestView: View {
                     optionButton(option, index: index, item: item)
                 }
             }
-        case .build, .listen, .grammar:
+        case .build, .listen, .grammar, .translate:
             buildArea(item)
         case .speak:
             speakArea(item)
-        case .rewrite, .translate:
+        case .rewrite:
             rewriteArea(item)
         }
     }
@@ -417,18 +419,12 @@ struct WeeklyTestView: View {
                     .controlSize(.small)
                 }
             } else {
+                // The answer itself is the tile area's (laid green, or the
+                // fluent version under a wrong one); this names the point.
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("The right way")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    spansBold(item.answer, spans: WeeklyTestEngine.requiredSpans(item))
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.green)
-                        .fixedSize(horizontal: false, vertical: true)
                     if let rule = item.rule, !rule.isEmpty {
                         Text(rule)
                             .font(.footnote.weight(.semibold))
-                            .padding(.top, 4)
                     }
                     if let note = item.note, !note.isEmpty {
                         Text(note)
@@ -452,23 +448,6 @@ struct WeeklyTestView: View {
                 }
             }
         }
-    }
-
-    /// `text` with each of `spans` (first occurrence) in bold and underlined.
-    private func spansBold(_ text: String, spans: [String]) -> Text {
-        var ranges: [Range<String.Index>] = []
-        for span in spans {
-            if let r = text.range(of: span, options: [.caseInsensitive, .diacriticInsensitive]),
-               !ranges.contains(where: { $0.overlaps(r) }) { ranges.append(r) }
-        }
-        ranges.sort { $0.lowerBound < $1.lowerBound }
-        var out = Text("")
-        var cursor = text.startIndex
-        for r in ranges {
-            out = out + Text(text[cursor..<r.lowerBound]) + Text(text[r]).bold().underline()
-            cursor = r.upperBound
-        }
-        return out + Text(text[cursor...])
     }
 
     // MARK: - Rewrite
@@ -558,9 +537,7 @@ struct WeeklyTestView: View {
             SpeakOrTypeField(
                 text: $rewriteText,
                 locale: Binding(get: { appState.targetLanguage }, set: { _ in }),
-                placeholder: item.kind == .translate
-                    ? explain("Say it or type it")
-                    : explain("Say it or type it the right way"),
+                placeholder: explain("Say it or type it the right way"),
                 showsLocalePicker: false,
                 lineRange: 2...5,
                 externalFocus: $rewriteFocused)
@@ -579,10 +556,8 @@ struct WeeklyTestView: View {
     private func checkRewrite(_ item: WeeklyTestItem, test: WeeklyTest) {
         rewriteFocused = false
         let given = rewriteText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let right = item.kind == .translate
-            ? WeeklyTestEngine.isCorrect(item, translated: given, language: test.targetLanguage)
-            : WeeklyTestEngine.isCorrect(item, rewritten: given, language: test.targetLanguage)
-        settle(correct: right, given: given, test: test, item: item)
+        settle(correct: WeeklyTestEngine.isCorrect(item, rewritten: given, language: test.targetLanguage),
+               given: given, test: test, item: item)
     }
 
     // MARK: - Speak
@@ -767,7 +742,7 @@ struct WeeklyTestView: View {
         // A build item may carry decoys (the words the correction replaced),
         // so some tiles are meant to be left over — said up front, or a
         // leftover tile reads as a mistake or a bug (user, 2026-10-03).
-        let fixes = item.kind == .build || item.kind == .grammar
+        let fixes = item.kind == .build || item.kind == .grammar || item.kind == .translate
         let decoys = fixes ? WeeklyTestEngine.decoyTiles(of: item) : []
         return VStack(alignment: .leading, spacing: 16) {
             if fixes, outcome == nil {
@@ -834,7 +809,8 @@ struct WeeklyTestView: View {
             // the learner's own words from before the fix.
             if outcome != nil, !decoys.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Trap words — what you said before the fix")
+                    (item.kind == .translate ? Text("Trap words — from your mistake")
+                                             : Text("Trap words — what you said before the fix"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     // Right: the leftover tiles above ARE the traps, so the
@@ -974,7 +950,7 @@ struct WeeklyTestView: View {
                 .controlSize(.large)
                 .tint(outcome ? .green : .accentColor)
                 .accessibilityIdentifier("weeklyTest.continue")
-            } else if item.kind == .rewrite || item.kind == .translate {
+            } else if item.kind == .rewrite {
                 Button {
                     checkRewrite(item, test: test)
                 } label: {
@@ -984,15 +960,18 @@ struct WeeklyTestView: View {
                 .controlSize(.large)
                 .disabled(rewriteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("weeklyTest.check")
-            } else if item.kind == .build || item.kind == .listen || item.kind == .grammar {
+            } else if item.kind == .build || item.kind == .listen || item.kind == .grammar || item.kind == .translate {
                 Button {
                     checkBuild(item, test: test)
                 } label: {
-                    Text("Check").frame(maxWidth: .infinity)
+                    Group {
+                        if checkingOrder { ProgressView() } else { Text("Check") }
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(laid.isEmpty)
+                .disabled(laid.isEmpty || checkingOrder)
                 .accessibilityIdentifier("weeklyTest.check")
             }
         }
@@ -1042,15 +1021,18 @@ struct WeeklyTestView: View {
         #if DEBUG
         // A capture run can't reach the model that writes translate items.
         if DebugCapture.weeklyTestKind == .translate, !test.items.contains(where: { $0.kind == .translate }),
-           let sample = WeeklyTestEngine.translateItem(
-               "나 이 스타트업에서 2년째 일하고 있어.",
-               answer: "I've been working at this startup for two years.",
-               must: [["I've been working", "I have been working"], ["for two years"]],
-               avoid: ["am working since", "since two years"],
-               point: "현재완료 진행형 + for", tip: "과거부터 지금까지 이어지는 일은 have been -ing와 for를 써요.",
-               slip: .init(was: "I am working in a startup since three years",
-                           now: "I've been working at a startup for three years", why: "", cardId: nil),
-               target: "en") {
+           let sample = { () -> WeeklyTestItem? in
+               var rng = WeeklyTestRandom(seed: test.id)
+               return WeeklyTestEngine.translateItem(
+                   "나 이 스타트업에서 2년째 일하고 있어.",
+                   answer: "I've been working at this startup for two years.",
+                   orders: ["For two years I've been working at this startup."],
+                   decoys: ["since", "am"],
+                   point: "현재완료 진행형 + for", tip: "과거부터 지금까지 이어지는 일은 have been -ing와 for를 써요.",
+                   slip: .init(was: "I am working in a startup since three years",
+                               now: "I've been working at a startup for three years", why: "", cardId: nil),
+                   target: "en", rng: &rng)
+           }() {
             test.items.insert(sample, at: 0)
         }
         if let kind = DebugCapture.weeklyTestKind,
@@ -1065,7 +1047,7 @@ struct WeeklyTestView: View {
         #if DEBUG
         if let right = DebugCapture.weeklyTestAnswer, let item = current {
             streak = 2   // so the flame is in the shot too
-            if item.kind == .build || item.kind == .grammar {
+            if item.kind == .build || item.kind == .grammar || item.kind == .translate {
                 let answer = WordSplitter.words(item.answer).map(WeeklyTestEngine.tileKey)
                 var order = answer.compactMap { key in
                     item.options.indices.first { WeeklyTestEngine.tileKey(item.options[$0]) == key && !laid.contains($0) }
@@ -1073,9 +1055,9 @@ struct WeeklyTestView: View {
                 }
                 if !right { order.swapAt(0, order.count - 1); laid = order }
                 checkBuild(item, test: test)
-            } else if item.kind == .rewrite || item.kind == .translate {
+            } else if item.kind == .rewrite {
                 showHint = !right
-                rewriteText = right ? item.answer : (item.kind == .translate ? (item.focus ?? "") : item.prompt)
+                rewriteText = right ? item.answer : item.prompt
                 checkRewrite(item, test: test)
             } else {
                 let pick = right ? item.answer : (item.options.first { !WeeklyTestEngine.isCorrect(item, chosen: $0) } ?? item.answer)
@@ -1141,8 +1123,21 @@ struct WeeklyTestView: View {
 
     private func checkBuild(_ item: WeeklyTestItem, test: WeeklyTest) {
         let tiles = laid.map { item.options[$0] }
-        settle(correct: WeeklyTestEngine.isCorrect(item, tiles: tiles),
-               given: WeeklyTestEngine.sentence(fromTiles: tiles), test: test, item: item)
+        let given = WeeklyTestEngine.sentence(fromTiles: tiles)
+        let right = WeeklyTestEngine.isCorrect(item, tiles: tiles)
+        // A translate answer in the answer's own words, in an order the item
+        // doesn't list, gets its order read before it is called wrong.
+        guard !right, item.kind == .translate, WeeklyTestEngine.isReorder(item, tiles: tiles) else {
+            settle(correct: right, given: given, test: test, item: item)
+            return
+        }
+        checkingOrder = true
+        Task { @MainActor in
+            let ok = await WeeklyTestEngine.orderIsNatural(item, laid: given, language: test.targetLanguage)
+            checkingOrder = false
+            guard outcome == nil, current?.id == item.id else { return }
+            settle(correct: ok, given: given, test: test, item: item)
+        }
     }
 
     private func settle(correct: Bool, given: String, test: WeeklyTest, item: WeeklyTestItem,
