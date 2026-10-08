@@ -1252,6 +1252,52 @@
         }
       }
     },
+    "The voice you have now is only replaced if you keep the new one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine jetzige Stimme wird nur ersetzt, wenn du die neue behältst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz actual solo cambia si te quedas con la nueva."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix actuelle ne change que si tu gardes la nouvelle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい声を選んだときだけ、今の声が置き換わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로 만든 목소리를 고를 때만 지금 목소리가 바뀌어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在你选用新声音时，现在的声音才会被换掉。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在你選用新聲音時，現在的聲音才會被換掉。"
+          }
+        }
+      }
+    },
     "This week in progress · ready %@" : {
       "localizations" : {
         "de" : {
@@ -1390,6 +1436,52 @@
         }
       }
     },
+    "Use this voice?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Stimme nehmen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Usar esta voz?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser cette voix ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この声にしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 목소리로 할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要用这个声音吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要用這個聲音嗎？"
+          }
+        }
+      }
+    },
     "Which accent do you want to speak with?" : {
       "localizations" : {
         "de" : {
@@ -1482,6 +1574,98 @@
         }
       }
     },
+    "You can change your voice again from %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab dem %@ kannst du deine Stimme wieder ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podrás volver a cambiar tu voz a partir del %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu pourras de nouveau changer ta voix à partir du %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@から、また声を変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@부터 다시 목소리를 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 起可以再换声音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 起可以再換聲音。"
+          }
+        }
+      }
+    },
+    "You can change your voice once every 30 days, and this uses it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst deine Stimme alle 30 Tage einmal ändern – damit nutzt du diese Änderung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes cambiar tu voz una vez cada 30 días, y con esto usas ese cambio."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux changer ta voix une fois tous les 30 jours, et ce changement compte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声は30日に1回変えられます。今変えると、その1回を使います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리는 30일에 한 번 바꿀 수 있어요. 지금 바꾸면 그 한 번을 써요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声音每 30 天可以换一次，现在换就会用掉这一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聲音每 30 天可以換一次，現在換就會用掉這一次。"
+          }
+        }
+      }
+    },
     "You made this mistake in %lld of your recent talks, so this call keeps an eye on it." : {
       "localizations" : {
         "de" : {
@@ -1524,6 +1708,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近有 %lld 次通話出現這個錯誤，所以這次通話會特別留意。"
+          }
+        }
+      }
+    },
+    "You'll read the script once more, about a minute. This voice is replaced only if you keep the new one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du liest den Text noch einmal, etwa eine Minute. Deine jetzige Stimme wird nur ersetzt, wenn du die neue behältst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vas a leer el texto otra vez, más o menos un minuto. Tu voz actual solo cambia si te quedas con la nueva."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu vas relire le texte, environ une minute. Ta voix actuelle ne change que si tu gardes la nouvelle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原稿をもう一度読みます。1分ほどです。新しい声を選んだときだけ、今の声が置き換わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대본을 한 번 더 읽어요. 1분쯤 걸려요. 새 목소리를 고를 때만 지금 목소리가 바뀌어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再读一次讲稿，大约一分钟。只有在你选用新声音时，现在的声音才会被换掉。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再念一次講稿，大約一分鐘。只有在你選用新聲音時，現在的聲音才會被換掉。"
+          }
+        }
+      }
+    },
+    "You've already changed your voice in the last 30 days." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast deine Stimme in den letzten 30 Tagen schon geändert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya cambiaste tu voz en los últimos 30 días."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as déjà changé ta voix au cours des 30 derniers jours."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この30日以内に、もう声を変えています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 30일 안에 이미 목소리를 바꿨어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 30 天内已经换过声音了。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 30 天內已經換過聲音了。"
           }
         }
       }

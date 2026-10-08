@@ -809,6 +809,7 @@ struct MeTab: View {
     /// supabase/functions/_shared/credits.ts — keep them in sync.
     private static var recloneWarning: String {
         explain("Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing.")
+            + "\n\n" + VoiceChangeStatus.usesItLine
     }
 
     private var voiceSection: some View {
@@ -869,13 +870,19 @@ struct MeTab: View {
                         subtitle: explain("Hear your recording and your clone side by side"))
                 }
             }
+            // Both make a new voice — the learner's one change per 30 days
+            // (2026-10-09). With none left they say when, instead of leading
+            // to a minute of reading and a refusal.
             Button(role: .destructive) {
                 confirmingVoiceReset = true
             } label: {
                 row(icon: "mic.badge.plus",
                     title: explain("Re-record voice"),
-                    subtitle: explain("Replace your current clone with a new one"))
+                    subtitle: appState.canChangeVoice
+                        ? explain("Replace your current clone with a new one")
+                        : VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
             }
+            .disabled(!appState.canChangeVoice)
             if VoiceSampleStore.shared.exists {
                 Button {
                     confirmingVoiceRegenerate = true
@@ -883,16 +890,19 @@ struct MeTab: View {
                     HStack {
                         row(icon: "arrow.triangle.2.circlepath",
                             title: explain("Regenerate from saved recording"),
-                            subtitle: explain("Rebuild the clone from your last recording"))
+                            subtitle: appState.canChangeVoice
+                                ? explain("Rebuild the clone from your last recording")
+                                : VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
                         if regeneratingVoice {
                             Spacer()
                             ProgressView()
                         }
                     }
                 }
-                .disabled(regeneratingVoice)
+                .disabled(regeneratingVoice || !appState.canChangeVoice)
             }
         }
+        .task { await appState.refreshVoiceChangeStatus() }
         .alert("Rebuild your voice?", isPresented: $confirmingVoiceRegenerate) {
             Button("Cancel", role: .cancel) {}
             Button("Rebuild", role: .destructive) { regenerateFromSavedSample() }

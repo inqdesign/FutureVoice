@@ -185,19 +185,24 @@ final class ElevenLabsClient {
     /// Promotes the picked preview into a permanent voice and returns its
     /// voice_id. The edge function mirrors the new id into `voice_clones`,
     /// so the swap-and-delete machinery treats it exactly like a re-record.
+    /// `purpose: "default"` marks the remix made right after a clone (the
+    /// accent picked in setup) — part of that clone, not the learner's one
+    /// voice change (`_shared/voice-changes.ts`).
     func saveRemixedVoice(generatedVoiceId: String, name: String,
-                          voiceDescription: String) async throws -> String {
+                          voiceDescription: String, purpose: String? = nil) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
+        var payload: [String: Any] = [
             "generated_voice_id": generatedVoiceId,
             "voice_name": name,
             "voice_description": voiceDescription,
-        ])
+        ]
+        if let purpose { payload["purpose"] = purpose }
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         let (data, response) = try await session.dataWithRetry(for: request)
         try Self.validate(response: response, data: data)
 
@@ -760,6 +765,12 @@ final class ElevenLabsClient {
         guard (200..<300).contains(http.statusCode) else {
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
             if http.statusCode == 402 { throw ElevenLabsError.wall(body: snippet) }
+            if http.statusCode == 403, snippet.contains("voice_change_limit") {
+                struct Body: Decodable { let next_at: String? }
+                let next = (try? JSONDecoder().decode(Body.self, from: data))?.next_at
+                    .flatMap { VoiceChangeStatus.parse($0) }
+                throw ElevenLabsError.voiceChangeLimit(nextAt: next)
+            }
             throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
         }
     }
@@ -783,6 +794,9 @@ enum ElevenLabsError: Error, LocalizedError {
     /// the fair-use figure it is watched against is never shown to it. Only a
     /// script can reach this, so the answer is a support conversation.
     case fairUseLimit
+    /// The learner's one voice change for the last 30 days is used
+    /// (`voice_change_limit`, 2026-10-09). Not a failure: a date.
+    case voiceChangeLimit(nextAt: Date?)
 
     var errorDescription: String? {
         switch self {
@@ -803,6 +817,8 @@ enum ElevenLabsError: Error, LocalizedError {
             // Surfaces that have no cap sheet of their own (drills, library
             // previews) fall back to this line. It must never say "credits".
             return explain("You've used today's talk time. It comes back at midnight — reviewing is always free.")
+        case .voiceChangeLimit(let nextAt):
+            return VoiceChangeStatus.againLine(nextAt)
         case .fairUseLimit:
             // Says nothing about an allowance, because none ran out.
             return explain("We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out.")

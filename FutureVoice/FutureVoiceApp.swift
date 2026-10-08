@@ -324,6 +324,40 @@ final class AppState: ObservableObject {
     /// the picker reopens with nothing checked and the learner can't tell
     /// what they already chose. Cleared by anything that mints a clone
     /// straight from the recording again — that drops the remix with it.
+    /// The learner's voice change allowance (`VoiceChangeStatus`), nil until
+    /// first read. Every control that would make a new voice reads it.
+    @Published var voiceChangeStatus: VoiceChangeStatus?
+
+    /// Read the allowance from the server. Called where a voice can be
+    /// changed (meet act, Me → Voice, the accent sheet, revival) and after
+    /// any voice is made. Silent on failure: the server still decides.
+    func refreshVoiceChangeStatus() async {
+        #if DEBUG
+        // Captures: `-voiceChangesLeft 0` draws every voice control locked.
+        if UserDefaults.standard.object(forKey: "voiceChangesLeft") != nil {
+            let left = UserDefaults.standard.integer(forKey: "voiceChangesLeft")
+            voiceChangeStatus = VoiceChangeStatus(
+                left: left, nextAt: left > 0 ? nil : Date().addingTimeInterval(23 * 86_400))
+            return
+        }
+        #endif
+        guard SupabaseProvider.shared.auth.currentSession != nil else { return }
+        struct Row: Decodable { let left: Int; let next_at: String? }
+        do {
+            let row: Row = try await SupabaseProvider.shared
+                .rpc("voice_change_status")
+                .execute()
+                .value
+            voiceChangeStatus = VoiceChangeStatus(left: row.left,
+                                                  nextAt: row.next_at.flatMap(VoiceChangeStatus.parse))
+        } catch {
+            print("voice change status failed:", error)
+        }
+    }
+
+    /// True unless the server said no change is left.
+    var canChangeVoice: Bool { voiceChangeStatus?.canChange ?? true }
+
     /// The accent picked in setup (2026-10-08) — what `applyDefaultAccent`
     /// remixes a new clone into. Nil = the language's default.
     var preferredAccentId: String? {
@@ -1475,6 +1509,7 @@ final class AppState: ObservableObject {
         Analytics.capture("voice_clone_succeeded", ["first_time": isFirstClone])
         await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()
+        await refreshVoiceChangeStatus()
     }
 
     /// Fire-and-forget: make the next free talk open instantly on the
@@ -1522,6 +1557,7 @@ final class AppState: ObservableObject {
         Analytics.capture("voice_accent_applied", ["accent": accentId, "source": source])
         await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()
+        await refreshVoiceChangeStatus()
     }
 
     /// Remix takes already made from THIS recording, per accent id
@@ -1613,17 +1649,33 @@ final class AppState: ObservableObject {
         guard voiceAccentId == nil, let voiceId = voiceCloneId,
               let accent = options.first(where: { $0.id == preferredAccentId })
                 ?? VoiceAccentCatalog.defaultAccent(for: targetLanguage) else { return }
+        // Takes for EVERY accent of the language, in parallel, while the plain
+        // clone still exists (2026-10-09). Takes add no voice, and once the
+        // remix below replaces the clone, takes for another accent would need
+        // the clone rebuilt first — a whole voice spent just to LISTEN. With
+        // these on file a later accent change is one save, nothing else.
+        let text = VoiceAccentCatalog.sampleText(for: targetLanguage)
+        let made: [String: [ElevenLabsClient.RemixPreview]] = await withTaskGroup(
+            of: (String, [ElevenLabsClient.RemixPreview]?).self) { group in
+            for option in options {
+                group.addTask {
+                    let takes = try? await ElevenLabsClient.shared.remixVoicePreviews(
+                        voiceId: voiceId, voiceDescription: option.prompt, text: text,
+                        promptStrength: VoiceAccentCatalog.promptStrength)
+                    return (option.id, takes)
+                }
+            }
+            var all: [String: [ElevenLabsClient.RemixPreview]] = [:]
+            for await (id, takes) in group { if let takes, !takes.isEmpty { all[id] = takes } }
+            return all
+        }
+        for (id, takes) in made { cacheRemixTakes(takes, for: id) }
         do {
-            let takes = try await ElevenLabsClient.shared.remixVoicePreviews(
-                voiceId: voiceId,
-                voiceDescription: accent.prompt,
-                text: VoiceAccentCatalog.sampleText(for: targetLanguage),
-                promptStrength: VoiceAccentCatalog.promptStrength)
-            guard let take = takes.first else { throw URLError(.zeroByteResource) }
-            cacheRemixTakes(takes, for: accent.id)
+            guard let take = made[accent.id]?.first else { throw URLError(.zeroByteResource) }
+            // "default": part of the clone it follows, not the learner's change.
             let newId = try await ElevenLabsClient.shared.saveRemixedVoice(
                 generatedVoiceId: take.id, name: voiceDisplayName,
-                voiceDescription: accent.prompt)
+                voiceDescription: accent.prompt, purpose: "default")
             await adoptRemixedVoice(newId, accentId: accent.id, source: "default")
         } catch {
             Analytics.capture("voice_accent_default_failed",
@@ -1657,6 +1709,7 @@ final class AppState: ObservableObject {
             // server actually answered.
             case .insufficientCredits, .sceneCapReached, .dailyCapReached, .fairUseLimit: return 402
             case .httpError(let status, _): return status
+            case .voiceChangeLimit: return 403
             case .invalidResponse: return -1
             }
         }

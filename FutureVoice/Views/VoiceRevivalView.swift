@@ -79,6 +79,7 @@ struct VoiceRevivalView: View {
     @State private var paceLoading: SpeechSpeed?
     @State private var accentToPick: VoiceAccent?
     @State private var removingAccent = false
+    @State private var confirmingRemove = false
     /// The recording the voice was rebuilt from (fetched, if `sample` was nil).
     @State private var resolvedSample: URL?
 
@@ -261,7 +262,11 @@ struct VoiceRevivalView: View {
                     accentPill(label: "accent.original",
                                selected: appState.voiceAccentId == nil,
                                loading: removingAccent,
-                               action: removeAccent)
+                               action: {
+                                   guard appState.voiceAccentId != nil else { return }
+                                   confirmingRemove = true
+                               })
+                        .disabled(appState.voiceAccentId != nil && !appState.canChangeVoice)
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
@@ -269,9 +274,25 @@ struct VoiceRevivalView: View {
                             player.stop()
                             accentToPick = option
                         }
+                        .disabled(!appState.canChangeVoice && appState.voiceAccentId != option.id)
                     }
                 }
                 .disabled(removingAccent)
+                // Bringing the voice back was free; changing it after is the
+                // learner's one change, like anywhere else.
+                if !appState.canChangeVoice {
+                    Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .task { await appState.refreshVoiceChangeStatus() }
+            .confirmationDialog("Remove the accent?", isPresented: $confirmingRemove,
+                                titleVisibility: .visible) {
+                Button("Remove", role: .destructive) { removeAccent() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(VoiceChangeStatus.usesItLine)
             }
         }
     }

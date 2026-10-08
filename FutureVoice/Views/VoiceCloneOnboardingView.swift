@@ -116,6 +116,8 @@ struct VoiceCloneOnboardingView: View {
     /// walking the wizard backwards, and a failed re-clone doesn't strand them.
     @State private var isReRecordingClone = false
     @State private var confirmReRecord = false
+    /// "No accent" rebuilds the voice — the learner's one change — so asked.
+    @State private var confirmingRemoveFromMeet = false
     /// A/B against the recording — the meet act's answer to "is this me?".
     @State private var comparingVoice = false
 
@@ -1009,7 +1011,8 @@ struct VoiceCloneOnboardingView: View {
         } message: {
             // Free, and said out loud — a user who suspects a retake costs
             // them credits will settle for a voice that isn't theirs.
-            Text(explain("You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one."))
+            Text(explain("You'll read the script once more, about a minute. This voice is replaced only if you keep the new one.")
+                 + "\n\n" + VoiceChangeStatus.usesItLine)
         }
     }
 
@@ -1086,8 +1089,12 @@ struct VoiceCloneOnboardingView: View {
                     accentPill(label: "accent.original",
                                selected: appState.voiceAccentId == nil,
                                loading: removingAccent,
-                               action: removeAccentFromMeet)
-                        .disabled(appState.voiceAccentId != nil && !VoiceSampleStore.shared.exists)
+                               action: {
+                                   guard appState.voiceAccentId != nil else { return }
+                                   confirmingRemoveFromMeet = true
+                               })
+                        .disabled(appState.voiceAccentId != nil
+                                  && (!VoiceSampleStore.shared.exists || !appState.canChangeVoice))
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
@@ -1095,11 +1102,28 @@ struct VoiceCloneOnboardingView: View {
                             player.stop()
                             accentToPick = option
                         }
+                        // With no change left, only the voice they have stays
+                        // tappable — the rest would end at a refusal.
+                        .disabled(!appState.canChangeVoice && appState.voiceAccentId != option.id)
                     }
                 }
                 .disabled(removingAccent)
+                if !appState.canChangeVoice {
+                    Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .padding(.horizontal, 24)
+            .task { await appState.refreshVoiceChangeStatus() }
+            .confirmationDialog("Remove the accent?", isPresented: $confirmingRemoveFromMeet,
+                                titleVisibility: .visible) {
+                Button("Remove", role: .destructive) { removeAccentFromMeet() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(VoiceChangeStatus.usesItLine)
+            }
         }
     }
 

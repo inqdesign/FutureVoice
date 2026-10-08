@@ -28,6 +28,7 @@ struct VoiceAccentSheet: View {
     /// Rebuilding the un-accented voice from the saved recording.
     @State private var removing = false
     @State private var confirmingRemove = false
+    @State private var confirmingApply = false
     @State private var playingId: String?
     @State private var error: String?
     /// The live voice was rebuilt from the recording on the way to a new
@@ -120,8 +121,18 @@ struct VoiceAccentSheet: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Remove", role: .destructive) { removeAccent() }
             } message: {
-                Text(explain("Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing."))
+                Text(explain("Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing.")
+                     + "\n\n" + VoiceChangeStatus.usesItLine)
             }
+            // Saving a take is the learner's one change for 30 days, so it is
+            // asked, not done on the tap (2026-10-09).
+            .alert("Use this voice?", isPresented: $confirmingApply) {
+                Button("Cancel", role: .cancel) {}
+                Button("Use this voice") { apply() }
+            } message: {
+                Text(VoiceChangeStatus.usesItLine)
+            }
+            .task { await appState.refreshVoiceChangeStatus() }
             .alert("Couldn't remix your voice", isPresented: Binding(
                 get: { error != nil },
                 set: { if !$0 { error = nil } }
@@ -141,6 +152,8 @@ struct VoiceAccentSheet: View {
         } footer: {
             if generating {
                 Text(explain("Making a few takes — about half a minute. Keep this open."))
+            } else if !appState.canChangeVoice {
+                Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
             } else {
                 Text(explain("Your clone speaks with whatever accent the AI guesses. Pick one instead: same voice, your chosen accent. Takes about half a minute to prepare."))
             }
@@ -161,7 +174,7 @@ struct VoiceAccentSheet: View {
                     if removing { ProgressView() }
                 }
             }
-            .disabled(generating || saving || removing)
+            .disabled(generating || saving || removing || !appState.canChangeVoice)
         } footer: {
             Text(explain("Back to the voice your recording makes on its own."))
         }
@@ -217,7 +230,7 @@ struct VoiceAccentSheet: View {
 
     private var applySection: some View {
         Section {
-            Button { apply() } label: {
+            Button { confirmingApply = true } label: {
                 HStack {
                     Text("Use this voice")
                     if saving {
@@ -226,9 +239,13 @@ struct VoiceAccentSheet: View {
                     }
                 }
             }
-            .disabled(pickedPreviewId == nil || saving)
+            .disabled(pickedPreviewId == nil || saving || !appState.canChangeVoice)
         } footer: {
-            Text(explain("Replaces your current voice. Your recording is kept, so you can rebuild the original anytime from Me → Voice."))
+            if appState.canChangeVoice {
+                Text(explain("Replaces your current voice. Your recording is kept, so you can rebuild the original anytime from Me → Voice."))
+            } else {
+                Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+            }
         }
     }
 
@@ -262,16 +279,26 @@ struct VoiceAccentSheet: View {
             Analytics.capture("voice_accent_previews_reused", ["accent": option.id])
             return
         }
+        // No change left this month: new takes could never be kept, so none
+        // are made (the server would refuse them too). Takes already on file
+        // above can still be heard.
+        guard appState.canChangeVoice else {
+            previews = []
+            return
+        }
         previews = []
         generating = true
         Analytics.capture("voice_accent_previews_requested", ["accent": option.id])
         Task {
             defer { generating = false }
             do {
-                if appState.voiceAccentId != nil, let sample = VoiceSampleStore.shared.url {
-                    try await appState.regenerateVoiceClone(fromSampleAt: sample)
-                    rebuiltWithoutApply = true
-                }
+                // No rebuild first (2026-10-09). Rebuilding the plain clone to
+                // make takes spent a whole voice of the month's allowance on
+                // LISTENING, and left the learner un-accented if they closed
+                // the sheet. The takes for every accent are made at the
+                // clone (`AppState.applyDefaultAccent`) and found above; only
+                // when they are gone (a reinstall) are takes made from the
+                // live voice — one generation of drift, against a voice.
                 guard let voiceId = appState.voiceCloneId else { return }
                 let takes = try await ElevenLabsClient.shared.remixVoicePreviews(
                     voiceId: voiceId,
@@ -351,9 +378,14 @@ struct VoiceAccentSheet: View {
                 onApplied?()
                 dismiss()
             } catch {
-                // A remembered take can go stale upstream; the next pick of
-                // this accent makes fresh ones instead of failing again.
-                appState.cacheRemixTakes([], for: accent.id)
+                if case ElevenLabsError.voiceChangeLimit = error {
+                    // Someone else's device used it first; say the date.
+                    await appState.refreshVoiceChangeStatus()
+                } else {
+                    // A remembered take can go stale upstream; the next pick
+                    // of this accent makes fresh ones instead of failing again.
+                    appState.cacheRemixTakes([], for: accent.id)
+                }
                 self.error = error.localizedDescription
             }
         }

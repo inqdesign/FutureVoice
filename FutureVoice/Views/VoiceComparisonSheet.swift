@@ -153,9 +153,18 @@ struct VoiceComparisonSheet: View {
             } label: {
                 Label("Not me — record again", systemImage: "mic.fill")
             }
+            // A re-record is the learner's one change for 30 days; with none
+            // left the button would lead to a minute of reading and a refusal.
+            .disabled(!appState.canChangeVoice)
         } footer: {
-            Text(explain("Recording again during setup is free, and the voice you have now is only replaced if you keep the new one."))
+            if appState.canChangeVoice {
+                Text(explain("The voice you have now is only replaced if you keep the new one.")
+                     + " " + VoiceChangeStatus.usesItLine)
+            } else {
+                Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+            }
         }
+        .task { await appState.refreshVoiceChangeStatus() }
     }
 
     // MARK: - Playback
