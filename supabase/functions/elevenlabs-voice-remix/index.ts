@@ -21,6 +21,7 @@ import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/au
 import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
 
 import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
+import { changesLeft, defaultRemixOpen, recordVoiceChange, changeLimitResponse } from "../_shared/voice-changes.ts"
 
 const SOURCE_FN = "elevenlabs-voice-remix"
 
@@ -47,12 +48,22 @@ Deno.serve(async (req) => {
     voice_name?: string
     prompt_strength?: number
     guidance_scale?: number
+    purpose?: string
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_description) return errorResponse(400, "voice_description required")
   // A saved remix is a new voice (_shared/voice-quota.ts). Refused at the
   // previews too, so nobody waits half a minute for takes that can't be kept.
   if (await reservedForNewLearners(apiKey)) return reservedResponse(cors())
+  // One change per 30 days (_shared/voice-changes.ts). Right after a clone
+  // its default remix — and the takes made for it — belong to that clone.
+  // Otherwise takes are made only for someone who can still keep one, so
+  // nobody waits half a minute for takes they can't save.
+  const remixIsDefault = await defaultRemixOpen(user.id)
+  if (!remixIsDefault) {
+    const status = await changesLeft(user.id)
+    if (status && status.left < 1) return changeLimitResponse(status.nextAt, cors())
+  }
   // How far the remix may drift from the reference audio. Upstream: 0 is
   // "almost no prompt influence", 1 "almost no reference audio influence".
   // For an accent pick the reference IS the product — the learner has to
@@ -114,6 +125,10 @@ Deno.serve(async (req) => {
         name: (body.voice_name ?? "").trim() || null,
       })
     if (insErr) console.error("voice_clones insert failed", insErr)
+    // A save the app marks as the clone's default remix, inside its window,
+    // is part of that clone; every other save is the learner's change.
+    await recordVoiceChange(user.id,
+      body.purpose === "default" && remixIsDefault ? "default" : "change")
 
     return new Response(JSON.stringify({ voice_id: json.voice_id }), {
       status: 200,

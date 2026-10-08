@@ -9,6 +9,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
+import { changesLeft, recordVoiceChange, changeLimitResponse, type VoiceChangeKind } from "../_shared/voice-changes.ts"
 import {
   recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
 } from "../_shared/credits.ts"
@@ -73,6 +74,19 @@ Deno.serve(async (req) => {
   // FIRST voice (_shared/voice-quota.ts). A re-record waits for the reset.
   if (!isFirstClone && await reservedForNewLearners(apiKey)) {
     return reservedResponse(cors())
+  }
+
+  // One change per 30 days after the first voice (_shared/voice-changes.ts).
+  // A parked voice coming back is a rebuild of what we took, not a change.
+  let changeKind: VoiceChangeKind = "first"
+  if (!isFirstClone) {
+    const { data: parked } = await billingClient().from("voice_clones")
+      .select("id").eq("user_id", user.id).not("parked_at", "is", null).limit(1)
+    changeKind = parked && parked.length > 0 ? "revival" : "change"
+    if (changeKind === "change") {
+      const status = await changesLeft(user.id)
+      if (status && status.left < 1) return changeLimitResponse(status.nextAt, cors())
+    }
   }
 
   // Minutes-native model: clones are never PRICED — the meter is talk
@@ -182,6 +196,7 @@ Deno.serve(async (req) => {
     .select("id")
     .maybeSingle()
   if (insErr) console.error("voice_clones insert failed", insErr)
+  await recordVoiceChange(user.id, changeKind)
   // Its own update, so a database without the column (deploy order) loses
   // only the default accent, never the clone.
   if (cloneRow?.id && !accentByApp) {
