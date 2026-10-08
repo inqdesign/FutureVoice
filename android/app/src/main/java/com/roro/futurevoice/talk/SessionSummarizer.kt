@@ -246,7 +246,25 @@ object SessionSummarizer {
             val needle = normalized(g.quote)
             needle.isNotEmpty() && haystack.contains(needle) && needle != normalized(g.correction)
         }
+        // new_patterns_detected must be something the learner SAID (iOS
+        // `isTheirs`): the summary prompt carries the profile's recurring
+        // mistakes and the model copies them back out whether or not this
+        // talk had them, which kept bumping the grammar focus so it never
+        // retired.
+        val normalizedTurns = userTexts.map(::normalized)
+        fun isTheirs(quote: String): Boolean {
+            val needle = normalized(quote)
+            if (needle.isEmpty()) return false
+            if (normalizedTurns.any { it.contains(needle) }) return true
+            val words = needle.split(" ").toSet()
+            if (words.size < 3) return false
+            return normalizedTurns.any { turn ->
+                val have = turn.split(" ").toSet()
+                words.intersect(have).size.toDouble() / words.size >= 0.75
+            }
+        }
         computed = computed.copy(
+            newPatternsDetected = computed.newPatternsDetected.filter { isTheirs(it.mistake) },
             expressionsUsed = priorUsed + verifiedUsed.filter { it !in priorUsed },
             expressionsOffered = priorOffered + verifiedOffered.filter { it !in priorOffered },
             grammarIssues = grammar,
