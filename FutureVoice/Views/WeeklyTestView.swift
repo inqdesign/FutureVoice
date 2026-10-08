@@ -46,6 +46,11 @@ struct WeeklyTestView: View {
     @State private var chosen: String?
     /// build: indices into `item.options`, in the order laid.
     @State private var laid: [Int] = []
+    /// rewrite: what the learner said or typed, and whether they asked for
+    /// the hint.
+    @State private var rewriteText = ""
+    @State private var showHint = false
+    @FocusState private var rewriteFocused: Bool
     /// Where the next tile goes: an insertion index into `laid`, 0…count.
     /// Tapping a placed tile puts the cursor right after it, so a word can be
     /// slipped into the middle without unlaying everything behind it (user,
@@ -193,6 +198,7 @@ struct WeeklyTestView: View {
             case .speak:   Label("Say it out loud", systemImage: "waveform.badge.mic")
             case .grammar: Label("A mistake you keep making", systemImage: "arrow.triangle.2.circlepath")
             case .upgrade: Label("A better word", systemImage: "arrow.up.circle")
+            case .rewrite: Label("Say it the right way", systemImage: "pencil.line")
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -273,6 +279,8 @@ struct WeeklyTestView: View {
                     .transition(.opacity)
                 }
             }
+        case .rewrite:
+            rewritePrompt(item)
         case .listen:
             HStack {
                 Spacer()
@@ -355,7 +363,119 @@ struct WeeklyTestView: View {
             buildArea(item)
         case .speak:
             speakArea(item)
+        case .rewrite:
+            rewriteArea(item)
         }
+    }
+
+    // MARK: - Rewrite
+
+    /// The learner's own sentence, whole, with the slip underlined; the hint
+    /// (why it was corrected + the words the fix brings) only on request.
+    /// Once graded: the right way, with the fix in bold.
+    private func rewritePrompt(_ item: WeeklyTestItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("You said")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                (Text("\u{201C}") + diffMarked(item.prompt, against: item.answer) + Text("\u{201D}"))
+                    .font(.title3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if outcome == nil {
+                if showHint {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Hint", systemImage: "lightbulb")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        if let words = WeeklyTestEngine.hintWords(item) {
+                            Text(words)
+                                .font(.body.weight(.semibold))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let note = item.note, !note.isEmpty {
+                            Text(note)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .transition(.opacity)
+                } else {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) { showHint = true }
+                    } label: {
+                        Label("Show a hint", systemImage: "lightbulb")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("The right way")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    diffMarked(item.answer, against: item.prompt)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.green)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let note = item.note, !note.isEmpty {
+                        Text(note)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+
+    /// `text` with the words `other` doesn't share (outside their longest
+    /// common run) bold and underlined — what the fix changed, never the
+    /// whole sentence when a card's source happens to be all of it.
+    private func diffMarked(_ text: String, against other: String) -> Text {
+        let words = WordSplitter.words(text)
+        let kept = WeeklyTestEngine.tileCheck(tiles: words, answer: other).correct
+        let gap = WordSplitter.spaced ? " " : ""
+        var out = Text("")
+        for (i, word) in words.enumerated() {
+            if i > 0 { out = out + Text(gap) }
+            out = out + (kept[i] ? Text(word) : Text(word).bold().underline())
+        }
+        return out
+    }
+
+    /// Say it (the field's mic dictates in the target language) or type it.
+    @ViewBuilder
+    private func rewriteArea(_ item: WeeklyTestItem) -> some View {
+        if outcome == nil {
+            SpeakOrTypeField(
+                text: $rewriteText,
+                locale: Binding(get: { appState.targetLanguage }, set: { _ in }),
+                placeholder: explain("Say it or type it the right way"),
+                showsLocalePicker: false,
+                lineRange: 2...5,
+                externalFocus: $rewriteFocused)
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your answer")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(rewriteText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func checkRewrite(_ item: WeeklyTestItem, test: WeeklyTest) {
+        rewriteFocused = false
+        let given = rewriteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        settle(correct: WeeklyTestEngine.isCorrect(item, rewritten: given), given: given,
+               test: test, item: item)
     }
 
     // MARK: - Speak
@@ -724,7 +844,8 @@ struct WeeklyTestView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(outcome ? "Right" : "Not this time")
                             .font(.subheadline.weight(.semibold))
-                        if !outcome, item.kind != .build, item.kind != .listen, item.kind != .grammar {
+                        if !outcome, item.kind != .build, item.kind != .listen, item.kind != .grammar,
+                           item.kind != .rewrite {
                             Text(item.answer)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -746,6 +867,16 @@ struct WeeklyTestView: View {
                 .controlSize(.large)
                 .tint(outcome ? .green : .accentColor)
                 .accessibilityIdentifier("weeklyTest.continue")
+            } else if item.kind == .rewrite {
+                Button {
+                    checkRewrite(item, test: test)
+                } label: {
+                    Text("Check").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(rewriteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("weeklyTest.check")
             } else if item.kind == .build || item.kind == .listen || item.kind == .grammar {
                 Button {
                     checkBuild(item, test: test)
@@ -822,6 +953,10 @@ struct WeeklyTestView: View {
                 }
                 if !right { order.swapAt(0, order.count - 1); laid = order }
                 checkBuild(item, test: test)
+            } else if item.kind == .rewrite {
+                showHint = !right
+                rewriteText = right ? item.answer : item.prompt
+                checkRewrite(item, test: test)
             } else {
                 let pick = right ? item.answer : (item.options.first { !WeeklyTestEngine.isCorrect(item, chosen: $0) } ?? item.answer)
                 choose(pick, item: item)
@@ -916,6 +1051,8 @@ struct WeeklyTestView: View {
         laid = []
         cursor = 0
         outcome = nil
+        rewriteText = ""
+        showHint = false
         speakPhase = .idle
         speakTranscript = nil
         speakScore = nil
@@ -1150,6 +1287,7 @@ struct WeeklyTestResultView: View {
         case .speak:   Image(systemName: "waveform.badge.mic")
         case .grammar: Image(systemName: "arrow.triangle.2.circlepath")
         case .upgrade: Image(systemName: "arrow.up.circle")
+        case .rewrite: Image(systemName: "pencil.line")
         }
     }
 }

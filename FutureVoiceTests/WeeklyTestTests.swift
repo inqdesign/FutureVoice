@@ -35,6 +35,22 @@ final class WeeklyTestTests: XCTestCase {
     // MARK: - Making items
 
     /// Material in the learner's own language never becomes an item.
+    /// A rewrite is right when it carries the fix inside the sentence —
+    /// however the rest is worded — and wrong when it repeats the slip or
+    /// answers with the fixed word alone (2026-10-08).
+    func testRewriteGradingNeedsTheFixInASentence() {
+        let it = WeeklyTestItem(id: UUID(), kind: .rewrite,
+                                prompt: "Yesterday I goed to the park with my friends.",
+                                answer: "Yesterday I went to the park with my friends.", options: [],
+                                focus: "I goed to the park", example: "I went to the park")
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, rewritten: "yesterday I went to the park with my friends"))
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, rewritten: "I went to the park with my friends yesterday."))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: "Yesterday I goed to the park with my friends."))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: "went"))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: ""))
+        XCTAssertEqual(WeeklyTestEngine.hintWords(it), "went")
+    }
+
     func testItemsRequireTheTargetScript() {
         XCTAssertTrue(WeeklyTestEngine.isInTargetScript("Show me the clock once.", language: "en"))
         XCTAssertFalse(WeeklyTestEngine.isInTargetScript("한번 나올게 해줘 시계.", language: "en"))
@@ -216,8 +232,9 @@ final class WeeklyTestTests: XCTestCase {
         let b = item(.gap, answer: "end up",
                      options: ["end up", "push back on", "catch up on", "walk you through"],
                      prompt: "Did you \(WeeklyTestEngine.blankMark) hiring movers?")
-        let c = item(.build, answer: "I really like it", options: ["I", "like", "really", "it", "very"],
-                     prompt: "I very like it")
+        let c = WeeklyTestItem(id: UUID(), kind: .rewrite, prompt: "I very like it",
+                               answer: "I really like it", options: [],
+                               focus: "very like", example: "really like")
         let d = item(.speak, answer: "Give yourself a day off.")
         // The paper is judged in ITS language, whatever the active one is.
         UserDefaults.standard.set("de", forKey: LanguageCatalog.targetLanguageDefaultsKey)

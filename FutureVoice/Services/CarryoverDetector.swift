@@ -288,6 +288,30 @@ enum CarryoverDetector {
         return added.isSubset(of: said) && removed.isDisjoint(with: said)
     }
 
+    /// `showsTheFix` over free text (the weekly test's rewrite answer).
+    static func showsTheFix(from source: String, to target: String, inText text: String) -> Bool {
+        showsTheFix(from: source, to: target, in: tokens(text))
+    }
+
+    /// Does the fix add or drop a word, or only move them?
+    static func fixChangesWords(from source: String, to target: String) -> Bool {
+        Set(tokens(source)) != Set(tokens(target))
+    }
+
+    /// The fix's added words in the target's order, as written in it.
+    static func addedWords(from source: String, to target: String) -> [String] {
+        let before = Set(tokens(source))
+        var seen = Set<String>()
+        return tokens(target).filter { !before.contains($0) && seen.insert($0).inserted }
+    }
+
+    /// Share of `reference`'s words that appear in `text`.
+    static func sharedWordRatio(of reference: String, in text: String) -> Double {
+        let ref = Set(tokens(reference))
+        guard !ref.isEmpty else { return 0 }
+        return Double(ref.intersection(Set(tokens(text))).count) / Double(ref.count)
+    }
+
     /// Could this phrase EVER be credited? The token bars in `firstMatch`
     /// reject an item before any transcript is looked at, so a phrase that
     /// fails here can never come back as a hit no matter what the learner says.

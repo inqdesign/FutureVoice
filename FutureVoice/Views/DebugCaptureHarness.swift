@@ -1016,6 +1016,7 @@ enum DebugCapture {
             once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
         case "weekly-test", "weekly-test-word", "weekly-test-gap", "weekly-test-build", "weekly-test-listen",
+             "weekly-test-rewrite", "weekly-test-rewrite-right", "weekly-test-rewrite-wrong",
              "weekly-test-speak",
              "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right",
              "weekly-test-grammar", "weekly-test-grammar-right", "weekly-test-grammar-wrong",
@@ -1029,6 +1030,7 @@ enum DebugCapture {
                 case "weekly-test-word", "weekly-test-word-right": .meaning
                 case "weekly-test-gap", "weekly-test-gap-wrong": .gap
                 case "weekly-test-build", "weekly-test-build-wrong", "weekly-test-build-right": .build
+                case "weekly-test-rewrite", "weekly-test-rewrite-right", "weekly-test-rewrite-wrong": .rewrite
                 case "weekly-test-listen": .listen
                 case "weekly-test-speak": .speak
                 case "weekly-test-grammar", "weekly-test-grammar-right", "weekly-test-grammar-wrong": .grammar
@@ -1914,9 +1916,10 @@ enum DebugCapture {
                               topic: nil, startedAt: started, endedAt: ended,
                               turns: turns, summary: summary, origin: .free)
         SessionStore.shared.save(session)
+        // A card as a fix mints it today: one clause, inside a longer turn.
         for turn in turns where turn.suggestion != nil {
             DrillStore.shared.seed(DrillCard(
-                sourcePhrase: turn.transcript, targetPhrase: turn.suggestion!.alternative,
+                sourcePhrase: "I end up carrying most boxes", targetPhrase: "I ended up carrying most of the boxes",
                 reason: turn.suggestion!.reason, createdAt: ended, lastReviewedAt: nil,
                 nextReviewAt: ended.addingTimeInterval(86_400), box: 0,
                 sourceSessionId: session.id, sourceTurnId: turn.id))

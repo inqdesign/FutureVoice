@@ -1678,6 +1678,22 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
   are the free, cached dictionary lookup that writes a gloss and the
   audio-grounded read of a take; no LLM ever decides whether an answer was
   right.
+- **Every item has a reason the learner can see** (2026-10-08, learner
+  feedback, founder agreed: "the review sentences feel random — the AI's
+  opening line, or my sentence chopped into tiles"). The correction item is
+  now `rewrite`, not tile `build`: the learner's WHOLE sentence as said (found
+  in the card's turn), the changed words underlined, a hint on request (the
+  words the fix adds + its why), answered by voice or keyboard
+  (`SpeakOrTypeField`, target-language dictation). Graded in code: the answer
+  sentence, or the fix shown by `CarryoverDetector.showsTheFix` inside ≥60% of
+  the sentence's words (the fixed word alone is not a rewrite). `build` is
+  never dealt again; a stored one (missed retake, unanswered in a paper in
+  progress) comes back as `rewrite` via its card. `gap` comes from the
+  Expressions page's "To study" list (`ExpressionCatalog.toStudy`), newest
+  first, in the line it was heard (this week → any talk → its scene's
+  example); `listen` / `speak` take only lines carrying a To-study phrase and
+  never a call's first fluent-self line (the greeting). Capture:
+  `-capture weekly-test-rewrite[-right|-wrong]`.
 - **Two kinds come from the week's REPORT** (2026-10-03, user request):
   `grammar` (a recurring grammar point from `WeekRecap.Coach.grammar` —
   its rule over one of the learner's own lines that carries the mistake,

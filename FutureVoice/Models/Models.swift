@@ -1956,7 +1956,8 @@ struct WeeklyTestItem: Codable, Identifiable, Hashable {
         /// A line the fluent self said with its phrase blanked out: pick the phrase.
         case gap
         /// A sentence the learner said and was corrected: rebuild the fluent
-        /// version from shuffled word tiles.
+        /// version from shuffled word tiles. No longer dealt (2026-10-08) —
+        /// stored papers still hold it; a missed one comes back as `rewrite`.
         case build
         /// A fluent-self line played from its saved audio: pick what was said.
         case listen
@@ -1969,6 +1970,11 @@ struct WeeklyTestItem: Codable, Identifiable, Hashable {
         /// A word the learner leans on (the report's "upgrades"): their line
         /// with it marked, pick the better word.
         case upgrade
+        /// A sentence the learner said and was corrected, shown whole with
+        /// the mistake marked: say or type it again the right way, a hint on
+        /// request. `focus` → `example` is the fix, `answer` the sentence
+        /// with it applied.
+        case rewrite
     }
     let id: UUID
     let kind: Kind

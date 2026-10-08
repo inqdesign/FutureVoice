@@ -7,12 +7,22 @@ import Foundation
 /// loop (see CLAUDE.md "The learning loop"):
 ///
 ///   meaning  ← the notebook (words the talks taught, `VocabStore.studying`)
-///   gap      ← the fluent self's phrases (`expressionsOffered` / `expressionsUsed`)
-///   build    ← the corrections (`DrillStore` cards with what the learner said)
+///   gap      ← the Expressions page's "To study" list (`ExpressionCatalog
+///              .toStudy`), in the line it was heard in
+///   rewrite  ← the corrections (`DrillStore` cards): the learner's WHOLE
+///              sentence as said, mistake marked, a hint on request —
+///              say or type it the right way (replaced `build`, 2026-10-08)
 ///   listen   ← the fluent self's saved lines (`TurnAudioStore`), heard and
 ///              rebuilt from tiles — dictation, not a pick from three
 ///   speak    ← the fluent self's lines, said out loud and scored like a
 ///              shadow take (`ShadowTranscriber` + `ShadowEngine`)
+///
+/// listen and speak take only lines that carry a "To study" expression, and
+/// never a call's opening line. A learner reported (2026-10-08) that the
+/// test "felt random": the opener's greeting came up to be repeated, and a
+/// correction card — one clause since 2026-09-27 — was shuffled into four
+/// tiles that rebuilt nothing worth knowing. Every item now has a reason the
+/// learner can see: a phrase they are studying, or a sentence they got wrong.
 ///   grammar  ← the week report's recurring grammar points (`WeekRecap.Coach`),
 ///              else the profile's recurring mistakes — rule + one of the
 ///              learner's own lines, rebuilt right from tiles
@@ -40,7 +50,7 @@ enum WeeklyTestEngine {
 
     static let maxMeaning = 4
     static let maxGap = 3
-    static let maxBuild = 3
+    static let maxRewrite = 3
     static let maxListen = 2
     static let maxSpeak = 2
     static let maxGrammar = 2
@@ -115,12 +125,22 @@ enum WeeklyTestEngine {
 
         var items: [WeeklyTestItem] = []
         items += await meaningItems(sessions: windowSessions, appState: appState, rng: &rng)
-        items += gapItems(sessions: windowSessions, fluentTurns: fluentTurns,
-                          userTurns: userTurns, appState: appState, rng: &rng)
-        items += buildItems(start: start, end: end, now: now, rng: &rng)
-        let listens = listenItems(fluentTurns: fluentTurns, allSessions: allSessions, rng: &rng)
+        // What the Expressions page lists under "To study" — the learner's
+        // own study list, and the reason a fluent-self line is worth a
+        // question at all.
+        let toStudy = ExpressionCatalog.toStudy(scenarios: appState.scenarios, sessions: allSessions)
+            .filter { isInTargetScript($0.text) }
+        let studyPhrases = toStudy.map { $0.text.lowercased() }
+        // A call's first fluent-self line is its greeting — the same few
+        // words every call, never the material.
+        let openers = Set(allSessions.compactMap { s in s.turns.first { $0.role == .fluentSelf }?.id })
+        let teachingTurns = fluentTurns.filter { !openers.contains($0.turn.id) }
+        items += gapItems(toStudy: toStudy, sessions: windowSessions, fluentTurns: teachingTurns,
+                          allSessions: allSessions, openers: openers, appState: appState, rng: &rng)
+        items += rewriteItems(start: start, end: end, now: now, sessions: allSessions)
+        let listens = listenItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases, rng: &rng)
         items += listens
-        items += speakItems(fluentTurns: fluentTurns, sessions: windowSessions,
+        items += speakItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases,
                             excluding: Set(listens.map { CarryoverDetector.normalized($0.answer) }),
                             rng: &rng)
         // What the week's report found: grammar that keeps going wrong and
@@ -169,8 +189,10 @@ enum WeeklyTestEngine {
             let wrong = Set(test.answers.filter { !$0.correct }.map(\.itemId))
             let asked = Set(test.items.map { itemKey($0) })
             defer { seen.formUnion(asked) }
-            for item in test.items where wrong.contains(item.id) && isValid(item, language: language) {
+            for stored in test.items where wrong.contains(stored.id) && isValid(stored, language: language) {
                 guard out.count < limit else { return out }
+                // A missed tile item comes back as the rewrite it is now.
+                guard let item = stored.kind == .build ? asRewrite(stored) : stored else { continue }
                 let key = itemKey(item)
                 guard !seen.contains(key) else { continue }
                 seen.insert(key)
@@ -216,6 +238,8 @@ enum WeeklyTestEngine {
         switch item.kind {
         case .build, .grammar:
             return ok(item.prompt) && item.options.allSatisfy(ok)
+        case .rewrite:
+            return ok(item.prompt)
         case .upgrade:
             return ok(item.prompt) && item.options.allSatisfy(ok)
         case .gap:
@@ -247,16 +271,19 @@ enum WeeklyTestEngine {
                                            cardId: item.cardId, note: item.note, isRetake: item.isRetake))
                 changed = true; continue
             }
-            // An unanswered build item re-deals its tiles under today's rule.
+            // An unanswered tile item becomes the rewrite that replaced it;
+            // one whose card is gone leaves the paper.
             if item.kind == .build {
-                let fresh = buildTiles(target: item.answer, source: item.prompt, rng: &rng)
-                if Set(fresh.map(tileKey)) != Set(item.options.map(tileKey)) {
-                    var copy = item
-                    copy = WeeklyTestItem(id: item.id, kind: .build, prompt: item.prompt, answer: item.answer,
-                                          options: fresh, sessionId: item.sessionId, turnId: item.turnId,
-                                          cardId: item.cardId, note: item.note, isRetake: item.isRetake)
-                    kept.append(copy); changed = true; continue
+                changed = true
+                if let rewrite = asRewrite(item) {
+                    kept.append(WeeklyTestItem(id: item.id, kind: rewrite.kind, prompt: rewrite.prompt,
+                                               answer: rewrite.answer, options: [],
+                                               sessionId: rewrite.sessionId, turnId: rewrite.turnId,
+                                               cardId: rewrite.cardId, note: rewrite.note,
+                                               isRetake: item.isRetake, focus: rewrite.focus,
+                                               example: rewrite.example))
                 }
+                continue
             }
             kept.append(item)
         }
@@ -273,16 +300,16 @@ enum WeeklyTestEngine {
 
     // MARK: speak
 
-    /// Lines to say out loud: fluent-self sentences of 4–16 words, the ones
-    /// carrying a phrase the summary offered first — that is what the talk
-    /// was teaching — and never a line the listen items already used.
+    /// Lines to say out loud: fluent-self sentences of 4–16 words that carry
+    /// a phrase on the "To study" list — saying it is studying it — and
+    /// never a line the listen items already used. No such line, no item:
+    /// a sentence picked for its length alone is what read as random.
     private static func speakItems(
         fluentTurns: [(session: Session, turn: Turn)],
-        sessions: [Session],
+        studyPhrases: [String],
         excluding: Set<String>,
         rng: inout WeeklyTestRandom
     ) -> [WeeklyTestItem] {
-        let offered = Set(sessions.flatMap { $0.summary?.expressionsOffered ?? [] }.map { $0.lowercased() })
         struct Line { let text: String; let session: Session; let lineId: UUID; let weight: Int }
         var lines: [Line] = []
         var seen = excluding
@@ -295,7 +322,8 @@ enum WeeklyTestEngine {
                 guard !seen.contains(key) else { continue }
                 seen.insert(key)
                 let lower = sentence.lowercased()
-                let weight = offered.filter { lower.contains($0) }.count
+                let weight = studyPhrases.filter { lower.contains($0) }.count
+                guard weight > 0 else { continue }
                 // The line's identity is the talk book's: a one-sentence turn
                 // keeps its turn id (its recorded audio matches the text), a
                 // sentence cut from a longer turn gets the book's sentence id.
@@ -424,47 +452,66 @@ enum WeeklyTestEngine {
 
     // MARK: gap
 
+    /// A "To study" expression with its line blanked out, newest first —
+    /// the list the learner keeps on the Expressions page, in the sentence
+    /// they met it in: this week's talks first, then any talk, then the
+    /// scene that taught it. A phrase with no such line is skipped.
     private static func gapItems(
+        toStudy: [ExpressionCatalog.Item],
         sessions: [Session],
         fluentTurns: [(session: Session, turn: Turn)],
-        userTurns: [(session: Session, turn: Turn)],
+        allSessions: [Session],
+        openers: Set<UUID>,
         appState: AppState,
         rng: inout WeeklyTestRandom
     ) -> [WeeklyTestItem] {
-        struct Candidate { let phrase: String; let sentence: String; let session: Session; let turn: Turn }
+        struct Candidate { let phrase: String; let sentence: String; let session: Session?; let turn: Turn? }
+        let anyFluent = allSessions.flatMap { s in
+            s.turns.filter { $0.role == .fluentSelf && !$0.excludedFromScoring && !openers.contains($0.id) }
+                .map { (session: s, turn: $0) }
+        }
+        let sceneExamples: [String: String] = Dictionary(
+            appState.scenarios.flatMap { sc in
+                (sc.curriculum?.expressions ?? []).compactMap { e in
+                    e.example.map { (ExpressionCatalog.normalizedKey(e.text), $0) }
+                }
+            },
+            uniquingKeysWith: { first, _ in first })
+
         var candidates: [Candidate] = []
-        var seen = Set<String>()
-        func collect(_ phrases: [String], in turns: [(session: Session, turn: Turn)]) {
-            for phrase in phrases {
-                let key = ExpressionCatalog.normalizedKey(phrase)
-                guard !key.isEmpty, !seen.contains(key), isInTargetScript(phrase) else { continue }
-                guard let hit = firstSentence(containing: phrase, in: turns) else { continue }
-                seen.insert(key)
-                candidates.append(Candidate(phrase: phrase, sentence: hit.sentence,
+        for entry in toStudy {
+            guard candidates.count < maxGap * 3 else { break }
+            if let hit = firstSentence(containing: entry.text, in: fluentTurns)
+                ?? firstSentence(containing: entry.text, in: anyFluent) {
+                candidates.append(Candidate(phrase: entry.text, sentence: hit.sentence,
                                             session: hit.session, turn: hit.turn))
+            } else if let example = sceneExamples[entry.key],
+                      example.range(of: entry.text, options: [.caseInsensitive]) != nil,
+                      isInTargetScript(example) {
+                candidates.append(Candidate(phrase: entry.text, sentence: example, session: nil, turn: nil))
             }
         }
-        // The fluent self's phrases first — what the week offered and the
-        // learner hasn't said — then the ones the learner did use.
-        for s in sessions { collect(s.summary?.expressionsOffered ?? [], in: fluentTurns) }
-        for s in sessions { collect(s.summary?.expressionsUsed ?? [], in: userTurns) }
 
         // Decoys: every other phrase of the week first — they are the ones
-        // that could plausibly fit — and the library only to fill the row.
-        var weekPool = candidates.map(\.phrase)
+        // that could plausibly fit — then the rest of the study list, and the
+        // library only to fill the row.
+        var weekPool: [String] = []
         for s in sessions {
             weekPool += (s.summary?.expressionsOffered ?? []) + (s.summary?.expressionsUsed ?? [])
         }
-        weekPool = dedupe(weekPool, key: ExpressionCatalog.normalizedKey)
+        weekPool = dedupe(weekPool + toStudy.map(\.text), key: ExpressionCatalog.normalizedKey)
         let libraryPool = dedupe(ExpressionCatalog.all(scenarios: appState.scenarios).map(\.text),
                                  key: ExpressionCatalog.normalizedKey)
 
         var out: [WeeklyTestItem] = []
-        for c in candidates.shuffled(using: &rng) {
+        // Newest first, as the list shows them — the top of it is what the
+        // learner is studying now.
+        for c in candidates {
             guard out.count < maxGap else { break }
             let key = ExpressionCatalog.normalizedKey(c.phrase)
             func fits(_ p: String) -> Bool {
                 ExpressionCatalog.normalizedKey(p) != key && !c.sentence.lowercased().contains(p.lowercased())
+                    && isInTargetScript(p)
             }
             let decoys = dedupe(weekPool.filter(fits).shuffled(using: &rng)
                                 + libraryPool.filter(fits).shuffled(using: &rng),
@@ -474,7 +521,7 @@ enum WeeklyTestEngine {
                   let prompt = blank(c.phrase, in: c.sentence) else { continue }
             let options = ([c.phrase] + decoys).shuffled(using: &rng)
             out.append(WeeklyTestItem(id: UUID(), kind: .gap, prompt: prompt, answer: c.phrase,
-                                      options: options, sessionId: c.session.id, turnId: c.turn.id))
+                                      options: options, sessionId: c.session?.id, turnId: c.turn?.id))
         }
         return out
     }
@@ -510,44 +557,71 @@ enum WeeklyTestEngine {
 
     // MARK: build
 
-    private static func buildItems(
-        start: Date, end: Date, now: Date, rng: inout WeeklyTestRandom
+    /// The corrections touched this window, due first then newest, each as
+    /// the learner's WHOLE sentence to say or type again the right way.
+    private static func rewriteItems(
+        start: Date, end: Date, now: Date, sessions: [Session]
     ) -> [WeeklyTestItem] {
         let cards = DrillStore.shared.load().filter { card in
             guard card.box < DrillStore.maxBox,
                   !card.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty,
                   isInTargetScript(card.targetPhrase), isInTargetScript(card.sourcePhrase) else { return false }
             let touched = [card.createdAt, card.lastReviewedAt].compactMap { $0 }
-            guard touched.contains(where: { $0 > start && $0 <= end }) else { return false }
-            // An unspaced language's "words" are segments — a particle is
-            // one — so a plain sentence runs longer in tiles.
-            let n = WordSplitter.count(card.targetPhrase)
-            return n >= 3 && n <= (WordSplitter.spaced ? 12 : 18)
+            return touched.contains(where: { $0 > start && $0 <= end })
         }
-        // Due cards first (the test is a review), then the newest.
         let ordered = cards.sorted {
             let aDue = $0.nextReviewAt <= now, bDue = $1.nextReviewAt <= now
             if aDue != bDue { return aDue }
             return $0.createdAt > $1.createdAt
         }
+        let byId = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var out: [WeeklyTestItem] = []
         var seen = Set<String>()
         for card in ordered {
-            guard out.count < maxBuild else { break }
-            let key = DrillStore.matchKey(card.targetPhrase)
-            guard !seen.contains(key) else { continue }
-            seen.insert(key)
-            let tiles = buildTiles(target: card.targetPhrase, source: card.sourcePhrase, rng: &rng)
-            // The same trim the drill card does: a turn can be a rambling
-            // paragraph of fillers, and only the sentence the correction is
-            // about belongs on a test card.
-            let said = DrillStore.relevantFragment(of: card.sourcePhrase,
-                                                   matching: card.targetPhrase, maxChars: 120)
-            out.append(WeeklyTestItem(id: UUID(), kind: .build, prompt: said,
-                                      answer: card.targetPhrase, options: tiles,
-                                      sessionId: card.sourceSessionId, turnId: card.sourceTurnId,
-                                      cardId: card.id, note: card.reason))
+            guard out.count < maxRewrite else { break }
+            guard let item = rewriteItem(from: card, sessions: byId) else { continue }
+            guard seen.insert(itemKey(item)).inserted else { continue }
+            out.append(item)
         }
+        return out
+    }
+
+    /// One correction card as a rewrite item. The sentence is the one the
+    /// learner said, found in the turn the card came from; the answer is
+    /// that sentence with the card's fix applied. `focus` / `example` carry
+    /// the fix itself (what was said → what it should be), which is what
+    /// the grade and the hint read. nil when the sentence is too short or
+    /// long to be worth writing out, or the fix changes nothing.
+    static func rewriteItem(from card: DrillCard, sessions: [UUID: Session]) -> WeeklyTestItem? {
+        let was = card.sourcePhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = card.targetPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        var said = was, answer = now
+        if let sid = card.sourceSessionId, let tid = card.sourceTurnId,
+           let turn = sessions[sid]?.turns.first(where: { $0.id == tid }) {
+            for sentence in TalkCurriculum.sentences(in: turn.transcript) {
+                guard let range = sentence.range(of: was, options: [.caseInsensitive, .diacriticInsensitive])
+                else { continue }
+                said = sentence
+                answer = sentence.replacingCharacters(in: range, with: now)
+                break
+            }
+        }
+        let n = WordSplitter.count(said)
+        guard n >= 3, n <= (WordSplitter.spaced ? 25 : 40),
+              CarryoverDetector.normalized(said) != CarryoverDetector.normalized(answer) else { return nil }
+        return WeeklyTestItem(id: UUID(), kind: .rewrite, prompt: said, answer: answer, options: [],
+                              sessionId: card.sourceSessionId, turnId: card.sourceTurnId,
+                              cardId: card.id, note: card.reason, focus: was, example: now)
+    }
+
+    /// A stored tile item (`build`) as the rewrite that replaced it, read
+    /// from its card. nil when the card is gone.
+    static func asRewrite(_ item: WeeklyTestItem) -> WeeklyTestItem? {
+        guard let id = item.cardId,
+              let card = DrillStore.shared.load().first(where: { $0.id == id }) else { return nil }
+        let sessions = Dictionary(SessionStore.shared.load().map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        guard var out = rewriteItem(from: card, sessions: sessions) else { return nil }
+        out.isRetake = item.isRetake
         return out
     }
 
@@ -727,16 +801,19 @@ enum WeeklyTestEngine {
 
     private static func listenItems(
         fluentTurns: [(session: Session, turn: Turn)],
-        allSessions: [Session],
+        studyPhrases: [String],
         rng: inout WeeklyTestRandom
     ) -> [WeeklyTestItem] {
         // Picking a line out of three was a length test, not a listening
         // test (user, 2026-09-24). The line is HEARD and rebuilt from its own
         // word tiles with the text hidden — dictation, so the difficulty is
         // the sentence's own. Whole turns only: the saved audio is the turn.
+        // Only a line carrying a "To study" phrase: hearing it is the point.
         func fits(_ text: String) -> Bool {
             let n = WordSplitter.count(text)
+            let lower = text.lowercased()
             return n >= 4 && n <= (WordSplitter.spaced ? 14 : 18) && isInTargetScript(text)
+                && studyPhrases.contains { lower.contains($0) }
         }
         let withAudio = fluentTurns.filter {
             fits($0.turn.transcript) && TurnAudioStore.shared.url(for: $0.turn.id) != nil
@@ -766,6 +843,33 @@ enum WeeklyTestEngine {
     /// A build item: the tiles in the order the learner laid them.
     static func isCorrect(_ item: WeeklyTestItem, tiles: [String]) -> Bool {
         tiles.map(tileKey) == WordSplitter.words(item.answer).map(tileKey)
+    }
+
+    /// A rewrite item: what the learner said or typed. Right when it is the
+    /// answer sentence, or when it carries the fix (every word the fix added,
+    /// none it removed — `CarryoverDetector.showsTheFix`, the rule that
+    /// credits a correction in a talk) inside most of the sentence, so a
+    /// reply of the fixed word alone is not a rewrite. Nothing else counts
+    /// against it: how the rest is worded is the learner's.
+    static func isCorrect(_ item: WeeklyTestItem, rewritten: String) -> Bool {
+        let given = CarryoverDetector.normalized(rewritten)
+        guard !given.isEmpty else { return false }
+        if given.contains(CarryoverDetector.normalized(item.answer)) { return true }
+        guard let was = item.focus, let now = item.example else { return false }
+        // A pure reorder adds and drops nothing; only the fix itself shows it.
+        let fixKey = CarryoverDetector.normalized(now)
+        guard CarryoverDetector.fixChangesWords(from: was, to: now) else {
+            return !fixKey.isEmpty && given.contains(fixKey)
+        }
+        return CarryoverDetector.showsTheFix(from: was, to: now, inText: rewritten)
+            && CarryoverDetector.sharedWordRatio(of: item.answer, in: rewritten) >= 0.6
+    }
+
+    /// The words the fix put in — the hint a rewrite item offers.
+    static func hintWords(_ item: WeeklyTestItem) -> String? {
+        guard let was = item.focus, let now = item.example else { return nil }
+        let added = CarryoverDetector.addedWords(from: was, to: now)
+        return added.isEmpty ? now : added.joined(separator: " · ")
     }
 
     /// Source words that sit in a substitution gap of the source↔target
@@ -869,7 +973,7 @@ enum WeeklyTestEngine {
     ///
     ///   meaning  right → the word waits 3 days · wrong → back in the notebook, due now
     ///   gap      right → the phrase waits 3 days · wrong → bookmarked, due now
-    ///   build    right → one Leitner rung up · wrong → one rung down
+    ///   rewrite  right → one Leitner rung up · wrong → one rung down (build alike)
     ///   listen   nothing to write; recognition is not production
     ///   grammar  nothing to write; its corrections already carry cards
     ///   upgrade  wrong → the better word in the notebook, due now
@@ -902,7 +1006,7 @@ enum WeeklyTestEngine {
                     else { PracticeLog.shared.record(.expression) }
                     ReviewQueue.retire(.expression, phrase)
                 }
-            case .build:
+            case .build, .rewrite:
                 guard let id = item.cardId, let card = cards[id] else { continue }
                 if answer.correct { DrillStore.shared.markCorrect(card, at: now) }
                 else { DrillStore.shared.markIncorrect(card, at: now) }
