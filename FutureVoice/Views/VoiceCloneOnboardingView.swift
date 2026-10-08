@@ -1073,17 +1073,21 @@ struct VoiceCloneOnboardingView: View {
     @ViewBuilder
     private var accentSection: some View {
         let options = VoiceAccentCatalog.options(for: appState.targetLanguage)
-        // A single option is the default remix itself — nothing to choose.
-        if options.count > 1 {
+        if !options.isEmpty {
             VStack(spacing: 8) {
                 Text("Accent")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 6) {
-                    // "Original" (the plain clone) is off the pills since
-                    // 2026-10-08: every clone is remixed into the default
-                    // accent, and the plain voice lives behind Me → Voice →
-                    // Remove accent. Kept, not deleted — founder's call.
+                    // "Original" is a choice on the row again (2026-10-08,
+                    // founder: the pills read clearer with the plain voice
+                    // among them) — but no longer the default: every clone
+                    // arrives remixed, so it is selected only once picked.
+                    accentPill(label: "accent.original",
+                               selected: appState.voiceAccentId == nil,
+                               loading: removingAccent,
+                               action: removeAccentFromMeet)
+                        .disabled(appState.voiceAccentId != nil && !VoiceSampleStore.shared.exists)
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
