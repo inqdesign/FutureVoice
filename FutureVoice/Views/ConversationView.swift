@@ -1382,7 +1382,11 @@ struct ConversationView: View {
                                                                                appState.nativeLanguage),
                                      showsCorrections: showsCorrections)
                                 .id(turn.id)
-                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                                // A reply arrives already growing; sliding it
+                                // up from below on top of that read as a jolt.
+                                .transition(turn.role == .fluentSelf
+                                    ? AnyTransition.opacity
+                                    : AnyTransition.opacity.combined(with: .move(edge: .bottom)))
                         }
                     }
                     if RealtimeMode.isEnabled {
@@ -1501,7 +1505,13 @@ struct ConversationView: View {
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
             .onChange(of: realtime.partial) { _, _ in scroll(proxy) }
             .onChange(of: suggestionsShown) { _, _ in scroll(proxy) }
-            .onChange(of: turns.last?.transcript) { _, _ in scroll(proxy) }
+            // A streaming reply changes this on every delta. While following,
+            // the bottom anchor already keeps the end in place in the same
+            // frame; an animated scrollTo restarted per delta was a second
+            // motion on another curve (2026-10-08). Only the settle pass runs.
+            .onChange(of: turns.last?.transcript) { _, _ in
+                scroll(proxy, immediate: turns.last?.role != .fluentSelf)
+            }
         }
     }
 
@@ -1534,10 +1544,12 @@ struct ConversationView: View {
         replyHasNoWordsYet ? Array(turns.dropLast()) : turns
     }
 
-    private func scroll(_ proxy: ScrollViewProxy) {
+    private func scroll(_ proxy: ScrollViewProxy, immediate: Bool = true) {
         guard followTail else { return }
-        withAnimation(.easeOut(duration: 0.25)) {
-            proxy.scrollTo(Self.bottomId, anchor: .bottom)
+        if immediate {
+            withAnimation(.easeOut(duration: 0.25)) {
+                proxy.scrollTo(Self.bottomId, anchor: .bottom)
+            }
         }
         // One settle pass, not one per change: a streaming reply calls this
         // on every delta, and a stack of late passes each re-aiming the
@@ -4637,7 +4649,13 @@ private struct TurnView: View {
                     .italic()
             } else {
                 Text(turn.transcript)
-                    .animation(.easeInOut(duration: 0.2), value: turn.transcript)
+                    // For the learner's line only: a better transcription
+                    // replacing the first one. A fluent-self reply streams in
+                    // dozens of deltas, and an animation per delta fought the
+                    // feed's bottom anchor — the bubble grew with a wobble
+                    // (2026-10-08).
+                    .animation(turn.role == .user ? .easeInOut(duration: 0.2) : nil,
+                               value: turn.transcript)
             }
         } accessory: {
             // Nothing to translate or correct until there is a line.
