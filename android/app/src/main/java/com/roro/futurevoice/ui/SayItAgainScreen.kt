@@ -477,6 +477,16 @@ fun SayItAgainScreen(
     }
 
     fun start(from: Int) {
+        // One row per run begun, so a start with no `say_again_run` after it
+        // is a run left halfway — the only way the console can tell "tried
+        // it" from "finished it". Retries don't come through here (iOS
+        // `SayItAgainView.start`).
+        if (from == 0) {
+            com.roro.futurevoice.core.Telemetry.log("say_again_start", mapOf(
+                "kind" to source.kind,
+                "lines" to spokenCount.toString(),
+            ))
+        }
         flushLog()
         runJob?.cancel()
         runJob = scope.launch { run(from) }
