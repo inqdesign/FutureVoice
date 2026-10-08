@@ -31,6 +31,8 @@ struct WelcomeView: View {
     @State private var showingSignIn = false
     /// The orb has opened into the Get started button.
     @State private var doorOpen = false
+    /// The caption box's top, in screen points; the backdrop's sky ends there.
+    @State private var captionTop: CGFloat?
     /// The closing frame was reached by Skip or Sign in, not by watching.
     @State private var skipped = false
     @State private var showInvite = false
@@ -106,7 +108,7 @@ struct WelcomeView: View {
 
     var body: some View {
         ZStack {
-            StoryBackdrop(still: reduceMotion)
+            StoryBackdrop(skyFloor: captionTop, still: reduceMotion)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -243,7 +245,10 @@ struct WelcomeView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
-            .frame(height: 250)
+            // Hung from the top, so the first thing on every line starts at
+            // the same height — the sky fades out exactly there.
+            .frame(height: 250, alignment: .top)
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { captionTop = $0 }
             Spacer(minLength: 0)
             bottom
         }

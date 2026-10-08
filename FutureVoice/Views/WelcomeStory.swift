@@ -10,6 +10,13 @@ import SwiftUI
 /// a light that grew as the story turned was tried and rejected, as were a
 /// dark ground and a multicolour light. It only drifts, slowly.
 struct StoryBackdrop: View {
+    /// Where the caption box begins, in screen points from the top. The sky
+    /// is drawn FROM it, not as a share of the screen: the captions are dark
+    /// ink, and a gradient sized by percentages landed its dark part on the
+    /// text on some screen heights (seen on Android, 2026-10-07). Whatever
+    /// the screen, the blue has faded to cream at this line and the night
+    /// band ends well above it. nil until the layout has been measured.
+    var skyFloor: CGFloat? = nil
     var still: Bool = false
 
     var body: some View {
@@ -72,17 +79,21 @@ struct StoryBackdrop: View {
                 Color(rgb: Self.cream)
                 // The sky: a wide ellipse centred above the top edge, so
                 // only its soft lower half comes down into the screen.
-                let r = h * 0.66
+                // A little past the box's top: the first line sits on the
+                // last pale breath of blue, the rest on cream.
+                let floor = (skyFloor ?? h * 0.4) + 14
+                let top = -h * 0.06
+                let r = max(floor - top, h * 0.2)
                 Ellipse()
                     .fill(RadialGradient(stops: Self.skyStops, center: .center,
                                          startRadius: 0, endRadius: r))
                     .frame(width: r * 2.4, height: r * 2)
                     .position(x: w * (0.5 + 0.04 * sin(t * 0.05)),
-                              y: h * (-0.06 + 0.02 * cos(t * 0.04)))
+                              y: top + h * 0.02 * cos(t * 0.04))
                 // Night at the very top: the sky deepens to near-black, so
                 // the notch and the status bar sink into it.
                 LinearGradient(stops: Self.nightStops,
-                               startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.40))
+                               startPoint: .top, endPoint: UnitPoint(x: 0.5, y: floor * 0.62 / max(h, 1)))
                 // A little warmth gathering at the bottom, under the buttons.
                 LinearGradient(colors: [.clear, Color(rgb: (0.96, 0.88, 0.78)).opacity(0.7)],
                                startPoint: UnitPoint(x: 0.5, y: 0.55), endPoint: .bottom)
