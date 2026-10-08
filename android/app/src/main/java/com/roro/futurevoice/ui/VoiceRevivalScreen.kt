@@ -130,12 +130,7 @@ internal fun VoiceRevivalScreen(
     var accentToPick by remember { mutableStateOf<VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
 
-    /**
-     * Back to the voice as recorded. Hidden since 2026-10-08 (founder's call):
-     * the "Original" pill is off the row, the plain voice is reachable via
-     * Me → Voice → Remove accent. Kept, not deleted, like iOS.
-     */
-    @Suppress("unused")
+    /** Back to the voice as recorded — the "Original" pill. */
     fun removeAccent() {
         if (state.voiceAccentId.isNullOrEmpty() || removingAccent) return
         player.stop()
@@ -254,17 +249,21 @@ internal fun VoiceRevivalScreen(
                     val options = remember(state.targetLanguage) {
                         VoiceAccentCatalog.options(state.targetLanguage)
                     }
-                    // A single option is the default remix itself — nothing to choose.
-                    if (options.size > 1) {
+                    if (options.isNotEmpty()) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.accent),
                                 style = MaterialTheme.typography.titleMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // "Original" (the plain clone) is off the pills since
-                                // 2026-10-08: every clone is remixed into the default
-                                // accent, and the plain voice lives behind Me → Voice →
-                                // Remove accent. Kept (`removeAccent` above), not
-                                // deleted — founder's call (iOS `VoiceRevivalView`).
+                                // "Original" is a choice on the row again (2026-10-08,
+                                // founder: the pills read clearer with the plain voice
+                                // among them) — but no longer the default: every clone
+                                // arrives remixed, so it is selected only once picked.
+                                AccentPill(
+                                    label = stringResource(R.string.accent_original),
+                                    selected = state.voiceAccentId.isNullOrEmpty(), loading = removingAccent,
+                                    enabled = !removingAccent,
+                                    modifier = Modifier.weight(1f),
+                                ) { removeAccent() }
                                 options.forEach { o ->
                                     AccentPill(
                                         label = accentLabel(o),

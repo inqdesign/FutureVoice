@@ -414,12 +414,7 @@ fun CloneFlowScreen(
         }
     }
 
-    /**
-     * Back to the voice as recorded — the meet act's old "Original" pill.
-     * Hidden since 2026-10-08 (founder's call): the plain voice is reachable
-     * via Me → Voice → Remove accent. Kept, not deleted, like iOS.
-     */
-    @Suppress("unused")
+    /** Back to the voice as recorded — the meet act's "Original" pill. */
     fun removeAccentFromMeet() {
         if (accentId == null || removingAccent) return
         mp3.stop()
@@ -964,13 +959,11 @@ fun CloneFlowScreen(
                         // The accent, as pills on the screen itself. Since
                         // 2026-10-08 the voice arrives already remixed into the
                         // default (`remixIntoDefaultAccent`, iOS
-                        // `AppState.applyDefaultAccent`) and "Original" is off
-                        // the row.
+                        // `AppState.applyDefaultAccent`).
                         val accentOptions = remember(targetLanguage) {
                             com.roro.futurevoice.data.VoiceAccentCatalog.options(targetLanguage)
                         }
-                        // A single option is the default remix itself — nothing to choose.
-                        if (accentOptions.size > 1) {
+                        if (accentOptions.isNotEmpty()) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -978,11 +971,16 @@ fun CloneFlowScreen(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    // "Original" (the plain clone) is off the pills since
-                                    // 2026-10-08: every clone is remixed into the default
-                                    // accent, and the plain voice lives behind Me → Voice →
-                                    // Remove accent. Kept (`removeAccentFromMeet`), not
-                                    // deleted — founder's call.
+                                    // "Original" is a choice on the row again (2026-10-08,
+                                    // founder: the pills read clearer with the plain voice
+                                    // among them) — but no longer the default: every clone
+                                    // arrives remixed, so it is selected only once picked.
+                                    AccentPill(
+                                        label = stringResource(R.string.accent_original),
+                                        selected = accentId == null, loading = removingAccent,
+                                        enabled = !removingAccent && (accentId == null || sampleFile.exists()),
+                                        modifier = Modifier.weight(1f),
+                                    ) { removeAccentFromMeet() }
                                     accentOptions.forEach { o ->
                                         AccentPill(
                                             label = accentLabel(o),
