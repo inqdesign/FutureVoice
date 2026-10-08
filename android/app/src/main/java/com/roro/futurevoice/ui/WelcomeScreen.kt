@@ -51,6 +51,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -184,8 +186,16 @@ fun WelcomeScreen(
     }
 
     val shiftPx = with(LocalDensity.current) { 14.dp.roundToPx() }
+    // The caption box's top and the backdrop's, in window px: the sky ends at
+    // the caption, wherever the layout put it.
+    var captionTop by remember { mutableStateOf<Float?>(null) }
+    var backdropTop by remember { mutableStateOf(0f) }
     Box(Modifier.fillMaxSize()) {
-        StoryBackdrop(Modifier.fillMaxSize(), still = still)
+        StoryBackdrop(
+            Modifier.fillMaxSize().onGloballyPositioned { backdropTop = it.positionInWindow().y },
+            skyFloor = captionTop?.let { it - backdropTop },
+            still = still,
+        )
         // The keyboard is in the padding (an invite code is typed at the very
         // foot of this screen) and the column scrolls only when it no longer
         // fits — the weighted spacers still fill the screen otherwise.
@@ -226,8 +236,12 @@ fun WelcomeScreen(
                     EnterTransition.None togetherWith (fadeOut(tween(700)) +
                         slideOutVertically(tween(700)) { if (still) 0 else -shiftPx })
                 },
-                modifier = Modifier.fillMaxWidth().height(250.dp).padding(horizontal = 24.dp),
-                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth().height(250.dp)
+                    .onGloballyPositioned { captionTop = it.positionInWindow().y }
+                    .padding(horizontal = 24.dp),
+                // Hung from the top, so the first thing on every line starts
+                // at the same height — the sky fades out exactly there.
+                contentAlignment = Alignment.TopCenter,
                 label = "beat",
             ) { b ->
                 if (b >= beats.size) {

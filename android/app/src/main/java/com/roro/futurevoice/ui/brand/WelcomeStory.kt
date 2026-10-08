@@ -83,7 +83,19 @@ private val Cream = floatArrayOf(0.975f, 0.955f, 0.915f)
  * everything. It only drifts, slowly.
  */
 @Composable
-fun StoryBackdrop(modifier: Modifier = Modifier, still: Boolean = false) {
+fun StoryBackdrop(
+    modifier: Modifier = Modifier,
+    /**
+     * Where the caption box begins, in px from this backdrop's top. The sky is
+     * drawn FROM it, not as a share of the screen: the captions are dark ink,
+     * and a gradient sized by percentages put its dark part under the text on
+     * some screen heights (2026-10-07). Whatever the screen, the blue has faded
+     * to cream at this line and the night band ends well above it. null until
+     * the layout has been measured. Same rule as iOS `StoryBackdrop.skyFloor`.
+     */
+    skyFloor: Float? = null,
+    still: Boolean = false,
+) {
     var t by remember { mutableFloatStateOf(0f) }
     if (!still) {
         LaunchedEffect(Unit) {
@@ -105,17 +117,21 @@ fun StoryBackdrop(modifier: Modifier = Modifier, still: Boolean = false) {
         drawRect(Color(Cream[0], Cream[1], Cream[2]))
         // The sky: a wide ellipse centred above the top edge, so only its
         // soft lower half comes down into the screen.
-        val r = h * 0.66f
+        // A little past the box's top: the first line sits on the last pale
+        // breath of blue, the rest on cream.
+        val floor = (skyFloor ?: (h * 0.4f)) + 14.dp.toPx()
+        val top = -h * 0.06f
+        val r = max(floor - top, h * 0.2f)
         val cx = w * (0.5f + 0.04f * sin(t * 0.05f))
-        val cy = h * (-0.06f + 0.02f * cos(t * 0.04f))
+        val cy = top + h * 0.02f * cos(t * 0.04f)
         scale(scaleX = 1.2f, scaleY = 1f, pivot = Offset(cx, cy)) {
             drawCircle(Brush.radialGradient(colorStops = SkyStops, center = Offset(cx, cy), radius = r),
                 radius = r, center = Offset(cx, cy))
         }
-        // Night at the very top, reaching 40% down; the sky comes to ~60%
-        // (iOS 0777ae8c).
-        drawRect(Brush.verticalGradient(colorStops = NightStops, startY = 0f, endY = h * 0.40f),
-            size = androidx.compose.ui.geometry.Size(w, h * 0.40f))
+        // Night at the very top, ending well above the captions.
+        val night = floor * 0.62f
+        drawRect(Brush.verticalGradient(colorStops = NightStops, startY = 0f, endY = night),
+            size = androidx.compose.ui.geometry.Size(w, night))
         // A little warmth gathering at the bottom, under the buttons.
         drawRect(Brush.verticalGradient(
             listOf(Color.Transparent, Color(0.96f, 0.88f, 0.78f).copy(alpha = 0.7f)),

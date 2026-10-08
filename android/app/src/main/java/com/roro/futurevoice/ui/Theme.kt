@@ -73,7 +73,10 @@ fun FutureVoiceTheme(
         tertiaryContainer = accent.copy(alpha = 0.16f).compositeOver(base.surface),
         onTertiaryContainer = accent,
     )
-    MaterialTheme(colorScheme = colors, typography = IosTypeScale, shapes = IosShapes, content = content)
+    val sans = if (com.roro.futurevoice.core.UILanguage.current(context) in CjkUi) {
+        androidx.compose.ui.text.font.FontFamily.Default
+    } else AppSans
+    MaterialTheme(colorScheme = colors, typography = iosTypeScale(sans), shapes = IosShapes, content = content)
 }
 
 /**
@@ -96,8 +99,34 @@ fun FutureVoiceTheme(
  *   labelMedium    13 medium    Footnote, emphasised
  *   labelSmall     12           Caption   ← a speaker's name over a bubble
  */
+/**
+ * The app's text face: Pretendard (OFL, `res/font/pretendard.ttf`, licence in
+ * `assets/licenses/`), the Korean UI face drawn to sit beside Apple SD Gothic
+ * Neo and Inter — so a Galaxy reads like the iPhone app instead of in
+ * Samsung's system font (2026-10-08, founder). One variable file, subset to
+ * the 2,350 KS X 1001 syllables + Latin; a rarer syllable falls back to the
+ * system font for that glyph alone.
+ */
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+val AppSans: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily(
+    listOf(400, 500, 600, 700).map { w ->
+        androidx.compose.ui.text.font.Font(
+            com.roro.futurevoice.R.font.pretendard,
+            androidx.compose.ui.text.font.FontWeight(w),
+            variationSettings = androidx.compose.ui.text.font.FontVariation.Settings(
+                androidx.compose.ui.text.font.FontVariation.weight(w)),
+        )
+    }
+)
+
+/** UI languages Pretendard can't spell (no kana, no hanzi): they stay on the
+ *  system face rather than mixing two faces in one line. */
+private val CjkUi = setOf("ja", "zh-Hant", "zh-Hans")
+
 private fun ios(size: Int, leading: Int, weight: androidx.compose.ui.text.font.FontWeight =
-    androidx.compose.ui.text.font.FontWeight.Normal) = androidx.compose.ui.text.TextStyle(
+    androidx.compose.ui.text.font.FontWeight.Normal,
+    family: androidx.compose.ui.text.font.FontFamily) = androidx.compose.ui.text.TextStyle(
+    fontFamily = family,
     fontSize = androidx.compose.ui.unit.TextUnit(size.toFloat(), androidx.compose.ui.unit.TextUnitType.Sp),
     lineHeight = androidx.compose.ui.unit.TextUnit(leading.toFloat(), androidx.compose.ui.unit.TextUnitType.Sp),
     fontWeight = weight,
@@ -106,20 +135,20 @@ private fun ios(size: Int, leading: Int, weight: androidx.compose.ui.text.font.F
 
 private val Semibold = androidx.compose.ui.text.font.FontWeight.SemiBold
 
-val IosTypeScale = androidx.compose.material3.Typography().let { m ->
+fun iosTypeScale(f: androidx.compose.ui.text.font.FontFamily) = androidx.compose.material3.Typography().let { m ->
     m.copy(
-        headlineLarge = ios(34, 41, androidx.compose.ui.text.font.FontWeight.Bold),
-        headlineMedium = ios(28, 34),
-        headlineSmall = ios(22, 28),
-        titleLarge = ios(20, 25),
-        titleMedium = ios(17, 22, Semibold),
-        titleSmall = ios(15, 20, Semibold),
-        bodyLarge = ios(17, 22),
-        bodyMedium = ios(15, 20),
-        bodySmall = ios(13, 18),
-        labelLarge = ios(17, 22, Semibold),
-        labelMedium = ios(13, 18, androidx.compose.ui.text.font.FontWeight.Medium),
-        labelSmall = ios(12, 16),
+        headlineLarge = ios(34, 41, androidx.compose.ui.text.font.FontWeight.Bold, f),
+        headlineMedium = ios(28, 34, family = f),
+        headlineSmall = ios(22, 28, family = f),
+        titleLarge = ios(20, 25, family = f),
+        titleMedium = ios(17, 22, Semibold, f),
+        titleSmall = ios(15, 20, Semibold, f),
+        bodyLarge = ios(17, 22, family = f),
+        bodyMedium = ios(15, 20, family = f),
+        bodySmall = ios(13, 18, family = f),
+        labelLarge = ios(17, 22, Semibold, f),
+        labelMedium = ios(13, 18, androidx.compose.ui.text.font.FontWeight.Medium, f),
+        labelSmall = ios(12, 16, family = f),
     )
 }
 
