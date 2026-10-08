@@ -83,6 +83,22 @@ Deno.serve(async (req) => {
     if (error) return errorResponse(500, "cache read failed", error.message)
     if (data) return json({ data: data.data })
   }
+  // 1b. The same entry under another capitalization (2026-10-08). Callers
+  //     don't agree on case — an expression from the learner's notebook
+  //     arrives lower-cased, the same phrase from a book keeps its capitals —
+  //     and the exact match above paid for "I get that" and "i get that"
+  //     separately (9 such pairs in the table). ILIKE with the wildcards
+  //     escaped is an exact, case-insensitive match.
+  {
+    const pattern = word.replace(/[\\%_]/g, (c) => `\\${c}`)
+    const { data, error } = await svc
+      .from("word_entry")
+      .select("data")
+      .ilike("word", pattern).eq("native_lang", native)
+      .eq("target_lang", target).eq("kind", kind)
+      .limit(1).maybeSingle()
+    if (!error && data) return json({ data: data.data })
+  }
 
   // 2. Cache miss → generation. Rate-limit NEW generations per user so the
   //    free path can't be turned into a cost/pollution firehose.
