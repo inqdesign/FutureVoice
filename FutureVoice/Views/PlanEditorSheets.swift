@@ -453,7 +453,7 @@ struct WeeklyPlanEditor: View {
                             }
                         }
                 }
-                .presentationDetents([.medium])
+                .fittingDetents([.medium])
             }
             .task { notifications = await ReviewNotifications.status() }
             .sheet(item: $blockEditor) { PlanBlockEditor(target: $0) }

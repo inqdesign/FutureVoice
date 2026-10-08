@@ -547,6 +547,15 @@ struct SayItAgainView: View {
     // MARK: - The run
 
     private func start(from i: Int) {
+        // One row per run begun, so a start with no `say_again_run` after it
+        // is a run left halfway — the only way the console can tell "tried
+        // it" from "finished it". Retries don't come through here.
+        if i == 0 {
+            Telemetry.log("say_again_start", [
+                "kind": source.kind,
+                "lines": "\(spokenCount)",
+            ])
+        }
         runTask?.cancel()
         runTask = Task { @MainActor in await run(from: i) }
     }
