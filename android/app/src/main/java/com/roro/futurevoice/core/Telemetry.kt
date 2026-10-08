@@ -56,6 +56,10 @@ object Telemetry {
     fun callSettings(context: Context): Map<String, String> = mapOf(
         "speed" to "%.2f".format(java.util.Locale.US,
             com.roro.futurevoice.data.SpeechSpeed.current(context).multiplier(context)),
+        // The RUNG, beside the number (iOS 2026-10-08): a rung's multiplier
+        // can be retuned (Slow 0.80 → 0.85), and then the number alone can't
+        // say whether two learners picked the same thing.
+        "speed_rung" to com.roro.futurevoice.data.SpeechSpeed.current(context).raw,
         "speed_picked" to if (com.roro.futurevoice.data.SpeechSpeed.picked(context)) "1" else "0",
         "coach" to if (com.roro.futurevoice.talk.CoachMode.isOn(context)) "on" else "off",
     )
