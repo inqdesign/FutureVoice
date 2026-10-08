@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -151,10 +152,19 @@ class RealtimeTalkClient(private val context: Context) {
     // coroutine context via the dispatcher below; none touch UI directly.
     @Volatile var onState: ((State) -> Unit)? = null
     @Volatile var onPartial: ((String) -> Unit)? = null
+    /** What the gateway knows about a committed turn beyond its words
+     *  (iOS `UserTurnFlags`, 2026-10-08). [native]: some or all of it was
+     *  said in the learner's own language — the text is what they said,
+     *  never a translation. [continues]: the learner was cut off right after
+     *  their previous turn and this is the REST of it; the text is only the
+     *  new part, the WAV is the whole turn. */
+    data class UserTurnFlags(val native: Boolean = false, val continues: Boolean = false)
+
     /** A committed learner turn: the audio-grounded text, the trimmed WAV
-     *  (or null if nothing was captured), and its length in ms. */
+     *  (or null if nothing was captured), its length in ms, and the flags. */
     @Volatile var onUserTurn: ((text: String, wav: File?, ms: Int,
-                                fluency: com.roro.futurevoice.audio.FluencyStats?) -> Unit)? = null
+                                fluency: com.roro.futurevoice.audio.FluencyStats?,
+                                flags: UserTurnFlags) -> Unit)? = null
     /** A reply began: [context] identifies it across deltas and audio. */
     /** A reply finished playing: its whole audio, for the talk's Replay and
      *  Say-it-again (iOS keeps every line's audio in `TurnAudioStore`). */
@@ -172,6 +182,11 @@ class RealtimeTalkClient(private val context: Context) {
      *  gateway cut in on a pause and they carried on with the same sentence
      *  (iOS `onReplyCutIn`). Fired just before that line's [onInterrupted]. */
     @Volatile var onReplyCutIn: ((context: String) -> Unit)? = null
+    /** The line was WITHDRAWN, not just cut: the learner hadn't finished and
+     *  the gateway took their turn back to answer it whole (iOS
+     *  `onReplyWithdrawn`). Its bubble goes; nothing of it is kept. Fired
+     *  INSTEAD of [onReplyCutIn] / [onInterrupted]. */
+    @Volatile var onReplyWithdrawn: ((context: String) -> Unit)? = null
     /** The gateway ended the call on a wall — "insufficient_credits",
      *  "daily_cap_reached" or "fair_use_limit". */
     @Volatile var onWall: ((code: String) -> Unit)? = null
@@ -223,6 +238,9 @@ class RealtimeTalkClient(private val context: Context) {
      *  even when End lands mid-playback and `audio_end` never arrives. */
     private val replyPCM = ByteArrayOutputStream()
     private val userPCM = ByteArrayOutputStream()
+    /** The last committed turn's audio: a turn the gateway re-opens
+     *  (`continues`) is handed over as ONE take (iOS `lastTurnPCM`). */
+    private var lastTurnPCM = ByteArray(0)
 
     /**
      * While true the mic is read but NOT forwarded. The gateway gates its own
@@ -257,12 +275,14 @@ class RealtimeTalkClient(private val context: Context) {
         system: String,
         opener: String?,
         history: List<Pair<String, String>>,
+        /** The learner's own language (iOS sends `LanguageCatalog.currentNative`). */
+        native: String? = null,
     ) {
         if (state != State.IDLE && state != State.FAILED) return
         tornDown = false
         wallCode = null
         lastErrorCode = null
-        replyPCM.reset(); userPCM.reset()
+        replyPCM.reset(); userPCM.reset(); lastTurnPCM = ByteArray(0)
         micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
         state = State.CONNECTING
 
@@ -274,6 +294,9 @@ class RealtimeTalkClient(private val context: Context) {
             put("system", system)
             // The fluent self's speed (0.7–1.2). An older gateway ignores it.
             com.roro.futurevoice.data.SpeechSpeed.currentMultiplier()?.let { put("speed", it) }
+            // The learner's own language: a line they say in it is kept as
+            // said and answered as such. An older gateway ignores it.
+            native?.takeIf { it.isNotBlank() }?.let { put("native", it) }
             opener?.takeIf { it.isNotBlank() }?.let { put("opener", it) }
             if (history.isNotEmpty()) {
                 put("history", buildJsonArray {
@@ -413,13 +436,20 @@ class RealtimeTalkClient(private val context: Context) {
             }
             "user_turn" -> {
                 val said = msg["text"]?.jsonPrimitive?.content.orEmpty()
-                val pcm = userPCM.toByteArray(); userPCM.reset()
+                val flags = UserTurnFlags(
+                    native = msg["native"]?.jsonPrimitive?.booleanOrNull ?: false,
+                    continues = msg["continues"]?.jsonPrimitive?.booleanOrNull ?: false)
+                val fresh = userPCM.toByteArray(); userPCM.reset()
                 if (said.isNotEmpty()) {
-                    turnsThisCall += 1
+                    // A continued turn is handed over whole: what was said
+                    // before the cut-off, then the rest.
+                    val pcm = if (flags.continues && lastTurnPCM.isNotEmpty()) lastTurnPCM + fresh else fresh
+                    lastTurnPCM = pcm
+                    if (!flags.continues) turnsThisCall += 1
                     val trimmed = trimSilence(pcm, MIC_RATE)
                     val wav = saveWav(trimmed, MIC_RATE)
                     val ms = (trimmed.size / 2 * 1000L / MIC_RATE).toInt()
-                    onUserTurn?.invoke(said, wav, ms, fluencyStats(trimmed, MIC_RATE))
+                    onUserTurn?.invoke(said, wav, ms, fluencyStats(trimmed, MIC_RATE), flags)
                 }
                 onPartial?.invoke("")
                 state = if (said.isEmpty()) State.LISTENING else State.THINKING
@@ -470,6 +500,16 @@ class RealtimeTalkClient(private val context: Context) {
             "interrupted" -> {
                 // Stop local playback NOW and drop what was buffered.
                 scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+                if (msg["reopened"]?.jsonPrimitive?.booleanOrNull == true) {
+                    // Withdrawn: the turn it answered isn't over. Nothing of
+                    // the line is kept — not its bubble, not its audio.
+                    replyContext?.let { onReplyWithdrawn?.invoke(it) }
+                    replyContext = null
+                    replyBeganAt = null
+                    replyPCM.reset()
+                    state = State.HEARING
+                    return
+                }
                 // A barge-in this soon after the line began is a cut-in, not
                 // the learner deliberately talking over a line they heard.
                 val began = replyBeganAt

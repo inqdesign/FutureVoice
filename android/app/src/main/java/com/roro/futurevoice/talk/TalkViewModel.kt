@@ -650,6 +650,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             system = realtimeSystem,
             opener = opener,
             history = history,
+            native = cfg.nativeLanguage,
         )
         syncCoachSteer()
     }
@@ -673,8 +674,24 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         realtime.onPartial = { text -> _state.update { it.copy(partial = text, level = realtime.level) } }
-        realtime.onUserTurn = { said, wav, ms, fluency ->
+        realtime.onUserTurn = turn@{ said, wav, ms, fluency, flags ->
             markLearnerSpoke()
+            // The rest of a turn the gateway re-opened after cutting the
+            // learner off (iOS 2026-10-08): it joins the bubble it belongs to
+            // — one turn, one take, one correction.
+            val last = _state.value.turns.lastOrNull { it.role == TurnRole.USER }
+            if (flags.continues && last != null) {
+                val joined = last.transcript + (if (com.roro.futurevoice.data.WordSplitter.spaced(cfg.targetLanguage)) " " else "") + said
+                val audio = wav?.let { keepTurnAudio(it) } ?: last.audioURL
+                _state.update { st ->
+                    st.copy(partial = "", turns = st.turns.map {
+                        if (it.id == last.id) it.copy(transcript = joined, durationMs = ms,
+                            fluency = fluency, audioURL = audio, suggestion = null) else it
+                    })
+                }
+                if (!flags.native) requestRealtimeSuggestion(last.id, joined, cfg)
+                return@turn
+            }
             // Measured off the take (iOS 55088c28): realtime turns used to
             // carry no fluency, so articulation rate read 0 for every call.
             val turn = Turn(role = TurnRole.USER, transcript = said, durationMs = ms,
@@ -682,7 +699,9 @@ class TalkViewModel(context: Context) : ViewModel() {
             _state.update { it.copy(turns = it.turns + turn, partial = "") }
             // The learner's first words open the steer (nothing before them).
             viewModelScope.launch { syncCoachSteer() }
-            requestRealtimeSuggestion(turn.id, said, cfg)
+            // A line said in their own language was answered with the target
+            // way to say it; a correction would be built on the wrong language.
+            if (!flags.native) requestRealtimeSuggestion(turn.id, said, cfg)
         }
         realtime.onReplyAudio = { ctx, pcm, rate ->
             realtimeReplyTurns[ctx]?.let { id ->
@@ -730,6 +749,12 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         realtime.onInterrupted = { _ -> lastActivityAt = System.currentTimeMillis() }
+        realtime.onReplyWithdrawn = { ctx ->
+            lastActivityAt = System.currentTimeMillis()
+            realtimeReplyTurns.remove(ctx)?.let { id ->
+                _state.update { st -> st.copy(turns = st.turns.filter { it.id != id }) }
+            }
+        }
         realtime.onWall = { code ->
             val kind = when (code) {
                 "daily_cap_reached" -> TalkWall.ALLOWANCE_SPENT
@@ -906,6 +931,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                     idempotencyKey = "rt-suggest:$turnId",
                 )
             }.getOrNull() ?: return@launch
+            // A turn since joined with its continuation is corrected as the
+            // whole line, not as its first half (iOS `transcript == said`).
+            if (_state.value.turns.firstOrNull { it.id == turnId }?.transcript != said) return@launch
             attachSuggestion(turnId, payload)
         }
     }
