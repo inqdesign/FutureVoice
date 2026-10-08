@@ -2426,7 +2426,16 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
 - **The grammar FOCUS** (2026-09-30, founder: "a real coach goes past
   words — mind the tense"; `GrammarFocus.swift`, `GrammarFocusViews.swift`).
   One recurring mistake per call, from `LearnerProfile.recurringMistakes`
-  (frequency ≥ 2, seen within 45 days, highest first), named once in the
+  — but chosen by EVIDENCE, not `frequency` (2026-10-08, founder: "what is
+  this for? is it random?"): the slip must be quoted from the learner's own
+  turns in ≥ 2 different talks within 45 days (`GrammarFocus.evidence`,
+  most talks first), and `describe` must judge it a GRAMMAR point, not a
+  word choice (cached verdict). The founder's only pattern was "한글을 잘
+  못 하다 → 한국어" at frequency 5 — a vocabulary mix-up, its count
+  inflated by summaries copying the profile back (fixed the same day), on
+  every call with nothing on screen saying why. The strip now says "In N
+  of your talks" and the sheet says why it is watched. Classification
+  probe: 21/22 (grammar vs word, en/ko/de). Named once in the
   native language by flash-lite (`describe`, cached per pattern + language:
   "과거 시제" + one tip line) and pinned ABOVE the chip row as a strip —
   the name beside the learner's own pair, trimmed to the span that changed

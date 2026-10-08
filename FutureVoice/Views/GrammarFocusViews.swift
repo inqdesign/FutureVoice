@@ -12,6 +12,8 @@ struct GrammarFocusStrip: View {
     let label: String
     let mistake: String
     let correction: String
+    /// Talks the slip was really said in — why this is the focus.
+    var talks: Int = 0
     let repeats: Int
     var onTap: () -> Void = {}
 
@@ -28,7 +30,9 @@ struct GrammarFocusStrip: View {
                         Text(label)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
-                        Text("This call's focus")
+                        // The reason, not just the title: without it the strip
+                        // read as a random pick (founder, 2026-10-08).
+                        (talks > 0 ? Text("In \(talks) of your talks") : Text("This call's focus"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -124,6 +128,7 @@ struct GrammarFocusSheet: View {
     let tip: String
     let mistake: String
     let correction: String
+    var talks: Int = 0
     let repeats: Int
     @Environment(\.dismiss) private var dismiss
 
@@ -142,6 +147,10 @@ struct GrammarFocusSheet: View {
                         }
                     }
                     .padding(.vertical, 4)
+                } footer: {
+                    if talks > 0 {
+                        Text(explain("You made this mistake in \(talks) of your recent talks, so this call keeps an eye on it."))
+                    }
                 }
                 Section {
                     LabeledContent {

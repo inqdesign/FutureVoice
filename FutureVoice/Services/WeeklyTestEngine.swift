@@ -702,7 +702,8 @@ enum WeeklyTestEngine {
 
     /// The mistakes to build on: this window's correction cards, due first
     /// then newest, then the profile's recurring mistakes — deduped.
-    static func slips(start: Date, end: Date, now: Date, profile: LearnerProfile) -> [Slip] {
+    static func slips(start: Date, end: Date, now: Date, profile: LearnerProfile,
+                      sessions: [Session] = []) -> [Slip] {
         let cards = DrillStore.shared.load().filter { card in
             guard card.box < DrillStore.maxBox,
                   !card.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -722,8 +723,11 @@ enum WeeklyTestEngine {
         }
         for c in cards { add(Slip(was: c.sourcePhrase, now: c.targetPhrase, why: c.reason, cardId: c.id)) }
         let fresh = now.addingTimeInterval(-Double(GrammarFocus.freshDays) * 86_400)
-        for p in profile.recurringMistakes where p.frequency >= GrammarFocus.minFrequency && p.lastSeenAt >= fresh
-            && isInTargetScript(p.mistake) && isInTargetScript(p.correction) {
+        // A profile pattern only when the learner really said it in a talk
+        // (`GrammarFocus.evidence`) — its frequency was inflated for weeks.
+        for p in profile.recurringMistakes where p.lastSeenAt >= fresh
+            && isInTargetScript(p.mistake) && isInTargetScript(p.correction)
+            && GrammarFocus.evidence(p, sessions: sessions, now: now) >= 1 {
             add(Slip(was: p.mistake, now: p.correction, why: p.context, cardId: nil))
         }
         return Array(out.prefix(10))
@@ -757,7 +761,8 @@ enum WeeklyTestEngine {
     ) async -> [WeeklyTestItem] {
         let target = appState.targetLanguage, native = appState.nativeLanguage
         guard !LanguageCatalog.sameLanguage(target, native) else { return [] }
-        let list = slips(start: start, end: end, now: now, profile: appState.learnerProfile)
+        let list = slips(start: start, end: end, now: now, profile: appState.learnerProfile,
+                         sessions: sessions)
         guard !list.isEmpty else { return [] }
         let topics = windowSessions.compactMap { $0.topic }
             .filter { !$0.isEmpty }.prefix(6)

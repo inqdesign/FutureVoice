@@ -833,6 +833,7 @@ struct ConversationView: View {
                     GrammarFocusStrip(label: focus.label,
                                       mistake: focus.pattern.mistake,
                                       correction: focus.pattern.correction,
+                                      talks: focus.talks,
                                       repeats: focusRepeatTurns.count) {
                         showingFocusSheet = true
                     }
@@ -971,6 +972,7 @@ struct ConversationView: View {
                     GrammarFocusSheet(label: focus.label, tip: focus.tip,
                                       mistake: focus.pattern.mistake,
                                       correction: focus.pattern.correction,
+                                      talks: focus.talks,
                                       repeats: focusRepeatTurns.count)
                 }
             }
@@ -3675,10 +3677,9 @@ struct ConversationView: View {
         guard coachMode, grammarFocus == nil else { return }
         let profile = ProfileStore.shared.load(targetLanguage: appState.targetLanguage,
                                                proficiency: appState.proficiency)
-        guard let pattern = GrammarFocus.pick(from: profile,
-                                              sessions: SessionStore.shared.load()) else { return }
-        guard let focus = await GrammarFocus.describe(pattern, target: appState.targetLanguage,
-                                                      native: appState.nativeLanguage),
+        guard let focus = await GrammarFocus.pick(from: profile, sessions: SessionStore.shared.load(),
+                                                  target: appState.targetLanguage,
+                                                  native: appState.nativeLanguage),
               !isTornDown, coachMode else { return }
         withAnimation(.easeInOut(duration: 0.3)) { grammarFocus = focus }
         syncCoachSteer()

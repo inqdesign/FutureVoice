@@ -791,7 +791,7 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 VStack(spacing: 0) {
                     GrammarFocusStrip(label: label, mistake: "Yesterday I go to the office",
-                                      correction: "Yesterday I went to the office", repeats: 1)
+                                      correction: "Yesterday I went to the office", talks: 3, repeats: 1)
                     Divider().opacity(0.15)
                     TalkGoalChipsRow(items: goals, used: ["commute"])
                     Divider().opacity(0.15)
@@ -824,7 +824,7 @@ enum DebugCapture {
                 .sheet(isPresented: .constant(name == "call-focus-sheet")) {
                     GrammarFocusSheet(label: label, tip: tip,
                                       mistake: "Yesterday I go to the office",
-                                      correction: "Yesterday I went to the office", repeats: 1)
+                                      correction: "Yesterday I went to the office", talks: 3, repeats: 1)
                 }
             })
         case "focus-result":

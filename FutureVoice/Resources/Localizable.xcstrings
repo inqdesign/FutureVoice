@@ -562,6 +562,52 @@
         }
       }
     },
+    "In %lld of your talks" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %lld deiner Gespräche"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En %lld de tus llamadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans %lld de tes appels"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld回の通話で出ています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화 %lld번에서 나왔어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %lld 次通话中出现"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %lld 次通話中出現"
+          }
+        }
+      }
+    },
     "In progress" : {
       "localizations" : {
         "de" : {
@@ -1432,6 +1478,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "想要哪種口音？"
+          }
+        }
+      }
+    },
+    "You made this mistake in %lld of your recent talks, so this call keeps an eye on it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Fehler kam in %lld deiner letzten Gespräche vor, darum achtet dieses Gespräch darauf."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este error salió en %lld de tus llamadas recientes, así que esta llamada lo vigila."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette erreur est revenue dans %lld de tes appels récents, alors cet appel la surveille."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の通話%lld回でこのミスが出たので、この通話で気をつけて見ていきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 통화 %lld번에서 이 실수가 나와서, 이번 통화에서 지켜봐요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近有 %lld 次通话出现这个错误，所以这次通话会特别留意。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近有 %lld 次通話出現這個錯誤，所以這次通話會特別留意。"
           }
         }
       }

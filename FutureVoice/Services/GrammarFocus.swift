@@ -13,8 +13,10 @@ import Foundation
 /// back during a call.
 ///
 /// Three pieces, all here:
-/// - `pick` chooses ONE pattern per call — seen at least twice, heard within
-///   `freshDays`, not retired — highest frequency first. One focus, because
+/// - `pick` chooses ONE pattern per call — SAID in at least `minTalks`
+///   different talks within `freshDays` (`evidence`, counted from the
+///   transcripts, not the profile's frequency), a grammar point and not a
+///   word choice (`describe`), not retired — most talks first. One focus, because
 ///   a coach naming three things at once is naming none.
 /// - `describe` names it in the learner's language ("과거 시제") with one
 ///   line of what to watch — coaching, so native; the pair itself stays in
@@ -32,12 +34,17 @@ struct GrammarFocus: Equatable {
     let pattern: LearnerPattern
     let label: String
     let tip: String
+    /// How many talks the learner actually SAID this slip in — the reason
+    /// it is the focus, shown on the strip. 0 when not counted.
+    var talks: Int = 0
 
     var key: String { LearnerProfile.patternKey(pattern) }
 
     static let minFrequency = 2
     static let freshDays = 45
     static let retireAfterCleanCalls = 2
+    /// A focus needs the slip in at least this many different talks.
+    static let minTalks = 2
 
     func record(repeats: Int) -> GrammarFocusRecord {
         GrammarFocusRecord(patternKey: key, label: label, mistake: pattern.mistake,
@@ -46,14 +53,48 @@ struct GrammarFocus: Equatable {
 
     // MARK: - Pick
 
-    static func pick(from profile: LearnerProfile, sessions: [Session],
-                     now: Date = Date()) -> LearnerPattern? {
+    /// The talks (within `freshDays`) in which the learner really said
+    /// `pattern.mistake` — quoted from their own turns, the summary's
+    /// `isTheirs` rule. This, not `frequency`, is the evidence: frequency
+    /// was inflated for weeks by summaries copying the profile's patterns
+    /// back out (fixed 2026-10-08), and a count the learner can't trace to
+    /// a talk is what made the strip read as random — one founder's only
+    /// pattern stood at 5 while appearing in none of their talks' text.
+    static func evidence(_ pattern: LearnerPattern, sessions: [Session], now: Date = Date()) -> Int {
         let fresh = now.addingTimeInterval(-Double(freshDays) * 86_400)
-        return profile.recurringMistakes
-            .filter { $0.frequency >= minFrequency && $0.lastSeenAt >= fresh }
+        return sessions.filter { s in
+            guard s.archivedAt == nil, (s.endedAt ?? s.startedAt) >= fresh else { return false }
+            return s.turns.contains { t in
+                t.role == .user && !t.excludedFromScoring
+                    && ConversationEngine.quotes(pattern.mistake, from: t.transcript)
+            }
+        }.count
+    }
+
+    /// Patterns said in at least `minTalks` talks, not retired, most talks
+    /// first. Grammar or not is decided later, by `describe`.
+    static func candidates(from profile: LearnerProfile, sessions: [Session],
+                           now: Date = Date()) -> [(pattern: LearnerPattern, talks: Int)] {
+        profile.recurringMistakes
             .filter { !isRetired($0, sessions: sessions) }
-            .sorted { ($0.frequency, $0.lastSeenAt) > ($1.frequency, $1.lastSeenAt) }
-            .first
+            .map { (pattern: $0, talks: evidence($0, sessions: sessions, now: now)) }
+            .filter { $0.talks >= minTalks }
+            .sorted { ($0.talks, $0.pattern.lastSeenAt) > ($1.talks, $1.pattern.lastSeenAt) }
+    }
+
+    /// This call's focus: the first candidate that is a GRAMMAR point
+    /// (`describe` turns a word mix-up away — "한글 → 한국어" is vocabulary,
+    /// and a strip calling it the call's grammar focus was the other half
+    /// of the report). nil = no strip.
+    @MainActor
+    static func pick(from profile: LearnerProfile, sessions: [Session], target: String,
+                     native: String, now: Date = Date()) async -> GrammarFocus? {
+        for c in candidates(from: profile, sessions: sessions, now: now).prefix(3) {
+            guard var focus = await describe(c.pattern, target: target, native: native) else { continue }
+            focus.talks = c.talks
+            return focus
+        }
+        return nil
     }
 
     static func isRetired(_ pattern: LearnerPattern, sessions: [Session]) -> Bool {
@@ -67,17 +108,21 @@ struct GrammarFocus: Equatable {
 
     // MARK: - Describe
 
-    private struct Description: Codable { let label: String; let tip: String }
-    private static let cacheKey = "futurevoice.coach.focusDescriptions"
+    private struct Description: Codable { let label: String; let tip: String; let grammar: Bool? }
+    /// v2 (2026-10-08) carries the grammar-or-word verdict; v1 entries
+    /// lack it and are asked again.
+    private static let cacheKey = "futurevoice.coach.focusDescriptions.v2"
 
     /// Name the pattern in `native`. nil when the call fails — the call then
-    /// runs without a focus rather than with an unnamed one.
+    /// runs without a focus rather than with an unnamed one — and nil when
+    /// the slip is a word choice rather than a grammar point (verdict cached).
     @MainActor
     static func describe(_ pattern: LearnerPattern, target: String,
                          native: String) async -> GrammarFocus? {
         let key = "\(LearnerProfile.patternKey(pattern))|\(native)"
         var cache = (UserDefaults.standard.dictionary(forKey: cacheKey) as? [String: [String: String]]) ?? [:]
         if let hit = cache[key], let label = hit["label"], let tip = hit["tip"] {
+            guard hit["grammar"] != "false" else { return nil }
             return GrammarFocus(pattern: pattern, label: label, tip: tip)
         }
         let nativeName = LanguageCatalog.englishName(native)
@@ -87,7 +132,12 @@ struct GrammarFocus: Equatable {
             point it belongs to, for a label they read mid-call, and say in one \
             short sentence what to watch for.
 
-            Return {"label": "...", "tip": "..."}, both in \(nativeName):
+            First decide: is it a GRAMMAR point (a form, an ending, word order, \
+            an article, a particle, a tense — a rule that applies to other words \
+            too), or a WORD choice (one word or name confused with another, a \
+            collocation)? Set "grammar" to true or false.
+
+            Return {"grammar": true, "label": "...", "tip": "..."}, label and tip in \(nativeName):
             - label: the grammar point as a learner would say it, 2–4 words \
               (e.g. "past tense", "articles a/the", "subject particle"). Not \
               the example, not a sentence.
@@ -103,13 +153,15 @@ struct GrammarFocus: Equatable {
             system: system,
             messages: [GeminiClient.Message(role: .user, content: content)],
             model: .flashLite31, maxTokens: 200, purpose: "coach",
-            idempotencyKey: "coach-focus:\(Self.digest(key))", requestTimeout: 8,
+            idempotencyKey: "coach-focus-v2:\(Self.digest(key))", requestTimeout: 8,
             fastThinking: true) else { return nil }
         let label = d.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let tip = d.tip.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else { return nil }
-        cache[key] = ["label": label, "tip": tip]
+        let grammar = d.grammar ?? true
+        cache[key] = ["label": label, "tip": tip, "grammar": grammar ? "true" : "false"]
         UserDefaults.standard.set(cache, forKey: cacheKey)
+        guard grammar else { return nil }
         return GrammarFocus(pattern: pattern, label: label, tip: tip)
     }
 
