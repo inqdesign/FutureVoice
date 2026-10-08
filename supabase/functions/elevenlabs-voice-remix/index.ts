@@ -20,6 +20,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
 
+import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
+
 const SOURCE_FN = "elevenlabs-voice-remix"
 
 Deno.serve(async (req) => {
@@ -48,6 +50,9 @@ Deno.serve(async (req) => {
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_description) return errorResponse(400, "voice_description required")
+  // A saved remix is a new voice (_shared/voice-quota.ts). Refused at the
+  // previews too, so nobody waits half a minute for takes that can't be kept.
+  if (await reservedForNewLearners(apiKey)) return reservedResponse(cors())
   // How far the remix may drift from the reference audio. Upstream: 0 is
   // "almost no prompt influence", 1 "almost no reference audio influence".
   // For an accent pick the reference IS the product — the learner has to

@@ -10,6 +10,7 @@
 // happened before this file existed. Nothing here may fail a synthesis.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
+import { reservedForNewLearners } from "./voice-quota.ts"
 
 const PROMPT_STRENGTH = 0.3
 
@@ -119,6 +120,8 @@ export async function speakAs(opts: {
       return row.speak_as_language === language ? row.speak_as_voice_id : voiceId
     }
     if (!create || !language || !hasDefaultAccent(language)) return voiceId
+    // The remix is a new voice; the month's last ones are for first clones.
+    if (await reservedForNewLearners(apiKey)) return voiceId
 
     // Claim the remix. Concurrent first lines (the opener pool is warmed in
     // parallel) wait for the one that won instead of making a second voice.

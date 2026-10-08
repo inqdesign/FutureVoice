@@ -8,6 +8,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
 import {
   recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
 } from "../_shared/credits.ts"
@@ -67,6 +68,12 @@ Deno.serve(async (req) => {
     firstCloneAt !== null && Number.isFinite(firstCloneAt) &&
     Date.now() - firstCloneAt < ONBOARDING_GRACE_MS
   const isFree = isFirstClone || withinOnboardingGrace
+
+  // The month's last voice creations are kept for learners making their
+  // FIRST voice (_shared/voice-quota.ts). A re-record waits for the reset.
+  if (!isFirstClone && await reservedForNewLearners(apiKey)) {
+    return reservedResponse(cors())
+  }
 
   // Minutes-native model: clones are never PRICED — the meter is talk
   // minutes and nothing else. Re-clones past the onboarding window are
