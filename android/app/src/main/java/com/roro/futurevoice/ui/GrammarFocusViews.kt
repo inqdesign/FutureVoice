@@ -59,6 +59,8 @@ private fun cameBack(id: Int, n: Int): String =
  */
 @Composable
 fun GrammarFocusStrip(label: String, mistake: String, correction: String, repeats: Int,
+                      /** Talks the slip was really said in — why this is the focus. */
+                      talks: Int = 0,
                       onTap: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onTap)
@@ -76,7 +78,10 @@ fun GrammarFocusStrip(label: String, mistake: String, correction: String, repeat
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                Text(stringResource(R.string.cm_this_calls_focus), style = MaterialTheme.typography.bodySmall,
+                // The reason, not just the title: without it the strip read
+                // as a random pick (founder, 2026-10-08).
+                Text(if (talks > 0) stringResource(R.string.cm_focus_in_talks, talks)
+                    else stringResource(R.string.cm_this_calls_focus), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
             GrammarFocusPair(mistake, correction, maxLines = 1)
@@ -151,6 +156,11 @@ fun GrammarFocusSheet(focus: GrammarFocus, repeats: Int, onDismiss: () -> Unit) 
             Text(focus.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             if (focus.tip.isNotEmpty()) {
                 Text(focus.tip, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (focus.talks > 0) {
+                Text(stringResource(R.string.cm_focus_talks_footer, focus.talks),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider(Modifier.padding(vertical = 6.dp))

@@ -554,4 +554,6 @@
     <string name="grammar_measures_two_reads">Deux lectures, la plus basse l’emporte : les structures que tu construis vraiment dans une conversation, et les fautes vérifiées dans la transcription pour 100 mots – erreurs de reconnaissance et suggestions de style exclues. Des phrases courtes et correctes donnent un niveau bas, pas haut.</string>
     <string name="grammar_improve_longer_sentences">Dis plus de choses en une phrase – une raison, une condition, ce qui s’est passé avant. Ce sont les phrases plus longues qui font bouger ce niveau.</string>
     <string name="grammar_trend_caption_ceiling">Fautes vérifiées pour 100 mots, un point par conversation – ta précision. Le niveau ci-dessus vient des structures que tu construis, donc cette courbe seule ne peut pas le faire bouger.</string>
+    <string name="cm_focus_in_talks">Dans %1$d de tes appels</string>
+    <string name="cm_focus_talks_footer">Cette erreur est revenue dans %1$d de tes appels récents, alors cet appel la surveille.</string>
 </resources>

@@ -477,6 +477,7 @@ object CaptureTalk {
             label = if (ko) "과거 시제" else "Past tense",
             tip = if (ko) "어제·지난주처럼 지난 일을 말할 때는 과거형을 써요."
             else "Use the past form when you talk about yesterday or last week.",
+            talks = 3,
         )
     }
 

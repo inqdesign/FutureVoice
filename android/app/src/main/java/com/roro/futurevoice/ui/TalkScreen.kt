@@ -678,7 +678,7 @@ fun TalkScreen(
             val focus = state.grammarFocus
             if (coachMode && focus != null && !ended) {
                 GrammarFocusStrip(focus.label, focus.pattern.mistake, focus.pattern.correction,
-                    repeats = state.focusRepeatTurns.size, onTap = { showingFocus = true })
+                    repeats = state.focusRepeatTurns.size, talks = focus.talks, onTap = { showingFocus = true })
                 androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
             }
             if (showingFocus && focus != null) {

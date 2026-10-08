@@ -540,4 +540,6 @@
     <string name="grammar_measures_two_reads">Zwei Messungen, die niedrigere zählt: die Satzstrukturen, die du im Gespräch tatsächlich baust, und im Transkript bestätigte Fehler pro 100 Wörter – Erkennungsfehler und Stilvorschläge ausgenommen. Kurze, korrekte Sätze werden niedrig gelesen, nicht hoch.</string>
     <string name="grammar_improve_longer_sentences">Sag mehr in einem Satz – einen Grund, eine Bedingung, was vorher passiert ist. Längere Sätze sind es, die dieses Niveau bewegen.</string>
     <string name="grammar_trend_caption_ceiling">Bestätigte Fehler pro 100 Wörter, ein Punkt pro Gespräch – deine Genauigkeit. Das Niveau oben kommt von den Strukturen, die du baust, deshalb kann diese Kurve allein es nicht bewegen.</string>
+    <string name="cm_focus_in_talks">In %1$d deiner Gespräche</string>
+    <string name="cm_focus_talks_footer">Dieser Fehler kam in %1$d deiner letzten Gespräche vor, darum achtet dieses Gespräch darauf.</string>
 </resources>

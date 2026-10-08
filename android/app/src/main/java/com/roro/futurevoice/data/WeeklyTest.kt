@@ -289,6 +289,9 @@ object WeeklyTestEngine {
         val sceneExamples: Map<String, String> = emptyMap(),
         /** The learner's own language — translate items need it. */
         val nativeLanguage: String = "",
+        /** Every recurring mistake on the profile, unfiltered — [slips]
+         *  judges them by what was really said ([GrammarFocus.evidence]). */
+        val profileMistakes: List<LearnerPattern> = emptyList(),
         /** Writes the translate items (one model call); null = no network,
          *  so no translate items (a JVM test). Args: system, user, test id. */
         val writeTranslate: (suspend (String, String, String) -> TranslatePayload?)? = null,
@@ -314,10 +317,11 @@ object WeeklyTestEngine {
         val app = context.applicationContext
         val now = System.currentTimeMillis()
         val fresh = now - GrammarFocus.FRESH_DAYS * 86_400_000L
-        val mistakes = runCatching {
+        val profileMistakes = runCatching {
             ProfileStore.shared(context).load(language, level.code).recurringMistakes
-                .filter { it.frequency >= GrammarFocus.MIN_FREQUENCY && it.lastSeenAt >= fresh }
         }.getOrDefault(emptyList())
+        val mistakes = profileMistakes
+            .filter { it.frequency >= GrammarFocus.MIN_FREQUENCY && it.lastSeenAt >= fresh }
         return Material(
             sessions = SessionStore.shared(context).load(language)
                 .filter { it.archivedAt == null && it.mode == SessionMode.CONVERSATION },
@@ -352,6 +356,7 @@ object WeeklyTestEngine {
                 out.toMap()
             }.getOrDefault(emptyMap()),
             nativeLanguage = native,
+            profileMistakes = profileMistakes,
             writeTranslate = { system, user, testId ->
                 val job = coachScope.async {
                     runCatching {
@@ -870,7 +875,7 @@ object WeeklyTestEngine {
     /** The mistakes to build on: this window's correction cards, due first
      *  then newest, then the profile's recurring mistakes — deduped. */
     fun slips(cards: List<DrillCard>, mistakes: List<LearnerPattern>, start: Long, end: Long, now: Long,
-              language: String): List<Slip> {
+              language: String, sessions: List<Session> = emptyList()): List<Slip> {
         val window = cards.filter { card ->
             if (card.box >= DrillIngest.MAX_BOX || card.sourcePhrase.isBlank()) return@filter false
             if (!TextScript.isInTargetScript(card.targetPhrase, language) ||
@@ -883,10 +888,13 @@ object WeeklyTestEngine {
         fun add(s: Slip) { if (seen.add(CarryoverDetector.normalized(s.was))) out += s }
         for (c in window) add(Slip(c.sourcePhrase, c.targetPhrase, c.reason, c.id))
         val fresh = now - GrammarFocus.FRESH_DAYS * 86_400_000L
+        // A profile pattern only when the learner really said it in a talk
+        // (`GrammarFocus.evidence`) — its frequency was inflated for weeks.
         for (p in mistakes) {
-            if (p.frequency < GrammarFocus.MIN_FREQUENCY || p.lastSeenAt < fresh) continue
+            if (p.lastSeenAt < fresh) continue
             if (!TextScript.isInTargetScript(p.mistake, language) ||
                 !TextScript.isInTargetScript(p.correction, language)) continue
+            if (GrammarFocus.evidence(p, sessions, now) < 1) continue
             add(Slip(p.mistake, p.correction, p.context, null))
         }
         return out.take(10)
@@ -907,7 +915,7 @@ object WeeklyTestEngine {
         val write = material.writeTranslate ?: return emptyList()
         val native = material.nativeLanguage
         if (native.isEmpty() || LanguageCatalog.sameLanguage(target, native)) return emptyList()
-        val list = slips(material.cards, material.mistakes, start, end, now, target)
+        val list = slips(material.cards, material.profileMistakes, start, end, now, target, material.sessions)
         if (list.isEmpty()) return emptyList()
         val topics = windowSessions.mapNotNull { it.topic }.filter { it.isNotEmpty() }.take(6)
         val targetName = LanguageCatalog.englishName(target)

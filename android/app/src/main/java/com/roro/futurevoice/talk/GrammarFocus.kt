@@ -19,8 +19,10 @@ import java.security.MessageDigest
  * this learner keeps making, named once at the top of the call and watched
  * for the rest of it.
  *
- * - [pick] chooses ONE pattern per call — seen at least twice, heard within
- *   [FRESH_DAYS], not retired — highest frequency first.
+ * - [pick] chooses ONE pattern per call — SAID in at least [MIN_TALKS]
+ *   different talks within [FRESH_DAYS] ([evidence], counted from the
+ *   transcripts, not the profile's frequency), a grammar point and not a
+ *   word choice ([describe]), not retired — most talks first.
  * - [describe] names it in the learner's language ("과거 시제") with one line
  *   of what to watch — coaching, so native; the pair stays in the target
  *   language. Cached per pattern, so it is written once.
@@ -36,6 +38,9 @@ data class GrammarFocus(
     val pattern: LearnerPattern,
     val label: String,
     val tip: String,
+    /** How many talks the learner actually SAID this slip in — the reason it
+     *  is the focus, shown on the strip. 0 when not counted. */
+    val talks: Int = 0,
 ) {
     val key: String get() = LearnerProfile.patternKey(pattern)
 
@@ -73,24 +78,61 @@ data class GrammarFocus(
     private data class RepeatVerdict(val same: Boolean = false)
 
     @Serializable
-    private data class Description(val label: String = "", val tip: String = "")
+    private data class Description(val label: String = "", val tip: String = "", val grammar: Boolean? = null)
 
     companion object {
         const val MIN_FREQUENCY = 2
         const val FRESH_DAYS = 45
         const val RETIRE_AFTER_CLEAN_CALLS = 2
+        /** A focus needs the slip in at least this many different talks. */
+        const val MIN_TALKS = 2
 
-        private const val CACHE_KEY = "futurevoice.coach.focusDescriptions"
+        /** v2 (iOS 2026-10-08) carries the grammar-or-word verdict; v1
+         *  entries lack it and are asked again. */
+        private const val CACHE_KEY = "futurevoice.coach.focusDescriptions.v2"
         private const val DAY_MS = 86_400_000L
 
-        fun pick(profile: LearnerProfile, sessions: List<Session>,
-                 now: Long = System.currentTimeMillis()): LearnerPattern? {
+        /**
+         * The talks (within [FRESH_DAYS]) in which the learner really said
+         * `pattern.mistake` — quoted from their own turns, the summary's
+         * `isTheirs` rule ([SpokenWords.quotes]). This, not `frequency`, is
+         * the evidence: frequency was inflated for weeks by summaries copying
+         * the profile's patterns back out (fixed 2026-10-08), and a count the
+         * learner can't trace to a talk is what made the strip read as random.
+         */
+        fun evidence(pattern: LearnerPattern, sessions: List<Session>,
+                     now: Long = System.currentTimeMillis()): Int {
             val fresh = now - FRESH_DAYS * DAY_MS
-            return profile.recurringMistakes
-                .filter { it.frequency >= MIN_FREQUENCY && it.lastSeenAt >= fresh }
+            return sessions.count { s ->
+                s.archivedAt == null && (s.endedAt ?: s.startedAt) >= fresh &&
+                    s.turns.any { t ->
+                        t.role == TurnRole.USER && !t.excludedFromScoring &&
+                            SpokenWords.quotes(pattern.mistake, t.transcript)
+                    }
+            }
+        }
+
+        /** Patterns said in at least [MIN_TALKS] talks, not retired, most
+         *  talks first. Grammar or not is decided later, by [describe]. */
+        fun candidates(profile: LearnerProfile, sessions: List<Session>,
+                       now: Long = System.currentTimeMillis()): List<Pair<LearnerPattern, Int>> =
+            profile.recurringMistakes
                 .filter { !isRetired(it, sessions) }
-                .sortedWith(compareByDescending<LearnerPattern> { it.frequency }.thenByDescending { it.lastSeenAt })
-                .firstOrNull()
+                .map { it to evidence(it, sessions, now) }
+                .filter { it.second >= MIN_TALKS }
+                .sortedWith(compareByDescending<Pair<LearnerPattern, Int>> { it.second }
+                    .thenByDescending { it.first.lastSeenAt })
+
+        /** This call's focus: the first candidate that is a GRAMMAR point
+         *  ([describe] turns a word mix-up away — "한글 → 한국어" is
+         *  vocabulary). Null = no strip. */
+        suspend fun pick(context: Context, profile: LearnerProfile, sessions: List<Session>, target: String,
+                         native: String, now: Long = System.currentTimeMillis()): GrammarFocus? {
+            for ((pattern, talks) in candidates(profile, sessions, now).take(3)) {
+                val focus = describe(context, pattern, target, native) ?: continue
+                return focus.copy(talks = talks)
+            }
+            return null
         }
 
         fun isRetired(pattern: LearnerPattern, sessions: List<Session>): Boolean {
@@ -104,7 +146,9 @@ data class GrammarFocus(
         }
 
         /** Name the pattern in [native]. Null when the call fails — the call
-         *  then runs without a focus rather than with an unnamed one. */
+         *  then runs without a focus rather than with an unnamed one — and
+         *  null when the slip is a word choice rather than a grammar point
+         *  (verdict cached). */
         suspend fun describe(context: Context, pattern: LearnerPattern, target: String,
                              native: String): GrammarFocus? {
             val key = "${LearnerProfile.patternKey(pattern)}|$native"
@@ -116,14 +160,21 @@ data class GrammarFocus(
                 val o = runCatching { hit.jsonObject }.getOrNull()
                 val label = o?.get("label")?.jsonPrimitive?.content
                 val tip = o?.get("tip")?.jsonPrimitive?.content
-                if (label != null && tip != null) return GrammarFocus(pattern, label, tip)
+                if (label != null && tip != null) {
+                    if (o["grammar"]?.jsonPrimitive?.content == "false") return null
+                    return GrammarFocus(pattern, label, tip)
+                }
             }
             val nativeName = LanguageCatalog.englishName(native)
             val targetName = LanguageCatalog.englishName(target)
             val system = "A $targetName learner keeps making one mistake. Name the grammar " +
                 "point it belongs to, for a label they read mid-call, and say in one " +
                 "short sentence what to watch for.\n\n" +
-                "Return {\"label\": \"...\", \"tip\": \"...\"}, both in $nativeName:\n" +
+                "First decide: is it a GRAMMAR point (a form, an ending, word order, " +
+                "an article, a particle, a tense — a rule that applies to other words " +
+                "too), or a WORD choice (one word or name confused with another, a " +
+                "collocation)? Set \"grammar\" to true or false.\n\n" +
+                "Return {\"grammar\": true, \"label\": \"...\", \"tip\": \"...\"}, label and tip in $nativeName:\n" +
                 "- label: the grammar point as a learner would say it, 2–4 words " +
                 "(e.g. \"past tense\", \"articles a/the\", \"subject particle\"). Not " +
                 "the example, not a sentence.\n" +
@@ -139,15 +190,19 @@ data class GrammarFocus(
                         messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, content)),
                         serializer = Description.serializer(),
                         model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 200, purpose = "coach",
-                        idempotencyKey = "coach-focus:${digest(key)}", fastThinking = true,
+                        idempotencyKey = "coach-focus-v2:${digest(key)}", fastThinking = true,
                     )
                 }.getOrNull()
             } ?: return null
             val label = d.label.trim()
             val tip = d.tip.trim()
             if (label.isEmpty()) return null
-            val updated = JsonObject(cache + (key to buildJsonObject { put("label", label); put("tip", tip) }))
+            val grammar = d.grammar ?: true
+            val updated = JsonObject(cache + (key to buildJsonObject {
+                put("label", label); put("tip", tip); put("grammar", if (grammar) "true" else "false")
+            }))
             prefs.edit().putString(CACHE_KEY, updated.toString()).apply()
+            if (!grammar) return null
             return GrammarFocus(pattern, label, tip)
         }
 

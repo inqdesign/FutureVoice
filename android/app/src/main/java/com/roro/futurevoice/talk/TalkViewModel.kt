@@ -1464,8 +1464,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         focusJob = viewModelScope.launch {
             val profile = ProfileStore.shared(appContext).load(cfg.targetLanguage, cfg.level.code)
             val past = runCatching { sessions.load(cfg.targetLanguage) }.getOrDefault(emptyList())
-            val pattern = GrammarFocus.pick(profile, past) ?: return@launch
-            val focus = GrammarFocus.describe(appContext, pattern, cfg.targetLanguage, cfg.nativeLanguage)
+            val focus = GrammarFocus.pick(appContext, profile, past, cfg.targetLanguage, cfg.nativeLanguage)
                 ?: return@launch
             if (!coachOn || _state.value.phase == TalkPhase.ENDED) return@launch
             _state.update { it.copy(grammarFocus = focus) }

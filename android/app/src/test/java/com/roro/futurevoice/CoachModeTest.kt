@@ -7,6 +7,8 @@ import com.roro.futurevoice.talk.GrammarFocusRecord
 import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.LearnerProfile
 import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.Turn
+import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.TalkGoalItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -81,28 +83,64 @@ class GrammarFocusTest {
 
     private fun focused(p: LearnerPattern, repeats: Int, daysAgo: Double): Session {
         val start = now - (daysAgo * day).toLong()
+        // A call where the slip came back has the learner saying it.
+        val turns = if (repeats > 0) listOf(Turn(role = TurnRole.USER, transcript = p.mistake)) else emptyList()
         return Session(userId = "U", targetLanguage = "en", startedAt = start, endedAt = start + 600_000,
+            turns = turns,
             grammarFocus = GrammarFocusRecord(LearnerProfile.patternKey(p), "L", p.mistake, p.correction, repeats))
     }
 
-    @Test fun picksMostFrequentFreshPattern() {
-        val picked = GrammarFocus.pick(profile(listOf(pattern("once", 1, 1.0), pattern("often", 5, 3.0),
-            pattern("some", 2, 1.0), pattern("stale", 9, 60.0))), emptyList(), now)
-        assertEquals("often", picked?.mistake)
+    /** A talk in which the learner said [line]. */
+    private fun talk(line: String, daysAgo: Double): Session {
+        val at = now - (daysAgo * day).toLong()
+        return Session(userId = "U", targetLanguage = "en", startedAt = at, endedAt = at + 600_000,
+            turns = listOf(Turn(role = TurnRole.USER, transcript = line)))
     }
 
-    @Test fun nothingWhenNoPatternRepeats() =
-        assertNull(GrammarFocus.pick(profile(listOf(pattern("once", 1, 1.0))), emptyList(), now))
+    private fun picked(ps: List<LearnerPattern>, sessions: List<Session>): String? =
+        GrammarFocus.candidates(profile(ps), sessions, now).firstOrNull()?.first?.mistake
+
+    /** The evidence is the transcripts, not the stored frequency: a pattern
+     *  at frequency 9 that no talk contains is never a focus (2026-10-08 —
+     *  summaries had been copying the profile's patterns back, so the count
+     *  rose with nothing said), and one said in two talks is. */
+    @Test fun focusNeedsTheSlipInTwoTalks() {
+        val inflated = pattern("I go to the office yesterday", 9, 1.0)
+        val real = pattern("explain him the", 2, 3.0)
+        val talks = listOf(talk("so I will explain him the situation tomorrow", 5.0),
+            talk("I had to explain him the plan", 2.0),
+            talk("nothing related here", 1.0))
+        assertEquals("explain him the", picked(listOf(inflated, real), talks))
+        assertEquals(2, GrammarFocus.evidence(real, talks, now))
+        assertEquals(0, GrammarFocus.evidence(inflated, talks, now))
+        // One talk is not a pattern.
+        assertNull(picked(listOf(real), talks.takeLast(2)))
+        // A talk older than FRESH_DAYS doesn't count.
+        val old = listOf(talk("explain him the plan", 50.0), talks[1])
+        assertNull(picked(listOf(real), old))
+    }
+
+    @Test fun mostTalksFirst() {
+        val a = pattern("a slip", 9, 1.0)
+        val b = pattern("b slip", 2, 1.0)
+        val talks = listOf(talk("a slip one", 1.0), talk("a slip two", 2.0),
+            talk("b slip one", 1.0), talk("b slip two", 2.0), talk("b slip three", 3.0))
+        assertEquals("b slip", picked(listOf(a, b), talks))
+    }
 
     @Test fun twoCleanCallsRetireAndARedetectionBringsItBack() {
-        val often = pattern("often", 5, 10.0)
-        val some = pattern("some", 2, 1.0)
-        val clean = listOf(focused(often, 0, 5.0), focused(often, 0, 2.0))
-        assertEquals("some", GrammarFocus.pick(profile(listOf(often, some)), clean, now)?.mistake)
-        val mixed = listOf(focused(often, 0, 5.0), focused(often, 2, 2.0))
-        assertEquals("often", GrammarFocus.pick(profile(listOf(often, some)), mixed, now)?.mistake)
-        val back = pattern("often", 6, 1.0)
-        assertEquals("often", GrammarFocus.pick(profile(listOf(back, some)), clean, now)?.mistake)
+        val often = pattern("often slip", 5, 10.0)
+        val some = pattern("some slip", 2, 1.0)
+        val said = listOf(talk("often slip", 20.0), talk("often slip", 15.0),
+            talk("some slip", 12.0), talk("some slip", 11.0))
+        val clean = said + listOf(focused(often, 0, 5.0), focused(often, 0, 2.0))
+        assertEquals("some slip", picked(listOf(often, some), clean))
+        // One of the two still had the slip — not retired.
+        val mixed = said + listOf(focused(often, 0, 5.0), focused(often, 2, 2.0))
+        assertEquals("often slip", picked(listOf(often, some), mixed))
+        // Said again after those clean calls (a summary re-detects it) → back in focus.
+        val back = pattern("often slip", 6, 1.0)
+        assertEquals("often slip", picked(listOf(back, some), clean + talk("often slip", 1.0)))
     }
 
     /** iOS `GrammarFocusPairTests`: the strip shows only what changed, with a word of context. */

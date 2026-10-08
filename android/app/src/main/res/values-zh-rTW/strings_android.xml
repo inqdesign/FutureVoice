@@ -548,4 +548,6 @@
     <string name="grammar_measures_two_reads">兩種判讀取較低者：你在對話中實際造出的句子結構，以及經逐字稿確認、每 100 字的文法錯誤（不含辨識錯誤與用詞建議）。簡短又正確的句子會被判得低，而不是高。</string>
     <string name="grammar_improve_longer_sentences">試著在一句話裡多說一點：原因、條件、之前發生的事。能讓這個等級往上的是更長的句子。</string>
     <string name="grammar_trend_caption_ceiling">每 100 字經確認的錯誤，每次對話一個點——這是你的準確度。上方的等級取決於你造出的句子結構，所以光靠這條曲線無法讓它變動。</string>
+    <string name="cm_focus_in_talks">在 %1$d 次通話中出現</string>
+    <string name="cm_focus_talks_footer">最近有 %1$d 次通話出現這個錯誤，所以這次通話會特別留意。</string>
 </resources>
