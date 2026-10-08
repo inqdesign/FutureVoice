@@ -65,6 +65,10 @@ struct SetupFlowView: View {
 
     private enum Step { case native, target, accent, level, goal }
 
+    /// `preferredAccentId` for "keep my voice as recorded" — no remix at all
+    /// (`AppState.applyDefaultAccent` skips it).
+    static let noAccent = "none"
+
     /// The accent step exists only where there is a choice to make.
     private var accentOptions: [VoiceAccent] {
         VoiceAccentCatalog.options(for: targetLanguage)
@@ -186,6 +190,14 @@ struct SetupFlowView: View {
                     selected: (accentId ?? accentOptions.first?.id) == option.id
                 ) { accentId = option.id }
             }
+            // The plain clone, as a choice (founder, 2026-10-08) — last,
+            // because from a native-language take the model invents the
+            // accent line by line, which is why a remix is the default.
+            pickRow(
+                title: explain("accent.original"),
+                subtitle: explain("Your voice as you recorded it, with no accent applied"),
+                selected: accentId == Self.noAccent
+            ) { accentId = Self.noAccent }
         } header: {
             Text(explain("Which accent do you want to speak with?"))
         } footer: {
@@ -465,7 +477,8 @@ struct SetupFlowView: View {
                                level: level)
         // The accent the first clone is remixed into. A pick made for a
         // target they then moved away from doesn't belong to this one.
-        let picked = accentOptions.contains { $0.id == accentId } ? accentId : nil
+        let picked = accentId == Self.noAccent || accentOptions.contains { $0.id == accentId }
+            ? accentId : nil
         appState.preferredAccentId = picked ?? accentOptions.first?.id
     }
 }

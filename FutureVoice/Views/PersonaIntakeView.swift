@@ -132,11 +132,11 @@ struct PersonaIntakeView: View {
                 question: explain("Where's home these days?"),
                 detail: explain("Real places make your conversations concrete — no small talk about nowhere."))
             VStack(spacing: 0) {
+                // City only (2026-10-08, founder): this card exists to tell
+                // the fluent self where they live, and a city says that —
+                // typing the country too was effort for nothing. The field
+                // stays on the persona and in Me → Profile.
                 TextField("City", text: $persona.city)
-                    .textInputAutocapitalization(.words)
-                    .padding(14)
-                CardDivider(inset: 14)
-                TextField("Country", text: $persona.country)
                     .textInputAutocapitalization(.words)
                     .padding(14)
                 CardDivider(inset: 14)

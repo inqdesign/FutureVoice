@@ -1608,6 +1608,8 @@ final class AppState: ObservableObject {
     /// Best-effort: a failure leaves the plain clone, which works.
     func applyDefaultAccent() async {
         let options = VoiceAccentCatalog.options(for: targetLanguage)
+        // Picked "as I recorded it" in setup: no remix.
+        guard preferredAccentId != SetupFlowView.noAccent else { return }
         guard voiceAccentId == nil, let voiceId = voiceCloneId,
               let accent = options.first(where: { $0.id == preferredAccentId })
                 ?? VoiceAccentCatalog.defaultAccent(for: targetLanguage) else { return }

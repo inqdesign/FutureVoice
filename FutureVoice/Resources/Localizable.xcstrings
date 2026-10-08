@@ -5232,6 +5232,52 @@
         }
       }
     },
+    "Your voice as you recorded it, with no accent applied" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme so, wie du sie aufgenommen hast – ohne Akzent"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz tal como la grabaste, sin añadir ningún acento"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix telle que tu l’as enregistrée, sans accent ajouté"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音した声のまま。アクセントは加えません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음한 목소리 그대로, 억양을 입히지 않아요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留录音时的声音，不另外加口音"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留錄音時的聲音，不另外加口音"
+          }
+        }
+      }
+    },
     "Your voice is back" : {
       "localizations" : {
         "de" : {
