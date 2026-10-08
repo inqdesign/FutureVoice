@@ -680,7 +680,8 @@ fun MeScreen(
         AlertDialog(onDismissRequest = { confirmingRerecord = false },
             title = { Text(stringResource(R.string.re_record_your_voice)) },
             text = { Text(stringResource(
-                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
+                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704) +
+                "\n\n" + com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
             confirmButton = { TextButton(onClick = { confirmingRerecord = false; onRerecordVoice() }) {
                 Text(stringResource(R.string.start_over), color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmingRerecord = false }) { Text(stringResource(R.string.cancel)) } })
@@ -691,9 +692,6 @@ fun MeScreen(
             targetLanguage = targetLanguage,
             appliedAccentId = voiceAccentId,
             onApplied = onAccentApplied,
-            // Leaving without applying leaves the learner on the rebuilt,
-            // un-accented clone — the app has to know which voice it holds.
-            onCloneRebuilt = { onAccentApplied(it, "") },
             onDismiss = { pickingAccent = false },
         )
     }

@@ -28,6 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -232,6 +235,12 @@ fun CloneFlowScreen(
     var accentId by remember { mutableStateOf<String?>(null) }
     var accentToPick by remember { mutableStateOf<com.roro.futurevoice.data.VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
+    /** "No accent" rebuilds the voice — the learner's one change — so asked. */
+    var confirmingRemoveFromMeet by remember { mutableStateOf(false) }
+    /** The month's one voice change (iOS `canChangeVoice`, 2026-10-09). */
+    val voiceChange by com.roro.futurevoice.data.VoiceChanges.status
+        .collectAsStateWithLifecycle()
+    val canChangeVoice = voiceChange?.canChange ?: true
     /** The second pass, started from the meet act: Back means "keep the
      *  voice I have", not "walk the wizard backwards". */
     var reRecording by remember { mutableStateOf(false) }
@@ -430,8 +439,11 @@ fun CloneFlowScreen(
                     removeBackgroundNoise = false,
                 )
             }.onSuccess { adoptVoice(it, null, greet = true) }
-                .onFailure { e -> error = e.message }
+                .onFailure { e ->
+                    error = (e as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context) ?: e.message
+                }
             removingAccent = false
+            com.roro.futurevoice.data.VoiceChanges.refresh()
         }
     }
 
@@ -492,6 +504,7 @@ fun CloneFlowScreen(
                         mapOf("accent" to accent.id, "source" to "default"))
                 }
                 val greetVoice = clonedVoiceId ?: voiceId
+                com.roro.futurevoice.data.VoiceChanges.refresh()
                 // First words in the user's own voice — best-effort: a failed
                 // synthesis opens the act silent, never blocks. Said once, at
                 // the default rung; the pills below are how speed is heard.
@@ -511,6 +524,7 @@ fun CloneFlowScreen(
                 android.util.Log.w("CloneFlow", "clone failed", e)
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
                 error = when {
+                    e is com.roro.futurevoice.data.VoiceChangeLimit -> e.line(context)
                     e is VoiceCloneClient.VoiceLimitReached ->
                         context.getString(R.string.voice_shelf_full)
                     e is EdgeError -> e.message
@@ -975,21 +989,35 @@ fun CloneFlowScreen(
                                     // founder: the pills read clearer with the plain voice
                                     // among them) — but no longer the default: every clone
                                     // arrives remixed, so it is selected only once picked.
+                                    // "No accent" rebuilds the voice — the learner's
+                                    // one change for 30 days — so it is asked first.
                                     AccentPill(
                                         label = stringResource(R.string.accent_original),
                                         selected = accentId == null, loading = removingAccent,
-                                        enabled = !removingAccent && (accentId == null || sampleFile.exists()),
+                                        enabled = !removingAccent && (accentId == null ||
+                                            (sampleFile.exists() && canChangeVoice)),
                                         modifier = Modifier.weight(1f),
-                                    ) { removeAccentFromMeet() }
+                                    ) { if (accentId != null) confirmingRemoveFromMeet = true }
                                     accentOptions.forEach { o ->
+                                        // With no change left, only the voice they have
+                                        // stays tappable — the rest would end at a refusal.
                                         AccentPill(
                                             label = accentLabel(o),
                                             selected = accentId == o.id,
-                                            loading = false, enabled = !removingAccent,
+                                            loading = false,
+                                            enabled = !removingAccent && (canChangeVoice || accentId == o.id),
                                             modifier = Modifier.weight(1f),
                                         ) { mp3.stop(); accentToPick = o }
                                     }
                                 }
+                                if (!canChangeVoice) {
+                                    Text(com.roro.futurevoice.data.VoiceChangeStatus.againLine(
+                                        context, voiceChange?.nextAt),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                }
+                                LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
                             }
                         }
 
@@ -1198,11 +1226,25 @@ fun CloneFlowScreen(
             targetLanguage = targetLanguage,
             appliedAccentId = accentId,
             onApplied = { id, accent -> adoptVoice(id, accent, greet = true) },
-            // Leaving without applying leaves the learner on the rebuilt,
-            // un-accented clone.
-            onCloneRebuilt = { id -> adoptVoice(id, null, greet = false) },
             initialAccent = picking,
             onDismiss = { accentToPick = null },
+        )
+    }
+    if (confirmingRemoveFromMeet) {
+        AlertDialog(
+            onDismissRequest = { confirmingRemoveFromMeet = false },
+            title = { Text(stringResource(R.string.remove_the_accent)) },
+            text = { Text(com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
+            confirmButton = {
+                TextButton(onClick = { confirmingRemoveFromMeet = false; removeAccentFromMeet() }) {
+                    Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingRemoveFromMeet = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
     }
     val compareVoice = clonedVoiceId

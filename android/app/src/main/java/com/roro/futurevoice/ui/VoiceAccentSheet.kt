@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +45,8 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.VoiceAccent
 import com.roro.futurevoice.data.VoiceAccentCatalog
 import com.roro.futurevoice.net.VoiceRemixClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 /**
@@ -66,13 +69,9 @@ fun VoiceAccentSheet(
     targetLanguage: String,
     /** The accent the live clone was remixed with, if any. */
     appliedAccentId: String?,
+    /** A voice was put in place — a take applied, or the accent removed
+     *  (`accentId` empty). */
     onApplied: (voiceId: String, accentId: String) -> Unit,
-    /**
-     * A fresh, UN-ACCENTED clone was built from the saved recording to remix
-     * from. Whoever presented this sheet is holding the old voice id (and any
-     * audio made with it), so they are told even when nothing is applied.
-     */
-    onCloneRebuilt: (voiceId: String) -> Unit = {},
     /**
      * Opened from an accent pill (the meet act, the revival screen): start
      * making this accent's takes at once, so the tap that picked the accent
@@ -89,8 +88,16 @@ fun VoiceAccentSheet(
 
     val options = remember(targetLanguage) { VoiceAccentCatalog.options(targetLanguage) }
     var accent by remember { mutableStateOf<VoiceAccent?>(null) }
-    /** The voice the takes are remixed FROM — the un-accented clone. */
-    var sourceVoiceId by remember(voiceId) { mutableStateOf(voiceId) }
+    /** The month's one voice change (iOS `canChangeVoice`, 2026-10-09). */
+    val changeStatus by com.roro.futurevoice.data.VoiceChanges.status
+        .collectAsStateWithLifecycle()
+    val canChange = changeStatus?.canChange ?: true
+    LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
+    var removing by remember { mutableStateOf(false) }
+    var confirmingRemove by remember { mutableStateOf(false) }
+    var confirmingApply by remember { mutableStateOf(false) }
+    val canRemoveAccent = !appliedAccentId.isNullOrEmpty() &&
+        VoiceComparison.exists(context.filesDir)
     var previews by remember { mutableStateOf<List<VoiceRemixClient.Preview>>(emptyList()) }
     var picked by remember { mutableStateOf<String?>(null) }
     var playing by remember { mutableStateOf<String?>(null) }
@@ -105,19 +112,14 @@ fun VoiceAccentSheet(
         Analytics.capture("voice_accent_previews_requested", mapOf("accent" to chosen.id))
         scope.launch {
             runCatching {
-                // Takes always come from the UN-ACCENTED
-                // clone. A second pick used to remix the live
-                // voice — i.e. the previous remix — so the
-                // learners who tried hardest to find
-                // themselves drifted furthest (iOS `84795b6`).
-                // The phone's own recording is the way back.
-                if (appliedAccentId != null) {
-                    rebuiltFromSample(context)?.let { fresh ->
-                        sourceVoiceId = fresh
-                        onCloneRebuilt(fresh)
-                    }
-                }
-                client.previews(sourceVoiceId, chosen.prompt,
+                // No rebuild first (iOS 2026-10-09). Rebuilding the plain
+                // clone to make takes spent a whole voice of the month's
+                // allowance on LISTENING. The takes for every accent are made
+                // at the clone (`remixIntoDefaultAccent`) and found in
+                // [RemixTakeCache]; only when they are gone (a reinstall) are
+                // takes made from the live voice — one generation of drift,
+                // against a voice.
+                client.previews(voiceId, chosen.prompt,
                     VoiceAccentCatalog.sampleText(targetLanguage))
             }.onSuccess { previews = it; RemixTakeCache.put(context, chosen.id, it) }
                 .onFailure {
@@ -135,13 +137,15 @@ fun VoiceAccentSheet(
                 if (cached != null) {
                     previews = cached
                     Analytics.capture("voice_accent_previews_reused", mapOf("accent" to first.id))
-                } else generate(first)
+                // No change left this month: new takes could never be kept,
+                // so none are made (the server would refuse them too).
+                } else if (com.roro.futurevoice.data.VoiceChanges.canChange) generate(first)
             }
         }
     }
 
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { if (!saving && !generating) onDismiss() }) {
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { if (!saving && !generating && !removing) onDismiss() }) {
         Column(
             Modifier.fillMaxWidth().bottomBarInsets()
                 .verticalScroll(rememberScrollState())
@@ -182,11 +186,19 @@ fun VoiceAccentSheet(
                 }
             }
 
+            // With no change left, takes already on file can still be heard;
+            // the line says when a change comes back (iOS footer).
+            if (!canChange && !generating) {
+                Text(com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
             val chosen = accent
             if (chosen != null && previews.isEmpty()) {
                 Button(
                     onClick = { generate(chosen) },
-                    enabled = !generating,
+                    enabled = !generating && canChange,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (generating) {
@@ -232,27 +244,11 @@ fun VoiceAccentSheet(
                     }
                 }
 
+                // Saving a take is the learner's one change for 30 days, so
+                // it is asked, not done on the tap (iOS 2026-10-09).
                 Button(
-                    onClick = {
-                        val id = picked ?: return@Button
-                        saving = true; error = null
-                        scope.launch {
-                            runCatching {
-                                client.save(id, "nawana clone", chosen?.prompt.orEmpty())
-                            }.onSuccess { newId ->
-                                onApplied(newId, chosen?.id.orEmpty())
-                                onDismiss()
-                            }.onFailure {
-                                // A remembered take can go stale upstream; the next
-                                // pick of this accent makes fresh ones instead of
-                                // failing again.
-                                chosen?.let { RemixTakeCache.drop(context, it.id) }
-                                error = context.getString(R.string.couldnt_apply_that_take_try_again)
-                            }
-                            saving = false
-                        }
-                    },
-                    enabled = picked != null && !saving,
+                    onClick = { if (picked != null) confirmingApply = true },
+                    enabled = picked != null && !saving && canChange,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (saving) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -261,7 +257,8 @@ fun VoiceAccentSheet(
                 // Said out loud because it can't be undone from here: the old
                 // voice is deleted upstream, and the only way back is a fresh
                 // clone from the saved recording.
-                Text(stringResource(R.string.this_replaces_your_current_voice),
+                Text(if (canChange) stringResource(R.string.this_replaces_your_current_voice)
+                    else com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedButton(
@@ -271,33 +268,116 @@ fun VoiceAccentSheet(
                 ) { Text(stringResource(R.string.try_again)) }
             }
 
+            // The way back — LAST, its own section, so it reads as an action
+            // and not a fourth option (iOS `removeAccentSection`).
+            if (canRemoveAccent) {
+                HorizontalDivider()
+                OutlinedButton(
+                    onClick = { confirmingRemove = true },
+                    enabled = !generating && !saving && !removing && canChange,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (removing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Text(stringResource(R.string.remove_accent), color = MaterialTheme.colorScheme.error)
+                }
+                Text(stringResource(R.string.back_to_the_voice_your_recording_makes_on_its_own),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
             error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
             }
         }
     }
-}
 
-
-/**
- * Build a fresh clone from the recording kept on the phone — the only way
- * back to the un-accented voice, and the same path "Remove accent" takes.
- * Null when there is no recording to rebuild from, which leaves the live
- * voice in place.
- */
-internal suspend fun rebuiltFromSample(context: android.content.Context): String? {
-    val sample = VoiceComparison.sampleFile(context.filesDir)
-    if (!sample.exists()) return null
-    return runCatching {
-        com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
-            // iOS sends `voiceDisplayName` — the library entry says whose it is.
-            name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
-            sample = sample,
-            removeBackgroundNoise = false,
+    if (confirmingApply) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmingApply = false },
+            title = { Text(stringResource(R.string.use_this_voice_q)) },
+            text = { Text(com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    confirmingApply = false
+                    val id = picked ?: return@TextButton
+                    val chosen = accent
+                    player.stop()
+                    saving = true; error = null
+                    scope.launch {
+                        runCatching {
+                            client.save(id,
+                                // iOS sends `voiceDisplayName` — the library entry says whose it is.
+                                com.roro.futurevoice.data.VoiceName.display(context,
+                                    com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+                                chosen?.prompt.orEmpty())
+                        }.onSuccess { newId ->
+                            onApplied(newId, chosen?.id.orEmpty())
+                            onDismiss()
+                        }.onFailure { e ->
+                            if (e is com.roro.futurevoice.data.VoiceChangeLimit) {
+                                // Someone else's device used it first; say the date.
+                                com.roro.futurevoice.data.VoiceChanges.refresh()
+                                error = e.line(context)
+                            } else {
+                                // A remembered take can go stale upstream; the next
+                                // pick of this accent makes fresh ones instead of
+                                // failing again.
+                                chosen?.let { RemixTakeCache.drop(context, it.id) }
+                                error = context.getString(R.string.couldnt_apply_that_take_try_again)
+                            }
+                        }
+                        saving = false
+                    }
+                }) { Text(stringResource(R.string.use_this_voice)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmingApply = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
-    }.getOrNull()
+    }
+    if (confirmingRemove) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmingRemove = false },
+            title = { Text(stringResource(R.string.remove_the_accent)) },
+            text = { Text(stringResource(R.string.rebuilds_your_voice_from_your_saved_recording_which_takes_a_90f303) +
+                "\n\n" + com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    confirmingRemove = false
+                    player.stop()
+                    removing = true; error = null
+                    Analytics.capture("voice_accent_removed")
+                    scope.launch {
+                        runCatching {
+                            com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
+                                name = com.roro.futurevoice.data.VoiceName.display(context,
+                                    com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+                                sample = VoiceComparison.sampleFile(context.filesDir),
+                                removeBackgroundNoise = false,
+                            )
+                        }.onSuccess { newId ->
+                            onApplied(newId, "")
+                            onDismiss()
+                        }.onFailure { e ->
+                            error = (e as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context)
+                                ?: e.localizedMessage ?: e.toString()
+                        }
+                        removing = false
+                    }
+                }) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmingRemove = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 }
+
 
 /**
  * The accent picked in setup (iOS `AppState.preferredAccentId`, 2026-10-08) —
@@ -419,21 +499,33 @@ internal suspend fun remixIntoDefaultAccent(
     val accent = VoiceAccentCatalog.options(targetLanguage)
         .firstOrNull { it.id == PreferredAccent.get(context) }
         ?: VoiceAccentCatalog.defaultAccent(targetLanguage) ?: return null
+    val client = VoiceRemixClient(AuthRepository())
+    // Takes for EVERY accent of the language, in parallel, while the plain
+    // clone still exists (iOS 2026-10-09). Takes add no voice, and once the
+    // remix below replaces the clone, takes for another accent would need the
+    // clone rebuilt first — a whole voice spent just to LISTEN. With these on
+    // file a later accent change is one save, nothing else.
+    val text = VoiceAccentCatalog.sampleText(targetLanguage)
+    val made: Map<String, List<VoiceRemixClient.Preview>> = kotlinx.coroutines.coroutineScope {
+        VoiceAccentCatalog.options(targetLanguage).map { option ->
+            async {
+                option.id to runCatching {
+                    client.previews(voiceId, option.prompt, text, VoiceAccentCatalog.PROMPT_STRENGTH)
+                }.getOrNull()
+            }
+        }.awaitAll()
+    }.mapNotNull { (id, takes) -> takes?.takeIf { it.isNotEmpty() }?.let { id to it } }.toMap()
+    made.forEach { (id, takes) -> RemixTakeCache.put(context, id, takes) }
     return runCatching {
-        val client = VoiceRemixClient(AuthRepository())
-        val takes = client.previews(
-            voiceId, accent.prompt,
-            VoiceAccentCatalog.sampleText(targetLanguage),
-            VoiceAccentCatalog.PROMPT_STRENGTH,
-        )
-        val take = takes.firstOrNull() ?: error("no_takes")
-        RemixTakeCache.put(context, accent.id, takes)
+        val take = made[accent.id]?.firstOrNull() ?: error("no_takes")
+        // "default": part of the clone it follows, not the learner's change.
         val newId = client.save(
             take.id,
             // iOS sends `voiceDisplayName` — the library entry says whose it is.
             com.roro.futurevoice.data.VoiceName.display(context,
                 com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
             accent.prompt,
+            purpose = "default",
         )
         newId to accent
     }.onFailure { e ->

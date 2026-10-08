@@ -233,6 +233,11 @@ fun VoicePage(
     var rebuilding by remember { mutableStateOf(false) }
     var rebuildError by remember { mutableStateOf<String?>(null) }
     val hasSample = VoiceComparison.exists(context.filesDir)
+    val changeStatus by com.roro.futurevoice.data.VoiceChanges.status
+        .collectAsStateWithLifecycle()
+    val canChange = changeStatus?.canChange ?: true
+    val againLine = com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt)
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
     MeSubpage(stringResource(R.string.voice), onBack) {
         GroupedSectionHeader(stringResource(R.string.voice))
         GroupedCard {
@@ -283,15 +288,20 @@ fun VoicePage(
                     stringResource(R.string.hear_your_recording_and_your_clone_side_by_side),
                     kind = MeRowKind.ACTION, onClick = onCompare)
             }
+            // Both make a new voice — the learner's one change per 30 days
+            // (iOS 2026-10-09). With none left they say when, instead of
+            // leading to a minute of reading and a refusal.
             GroupedRowDivider()
             MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
-                stringResource(R.string.replace_your_current_clone_with_a_new_one),
-                kind = MeRowKind.DESTRUCTIVE, onClick = onRerecord)
+                if (canChange) stringResource(R.string.replace_your_current_clone_with_a_new_one)
+                else againLine,
+                kind = MeRowKind.DESTRUCTIVE, enabled = canChange, onClick = onRerecord)
             if (hasSample) {
                 GroupedRowDivider()
                 MeRow(Icons.Filled.Sync, stringResource(R.string.regenerate_from_saved_recording),
-                    stringResource(R.string.rebuild_the_clone_from_your_last_recording),
-                    kind = MeRowKind.ACTION, enabled = !rebuilding,
+                    if (canChange) stringResource(R.string.rebuild_the_clone_from_your_last_recording)
+                    else againLine,
+                    kind = MeRowKind.ACTION, enabled = !rebuilding && canChange,
                     trailing = if (rebuilding) ({
                         androidx.compose.material3.CircularProgressIndicator(
                             Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -353,7 +363,8 @@ fun VoicePage(
             onDismissRequest = { confirmingRebuild = false },
             title = { Text(stringResource(R.string.rebuild_your_voice)) },
             text = { Text(stringResource(
-                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
+                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704) +
+                "\n\n" + com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     confirmingRebuild = false
@@ -369,7 +380,10 @@ fun VoicePage(
                                     removeBackgroundNoise = false,
                                 )
                         }.onSuccess { onRebuilt(it); onApplyDefaultAccent() }
-                            .onFailure { rebuildError = it.localizedMessage ?: it.toString() }
+                            .onFailure {
+                                rebuildError = (it as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context)
+                                    ?: it.localizedMessage ?: it.toString()
+                            }
                         rebuilding = false
                     }
                 }) {

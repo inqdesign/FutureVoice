@@ -250,6 +250,11 @@
     <string name="which_accent_do_you_want_to_speak_with">想用哪种口音说？</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流利的自己会用你的声音、带着这个口音说话。听过之后也能再换。</string>
     <string name="your_voice_as_you_recorded_it_with_no_accent_applied">保留录音时的声音，不另外加口音</string>
+    <string name="voice_change_already">最近 30 天内已经换过声音了。</string>
+    <string name="voice_change_again_from">%s 起可以再换声音。</string>
+    <string name="voice_change_uses_it">声音每 30 天可以换一次，现在换就会用掉这一次。</string>
+    <string name="use_this_voice_q">要用这个声音吗？</string>
+    <string name="voice_replaced_only_if_kept">只有在你选用新声音时，现在的声音才会被换掉。</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">你们怎么说话？</string>
     <string name="rel_how_do_you_and_s_talk">你和%1$s怎么说话？</string>

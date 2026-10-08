@@ -62,6 +62,10 @@ class VoiceCloneClient(private val auth: AuthRepository) {
             android.util.Log.i("VoiceClone", "response ${resp.code} ${resp.protocol} after ${System.currentTimeMillis() - started} ms")
             val text = resp.body.string()
             if (resp.code !in 200..299) {
+                // The month's one voice change is used (2026-10-09). Checked
+                // first: its body also carries `voice_limit_reached`, for
+                // builds that predate it.
+                com.roro.futurevoice.data.VoiceChangeLimit.from(resp.code, text)?.let { throw it }
                 // Upstream 400 carrying voice_limit_reached is OUR capacity
                 // problem — callers show a human message, not the JSON.
                 if (text.contains("voice_limit_reached")) throw VoiceLimitReached()

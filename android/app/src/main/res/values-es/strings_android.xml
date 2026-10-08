@@ -266,6 +266,11 @@
     <string name="which_accent_do_you_want_to_speak_with">¿Con qué acento quieres hablar?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Tu yo fluido habla con este acento, con tu propia voz. Cuando lo escuches, puedes cambiarlo.</string>
     <string name="your_voice_as_you_recorded_it_with_no_accent_applied">Tu voz tal como la grabaste, sin añadir ningún acento</string>
+    <string name="voice_change_already">Ya cambiaste tu voz en los últimos 30 días.</string>
+    <string name="voice_change_again_from">Podrás volver a cambiar tu voz a partir del %s.</string>
+    <string name="voice_change_uses_it">Puedes cambiar tu voz una vez cada 30 días, y con esto usas ese cambio.</string>
+    <string name="use_this_voice_q">¿Usar esta voz?</string>
+    <string name="voice_replaced_only_if_kept">Tu voz actual solo cambia si te quedas con la nueva.</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">¿Cómo se hablan?</string>
     <string name="rel_how_do_you_and_s_talk">¿Cómo hablas con %1$s?</string>

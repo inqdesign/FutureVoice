@@ -465,6 +465,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * That is why applying a take is an explicit choice on its own button and
      * never a side effect of auditioning one.
      */
+    /** Read the learner's voice change allowance (iOS
+     *  `refreshVoiceChangeStatus`) — see [com.roro.futurevoice.data.VoiceChanges]. */
+    fun refreshVoiceChangeStatus() {
+        viewModelScope.launch { com.roro.futurevoice.data.VoiceChanges.refresh() }
+    }
+
+    /** True unless the server said no change is left. */
+    val canChangeVoice: Boolean get() = com.roro.futurevoice.data.VoiceChanges.canChange
+
     fun adoptRemixedVoice(newId: String, accentId: String, source: String = "picker") {
         val old = _state.value.voiceId
         if (newId == old) return
@@ -473,6 +482,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         _state.update { it.copy(voiceId = newId, voiceAccentId = accentId) }
         prefs.edit().putString(ACCENT_KEY, accentId).apply()
         warmFreeTalkOpeners()
+        refreshVoiceChangeStatus()
         viewModelScope.launch {
             if (old != null) {
                 runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
@@ -507,6 +517,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         // A re-record from Me bakes now; during onboarding the hold makes
         // this a no-op and the meet act's "Start talking" bakes instead.
         warmFreeTalkOpeners()
+        refreshVoiceChangeStatus()
     }
 
     /**
@@ -596,6 +607,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         }
         if (result.isSuccess) {
             applyDefaultAccent()
+            com.roro.futurevoice.data.VoiceChanges.refresh()
             com.roro.futurevoice.core.Analytics.capture("voice_parked_revive", mapOf("result" to "ok"))
             com.roro.futurevoice.core.Telemetry.log("voice_parked_revive", mapOf("result" to "ok"))
         }

@@ -370,11 +370,16 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
      */
     suspend fun save(
         generatedVoiceId: String, name: String, voiceDescription: String,
+        /** `"default"` marks the remix made right after a clone (the accent
+         *  picked in setup) — part of that clone, not the learner's one voice
+         *  change (`_shared/voice-changes.ts`). */
+        purpose: String? = null,
     ): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val body = buildJsonObject {
             put("generated_voice_id", generatedVoiceId)
             put("voice_name", name)
             put("voice_description", voiceDescription)
+            if (purpose != null) put("purpose", purpose)
         }
         Edge.json.decodeFromString(SavedResponse.serializer(), post(body.toString())).voice_id
     }
@@ -388,6 +393,7 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
             .build()
         return slowClient.newCall(req).execute().use { resp ->
             val raw = resp.body.string()
+            com.roro.futurevoice.data.VoiceChangeLimit.from(resp.code, raw)?.let { throw it }
             if (resp.code !in 200..299) throw EdgeError.Http(resp.code, raw.take(512))
             raw
         }

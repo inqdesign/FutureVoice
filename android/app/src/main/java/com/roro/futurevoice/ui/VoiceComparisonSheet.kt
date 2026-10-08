@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,6 +81,10 @@ object VoiceComparison {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VoiceComparisonSheet(voiceId: String, targetLanguage: String, onRerecord: () -> Unit, onDismiss: () -> Unit) {
+    val changeStatus by com.roro.futurevoice.data.VoiceChanges.status
+        .collectAsStateWithLifecycle()
+    val canChange = changeStatus?.canChange ?: true
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val opening = remember(targetLanguage) { VoiceComparison.opening(targetLanguage) }
@@ -168,13 +173,22 @@ fun VoiceComparisonSheet(voiceId: String, targetLanguage: String, onRerecord: ()
                 Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Dismiss first: the caller walks to the record step, and a
                     // sheet still up over that transition is a stale comparison.
-                    TextButton(onClick = { stopAll(); onDismiss(); onRerecord() }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Filled.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        Text("  " + stringResource(R.string.not_me_record_again), color = MaterialTheme.colorScheme.error)
+                    // A re-record is the learner's one change for 30 days; with
+                    // none left the button would lead to a minute of reading
+                    // and a refusal (iOS 2026-10-09).
+                    TextButton(onClick = { stopAll(); onDismiss(); onRerecord() }, enabled = canChange,
+                        modifier = Modifier.fillMaxWidth()) {
+                        val tint = if (canChange) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        Icon(Icons.Filled.Mic, contentDescription = null, tint = tint)
+                        Text("  " + stringResource(R.string.not_me_record_again), color = tint)
                     }
                 }
             }
-            GroupedFooter(stringResource(R.string.recording_again_during_setup_is_free_and_the_voice_you_have_75a508))
+            GroupedFooter(if (canChange)
+                stringResource(R.string.voice_replaced_only_if_kept) + " " +
+                    com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)
+                else com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt))
         }
     }
 }

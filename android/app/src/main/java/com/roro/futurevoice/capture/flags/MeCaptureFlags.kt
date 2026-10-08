@@ -37,4 +37,8 @@ object MeCaptureFlags {
     /** The talk-minute pack with a seeded price, so the sheet, Usage and the
      *  paywall can draw it without Play (iOS seeds `Pack(… product: nil)`). */
     @JvmField var previewPack: BillingService.Pack? = null
+
+    /** Voice changes left (iOS `-voiceChangesLeft`): 0 draws every voice
+     *  control locked, without asking the server. */
+    @JvmField var voiceChangesLeft: Int? = null
 }
