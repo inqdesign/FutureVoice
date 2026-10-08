@@ -79,12 +79,56 @@ class WeeklyTestTest {
             prompt = "Yesterday I goed to the park with my friends.",
             answer = "Yesterday I went to the park with my friends.",
             focus = "I goed to the park", example = "I went to the park")
-        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "yesterday I went to the park with my friends"))
-        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "I went to the park with my friends yesterday."))
-        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "Yesterday I goed to the park with my friends."))
-        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "went"))
-        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, ""))
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "yesterday I went to the park with my friends", "en"))
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "I went to the park with my friends yesterday.", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "Yesterday I goed to the park with my friends.", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "went", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "", "en"))
         assertEquals("went", WeeklyTestEngine.hintWords(it))
+    }
+
+    /** Real spoken turns (iOS `scripts/correction-cases-en.json`) run 29–34
+     *  words in one comma-joined sentence. Each correction still becomes an
+     *  item: the clause holding the slip, hesitation taken out, and an answer
+     *  said the way dictation writes it ("I have", not "I've") passes. */
+    @Test fun rewriteItemsFromRealSpokenTurns() {
+        data class Case(val line: String, val was: String, val now: String, val prompt: String, val said: String)
+        val cases = listOf(
+            Case("Hey, um yeah, we can definitely do so, but I had a bad experience uh right uh before and checking if that is consistent uh issue or temporal issue.",
+                "checking if that is consistent uh issue or temporal issue",
+                "checking if it's a consistent issue or a temporary issue",
+                "but I had a bad experience right before and checking if that is consistent issue or temporal issue.",
+                "I had a bad experience right before and I am checking if it is a consistent issue or a temporary issue"),
+            Case("It was uh it was really tiring, we started at like six in the morning and the truck it came late, so we finish only at midnight and I have to unpack everything tomorrow.",
+                "we finish only at midnight", "we only finished at midnight",
+                "so we finish only at midnight and I have to unpack everything tomorrow.",
+                "so we only finished at midnight and I have to unpack everything tomorrow"),
+            Case("I am working in a startup since three years, I do mostly the backend, um, and recently I take also some product decisions because we are very small team.",
+                "I am working in a startup since three years", "I've been working at a startup for three years",
+                "I am working in a startup since three years",
+                "I have been working at a startup for three years"),
+            Case("I am working in a startup since three years, I do mostly the backend, um, and recently I take also some product decisions because we are very small team.",
+                "I take also some product decisions", "I also make some product decisions",
+                "and recently I take also some product decisions because we are very small team.",
+                "and recently I also make some product decisions because we are a very small team"),
+            Case("Not yet, I am planning to, but every time I want to bring it up he is busy, so I think I will just send a message and explain him the situation.",
+                "explain him the situation", "explain the situation to him",
+                "so I think I will just send a message and explain him the situation.",
+                "uh so I think I will just send a message and explain the situation to him"),
+        )
+        val now = System.currentTimeMillis()
+        for (c in cases) {
+            val turn = Turn(role = TurnRole.USER, transcript = c.line)
+            val session = Session(userId = "u", targetLanguage = "en", startedAt = now, endedAt = now,
+                turns = listOf(turn))
+            val card = DrillCard(sourcePhrase = c.was, targetPhrase = c.now, reason = "", createdAt = now,
+                nextReviewAt = now, box = 0, sourceSessionId = session.id, sourceTurnId = turn.id)
+            val it = WeeklyTestEngine.rewriteItem(card, mapOf(session.id to session), "en")
+            assertNotNull("no item for: ${c.was}", it)
+            assertEquals(c.prompt, it!!.prompt)
+            assertTrue(c.said, WeeklyTestEngine.isCorrectRewrite(it, c.said, "en"))
+            assertFalse(it.prompt, WeeklyTestEngine.isCorrectRewrite(it, it.prompt, "en"))
+        }
     }
 
     /** Right only in the answer's order, with every tile and no decoy left in. */
@@ -274,7 +318,7 @@ class WeeklyTestTest {
                 WeeklyTestItem.Kind.BUILD -> error("tile items are no longer dealt")
                 WeeklyTestItem.Kind.REWRITE -> {
                     assertNotNull(i.cardId)
-                    assertTrue(WeeklyTestEngine.isCorrectRewrite(i, i.answer))
+                    assertTrue(WeeklyTestEngine.isCorrectRewrite(i, i.answer, "en"))
                 }
                 WeeklyTestItem.Kind.LISTEN -> assertEquals(
                     WordSplitter.words(i.answer, "en").sorted(), i.options.sorted())

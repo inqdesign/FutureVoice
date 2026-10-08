@@ -7,6 +7,7 @@ import com.roro.futurevoice.talk.GrammarFocus
 import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.DrillCard
 import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.ShadowScore
 import com.roro.futurevoice.talk.SessionMode
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
@@ -762,12 +763,21 @@ object WeeklyTestEngine {
     }
 
     /**
-     * One correction card as a rewrite item. The sentence is the one the
-     * learner said, found in the turn the card came from; the answer is that
-     * sentence with the card's fix applied. `focus` / `example` carry the fix
-     * itself (what was said → what it should be), which is what the grade and
-     * the hint read. Null when the sentence is too short or long to be worth
-     * writing out, or the fix changes nothing.
+     * One correction card as a rewrite item. What the learner reads is what
+     * they said around the slip: the sentence it sits in, or — when that
+     * sentence runs past [rewriteClauseFrom] words, which a spoken turn
+     * usually does, since the recognizer joins it with commas — just the
+     * comma-bounded clause holding it. The answer is that same span with the
+     * card's fix applied. Hesitation sounds ([SpeechLibrary.fillers]) are
+     * taken out of both: they are not the mistake, and "consistent uh issue"
+     * is hard to read back. `focus` / `example` carry the fix itself (what was
+     * said → what it should be), which is what the grade and the hint read.
+     * Null when the span is still too short or long to write out, or the fix
+     * changes nothing.
+     *
+     * Until the clause cut (iOS 2026-10-08, same day as the item) the whole
+     * sentence had to fit 25 words, and real spoken turns run 29–34 words —
+     * so almost no real correction ever became an item.
      */
     fun rewriteItem(card: DrillCard, sessions: Map<String, Session>, language: String): WeeklyTestItem? {
         val was = card.sourcePhrase.trim()
@@ -779,17 +789,72 @@ object WeeklyTestEngine {
         if (turn != null) {
             for (sentence in TalkCurriculum.sentences(turn.transcript)) {
                 val range = foldedRange(sentence, was) ?: continue
-                said = sentence
-                answer = sentence.replaceRange(range, now)
+                val span = if (WordSplitter.count(sentence, language) > rewriteClauseFrom(language))
+                    clauseRange(range, sentence) else sentence.indices
+                val clause = sentence.substring(span.first, span.last + 1)
+                val local = foldedRange(clause, was) ?: continue
+                said = clause
+                answer = clause.replaceRange(local, now)
                 break
             }
         }
+        said = withoutFillers(said, language)
+        answer = withoutFillers(answer, language)
         val n = WordSplitter.count(said, language)
         if (n < 3 || n > (if (WordSplitter.spaced(language)) 25 else 40) ||
             CarryoverDetector.normalized(said) == CarryoverDetector.normalized(answer)) return null
         return WeeklyTestItem(kind = WeeklyTestItem.Kind.REWRITE, prompt = said, answer = answer,
             sessionId = card.sourceSessionId, turnId = card.sourceTurnId,
             cardId = card.id, note = card.reason, focus = was, example = now)
+    }
+
+    /** Past this many words a sentence is cut to the clause holding the slip. */
+    fun rewriteClauseFrom(language: String): Int = if (WordSplitter.spaced(language)) 16 else 30
+
+    private val CLAUSE_MARKS = setOf(',', ';', '、', '，', '；')
+
+    /** The comma/semicolon-bounded stretch of [sentence] holding [range],
+     *  trimmed. The slip's own span is never cut, even when it crosses a
+     *  comma. */
+    fun clauseRange(range: IntRange, sentence: String): IntRange {
+        var lower = range.first
+        while (lower > 0 && sentence[lower - 1] !in CLAUSE_MARKS) lower--
+        var upper = range.last + 1
+        while (upper < sentence.length && sentence[upper] !in CLAUSE_MARKS) upper++
+        while (lower < upper && sentence[lower].isWhitespace()) lower++
+        while (upper > lower && sentence[upper - 1].isWhitespace()) upper--
+        return lower until upper
+    }
+
+    private fun isPunctuation(c: Char): Boolean = when (Character.getType(c).toByte()) {
+        Character.CONNECTOR_PUNCTUATION, Character.DASH_PUNCTUATION, Character.START_PUNCTUATION,
+        Character.END_PUNCTUATION, Character.INITIAL_QUOTE_PUNCTUATION, Character.FINAL_QUOTE_PUNCTUATION,
+        Character.OTHER_PUNCTUATION -> true
+        else -> false
+    }
+
+    /** [text] with the language's hesitation sounds taken out, and the
+     *  commas they leave behind tidied. Spaced languages drop whole words
+     *  only; Japanese drops the sound wherever it stands, with its 、. */
+    fun withoutFillers(text: String, language: String): String {
+        val fillers = SpeechLibrary.fillers(language).map { it.lowercase() }.toSet() -
+            "este"   // Spanish "this" as often as a filler
+        if (fillers.isEmpty()) return text
+        var out: String
+        if (WordSplitter.spaced(language)) {
+            out = text.split(' ').filter { it.isNotEmpty() }.filter { word ->
+                word.lowercase().trim(::isPunctuation) !in fillers
+            }.joinToString(" ")
+        } else {
+            out = text
+            for (f in fillers.sortedByDescending { it.length }) {
+                out = out.replace(f + "、", "")
+                out = out.replace(f, "")
+            }
+        }
+        // ", ," and a leading comma are what a removed "um," leaves behind.
+        while (out.contains(", ,")) out = out.replace(", ,", ",")
+        return out.trim { it == ',' || it == '、' || it.isWhitespace() }
     }
 
     /** A stored tile item ([WeeklyTestItem.Kind.BUILD]) as the rewrite that
@@ -1029,18 +1094,28 @@ object WeeklyTestEngine {
      * fixed word alone is not a rewrite. Nothing else counts against it: how
      * the rest is worded is the learner's. (iOS `isCorrect(_:rewritten:)` —
      * renamed here because Kotlin can't overload on the label.)
+     *
+     * Everything is compared through [ShadowScore.expandForDiff] first:
+     * dictation writes "I've" as "I have" and digits for numbers, and an
+     * answer said right must not fail on how the recognizer spelled it.
+     * Spaces are compared away too (Korean spacing is the recognizer's).
      */
-    fun isCorrectRewrite(item: WeeklyTestItem, rewritten: String): Boolean {
-        val given = CarryoverDetector.normalized(rewritten)
+    fun isCorrectRewrite(item: WeeklyTestItem, rewrittenRaw: String, language: String): Boolean {
+        // Hesitation is never the mistake, in the slip or in the answer.
+        fun expand(t: String) = ShadowScore.expandForDiff(withoutFillers(t, language), language)
+        fun squeezed(t: String) = CarryoverDetector.normalized(expand(t)).replace(" ", "")
+        val given = CarryoverDetector.normalized(expand(rewrittenRaw))
         if (given.isEmpty()) return false
-        if (given.contains(CarryoverDetector.normalized(item.answer))) return true
-        val was = item.focus ?: return false
-        val now = item.example ?: return false
+        if (given.contains(CarryoverDetector.normalized(expand(item.answer))) ||
+            squeezed(rewrittenRaw).contains(squeezed(item.answer))) return true
+        val was = expand(item.focus ?: return false)
+        val now = expand(item.example ?: return false)
+        val rewritten = expand(rewrittenRaw)
         // A pure reorder adds and drops nothing; only the fix itself shows it.
         val fixKey = CarryoverDetector.normalized(now)
         if (!CarryoverDetector.fixChangesWords(was, now)) return fixKey.isNotEmpty() && given.contains(fixKey)
         return CarryoverDetector.showsTheFixInText(was, now, rewritten) &&
-            CarryoverDetector.sharedWordRatio(item.answer, rewritten) >= 0.6
+            CarryoverDetector.sharedWordRatio(expand(item.answer), rewritten) >= 0.6
     }
 
     /** The words the fix put in — the hint a rewrite item offers. */

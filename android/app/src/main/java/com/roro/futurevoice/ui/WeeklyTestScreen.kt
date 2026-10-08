@@ -293,7 +293,7 @@ fun WeeklyTestScreen(
 
     fun checkRewrite(item: WeeklyTestItem, test: WeeklyTest) {
         val given = rewriteText.trim()
-        settle(WeeklyTestEngine.isCorrectRewrite(item, given), given, test, item)
+        settle(WeeklyTestEngine.isCorrectRewrite(item, given, test.targetLanguage), given, test, item)
     }
 
     suspend fun buildNew() {
