@@ -324,6 +324,13 @@ final class AppState: ObservableObject {
     /// the picker reopens with nothing checked and the learner can't tell
     /// what they already chose. Cleared by anything that mints a clone
     /// straight from the recording again — that drops the remix with it.
+    /// The accent picked in setup (2026-10-08) — what `applyDefaultAccent`
+    /// remixes a new clone into. Nil = the language's default.
+    var preferredAccentId: String? {
+        get { UserDefaults.standard.string(forKey: "futurevoice.preferredAccentId") }
+        set { UserDefaults.standard.set(newValue, forKey: "futurevoice.preferredAccentId") }
+    }
+
     @Published var voiceAccentId: String? {
         didSet { UserDefaults.standard.set(voiceAccentId, forKey: Self.voiceAccentIdKey) }
     }
@@ -657,6 +664,7 @@ final class AppState: ObservableObject {
     func reviveParkedVoice(from sample: URL) async throws {
         do {
             try await regenerateVoiceClone(fromSampleAt: sample)
+            await applyDefaultAccent()
             Analytics.capture("voice_parked_revive", ["result": "ok"])
             Telemetry.log("voice_parked_revive", ["result": "ok"])
         } catch {
@@ -1506,14 +1514,75 @@ final class AppState: ObservableObject {
     /// Same replacement contract as a re-record: the outgoing id is staged
     /// and deleted only after the new voice is in place, and audio already
     /// synthesized keeps playing through the PhraseAudioStore lineage.
-    func adoptRemixedVoice(_ newId: String, accentId: String) async {
+    func adoptRemixedVoice(_ newId: String, accentId: String, source: String = "picker") async {
         guard newId != voiceCloneId else { return }
         if let old = voiceCloneId { pendingDeleteVoiceId = old }
         voiceCloneId = newId
         voiceAccentId = accentId
-        Analytics.capture("voice_accent_applied", ["accent": accentId])
+        Analytics.capture("voice_accent_applied", ["accent": accentId, "source": source])
         await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()
+    }
+
+    /// Remix takes already made from THIS recording, per accent id, for as
+    /// long as the app runs (2026-10-08). The accent sheet used to drop its
+    /// takes on close, so cancelling and reopening it on the same accent paid
+    /// for a fresh remix (~25 s and upstream credits) of the same voice;
+    /// `applyDefaultAccent` also gets three takes and kept one. Takes from
+    /// the same recording are interchangeable whichever plain clone they came
+    /// from, so a rebuild of that clone doesn't invalidate them — a NEW
+    /// recording does (`recordingKey`).
+    private var remixTakeCache: (recording: String, takes: [String: [ElevenLabsClient.RemixPreview]])?
+
+    /// Which recording the voice is made from: the sample file's size and
+    /// date, which change with every new take.
+    private var recordingKey: String? {
+        guard let url = VoiceSampleStore.shared.url,
+              let a = try? FileManager.default.attributesOfItem(atPath: url.path) else { return nil }
+        let size = (a[.size] as? NSNumber)?.intValue ?? 0
+        let date = (a[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        return "\(size)-\(Int(date))"
+    }
+
+    func cachedRemixTakes(for accentId: String) -> [ElevenLabsClient.RemixPreview]? {
+        guard let key = recordingKey, let cache = remixTakeCache, cache.recording == key else { return nil }
+        return cache.takes[accentId]
+    }
+
+    func cacheRemixTakes(_ takes: [ElevenLabsClient.RemixPreview], for accentId: String) {
+        guard let key = recordingKey else { return }
+        if remixTakeCache?.recording != key { remixTakeCache = (key, [:]) }
+        remixTakeCache?.takes[accentId] = takes.isEmpty ? nil : takes
+    }
+
+    /// Remix a clone straight off the recording into the target language's
+    /// default accent (`VoiceAccentCatalog.defaultAccent`). Runs after every
+    /// rebuild that isn't the learner asking for the plain voice: the first
+    /// clone, a re-record, Me → Voice's rebuild, a parked voice coming back.
+    /// The first take is kept — the accent is the point here, and the
+    /// learner can still audition takes or another accent from the pills.
+    /// Best-effort: a failure leaves the plain clone, which works.
+    func applyDefaultAccent() async {
+        let options = VoiceAccentCatalog.options(for: targetLanguage)
+        guard voiceAccentId == nil, let voiceId = voiceCloneId,
+              let accent = options.first(where: { $0.id == preferredAccentId })
+                ?? VoiceAccentCatalog.defaultAccent(for: targetLanguage) else { return }
+        do {
+            let takes = try await ElevenLabsClient.shared.remixVoicePreviews(
+                voiceId: voiceId,
+                voiceDescription: accent.prompt,
+                text: VoiceAccentCatalog.sampleText(for: targetLanguage),
+                promptStrength: VoiceAccentCatalog.promptStrength)
+            guard let take = takes.first else { throw URLError(.zeroByteResource) }
+            cacheRemixTakes(takes, for: accent.id)
+            let newId = try await ElevenLabsClient.shared.saveRemixedVoice(
+                generatedVoiceId: take.id, name: voiceDisplayName,
+                voiceDescription: accent.prompt)
+            await adoptRemixedVoice(newId, accentId: accent.id, source: "default")
+        } catch {
+            Analytics.capture("voice_accent_default_failed",
+                              ["reason": String(error.localizedDescription.prefix(200))])
+        }
     }
 
     /// WHY it failed, not just THAT it failed. Without the status + reason the

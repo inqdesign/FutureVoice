@@ -7,6 +7,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { priceFor, charge, serviceRoleClient } from "../_shared/credits.ts"
+import { deleteSpeakAs } from "../_shared/default-accent.ts"
 
 const SOURCE_FN = "elevenlabs-voice-delete"
 
@@ -46,6 +47,11 @@ Deno.serve(async (req) => {
     idempotencyKey: idemKey,
     metadata: { voice_id: body.voice_id },
   })
+
+  // The default-accent remix this voice spoke through, if the server made
+  // one (_shared/default-accent.ts) — the app never knew its id, so this is
+  // the only place it can go with its source.
+  await deleteSpeakAs(serviceRoleClient(), apiKey, user.id, body.voice_id)
 
   const upstream = await fetch(`https://api.elevenlabs.io/v1/voices/${body.voice_id}`, {
     method: "DELETE",

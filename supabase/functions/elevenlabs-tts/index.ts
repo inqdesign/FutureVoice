@@ -18,6 +18,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { calmExclamations, restoreCharacters } from "../_shared/calm-exclamations.ts"
+import { speakAs, guessAccentLanguage, BUSY } from "../_shared/default-accent.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
          beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
          dailyCapResponse, sceneCapResponse, rateLimitedResponse,
@@ -201,6 +202,20 @@ Deno.serve(async (req) => {
           return null
         })()
 
+  // The voice upstream actually speaks with. An old build's plain clone
+  // speaks English/German through its default-accent remix (made on its
+  // first such line — see _shared/default-accent.ts); everything else is
+  // the voice asked for. Started beside the ownership check (it reads only
+  // this user's own rows), awaited before the upstream fetch. Never fails.
+  const speakAsPromise: Promise<string> = PRESET_VOICE_IDS.has(body.voice_id)
+    ? Promise.resolve(body.voice_id)
+    : speakAs({
+        admin: billingClient(), apiKey: Deno.env.get("ELEVENLABS_API_KEY") ?? "",
+        userId: user.id, voiceId: body.voice_id,
+        language: body.language_code ?? guessAccentLanguage(body.text),
+        create: true,
+      })
+
   // Model allowlist: the fidelity model costs ~2x upstream at the SAME price to
   // us, so it's reserved for the purposes meant to use it (scenes + once-per-
   // user entry lines, all cached). A fidelity request on any other purpose is
@@ -334,6 +349,19 @@ Deno.serve(async (req) => {
   // (_shared/calm-exclamations.ts). Same length, so nothing else moves.
   const spokenText = calmExclamations(body.text)
 
+  const upstreamVoiceId = await speakAsPromise
+  if (upstreamVoiceId === BUSY) {
+    // Another line is making this voice's accent remix; nothing was
+    // synthesized, so nothing is owed.
+    if (ch.ok && ch.charged > 0) {
+      await refund({
+        supabase, userId: user.id, amount: ch.charged,
+        action, sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+        metadata: { reason: "default_accent_busy" },
+      })
+    }
+    return errorResponse(503, "voice is being prepared, retry shortly")
+  }
   const fetchOptions: RequestInit = {
     method: "POST",
     headers: {
@@ -398,7 +426,7 @@ Deno.serve(async (req) => {
         // audible in a cloned voice). Streaming is the live call's path and
         // its first byte is what the learner is waiting on; the buffered path
         // below deliberately doesn't send this, fidelity surfaces don't race.
-        `https://api.elevenlabs.io/v1/text-to-speech/${body.voice_id}/stream?output_format=${format}&optimize_streaming_latency=3`,
+        `https://api.elevenlabs.io/v1/text-to-speech/${upstreamVoiceId}/stream?output_format=${format}&optimize_streaming_latency=3`,
         fetchOptions,
       )
       last = r
@@ -415,8 +443,8 @@ Deno.serve(async (req) => {
     upstream = last!
   } else {
     const path = body.with_timestamps
-      ? `/v1/text-to-speech/${body.voice_id}/with-timestamps`
-      : `/v1/text-to-speech/${body.voice_id}`
+      ? `/v1/text-to-speech/${upstreamVoiceId}/with-timestamps`
+      : `/v1/text-to-speech/${upstreamVoiceId}`
     upstream = await fetch(`https://api.elevenlabs.io${path}`, fetchOptions)
   }
 

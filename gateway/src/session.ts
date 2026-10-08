@@ -23,7 +23,7 @@ import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
-import { verifyUser, ownsVoice, recordGeminiUsage, type Env } from "./supabase"
+import { verifyUser, ownsVoice, speakAsVoice, recordGeminiUsage, type Env } from "./supabase"
 import { TalkBilling, type WallCode } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
@@ -51,6 +51,9 @@ export class CallSession implements DurableObject {
   private replyEngine: ReplyEngine | null = null
   private eleven: ElevenTTS | null = null
   private started = false
+  /** The voice upstream speaks with — the app's own, or its default-accent
+   *  remix (`speakAsVoice`). */
+  private upstreamVoiceId: string | null = null
   private ended = false
 
   /** The conversation so far, replayed into every reply call. */
@@ -677,11 +680,13 @@ export class CallSession implements DurableObject {
         void preflight.catch(() => null)
         return this.fail("unauthorized", "invalid session token")
       }
-      const [owns, wall] = await Promise.all([
+      const [owns, wall, speakAs] = await Promise.all([
         ownsVoice(this.env, userId, msg.voiceId)
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
         preflight,
+        speakAsVoice(this.env, userId, msg.voiceId, msg.language || "en"),
       ])
+      this.upstreamVoiceId = speakAs
       if (owns === "forbidden") {
         return this.fail("voice_forbidden", "voice_id not permitted")
       }
@@ -729,7 +734,7 @@ export class CallSession implements DurableObject {
     this.eleven = new ElevenTTS(
       {
         apiKey: this.env.ELEVENLABS_API_KEY,
-        voiceId: msg.voiceId,
+        voiceId: this.upstreamVoiceId ?? msg.voiceId,
         modelId: CONVERSATION_MODEL,
         outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
         speed: clampSpeed(msg.speed),

@@ -79,6 +79,11 @@ final class ElevenLabsClient {
         // caller decides from the measured SNR.
         body.appendFormField(name: "remove_background_noise",
                              value: removeBackgroundNoise ? "true" : "false", boundary: boundary)
+        // This build applies the default accent itself (`AppState
+        // .applyDefaultAccent`) — and leaves a clone plain on purpose after
+        // "Remove accent". Without it the server would remix the clone for
+        // us at the speech side, as it does for older builds.
+        body.appendFormField(name: "accent_by_app", value: "true", boundary: boundary)
         for url in sampleAudioURLs {
             let data = try Data(contentsOf: url)
             let filename = url.lastPathComponent

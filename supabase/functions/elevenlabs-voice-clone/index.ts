@@ -110,7 +110,13 @@ Deno.serve(async (req) => {
 
   const incoming = await req.formData()
   const outgoing = new FormData()
+  // Builds from 1.1.5 remix every new clone into the language's default
+  // accent themselves and say so here; a clone without it is an older
+  // build's, and the server applies the accent for it at the speech side
+  // (_shared/default-accent.ts). Ours, not ElevenLabs' — never forwarded.
+  const accentByApp = incoming.get("accent_by_app") === "true"
   for (const [key, value] of incoming.entries()) {
+    if (key === "accent_by_app") continue
     if (value instanceof File) outgoing.append(key, value, value.name)
     else outgoing.append(key, value)
   }
@@ -169,6 +175,13 @@ Deno.serve(async (req) => {
     .select("id")
     .maybeSingle()
   if (insErr) console.error("voice_clones insert failed", insErr)
+  // Its own update, so a database without the column (deploy order) loses
+  // only the default accent, never the clone.
+  if (cloneRow?.id && !accentByApp) {
+    const { error: flagErr } = await supabase.from("voice_clones")
+      .update({ accent_by_server: true }).eq("id", cloneRow.id)
+    if (flagErr) console.error("accent_by_server flag failed", flagErr.message)
+  }
 
   // Keep the recording for a DAY. This function is the ONLY place it exists
   // on our side — the multipart body is forwarded upstream and then forgotten

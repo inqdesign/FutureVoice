@@ -249,15 +249,16 @@ struct VoiceRevivalView: View {
     @ViewBuilder
     private var accentSection: some View {
         let options = VoiceAccentCatalog.options(for: appState.targetLanguage)
-        if !options.isEmpty {
+        // A single option is the default remix itself — nothing to choose.
+        if options.count > 1 {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Accent")
                     .font(.headline)
                 HStack(spacing: 6) {
-                    accentPill(label: "accent.original",
-                               selected: appState.voiceAccentId == nil,
-                               loading: removingAccent,
-                               action: removeAccent)
+                    // "Original" (the plain clone) is off the pills since
+                    // 2026-10-08: every clone is remixed into the default
+                    // accent, and the plain voice lives behind Me → Voice →
+                    // Remove accent. Kept, not deleted — founder's call.
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,

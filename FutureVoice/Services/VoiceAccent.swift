@@ -27,10 +27,24 @@ enum VoiceAccentCatalog {
         return byLanguage[code] ?? []
     }
 
+    /// The accent every new clone is remixed into — the FIRST option of the
+    /// language (2026-10-08, founder decision; German learners had the same
+    /// invented accent). A clone straight off the recording has no accent of its
+    /// own in the target language — from a Korean take the model invents one
+    /// per line, and ~75% of English lines came out Indian (measured
+    /// 2026-09-30); a remix fixed it 30/30. So nobody gets the un-remixed
+    /// voice by default: American, with the catalog's others to pick from.
+    /// The plain clone is still reachable ("Remove accent" in Me → Voice),
+    /// just no longer on the onboarding pills. Nil = no remix for this
+    /// language.
+    static func defaultAccent(for language: String) -> VoiceAccent? {
+        options(for: language).first
+    }
+
     /// The line the remix previews speak (ElevenLabs wants 100–1000 chars).
     /// Written to surface accent-revealing sounds — for English: t-flapping
-    /// ("water", "better"), the bath/trap split ("can't", "half past"),
-    /// rhoticity ("park", "there"), and a tag question's intonation.
+    /// ("water"), the bath/trap split ("can't", "half past"), rhoticity
+    /// ("water"), and a tag question's intonation.
     static func sampleText(for language: String) -> String {
         let code = LanguageCatalog.language(language)?.code ?? "en"
         return samples[code] ?? samples["en"]!
@@ -65,14 +79,24 @@ enum VoiceAccentCatalog {
             VoiceAccent(id: "en-AU", label: "Australian",
                         prompt: prompt("Australian English accent")),
         ],
+        // One option: the default remix, nothing to pick — the pills only
+        // show where there is a choice (`options.count > 1`).
+        "de": [
+            VoiceAccent(id: "de-DE", label: "Standard German",
+                        prompt: prompt("Standard German accent (Hochdeutsch) as spoken in Germany")),
+        ],
     ]
 
     private static let samples: [String: String] = [
-        "en": "Right — let me think about tomorrow. I'll grab a bottle of water "
-            + "and a cup of coffee on the way, probably around half past eight. "
-            + "I can't be late again; the last bus leaves at twenty to nine. "
-            + "Honestly, the weather's been better lately, hasn't it? Maybe "
-            + "I'll walk through the park instead, and I'll call you when I "
-            + "get there.",
+        // Kept just over upstream's 100-character floor (2026-10-08): the
+        // line is only what the takes say, and 330 characters spent ~3x the
+        // preview audio for no better judgement of the accent.
+        "en": "I'll grab a bottle of water and a coffee around half past eight. "
+            + "I can't be late again, the bus leaves at nine, doesn't it?",
+        // Accent tells: ich/ach, the vocalised r ("aber", "später"), ü/ö,
+        // final devoicing ("Tag", "Hund"), and the glottal stop before
+        // vowel onsets.
+        "de": "Morgen früh hole ich zwei Brötchen beim Bäcker, danach fahre ich "
+            + "mit dem Zug nach München. Ich rufe dich später an, okay?",
     ]
 }

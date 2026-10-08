@@ -505,6 +505,7 @@ struct MeTab: View {
             defer { regeneratingVoice = false }
             do {
                 try await appState.regenerateVoiceClone(fromSampleAt: url)
+                await appState.applyDefaultAccent()
             } catch {
                 // This used to be `try?`: the spinner stopped, nothing changed,
                 // and the failure was invisible — the user walked away thinking

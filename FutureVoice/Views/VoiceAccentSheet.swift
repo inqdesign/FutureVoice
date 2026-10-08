@@ -232,8 +232,9 @@ struct VoiceAccentSheet: View {
         }
     }
 
-    /// Pick an accent → generate fresh takes for it. Re-tapping the same
-    /// accent regenerates: "none of these sound like me" needs a way forward.
+    /// Pick an accent → its takes: the ones this recording already has, or
+    /// fresh ones. Re-tapping the accent whose takes are on screen
+    /// regenerates: "none of these sound like me" needs a way forward.
     ///
     /// The takes are ALWAYS remixed from the un-accented clone. Applying an
     /// accent replaces the live voice and deletes the clone it came from, so
@@ -249,9 +250,19 @@ struct VoiceAccentSheet: View {
         guard appState.voiceCloneId != nil else { return }
         player.stop()
         playingId = nil
+        // Takes this recording already has for this accent are shown, never
+        // made again (`AppState.cachedRemixTakes`) — closing the sheet and
+        // reopening it used to pay for the same remix twice. Only re-tapping
+        // the accent whose takes are ON SCREEN asks for new ones.
+        let regenerate = accent == option && !previews.isEmpty
         accent = option
-        previews = []
         pickedPreviewId = nil
+        if !regenerate, let cached = appState.cachedRemixTakes(for: option.id) {
+            previews = cached
+            Analytics.capture("voice_accent_previews_reused", ["accent": option.id])
+            return
+        }
+        previews = []
         generating = true
         Analytics.capture("voice_accent_previews_requested", ["accent": option.id])
         Task {
@@ -268,6 +279,7 @@ struct VoiceAccentSheet: View {
                     text: VoiceAccentCatalog.sampleText(for: appState.targetLanguage),
                     promptStrength: VoiceAccentCatalog.promptStrength)
                 // The user may have tapped another accent while this ran.
+                appState.cacheRemixTakes(takes, for: option.id)
                 guard accent == option else { return }
                 previews = takes
                 if takes.isEmpty {
@@ -339,6 +351,9 @@ struct VoiceAccentSheet: View {
                 onApplied?()
                 dismiss()
             } catch {
+                // A remembered take can go stale upstream; the next pick of
+                // this accent makes fresh ones instead of failing again.
+                appState.cacheRemixTakes([], for: accent.id)
                 self.error = error.localizedDescription
             }
         }

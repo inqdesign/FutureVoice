@@ -1054,7 +1054,9 @@ struct VoiceCloneOnboardingView: View {
         .padding(.horizontal, 24)
     }
 
-    /// The accent, as four pills on the screen itself — never behind a
+    /// The accent, as pills on the screen itself (since 2026-10-08 the
+    /// voice arrives already remixed into the default — see
+    /// `AppState.applyDefaultAccent` — and "Original" is off the row) — never behind a
     /// button (2026-09-30, user decision). It used to be a footnote link,
     /// "Choose your accent", and a clone recorded by a Korean speaker, left on
     /// whatever accent the model guessed, came out sounding Indian: the
@@ -1071,17 +1073,17 @@ struct VoiceCloneOnboardingView: View {
     @ViewBuilder
     private var accentSection: some View {
         let options = VoiceAccentCatalog.options(for: appState.targetLanguage)
-        if !options.isEmpty {
+        // A single option is the default remix itself — nothing to choose.
+        if options.count > 1 {
             VStack(spacing: 8) {
                 Text("Accent")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 6) {
-                    accentPill(label: "accent.original",
-                               selected: appState.voiceAccentId == nil,
-                               loading: removingAccent,
-                               action: removeAccentFromMeet)
-                        .disabled(appState.voiceAccentId != nil && !VoiceSampleStore.shared.exists)
+                    // "Original" (the plain clone) is off the pills since
+                    // 2026-10-08: every clone is remixed into the default
+                    // accent, and the plain voice lives behind Me → Voice →
+                    // Remove accent. Kept, not deleted — founder's call.
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
@@ -1561,6 +1563,9 @@ struct VoiceCloneOnboardingView: View {
                 try await appState.regenerateVoiceClone(fromSampleAt: url,
                                                         scriptLanguage: scriptLanguageCode)
                 UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
+                // Before the greeting, so the first words are already in the
+                // accent the voice will keep.
+                await appState.applyDefaultAccent()
                 // First words in the user's own voice. Best-effort: a failed
                 // synthesis never blocks the flow — the act just opens silent.
                 if let voiceId = appState.voiceCloneId {

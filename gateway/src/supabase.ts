@@ -75,6 +75,37 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
   return rows[0]?.parked_at ? "parked" : "ok"
 }
 
+/** The voice a call actually speaks with (2026-10-08). An old build's plain
+ *  clone speaks its target language through the default-accent remix the
+ *  `elevenlabs-tts` function made on its first English/German line
+ *  (supabase/functions/_shared/default-accent.ts); the gateway only USES one
+ *  that exists, it never makes one — by the time a call starts, the
+ *  greeting and the openers have spoken. A separate query from `ownsVoice`
+ *  on purpose: a database without the columns answers with an error, and
+ *  that must be "the plain voice", never a refused call. */
+export async function speakAsVoice(env: Env, userId: string, voiceId: string, language: string): Promise<string> {
+  if (PRESET_VOICE_IDS.has(voiceId)) return voiceId
+  try {
+    const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
+      `?user_id=eq.${encodeURIComponent(userId)}` +
+      `&elevenlabs_voice_id=eq.${encodeURIComponent(voiceId)}` +
+      `&select=speak_as_voice_id,speak_as_language&limit=1`
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    })
+    if (!r.ok) return voiceId
+    const rows = (await r.json()) as { speak_as_voice_id?: string | null; speak_as_language?: string | null }[]
+    const row = Array.isArray(rows) ? rows[0] : undefined
+    const base = language.toLowerCase().split("-")[0]
+    return row?.speak_as_voice_id && row.speak_as_language === base ? row.speak_as_voice_id : voiceId
+  } catch {
+    return voiceId
+  }
+}
+
 /** One 0-delta `usage_ledger` row with what a call cost upstream (2026-10-08).
  *
  *  The call's Gemini work — the live transcriber and every reply — goes

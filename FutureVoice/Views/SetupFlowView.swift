@@ -8,6 +8,12 @@ import SwiftUI
 ///   1. Native language   ← explanations/translations speak this
 ///   2. Target language   ← what the fluent self speaks (multi-language:
 ///                          more can be enrolled later from the Talk header)
+///   2b. Accent           ← only where the target has accents to pick
+///                          (English): the voice is remixed into it right
+///                          after the clone, so the pick costs nothing more
+///                          (2026-10-08 — before, every English clone was
+///                          made American and a British learner paid for a
+///                          second remix to get theirs)
 ///   3. Level             ← CEFR self-rating; calibrates every conversation
 ///   4. Daily goal        ← minutes of talk per day; the Talk home ring's
 ///                          100%. The learner's own number — plans decide
@@ -30,6 +36,8 @@ struct SetupFlowView: View {
     /// Set once the learner taps a target — from then on a match with the app
     /// language is their choice, not a default to move.
     @State private var targetPickedByHand = false
+    /// The accent picked on the accent step — nil until the target has one.
+    @State private var accentId: String?
     /// Same key the Talk home ring and Me's picker read — the ring's 100%.
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     @State private var goalMinutes = 10
@@ -55,20 +63,33 @@ struct SetupFlowView: View {
     /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
     private static let nativeChoices = LanguageCatalog.nativeChoices
 
-    private static let totalSteps = 4
+    private enum Step { case native, target, accent, level, goal }
+
+    /// The accent step exists only where there is a choice to make.
+    private var accentOptions: [VoiceAccent] {
+        VoiceAccentCatalog.options(for: targetLanguage)
+    }
+
+    private var steps: [Step] {
+        accentOptions.count > 1 ? [.native, .target, .accent, .level, .goal]
+                                : [.native, .target, .level, .goal]
+    }
+
+    private var current: Step { steps[min(step, steps.count - 1)] }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ProgressView(value: Double(step + 1), total: Double(Self.totalSteps))
+                ProgressView(value: Double(step + 1), total: Double(steps.count))
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                 Form {
-                    switch step {
-                    case 0: nativeStep
-                    case 1: targetStep
-                    case 2: levelStep
-                    default: goalStep
+                    switch current {
+                    case .native: nativeStep
+                    case .target: targetStep
+                    case .accent: accentStep
+                    case .level:  levelStep
+                    case .goal:   goalStep
                     }
                 }
                 Spacer(minLength: 0)
@@ -102,7 +123,7 @@ struct SetupFlowView: View {
             #if DEBUG
             // Screenshot harness: `-onboardingStep <n>` jumps to a card.
             if UserDefaults.standard.object(forKey: "onboardingStep") != nil {
-                step = min(Self.totalSteps - 1, max(0, UserDefaults.standard.integer(forKey: "onboardingStep")))
+                step = min(steps.count - 1, max(0, UserDefaults.standard.integer(forKey: "onboardingStep")))
             }
             #endif
         }
@@ -113,14 +134,15 @@ struct SetupFlowView: View {
     /// learner's own language (see `UILanguage.isOnboarding`), which is the
     /// only sane answer on a screen where the target hasn't been picked yet.
     private var title: String {
-        switch step {
+        switch current {
         // "Your language?" carried the same ambiguity the Me row did — on the
         // very first screen, before any context, it reads as "which language
         // am I here to learn?". Say native.
-        case 0: return chrome("Your native language?")
-        case 1: return chrome("Learn which language?")
-        case 2: return chrome("Your level?")
-        default: return chrome("Your daily goal?")
+        case .native: return chrome("Your native language?")
+        case .target: return chrome("Learn which language?")
+        case .accent: return chrome("Which accent?")
+        case .level:  return chrome("Your level?")
+        case .goal:   return chrome("Your daily goal?")
         }
     }
 
@@ -145,6 +167,29 @@ struct SetupFlowView: View {
             Text(explain("Which language do you want to speak?"))
         } footer: {
             Text(explain("Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup."))
+        }
+    }
+
+    // MARK: - Step 2b · Accent
+
+    /// Which accent the fluent self speaks with. Nothing can be heard yet —
+    /// the voice doesn't exist — so this is a name pick, and the meet act's
+    /// pills let them change it once it's audible. What it buys is that the
+    /// ONE remix made after the clone (`AppState.applyDefaultAccent`) is
+    /// already theirs.
+    private var accentStep: some View {
+        Section {
+            ForEach(accentOptions) { option in
+                pickRow(
+                    title: explain(String.LocalizationValue(option.label)),
+                    subtitle: nil,
+                    selected: (accentId ?? accentOptions.first?.id) == option.id
+                ) { accentId = option.id }
+            }
+        } header: {
+            Text(explain("Which accent do you want to speak with?"))
+        } footer: {
+            Text(explain("Your fluent self speaks with this accent, in your own voice. You can change it once you've heard it."))
         }
     }
 
@@ -291,16 +336,18 @@ struct SetupFlowView: View {
 
     /// One tappable choice — title + caption on the left, a checkmark on the
     /// right when selected. Same shape on every step so the flow reads as one.
-    private func pickRow(title: String, subtitle: String, selected: Bool,
+    private func pickRow(title: String, subtitle: String?, selected: Bool,
                          action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .foregroundStyle(.primary)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 if selected {
@@ -361,7 +408,7 @@ struct SetupFlowView: View {
             Button {
                 advance()
             } label: {
-                Text(step < Self.totalSteps - 1 ? "Next" : "Continue")
+                Text(step < steps.count - 1 ? "Next" : "Continue")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -392,11 +439,11 @@ struct SetupFlowView: View {
     }
 
     private func advance() {
-        if step < Self.totalSteps - 1 {
+        if step < steps.count - 1 {
             // Leaving the language step: move a pre-selection that now
             // matches the app language. Leaving the target step with it is the
             // learner's own choice and stands.
-            if step == 0, !targetPickedByHand,
+            if current == .native, !targetPickedByHand,
                LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
                 targetLanguage = defaultTarget
             }
@@ -416,5 +463,9 @@ struct SetupFlowView: View {
         appState.completeSetup(target: targetLanguage,
                                native: nativeLanguage,
                                level: level)
+        // The accent the first clone is remixed into. A pick made for a
+        // target they then moved away from doesn't belong to this one.
+        let picked = accentOptions.contains { $0.id == accentId } ? accentId : nil
+        appState.preferredAccentId = picked ?? accentOptions.first?.id
     }
 }

@@ -1,9 +1,13 @@
 import SwiftUI
 import PhotosUI
 
-/// First-run persona collection — four light cards only: name, home, and the
-/// two chip picks (interests feed the news rail, situations steer scenario
-/// suggestions). The narrative "tell me about…" answers (occupation,
+/// First-run persona collection — three light cards only: name, home, and
+/// interests (they feed the news rail). The fourth card, "What do you want to
+/// be able to do in English?", was cut on 2026-10-08 (founder): two seconds of
+/// chips, never revisited, and the first call learns what someone actually
+/// needs the language for far better (`about_user`); its slot in onboarding
+/// went to the accent question (`SetupFlowView`). `persona.situations` stays
+/// editable in Me → Profile and is still read where it is set. The narrative "tell me about…" answers (occupation,
 /// household, quirks) are deliberately NOT asked here — the first talk works
 /// generic-but-warm, and `PersonaDeepenSheet` asks for the rich version right
 /// after it, when the user has felt why it matters. Later edits happen in the
@@ -13,7 +17,7 @@ struct PersonaIntakeView: View {
     @Environment(\.dismiss) private var dismiss
 
     private enum Step: Int, CaseIterable {
-        case name, home, interests, situations
+        case name, home, interests
     }
 
     @State private var step: Step = .name
@@ -81,7 +85,6 @@ struct PersonaIntakeView: View {
         case .name:       nameStep
         case .home:       homeStep
         case .interests:  interestsStep
-        case .situations: situationsStep
         }
     }
 
@@ -156,17 +159,6 @@ struct PersonaIntakeView: View {
         }
     }
 
-    private var situationsStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: explain("What do you want to be able to do in \(LanguageCatalog.learnerName(appState.targetLanguage))?"),
-                detail: explain("What you pick becomes your goal — practice aims at it."))
-            ChipPickerField(
-                presets: PersonaOnboardingView.situationPresets,
-                selection: $persona.situations)
-        }
-    }
-
     // MARK: - Flow
 
     private var canAdvance: Bool {
@@ -178,10 +170,10 @@ struct PersonaIntakeView: View {
     }
 
     private func advance() {
-        if step == .situations {
+        if step == Step.allCases.last {
             finish()
         } else {
-            withAnimation { step = Step(rawValue: step.rawValue + 1) ?? .situations }
+            withAnimation { step = Step(rawValue: step.rawValue + 1) ?? .interests }
             saveDraft()
         }
     }
