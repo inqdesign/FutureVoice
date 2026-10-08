@@ -1524,14 +1524,17 @@ final class AppState: ObservableObject {
         warmFreeTalkOpeners()
     }
 
-    /// Remix takes already made from THIS recording, per accent id, for as
-    /// long as the app runs (2026-10-08). The accent sheet used to drop its
-    /// takes on close, so cancelling and reopening it on the same accent paid
-    /// for a fresh remix (~25 s and upstream credits) of the same voice;
-    /// `applyDefaultAccent` also gets three takes and kept one. Takes from
-    /// the same recording are interchangeable whichever plain clone they came
-    /// from, so a rebuild of that clone doesn't invalidate them — a NEW
-    /// recording does (`recordingKey`).
+    /// Remix takes already made from THIS recording, per accent id
+    /// (2026-10-08). The accent sheet used to drop its takes on close, so
+    /// cancelling and reopening it on the same accent paid for a fresh remix
+    /// (~25 s and upstream credits) of the same voice; `applyDefaultAccent`
+    /// also gets three takes and kept one. Takes from the same recording are
+    /// interchangeable whichever plain clone they came from, so a rebuild of
+    /// that clone doesn't invalidate them — a NEW recording does
+    /// (`recordingKey`). Kept on disk too, because closing the app in the
+    /// middle of choosing threw the in-memory copy away and the same accent
+    /// was made again on the next open (reported the same day). Caches
+    /// directory: if iOS clears it, the cost is one regeneration.
     private var remixTakeCache: (recording: String, takes: [String: [ElevenLabsClient.RemixPreview]])?
 
     /// Which recording the voice is made from: the sample file's size and
@@ -1544,15 +1547,56 @@ final class AppState: ObservableObject {
         return "\(size)-\(Int(date))"
     }
 
+    private static var remixTakeRoot: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("accent-takes", isDirectory: true)
+    }
+
+    private struct StoredTake: Codable { let id: String; let file: String }
+
     func cachedRemixTakes(for accentId: String) -> [ElevenLabsClient.RemixPreview]? {
-        guard let key = recordingKey, let cache = remixTakeCache, cache.recording == key else { return nil }
-        return cache.takes[accentId]
+        guard let key = recordingKey else { return nil }
+        if let cache = remixTakeCache, cache.recording == key, let takes = cache.takes[accentId] {
+            return takes
+        }
+        // From disk: only this recording's folder is ever there.
+        let dir = Self.remixTakeRoot.appendingPathComponent(key, isDirectory: true)
+        guard let data = try? Data(contentsOf: dir.appendingPathComponent("\(accentId).json")),
+              let stored = try? JSONDecoder().decode([StoredTake].self, from: data) else { return nil }
+        let takes = stored.compactMap { t in
+            (try? Data(contentsOf: dir.appendingPathComponent(t.file)))
+                .map { ElevenLabsClient.RemixPreview(id: t.id, audio: $0) }
+        }
+        guard takes.count == stored.count, !takes.isEmpty else { return nil }
+        if remixTakeCache?.recording != key { remixTakeCache = (key, [:]) }
+        remixTakeCache?.takes[accentId] = takes
+        return takes
     }
 
     func cacheRemixTakes(_ takes: [ElevenLabsClient.RemixPreview], for accentId: String) {
         guard let key = recordingKey else { return }
         if remixTakeCache?.recording != key { remixTakeCache = (key, [:]) }
         remixTakeCache?.takes[accentId] = takes.isEmpty ? nil : takes
+        let fm = FileManager.default
+        let root = Self.remixTakeRoot
+        let dir = root.appendingPathComponent(key, isDirectory: true)
+        // Another recording's takes can never be shown again.
+        for old in (try? fm.contentsOfDirectory(atPath: root.path)) ?? [] where old != key {
+            try? fm.removeItem(at: root.appendingPathComponent(old))
+        }
+        let manifest = dir.appendingPathComponent("\(accentId).json")
+        guard !takes.isEmpty else {
+            try? fm.removeItem(at: manifest)
+            return
+        }
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        var stored: [StoredTake] = []
+        for (i, take) in takes.enumerated() {
+            let file = "\(accentId)-\(i).mp3"
+            guard (try? take.audio.write(to: dir.appendingPathComponent(file))) != nil else { return }
+            stored.append(StoredTake(id: take.id, file: file))
+        }
+        if let data = try? JSONEncoder().encode(stored) { try? data.write(to: manifest) }
     }
 
     /// Remix a clone straight off the recording into the target language's
