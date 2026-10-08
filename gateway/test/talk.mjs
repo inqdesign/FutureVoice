@@ -10,7 +10,7 @@
 // Usage:
 //   node test/talk.mjs --url ws://localhost:8787/call --wav hello16k.wav \
 //     [--token <supabase-jwt>] [--voice <voice_id>] [--lang en] [--native ko]
-//     [--system-file /tmp/fv-prompt-dump/en-a2.txt]
+//     [--system-file /tmp/fv-prompt-dump/en-a2.txt] [--steer "<coach steer>"]
 //     [--whole]   keep going past the first reply (multi-turn wavs: a
 //                 native-language line, a pause the learner fills — see
 //                 test/probe-reread-native.mjs); ends 8 s after the mic
@@ -64,7 +64,11 @@ ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data)
     const flags = ["native", "continues", "reopened"].filter((k) => msg[k]).join(",")
     console.log(stamp(), msg.type, msg.text ?? msg.message ?? "", flags ? `[${flags}]` : "")
-    if (msg.type === "ready") streamMic()
+    if (msg.type === "ready") {
+      // --steer "<text>": coach mode's steer, as the app sends it on `set`.
+      if (args.steer) ws.send(JSON.stringify({ type: "set", steer: args.steer }))
+      streamMic()
+    }
     if (msg.type === "audio_start") sampleRate = msg.sampleRate
     if (msg.type === "audio_end" && !("whole" in args)) finish()
     if (msg.type === "error") { console.error(stamp(), "ERROR", msg); process.exit(1) }

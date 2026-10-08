@@ -232,6 +232,7 @@ export class ReplyEngine {
       console.log(`reply cache refused (${resp.status}): ${detail}`)
       this.cache = null
       this.cacheState = "none"
+      this.ensureCache()   // a new one for the next turn, made while this one answers
       resp = await post(body(model, false).json)
     }
     if (!resp.ok || !resp.body) {
@@ -321,10 +322,11 @@ export class ReplyEngine {
         return
       }
       if (!r.ok || typeof j?.name !== "string") {
-        // 400 = the model won't cache this (too short, unsupported). Don't
-        // ask again for the rest of the call.
+        // A 4xx is an answer about this prompt or model (too short, no such
+        // model, not cacheable) and will be the same next turn: don't ask
+        // again for the rest of the call. A 5xx may pass.
         console.log(`reply cache create failed (${r.status}): ${JSON.stringify(j?.error ?? j).slice(0, 200)}`)
-        this.cacheState = r.status === 400 ? "off" : "none"
+        this.cacheState = r.status >= 400 && r.status < 500 ? "off" : "none"
         return
       }
       this.cache = { name: j.name, model, expiresAt: startedAt + ReplyEngine.cacheTtlSeconds * 1000 }

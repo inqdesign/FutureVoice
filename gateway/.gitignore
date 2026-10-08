@@ -3,3 +3,4 @@ node_modules/
 .dev.vars
 out.wav
 test/.reread-native/
+.reply-check.mjs
