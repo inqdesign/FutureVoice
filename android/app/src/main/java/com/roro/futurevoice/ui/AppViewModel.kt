@@ -465,10 +465,11 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * That is why applying a take is an explicit choice on its own button and
      * never a side effect of auditioning one.
      */
-    fun adoptRemixedVoice(newId: String, accentId: String) {
-        com.roro.futurevoice.core.Analytics.capture("voice_accent_applied")
+    fun adoptRemixedVoice(newId: String, accentId: String, source: String = "picker") {
         val old = _state.value.voiceId
         if (newId == old) return
+        com.roro.futurevoice.core.Analytics.capture("voice_accent_applied",
+            mapOf("accent" to accentId, "source" to source))
         _state.update { it.copy(voiceId = newId, voiceAccentId = accentId) }
         prefs.edit().putString(ACCENT_KEY, accentId).apply()
         warmFreeTalkOpeners()
@@ -477,6 +478,22 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
             }
         }
+    }
+
+    /**
+     * Remix a clone straight off the recording into the target language's
+     * default accent (iOS `AppState.applyDefaultAccent`, 2026-10-08). Runs
+     * after every rebuild that isn't the learner asking for the plain voice:
+     * Me → Voice's rebuild, a parked voice coming back (the onboarding clone
+     * and a re-record do the same inside the clone flow, before the greeting).
+     * Best-effort: a failure leaves the plain clone, which works.
+     */
+    suspend fun applyDefaultAccent() {
+        val st = _state.value
+        if (!st.voiceAccentId.isNullOrEmpty()) return
+        val voiceId = st.voiceId ?: return
+        val (newId, accent) = remixIntoDefaultAccent(appContext, voiceId, st.targetLanguage) ?: return
+        adoptRemixedVoice(newId, accent.id, source = "default")
     }
 
     /** A clone just landed on this device — the server row already exists. */
@@ -576,9 +593,13 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             _state.update { it.copy(voiceId = newId, voiceAccentId = null) }
             if (com.roro.futurevoice.data.DailyCallStore.isEnabled(appContext))
                 com.roro.futurevoice.data.DailyCallScheduler.schedule(appContext)
+        }
+        if (result.isSuccess) {
+            applyDefaultAccent()
             com.roro.futurevoice.core.Analytics.capture("voice_parked_revive", mapOf("result" to "ok"))
             com.roro.futurevoice.core.Telemetry.log("voice_parked_revive", mapOf("result" to "ok"))
-        }.onFailure { e ->
+        }
+        result.onFailure { e ->
             com.roro.futurevoice.core.Analytics.capture("voice_parked_revive", mapOf("result" to "failed"))
             com.roro.futurevoice.core.Telemetry.log("voice_parked_revive",
                 mapOf("result" to "failed", "error" to e.toString().take(200)))

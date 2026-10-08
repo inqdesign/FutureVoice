@@ -414,6 +414,32 @@ fun CloneFlowScreen(
         }
     }
 
+    /**
+     * Back to the voice as recorded — the meet act's old "Original" pill.
+     * Hidden since 2026-10-08 (founder's call): the plain voice is reachable
+     * via Me → Voice → Remove accent. Kept, not deleted, like iOS.
+     */
+    @Suppress("unused")
+    fun removeAccentFromMeet() {
+        if (accentId == null || removingAccent) return
+        mp3.stop()
+        removingAccent = true
+        com.roro.futurevoice.core.Analytics.capture(
+            "voice_accent_removed", mapOf("from" to "meet"))
+        scope.launch {
+            runCatching {
+                VoiceCloneClient(AuthRepository()).cloneVoice(
+                    // iOS sends `voiceDisplayName` — the library entry says whose it is.
+                    name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+                    sample = sampleFile,
+                    removeBackgroundNoise = false,
+                )
+            }.onSuccess { adoptVoice(it, null, greet = true) }
+                .onFailure { e -> error = e.message }
+            removingAccent = false
+        }
+    }
+
     /** Persist the recording, clone, then synthesize the clone's first words
      *  so the meet act can play them. */
     fun performClone() {
@@ -457,12 +483,26 @@ fun CloneFlowScreen(
                 if (signedIn) com.roro.futurevoice.data.VoiceReclaim.clear(context)
                 else com.roro.futurevoice.data.VoiceReclaim.markUnclaimed(context)
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_succeeded")
+                // Into the default accent BEFORE the greeting, so the first
+                // words are already in the accent the voice will keep (iOS
+                // `AppState.applyDefaultAccent`). Best-effort: a failure
+                // keeps the plain clone.
+                remixIntoDefaultAccent(context, voiceId, targetLanguage)?.let { (remixed, accent) ->
+                    clonedVoiceId = remixed
+                    accentId = accent.id
+                    scope.launch {
+                        runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(voiceId) }
+                    }
+                    com.roro.futurevoice.core.Analytics.capture("voice_accent_applied",
+                        mapOf("accent" to accent.id, "source" to "default"))
+                }
+                val greetVoice = clonedVoiceId ?: voiceId
                 // First words in the user's own voice — best-effort: a failed
                 // synthesis opens the act silent, never blocks. Said once, at
                 // the default rung; the pills below are how speed is heard.
                 greeting = runCatching {
                     ElevenLabsClient(auth).synthesize(
-                        voiceId = voiceId,
+                        voiceId = greetVoice,
                         text = VoiceCloneScript.greeting(targetLanguage),
                         purpose = "greeting",
                         speed = com.roro.futurevoice.data.SpeechSpeed.DEFAULT.multiplier(context),
@@ -921,12 +961,16 @@ fun CloneFlowScreen(
                             }
                         }
 
-                        // The accent, as four pills on the screen itself.
-                        // "Original" is the voice as recorded.
+                        // The accent, as pills on the screen itself. Since
+                        // 2026-10-08 the voice arrives already remixed into the
+                        // default (`remixIntoDefaultAccent`, iOS
+                        // `AppState.applyDefaultAccent`) and "Original" is off
+                        // the row.
                         val accentOptions = remember(targetLanguage) {
                             com.roro.futurevoice.data.VoiceAccentCatalog.options(targetLanguage)
                         }
-                        if (accentOptions.isNotEmpty()) {
+                        // A single option is the default remix itself — nothing to choose.
+                        if (accentOptions.size > 1) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -934,30 +978,11 @@ fun CloneFlowScreen(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    AccentPill(
-                                        label = stringResource(R.string.accent_original),
-                                        selected = accentId == null, loading = removingAccent,
-                                        enabled = !removingAccent && (accentId == null || sampleFile.exists()),
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        if (accentId == null || removingAccent) return@AccentPill
-                                        mp3.stop()
-                                        removingAccent = true
-                                        com.roro.futurevoice.core.Analytics.capture(
-                                            "voice_accent_removed", mapOf("from" to "meet"))
-                                        scope.launch {
-                                            runCatching {
-                                                VoiceCloneClient(AuthRepository()).cloneVoice(
-                                                    // iOS sends `voiceDisplayName` — the library entry says whose it is.
-            name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
-                                                    sample = sampleFile,
-                                                    removeBackgroundNoise = false,
-                                                )
-                                            }.onSuccess { adoptVoice(it, null, greet = true) }
-                                                .onFailure { e -> error = e.message }
-                                            removingAccent = false
-                                        }
-                                    }
+                                    // "Original" (the plain clone) is off the pills since
+                                    // 2026-10-08: every clone is remixed into the default
+                                    // accent, and the plain voice lives behind Me → Voice →
+                                    // Remove accent. Kept (`removeAccentFromMeet`), not
+                                    // deleted — founder's call.
                                     accentOptions.forEach { o ->
                                         AccentPill(
                                             label = accentLabel(o),

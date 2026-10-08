@@ -245,6 +245,10 @@
     <string name="accent_american">美式</string>
     <string name="accent_british">英式</string>
     <string name="accent_australian">澳式</string>
+    <string name="accent_standard_german">标准德语</string>
+    <string name="which_accent">想要哪种口音？</string>
+    <string name="which_accent_do_you_want_to_speak_with">想用哪种口音说？</string>
+    <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流利的自己会用你的声音、带着这个口音说话。听过之后也能再换。</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">你们怎么说话？</string>
     <string name="rel_how_do_you_and_s_talk">你和%1$s怎么说话？</string>

@@ -130,6 +130,28 @@ internal fun VoiceRevivalScreen(
     var accentToPick by remember { mutableStateOf<VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
 
+    /**
+     * Back to the voice as recorded. Hidden since 2026-10-08 (founder's call):
+     * the "Original" pill is off the row, the plain voice is reachable via
+     * Me → Voice → Remove accent. Kept, not deleted, like iOS.
+     */
+    @Suppress("unused")
+    fun removeAccent() {
+        if (state.voiceAccentId.isNullOrEmpty() || removingAccent) return
+        player.stop()
+        removingAccent = true
+        scope.launch {
+            runCatching {
+                com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
+                    name = "Future Self",
+                    sample = VoiceComparison.sampleFile(context.filesDir),
+                    removeBackgroundNoise = false,
+                )
+            }.onSuccess { app.adoptRemixedVoice(it, "") }
+            removingAccent = false
+        }
+    }
+
     LaunchedEffect(attempt) {
         stage = RevivalStage.REBUILDING
         // Capture harness: no session, no network — hold the stage asked for
@@ -232,33 +254,17 @@ internal fun VoiceRevivalScreen(
                     val options = remember(state.targetLanguage) {
                         VoiceAccentCatalog.options(state.targetLanguage)
                     }
-                    if (options.isNotEmpty()) {
+                    // A single option is the default remix itself — nothing to choose.
+                    if (options.size > 1) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.accent),
                                 style = MaterialTheme.typography.titleMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                val noAccent = state.voiceAccentId.isNullOrEmpty()
-                                AccentPill(
-                                    label = stringResource(R.string.accent_original),
-                                    selected = noAccent, loading = removingAccent,
-                                    enabled = !removingAccent,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    if (noAccent || removingAccent) return@AccentPill
-                                    player.stop()
-                                    removingAccent = true
-                                    scope.launch {
-                                        // Back to the voice as recorded.
-                                        runCatching {
-                                            com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
-                                                name = "Future Self",
-                                                sample = VoiceComparison.sampleFile(context.filesDir),
-                                                removeBackgroundNoise = false,
-                                            )
-                                        }.onSuccess { app.adoptRemixedVoice(it, "") }
-                                        removingAccent = false
-                                    }
-                                }
+                                // "Original" (the plain clone) is off the pills since
+                                // 2026-10-08: every clone is remixed into the default
+                                // accent, and the plain voice lives behind Me → Voice →
+                                // Remove accent. Kept (`removeAccent` above), not
+                                // deleted — founder's call (iOS `VoiceRevivalView`).
                                 options.forEach { o ->
                                     AccentPill(
                                         label = accentLabel(o),

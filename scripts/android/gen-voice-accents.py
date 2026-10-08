@@ -11,12 +11,15 @@ Run after touching VoiceAccentCatalog:
 
     python3 scripts/android/gen-voice-accents.py
 """
+import os
 import pathlib
 import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-SRC = ROOT / "FutureVoice/Services/VoiceAccent.swift"
+# VOICE_ACCENT_SWIFT points at another checkout's copy (the iOS working tree)
+# when feat/android's own copy of the Swift file is behind.
+SRC = pathlib.Path(os.environ.get("VOICE_ACCENT_SWIFT") or ROOT / "FutureVoice/Services/VoiceAccent.swift")
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/data/VoiceAccent.kt"
 
 src = SRC.read_text()
@@ -68,7 +71,7 @@ rows = "\n".join(
 )
 sample_rows = "\n".join(f'        "{lang}" to "{text}",' for lang, text in samples)
 
-m_strength = re.search(r"static let promptStrength: Double = ([0-9.]+)", SRC.read_text() if "SRC" in globals() else SWIFT.read_text())
+m_strength = re.search(r"static let promptStrength: Double = ([0-9.]+)", src)
 if not m_strength:
     sys.exit("VoiceAccent.swift has no promptStrength")
 strength = m_strength.group(1)
@@ -125,6 +128,13 @@ object VoiceAccentCatalog {{
      *  for that language; v1 ships English only. */
     fun options(language: String): List<VoiceAccent> =
         all.filter {{ it.language == language.take(2) }}
+
+    /**
+     * The accent every new clone is remixed into — the FIRST option of the
+     * language (iOS `VoiceAccentCatalog.defaultAccent(for:)`, 2026-10-08).
+     * Null = no remix for this language.
+     */
+    fun defaultAccent(language: String): VoiceAccent? = options(language).firstOrNull()
 
     private val samples = mapOf(
 {sample_rows}

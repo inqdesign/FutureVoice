@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.HorizontalDivider
@@ -62,11 +63,33 @@ import com.roro.futurevoice.talk.UserPersona
 fun RememberedLinesSection(
     persona: UserPersona,
     onNotesChange: (List<PersonaNote>) -> Unit,
+    /** "Show the talk" (iOS `noteRow`'s context menu): the talk a line was
+     *  heard in, as (session id, its language). Null hides the item. */
+    onShowTalk: ((sessionId: String, language: String) -> Unit)? = null,
 ) {
     val notes = persona.learnedNotes
     val hasFacts = notes.any { it.kind == PersonaNote.Kind.FACT }
     val hasRecent = notes.any { it.kind == PersonaNote.Kind.NOW }
     if (!hasFacts && !hasRecent) return
+
+    // Which language each talk lives in — iOS looks the line's session up
+    // with `SessionStore.loadAcrossLanguages()`, and offers "Show the talk"
+    // only when it is still on the phone.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val talkLanguages by androidx.compose.runtime.produceState<Map<String, String>>(
+        emptyMap(), onShowTalk != null, notes.mapNotNull { it.sessionId }.toSet()) {
+        if (onShowTalk == null) return@produceState
+        val wanted = notes.mapNotNull { it.sessionId }.toSet()
+        if (wanted.isEmpty()) return@produceState
+        val store = com.roro.futurevoice.data.SessionStore.shared(context)
+        val active = com.roro.futurevoice.data.LanguageScope.active(context)
+        val found = mutableMapOf<String, String>()
+        for (lang in (listOf(active) + com.roro.futurevoice.data.LanguageScope.enrolled(context)).distinct()) {
+            store.load(lang).forEach { if (it.id in wanted) found.putIfAbsent(it.id, lang) }
+        }
+        store.load(active)   // leave the store's cache on the active language
+        value = found
+    }
 
     fun replace(n: PersonaNote) = onNotesChange(notes.map { if (it.id == n.id) n else it })
     fun forget(id: String) = onNotesChange(notes.filterNot { it.id == id })
@@ -76,7 +99,11 @@ fun RememberedLinesSection(
         GroupedCard {
             notes.filter { it.kind == kind }.forEachIndexed { i, n ->
                 if (i > 0) GroupedRowDivider(inset = false)
-                NoteRow(n, onChange = ::replace, onForget = { forget(n.id) })
+                val talk = n.sessionId?.let { sid -> talkLanguages[sid]?.let { sid to it } }
+                NoteRow(n, onChange = ::replace, onForget = { forget(n.id) },
+                    onShowTalk = if (talk != null && onShowTalk != null) {
+                        { onShowTalk(talk.first, talk.second) }
+                    } else null)
             }
         }
     }
@@ -114,7 +141,12 @@ fun RememberedLinesSection(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NoteRow(n: PersonaNote, onChange: (PersonaNote) -> Unit, onForget: () -> Unit) {
+private fun NoteRow(
+    n: PersonaNote,
+    onChange: (PersonaNote) -> Unit,
+    onForget: () -> Unit,
+    onShowTalk: (() -> Unit)? = null,
+) {
     var menu by remember { mutableStateOf(false) }
     var rungMenu by remember { mutableStateOf(false) }
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
@@ -195,9 +227,17 @@ private fun NoteRow(n: PersonaNote, onChange: (PersonaNote) -> Unit, onForget: (
                 }
             }
         }
-        // The long-press menu: the rungs, "That's over now" for a line that
-        // fades, and forgetting it outright.
+        // The long-press menu: the talk it was heard in, the rungs, "That's
+        // over now" for a line that fades, and forgetting it outright.
         com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            if (onShowTalk != null) {
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                    text = { Text(stringResource(R.string.show_the_talk)) },
+                    leadingIcon = { Icon(Icons.Filled.GraphicEq, null) },
+                    onClick = { menu = false; onShowTalk() },
+                )
+                com.roro.futurevoice.ui.brand.IosMenuDivider()
+            }
             RungItems(n) { onChange(n.copy(share = it)); menu = false }
             com.roro.futurevoice.ui.brand.IosMenuDivider()
             if (n.kind == PersonaNote.Kind.NOW) {

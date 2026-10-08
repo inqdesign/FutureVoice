@@ -333,6 +333,15 @@ fun RootScreen() {
     }
     var studyDeckKind by remember { mutableStateOf<StudyScheduleStore.Kind?>(null) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
+    /** The talk page was opened from Me → Profile's "Show the talk" (iOS
+     *  presents `ConversationDetailView` over the form): drawn ABOVE the
+     *  editor, in the language the talk was found in, which can be another
+     *  enrolled language than the active one. */
+    var talkOverProfile by remember { mutableStateOf(false) }
+    var detailLanguage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(detailSessionId) {
+        if (detailSessionId == null) { talkOverProfile = false; detailLanguage = null }
+    }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
     /** The book's Watch replays the saved scene (free, no gate); the Watch
      *  tab writes a fresh take. */
@@ -680,7 +689,6 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onBackToSetup = { app.reopenSetup() },
             onFinish = app::savePersona,
-            persistDraft = true,
         )
         // An anonymous session is being looked at for a voice it already
         // made — hold rather than flash the intro before the account act.
@@ -750,12 +758,25 @@ fun RootScreen() {
     // Pages iOS PUSHES (see [rootPushes]) slide in and swipe back; covers,
     // sheets and the call swap in place, as before.
     val rootStack: List<RootRoute> = if (gateScreen != null) listOf(RootRoute.Gate) else buildList {
+        // A call is a cover over everything — including the profile editor,
+        // when a talk opened from it was continued (Continue clears the talk
+        // page, so this can't wait on `talkOverProfile`).
+        val callOverProfile = editProfile && inCall && state.voiceId != null
+        if (callOverProfile) add(RootRoute.Call)
+        // What that talk page opens (a shadow line, its review deck) stays
+        // above the editor too, as iOS presents it over the sheet.
+        val overProfile = editProfile && talkOverProfile
+        if (overProfile) {
+            shadowLine?.let { add(RootRoute.ShadowLine(it)) }
+            if (showDeck) add(RootRoute.Deck)
+            detailSessionId?.let { add(RootRoute.TalkBook(it)) }
+        }
         if (editProfile) add(RootRoute.EditProfile)
         if (shadowHand.isNotEmpty()) add(RootRoute.ShadowHand)
-        shadowLine?.let { add(RootRoute.ShadowLine(it)) }
+        if (!overProfile) shadowLine?.let { add(RootRoute.ShadowLine(it)) }
         watchScenarioId?.let { add(RootRoute.Watch(it)) }
-        if (showDeck) add(RootRoute.Deck)
-        detailSessionId?.let { add(RootRoute.TalkBook(it)) }
+        if (showDeck && !overProfile) add(RootRoute.Deck)
+        if (!overProfile) detailSessionId?.let { add(RootRoute.TalkBook(it)) }
         bookScenarioId?.let { add(RootRoute.ScenarioBook(it)) }
         if (showSentences) add(RootRoute.Sentences)
         library?.let { add(RootRoute.Library(it)) }
@@ -780,7 +801,7 @@ fun RootScreen() {
             if (showPublicIntro) add(RootRoute.PublicIntro)
             if (showPrivacy) add(RootRoute.Privacy)
         }
-        if (inCall && state.voiceId != null) add(RootRoute.Call)
+        if (inCall && state.voiceId != null && !callOverProfile) add(RootRoute.Call)
         add(RootRoute.Tabs)
     }.reversed()
     /** What a committed back on [top] does — exactly its own back button. */
@@ -832,7 +853,7 @@ fun RootScreen() {
         RootRoute.Gate -> gateScreen?.invoke()
         is RootRoute.TalkBook -> TalkDetailScreen(
                 sessionId = r.id,
-                language = state.targetLanguage,
+                language = detailLanguage ?: state.targetLanguage,
                 level = state.level,
                 onBack = { detailSessionId = null },
                 onShadow = { shadowLine = it },
@@ -868,13 +889,19 @@ fun RootScreen() {
                 // The talk page sits above the book, so back returns here.
                 onOpenTalk = { id -> detailSessionId = id },
             )
-        RootRoute.EditProfile -> PersonaIntakeScreen(
+        // iOS `PersonaOnboardingView` (Me → Profile): its own form, saved
+        // page by page — not the first-run intake cards.
+        RootRoute.EditProfile -> PersonaEditScreen(
             initial = state.persona ?: com.roro.futurevoice.talk.UserPersona(),
+            saved = state.persona,
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
-            onBackToSetup = { editProfile = false },
-            onFinish = { app.savePersona(it); editProfile = false },
+            onSave = app::savePersona,
+            onClose = { editProfile = false },
             startStep = editProfileStep,
+            onShowTalk = { id, language ->
+                detailLanguage = language; talkOverProfile = true; detailSessionId = id
+            },
         )
 
         RootRoute.ShadowHand -> ShadowScreen(
@@ -1106,6 +1133,7 @@ fun RootScreen() {
             voiceId = state.voiceId,
             voiceAccentId = state.voiceAccentId,
             onAccentApplied = app::adoptRemixedVoice,
+            onApplyDefaultAccent = app::applyDefaultAccent,
             onEditProfile = { editProfileStep = 0; editProfile = true },
             onEditNotes = { editProfileStep = 1; editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },

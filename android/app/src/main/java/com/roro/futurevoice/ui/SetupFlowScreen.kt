@@ -39,8 +39,12 @@ import com.roro.futurevoice.data.LanguageCatalog
 
 /**
  * First-run quick-answer setup — `SetupFlowView.swift`, one question per
- * screen, mostly taps: native language → target language → level → daily
- * goal. Native leads (a plain fact, so the first question never reads like a
+ * screen, mostly taps: native language → target language → (accent) →
+ * level → daily goal. The accent step shows only where the target has
+ * accents to pick (English): the voice is remixed into it right after the
+ * clone, so the pick costs nothing more (iOS 2026-10-08 — before, every
+ * English clone was made American and a British learner paid for a second
+ * remix to get theirs). Native leads (a plain fact, so the first question never reads like a
  * test); the target scopes the level labels (TOPIK for Korean); the goal
  * closes on a commitment the learner chose. Strings come from the shared
  * catalog — nothing here is authored twice.
@@ -111,6 +115,14 @@ private fun SetupFlowBody(
      *  language is their choice, not a default to move. */
     var targetPickedByHand by remember { mutableStateOf(false) }
     var level by remember { mutableStateOf(initialLevel) }
+    /** The accent picked on the accent step — null until the target has one. */
+    var accentId by remember { mutableStateOf<String?>(null) }
+    /** The accent step exists only where there is a choice to make. */
+    val accentOptions = com.roro.futurevoice.data.VoiceAccentCatalog.options(target)
+    val steps = if (accentOptions.size > 1)
+        listOf(SetupStep.NATIVE, SetupStep.TARGET, SetupStep.ACCENT, SetupStep.LEVEL, SetupStep.GOAL)
+    else listOf(SetupStep.NATIVE, SetupStep.TARGET, SetupStep.LEVEL, SetupStep.GOAL)
+    val current = steps[step.coerceAtMost(steps.size - 1)]
     // Same key the Talk home ring and Me's picker read — the ring's 100%.
     val goalContext = androidx.compose.ui.platform.LocalContext.current
     var goal by remember {
@@ -152,18 +164,19 @@ private fun SetupFlowBody(
      *  app language. Leaving the target step with it is the learner's own
      *  choice and stands. */
     fun resolveCollision() {
-        if (step == 0 && !targetPickedByHand && LanguageCatalog.sameLanguage(target, native))
+        if (current == SetupStep.NATIVE && !targetPickedByHand && LanguageCatalog.sameLanguage(target, native))
             target = defaultTarget(native)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(title = {
-                Text(stringResource(when (step) {
-                    0 -> R.string.your_native_language
-                    1 -> R.string.learn_which_language
-                    2 -> R.string.your_level_5f68da
-                    else -> R.string.your_daily_goal
+                Text(stringResource(when (current) {
+                    SetupStep.NATIVE -> R.string.your_native_language
+                    SetupStep.TARGET -> R.string.learn_which_language
+                    SetupStep.ACCENT -> R.string.which_accent
+                    SetupStep.LEVEL -> R.string.your_level_5f68da
+                    SetupStep.GOAL -> R.string.your_daily_goal
                 }))
             })
         },
@@ -176,40 +189,48 @@ private fun SetupFlowBody(
                 ) { Text(stringResource(R.string.back)) }
                 Button(
                     onClick = {
-                        if (step < 3) { resolveCollision(); step += 1 }
-                        else onFinish(native, target, level, goal)
+                        if (step < steps.size - 1) { resolveCollision(); step += 1 }
+                        else {
+                            // The accent the first clone is remixed into. A
+                            // pick made for a target they then moved away
+                            // from doesn't belong to this one.
+                            val picked = accentId?.takeIf { id -> accentOptions.any { it.id == id } }
+                            PreferredAccent.set(goalContext, picked ?: accentOptions.firstOrNull()?.id)
+                            onFinish(native, target, level, goal)
+                        }
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(if (step < 3) R.string.next else R.string.continue_)) }
+                ) { Text(stringResource(if (step < steps.size - 1) R.string.next else R.string.continue_)) }
             }
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(horizontal = 16.dp)) {
             LinearProgressIndicator(
-                progress = { (step + 1) / 4f },
+                progress = { (step + 1) / steps.size.toFloat() },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             )
             // Step 0 asks its question as the first section's HEADER, because
             // it has two sections and each needs its own — repeating it above
             // them said the same thing twice.
-            if (step > 0) {
+            if (current != SetupStep.NATIVE) {
                 Text(
-                    stringResource(when (step) {
-                        1 -> R.string.which_language_do_you_want_to_speak
-                        2 -> R.string.how_comfortable_are_you_right_now
+                    stringResource(when (current) {
+                        SetupStep.TARGET -> R.string.which_language_do_you_want_to_speak
+                        SetupStep.ACCENT -> R.string.which_accent_do_you_want_to_speak_with
+                        SetupStep.LEVEL -> R.string.how_comfortable_are_you_right_now
                         else -> R.string.how_much_will_you_talk_each_day
                     }),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
             }
-            when (step) {
+            when (current) {
                 // Two groups, not one flat list of sixty-six: a handful of
                 // languages are translated end to end and the rest only get
                 // the coaching text. Picking Vietnamese from a single list
                 // chose an English app without saying so, and the caveat has
                 // to be readable BEFORE the tap.
-                0 -> {
+                SetupStep.NATIVE -> {
                     val groups = remember { LanguageCatalog.nativeGroups() }
                     ChoiceList(groups.translated, selected = native,
                         title = { LanguageCatalog.endonym(it) },
@@ -222,19 +243,30 @@ private fun SetupFlowBody(
                             R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21),
                     ) { native = it; onPickNative(it) }
                 }
-                1 -> ChoiceList(targetChoices, selected = target,
+                SetupStep.TARGET -> ChoiceList(targetChoices, selected = target,
                     title = { LanguageCatalog.endonym(it) },
                     subtitle = { LanguageCatalog.ownName(it, native) },
                     footer = stringResource(R.string.your_fluent_self_speaks_this_language_in_your_own_voice_you_0a47cf)) {
                     target = it
                     targetPickedByHand = true
                 }
-                2 -> ChoiceList(CefrLevel.entries.toList(), selected = level,
+                // Nothing can be heard yet — the voice doesn't exist — so
+                // this is a name pick; the meet act's pills change it once
+                // it's audible. What it buys is that the ONE remix made after
+                // the clone is already theirs.
+                SetupStep.ACCENT -> ChoiceList(accentOptions,
+                    selected = accentOptions.firstOrNull { it.id == accentId } ?: accentOptions.first(),
+                    title = { accentLabel(it) },
+                    subtitle = { null },
+                    footer = stringResource(R.string.your_fluent_self_speaks_with_this_accent_in_your_own_voice)) {
+                    accentId = it.id
+                }
+                SetupStep.LEVEL -> ChoiceList(CefrLevel.entries.toList(), selected = level,
                     title = { LanguageCatalog.levelLabel(it, target) },
                     subtitle = { levelBlurb(it) },
                     footer = stringResource(R.string.you_re_about_to_build_your_fluent_self_another_you_that_alre_1eac72,
                         LanguageCatalog.ownName(target, native))) { level = it }
-                else -> ChoiceList(listOf(5, 10, 15, 20, 30), selected = goal,
+                SetupStep.GOAL -> ChoiceList(listOf(5, 10, 15, 20, 30), selected = goal,
                     title = { stringResource(R.string.lld_min_a_day, it) },
                     subtitle = { goalBlurb(it) },
                     footer = stringResource(R.string.your_goal_your_call_the_ring_on_the_talk_screen_fills_toward_377ab2)) { goal = it }
@@ -248,7 +280,7 @@ private fun <T> ChoiceList(
     options: List<T>,
     selected: T,
     title: @Composable (T) -> String,
-    subtitle: @Composable (T) -> String,
+    subtitle: @Composable (T) -> String?,
     footer: String? = null,
     header: String? = null,
     /** A SECOND group under its own header — what a choice buys can differ
@@ -287,7 +319,7 @@ private fun <T> ChoiceList(
 }
 
 @Composable
-private fun ChoiceRow(title: String, subtitle: String, selected: Boolean, onPick: () -> Unit) {
+private fun ChoiceRow(title: String, subtitle: String?, selected: Boolean, onPick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable { onPick() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -295,7 +327,7 @@ private fun ChoiceRow(title: String, subtitle: String, selected: Boolean, onPick
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall,
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (selected) {
@@ -304,6 +336,8 @@ private fun ChoiceRow(title: String, subtitle: String, selected: Boolean, onPick
         }
     }
 }
+
+private enum class SetupStep { NATIVE, TARGET, ACCENT, LEVEL, GOAL }
 
 @Composable
 internal fun levelBlurb(level: CefrLevel): String = stringResource(when (level) {

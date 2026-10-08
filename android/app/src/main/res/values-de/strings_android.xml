@@ -235,6 +235,10 @@
     <string name="accent_american">Amerikanisch</string>
     <string name="accent_british">Britisch</string>
     <string name="accent_australian">Australisch</string>
+    <string name="accent_standard_german">Hochdeutsch</string>
+    <string name="which_accent">Welcher Akzent?</string>
+    <string name="which_accent_do_you_want_to_speak_with">Mit welchem Akzent möchtest du sprechen?</string>
+    <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Dein fließendes Ich spricht mit diesem Akzent, in deiner eigenen Stimme. Wenn du es gehört hast, kannst du ihn noch ändern.</string>
     <string name="rel_how_do_you_two_talk">Wie sprecht ihr miteinander?</string>
     <string name="rel_how_do_you_and_s_talk">Wie sprecht ihr miteinander, du und %1$s?</string>
     <string name="rel_calls_and_scenes_change_later">So wird in Anrufen und Szenen gesprochen. Du kannst es später ändern.</string>

@@ -48,9 +48,15 @@ import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.talk.UserPersona
 
 /**
- * First-run persona collection — `PersonaIntakeView`, four light cards only:
- * name, home, and the two chip picks (interests feed the news rail,
- * situations steer scenario suggestions). The narrative answers are
+ * First-run persona collection — `PersonaIntakeView`, three light cards only:
+ * name, home, and interests (they feed the news rail). The fourth card,
+ * "What do you want to be able to do in English?", was cut from onboarding on
+ * 2026-10-08 (founder, iOS `PersonaIntakeView`): two seconds of chips, never
+ * revisited, and the first call learns what someone needs the language for
+ * far better; its slot went to the accent question (`SetupFlowScreen`).
+ * `persona.situations` stays editable in Me → Profile (`PersonaEditScreen`,
+ * iOS `PersonaOnboardingView`), which is its own form, not these cards. The
+ * narrative answers are
  * deliberately NOT asked here; the first talk works generic-but-warm.
  * Chip VALUES stay English on purpose (they are prompt material and the
  * selection match key); only labels would localize.
@@ -63,38 +69,28 @@ fun PersonaIntakeScreen(
     nativeLanguage: String,
     onBackToSetup: () -> Unit,
     onFinish: (UserPersona) -> Unit,
-    /** Where the pages open — Me's remembered lines open on the home page. */
-    startStep: Int = 0,
-    /**
-     * First run only (iOS `PersonaIntakeView`'s draft): answers + the current
-     * card survive an app kill and a cross-stage Back, so a relaunch resumes
-     * where the learner left off instead of re-asking the cards. Saved at
-     * every step transition, cleared on finish. Me's profile editor edits
-     * the saved persona directly and keeps no draft.
-     */
-    persistDraft: Boolean = false,
 ) {
+    // iOS `PersonaIntakeView`'s draft: answers + the current card survive an
+    // app kill and a cross-stage Back, so a relaunch resumes where the
+    // learner left off instead of re-asking the cards. Saved at every step
+    // transition, cleared on finish.
     val context = LocalContext.current
     // A draft from an interrupted run wins over [initial].
-    val seed = remember { if (persistDraft) PersonaDraft.load(context) else null }
+    val seed = remember { PersonaDraft.load(context) }
     val from = seed?.first ?: initial
-    var step by remember { mutableIntStateOf((seed?.second ?: startStep).coerceIn(0, 3)) }
+    val lastStep = 2
+    var step by remember { mutableIntStateOf((seed?.second ?: 0).coerceIn(0, lastStep)) }
     var name by remember { mutableStateOf(from.displayName) }
     var city by remember { mutableStateOf(from.city) }
     var country by remember { mutableStateOf(from.country) }
     var stay by remember { mutableStateOf(from.lengthOfStay) }
     var interests by remember { mutableStateOf(from.interests.toSet()) }
-    var situations by remember { mutableStateOf(from.situations.toSet()) }
-    // What the fluent self remembers, with each line's rung — edited here,
-    // saved with the rest on Finish (iOS `rememberedSection`).
-    var notes by remember { mutableStateOf(initial.learnedNotes) }
     fun draft() = initial.copy(
         displayName = name.trim(), city = city.trim(),
         country = country.trim(), lengthOfStay = stay.trim(),
-        interests = interests.toList(), situations = situations.toList(),
-        learnedNotes = notes,
+        interests = interests.toList(),
     )
-    fun saveDraft() { if (persistDraft) PersonaDraft.save(context, draft(), step) }
+    fun saveDraft() { PersonaDraft.save(context, draft(), step) }
     /** Back: a step within the cards, or — on the first — reopen setup.
      *  Answers survive either way: the draft here, the app state there. */
     fun back() {
@@ -120,10 +116,10 @@ fun PersonaIntakeScreen(
                 Button(
                     enabled = canAdvance,
                     onClick = {
-                        if (step < 3) { step += 1; saveDraft() }
+                        if (step < lastStep) { step += 1; saveDraft() }
                         else {
-                            if (persistDraft) PersonaDraft.clear(context)
-                            onFinish(draft().committingNotes(initial.learnedNotes))
+                            PersonaDraft.clear(context)
+                            onFinish(draft())
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -135,7 +131,7 @@ fun PersonaIntakeScreen(
             Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            LinearProgressIndicator(progress = { (step + 1) / 4f }, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { (step + 1) / (lastStep + 1f) }, modifier = Modifier.fillMaxWidth())
             when (step) {
                 0 -> {
                     Header(stringResource(R.string.what_should_i_call_you),
@@ -170,24 +166,12 @@ fun PersonaIntakeScreen(
                     OutlinedTextField(value = stay, onValueChange = { stay = it },
                         label = { Text(stringResource(R.string.how_long_have_you_been_there_optional)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth())
-                    // The remembered lines sit with the facts about the
-                    // learner's life, as on iOS; nothing is drawn before the
-                    // first talk has taught the fluent self anything.
-                    Column { RememberedLinesSection(draft(), onNotesChange = { notes = it }) }
                 }
                 2 -> {
                     Header(stringResource(R.string.what_are_you_into),
                         stringResource(R.string.tap_what_fits_these_pick_your_news_stories_and_fuel_conversa_369fbd))
-                    ChipGrid(INTEREST_PRESETS, interests) { tag ->
+                    ChipGrid(PERSONA_INTEREST_PRESETS, interests) { tag ->
                         interests = if (tag in interests) interests - tag else interests + tag
-                    }
-                }
-                else -> {
-                    Header(stringResource(R.string.what_do_you_want_to_be_able_to_do_in,
-                        LanguageCatalog.ownName(targetLanguage, nativeLanguage)),
-                        stringResource(R.string.what_you_pick_becomes_your_goal_practice_aims_at_it))
-                    ChipGrid(SITUATION_PRESETS, situations) { tag ->
-                        situations = if (tag in situations) situations - tag else situations + tag
                     }
                 }
             }
@@ -215,19 +199,6 @@ private fun ChipGrid(presets: List<String>, selection: Set<String>, onToggle: (S
     }
 }
 
-// `PersonaOnboardingView` presets — stored values stay English (prompt
-// material + selection keys); localizing them would un-select saved chips.
-private val INTEREST_PRESETS = listOf(
-    "AI / tech", "parenting", "language learning", "music", "podcasts",
-    "cooking", "travel", "sports", "fashion", "finance", "science", "art",
-)
-private val SITUATION_PRESETS = listOf(
-    "Work meetings", "Client calls", "Kita / school",
-    "Doctor / clinic", "Travel", "Online shopping",
-    "Customer service", "Streaming / shows", "Reading articles",
-    "Daily small talk",
-)
-
 /**
  * The first-run intake's draft (iOS `futurevoice.personaDraft` /
  * `futurevoice.personaDraftStep`): the answers and the card they were on.
@@ -244,7 +215,7 @@ internal object PersonaDraft {
         }.getOrNull() ?: return null
         // A step from an older, longer flow can point past the end — clamp
         // instead of silently restarting at card one.
-        return persona to p.getInt(STEP_KEY, 0).coerceIn(0, 3)
+        return persona to p.getInt(STEP_KEY, 0).coerceIn(0, 2)
     }
 
     fun save(c: android.content.Context, persona: UserPersona, step: Int) {

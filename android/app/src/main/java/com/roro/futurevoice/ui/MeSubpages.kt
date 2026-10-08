@@ -216,6 +216,9 @@ fun VoicePage(
     onPickSceneVoice: () -> Unit,
     /** A clone rebuilt from the saved recording replaces the live one. */
     onRebuilt: (String) -> Unit,
+    /** Then into the default accent (iOS `AppState.applyDefaultAccent`),
+     *  awaited under the same spinner. */
+    onApplyDefaultAccent: suspend () -> Unit = {},
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -250,7 +253,7 @@ fun VoicePage(
                 GroupedRowDivider()
                 val applied = accents.firstOrNull { it.id == voiceAccentId }
                 MeRow(Icons.Outlined.Language,
-                    applied?.let { stringResource(R.string.accent_746770, it.label) }
+                    applied?.let { stringResource(R.string.accent_746770, accentLabel(it)) }
                         ?: stringResource(R.string.accent_233064),
                     stringResource(R.string.same_voice_the_accent_you_choose),
                     kind = MeRowKind.ACTION, onClick = onPickAccent)
@@ -365,7 +368,7 @@ fun VoicePage(
                                     sample = VoiceComparison.sampleFile(context.filesDir),
                                     removeBackgroundNoise = false,
                                 )
-                        }.onSuccess { onRebuilt(it) }
+                        }.onSuccess { onRebuilt(it); onApplyDefaultAccent() }
                             .onFailure { rebuildError = it.localizedMessage ?: it.toString() }
                         rebuilding = false
                     }

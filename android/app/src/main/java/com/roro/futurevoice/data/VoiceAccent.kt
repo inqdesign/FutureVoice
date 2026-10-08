@@ -47,6 +47,7 @@ object VoiceAccentCatalog {
         VoiceAccent("en", "en-US", "American", prompt("General American English accent")),
         VoiceAccent("en", "en-GB", "British", prompt("British English accent with standard Southern British pronunciation")),
         VoiceAccent("en", "en-AU", "Australian", prompt("Australian English accent")),
+        VoiceAccent("de", "de-DE", "Standard German", prompt("Standard German accent (Hochdeutsch) as spoken in Germany")),
     )
 
     /** Accent choices for a target language. Empty = the picker never shows
@@ -54,8 +55,16 @@ object VoiceAccentCatalog {
     fun options(language: String): List<VoiceAccent> =
         all.filter { it.language == language.take(2) }
 
+    /**
+     * The accent every new clone is remixed into — the FIRST option of the
+     * language (iOS `VoiceAccentCatalog.defaultAccent(for:)`, 2026-10-08).
+     * Null = no remix for this language.
+     */
+    fun defaultAccent(language: String): VoiceAccent? = options(language).firstOrNull()
+
     private val samples = mapOf(
-        "en" to "Right — let me think about tomorrow. I'll grab a bottle of water and a cup of coffee on the way, probably around half past eight. I can't be late again; the last bus leaves at twenty to nine. Honestly, the weather's been better lately, hasn't it? Maybe I'll walk through the park instead, and I'll call you when I get there.",
+        "en" to "I'll grab a bottle of water and a coffee around half past eight. I can't be late again, the bus leaves at nine, doesn't it?",
+        "de" to "Morgen früh hole ich zwei Brötchen beim Bäcker, danach fahre ich mit dem Zug nach München. Ich rufe dich später an, okay?",
     )
 
     /**

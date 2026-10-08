@@ -29,7 +29,6 @@ import com.roro.futurevoice.talk.UserPersona
 import com.roro.futurevoice.ui.ComposerHost
 import com.roro.futurevoice.ui.FindPeopleScreen
 import com.roro.futurevoice.ui.PersonaDeepenSheet
-import com.roro.futurevoice.ui.PersonaIntakeScreen
 import com.roro.futurevoice.ui.PublicIntroPreviewSheet
 import androidx.compose.foundation.layout.Box
 import com.roro.futurevoice.ui.PracticeBody
@@ -178,11 +177,11 @@ object CaptureWatch {
                 CaptureSeed.once("sample-persona") { CaptureSeed.seedSamplePersona(c) }
                 persona = PersonaStore.shared(c).load()
             }) {
-                PersonaIntakeScreen(
-                    initial = persona ?: UserPersona(), targetLanguage = lang(c),
+                com.roro.futurevoice.ui.PersonaEditScreen(
+                    initial = persona ?: UserPersona(), saved = persona, targetLanguage = lang(c),
                     nativeLanguage = c.getSharedPreferences("futurevoice", 0)
                         .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
-                    onBackToSetup = {}, onFinish = {}, startStep = 1,
+                    onSave = {}, onClose = {}, startStep = 1,
                 )
             }
         },
@@ -272,11 +271,11 @@ object CaptureWatch {
             CaptureSeed.once("sample-persona") { CaptureSeed.seedSamplePersona(c) }
             persona = PersonaStore.shared(c).load()
         }) {
-            PersonaIntakeScreen(
-                initial = persona ?: UserPersona(), targetLanguage = lang(c),
+            com.roro.futurevoice.ui.PersonaEditScreen(
+                initial = persona ?: UserPersona(), saved = persona, targetLanguage = lang(c),
                 nativeLanguage = c.getSharedPreferences("futurevoice", 0)
                     .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
-                onBackToSetup = {}, onFinish = {}, startStep = step,
+                onSave = {}, onClose = {}, startStep = step,
             )
         }
     }

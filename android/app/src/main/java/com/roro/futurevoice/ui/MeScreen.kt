@@ -134,6 +134,8 @@ fun MeScreen(
     voiceId: String? = null,
     voiceAccentId: String? = null,
     onAccentApplied: (voiceId: String, accentId: String) -> Unit = { _, _ -> },
+    /** After a rebuild from the saved recording (iOS `MeTab.regenerateFromSavedSample`). */
+    onApplyDefaultAccent: suspend () -> Unit = {},
     onRerecordVoice: () -> Unit = {},
     onPickAppLanguage: (String) -> Unit = {},
     onEditProfile: () -> Unit,
@@ -267,6 +269,7 @@ fun MeScreen(
             onRerecord = { confirmingRerecord = true },
             onPickSceneVoice = { page = MePage.SCENE_VOICE },
             onRebuilt = { onAccentApplied(it, "") },
+            onApplyDefaultAccent = onApplyDefaultAccent,
             onBack = { page = null },
         )
         // iOS pushes `VoicePresetPickerView` from the Voice page; back

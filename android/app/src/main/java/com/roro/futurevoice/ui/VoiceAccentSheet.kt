@@ -119,7 +119,7 @@ fun VoiceAccentSheet(
                 }
                 client.previews(sourceVoiceId, chosen.prompt,
                     VoiceAccentCatalog.sampleText(targetLanguage))
-            }.onSuccess { previews = it }
+            }.onSuccess { previews = it; RemixTakeCache.put(context, chosen.id, it) }
                 .onFailure {
                     error = context.getString(R.string.couldnt_make_the_takes_try_again)
                 }
@@ -129,7 +129,14 @@ fun VoiceAccentSheet(
 
     LaunchedEffect(initialAccent) {
         initialAccent?.let { first ->
-            if (options.any { it.id == first.id }) { accent = first; generate(first) }
+            if (options.any { it.id == first.id }) {
+                accent = first
+                val cached = RemixTakeCache.get(context, first.id)
+                if (cached != null) {
+                    previews = cached
+                    Analytics.capture("voice_accent_previews_reused", mapOf("accent" to first.id))
+                } else generate(first)
+            }
         }
     }
 
@@ -151,10 +158,21 @@ fun VoiceAccentSheet(
                     FilterChip(
                         selected = accent?.id == o.id,
                         onClick = {
+                            // Takes this recording already has for this accent
+                            // are shown, never made again (`RemixTakeCache`) —
+                            // closing the sheet and reopening it used to pay for
+                            // the same remix twice. Only re-tapping the accent
+                            // whose takes are ON SCREEN asks for new ones.
+                            val regenerate = accent?.id == o.id && previews.isNotEmpty()
                             // A new accent invalidates the takes on screen —
                             // keeping them would let a British take be applied
                             // under an American label.
-                            accent = o; previews = emptyList(); picked = null; error = null
+                            accent = o; picked = null; error = null
+                            val cached = if (regenerate) null else RemixTakeCache.get(context, o.id)
+                            if (cached != null) {
+                                previews = cached
+                                Analytics.capture("voice_accent_previews_reused", mapOf("accent" to o.id))
+                            } else previews = emptyList()
                         },
                         label = {
                             val label = accentLabel(o)
@@ -225,6 +243,10 @@ fun VoiceAccentSheet(
                                 onApplied(newId, chosen?.id.orEmpty())
                                 onDismiss()
                             }.onFailure {
+                                // A remembered take can go stale upstream; the next
+                                // pick of this accent makes fresh ones instead of
+                                // failing again.
+                                chosen?.let { RemixTakeCache.drop(it.id) }
                                 error = context.getString(R.string.couldnt_apply_that_take_try_again)
                             }
                             saving = false
@@ -277,6 +299,103 @@ internal suspend fun rebuiltFromSample(context: android.content.Context): String
     }.getOrNull()
 }
 
+/**
+ * The accent picked in setup (iOS `AppState.preferredAccentId`, 2026-10-08) —
+ * what a new clone is remixed into. Null = the language's default.
+ */
+internal object PreferredAccent {
+    private const val KEY = "futurevoice.preferredAccentId"
+    private fun prefs(c: android.content.Context) = c.getSharedPreferences("futurevoice", 0)
+    fun get(c: android.content.Context): String? = prefs(c).getString(KEY, null)
+    fun set(c: android.content.Context, id: String?) {
+        prefs(c).edit().apply { if (id != null) putString(KEY, id) else remove(KEY) }.apply()
+    }
+}
+
+/**
+ * Remix takes already made from THIS recording, per accent id, for as long as
+ * the process runs (iOS `AppState.remixTakeCache`, 2026-10-08). The accent
+ * sheet used to drop its takes on close, so cancelling and reopening it on the
+ * same accent paid for a fresh remix (~25 s and upstream credits) of the same
+ * voice; the default-accent remix also gets several takes and keeps one.
+ * Takes from the same recording are interchangeable whichever plain clone they
+ * came from, so a rebuild of that clone doesn't invalidate them — a NEW
+ * recording does ([recordingKey]).
+ */
+internal object RemixTakeCache {
+    private var recording: String? = null
+    private val takes = mutableMapOf<String, List<VoiceRemixClient.Preview>>()
+
+    /** Which recording the voice is made from: the saved sample's size and
+     *  date, which change with every new take. */
+    private fun recordingKey(context: android.content.Context): String? {
+        val f = VoiceComparison.sampleFile(context.filesDir)
+        if (!f.exists()) return null
+        return "${f.length()}-${f.lastModified() / 1000}"
+    }
+
+    @Synchronized
+    fun get(context: android.content.Context, accentId: String): List<VoiceRemixClient.Preview>? {
+        val key = recordingKey(context) ?: return null
+        if (recording != key) return null
+        return takes[accentId]
+    }
+
+    @Synchronized
+    fun put(context: android.content.Context, accentId: String, list: List<VoiceRemixClient.Preview>) {
+        val key = recordingKey(context) ?: return
+        if (recording != key) { recording = key; takes.clear() }
+        if (list.isEmpty()) takes.remove(accentId) else takes[accentId] = list
+    }
+
+    @Synchronized
+    fun drop(accentId: String) { takes.remove(accentId) }
+}
+
+/**
+ * The remix half of iOS `AppState.applyDefaultAccent` (2026-10-08): remix
+ * [voiceId] — a clone straight off the recording — into the target language's
+ * default accent (`VoiceAccentCatalog.defaultAccent`) and keep the FIRST take.
+ * The accent is the point here; the learner can still audition takes or
+ * another accent from the pills. Best-effort: null (and
+ * `voice_accent_default_failed`) on any failure, which leaves the plain
+ * clone — it works. Null without a capture when the language has no default.
+ * The caller adopts the returned voice (and deletes the outgoing one).
+ */
+internal suspend fun remixIntoDefaultAccent(
+    context: android.content.Context,
+    voiceId: String,
+    targetLanguage: String,
+): Pair<String, VoiceAccent>? {
+    // The accent picked in setup, when it is one of this target's options;
+    // else the language's default (iOS `applyDefaultAccent`).
+    val accent = VoiceAccentCatalog.options(targetLanguage)
+        .firstOrNull { it.id == PreferredAccent.get(context) }
+        ?: VoiceAccentCatalog.defaultAccent(targetLanguage) ?: return null
+    return runCatching {
+        val client = VoiceRemixClient(AuthRepository())
+        val takes = client.previews(
+            voiceId, accent.prompt,
+            VoiceAccentCatalog.sampleText(targetLanguage),
+            VoiceAccentCatalog.PROMPT_STRENGTH,
+        )
+        val take = takes.firstOrNull() ?: error("no_takes")
+        RemixTakeCache.put(context, accent.id, takes)
+        val newId = client.save(
+            take.id,
+            // iOS sends `voiceDisplayName` — the library entry says whose it is.
+            com.roro.futurevoice.data.VoiceName.display(context,
+                com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+            accent.prompt,
+        )
+        newId to accent
+    }.onFailure { e ->
+        if (e is kotlinx.coroutines.CancellationException) throw e
+        Analytics.capture("voice_accent_default_failed",
+            mapOf("reason" to (e.localizedMessage ?: e.toString()).take(200)))
+    }.getOrNull()
+}
+
 /** An accent's label in the app language (iOS uses the catalog keys
  *  "American" / "British" / "Australian", shortened per language so four
  *  pills fit one row: ja 米国, de USA, fr Anglais — iOS `6754be8`). */
@@ -285,5 +404,6 @@ internal fun accentLabel(accent: VoiceAccent): String = when (accent.id) {
     "en-US" -> stringResource(R.string.accent_american)
     "en-GB" -> stringResource(R.string.accent_british)
     "en-AU" -> stringResource(R.string.accent_australian)
+    "de-DE" -> stringResource(R.string.accent_standard_german)
     else -> accent.label
 }

@@ -261,6 +261,10 @@
     <string name="accent_american">American</string>
     <string name="accent_british">British</string>
     <string name="accent_australian">Australian</string>
+    <string name="accent_standard_german">Standard German</string>
+    <string name="which_accent">Which accent?</string>
+    <string name="which_accent_do_you_want_to_speak_with">Which accent do you want to speak with?</string>
+    <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Your fluent self speaks with this accent, in your own voice. You can change it once you\'ve heard it.</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">How do you two talk?</string>
     <string name="rel_how_do_you_and_s_talk">How do you and %1$s talk?</string>

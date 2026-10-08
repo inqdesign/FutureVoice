@@ -44,6 +44,10 @@ class VoiceCloneClient(private val auth: AuthRepository) {
             .addFormDataPart("name", name)
             .apply { description?.let { addFormDataPart("description", it) } }
             .addFormDataPart("remove_background_noise", if (removeBackgroundNoise) "true" else "false")
+            // This build applies the default accent itself (applyDefaultAccent)
+            // and leaves a clone plain on purpose after "Remove accent";
+            // without it the server remixes at the speech side (iOS 1.1.5).
+            .addFormDataPart("accent_by_app", "true")
             .addFormDataPart("files", sample.name, sample.asRequestBody("audio/wav".toMediaType()))
             .build()
         val request = Request.Builder()
