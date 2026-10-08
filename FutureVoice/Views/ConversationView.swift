@@ -2640,8 +2640,29 @@ struct ConversationView: View {
             error = explain("Your voice isn't ready yet.")
             return
         }
-        realtime.onUserTurn = { text, url, ms, fluency in
+        realtime.onUserTurn = { text, url, ms, fluency, flags in
             guard !isTornDown else { return }
+            // The rest of a turn the gateway re-opened after cutting the
+            // learner off (2026-10-08): it joins the bubble it belongs to —
+            // one turn, one take, one correction — instead of standing as a
+            // second turn the summary and the coach would read as two lines.
+            if flags.continues, let idx = turns.lastIndex(where: { $0.role == .user }) {
+                let joined = turns[idx].transcript
+                    + (WordSplitter.spaced ? " " : "") + text
+                turns[idx].transcript = joined
+                turns[idx].durationMs = ms
+                turns[idx].fluency = fluency
+                turns[idx].suggestion = nil
+                let id = turns[idx].id
+                if let url, let data = try? Data(contentsOf: url) {
+                    turns[idx].audioURL = TurnAudioStore.shared.save(data, turnId: id)
+                    try? FileManager.default.removeItem(at: url)
+                }
+                didSaveCurrentSession = false
+                creditGoalChips(turnId: id)
+                if !flags.native { requestRealtimeSuggestion(for: id, said: joined) }
+                return
+            }
             var turn = Turn(id: UUID(), role: .user, audioURL: nil,
                             transcript: text, durationMs: ms, timestamp: Date(),
                             suggestion: nil)
@@ -2665,7 +2686,10 @@ struct ConversationView: View {
                 withAnimation(.easeInOut(duration: 0.25)) { _ = usedGoalKeys.insert(hint.key) }
                 HapticEngine.success()
             }
-            requestRealtimeSuggestion(for: turn.id, said: text)
+            // A line said in their own language was answered with the target
+            // way to say it; a correction of it would be built on words in
+            // the wrong language.
+            if !flags.native { requestRealtimeSuggestion(for: turn.id, said: text) }
         }
         // The bubble appears WITH the voice and fills as the line is written —
         // the same "you read what you are hearing" the HTTP path gets from
@@ -2693,6 +2717,11 @@ struct ConversationView: View {
             } else {
                 turns[idx].transcript += delta
             }
+        }
+        realtime.onReplyWithdrawn = { context in
+            guard let id = realtimeReplyTurns.removeValue(forKey: context) else { return }
+            turns.removeAll { $0.id == id }
+            didSaveCurrentSession = false
         }
         realtime.onReplyCutIn = { context in
             guard let id = realtimeReplyTurns[context],
@@ -2827,9 +2856,12 @@ struct ConversationView: View {
                 ])
                 payload = nil
             }
+            // `transcript == said`: a turn that has since been joined with its
+            // continuation is corrected as the whole line, not as its first half.
             guard !isTornDown, let payload,
                   let suggestion = payload.turnSuggestion(for: said),
-                  let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }
+                  let idx = turns.firstIndex(where: { $0.id == turnId }),
+                  turns[idx].transcript == said else { return }
             turns[idx].suggestion = suggestion
             suggestionsShown += 1
             checkFocusRepeat(suggestion, turnId: turnId)

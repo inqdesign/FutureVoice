@@ -17,8 +17,9 @@
 // Metering is Phase 1: speech seconds are counted and reported in `stats`
 // events but not yet charged — billing lands in Phase 3 (see README).
 
-import { GeminiTranscriber } from "./transcriber"
+import { GeminiTranscriber, languageName } from "./transcriber"
 import { rereadUtterance } from "./reread"
+import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
@@ -287,6 +288,24 @@ export class CallSession implements DurableObject {
    *  endpointing has no such judgement and committed "…yet, but" as a turn
    *  (earphone call, 2026-09-01). */
   private pendingUtterance: string | null = null
+  /** Some or all of the held line was said in the learner's NATIVE
+   *  language (2026-10-08) — it reaches the reply model with a note
+   *  (native-turn.ts) instead of as if it were the target language. */
+  private pendingNative = false
+  /** The held line was RE-OPENED by a cut-off (see `reopenLastTurn`): this
+   *  is the part the app already shows as a bubble, so the next `user_turn`
+   *  carries only what follows it, flagged `continues`. */
+  private pendingReopened: string | null = null
+  /** The learner's native language when the app sent one and it differs
+   *  from the target; null = the old single-language behaviour. */
+  private native: string | null = null
+  /** The native language a re-read CONFIRMED from the audio, for an app that
+   *  didn't send one (see `nativeFromScript`). A learner's own language does
+   *  not change mid-call, so once heard it stands for the rest of it. */
+  private inferredNative: string | null = null
+  /** The last committed learner turn and where it sits in `history`, for as
+   *  long as a barge-in could still mean "I wasn't finished". */
+  private lastCommitted: { text: string; native: boolean; index: number } | null = null
   /** Mic audio since the transcriber's last final — what a wrong-script
    *  final is re-read from (reread.ts). Capped at `utteranceAudioMaxBytes`,
    *  oldest dropped. */
@@ -457,6 +476,17 @@ export class CallSession implements DurableObject {
     if (!want) return true
     if (!/\p{L}/u.test(text)) return true
     return want.test(text)
+  }
+
+  /** Nothing but hesitation sounds, in any Latin-script spelling: uh, um,
+   *  er, ah, hm, mhm, oh, äh, ähm, öh, eh, euh — drawn out or not. Used only
+   *  on a RE-READ of a wrong-script final, where the original was already
+   *  not a word of the target language; a filler said inside a real target
+   *  line never comes here. */
+  private static isFillerOnly(text: string): boolean {
+    const words = text.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean)
+    return words.length > 0 && words.every((w) =>
+      /^(u+h*m*|u+m+|e+r+m*|a+h+m*|ä+h*m*|ö+h+|e+h+|e+u+h+|o+h+|h+m+|m+h*m+|h*m+)$/u.test(w))
   }
 
   /** A final with no letter of the target script that is too short to be a
@@ -656,6 +686,8 @@ export class CallSession implements DurableObject {
 
     this.history = msg.history ? [...msg.history] : []
     this.language = msg.language || "en"
+    const base = (code: string) => code.toLowerCase().split("-")[0]
+    this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
       apiKey: this.env.GEMINI_API_KEY,
       // An env var, so a bad model release can be rolled back without a
@@ -759,7 +791,7 @@ export class CallSession implements DurableObject {
             // why it's overwriting what I said", 2026-09-04).
             this.armPending(CallSession.pendingHoldMs)
             if (CallSession.inTargetScript(text, this.language)) {
-              this.emit({ type: "user_partial", text: this.pendingUtterance + " " + text })
+              this.emit({ type: "user_partial", text: this.shownPart(this.pendingUtterance + " " + text) })
             }
           } else if (CallSession.inTargetScript(text, this.language)) {
             this.emit({ type: "user_partial", text })
@@ -948,31 +980,63 @@ export class CallSession implements DurableObject {
   private async acceptFinal(text: string, audio: ArrayBuffer[]): Promise<void> {
     if (this.ended) return
     if (CallSession.inTargetScript(text, this.language)) {
-      this.handleUtterance(text)
+      // "I want to… 승진" — a native word inside a target line is the
+      // learner reaching for one they don't have. The line is theirs as
+      // written; the model is told which part they couldn't say.
+      this.handleUtterance(text, this.hasNativeScript(text))
       return
     }
     // They are still in the middle of a line if one is held: keep it open
     // for as long as the re-read takes, like an interim would.
     if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
     const started = Date.now()
+    // An app that doesn't send `start.native` (every build before
+    // 2026-10-08) still says which language a final was written in when it is
+    // a script only one language uses: Hangul is Korean, kana is Japanese.
+    // That is enough to ask the classifying re-read, which then decides from
+    // the AUDIO — a Japanese line the live model wrote as Korean words comes
+    // back as Japanese (probe: 48/48). Devanagari is never a guess: it is
+    // what the live model writes for a mis-heard sound, not a learner's
+    // language.
+    const native = this.native ?? this.inferredNative ?? CallSession.nativeFromScript(text, this.language)
     const reread = await rereadUtterance(
       this.env.GEMINI_API_KEY,
       this.env.GEMINI_REREAD_MODEL ?? "gemini-3.1-flash-lite",
       this.language,
       audio,
+      native,
     )
     if (this.ended) return
     const ms = Date.now() - started
-    if (reread !== null && reread === "") {
+    // A hesitation the re-read wrote as a word: "अह" came back "Ah.", "Uh",
+    // "Ähm." (2026-10-08, 14 days of finals). Those went through as turns and
+    // the fluent self answered a filler. Same fate as an empty re-read.
+    if (reread !== null && reread.spoken !== "none" && CallSession.isFillerOnly(reread.text)) {
+      this.warn("script_mismatch", `reread filler (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 40)}`)
+      if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+      return
+    }
+    if (reread !== null && reread.spoken === "none") {
       // Only a hesitation in the audio. Dropped, as before, and the hold's
       // clock moves (they are still going).
       this.warn("script_mismatch", `reread empty (${ms}ms): ${text.slice(0, 40)}`)
       if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
       return
     }
-    if (reread !== null && CallSession.inTargetScript(reread, this.language)) {
-      this.warn("script_mismatch", `reread (${ms}ms): ${text.slice(0, 40)} → ${reread.slice(0, 80)}`)
-      this.handleUtterance(reread)
+    // They switched to their own language. Kept as SAID — never the
+    // translation the old re-read invented — and answered as such. A
+    // "target" label on a line written wholly in the native script is
+    // overruled by the script (2 of 88 in the probe).
+    if (reread !== null && native !== null && (reread.spoken === "native"
+        || (!CallSession.inTargetScript(reread.text, this.language) && this.hasNativeScript(reread.text, native)))) {
+      this.warn("script_mismatch", `native (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
+      if (this.native === null) this.inferredNative = native
+      this.handleUtterance(reread.text, true)
+      return
+    }
+    if (reread !== null && CallSession.inTargetScript(reread.text, this.language)) {
+      this.warn("script_mismatch", `reread (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
+      this.handleUtterance(reread.text, this.hasNativeScript(reread.text))
       return
     }
     // The re-read failed or came back wrong too: the old behaviour.
@@ -988,12 +1052,12 @@ export class CallSession implements DurableObject {
     // than a wrong answer the learner can see. Recorded.
     this.emit({ type: "warning", code: "script_mismatch",
                 message: `final not in target script: ${text.slice(0, 80)}` })
-    this.handleUtterance(text)
+    this.handleUtterance(text, this.hasNativeScript(text))
   }
 
   /** The transcriber finalized an utterance. It becomes a turn now, or it
    *  waits: a line ending on a hanging word is a breath, not an ending. */
-  private handleUtterance(text: string): void {
+  private handleUtterance(text: string, native = false): void {
     console.log(`utterance: "${text.slice(0, 80)}" pending=${this.pendingUtterance !== null}`)
     // The speaker heard itself: an utterance that is a verbatim fragment of
     // the line just played is the microphone, not the learner — drop it
@@ -1025,7 +1089,11 @@ export class CallSession implements DurableObject {
     const merged = this.pendingUtterance !== null
       ? this.pendingUtterance + joint + text.trim()
       : text.trim()
+    const heldNative = (this.pendingUtterance !== null && this.pendingNative) || native
+    const reopened = this.pendingUtterance !== null ? this.pendingReopened : null
     this.clearPending()
+    this.pendingNative = heldNative
+    this.pendingReopened = reopened
     // Held, always. A hanging word says "still composing" and earns the
     // long hold; a final the transcriber didn't close with a mark gets the
     // middle one (see `unfinishedMs`); anything else gets the continuation
@@ -1035,7 +1103,7 @@ export class CallSession implements DurableObject {
     const unfinished = !hanging && CallSession.endsUnfinished(merged)
     this.pendingUtterance = merged
     this.pendingSince = Date.now()
-    this.emit({ type: "user_partial", text: merged })
+    this.emit({ type: "user_partial", text: this.shownPart(merged) })
     const kind = hanging ? "ends hanging" : unfinished ? "unpunctuated" : "continuation"
     console.log(`holding (${kind}): "${merged.slice(-30)}"`)
     this.armPending(hanging ? CallSession.pendingHoldMs
@@ -1050,8 +1118,10 @@ export class CallSession implements DurableObject {
     if (this.pendingTimer !== null) clearTimeout(this.pendingTimer)
     this.pendingTimer = setTimeout(() => {
       const held = this.pendingUtterance
+      const native = this.pendingNative
+      const reopened = this.pendingReopened
       this.clearPending()
-      if (held) this.commitTurn(held)
+      if (held) this.commitTurn(held, native, reopened)
     }, ms) as unknown as number
   }
 
@@ -1059,11 +1129,74 @@ export class CallSession implements DurableObject {
     if (this.pendingTimer !== null) { clearTimeout(this.pendingTimer); this.pendingTimer = null }
     this.pendingUtterance = null
     this.pendingSince = 0
+    this.pendingNative = false
+    this.pendingReopened = null
+  }
+
+  /** What the learner's live bubble should show of a held line: all of it,
+   *  except the re-opened part the app already has as its own bubble. */
+  private shownPart(merged: string): string {
+    const prefix = this.pendingReopened
+    if (prefix === null || !merged.startsWith(prefix)) return merged
+    return merged.slice(prefix.length).trim()
+  }
+
+  /** A letter of the native language's script that the target's own
+   *  script doesn't use. Shared letters prove nothing: a German speaker's
+   *  German inside English is Latin either way, and a Chinese speaker's
+   *  Japanese is full of Han — only a letter the target never writes can
+   *  say "this part wasn't the target language". */
+  private hasNativeScript(text: string, native: string | null = this.native ?? this.inferredNative): boolean {
+    if (native === null) return false
+    const n = CallSession.targetScript[native.toLowerCase().split("-")[0]]
+    const t = CallSession.targetScript[this.language.toLowerCase().split("-")[0]]
+    if (!n) return false
+    for (const ch of text.match(/\p{L}/gu) ?? []) {
+      if (n.test(ch) && !(t?.test(ch) ?? false)) return true
+    }
+    return false
+  }
+
+  /** The one language a wrong-script final's script can only be, for an app
+   *  that didn't send its native language. Hangul → ko, kana → ja; nothing
+   *  else (Han is Chinese or Japanese, Latin is everyone, Devanagari is the
+   *  live model's mishearing). Never the target itself. */
+  private static nativeFromScript(text: string, target: string): string | null {
+    const t = target.toLowerCase().split("-")[0]
+    const guess = /\p{Script=Hangul}/u.test(text) ? "ko"
+      : /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text) ? "ja" : null
+    return guess !== null && guess !== t ? guess : null
+  }
+
+  /** A barge-in right after a commit: the learner wasn't finished, the
+   *  reply answered half a sentence (2026-10-08 — 548 such cut-offs from 40
+   *  learners in two weeks, median 0.76 s after the commit, typically a
+   *  beginner pausing mid-thought). The turn is taken back out of
+   *  `history` (with the reply's text, if it was already written) and held
+   *  again, so the rest of what they say JOINS it — the model then answers
+   *  one turn, not two halves, and corrections and the summary see one
+   *  line. Only the turn just committed, and only while nothing else has
+   *  been written after it. */
+  private reopenLastTurn(): boolean {
+    const last = this.lastCommitted
+    if (last === null || this.pendingUtterance !== null || this.pendingWall !== null) return false
+    const top = this.history.length - 1
+    const onlyTurn = top === last.index
+    const turnAndReply = top === last.index + 1 && this.history[top].role === "model"
+    if (this.history[last.index]?.role !== "user" || !(onlyTurn || turnAndReply)) return false
+    this.history.splice(last.index)
+    this.lastCommitted = null
+    this.pendingUtterance = last.text
+    this.pendingNative = last.native
+    this.pendingReopened = last.text
+    this.pendingSince = 0
+    this.armPending(CallSession.pendingHoldMs)
+    return true
   }
 
   /** A turn is settled. Commit it and speak the reply. */
-  private commitTurn(text: string): void {
-    console.log(`commit: "${text.slice(0, 80)}"`)
+  private commitTurn(text: string, native = false, reopened: string | null = null): void {
+    console.log(`commit: "${text.slice(0, 80)}"${native ? " (native)" : ""}${reopened !== null ? " (continues)" : ""}`)
     if (!this.learnerSpoke && this.firstInterimAt > 0) {
       // Capped at the longest a listening turn is held open on the phone
       // (`maxListenSecondsHard`), so a stray interim long before the answer
@@ -1074,15 +1207,29 @@ export class CallSession implements DurableObject {
     }
     this.learnerSpoke = true
     this.lastCommitAt = Date.now()
-    this.emit({ type: "user_turn", text })
-    this.history.push({ role: "user", text })
+    // A re-opened turn sends only what the app doesn't have yet. When the
+    // learner said nothing more (the barge-in was a breath), that is "" —
+    // an older app ignores an empty turn, a newer one keeps its bubble —
+    // and the turn is answered again, whole.
+    const shown = reopened !== null && text.startsWith(reopened) ? text.slice(reopened.length).trim() : text
+    this.emit({
+      type: "user_turn", text: shown,
+      ...(native ? { native: true } : {}),
+      ...(reopened !== null ? { continues: true } : {}),
+    })
+    this.lastCommitted = { text, native, index: this.history.length }
+    const nativeLanguage = this.native ?? this.inferredNative
+    this.history.push({ role: "user", text: native && nativeLanguage !== null
+      ? nativeTurnText(text, languageName(this.language), languageName(nativeLanguage))
+      : text })
     // A stale reply still going (e.g. utterance finalized right behind a
     // barge-in interim) must not race the new one.
     this.activeReplyAbort?.abort()
     if (this.specTimer !== null) { clearTimeout(this.specTimer); this.specTimer = null }
 
     const spec = this.spec as (NonNullable<CallSession["spec"]> & { context?: string }) | null
-    if (spec && CallSession.sameWords(spec.text, text)) {
+    // A native line's speculation answered the raw words, without the note.
+    if (spec && !native && CallSession.sameWords(spec.text, text)) {
       // The model has been writing since the interim settled — adopt it.
       // Only NOW does anything reach the voice: a speculation for words the
       // learner didn't finish saying dies unvoiced above.
@@ -1417,16 +1564,18 @@ export class CallSession implements DurableObject {
     const context = this.activeContext
     if (!context) return
     const sinceCommit = Date.now() - this.lastCommitAt
+    let reopened = false
     if (sinceCommit < CallSession.cutoffWindowMs) {
       this.cutoffs += 1
-      console.log(`cutoff: barge-in ${sinceCommit}ms after commit`)
+      reopened = this.reopenLastTurn()
+      console.log(`cutoff: barge-in ${sinceCommit}ms after commit${reopened ? " — reopened" : ""}`)
       // Rides the `warning` channel because that is the one message a
       // shipped client already forwards verbatim to client_events (build 48
       // logs code + message and nothing else); the count on `ended` needs
       // the next app build to be read at all. Not `warn()`: the call
       // survived nothing here — it talked over someone.
       this.emit({ type: "warning", code: "cutoff",
-                  message: `barge-in ${sinceCommit}ms after commit` })
+                  message: `barge-in ${sinceCommit}ms after commit${reopened ? " · reopened" : ""}` })
     }
     this.activeContext = null
     // Talked over the last line the allowance covered: nothing can answer
@@ -1439,7 +1588,7 @@ export class CallSession implements DurableObject {
     this.activeReplyAbort?.abort()
     this.voiceBuffer.delete(context)
     this.eleven?.closeContext(context)
-    this.emit({ type: "interrupted", context })
+    this.emit({ type: "interrupted", context, ...(reopened ? { reopened: true } : {}) })
     // What was already voiced still happened — keep the model's half honest
     // by not pretending the turn never existed. The aborted generate() call
     // resolved with the partial text; simplest correct record: drop it from

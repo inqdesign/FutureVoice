@@ -2010,6 +2010,59 @@ the transport's fault, a typo the model's); `decodeDetail` carries all of it
 into `talk_summary_retry` / `talk_summary_error`. Read the next one off the
 console before guessing at a repair pass.
 
+## A learner who switches language, or isn't finished (2026-10-08)
+
+Found reading one A2 learner's calls; both were everywhere once counted.
+
+- **A line said in the NATIVE language is kept as said.** The wrong-script
+  re-read (`gateway/src/reread.ts`) was told "write the target language
+  only", so a Korean learner's "가벼운" became "a cupboard" and "이거 포인트
+  어떻게 뽑죠?" became "Ich habe heute etwas Brot." — 72 lines from 15
+  learners in two weeks, each answered and corrected as if said. The app now
+  sends `start.native`; the re-read classifies (`target` / `native` /
+  `none`, JSON) and writes in the language spoken. A native line reaches the
+  reply model wrapped by `native-turn.ts` (give them the target way to say
+  it, once, as a friend would, then carry on) — the app's system prompt is
+  untouched. `user_turn.native` tells the app, which skips the per-turn
+  correction for it. An app that sends no `native` (every build before this)
+  still gets it whenever the live model wrote the final in a script only one
+  language uses — Hangul → ko, kana → ja (`nativeFromScript`), confirmed from
+  the audio by the classifier and then kept for the rest of the call
+  (`inferredNative`); never from Devanagari, which is a mishearing. A native-script letter inside a target line ("I want
+  to… 승진") counts too, but only a letter the target script never uses
+  (`hasNativeScript` — a Chinese speaker's Japanese is all shared Han).
+  Measured: `test/probe-reread-native.mjs` 86/88 (the 2 misses are fixed by
+  the script check) vs the old prompt inventing a sentence for 40/40;
+  `test/probe-native-reply.mjs` — the wrapped turn gets an English rendering
+  in the reply, 0 Hangul replies, on both reply models. A same-script native
+  (German inside English) is invisible to all of this.
+- **Why Hindi, and why it stays.** The live transcriber has no language
+  lock, only the pin; a lone Korean 어/아 is acoustically Hindi "अह", and
+  on one of two Korean voices it was written so EVERY time (128 Devanagari
+  finals, ~25 learners, 14 days). `inputAudioTranscription.languageCodes`
+  is accepted since (rejected 2026-09-01), and `test/probe-live-language-codes.mjs`
+  (Korean-voiced clips, 3 runs, en+de) measured both sides of it: fillers
+  written right 66/84 → 84/84, short accented answers in the right script
+  84/102 → 102/102 (right WORDS 48 → 66) — and short Korean words
+  ("몰라", "맞아", "대박") turned into invented target words 24/120 → 54/120
+  ("Hola.", "Maja", "Airbag", "Gesäß"). NOT adopted, because the two kinds
+  of error are not alike: a wrong SCRIPT is visible and is repaired after
+  the re-read (the native classifier, and `isFillerOnly` dropping a re-read
+  that is only "Uh"/"Ah." — which on every build used to become a turn the
+  fluent self answered), while an invented target word is invisible and is
+  answered as said. The remaining 20% invented under the pin is open.
+- **A barge-in right after a commit RE-OPENS the turn** (`reopenLastTurn`).
+  548 cut-offs from 40 learners in two weeks, median 0.76 s after the commit
+  — a beginner pausing mid-sentence. Within `cutoffWindowMs` the committed
+  turn (and its reply, if written) is taken back out of `history` and held
+  again, so the rest joins it and the model answers one turn. The reply is
+  WITHDRAWN (`interrupted.reopened`: the app removes the bubble and keeps no
+  audio) and the rest arrives as `user_turn.continues` carrying only the new
+  words; the app appends them to the previous bubble, re-takes the audio as
+  one WAV and re-asks the correction for the joined line (a late answer for
+  the first half is dropped by `transcript == said`). An older app ignores
+  both flags and shows two bubbles, as before. No hold window got longer.
+
 ## A call outlives the screen (2026-08-18)
 
 A phone call doesn't end because you looked at something else. Until now this

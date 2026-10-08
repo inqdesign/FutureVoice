@@ -41,6 +41,14 @@ export interface StartMessage {
    *  an app build that predates the setting never sends it. Clamped here
    *  rather than trusted: this rides in from a client. */
   speed?: number
+  /** The learner's NATIVE language code ("ko"), 2026-10-08. A learner who
+   *  can't find a word says it in their own language, and without this the
+   *  re-read (reread.ts) had only one language to write in and invented a
+   *  target-language sentence for it. With it, a line said in the native
+   *  language reaches the reply model as such (native-turn.ts) and the
+   *  bubble shows what was said. Absent (an app build before this) = the
+   *  old behaviour, unchanged. */
+  native?: string
 }
 
 /** Speak a line the app chose, after the call is already up.
@@ -99,8 +107,14 @@ export type ServerMessage =
   | { type: "ready" }
   /** Live transcription of what the learner is saying, incremental. */
   | { type: "user_partial"; text: string }
-  /** The turn's committed transcript (Gemini's audio-grounded text). */
-  | { type: "user_turn"; text: string }
+  /** The turn's committed transcript (Gemini's audio-grounded text).
+   *  `native`: some or all of it was said in the learner's native language
+   *  (2026-10-08) — the text is what they said, never a translation.
+   *  `continues`: the learner was cut off by a reply right after their
+   *  previous turn committed, and this is the REST of that turn — the
+   *  gateway has already joined the two for the model; the app joins the
+   *  bubbles. An app that ignores the flag shows two bubbles, as before. */
+  | { type: "user_turn"; text: string; native?: boolean; continues?: boolean }
   /** Reply text, streamed as the model writes it. */
   | { type: "reply_delta"; context: string; text: string }
   /** The model finished writing this reply. */
@@ -112,7 +126,13 @@ export type ServerMessage =
   /** The learner spoke over the reply — stop local playback NOW and drop any
    *  buffered audio for `context`. `heardText` is what was voiced before the
    *  cut, so the transcript can honestly show only what was heard. */
-  | { type: "interrupted"; context: string }
+  | { type: "interrupted"; context: string
+      /** The reply was cut because the learner had not finished (a barge-in
+       *  right after the commit): it is withdrawn, not just cut — the turn
+       *  it answered was re-opened and the next `user_turn` carries
+       *  `continues`. The app removes the line instead of marking it talked
+       *  over. 2026-10-08; an older app ignores it. */
+      reopened?: boolean }
   /** Periodic session stats (Phase 1: logged, not billed). */
   | { type: "stats"; speechSeconds: number; turns: number }
   /** The upstream session is being rotated (Gemini Live ~15 min cap);

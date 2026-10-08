@@ -9,7 +9,10 @@
 //
 // Usage:
 //   node test/talk.mjs --url ws://localhost:8787/call --wav hello16k.wav \
-//     [--token <supabase-jwt>] [--voice <voice_id>]
+//     [--token <supabase-jwt>] [--voice <voice_id>] [--lang en] [--native ko]
+//     [--whole]   keep going past the first reply (multi-turn wavs: a
+//                 native-language line, a pause the learner fills — see
+//                 test/probe-reread-native.mjs); ends 8 s after the mic
 //
 // Against `wrangler dev` with DEV_ALLOW_ANON=1 in .dev.vars, token/voice can
 // be anything. Needs Node >= 22 (global WebSocket).
@@ -46,7 +49,8 @@ ws.onopen = () => {
     type: "start",
     token: args.token ?? "",
     voiceId: args.voice ?? "test-voice",
-    language: "en",
+    language: args.lang || "en",
+    ...(args.native ? { native: args.native } : {}),
     system: "You are the user's fluent future self. Reply in one or two short spoken sentences.",
   }))
 }
@@ -54,10 +58,11 @@ ws.onopen = () => {
 ws.onmessage = (ev) => {
   if (typeof ev.data === "string") {
     const msg = JSON.parse(ev.data)
-    console.log(stamp(), msg.type, msg.text ?? msg.message ?? "")
+    const flags = ["native", "continues", "reopened"].filter((k) => msg[k]).join(",")
+    console.log(stamp(), msg.type, msg.text ?? msg.message ?? "", flags ? `[${flags}]` : "")
     if (msg.type === "ready") streamMic()
     if (msg.type === "audio_start") sampleRate = msg.sampleRate
-    if (msg.type === "audio_end") finish()
+    if (msg.type === "audio_end" && !("whole" in args)) finish()
     if (msg.type === "error") { console.error(stamp(), "ERROR", msg); process.exit(1) }
     return
   }
@@ -82,6 +87,7 @@ async function streamMic() {
     ws.send(silence)
     await new Promise((r) => setTimeout(r, 100))
   }
+  if ("whole" in args) setTimeout(finish, 8000)
 }
 
 function finish() {

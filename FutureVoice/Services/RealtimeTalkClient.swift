@@ -96,9 +96,18 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     // Audio comes with them because Practice needs it: the learner's own take
     // for listen-back, the fluent self's line for replay and shadowing.
 
+    /// What the gateway knows about a committed turn beyond its words
+    /// (2026-10-08). `native`: some or all of it was said in the learner's
+    /// own language, and the text is what they said, never a translation.
+    /// `continues`: the learner was cut off right after their previous turn
+    /// committed and this is the REST of it — the gateway has re-opened that
+    /// turn, so the text here is only the new part (empty when they said
+    /// nothing more), while the audio handed over is the WHOLE turn.
+    struct UserTurnFlags { var native = false; var continues = false }
+
     /// A committed learner turn: text, their own audio, duration in ms.
-    /// text, the take's WAV, its length, and its measured delivery.
-    var onUserTurn: ((String, URL?, Int, FluencyStats?) -> Void)?
+    /// text, the take's WAV, its length, its measured delivery, and the flags.
+    var onUserTurn: ((String, URL?, Int, FluencyStats?, UserTurnFlags) -> Void)?
     /// The fluent self has STARTED a line — its bubble belongs on screen
     /// now, empty, because the voice is about to be heard. Carries the
     /// context id so later events find the same bubble.
@@ -111,6 +120,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// gateway cut in on a pause and they carried on with the same sentence.
     /// Fired just before that line's `onReplyFinished`.
     var onReplyCutIn: ((String) -> Void)?
+    /// The line was WITHDRAWN, not just cut: the learner hadn't finished, the
+    /// gateway took their turn back and will answer it whole (2026-10-08).
+    /// Its bubble goes; nothing of it is kept.
+    var onReplyWithdrawn: ((String) -> Void)?
 
     /// Mic PCM since the last committed turn, at the MIC'S OWN rate — the
     /// 16 kHz uplink is transport quality, and saving it was why a learner's
@@ -118,6 +131,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// capture (reported 2026-09-01). Capped at ~2 min so a monologue cannot
     /// grow it without bound.
     private var userPCM = Data()
+    /// The last committed turn's audio, kept until the next turn commits: a
+    /// turn the gateway re-opens (`continues`) is handed over as ONE take.
+    private var lastTurnPCM = Data()
     private var userPCMRate: Double = 48_000
     private var maxUserPCMBytes: Int { Int(userPCMRate) * 2 * 60 * 2 }
     /// Reply PCM for the line currently playing, at `replySampleRate`.
@@ -1759,6 +1775,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // even Normal is 0.9 (see `SpeechSpeed`). A gateway deploy that
         // predates the field ignores it and the call sounds as it used to.
         payload["speed"] = SpeechSpeed.current.multiplier
+        // The learner's own language (2026-10-08): a line they say in it is
+        // kept as said and answered as such, instead of the re-read inventing
+        // a target-language sentence for it. A gateway before this ignores it.
+        payload["native"] = LanguageCatalog.currentNative
         if let opener, !opener.isEmpty { payload["opener"] = opener }
         if !history.isEmpty {
             payload["history"] = history.map { ["role": $0.role, "text": $0.text] }
@@ -1865,21 +1885,32 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if state != .speaking { state = partial.isEmpty ? .listening : .hearing }
         case "user_turn":
             let said = json["text"] as? String ?? ""
-            Self.step("heard: \(said)")
+            let flags = UserTurnFlags(native: json["native"] as? Bool ?? false,
+                                      continues: json["continues"] as? Bool ?? false)
+            Self.step("heard: \(said)\(flags.native ? " [native]" : "")\(flags.continues ? " [continues]" : "")")
             if !said.isEmpty {
-                let pcm = userPCM
+                // A continued turn is handed over whole: what was said before
+                // the cut-off, then the rest. Same-rate only — a rate change
+                // in between would corrupt the WAV, so the newer take wins.
+                let pcm = flags.continues && !lastTurnPCM.isEmpty ? lastTurnPCM + userPCM : userPCM
                 userPCM = Data()
+                lastTurnPCM = pcm
                 let rate = userPCMRate
                 let trimmed = Self.trimSilence(pcm: pcm, sampleRate: rate)
                 let url = Self.saveWAV(pcm: trimmed, sampleRate: rate)
                 let ms = Int(Double(trimmed.count / 2) / rate * 1000)
-                onUserTurn?(said, url, ms, Self.fluencyStats(pcm: trimmed, sampleRate: rate))
+                onUserTurn?(said, url, ms, Self.fluencyStats(pcm: trimmed, sampleRate: rate), flags)
             } else {
                 userPCM = Data()
             }
             partial = ""
             turnCommittedAt = Date()
-            if !said.isEmpty { lines.append(Line(isUser: true, text: said)) }
+            if flags.continues, !said.isEmpty,
+               let idx = lines.lastIndex(where: { $0.isUser }) {
+                lines[idx].text += (WordSplitter.spaced ? " " : "") + said
+            } else if !said.isEmpty {
+                lines.append(Line(isUser: true, text: said))
+            }
             state = said.isEmpty ? .listening : .thinkingReply
         case "audio_start":
             Self.step("reply audio starting")
@@ -1963,11 +1994,24 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // rebuild, a raise is a crash.
             Self.avGuard("interrupt.play") { self.player.play() }
             state = .hearing
-            if let context = replyContext, let began = replyBeganAt,
-               Date().timeIntervalSince(began) < Self.cutInWindow {
-                onReplyCutIn?(context)
+            if json["reopened"] as? Bool == true {
+                // Withdrawn: the turn it answered isn't over. Nothing of the
+                // line is kept — not its bubble, not its audio.
+                if let context = replyContext {
+                    if let idx = lines.lastIndex(where: { !$0.isUser }) { lines.remove(at: idx) }
+                    onReplyWithdrawn?(context)
+                }
+                replyPCM = Data()
+                replyText = ""
+                replyContext = nil
+                replyBeganAt = nil
+            } else {
+                if let context = replyContext, let began = replyBeganAt,
+                   Date().timeIntervalSince(began) < Self.cutInWindow {
+                    onReplyCutIn?(context)
+                }
+                handOverReply()
             }
-            handOverReply()
             // A barge-in means the learner IS talking — the gate would only
             // stand in their way now.
             mic.setEchoGate(active: false)
