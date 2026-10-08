@@ -17,10 +17,16 @@ final class PromiseLedger: @unchecked Sendable {
         /// False while the day is still running; a day whose last write was
         /// provisional is judged again once it is over.
         var settled: Bool = true
+        /// When the day was first seen with everything done. A kept day stays
+        /// kept: adding a block after finishing the day's plan raises the bar
+        /// for the days ahead, never takes back the one already kept
+        /// (2026-10-07 — a 5-minute talk added at night turned a finished
+        /// day grey). Optional, so entries on disk from before decode.
+        var keptAt: Date? = nil
         /// Nothing was planned that day: a rest day — it neither counts nor
         /// breaks the streak.
-        var isRest: Bool { planned == 0 }
-        var kept: Bool { planned > 0 && done >= planned }
+        var isRest: Bool { planned == 0 && keptAt == nil }
+        var kept: Bool { keptAt != nil || (planned > 0 && done >= planned) }
     }
 
     private let lock = NSLock()
@@ -98,14 +104,29 @@ enum PromiseJudge {
         var day = max(cal.startOfDay(for: since),
                       cal.date(byAdding: .day, value: -maxBackfillDays, to: today) ?? today)
         while day < today {
-            if ledger.entry(day, calendar: cal)?.settled != true {
-                ledger.set(result(for: day, plan: plan, calendar: cal), for: day, calendar: cal)
+            let old = ledger.entry(day, calendar: cal)
+            if old?.settled != true {
+                ledger.set(carryingKept(result(for: day, plan: plan, calendar: cal), from: old, now: now),
+                           for: day, calendar: cal)
             }
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
             day = next
         }
-        var live = result(for: today, plan: plan, calendar: cal)
+        var live = carryingKept(result(for: today, plan: plan, calendar: cal),
+                                from: ledger.entry(today, calendar: cal), now: now)
         live.settled = false
         ledger.set(live, for: today, calendar: cal)
+    }
+
+    /// A day judged again keeps the moment it was first kept.
+    static func carryingKept(_ new: PromiseLedger.Entry, from old: PromiseLedger.Entry?,
+                             now: Date) -> PromiseLedger.Entry {
+        var new = new
+        if let at = old?.keptAt {
+            new.keptAt = at
+        } else if old?.kept == true || new.kept {
+            new.keptAt = now
+        }
+        return new
     }
 }

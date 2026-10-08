@@ -637,6 +637,9 @@ final class StudyPlanStore: ObservableObject {
         }
         new.pruneBefore(Date())
         guard new.isCallable else { return false }
+        // Judge today by the plan it is leaving first, so a day already kept
+        // is recorded as kept before a new block raises its bar.
+        PromiseJudge.refresh()
         let callsChanged = new.callTimes != plan.callTimes
             || new.blocks.filter({ $0.kind == .talk }) != plan.blocks.filter({ $0.kind == .talk })
             || new.exceptions != plan.exceptions || new.restDays != plan.restDays

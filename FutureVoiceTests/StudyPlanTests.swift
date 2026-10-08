@@ -329,4 +329,23 @@ final class StudyPlanTests: XCTestCase {
         let kept = mine.upgradingToOnboardingPromise(callEnabled: false, goalMinutes: 10)
         XCTAssertEqual(kept.blocks, mine.blocks)
     }
+
+    /// Adding a block after the day's plan was done must not take the day
+    /// back (2026-10-07: a 5-minute talk added at night turned Oct 6 grey).
+    @MainActor
+    func testKeptDayStaysKeptWhenABlockIsAddedLater() {
+        let now = Date()
+        let finished = PromiseLedger.Entry(planned: 3, done: 3, settled: false)
+        let raised = PromiseJudge.carryingKept(.init(planned: 4, done: 3), from: finished, now: now)
+        XCTAssertTrue(raised.kept)
+        XCTAssertEqual(raised.keptAt, now)
+        let later = PromiseJudge.carryingKept(.init(planned: 5, done: 3), from: raised,
+                                              now: now.addingTimeInterval(60))
+        XCTAssertEqual(later.keptAt, now)
+        // A day never finished is still judged by its plan.
+        let short = PromiseJudge.carryingKept(.init(planned: 4, done: 3),
+                                              from: .init(planned: 3, done: 2), now: now)
+        XCTAssertFalse(short.kept)
+        XCTAssertNil(short.keptAt)
+    }
 }
