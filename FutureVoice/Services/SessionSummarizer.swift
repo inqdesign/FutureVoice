@@ -259,6 +259,21 @@ enum SessionSummarizer {
         }
         computed.phrasesUsed = keptPhrases
         report { $0.phrases = computed.phrasesUsed.count }
+        // new_patterns_detected gets the same "they said it" check. The
+        // summary prompt carries the whole learner profile, recurring
+        // mistakes included, and the model copies a pattern on file back
+        // out verbatim whether or not this talk had it — same key, so
+        // `absorb` bumped its frequency and moved `lastSeenAt` past this
+        // talk's end, which made every clean coached call ineligible to
+        // retire the grammar focus (`GrammarFocus.isRetired`). Reported
+        // 2026-10-08: the same focus on every call, used right or not.
+        let keptPatterns = computed.newPatternsDetected.filter { isTheirs($0.mistake) }
+        if keptPatterns.count != computed.newPatternsDetected.count {
+            NSLog("PATTERNCAPTURE dropped %d of %d (not in the learner's turns)",
+                  computed.newPatternsDetected.count - keptPatterns.count,
+                  computed.newPatternsDetected.count)
+        }
+        computed.newPatternsDetected = keptPatterns
         // What they had been studying, and what they had marked known, as it
         // stood BEFORE this talk is credited: producing a word takes it out of
         // the notebook, and the wrap-up still has to say it was a notebook
