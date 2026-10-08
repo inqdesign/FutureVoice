@@ -586,13 +586,24 @@ enum WeeklyTestEngine {
         return out
     }
 
-    /// One correction card as a rewrite item. The sentence is the one the
-    /// learner said, found in the turn the card came from; the answer is
-    /// that sentence with the card's fix applied. `focus` / `example` carry
-    /// the fix itself (what was said → what it should be), which is what
-    /// the grade and the hint read. nil when the sentence is too short or
-    /// long to be worth writing out, or the fix changes nothing.
-    static func rewriteItem(from card: DrillCard, sessions: [UUID: Session]) -> WeeklyTestItem? {
+    /// One correction card as a rewrite item. What the learner reads is
+    /// what they said around the slip: the sentence it sits in, or — when
+    /// that sentence runs past `rewriteClauseFrom` words, which a spoken turn
+    /// usually does, since the recognizer joins it with commas — just the
+    /// comma-bounded clause holding it. The answer is that same span with the
+    /// card's fix applied. Hesitation sounds (`SpeechLibrary.fillers`) are
+    /// taken out of both: they are not the mistake, and "consistent uh issue"
+    /// is hard to read back. `focus` / `example` carry the fix itself (what
+    /// was said → what it should be), which is what the grade and the hint
+    /// read. nil when the span is still too short or long to write out, or
+    /// the fix changes nothing.
+    ///
+    /// Until the clause cut (2026-10-08, same day as the item) the whole
+    /// sentence had to fit 25 words, and the four real spoken turns in
+    /// `correction-cases-en.json` were 29–34 words each — so almost no real
+    /// correction ever became an item.
+    static func rewriteItem(from card: DrillCard, sessions: [UUID: Session],
+                            language: String = LanguageScope.active) -> WeeklyTestItem? {
         let was = card.sourcePhrase.trimmingCharacters(in: .whitespacesAndNewlines)
         let now = card.targetPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
         var said = was, answer = now
@@ -601,17 +612,76 @@ enum WeeklyTestEngine {
             for sentence in TalkCurriculum.sentences(in: turn.transcript) {
                 guard let range = sentence.range(of: was, options: [.caseInsensitive, .diacriticInsensitive])
                 else { continue }
-                said = sentence
-                answer = sentence.replacingCharacters(in: range, with: now)
+                let span = WordSplitter.count(sentence) > rewriteClauseFrom
+                    ? clauseRange(around: range, in: sentence) : sentence.startIndex..<sentence.endIndex
+                var clause = String(sentence[span])
+                guard let local = clause.range(of: was, options: [.caseInsensitive, .diacriticInsensitive])
+                else { continue }
+                said = clause
+                clause.replaceSubrange(local, with: now)
+                answer = clause
                 break
             }
         }
+        said = withoutFillers(said, language: language)
+        answer = withoutFillers(answer, language: language)
         let n = WordSplitter.count(said)
         guard n >= 3, n <= (WordSplitter.spaced ? 25 : 40),
               CarryoverDetector.normalized(said) != CarryoverDetector.normalized(answer) else { return nil }
         return WeeklyTestItem(id: UUID(), kind: .rewrite, prompt: said, answer: answer, options: [],
                               sessionId: card.sourceSessionId, turnId: card.sourceTurnId,
                               cardId: card.id, note: card.reason, focus: was, example: now)
+    }
+
+    /// Past this many words a sentence is cut to the clause holding the slip.
+    static var rewriteClauseFrom: Int { WordSplitter.spaced ? 16 : 30 }
+
+    /// The comma/semicolon-bounded stretch of `sentence` holding `range`,
+    /// trimmed, with any leading conjunction-less comma left out. The slip's
+    /// own span is never cut, even when it crosses a comma.
+    static func clauseRange(around range: Range<String.Index>, in sentence: String) -> Range<String.Index> {
+        let marks: Set<Character> = [",", ";", "、", "，", "；"]
+        var lower = range.lowerBound
+        while lower > sentence.startIndex {
+            let prev = sentence.index(before: lower)
+            if marks.contains(sentence[prev]) { break }
+            lower = prev
+        }
+        var upper = range.upperBound
+        while upper < sentence.endIndex, !marks.contains(sentence[upper]) {
+            upper = sentence.index(after: upper)
+        }
+        while lower < upper, sentence[lower].isWhitespace { lower = sentence.index(after: lower) }
+        while upper > lower, sentence[sentence.index(before: upper)].isWhitespace {
+            upper = sentence.index(before: upper)
+        }
+        return lower..<upper
+    }
+
+    /// `text` with the language's hesitation sounds taken out, and the
+    /// commas they leave behind tidied. Spaced languages drop whole words
+    /// only; Japanese drops the sound wherever it stands, with its 、.
+    static func withoutFillers(_ text: String, language: String) -> String {
+        let fillers = Set(SpeechLibrary.fillers(language).map { $0.lowercased() })
+            .subtracting(["este"])   // Spanish "this" as often as a filler
+        guard !fillers.isEmpty else { return text }
+        var out: String
+        if WordSplitter.spaced {
+            let kept = text.split(separator: " ", omittingEmptySubsequences: true).filter { word in
+                let bare = word.lowercased().trimmingCharacters(in: .punctuationCharacters)
+                return !fillers.contains(bare)
+            }
+            out = kept.joined(separator: " ")
+        } else {
+            out = text
+            for f in fillers.sorted(by: { $0.count > $1.count }) {
+                out = out.replacingOccurrences(of: f + "、", with: "")
+                out = out.replacingOccurrences(of: f, with: "")
+            }
+        }
+        // ", ," and a leading comma are what a removed "um," leaves behind.
+        while out.contains(", ,") { out = out.replacingOccurrences(of: ", ,", with: ",") }
+        return out.trimmingCharacters(in: CharacterSet(charactersIn: ",、 ").union(.whitespaces))
     }
 
     /// A stored tile item (`build`) as the rewrite that replaced it, read
@@ -851,18 +921,34 @@ enum WeeklyTestEngine {
     /// credits a correction in a talk) inside most of the sentence, so a
     /// reply of the fixed word alone is not a rewrite. Nothing else counts
     /// against it: how the rest is worded is the learner's.
-    static func isCorrect(_ item: WeeklyTestItem, rewritten: String) -> Bool {
-        let given = CarryoverDetector.normalized(rewritten)
+    ///
+    /// Everything is compared through `ShadowEngine.expandForDiff` first:
+    /// dictation writes "I've" as "I have" and digits for numbers, and an
+    /// answer said right must not fail on how the recognizer spelled it.
+    /// Spaces are compared away too (Korean spacing is the recognizer's).
+    static func isCorrect(_ item: WeeklyTestItem, rewritten: String,
+                          language: String = LanguageScope.active) -> Bool {
+        // Hesitation is never the mistake, in the slip or in the answer.
+        func expand(_ t: String) -> String {
+            ShadowEngine.expandForDiff(withoutFillers(t, language: language), language: language)
+        }
+        func squeezed(_ t: String) -> String {
+            CarryoverDetector.normalized(expand(t)).replacingOccurrences(of: " ", with: "")
+        }
+        let given = CarryoverDetector.normalized(expand(rewritten))
         guard !given.isEmpty else { return false }
-        if given.contains(CarryoverDetector.normalized(item.answer)) { return true }
-        guard let was = item.focus, let now = item.example else { return false }
+        if given.contains(CarryoverDetector.normalized(expand(item.answer)))
+            || squeezed(rewritten).contains(squeezed(item.answer)) { return true }
+        guard let rawWas = item.focus, let rawNow = item.example else { return false }
+        let was = expand(rawWas), now = expand(rawNow)
+        let rewritten = expand(rewritten)
         // A pure reorder adds and drops nothing; only the fix itself shows it.
         let fixKey = CarryoverDetector.normalized(now)
         guard CarryoverDetector.fixChangesWords(from: was, to: now) else {
             return !fixKey.isEmpty && given.contains(fixKey)
         }
         return CarryoverDetector.showsTheFix(from: was, to: now, inText: rewritten)
-            && CarryoverDetector.sharedWordRatio(of: item.answer, in: rewritten) >= 0.6
+            && CarryoverDetector.sharedWordRatio(of: expand(item.answer), in: rewritten) >= 0.6
     }
 
     /// The words the fix put in — the hint a rewrite item offers.

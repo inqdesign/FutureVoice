@@ -51,6 +51,55 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertEqual(WeeklyTestEngine.hintWords(it), "went")
     }
 
+    /// Real spoken turns (`scripts/correction-cases-en.json`) run 29–34
+    /// words in one comma-joined sentence. Each correction still becomes an
+    /// item: the clause holding the slip, hesitation taken out, and an
+    /// answer said the way dictation writes it ("I have", not "I've") passes.
+    func testRewriteItemsFromRealSpokenTurns() {
+        UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey) }
+        let cases: [(line: String, was: String, now: String, prompt: String, said: String)] = [
+            ("Hey, um yeah, we can definitely do so, but I had a bad experience uh right uh before and checking if that is consistent uh issue or temporal issue.",
+             "checking if that is consistent uh issue or temporal issue",
+             "checking if it's a consistent issue or a temporary issue",
+             "but I had a bad experience right before and checking if that is consistent issue or temporal issue.",
+             "I had a bad experience right before and I am checking if it is a consistent issue or a temporary issue"),
+            ("It was uh it was really tiring, we started at like six in the morning and the truck it came late, so we finish only at midnight and I have to unpack everything tomorrow.",
+             "we finish only at midnight", "we only finished at midnight",
+             "so we finish only at midnight and I have to unpack everything tomorrow.",
+             "so we only finished at midnight and I have to unpack everything tomorrow"),
+            ("I am working in a startup since three years, I do mostly the backend, um, and recently I take also some product decisions because we are very small team.",
+             "I am working in a startup since three years", "I've been working at a startup for three years",
+             "I am working in a startup since three years",
+             "I have been working at a startup for three years"),
+            ("I am working in a startup since three years, I do mostly the backend, um, and recently I take also some product decisions because we are very small team.",
+             "I take also some product decisions", "I also make some product decisions",
+             "and recently I take also some product decisions because we are very small team.",
+             "and recently I also make some product decisions because we are a very small team"),
+            ("Not yet, I am planning to, but every time I want to bring it up he is busy, so I think I will just send a message and explain him the situation.",
+             "explain him the situation", "explain the situation to him",
+             "so I think I will just send a message and explain him the situation.",
+             "uh so I think I will just send a message and explain the situation to him"),
+        ]
+        for c in cases {
+            let turn = Turn(id: UUID(), role: .user, audioURL: nil, transcript: c.line, durationMs: 9_000,
+                            timestamp: Date(), suggestion: nil)
+            let session = Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                                  topic: nil, startedAt: Date(), endedAt: Date(), turns: [turn],
+                                  summary: nil, origin: .free)
+            let card = DrillCard(sourcePhrase: c.was, targetPhrase: c.now, reason: "", createdAt: Date(),
+                                 lastReviewedAt: nil, nextReviewAt: Date(), box: 0,
+                                 sourceSessionId: session.id, sourceTurnId: turn.id)
+            guard let it = WeeklyTestEngine.rewriteItem(from: card, sessions: [session.id: session],
+                                                        language: "en") else {
+                XCTFail("no item for: \(c.was)"); continue
+            }
+            XCTAssertEqual(it.prompt, c.prompt)
+            XCTAssertTrue(WeeklyTestEngine.isCorrect(it, rewritten: c.said, language: "en"), c.said)
+            XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: it.prompt, language: "en"), it.prompt)
+        }
+    }
+
     func testItemsRequireTheTargetScript() {
         XCTAssertTrue(WeeklyTestEngine.isInTargetScript("Show me the clock once.", language: "en"))
         XCTAssertFalse(WeeklyTestEngine.isInTargetScript("한번 나올게 해줘 시계.", language: "en"))
