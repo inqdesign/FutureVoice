@@ -89,6 +89,18 @@ export class CallSession implements DurableObject {
   private specTimer: number | null = null
   /** Interim must sit unchanged this long before a speculation fires. */
   private static readonly specSettleMs = 350
+  /** A runaway guard, not a budget (2026-10-08). Every speculation is a
+   *  whole generation, and interims grow a word at a time, so a long turn
+   *  fires one per word gap. Throttling them was measured and rejected: the
+   *  fire that matters is the LAST one, and any count or longer settle
+   *  delays exactly that one — reply text went from ready-at-commit to
+   *  0.7–1.2 s after it. The cached system prompt (reply.ts) is what made
+   *  them cheap instead; this only stops a turn that never ends from
+   *  generating forever. */
+  private static readonly specMaxFires = 12
+  private specFiresThisTurn = 0
+  private specFires = 0
+  private specAdopted = 0
 
   /// A call with nobody in it hangs itself up.
   ///
@@ -812,9 +824,11 @@ export class CallSession implements DurableObject {
             ? this.pendingUtterance + " " + text
             : text
           if (this.spec && this.spec.text !== specText) this.dropSpec()
-          if (this.specTimer !== null) clearTimeout(this.specTimer)
-          this.specTimer = setTimeout(() => this.fireSpec(specText),
-                                      CallSession.specSettleMs) as unknown as number
+          if (this.specTimer !== null) { clearTimeout(this.specTimer); this.specTimer = null }
+          if (this.specFiresThisTurn < CallSession.specMaxFires) {
+            this.specTimer = setTimeout(() => this.fireSpec(specText),
+                                        CallSession.specSettleMs) as unknown as number
+          }
         },
         onUtterance: (text) => {
           const audio = this.utteranceAudio
@@ -924,6 +938,8 @@ export class CallSession implements DurableObject {
     const trimmed = text.trim()
     if (trimmed.length === 0) return
 
+    this.specFiresThisTurn += 1
+    this.specFires += 1
     const abort = new AbortController()
     const spec: NonNullable<CallSession["spec"]> & { context?: string } = {
       text, buffered: "", abort, done: false, fullText: null,
@@ -1207,6 +1223,7 @@ export class CallSession implements DurableObject {
     }
     this.learnerSpoke = true
     this.lastCommitAt = Date.now()
+    this.specFiresThisTurn = 0
     // A re-opened turn sends only what the app doesn't have yet. When the
     // learner said nothing more (the barge-in was a breath), that is "" —
     // an older app ignores an empty turn, a newer one keeps its bubble —
@@ -1234,6 +1251,7 @@ export class CallSession implements DurableObject {
       // Only NOW does anything reach the voice: a speculation for words the
       // learner didn't finish saying dies unvoiced above.
       this.spec = null
+      this.specAdopted += 1
       this.turnCount += 1
       const context = `t${this.turnCount}`
       // Same clock as the non-speculative path — an adopted speculation is
@@ -1681,6 +1699,14 @@ export class CallSession implements DurableObject {
     this.clearPending()
     this.dropSpec()
     this.activeReplyAbort?.abort()
+    if (this.replyEngine) {
+      // What this call's replies cost (they reach no ledger) — Workers Logs.
+      const u = this.replyEngine.usage
+      console.log(`reply usage: calls=${u.calls} prompt=${u.promptTokens} cached=${u.cachedTokens} ` +
+        `out=${u.outputTokens} thought=${u.thoughtTokens} turns=${this.turnCount} ` +
+        `spec_fires=${this.specFires} spec_adopted=${this.specAdopted}`)
+      this.replyEngine.dispose()
+    }
     this.transcriber?.close()
     this.eleven?.close()
     try { this.client?.close(1000, "session ended") } catch { /* gone */ }

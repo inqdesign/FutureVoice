@@ -10,6 +10,7 @@
 // Usage:
 //   node test/talk.mjs --url ws://localhost:8787/call --wav hello16k.wav \
 //     [--token <supabase-jwt>] [--voice <voice_id>] [--lang en] [--native ko]
+//     [--system-file /tmp/fv-prompt-dump/en-a2.txt]
 //     [--whole]   keep going past the first reply (multi-turn wavs: a
 //                 native-language line, a pause the learner fills — see
 //                 test/probe-reread-native.mjs); ends 8 s after the mic
@@ -51,7 +52,10 @@ ws.onopen = () => {
     voiceId: args.voice ?? "test-voice",
     language: args.lang || "en",
     ...(args.native ? { native: args.native } : {}),
-    system: "You are the user's fluent future self. Reply in one or two short spoken sentences.",
+    // --system-file: a real dumped prompt (/tmp/fv-prompt-dump), long enough
+    // for the reply cache to engage — the default is too short to cache.
+    system: args["system-file"] ? readFileSync(args["system-file"], "utf8")
+      : "You are the user's fluent future self. Reply in one or two short spoken sentences.",
   }))
 }
 

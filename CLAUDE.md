@@ -1954,6 +1954,24 @@ BEFORE `audio_start`: the app reads it as connecting → listening and would
 otherwise overwrite the speaking state the opener just set, leaving the line
 with no hand-off.
 
+**The reply's system prompt is an explicit Gemini CACHE** (2026-10-08,
+`gateway/src/reply.ts`). The reply calls go straight to Gemini, so no ledger
+row saw them, and they were most of the Gemini bill: every generation —
+speculative ones included, ~6 per turn since interims grow a word at a time —
+re-sent the ~4–6k-token system prompt plus the call so far; 33M input tokens
+in the first eight days of October, 60% of the bill. Implicit caching did not
+catch it (7% cached; identical back-to-back requests cached 0 in
+`test/probe-reply-cache.mjs`). The cache is made on the first generation
+(the first runs uncached beside it), stretched by each one, deleted when the
+call ends; any failure is the old uncached request. Primary model only — the
+hedge runs uncached. Throttling speculation was built and REJECTED the same
+day: the fire that matters is the last one, and every count or longer settle
+delayed exactly that one (reply text 0 ms → 0.7–1.2 s after commit, A/B
+against the production code); `specMaxFires` (12) is a runaway guard only.
+Each call logs `reply usage: calls prompt cached out … spec_fires
+spec_adopted` to Workers Logs — the only record of what a call's replies
+cost. The app's `talk_rt_session` row does not carry it yet.
+
 **The audio stack is never rebuilt while the fluent self is AUDIBLE, and
 exactly one thing may rebuild it** (2026-09-13). Two watchdogs were restarting
 it on two clocks — `startMicWatchdog` at 1.5 s and 3 s from connect, the
@@ -2316,8 +2334,12 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
 - **The steer is permission, not an order** ("if one fits what you're
   already talking about…; never steer the topic; don't say the word"). The
   feature is judged by whether it feels forced.
-- **It rides on the gateway's `set` as `steer`**, appended to the reply's
-  system prompt until the app clears it — set when a line FINISHES (the next
+- **It rides on the gateway's `set` as `steer`**, carried as a note on the
+  model's copy of the learner's last turn (`gateway/src/steer-turn.ts`; it was
+  the system prompt's tail until 2026-10-08, when the system prompt became a
+  cache — measured with `test/probe-steer-placement.mjs`, no change in how
+  often the question fits, fewer replies saying the word) until the app
+  clears it — set when a line FINISHES (the next
   reply is generated the moment the learner stops, speculative ones included,
   so later is too late) and cleared once the steered line has been spoken.
   An older gateway ignores the field; the hint then appears without a
