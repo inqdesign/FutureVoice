@@ -305,6 +305,9 @@ internal suspend fun rebuiltFromSample(context: android.content.Context): String
  */
 internal object PreferredAccent {
     private const val KEY = "futurevoice.preferredAccentId"
+    /** "Keep my voice as recorded" (iOS `SetupFlowView.noAccent`): no remix
+     *  at all. */
+    const val NONE = "none"
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("futurevoice", 0)
     fun get(c: android.content.Context): String? = prefs(c).getString(KEY, null)
     fun set(c: android.content.Context, id: String?) {
@@ -411,6 +414,8 @@ internal suspend fun remixIntoDefaultAccent(
 ): Pair<String, VoiceAccent>? {
     // The accent picked in setup, when it is one of this target's options;
     // else the language's default (iOS `applyDefaultAccent`).
+    // Picked "as I recorded it" in setup: no remix.
+    if (PreferredAccent.get(context) == PreferredAccent.NONE) return null
     val accent = VoiceAccentCatalog.options(targetLanguage)
         .firstOrNull { it.id == PreferredAccent.get(context) }
         ?: VoiceAccentCatalog.defaultAccent(targetLanguage) ?: return null

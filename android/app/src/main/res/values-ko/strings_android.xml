@@ -249,6 +249,7 @@
     <string name="which_accent">원하는 억양은?</string>
     <string name="which_accent_do_you_want_to_speak_with">어떤 억양으로 말하고 싶으세요?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">유창해진 내가 내 목소리로, 이 억양으로 말해요. 직접 들어본 뒤에 바꿀 수도 있어요.</string>
+    <string name="your_voice_as_you_recorded_it_with_no_accent_applied">녹음한 목소리 그대로, 억양을 입히지 않아요</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">둘은 어떤 말투로 얘기해요?</string>
     <string name="rel_how_do_you_and_s_talk">%1$s하고는 어떤 말투로 얘기해요?</string>

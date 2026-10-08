@@ -160,9 +160,10 @@ fun PersonaIntakeScreen(
                     OutlinedTextField(value = city, onValueChange = { city = it },
                         label = { Text(stringResource(R.string.city)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = country, onValueChange = { country = it },
-                        label = { Text(stringResource(R.string.country)) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    // City only (iOS 2026-10-08, founder): this card tells the
+                    // fluent self where they live, and a city says that —
+                    // typing the country too was effort for nothing. The
+                    // field stays on the persona and in Me → Profile.
                     OutlinedTextField(value = stay, onValueChange = { stay = it },
                         label = { Text(stringResource(R.string.how_long_have_you_been_there_optional)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth())

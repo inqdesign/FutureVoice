@@ -194,7 +194,8 @@ private fun SetupFlowBody(
                             // The accent the first clone is remixed into. A
                             // pick made for a target they then moved away
                             // from doesn't belong to this one.
-                            val picked = accentId?.takeIf { id -> accentOptions.any { it.id == id } }
+                            val picked = accentId?.takeIf { id ->
+                                id == PreferredAccent.NONE || accentOptions.any { it.id == id } }
                             PreferredAccent.set(goalContext, picked ?: accentOptions.firstOrNull()?.id)
                             onFinish(native, target, level, goal)
                         }
@@ -254,12 +255,23 @@ private fun SetupFlowBody(
                 // this is a name pick; the meet act's pills change it once
                 // it's audible. What it buys is that the ONE remix made after
                 // the clone is already theirs.
-                SetupStep.ACCENT -> ChoiceList(accentOptions,
-                    selected = accentOptions.firstOrNull { it.id == accentId } ?: accentOptions.first(),
-                    title = { accentLabel(it) },
-                    subtitle = { null },
+                // The plain clone, as a choice (iOS 2026-10-08) — last,
+                // because from a native-language take the model invents the
+                // accent line by line, which is why a remix is the default.
+                SetupStep.ACCENT -> ChoiceList(accentOptions.map { it.id } + PreferredAccent.NONE,
+                    selected = accentId?.takeIf { id -> id == PreferredAccent.NONE || accentOptions.any { it.id == id } }
+                        ?: accentOptions.first().id,
+                    title = { id ->
+                        accentOptions.firstOrNull { it.id == id }?.let { accentLabel(it) }
+                            ?: stringResource(R.string.accent_original)
+                    },
+                    subtitle = { id ->
+                        if (id == PreferredAccent.NONE)
+                            stringResource(R.string.your_voice_as_you_recorded_it_with_no_accent_applied)
+                        else null
+                    },
                     footer = stringResource(R.string.your_fluent_self_speaks_with_this_accent_in_your_own_voice)) {
-                    accentId = it.id
+                    accentId = it
                 }
                 SetupStep.LEVEL -> ChoiceList(CefrLevel.entries.toList(), selected = level,
                     title = { LanguageCatalog.levelLabel(it, target) },

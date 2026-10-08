@@ -249,6 +249,7 @@
     <string name="which_accent">話したいアクセントは？</string>
     <string name="which_accent_do_you_want_to_speak_with">どのアクセントで話したいですか？</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流暢な自分が、自分の声でこのアクセントで話します。実際に聞いてから変えることもできます。</string>
+    <string name="your_voice_as_you_recorded_it_with_no_accent_applied">録音した声のまま。アクセントは加えません</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">ふたりはどう話していますか？</string>
     <string name="rel_how_do_you_and_s_talk">%1$sとはどう話していますか？</string>
