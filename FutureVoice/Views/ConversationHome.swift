@@ -75,10 +75,10 @@ struct ConversationHome: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     heroSection
-                    if sessionCount == 0 {
-                        firstRunCard
-                            .padding(.horizontal, 20)
-                    } else if personaNeedsDepth {
+                    // Nothing before the first talk (2026-10-08): the greeting
+                    // and the ring already say what to do, and a card telling
+                    // people to tap the biggest thing on the screen said nothing.
+                    if sessionCount > 0 && personaNeedsDepth {
                         deepenRow
                             .padding(.horizontal, 20)
                     }
@@ -622,23 +622,6 @@ struct ConversationHome: View {
     private func syncRingHeadline() {
         let headline = goalHeadline
         if appState.talkRingHeadline != headline { appState.talkRingHeadline = headline }
-    }
-
-    // MARK: - First run
-
-    /// Under Today before the first conversation — explains the lists below.
-    private var firstRunCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Your fluent self is ready", systemImage: "waveform")
-                .font(.subheadline.weight(.semibold))
-            Text(explain("Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     // MARK: - Persona deepening (post-first-talk)
