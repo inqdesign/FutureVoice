@@ -108,8 +108,9 @@ final class SpeechTakeSession: ObservableObject {
 
     func appear() async {
         #if DEBUG
-        // A capture run shoots the screen, not a camera prompt.
-        if DebugCapture.isCapturing { return }
+        // A capture run shoots the screen, not a camera prompt —
+        // unless `-speechrealcam 1` asks for the real camera (device checks).
+        if DebugCapture.isCapturing && !UserDefaults.standard.bool(forKey: "speechrealcam") { return }
         #endif
         if cameraOn { await camera.start() }
     }

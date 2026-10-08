@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import os
 import SwiftUI
 import UIKit
 
@@ -21,15 +22,25 @@ final class SpeechCamera: NSObject, ObservableObject {
     private let queue = DispatchQueue(label: "com.roro.futurevoice.speech-camera")
     private var configured = false
     private let handlerBox = FrameHandlerBox()
+    private var device: AVCaptureDevice?
+    private weak var previewLayer: AVCaptureVideoPreviewLayer?
+    private var rotation: AVCaptureDevice.RotationCoordinator?
+    private var rotationObservation: NSKeyValueObservation?
+    /// What the screen asked for. A start that finishes after a stop was
+    /// asked for is undone, and a runtime error restarts only a wanted camera.
+    private var wanted = false
+    private var observers: [NSObjectProtocol] = []
+    private static let log = Logger(subsystem: "com.roro.futurevoice", category: "speech-camera")
 
-    /// Called for every frame, on the camera's queue. Frames are portrait
-    /// and mirrored like the preview, stamped on the host clock.
+    /// Called for every frame, on the camera's queue. Frames are upright the
+    /// way the preview is and mirrored like it, stamped on the host clock.
     nonisolated var frameHandler: (@Sendable (CMSampleBuffer) -> Void)? {
         get { handlerBox.get() }
         set { handlerBox.set(newValue) }
     }
 
     func start() async {
+        wanted = true
         guard !isRunning else { return }
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         var granted = status == .authorized
@@ -40,17 +51,55 @@ final class SpeechCamera: NSObject, ObservableObject {
         denied = false
         if !configured { configured = configure() }
         guard configured else { return }
+        followRotation()
         let session = session
+        let began = Date()
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             queue.async { session.startRunning(); cont.resume() }
         }
-        isRunning = session.isRunning
+        Self.log.notice("start: running=\(session.isRunning) interrupted=\(session.isInterrupted) ms=\(Int(Date().timeIntervalSince(began) * 1000))")
+        guard wanted else { stop(); return }
+        refreshRunning()
     }
 
     func stop() {
+        wanted = false
         let session = session
         queue.async { session.stopRunning() }
         isRunning = false
+    }
+
+    /// Showing = running and not interrupted. An interrupted session (another
+    /// app holding the camera, iPad multitasking) still reads as running and
+    /// draws a frozen or black card, so the screen falls back to the mic panel.
+    private func refreshRunning() {
+        isRunning = wanted && session.isRunning && !session.isInterrupted
+    }
+
+    private func observeSession() {
+        let center = NotificationCenter.default
+        let names: [Notification.Name] = [AVCaptureSession.didStartRunningNotification,
+                                          AVCaptureSession.didStopRunningNotification,
+                                          AVCaptureSession.wasInterruptedNotification,
+                                          AVCaptureSession.interruptionEndedNotification,
+                                          AVCaptureSession.runtimeErrorNotification]
+        for name in names {
+            observers.append(center.addObserver(forName: name, object: session, queue: .main) { [weak self] note in
+                let reason = (note.userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int) ?? -1
+                let error = note.userInfo?[AVCaptureSessionErrorKey] as? NSError
+                MainActor.assumeIsolated { self?.sessionChanged(note.name, reason: reason, error: error) }
+            })
+        }
+    }
+
+    private func sessionChanged(_ name: Notification.Name, reason: Int, error: NSError?) {
+        Self.log.notice("\(name.rawValue, privacy: .public) reason=\(reason) error=\(error?.code ?? 0)")
+        if name == AVCaptureSession.runtimeErrorNotification, wanted {
+            // Media services reset, or the session died under us: start it again.
+            let session = session
+            queue.async { session.startRunning() }
+        }
+        refreshRunning()
     }
 
     private func configure() -> Bool {
@@ -59,23 +108,65 @@ final class SpeechCamera: NSObject, ObservableObject {
         // The mic is ours; never let the capture session touch the audio
         // session the recognizer is running on.
         session.automaticallyConfiguresApplicationAudioSession = false
+        // iPad Split View / Stage Manager: without this the camera is
+        // interrupted the moment another app shares the screen.
+        if session.isMultitaskingCameraAccessSupported {
+            session.isMultitaskingCameraAccessEnabled = true
+        }
         session.sessionPreset = .hd1280x720
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input), session.canAddOutput(output) else { return false }
         session.addInput(input)
+        self.device = device
+        observeSession()
         output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
-            if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
             if connection.isVideoMirroringSupported {
                 connection.automaticallyAdjustsVideoMirroring = false
                 connection.isVideoMirrored = true
             }
         }
         return true
+    }
+
+    /// The preview hands its layer over so the picture can follow the SCREEN.
+    /// A fixed 90° was right only on an iPhone held upright; an iPad turns,
+    /// and its front camera may sit on the long edge, so the angle comes from
+    /// the device and the interface, never from a constant.
+    func attach(previewLayer layer: AVCaptureVideoPreviewLayer) {
+        guard previewLayer !== layer else { return }
+        previewLayer = layer
+        rotation = nil
+        followRotation()
+    }
+
+    private func followRotation() {
+        guard let device else { return }
+        if rotation == nil {
+            rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+            rotationObservation = rotation?.observe(\.videoRotationAngleForHorizonLevelPreview,
+                                                    options: [.new]) { [weak self] _, _ in
+                Task { @MainActor in self?.applyRotation() }
+            }
+        }
+        applyRotation()
+    }
+
+    /// The preview angle goes on BOTH connections: the saved video is the take
+    /// screen, so its picture stands the way the screen's does.
+    private func applyRotation() {
+        guard let angle = rotation?.videoRotationAngleForHorizonLevelPreview else { return }
+        Self.log.notice("rotation: \(angle) preview=\(self.previewLayer != nil)")
+        if let c = previewLayer?.connection, c.isVideoRotationAngleSupported(angle) {
+            c.videoRotationAngle = angle
+        }
+        if let c = output.connection(with: .video), c.isVideoRotationAngleSupported(angle) {
+            c.videoRotationAngle = angle
+        }
     }
 }
 
@@ -96,7 +187,7 @@ private final class FrameHandlerBox: @unchecked Sendable {
 /// The live preview. The one UIKit wrap on this screen — SwiftUI has no
 /// capture preview.
 struct SpeechCameraPreview: UIViewRepresentable {
-    let session: AVCaptureSession
+    let camera: SpeechCamera
 
     final class PreviewView: UIView {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
@@ -105,9 +196,10 @@ struct SpeechCameraPreview: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
-        view.previewLayer.session = session
+        view.previewLayer.session = camera.session
         view.previewLayer.videoGravity = .resizeAspectFill
         view.backgroundColor = .black
+        camera.attach(previewLayer: view.previewLayer)
         return view
     }
 

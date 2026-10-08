@@ -297,10 +297,10 @@ struct SpeechPrompterView: View {
                         LinearGradient(colors: [Color(white: 0.75), Color(red: 0.55, green: 0.42, blue: 0.35), Color(white: 0.2)],
                                        startPoint: .top, endPoint: .bottom)
                     } else {
-                        SpeechCameraPreview(session: session.camera.session)
+                        SpeechCameraPreview(camera: session.camera)
                     }
                     #else
-                    SpeechCameraPreview(session: session.camera.session)
+                    SpeechCameraPreview(camera: session.camera)
                     #endif
                 } else {
                     micPanel
