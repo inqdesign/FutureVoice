@@ -1971,10 +1971,17 @@ struct WeeklyTestItem: Codable, Identifiable, Hashable {
         /// with it marked, pick the better word.
         case upgrade
         /// A sentence the learner said and was corrected, shown whole with
-        /// the mistake marked: say or type it again the right way, a hint on
-        /// request. `focus` → `example` is the fix, `answer` the sentence
-        /// with it applied.
+        /// the mistake marked: say or type it again the right way. Dealt for
+        /// one day (2026-10-08) and replaced by `translate`; stored papers
+        /// may still hold it.
         case rewrite
+        /// A grammar point the learner got wrong, asked in a NEW sentence:
+        /// `prompt` is a native-language sentence to say in the target
+        /// language, `answer` a model answer. Right when every `required`
+        /// group is in the answer and nothing in `avoid` is. `rule` names
+        /// the point, `note` is its tip, `focus` → `example` the learner's
+        /// own slip and its fix.
+        case translate
     }
     let id: UUID
     let kind: Kind
@@ -2002,6 +2009,11 @@ struct WeeklyTestItem: Codable, Identifiable, Hashable {
     var focus: String? = nil
     /// upgrade: the learner's line with the better word in it.
     var example: String? = nil
+    /// translate: groups of target-language spans, one of each group must
+    /// be in the answer (a group holds the variants: "I've been", "I have been").
+    var required: [[String]]? = nil
+    /// translate: the wrong forms — the learner's own — that fail an answer.
+    var avoid: [String]? = nil
 }
 
 struct WeeklyTestAnswer: Codable, Hashable {

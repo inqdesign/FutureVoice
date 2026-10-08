@@ -1680,25 +1680,35 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
   right.
 - **Every item has a reason the learner can see** (2026-10-08, learner
   feedback, founder agreed: "the review sentences feel random — the AI's
-  opening line, or my sentence chopped into tiles"). The correction item is
-  now `rewrite`, not tile `build`: the learner's sentence as said (found in
-  the card's turn — cut to the comma-bounded clause holding the slip past 16
-  words, because a spoken turn is one 30-word comma-joined sentence and the
-  first cut's 25-word cap dropped all four real turns in
-  `correction-cases-en.json`; hesitation sounds taken out), the changed words underlined, a hint on request (the
-  words the fix adds + its why), answered by voice or keyboard
-  (`SpeakOrTypeField`, target-language dictation). Graded in code, through
-  `expandForDiff` and without fillers (dictation writes "I have" for "I've"):
-  the answer sentence, or the fix shown by `CarryoverDetector.showsTheFix`
-  inside ≥60% of the sentence's words (the fixed word alone is not a rewrite).
-  `testRewriteItemsFromRealSpokenTurns` pins the real turns. `build` is
-  never dealt again; a stored one (missed retake, unanswered in a paper in
-  progress) comes back as `rewrite` via its card. `gap` comes from the
+  opening line, or my sentence chopped into tiles"). `gap` comes from the
   Expressions page's "To study" list (`ExpressionCatalog.toStudy`), newest
   first, in the line it was heard (this week → any talk → its scene's
   example); `listen` / `speak` take only lines carrying a To-study phrase and
-  never a call's first fluent-self line (the greeting). Capture:
-  `-capture weekly-test-rewrite[-right|-wrong]`.
+  never a call's first fluent-self line (the greeting).
+- **A mistake is tested by its PATTERN in a new sentence** (`translate`, same
+  day, founder: "if I got this wrong, give me a related sentence — '나는 어제
+  티비를 보다가 잠이 들었다', translate it"). The correction item went tiles
+  (`build`) → re-say your own sentence (`rewrite`, lived one day: re-reading
+  the sentence you were corrected on checks the answer, not the grammar) →
+  `translate`: one default-model call (`purpose: "weekly-test"`, 30 s) gets
+  the window's correction cards + the profile's recurring mistakes (`slips`)
+  and writes up to 3 items, one per DIFFERENT grammar point — a casual
+  native-language sentence on the learner's topics, a model answer, `must`
+  (span groups that prove the point, variants per group) and `avoid` (the
+  learner's own wrong forms, 2+ words). Graded in CODE, never by the model:
+  every group in the answer, no avoid form, at least half the answer's
+  length; through `expandForDiff` and without fillers, so dictation's "I
+  have" passes for "I've". The model answer must pass its own grade or the
+  item is dropped, and a lone function word in `must` / a one-word `avoid`
+  ("since") is stripped in code. Known limit, accepted: only the point is
+  graded, so a slip elsewhere in the sentence still passes, and a synonym
+  for a must span fails. After the answer: the model answer with the spans
+  bold, the point + tip, and "Last time you said" (the slip → fix). Wrong /
+  right write back to the slip's card like `build` did. Measured with
+  `scripts/translate-quiz-probe.py` (live prompt, the real slips of
+  `correction-cases-en.json`): 9/9 items need their point; re-run it before
+  touching the prompt. `build` / `rewrite` are no longer dealt; stored ones
+  still play. Captures: `-capture weekly-test-translate[-right|-wrong]`.
 - **Two kinds come from the week's REPORT** (2026-10-03, user request):
   `grammar` (a recurring grammar point from `WeekRecap.Coach.grammar` —
   its rule over one of the learner's own lines that carries the mistake,

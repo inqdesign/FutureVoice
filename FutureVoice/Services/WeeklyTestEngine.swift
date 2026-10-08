@@ -9,9 +9,13 @@ import Foundation
 ///   meaning  ← the notebook (words the talks taught, `VocabStore.studying`)
 ///   gap      ← the Expressions page's "To study" list (`ExpressionCatalog
 ///              .toStudy`), in the line it was heard in
-///   rewrite  ← the corrections (`DrillStore` cards): the learner's WHOLE
-///              sentence as said, mistake marked, a hint on request —
-///              say or type it the right way (replaced `build`, 2026-10-08)
+///   translate← the corrections (`DrillStore` cards) and the profile's
+///              recurring mistakes, asked in a NEW sentence: a native-language
+///              line to say in the target language, graded in code against
+///              the pattern's required spans and the learner's own wrong
+///              forms (replaced `build`, 2026-10-08 — founder: "a mistake is
+///              learned by using its pattern again, not by re-reading the
+///              sentence it was in")
 ///   listen   ← the fluent self's saved lines (`TurnAudioStore`), heard and
 ///              rebuilt from tiles — dictation, not a pick from three
 ///   speak    ← the fluent self's lines, said out loud and scored like a
@@ -51,6 +55,9 @@ enum WeeklyTestEngine {
     static let maxMeaning = 4
     static let maxGap = 3
     static let maxRewrite = 3
+    static let maxTranslate = 3
+    /// How long a paper waits for its translate items to be written.
+    static let translateWait: TimeInterval = 30
     static let maxListen = 2
     static let maxSpeak = 2
     static let maxGrammar = 2
@@ -137,7 +144,8 @@ enum WeeklyTestEngine {
         let teachingTurns = fluentTurns.filter { !openers.contains($0.turn.id) }
         items += gapItems(toStudy: toStudy, sessions: windowSessions, fluentTurns: teachingTurns,
                           allSessions: allSessions, openers: openers, appState: appState, rng: &rng)
-        items += rewriteItems(start: start, end: end, now: now, sessions: allSessions)
+        items += await translateItems(start: start, end: end, now: now, sessions: allSessions,
+                                      windowSessions: windowSessions, appState: appState, testId: id)
         let listens = listenItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases, rng: &rng)
         items += listens
         items += speakItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases,
@@ -240,6 +248,8 @@ enum WeeklyTestEngine {
             return ok(item.prompt) && item.options.allSatisfy(ok)
         case .rewrite:
             return ok(item.prompt)
+        case .translate:
+            return true
         case .upgrade:
             return ok(item.prompt) && item.options.allSatisfy(ok)
         case .gap:
@@ -684,6 +694,179 @@ enum WeeklyTestEngine {
         return out.trimmingCharacters(in: CharacterSet(charactersIn: ",、 ").union(.whitespaces))
     }
 
+    // MARK: translate
+
+    /// One mistake a translate item can be built on: what was said, what it
+    /// should be, why, and the card it came from (for write-back).
+    struct Slip { let was: String; let now: String; let why: String; let cardId: UUID? }
+
+    /// The mistakes to build on: this window's correction cards, due first
+    /// then newest, then the profile's recurring mistakes — deduped.
+    static func slips(start: Date, end: Date, now: Date, profile: LearnerProfile) -> [Slip] {
+        let cards = DrillStore.shared.load().filter { card in
+            guard card.box < DrillStore.maxBox,
+                  !card.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty,
+                  isInTargetScript(card.targetPhrase), isInTargetScript(card.sourcePhrase) else { return false }
+            let touched = [card.createdAt, card.lastReviewedAt].compactMap { $0 }
+            return touched.contains(where: { $0 > start && $0 <= end })
+        }.sorted {
+            let aDue = $0.nextReviewAt <= now, bDue = $1.nextReviewAt <= now
+            if aDue != bDue { return aDue }
+            return $0.createdAt > $1.createdAt
+        }
+        var out: [Slip] = []
+        var seen = Set<String>()
+        func add(_ s: Slip) {
+            guard seen.insert(CarryoverDetector.normalized(s.was)).inserted else { return }
+            out.append(s)
+        }
+        for c in cards { add(Slip(was: c.sourcePhrase, now: c.targetPhrase, why: c.reason, cardId: c.id)) }
+        let fresh = now.addingTimeInterval(-Double(GrammarFocus.freshDays) * 86_400)
+        for p in profile.recurringMistakes where p.frequency >= GrammarFocus.minFrequency && p.lastSeenAt >= fresh
+            && isInTargetScript(p.mistake) && isInTargetScript(p.correction) {
+            add(Slip(was: p.mistake, now: p.correction, why: p.context, cardId: nil))
+        }
+        return Array(out.prefix(10))
+    }
+
+    private struct TranslatePayload: Decodable {
+        struct Item: Decodable {
+            let source: Int
+            let point: String
+            let native: String
+            let answer: String
+            let must: [[String]]
+            let avoid: [String]?
+            let tip: String?
+        }
+        let items: [Item]
+    }
+
+    /// New sentences that need the grammar the learner got wrong — one
+    /// model call writes them with the spans that prove the point, and code
+    /// grades against those spans. Nothing when the target IS the native
+    /// language (there is nothing to translate from) or the call fails.
+    private static func translateItems(
+        start: Date, end: Date, now: Date, sessions: [Session], windowSessions: [Session],
+        appState: AppState, testId: UUID
+    ) async -> [WeeklyTestItem] {
+        let target = appState.targetLanguage, native = appState.nativeLanguage
+        guard !LanguageCatalog.sameLanguage(target, native) else { return [] }
+        let list = slips(start: start, end: end, now: now, profile: appState.learnerProfile)
+        guard !list.isEmpty else { return [] }
+        let topics = windowSessions.compactMap { $0.topic }
+            .filter { !$0.isEmpty }.prefix(6)
+        let targetName = LanguageCatalog.englishName(target)
+        let nativeName = LanguageCatalog.englishName(native)
+        let system = """
+            You write a short translation quiz for a \(targetName) learner whose own \
+            language is \(nativeName), level \(appState.proficiency.rawValue.uppercased()). \
+            You get mistakes they really made. Pick up to \(maxTranslate) of them, \
+            each a DIFFERENT grammar point (skip pure word choice or a slip with no \
+            rule behind it), and for each write ONE new everyday sentence that \
+            cannot be said right without that grammar point.
+
+            Return {"items":[{"source":n,"point":"...","native":"...","answer":"...",\
+            "must":[["..."]],"avoid":["..."],"tip":"..."}]}
+            - source: the number of the mistake it is built on.
+            - native: the sentence in \(nativeName), casual and spoken, the way they'd say it to a friend, 6–14 words, \
+              about ordinary life (these were their topics: \(topics.joined(separator: "; "))). \
+              NOT their original sentence, and not a word-for-word copy of it.
+            - answer: the most natural \(targetName) way to say it, at their level.
+            - must: the words in `answer` that show the grammar point and nothing \
+              else, 1–4 words each, as groups; a group lists the forms that are \
+              equally right ("I've been", "I have been"). Every group's first form \
+              must appear in `answer` exactly. As specific as the point allows (\"explain the problem to\", not \"to\"); never a word the learner could \
+              reasonably replace with a synonym.
+            - avoid: wrong forms of 2+ words this learner would produce, built the way \
+              their mistake was (e.g. "since five years"). Each must be wrong in ANY sentence — never a word that is right elsewhere (\"since\" alone, \"finish\" alone). Each must NOT be in answer.
+            - point: the grammar point in \(nativeName), 2–5 words. tip: one line in \
+              \(nativeName) on when it applies, at most 14 words.
+            JSON only.
+            """
+        let user = list.enumerated().map { i, s in
+            "\(i + 1). said \"\(s.was)\" → should be \"\(s.now)\"\(s.why.isEmpty ? "" : " (\(s.why))")"
+        }.joined(separator: "\n")
+        let task = Task { @MainActor () -> TranslatePayload? in
+            try? await GeminiClient.shared.sendJSON(
+                system: system, messages: [.init(role: .user, content: user)],
+                maxTokens: 3000, purpose: "weekly-test",
+                idempotencyKey: "weekly-test-translate:\(testId.uuidString)",
+                requestTimeout: translateWait)
+        }
+        guard let payload = await task.value else { return [] }
+        var out: [WeeklyTestItem] = []
+        var points = Set<String>()
+        for it in payload.items {
+            guard out.count < maxTranslate, list.indices.contains(it.source - 1) else { continue }
+            let slip = list[it.source - 1]
+            guard let item = translateItem(it.native, answer: it.answer, must: it.must, avoid: it.avoid ?? [],
+                                           point: it.point, tip: it.tip, slip: slip, target: target),
+                  points.insert(it.point.lowercased()).inserted else { continue }
+            out.append(item)
+        }
+        return out
+    }
+
+    /// A model-written translate item, kept only if its own answer passes
+    /// its own grade — every required group in it, nothing to avoid — and
+    /// each side is in the language it claims to be.
+    static func translateItem(_ native: String, answer: String, must: [[String]], avoid: [String],
+                              point: String, tip: String?, slip: Slip, target: String) -> WeeklyTestItem? {
+        // A group of nothing but a short function word ("to", "a") proves
+        // nothing, and a one-word avoid ("since") fails right sentences —
+        // the prompt asks for neither, and this keeps them out when it slips.
+        let groups = must.map { $0.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } }
+            .filter { !$0.isEmpty }
+            .filter { group in !WordSplitter.spaced || !group.allSatisfy { WordSplitter.count($0) == 1 && $0.count <= 3 } }
+        let avoid = avoid.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && (!WordSplitter.spaced || WordSplitter.count($0) >= 2) }
+        let n = WordSplitter.count(answer)
+        guard !groups.isEmpty, n >= 3, n <= (WordSplitter.spaced ? 18 : 30),
+              isInTargetScript(answer, language: target), !native.isEmpty,
+              CarryoverDetector.normalized(native) != CarryoverDetector.normalized(answer) else { return nil }
+        let item = WeeklyTestItem(id: UUID(), kind: .translate, prompt: native, answer: answer, options: [],
+                                  cardId: slip.cardId, note: tip, rule: point,
+                                  focus: slip.was, example: slip.now,
+                                  required: groups, avoid: avoid)
+        guard isCorrect(item, translated: answer, language: target) else { return nil }
+        return item
+    }
+
+    /// A translate answer: every required group has a form in it, no avoided
+    /// form is in it, and it is a sentence rather than the key words alone.
+    /// Compared without fillers and through `expandForDiff` (dictation's
+    /// "I have" for "I've"), with spaces compared away too.
+    static func isCorrect(_ item: WeeklyTestItem, translated: String,
+                          language: String = LanguageScope.active) -> Bool {
+        func key(_ t: String) -> String {
+            CarryoverDetector.normalized(
+                ShadowEngine.expandForDiff(withoutFillers(t, language: language), language: language))
+        }
+        func contains(_ hay: String, _ needle: String) -> Bool {
+            let n = key(needle)
+            guard !n.isEmpty else { return false }
+            let h = " " + hay + " "
+            if h.contains(" " + n + " ") { return true }
+            return !WordSplitter.spaced || LanguageCatalog.base(language) == "ko"
+                ? hay.replacingOccurrences(of: " ", with: "").contains(n.replacingOccurrences(of: " ", with: ""))
+                : false
+        }
+        let given = key(translated)
+        guard !given.isEmpty, let groups = item.required, !groups.isEmpty else { return false }
+        let floor = max(3, WordSplitter.count(item.answer) / 2)
+        guard WordSplitter.count(translated) >= min(floor, WordSplitter.count(item.answer)) else { return false }
+        guard groups.allSatisfy({ $0.contains { contains(given, $0) } }) else { return false }
+        return !(item.avoid ?? []).contains { contains(given, $0) }
+    }
+
+    /// The required spans as the answer spells them — bolded on the result.
+    static func requiredSpans(_ item: WeeklyTestItem) -> [String] {
+        (item.required ?? []).compactMap { group in
+            group.first { item.answer.range(of: $0, options: [.caseInsensitive]) != nil }
+        }
+    }
+
     /// A stored tile item (`build`) as the rewrite that replaced it, read
     /// from its card. nil when the card is gone.
     static func asRewrite(_ item: WeeklyTestItem) -> WeeklyTestItem? {
@@ -1092,7 +1275,7 @@ enum WeeklyTestEngine {
                     else { PracticeLog.shared.record(.expression) }
                     ReviewQueue.retire(.expression, phrase)
                 }
-            case .build, .rewrite:
+            case .build, .rewrite, .translate:
                 guard let id = item.cardId, let card = cards[id] else { continue }
                 if answer.correct { DrillStore.shared.markCorrect(card, at: now) }
                 else { DrillStore.shared.markIncorrect(card, at: now) }

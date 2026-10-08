@@ -1017,6 +1017,7 @@ enum DebugCapture {
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
         case "weekly-test", "weekly-test-word", "weekly-test-gap", "weekly-test-build", "weekly-test-listen",
              "weekly-test-rewrite", "weekly-test-rewrite-right", "weekly-test-rewrite-wrong",
+             "weekly-test-translate", "weekly-test-translate-right", "weekly-test-translate-wrong",
              "weekly-test-speak",
              "weekly-test-word-right", "weekly-test-gap-wrong", "weekly-test-build-wrong", "weekly-test-build-right",
              "weekly-test-grammar", "weekly-test-grammar-right", "weekly-test-grammar-wrong",
@@ -1031,6 +1032,7 @@ enum DebugCapture {
                 case "weekly-test-gap", "weekly-test-gap-wrong": .gap
                 case "weekly-test-build", "weekly-test-build-wrong", "weekly-test-build-right": .build
                 case "weekly-test-rewrite", "weekly-test-rewrite-right", "weekly-test-rewrite-wrong": .rewrite
+                case "weekly-test-translate", "weekly-test-translate-right", "weekly-test-translate-wrong": .translate
                 case "weekly-test-listen": .listen
                 case "weekly-test-speak": .speak
                 case "weekly-test-grammar", "weekly-test-grammar-right", "weekly-test-grammar-wrong": .grammar

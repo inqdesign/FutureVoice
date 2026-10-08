@@ -199,6 +199,12 @@ struct WeeklyTestView: View {
             case .grammar: Label("A mistake you keep making", systemImage: "arrow.triangle.2.circlepath")
             case .upgrade: Label("A better word", systemImage: "arrow.up.circle")
             case .rewrite: Label("Say it the right way", systemImage: "pencil.line")
+            case .translate:
+                Label {
+                    Text("Say it in \(LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage))")
+                } icon: {
+                    Image(systemName: "character.bubble")
+                }
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -281,6 +287,8 @@ struct WeeklyTestView: View {
             }
         case .rewrite:
             rewritePrompt(item)
+        case .translate:
+            translatePrompt(item)
         case .listen:
             HStack {
                 Spacer()
@@ -363,9 +371,104 @@ struct WeeklyTestView: View {
             buildArea(item)
         case .speak:
             speakArea(item)
-        case .rewrite:
+        case .rewrite, .translate:
             rewriteArea(item)
         }
+    }
+
+    // MARK: - Translate
+
+    /// A new sentence in the learner's language that needs the grammar they
+    /// got wrong. The point and its tip are the hint; once graded, the model
+    /// answer with the spans that prove the point in bold, and the slip it
+    /// was built on.
+    private func translatePrompt(_ item: WeeklyTestItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(item.prompt)
+                .font(.title3.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            if outcome == nil {
+                if showHint {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Hint", systemImage: "lightbulb")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        if let rule = item.rule, !rule.isEmpty {
+                            Text(rule)
+                                .font(.body.weight(.semibold))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let note = item.note, !note.isEmpty {
+                            Text(note)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .transition(.opacity)
+                } else {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) { showHint = true }
+                    } label: {
+                        Label("Show a hint", systemImage: "lightbulb")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("The right way")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    spansBold(item.answer, spans: WeeklyTestEngine.requiredSpans(item))
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.green)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let rule = item.rule, !rule.isEmpty {
+                        Text(rule)
+                            .font(.footnote.weight(.semibold))
+                            .padding(.top, 4)
+                    }
+                    if let note = item.note, !note.isEmpty {
+                        Text(note)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .transition(.opacity)
+                if let was = item.focus, let fixed = item.example {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Last time you said")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        (Text(was).strikethrough() + Text("  →  ") + Text(fixed).bold())
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .transition(.opacity)
+                }
+            }
+        }
+    }
+
+    /// `text` with each of `spans` (first occurrence) in bold and underlined.
+    private func spansBold(_ text: String, spans: [String]) -> Text {
+        var ranges: [Range<String.Index>] = []
+        for span in spans {
+            if let r = text.range(of: span, options: [.caseInsensitive, .diacriticInsensitive]),
+               !ranges.contains(where: { $0.overlaps(r) }) { ranges.append(r) }
+        }
+        ranges.sort { $0.lowerBound < $1.lowerBound }
+        var out = Text("")
+        var cursor = text.startIndex
+        for r in ranges {
+            out = out + Text(text[cursor..<r.lowerBound]) + Text(text[r]).bold().underline()
+            cursor = r.upperBound
+        }
+        return out + Text(text[cursor...])
     }
 
     // MARK: - Rewrite
@@ -455,7 +558,9 @@ struct WeeklyTestView: View {
             SpeakOrTypeField(
                 text: $rewriteText,
                 locale: Binding(get: { appState.targetLanguage }, set: { _ in }),
-                placeholder: explain("Say it or type it the right way"),
+                placeholder: item.kind == .translate
+                    ? explain("Say it or type it")
+                    : explain("Say it or type it the right way"),
                 showsLocalePicker: false,
                 lineRange: 2...5,
                 externalFocus: $rewriteFocused)
@@ -474,8 +579,10 @@ struct WeeklyTestView: View {
     private func checkRewrite(_ item: WeeklyTestItem, test: WeeklyTest) {
         rewriteFocused = false
         let given = rewriteText.trimmingCharacters(in: .whitespacesAndNewlines)
-        settle(correct: WeeklyTestEngine.isCorrect(item, rewritten: given), given: given,
-               test: test, item: item)
+        let right = item.kind == .translate
+            ? WeeklyTestEngine.isCorrect(item, translated: given, language: test.targetLanguage)
+            : WeeklyTestEngine.isCorrect(item, rewritten: given, language: test.targetLanguage)
+        settle(correct: right, given: given, test: test, item: item)
     }
 
     // MARK: - Speak
@@ -845,7 +952,7 @@ struct WeeklyTestView: View {
                         Text(outcome ? "Right" : "Not this time")
                             .font(.subheadline.weight(.semibold))
                         if !outcome, item.kind != .build, item.kind != .listen, item.kind != .grammar,
-                           item.kind != .rewrite {
+                           item.kind != .rewrite, item.kind != .translate {
                             Text(item.answer)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -867,7 +974,7 @@ struct WeeklyTestView: View {
                 .controlSize(.large)
                 .tint(outcome ? .green : .accentColor)
                 .accessibilityIdentifier("weeklyTest.continue")
-            } else if item.kind == .rewrite {
+            } else if item.kind == .rewrite || item.kind == .translate {
                 Button {
                     checkRewrite(item, test: test)
                 } label: {
@@ -933,6 +1040,19 @@ struct WeeklyTestView: View {
         }
         settings.clearThin()
         #if DEBUG
+        // A capture run can't reach the model that writes translate items.
+        if DebugCapture.weeklyTestKind == .translate, !test.items.contains(where: { $0.kind == .translate }),
+           let sample = WeeklyTestEngine.translateItem(
+               "나 이 스타트업에서 2년째 일하고 있어.",
+               answer: "I've been working at this startup for two years.",
+               must: [["I've been working", "I have been working"], ["for two years"]],
+               avoid: ["am working since", "since two years"],
+               point: "현재완료 진행형 + for", tip: "과거부터 지금까지 이어지는 일은 have been -ing와 for를 써요.",
+               slip: .init(was: "I am working in a startup since three years",
+                           now: "I've been working at a startup for three years", why: "", cardId: nil),
+               target: "en") {
+            test.items.insert(sample, at: 0)
+        }
         if let kind = DebugCapture.weeklyTestKind,
            let first = test.items.firstIndex(where: { $0.kind == kind }) {
             test.items.swapAt(0, first)
@@ -953,9 +1073,9 @@ struct WeeklyTestView: View {
                 }
                 if !right { order.swapAt(0, order.count - 1); laid = order }
                 checkBuild(item, test: test)
-            } else if item.kind == .rewrite {
+            } else if item.kind == .rewrite || item.kind == .translate {
                 showHint = !right
-                rewriteText = right ? item.answer : item.prompt
+                rewriteText = right ? item.answer : (item.kind == .translate ? (item.focus ?? "") : item.prompt)
                 checkRewrite(item, test: test)
             } else {
                 let pick = right ? item.answer : (item.options.first { !WeeklyTestEngine.isCorrect(item, chosen: $0) } ?? item.answer)
@@ -1288,6 +1408,7 @@ struct WeeklyTestResultView: View {
         case .grammar: Image(systemName: "arrow.triangle.2.circlepath")
         case .upgrade: Image(systemName: "arrow.up.circle")
         case .rewrite: Image(systemName: "pencil.line")
+        case .translate: Image(systemName: "character.bubble")
         }
     }
 }
