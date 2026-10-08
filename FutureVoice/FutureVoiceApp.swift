@@ -133,9 +133,6 @@ struct FutureVoiceApp: App {
                 SyncEngine.shared.backgrounded()
                 // …and whatever doesn't fit in that, iOS finishes later.
                 SyncBackground.schedule()
-                // Tomorrow's voicemail, once per sitting rather than once per
-                // talk (see `DailyCallScheduler.ensureVoicemailAudio`).
-                DailyCallScheduler.ensureVoicemailAudioOnBackground()
             }
             // Pull the other devices' practice, then push ours.
             if phase == .active {

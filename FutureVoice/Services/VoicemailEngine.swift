@@ -127,8 +127,8 @@ enum VoicemailEngine {
 
     /// ~25 s of speech at a natural pace, at speed 1.0. Nobody listens to a
     /// longer voicemail, and the learner is meant to answer a question, not
-    /// sit through a monologue. Enforced twice: here in characters, and again
-    /// on the PCM in `synthesizeVoicemail`.
+    /// sit through a monologue. Enforced here in characters; the gateway speaks
+    /// the line live when the learner picks up (`DailyCallScheduler.refresh`).
     static let baseScriptCharacters = 260
 
     /// The budget the script is written to and trimmed to. The learner's
@@ -141,10 +141,6 @@ enum VoicemailEngine {
     static var maxScriptCharacters: Int {
         Int(Double(baseScriptCharacters) * SpeechSpeed.current.multiplier)
     }
-
-    /// Hard cut for the spoken audio, in case a model overruns the character
-    /// budget anyway.
-    static let maxVoicemailSeconds: Double = 29
 
     static func systemPrompt(_ c: Context, calendar: Calendar = .current) -> String {
         let targetName = LanguageCatalog.englishName(c.targetLanguage)
@@ -244,116 +240,5 @@ enum VoicemailEngine {
         Return STRICT JSON only — no prose, no code fences:
         { "script": "..." }
         """
-    }
-
-    // MARK: - Ringtone
-
-    /// Synthesize `script` in the learner's clone and return it as playable
-    /// WAV. This is the VOICEMAIL — what the caller says once the learner picks
-    /// up — not the ring. The ring is a bundled phone tone
-    /// (`DailyCallStore.ringtoneFilename`); a runtime-written file cannot be a
-    /// notification or alarm sound on iOS 26.
-    ///
-    /// Uses the STREAMING endpoint purely for its output format: it returns
-    /// raw 16-bit LE PCM, and Linear PCM in a WAV container is one of the few
-    /// things `UNNotificationSound` will play. The MP3 that `synthesize`
-    /// returns is not — decoding it on-device would be a second dependency for
-    /// no gain. Returns nil on any failure; the caller then rings on the
-    /// default sound rather than not ringing at all.
-    ///
-    /// Model: turbo, like every other repeating surface (2026-09-26). It ran
-    /// `fidelityModelId` on the argument that a voicemail is where "that's my
-    /// voice" lands, and that it fires at most once a day — but the founder
-    /// compared the two models on their own clone that day and turbo held up
-    /// (`scripts/tts-model-probe.sh`), so there is nothing left to buy. The
-    /// "once a day" was also not true: the script is re-synthesized at every
-    /// SESSION end (`refreshDailyCall(force: true)`), so three talks in a day
-    /// meant three voicemails and one ring. Measured over the launch window
-    /// this path was 8.6% of all ElevenLabs credits excluding the founder's
-    /// own account, and half of that was the 2x.
-    @MainActor
-    static func synthesizeVoicemail(script: String, voiceId: String) async -> Data? {
-        do {
-            // Sentence by sentence, so the voicemail breathes between them
-            // (see `PacedSpeech`); a one-sentence script takes the single call.
-            if let paced = try await PacedSpeech.synthesizePCM(
-                voiceId: voiceId, text: script,
-                modelId: ElevenLabsClient.cloneModelId, purpose: "daily-call") {
-                let trimmed = trim(pcm: paced.pcm, sampleRate: paced.sampleRate,
-                                   to: maxVoicemailSeconds)
-                return AudioLoudness.wavData(fromPCM16: leveled(trimmed),
-                                             sampleRate: Int(paced.sampleRate))
-            }
-            let audio = try await ElevenLabsClient.shared.synthesizeStreaming(
-                voiceId: voiceId,
-                text: script,
-                modelId: ElevenLabsClient.cloneModelId,
-                purpose: "daily-call",
-                onPCMChunk: { _, _ in }   // nothing to play — we only want the bytes
-            )
-            guard case .pcm(let pcm, let sampleRate) = audio else {
-                // Older edge deploy with no streaming support handed back MP3,
-                // which the OS won't ring. Not worth a decoder: the call still
-                // goes out on the default sound.
-                return nil
-            }
-            let trimmed = trim(pcm: pcm, sampleRate: sampleRate,
-                               to: maxVoicemailSeconds)
-            return AudioLoudness.wavData(fromPCM16: leveled(trimmed),
-                                         sampleRate: Int(sampleRate))
-        } catch {
-            return nil
-        }
-    }
-
-    /// Hard-cut the PCM at the OS ceiling. The character budget should have
-    /// prevented this; a model that overruns anyway must not silence the call.
-    static func trim(pcm: Data, sampleRate: Double, to seconds: Double) -> Data {
-        let maxBytes = Int(sampleRate * seconds) * 2   // 16-bit mono
-        guard pcm.count > maxBytes, maxBytes > 0 else { return pcm }
-        return pcm.prefix(maxBytes)
-    }
-
-    /// Bring the ringtone to the app's one playback level.
-    ///
-    /// IVC clones come back markedly quieter than preset voices (see
-    /// `AudioLoudness`), and a ringtone that plays under the room is a missed
-    /// call. Runs the same `gain(forSpeechRMS:)` rule every other playback path
-    /// uses — measured over samples above the same relative gate — so the call
-    /// lands at the level the learner already hears the app at, then soft-clips
-    /// so a boosted transient can't wrap around.
-    static func leveled(_ pcm: Data) -> Data {
-        let count = pcm.count / 2
-        guard count > 0 else { return pcm }
-
-        var samples = [Int16](repeating: 0, count: count)
-        _ = samples.withUnsafeMutableBytes { pcm.copyBytes(to: $0, count: count * 2) }
-
-        var peak: Float = 0
-        for s in samples { peak = max(peak, abs(Float(s) / 32767)) }
-        guard peak > 0 else { return pcm }
-
-        // Speech level, gated relative to this signal's own peak — room tone
-        // and the gaps between sentences must not drag the measurement down.
-        let gate = peak * AudioLoudness.speechGateRatio
-        var sumSquares: Double = 0
-        var voiced = 0
-        for s in samples {
-            let v = abs(Float(s) / 32767)
-            guard v >= gate else { continue }
-            sumSquares += Double(v) * Double(v)
-            voiced += 1
-        }
-        guard voiced > 0 else { return pcm }
-
-        let rms = Float((sumSquares / Double(voiced)).squareRoot())
-        let gain = AudioLoudness.gain(forSpeechRMS: rms)
-        guard abs(gain - 1) > 0.01 else { return pcm }
-
-        for i in samples.indices {
-            let boosted = (Float(samples[i]) / 32767) * gain
-            samples[i] = Int16(max(-1, min(1, boosted)) * 32767)
-        }
-        return samples.withUnsafeBufferPointer { Data(buffer: $0) }
     }
 }

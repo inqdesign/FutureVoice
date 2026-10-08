@@ -40,51 +40,6 @@ final class DailyCallTests: XCTestCase {
         XCTAssertEqual(VoicemailEngine.sanitize(script), script)
     }
 
-    // MARK: - Ringtone length
-
-    /// iOS silently swaps a too-long notification sound for the default one,
-    /// so the PCM is cut even when the character budget was somehow beaten.
-    func testTrimEnforcesTheOSSoundCeiling() {
-        let sampleRate = 22_050.0
-        let fortySeconds = Data(count: Int(sampleRate * 40) * 2)
-        let trimmed = VoicemailEngine.trim(pcm: fortySeconds, sampleRate: sampleRate,
-                                           to: VoicemailEngine.maxVoicemailSeconds)
-        XCTAssertEqual(trimmed.count, Int(sampleRate * VoicemailEngine.maxVoicemailSeconds) * 2)
-    }
-
-    func testTrimLeavesShortAudioUntouched() {
-        let sampleRate = 22_050.0
-        let tenSeconds = Data(count: Int(sampleRate * 10) * 2)
-        XCTAssertEqual(
-            VoicemailEngine.trim(pcm: tenSeconds, sampleRate: sampleRate,
-                                 to: VoicemailEngine.maxVoicemailSeconds).count,
-            tenSeconds.count)
-    }
-
-    // MARK: - Ringtone level
-
-    /// A clone comes back quieter than a preset voice, and a ringtone under
-    /// the room is a missed call. The gain rule must LIFT a quiet take —
-    /// without wrapping the samples around on the way.
-    func testLeveledBoostsAQuietTakeWithoutClipping() {
-        let sampleRate = 22_050
-        let quiet = pcm(amplitude: 0.03, seconds: 1, sampleRate: sampleRate)
-        let leveled = VoicemailEngine.leveled(quiet)
-
-        XCTAssertEqual(leveled.count, quiet.count, "sample count must not change")
-        XCTAssertGreaterThan(peak(of: leveled), peak(of: quiet), "quiet take should be lifted")
-        XCTAssertLessThanOrEqual(peak(of: leveled), 1.0)
-    }
-
-    func testLeveledHandlesSilenceWithoutCrashing() {
-        let silence = Data(count: 4096)
-        XCTAssertEqual(VoicemailEngine.leveled(silence), silence)
-    }
-
-    func testLeveledHandlesEmptyAudio() {
-        XCTAssertEqual(VoicemailEngine.leveled(Data()), Data())
-    }
-
     // MARK: - Fire time
 
     @MainActor
@@ -358,24 +313,5 @@ final class DailyCallTests: XCTestCase {
     private func removeFiles(for store: DailyCallStore) {
         store.clearUnheard()
         store.clear()
-    }
-
-    /// 16-bit LE mono PCM at a fixed amplitude, as the streaming TTS delivers.
-    private func pcm(amplitude: Float, seconds: Double, sampleRate: Int) -> Data {
-        let n = Int(Double(sampleRate) * seconds)
-        var samples = [Int16](repeating: 0, count: n)
-        for i in 0..<n {
-            let v = amplitude * sinf(Float(2 * Double.pi * 200 * Double(i) / Double(sampleRate)))
-            samples[i] = Int16(max(-1, min(1, v)) * 32767)
-        }
-        return samples.withUnsafeBufferPointer { Data(buffer: $0) }
-    }
-
-    private func peak(of pcm: Data) -> Float {
-        let count = pcm.count / 2
-        guard count > 0 else { return 0 }
-        var samples = [Int16](repeating: 0, count: count)
-        _ = samples.withUnsafeMutableBytes { pcm.copyBytes(to: $0, count: count * 2) }
-        return samples.reduce(Float(0)) { max($0, abs(Float($1) / 32767)) }
     }
 }
