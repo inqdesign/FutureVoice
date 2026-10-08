@@ -142,6 +142,19 @@ Deno.serve(async (req) => {
     return errorResponse(400, "voice_id and text required")
   }
 
+  // The daily call's voicemail is never synthesized ahead any more
+  // (2026-10-08): 583 takes in 30 days for 46 answered calls, ~$9/month for
+  // audio nobody heard. Build 77 stopped asking; older builds still do, so
+  // they are refused here, before anything is charged or spent upstream.
+  // Every build from 53 on treats a failed take as "no audio": the call still
+  // rings (the ring is a bundled tone) and on answer the gateway speaks the
+  // script live. Nothing on screen depends on this request.
+  if (body.purpose === "daily-call") {
+    return new Response(JSON.stringify({ error: "voicemail_spoken_live" }), {
+      status: 410, headers: { "Content-Type": "application/json", ...cors() },
+    })
+  }
+
   // Idempotency-proof hourly backstop, before any upstream spend. FIRED here,
   // awaited beside the charge below: the rate bump, the ownership check and
   // the charge are three independent DB round trips, and this function sits
