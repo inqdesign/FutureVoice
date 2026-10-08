@@ -117,6 +117,7 @@ import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.data.WeeklyTest
 import com.roro.futurevoice.data.WeeklyTestEngine
 import com.roro.futurevoice.data.WeeklyTestItem
+import com.roro.futurevoice.data.WeeklyTestRandom
 import com.roro.futurevoice.data.WeeklyTestSchedule
 import com.roro.futurevoice.data.WeeklyTestSettings
 import com.roro.futurevoice.data.WeeklyTestStore
@@ -204,6 +205,8 @@ fun WeeklyTestScreen(
      *  the hint. */
     var rewriteText by remember { mutableStateOf("") }
     var showHint by remember { mutableStateOf(false) }
+    /** translate: an unlisted order of the answer's words is being read. */
+    var checkingOrder by remember { mutableStateOf(false) }
 
     val mood = when (outcome) {
         null -> WeeklyTestHost.Mood.WAITING
@@ -291,16 +294,27 @@ fun WeeklyTestScreen(
 
     fun checkBuild(item: WeeklyTestItem, test: WeeklyTest) {
         val tiles = laid.map { item.options[it] }
-        settle(WeeklyTestEngine.isCorrect(item, tiles, test.targetLanguage),
-            WeeklyTestEngine.sentence(tiles, test.targetLanguage), test, item)
+        val given = WeeklyTestEngine.sentence(tiles, test.targetLanguage)
+        val right = WeeklyTestEngine.isCorrect(item, tiles, test.targetLanguage)
+        // A translate answer in the answer's own words, in an order the item
+        // doesn't list, gets its order read before it is called wrong.
+        if (right || item.kind != WeeklyTestItem.Kind.TRANSLATE ||
+            !WeeklyTestEngine.isReorder(item, tiles, test.targetLanguage)) {
+            settle(right, given, test, item)
+            return
+        }
+        checkingOrder = true
+        scope.launch {
+            val ok = WeeklyTestEngine.orderIsNatural(item, given, test.targetLanguage)
+            checkingOrder = false
+            if (outcome != null || current?.id != item.id) return@launch
+            settle(ok, given, test, item)
+        }
     }
 
     fun checkRewrite(item: WeeklyTestItem, test: WeeklyTest) {
         val given = rewriteText.trim()
-        val right = if (item.kind == WeeklyTestItem.Kind.TRANSLATE)
-            WeeklyTestEngine.isCorrectTranslate(item, given, test.targetLanguage)
-            else WeeklyTestEngine.isCorrectRewrite(item, given, test.targetLanguage)
-        settle(right, given, test, item)
+        settle(WeeklyTestEngine.isCorrectRewrite(item, given, test.targetLanguage), given, test, item)
     }
 
     suspend fun buildNew() {
@@ -331,12 +345,13 @@ fun WeeklyTestScreen(
             WeeklyTestEngine.translateItem(
                 "나 이 스타트업에서 2년째 일하고 있어.",
                 answer = "I've been working at this startup for two years.",
-                must = listOf(listOf("I've been working", "I have been working"), listOf("for two years")),
-                avoid = listOf("am working since", "since two years"),
+                orders = listOf("For two years I've been working at this startup."),
+                decoys = listOf("since", "am"),
                 point = "현재완료 진행형 + for", tip = "과거부터 지금까지 이어지는 일은 have been -ing와 for를 써요.",
                 slip = WeeklyTestEngine.Slip(was = "I am working in a startup since three years",
                     now = "I've been working at a startup for three years", why = "", cardId = null),
-                target = "en")?.let { sample -> test = test!!.copy(items = listOf(sample) + test!!.items) }
+                target = "en", rng = WeeklyTestRandom(test!!.id))
+                ?.let { sample -> test = test!!.copy(items = listOf(sample) + test!!.items) }
         }
         WeeklyTestCaptureFlags.kind?.let { k ->
             val i = test!!.items.indexOfFirst { it.kind == k }
@@ -352,7 +367,7 @@ fun WeeklyTestScreen(
         val item = current
         if (right != null && item != null) {
             if (item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN ||
-                item.kind == WeeklyTestItem.Kind.GRAMMAR) {
+                item.kind == WeeklyTestItem.Kind.GRAMMAR || item.kind == WeeklyTestItem.Kind.TRANSLATE) {
                 val answer = WordSplitter.words(item.answer, language).map(WeeklyTestEngine::tileKey)
                 val order = ArrayList<Int>()
                 for (key in answer) {
@@ -363,10 +378,9 @@ fun WeeklyTestScreen(
                 if (!right && order.size > 1) java.util.Collections.swap(order, 0, order.lastIndex)
                 laid.addAll(order); cursor = laid.size
                 checkBuild(item, test!!)
-            } else if (item.kind == WeeklyTestItem.Kind.REWRITE || item.kind == WeeklyTestItem.Kind.TRANSLATE) {
+            } else if (item.kind == WeeklyTestItem.Kind.REWRITE) {
                 showHint = !right
-                rewriteText = if (right) item.answer
-                    else if (item.kind == WeeklyTestItem.Kind.TRANSLATE) item.focus.orEmpty() else item.prompt
+                rewriteText = if (right) item.answer else item.prompt
                 checkRewrite(item, test!!)
             } else {
                 val pick = if (right) item.answer
@@ -589,10 +603,10 @@ fun WeeklyTestScreen(
             val p = phase as? TestPhase.Playing
             val item = current
             if (p != null && item != null) {
-                val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE ||
-                    item.kind == WeeklyTestItem.Kind.TRANSLATE
+                val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE
                 BottomBar(item, outcome, isLast = p.test.nextItem == null,
-                    canCheck = if (rewrite) rewriteText.isNotBlank() else laid.isNotEmpty(),
+                    canCheck = if (rewrite) rewriteText.isNotBlank() else laid.isNotEmpty() && !checkingOrder,
+                    checking = checkingOrder,
                     onCheck = { if (rewrite) checkRewrite(item, p.test) else checkBuild(item, p.test) },
                     onContinue = { advance(p.test) })
             }
@@ -651,15 +665,13 @@ fun WeeklyTestScreen(
                                             OptionButton(option, item, chosen, outcome) { choose(option, item) }
                                         }
                                     }
-                                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.LISTEN, WeeklyTestItem.Kind.GRAMMAR ->
+                                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.LISTEN, WeeklyTestItem.Kind.GRAMMAR,
+                                WeeklyTestItem.Kind.TRANSLATE ->
                                     BuildArea(item, ph.test.targetLanguage, laid, cursor, outcome,
                                         onLay = ::lay, onTapPlaced = ::tapPlaced,
                                         onTapEnd = { if (outcome == null) cursor = laid.size })
-                                WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE ->
+                                WeeklyTestItem.Kind.REWRITE ->
                                     RewriteArea(rewriteText, ph.test.targetLanguage, outcome,
-                                        placeholder = stringResource(
-                                            if (item.kind == WeeklyTestItem.Kind.TRANSLATE) R.string.wt_say_or_type_it
-                                            else R.string.wt_say_or_type_right_way),
                                         onText = { rewriteText = it })
                                 WeeklyTestItem.Kind.SPEAK ->
                                     SpeakArea(speakPhase, outcome, speakTranscript, speakScore,
@@ -853,14 +865,11 @@ private fun TranslatePrompt(item: WeeklyTestItem, outcome: Boolean?, showHint: B
                 }
             } else ShowHintButton(onShowHint)
         } else {
+            // The answer itself is the tile area's (laid green, or the fluent
+            // version under a wrong one); this names the point.
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.wt_right_way), style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold, color = secondary)
-                Text(spansBold(item.answer, WeeklyTestEngine.requiredSpans(item)),
-                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = RIGHT_GREEN)
                 item.rule?.takeIf { it.isNotEmpty() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 4.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                 }
                 item.note?.takeIf { it.isNotEmpty() }?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = secondary)
@@ -881,25 +890,6 @@ private fun TranslatePrompt(item: WeeklyTestItem, outcome: Boolean?, showHint: B
             }
         }
     }
-}
-
-/** [text] with each of [spans] (first occurrence) in bold and underlined. */
-private fun spansBold(text: String, spans: List<String>) = buildAnnotatedString {
-    val ranges = ArrayList<IntRange>()
-    for (span in spans) {
-        val r = WeeklyTestEngine.foldedRange(text, span) ?: continue
-        if (ranges.none { it.first <= r.last && r.first <= it.last }) ranges += r
-    }
-    ranges.sortBy { it.first }
-    var cursor = 0
-    for (r in ranges) {
-        append(text.substring(cursor, r.first))
-        withStyle(SpanStyle(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline)) {
-            append(text.substring(r.first, r.last + 1))
-        }
-        cursor = r.last + 1
-    }
-    append(text.substring(cursor))
 }
 
 @Composable
@@ -1010,13 +1000,12 @@ private fun diffMarked(text: String, other: String, language: String) = buildAnn
 
 /** Say it (the field's mic dictates in the target language) or type it. */
 @Composable
-private fun RewriteArea(text: String, language: String, outcome: Boolean?, placeholder: String,
-                        onText: (String) -> Unit) {
+private fun RewriteArea(text: String, language: String, outcome: Boolean?, onText: (String) -> Unit) {
     if (outcome == null) {
         var usedVoice by remember { mutableStateOf(false) }
         SpeakOrTypeField(text = text, onText = onText, usedVoice = usedVoice,
             onUsedVoice = { usedVoice = it },
-            placeholder = placeholder,
+            placeholder = stringResource(R.string.wt_say_or_type_right_way),
             locale = LanguageCatalog.sttLocale(language))
     } else {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1086,7 +1075,8 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
     // A fix item may carry decoys (the words the correction replaced), so some
     // tiles are meant to be left over — said up front, or a leftover tile
     // reads as a mistake or a bug (iOS `cf5b08d`).
-    val fixes = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.GRAMMAR
+    val fixes = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.GRAMMAR ||
+        item.kind == WeeklyTestItem.Kind.TRANSLATE
     val decoys = if (fixes) WeeklyTestEngine.decoyTiles(item, language) else emptyList()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (fixes && outcome == null) {
@@ -1142,7 +1132,8 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
         // learner's own words from before the fix.
         if (outcome != null && decoys.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.wt_trap_words), style = MaterialTheme.typography.labelMedium,
+                Text(stringResource(if (item.kind == WeeklyTestItem.Kind.TRANSLATE) R.string.wt_trap_words_mistake
+                    else R.string.wt_trap_words), style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // Right: the leftover tiles above ARE the traps. Wrong: the
                 // leftovers may mix in answer words, so the traps are spelled out.
@@ -1285,10 +1276,10 @@ private fun SpeakArea(phase: SpeakPhase, outcome: Boolean?, transcript: String?,
 
 @Composable
 private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, canCheck: Boolean,
-                      onCheck: () -> Unit, onContinue: () -> Unit) {
+                      checking: Boolean, onCheck: () -> Unit, onContinue: () -> Unit) {
     val tiles = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN ||
-        item.kind == WeeklyTestItem.Kind.GRAMMAR
-    val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE || item.kind == WeeklyTestItem.Kind.TRANSLATE
+        item.kind == WeeklyTestItem.Kind.GRAMMAR || item.kind == WeeklyTestItem.Kind.TRANSLATE
+    val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE
     if (outcome == null && !tiles && !rewrite) return
     Column(Modifier.fillMaxWidth().background(AppSurfaces.ground).bottomBarInsets()) {
         HorizontalDivider()
@@ -1314,7 +1305,8 @@ private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, 
                 }
             } else {
                 Button(onClick = onCheck, enabled = canCheck, modifier = Modifier.fillMaxWidth().height(50.dp)) {
-                    Text(stringResource(R.string.check))
+                    if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Text(stringResource(R.string.check))
                 }
             }
         }

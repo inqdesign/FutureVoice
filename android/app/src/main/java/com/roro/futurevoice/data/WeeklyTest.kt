@@ -93,11 +93,9 @@ data class WeeklyTestItem(
     /** upgrade: the learner's line with the better word in it · rewrite:
      *  what it should be (the fix's "now"). */
     val example: String? = null,
-    /** translate: groups of target-language spans, one of each group must be
-     *  in the answer (a group holds the variants: "I've been", "I have been"). */
-    val required: List<List<String>>? = null,
-    /** translate: the wrong forms — the learner's own — that fail an answer. */
-    val avoid: List<String>? = null,
+    /** translate: other orders of the answer's own words that are just as
+     *  right ("Yesterday I…" / "I … yesterday"). */
+    val orders: List<String>? = null,
 ) {
     @Serializable
     enum class Kind {
@@ -126,11 +124,11 @@ data class WeeklyTestItem(
          *  may still hold it. */
         @SerialName("rewrite") REWRITE,
         /** A grammar point the learner got wrong, asked in a NEW sentence:
-         *  `prompt` is a native-language sentence to say in the target
-         *  language, `answer` a model answer. Right when every `required`
-         *  group is in the answer and nothing in `avoid` is. `rule` names the
-         *  point, `note` is its tip, `focus` → `example` the learner's own
-         *  slip and its fix. */
+         *  `prompt` is a native-language sentence, laid in the target
+         *  language from `options` (the answer's words + trap words from the
+         *  learner's mistake). Right in `answer`'s order or one of `orders`.
+         *  `rule` names the point, `note` is its tip, `focus` → `example` the
+         *  learner's own slip and its fix. */
         @SerialName("translate") TRANSLATE,
     }
 }
@@ -217,6 +215,8 @@ object WeeklyTestEngine {
     const val MAX_TRANSLATE = 3
     /** How long a paper waits for its translate items to be written. */
     const val TRANSLATE_WAIT_MS = 30_000L
+    /** How long an unlisted tile order waits to be read. */
+    const val ORDER_WAIT_MS = 10_000L
     const val MAX_LISTEN = 2
     const val MAX_SPEAK = 2
     const val MAX_GRAMMAR = 2
@@ -302,8 +302,8 @@ object WeeklyTestEngine {
             val point: String,
             val native: String,
             val answer: String,
-            val must: List<List<String>>,
-            val avoid: List<String>? = null,
+            val orders: List<String>? = null,
+            val decoys: List<String>? = null,
             val tip: String? = null,
         )
     }
@@ -892,10 +892,15 @@ object WeeklyTestEngine {
         return out.take(10)
     }
 
-    /** New sentences that need the grammar the learner got wrong — one model
-     *  call writes them with the spans that prove the point, and code grades
-     *  against those spans. Nothing when the target IS the native language
-     *  (there is nothing to translate from) or the call fails. */
+    /** New sentences that need the grammar the learner got wrong, laid from
+     *  word tiles. One model call writes each sentence, the other word orders
+     *  that are just as right, and trap words built from the learner's own
+     *  mistake; code grades the laid tiles against that closed set. A free
+     *  answer (typed or said) was tried first and could not be graded
+     *  exactly: a slip elsewhere passed and a synonym failed (founder,
+     *  2026-10-08: "that limit can't be there"). Nothing when the target IS
+     *  the native language (there is nothing to translate from) or the call
+     *  fails. */
     private suspend fun translateItems(material: Material, start: Long, end: Long, now: Long,
                                        windowSessions: List<Session>, target: String, level: CefrLevel,
                                        testId: String): List<WeeklyTestItem> {
@@ -909,25 +914,31 @@ object WeeklyTestEngine {
         val nativeName = LanguageCatalog.englishName(native)
         val system = "You write a short translation quiz for a $targetName learner whose own " +
             "language is $nativeName, level ${level.code.uppercase()}. " +
-            "You get mistakes they really made. Pick up to $MAX_TRANSLATE of them, " +
-            "each a DIFFERENT grammar point (skip pure word choice or a slip with no " +
-            "rule behind it), and for each write ONE new everyday sentence that " +
-            "cannot be said right without that grammar point.\n" +
+            "They answer by laying word tiles in order. You get mistakes they really " +
+            "made. Pick up to $MAX_TRANSLATE of them, each a DIFFERENT grammar point " +
+            "(skip pure word choice or a slip with no rule behind it), and for each " +
+            "write ONE new everyday sentence that cannot be said right without that " +
+            "grammar point.\n" +
             "\n" +
             "Return {\"items\":[{\"source\":n,\"point\":\"...\",\"native\":\"...\",\"answer\":\"...\"," +
-            "\"must\":[[\"...\"]],\"avoid\":[\"...\"],\"tip\":\"...\"}]}\n" +
+            "\"orders\":[\"...\"],\"decoys\":[\"...\"],\"tip\":\"...\"}]}\n" +
             "- source: the number of the mistake it is built on.\n" +
-            "- native: the sentence in $nativeName, casual and spoken, the way they'd say it to a friend, 6–14 words, " +
-            "about ordinary life (these were their topics: ${topics.joinToString("; ")}). " +
-            "NOT their original sentence, and not a word-for-word copy of it.\n" +
-            "- answer: the most natural $targetName way to say it, at their level.\n" +
-            "- must: the words in `answer` that show the grammar point and nothing " +
-            "else, 1–4 words each, as groups; a group lists the forms that are " +
-            "equally right (\"I've been\", \"I have been\"). Every group's first form " +
-            "must appear in `answer` exactly. As specific as the point allows (\"explain the problem to\", not \"to\"); never a word the learner could " +
-            "reasonably replace with a synonym.\n" +
-            "- avoid: wrong forms of 2+ words this learner would produce, built the way " +
-            "their mistake was (e.g. \"since five years\"). Each must be wrong in ANY sentence — never a word that is right elsewhere (\"since\" alone, \"finish\" alone). Each must NOT be in answer.\n" +
+            "- native: the sentence in $nativeName, casual and spoken, the way they'd " +
+            "say it to a friend, 6–12 words, about ordinary life (these were their " +
+            "topics: ${topics.joinToString("; ")}). NOT their original sentence.\n" +
+            "- answer: the most natural $targetName way to say it, at their level, " +
+            "5–12 words. Its words are the tiles, so there must be ONE wording: no " +
+            "optional words, nothing a learner could naturally say differently " +
+            "with other words.\n" +
+            "- orders: every OTHER order of exactly the same words that is just as " +
+            "correct. Go through each time, place and duration phrase (\"for two " +
+            "years\", \"yesterday\", \"at midnight\") and each adverb, and list the " +
+            "sentence with it at the front too wherever that is natural — a " +
+            "learner who lays a right order and is marked wrong stops trusting " +
+            "the test. [] only if the order is truly fixed.\n" +
+            "- decoys: 2–3 single words built from their mistake (e.g. \"since\", \"am\" " +
+            "for \"I am working here since 2020\") that make the sentence WRONG " +
+            "wherever they go, and are not in answer.\n" +
             "- point: the grammar point in $nativeName, 2–5 words. tip: one line in " +
             "$nativeName on when it applies, at most 14 words.\n" +
             "JSON only."
@@ -935,71 +946,47 @@ object WeeklyTestEngine {
             "${i + 1}. said \"${s.was}\" → should be \"${s.now}\"" + (if (s.why.isEmpty()) "" else " (${s.why})")
         }.joinToString("\n")
         val payload = runCatching { write(system, user, testId) }.getOrNull() ?: return emptyList()
+        val rng = WeeklyTestRandom(testId)
         val out = ArrayList<WeeklyTestItem>()
         val points = HashSet<String>()
         for (it in payload.items) {
             if (out.size >= MAX_TRANSLATE || it.source - 1 !in list.indices) continue
             val slip = list[it.source - 1]
-            val item = translateItem(it.native, it.answer, it.must, it.avoid.orEmpty(), it.point, it.tip,
-                slip, target) ?: continue
+            val item = translateItem(it.native, it.answer, it.orders.orEmpty(), it.decoys.orEmpty(), it.point,
+                it.tip, slip, target, rng) ?: continue
             if (!points.add(it.point.lowercase())) continue
             out += item
         }
         return out
     }
 
-    /** A model-written translate item, kept only if its own answer passes its
-     *  own grade — every required group in it, nothing to avoid — and each
-     *  side is in the language it claims to be. */
-    fun translateItem(native: String, answer: String, must: List<List<String>>, avoid: List<String>,
-                      point: String, tip: String?, slip: Slip, target: String): WeeklyTestItem? {
-        // A group of nothing but a short function word ("to", "a") proves
-        // nothing, and a one-word avoid ("since") fails right sentences — the
-        // prompt asks for neither, and this keeps them out when it slips.
-        val spaced = WordSplitter.spaced(target)
-        val groups = must.map { g -> g.map { it.trim() }.filter { it.isNotEmpty() } }
-            .filter { it.isNotEmpty() }
-            .filter { g -> !spaced || !g.all { WordSplitter.count(it, target) == 1 && it.length <= 3 } }
-        val avoids = avoid.map { it.trim() }
-            .filter { it.isNotEmpty() && (!spaced || WordSplitter.count(it, target) >= 2) }
-        val n = WordSplitter.count(answer, target)
-        if (groups.isEmpty() || n < 3 || n > (if (spaced) 18 else 30) ||
+    /** A model-written translate item, or null. Kept only when the answer is
+     *  a tileable sentence in the target script; `orders` keep only the ones
+     *  made of exactly the answer's words; a decoy must be one target-script
+     *  word the answer doesn't use. Tiles = the answer's words + decoys. */
+    fun translateItem(native: String, answer: String, orders: List<String>, decoys: List<String>,
+                      point: String, tip: String?, slip: Slip, target: String, rng: Random): WeeklyTestItem? {
+        val words = WordSplitter.words(answer, target)
+        val keys = words.map(::tileKey)
+        if (words.size < 3 || words.size > (if (WordSplitter.spaced(target)) 14 else 20) ||
             !TextScript.isInTargetScript(answer, target) || native.isEmpty() ||
             CarryoverDetector.normalized(native) == CarryoverDetector.normalized(answer)) return null
-        val item = WeeklyTestItem(kind = WeeklyTestItem.Kind.TRANSLATE, prompt = native, answer = answer,
-            cardId = slip.cardId, note = tip, rule = point, focus = slip.was, example = slip.now,
-            required = groups, avoid = avoids)
-        return if (isCorrectTranslate(item, answer, target)) item else null
+        val sameWords = keys.sorted()
+        val kept = dedupe(orders.filter {
+            val k = WordSplitter.words(it, target).map(::tileKey)
+            k.sorted() == sameWords && k != keys
+        }) { WordSplitter.words(it, target).map(::tileKey).joinToString(" ") }
+        val answerKeys = keys.toSet()
+        val traps = dedupe(decoys.map { it.trim() }.filter {
+            it.isNotEmpty() && WordSplitter.count(it, target) == 1 && tileKey(it) !in answerKeys &&
+                TextScript.isInTargetScript(it, target)
+        }, ::tileKey).take(3)
+        val tiles = (words + traps).shuffled(rng).toMutableList()
+        if (tiles.size > 2 && tiles.map(::tileKey) == keys) java.util.Collections.swap(tiles, 0, tiles.lastIndex)
+        return WeeklyTestItem(kind = WeeklyTestItem.Kind.TRANSLATE, prompt = native, answer = answer,
+            options = tiles, cardId = slip.cardId, note = tip, rule = point,
+            focus = slip.was, example = slip.now, orders = kept)
     }
-
-    /** A translate answer: every required group has a form in it, no avoided
-     *  form is in it, and it is a sentence rather than the key words alone.
-     *  Compared without fillers and through `expandForDiff` (dictation's
-     *  "I have" for "I've"), with spaces compared away too. (iOS
-     *  `isCorrect(_:translated:)`.) */
-    fun isCorrectTranslate(item: WeeklyTestItem, translated: String, language: String): Boolean {
-        fun key(t: String) = CarryoverDetector.normalized(
-            ShadowScore.expandForDiff(withoutFillers(t, language), language))
-        val squeezeToo = !WordSplitter.spaced(language) || language.substringBefore('-') == "ko"
-        fun contains(hay: String, needle: String): Boolean {
-            val n = key(needle)
-            if (n.isEmpty()) return false
-            if (" $hay ".contains(" $n ")) return true
-            return squeezeToo && hay.replace(" ", "").contains(n.replace(" ", ""))
-        }
-        val given = key(translated)
-        val groups = item.required
-        if (given.isEmpty() || groups.isNullOrEmpty()) return false
-        val answerWords = WordSplitter.count(item.answer, language)
-        val floor = maxOf(3, answerWords / 2)
-        if (WordSplitter.count(translated, language) < minOf(floor, answerWords)) return false
-        if (!groups.all { g -> g.any { contains(given, it) } }) return false
-        return item.avoid.orEmpty().none { contains(given, it) }
-    }
-
-    /** The required spans as the answer spells them — bolded on the result. */
-    fun requiredSpans(item: WeeklyTestItem): List<String> =
-        item.required.orEmpty().mapNotNull { g -> g.firstOrNull { item.answer.contains(it, ignoreCase = true) } }
 
     /** Past this many words a sentence is cut to the clause holding the slip. */
     fun rewriteClauseFrom(language: String): Int = if (WordSplitter.spaced(language)) 16 else 30
@@ -1241,9 +1228,63 @@ object WeeklyTestEngine {
     fun isCorrect(item: WeeklyTestItem, chosen: String): Boolean =
         CarryoverDetector.normalized(chosen) == CarryoverDetector.normalized(item.answer)
 
-    /** A build/listen item: the tiles in the order the learner laid them. */
-    fun isCorrect(item: WeeklyTestItem, tiles: List<String>, language: String): Boolean =
-        tiles.map(::tileKey) == WordSplitter.words(item.answer, language).map(::tileKey)
+    /** A tile item: the tiles in the order the learner laid them — the
+     *  answer's order, or (translate) another order the item lists as just
+     *  as right. */
+    fun isCorrect(item: WeeklyTestItem, tiles: List<String>, language: String): Boolean {
+        val laid = tiles.map(::tileKey)
+        return (listOf(item.answer) + item.orders.orEmpty())
+            .any { WordSplitter.words(it, language).map(::tileKey) == laid }
+    }
+
+    /** Laid tiles that are exactly the answer's words — no trap, none left
+     *  out — in an order the item doesn't list. The one case code can't
+     *  settle: the grammar point is already proved (every word of the right
+     *  form, no wrong one), and only whether the ORDER is natural is open. */
+    fun isReorder(item: WeeklyTestItem, tiles: List<String>, language: String): Boolean =
+        tiles.map(::tileKey).sorted() == WordSplitter.words(item.answer, language).map(::tileKey).sorted() &&
+            !isCorrect(item, tiles, language)
+
+    @Serializable
+    private data class OrderVerdict(val natural: Boolean)
+
+    /**
+     * Is [laid] a natural order of the answer's words, meaning the same? The
+     * model generating the item lists the orders it can think of and
+     * measurably misses one in about twelve ("For two years I have worked
+     * here" unlisted beside "I have worked here for two years", probe
+     * 2026-10-08). Asked only for [isReorder] answers, so it judges word order
+     * and nothing else; a failed call is the old verdict, wrong.
+     */
+    suspend fun orderIsNatural(item: WeeklyTestItem, laid: String, language: String): Boolean {
+        val name = LanguageCatalog.englishName(language)
+        // Told the point and the learner's slip, or it accepts the slip itself
+        // as "understandable" (probe 2026-10-08).
+        val system = "A learner laid word tiles to say a $name sentence. They used exactly " +
+            "the words of the model answer, in a different order. Judge only the " +
+            "order: is it grammatical and natural, meaning the same — something a " +
+            "careful teacher would accept? Unusual but correct emphasis (a time " +
+            "phrase moved to the front) is fine. The quiz tests one grammar point, " +
+            "given below with the learner's earlier mistake; an order that repeats " +
+            "that mistake is NOT acceptable, even if a listener would understand it.\n" +
+            "Return {\"natural\": true} or {\"natural\": false}."
+        var user = ""
+        item.rule?.let { user += "Grammar point: $it\n" }
+        if (item.focus != null && item.example != null) user += "Their earlier mistake: ${item.focus} → ${item.example}\n"
+        user += "Model answer: ${item.answer}\nTheir order: $laid"
+        val job = coachScope.async {
+            runCatching {
+                GeminiClient(AuthRepository()).sendJson(
+                    system = system,
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
+                    serializer = OrderVerdict.serializer(),
+                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 400, purpose = "weekly-test",
+                    idempotencyKey = "weekly-test-order:${item.id}:${CarryoverDetector.normalized(laid)}",
+                    fastThinking = true)
+            }.getOrNull()
+        }
+        return withTimeoutOrNull(ORDER_WAIT_MS) { job.await() }?.natural ?: false
+    }
 
     private fun lcs(a: List<String>, b: List<String>): Array<IntArray> {
         val dp = Array(a.size + 1) { IntArray(b.size + 1) }

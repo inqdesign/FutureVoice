@@ -119,6 +119,6 @@
     <string name="wt_your_answer">"自分の答え"</string>
     <string name="wt_say_or_type_right_way">"話すか入力して、正しく言い直してみましょう"</string>
     <string name="wt_say_it_in">"%1$sで言う"</string>
-    <string name="wt_say_or_type_it">"話すか入力してみましょう"</string>
     <string name="wt_last_time_you_said">"前回の言い方"</string>
+    <string name="wt_trap_words_mistake">"ひっかけの単語 · 自分のミスから"</string>
 </resources>

@@ -132,31 +132,36 @@ class WeeklyTestTest {
     }
 
     /** A translate item (iOS 2026-10-08): a NEW sentence needing the grammar
-     *  the learner got wrong. Right when the pattern's spans are in the answer
-     *  and the learner's own wrong form isn't — the rest of the wording is
-     *  theirs. The item itself is refused if its model answer fails its own
-     *  grade, and a lone function word / one-word avoid never make it onto
+     *  the learner got wrong, laid from tiles — the answer's words plus traps
+     *  built from their mistake. Right in the answer's order or a listed equal
+     *  one, nothing else: the answer set is closed, so the grade is exact. A
+     *  model order with other words, or a decoy the answer uses, never reaches
      *  the item. */
-    @Test fun translateGradesThePatternOnly() {
+    @Test fun translateIsLaidFromTilesWithTraps() {
         val slip = WeeklyTestEngine.Slip(was = "I am working in a startup since three years",
             now = "I've been working at a startup for three years", why = "", cardId = null)
         val it = WeeklyTestEngine.translateItem(
-            "나 이 동네에서 5년째 살고 있어.", answer = "I've been living in this neighborhood for five years.",
-            must = listOf(listOf("I've been living", "I have been living"), listOf("for five years"), listOf("to")),
-            avoid = listOf("since five years", "am living", "since"), point = "현재완료 진행 + for", tip = null,
-            slip = slip, target = "en")
+            "어제 밤 12시에야 이사짐 정리가 끝났어.", answer = "We finished unpacking at midnight yesterday.",
+            orders = listOf("Yesterday we finished unpacking at midnight.", "We finished packing at midnight yesterday.",
+                "We finished unpacking at midnight yesterday."),
+            decoys = listOf("finish", "unpacking", "have finished", "since"), point = "과거 시제", tip = null,
+            slip = slip, target = "en", rng = WeeklyTestRandom(StoreJson.newId()))
         assertNotNull("item refused", it)
-        assertEquals("a lone \"to\" group is dropped", 2, it!!.required?.size)
-        assertEquals("a one-word avoid is dropped", listOf("since five years", "am living"), it.avoid)
-        assertTrue(WeeklyTestEngine.isCorrectTranslate(it, "I have been living here for five years", "en"))
-        assertTrue(WeeklyTestEngine.isCorrectTranslate(it, "uh I've been living in this area for five years", "en"))
-        assertFalse(WeeklyTestEngine.isCorrectTranslate(it, "I am living in this neighborhood since five years", "en"))
-        assertFalse(WeeklyTestEngine.isCorrectTranslate(it, "I live here for five years", "en"))
-        assertFalse(WeeklyTestEngine.isCorrectTranslate(it, "been living for five years", "en"))
-        // A model answer that fails its own spans is not an item.
-        assertNull(WeeklyTestEngine.translateItem(
-            "나 이 동네에서 5년째 살고 있어.", answer = "I live here.", must = listOf(listOf("have been living")),
-            avoid = emptyList(), point = "", tip = null, slip = slip, target = "en"))
+        assertEquals("only true reorders of the same words survive",
+            listOf("Yesterday we finished unpacking at midnight."), it!!.orders)
+        val traps = WeeklyTestEngine.decoyTiles(it, "en").map(WeeklyTestEngine::tileKey).sorted()
+        assertEquals("a decoy the answer uses, or of two words, is dropped", listOf("finish", "since"), traps)
+        fun lay(text: String) = WordSplitter.words(text, "en")
+        assertTrue(WeeklyTestEngine.isCorrect(it, lay("We finished unpacking at midnight yesterday."), "en"))
+        assertTrue(WeeklyTestEngine.isCorrect(it, lay("Yesterday we finished unpacking at midnight."), "en"))
+        assertFalse(WeeklyTestEngine.isCorrect(it, lay("We finish unpacking at midnight yesterday."), "en"))
+        assertFalse(WeeklyTestEngine.isCorrect(it, lay("We finished unpacking at midnight."), "en"))
+        // Only an unlisted order of exactly the answer's words goes to the
+        // order check — never one with a trap in it or a word left out.
+        assertTrue(WeeklyTestEngine.isReorder(it, lay("At midnight yesterday we finished unpacking."), "en"))
+        assertFalse(WeeklyTestEngine.isReorder(it, lay("Yesterday we finished unpacking at midnight."), "en"))
+        assertFalse(WeeklyTestEngine.isReorder(it, lay("We finish unpacking at midnight yesterday."), "en"))
+        assertFalse(WeeklyTestEngine.isReorder(it, lay("We finished unpacking at midnight."), "en"))
     }
 
     /** Right only in the answer's order, with every tile and no decoy left in. */

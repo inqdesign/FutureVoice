@@ -119,6 +119,6 @@
     <string name="wt_your_answer">"내 답"</string>
     <string name="wt_say_or_type_right_way">"말하거나 써서 바르게 고쳐 보세요"</string>
     <string name="wt_say_it_in">"%1$s로 말하기"</string>
-    <string name="wt_say_or_type_it">"말하거나 써 보세요"</string>
     <string name="wt_last_time_you_said">"지난번엔 이렇게 말했어요"</string>
+    <string name="wt_trap_words_mistake">"함정 단어 · 내 실수에서 나온 말"</string>
 </resources>
