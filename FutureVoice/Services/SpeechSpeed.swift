@@ -22,6 +22,11 @@ import Foundation
 /// 0.85: a rung the learner cannot hear teaches them the control is fake.
 /// Below 0.8 nothing has been listened to; ElevenLabs' floor is 0.7.
 ///
+/// **Slow moved 0.8 → 0.85 on 2026-10-09** (founder: "the slow voice a little
+/// faster"). It now sits ~half a step under Relaxed instead of a full one —
+/// a deliberate trade against the audibility rule above; listen before
+/// moving it again.
+///
 /// The same probe retired the one objection on file. `CoachingLanguage.breathPunctuation`
 /// records that `speed: 0.9` "slowed the words while REDUCING the pauses" —
 /// measured on one Korean line in 2026-09-15. Across five lines the pauses hold
@@ -32,7 +37,7 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
     /// Ladder order, top to bottom. `rawValue` is what defaults store.
     case normal   // 1.0 — the clone at the speed it was recorded
     case slow     // 0.9 — the default
-    case slower   // 0.8
+    case slower   // 0.85 (0.8 until 2026-10-09 — founder: "a little faster")
 
     static let key = "futurevoice.speechSpeed"
     static let `default`: SpeechSpeed = .slow
@@ -45,7 +50,7 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
         switch self {
         case .normal: return 1.00
         case .slow:   return Self.remoteDefaultMultiplier ?? 0.90
-        case .slower: return 0.80
+        case .slower: return 0.85
         }
     }
 
@@ -105,8 +110,17 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
     /// request for different audio and gets its own key; the empty tag can't
     /// tell an old 1.0 line from a new 0.9 one, so it belongs to the default
     /// alone.
+    ///
+    /// Slow keeps the tag it was born with (`s0.80`) although it now speaks at
+    /// 0.85 (2026-10-09): renaming it would orphan every Slow line already
+    /// made. Those old takes play a little slower than new ones — the same
+    /// price the default rung's empty tag pays.
     var cacheTag: String {
-        self == Self.default ? "" : String(format: "s%.2f", multiplier)
+        switch self {
+        case Self.default: return ""
+        case .slower:      return "s0.80"
+        default:           return String(format: "s%.2f", multiplier)
+        }
     }
 
     var label: String {
