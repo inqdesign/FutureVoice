@@ -153,6 +153,7 @@ object SayItAgainRewrites {
                 serializer = ConversationTurnPayload.serializer(),
                 maxTokens = 2048, purpose = "turn",
                 idempotencyKey = "say-again-fill:$turnId",
+                fastThinking = com.roro.futurevoice.talk.CorrectionThinking.fast(language),
             )
             val s = payload.turnSuggestion(said, language) ?: return Entry(null, "")
             Entry(s.alternative, s.reason)

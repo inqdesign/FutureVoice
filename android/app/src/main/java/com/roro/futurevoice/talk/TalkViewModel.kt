@@ -940,6 +940,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     // correction, and Say it again then reads the turn raw.
                     maxTokens = 2048, purpose = "turn",
                     idempotencyKey = "rt-suggest:$turnId",
+                    fastThinking = CorrectionThinking.fast(cfg.targetLanguage),
                 )
             } catch (e: Exception) {
                 // Was invisible until 2026-10-06 (iOS). One row per failed
