@@ -43,7 +43,13 @@ final class FreeTalkOpeners {
     /// call; one spare covers a second call before the launcher re-warms
     /// (it does after every call). A miss is still a working call: the
     /// gateway speaks the line itself, one round trip slower.
-    static let warmAhead = 2
+    ///
+    /// One since 2026-10-09: the spare was for a second call before the
+    /// re-warm, but the launcher re-warms the moment a call closes and on
+    /// every foreground, so the spare was made and almost never the one
+    /// played. Measured over 7 days: 183 opener takes for 148 calls (25
+    /// learners), 42 of them for 8 learners who never called at all.
+    static let warmAhead = 1
 
     /// The single-pool file from before 2026-09-28 — read for migration only.
     private let fileURL: URL
@@ -347,10 +353,19 @@ final class FreeTalkOpeners {
         if let voiceId, firstMeeting {
             try? await warmLine(Self.introOpener(language: language), voiceId: voiceId)
         }
-        if let voiceId, !hasPool(language: language, personaName: personaName) {
+        if let voiceId, !firstMeeting, !hasPool(language: language, personaName: personaName) {
             try? await warmLine(Self.fallbackOpener(language: language), voiceId: voiceId)
         }
         await warmUp(language: language, personaName: personaName, proficiency: proficiency)
+        // An unmet learner's first free talk opens on the introduction, never
+        // on a pool line, so pool AUDIO made now could only open a second
+        // call — and is made again whenever the voice id moves before then
+        // (the onboarding accent remix is one). It waits for the first call's
+        // own re-warm (`RootTabView`, after the call closes). Reported
+        // 2026-10-09: two pool lines in a new learner's voice history before
+        // they had said a word. The pool TEXT is still written now (cheap,
+        // and the second call should not wait on it).
+        guard !firstMeeting else { return }
         await warmAudio(language: language, personaName: personaName, voiceId: voiceId)
     }
 
