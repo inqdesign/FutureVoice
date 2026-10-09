@@ -11,8 +11,9 @@ import com.roro.futurevoice.R
  * learner, and word timings come back measured against the audio made.
  *
  * Three rungs, each ~12% apart by ear: Normal 1.0 (the clone at the speed it
- * was recorded) · Relaxed 0.9 (the default) · Slow 0.8. Nothing below 0.8 has
- * been listened to, so nothing below 0.8 ships.
+ * was recorded) · Relaxed 0.9 (the default) · Slow 0.85 (0.8 until
+ * 2026-10-09 — founder: "a little faster"). Nothing below 0.8 has been
+ * listened to, so nothing below 0.8 ships.
  */
 enum class SpeechSpeed(val raw: String, @StringRes val label: Int) {
     NORMAL("normal", R.string.normal),
@@ -24,17 +25,21 @@ enum class SpeechSpeed(val raw: String, @StringRes val label: Int) {
     fun multiplier(context: Context): Double = when (this) {
         NORMAL -> 1.0
         SLOW -> remoteDefault(context) ?: 0.9
-        SLOWER -> 0.8
+        SLOWER -> 0.85
     }
 
     /**
      * Part of a cached line's key. EMPTY for the default rung, so every line
      * cached before the setting existed is still found and still plays —
      * produced audio is never orphaned. A rung picked on purpose, Normal
-     * included, gets its own key.
+     * included, gets its own key. Slow keeps the tag it was born with
+     * (`s0.80`) although it now speaks at 0.85, so its old lines still play.
      */
-    fun cacheTag(context: Context): String =
-        if (this == DEFAULT) "" else "s%.2f".format(java.util.Locale.US, multiplier(context))
+    fun cacheTag(context: Context): String = when (this) {
+        DEFAULT -> ""
+        SLOWER -> "s0.80"
+        else -> "s%.2f".format(java.util.Locale.US, multiplier(context))
+    }
 
     companion object {
         @Volatile private var appContext: Context? = null
