@@ -537,6 +537,13 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/park-idle-voices/index.ts"
 
+[functions.default-accent-backfill]
+enabled = true
+# Called by pg_cron every 10 minutes (20261009150000); no Supabase JWT to send,
+# authenticity is the CLEANUP_SECRET header checked inside the function.
+verify_jwt = false
+entrypoint = "./functions/default-accent-backfill/index.ts"
+
 [functions.owner-watch]
 enabled = true
 # Called by pg_cron every minute, which has no Supabase JWT to send —
