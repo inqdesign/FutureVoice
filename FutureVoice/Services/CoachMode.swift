@@ -166,6 +166,8 @@ enum CoachSuggester {
                         learnerSaid: String?,
                         earlier: String?,
                         situation: String? = nil,
+                        register: SpeechRegister? = nil,
+                        previousSay: String? = nil,
                         candidates: [TalkGoalItem],
                         target: String,
                         native: String,
@@ -175,12 +177,17 @@ enum CoachSuggester {
         if let situation, !situation.isEmpty { content += "Situation: \(situation)\n" }
         if let earlier, !earlier.isEmpty { content += "Earlier they said: \"\(earlier)\"\n" }
         if let learnerSaid, !learnerSaid.isEmpty { content += "The learner said: \"\(learnerSaid)\"\n" }
+        // The level was read off this one line, so a line with no clear
+        // ending re-decided it and the suggestions flipped between 반말 and
+        // 존댓말 inside one call (2026-10-09). The last suggestion anchors it
+        // where the call has no level of its own (a scene).
+        if let previousSay, !previousSay.isEmpty { content += "Your previous suggestion was: \"\(previousSay)\"\n" }
         content += "Now the other speaker says: \"\(line)\""
         if !candidates.isEmpty {
             content += "\n\nStudied items:\n" + candidates.map { "- \($0.text)" }.joined(separator: "\n")
         }
         let payload: Payload? = try? await GeminiClient.background.sendJSON(
-            system: system(target: target, native: native, level: level),
+            system: system(target: target, native: native, level: level, register: register),
             messages: [GeminiClient.Message(role: .user, content: content)],
             // The default model, not flash-lite (2026-10-04): the line is
             // what the learner is about to SAY, and flash-lite wrote "I will
@@ -212,8 +219,25 @@ enum CoachSuggester {
         return (CoachReply(say: say, meaning: meaning, turnId: turnId), item)
     }
 
-    private static func system(target: String, native: String, level: CEFRLevel) -> String {
+    private static func system(target: String, native: String, level: CEFRLevel,
+                               register: SpeechRegister?) -> String {
         let targetName = LanguageCatalog.englishName(target)
+        let address: String
+        if let register, SpeechRegister.hasForms(target) {
+            address = """
+            - The learner speaks to the other person in \(register.promptDescription(in: target)). \
+              Every "say" is in that form, whatever endings the line itself \
+              happens to use.
+            """
+        } else {
+            address = """
+            - Use the same form of address the other speaker uses with them \
+              (Korean 반말 or 존댓말, Japanese plain or polite, du or Sie, tu or \
+              vous…), and keep ONE form for the whole call: when a previous \
+              suggestion is given, use its form unless this line clearly \
+              changes it.
+            """
+        }
         let nativeName = LanguageCatalog.englishName(native)
         let scale = ConversationEngine.speechScale(for: level)
         return """
@@ -245,9 +269,11 @@ enum CoachSuggester {
           brackets, a word or two inside each, nothing else in brackets.
         - If the line asks nothing, "say" is a natural reaction or a short \
           follow-up question back.
-        - Use the same form of address the other speaker uses with them \
-          (Korean 반말 or 존댓말, Japanese plain or polite, du or Sie, tu or \
-          vous…).
+        - Asking the same question straight back ("And you?", "Und du?", \
+          "너는?") is something people do now and then, not on every answer: \
+          by default "say" just answers. Never ask back what the line already \
+          told them (they gave their name, then asked yours).
+        \(address)
         - "meaning": the \(nativeName) translation, natural, with the \
           bracketed example translated inside brackets in the matching place.
         - "word": if studied items are listed and one fits this answer \
