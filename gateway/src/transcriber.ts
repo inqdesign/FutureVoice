@@ -120,8 +120,41 @@ export class GeminiTranscriber {
    *  percent of text out), so the gateway counts the audio for the ledger. */
   audioBytesSent = 0
 
-  /** Forward one mic frame (16 kHz mono s16le PCM). */
+  /** How long the current run of all-zero frames has lasted, and where in
+   *  it the last keep-alive frame went out. */
+  private zeroRunMs = 0
+  private keptAliveAtMs = 0
+  /** Silence still forwarded at the start of a muted stretch. The phone
+   *  sends EXACT zeros only while the fluent self is audible (its echo gate,
+   *  `RealtimeTalkClient`); a quiet room is never digital zero, so a
+   *  learner's thinking pause is always forwarded in full. */
+  private static readonly zeroTailMs = 2000
+  /** Past the tail, one frame this often. With nothing at all the live socket
+   *  is aborted (1008) somewhere between 60 and 90 s of quiet; one 100 ms frame
+   *  every 5 s kept it open for 120 s (test/probe-transcribe-gap.mjs). */
+  private static readonly keepAliveMs = 5000
+
+  /** Forward one mic frame (16 kHz mono s16le PCM).
+   *
+   *  Google bills this model by audio streamed in, and the phone streams its
+   *  echo-muted silence for the whole of every fluent-self line — about half
+   *  a call's audio (learner speech was 62 of 137 call minutes, 2026-10-08).
+   *  So a run of all-zero frames stops being forwarded after `zeroTailMs`
+   *  (2026-10-09). Measured with test/probe-transcribe-gap.mjs: the same
+   *  finals, the same ~1.4 s to the final, and a barge-in spoken the instant
+   *  the gap ends transcribed whole, against streaming the zeros. */
   sendAudio(pcm: ArrayBuffer): void {
+    const ms = pcm.byteLength / 32
+    if (isAllZero(pcm)) {
+      this.zeroRunMs += ms
+      if (this.zeroRunMs > GeminiTranscriber.zeroTailMs) {
+        if (this.zeroRunMs - this.keptAliveAtMs < GeminiTranscriber.keepAliveMs) return
+        this.keptAliveAtMs = this.zeroRunMs
+      }
+    } else {
+      this.zeroRunMs = 0
+      this.keptAliveAtMs = 0
+    }
     const data = base64Encode(pcm)
     if (!this.setupDone || !this.ws) {
       this.buffer(data)
@@ -321,4 +354,10 @@ export function base64Encode(buf: ArrayBuffer): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
   }
   return btoa(binary)
+}
+
+function isAllZero(pcm: ArrayBuffer): boolean {
+  const bytes = new Uint8Array(pcm)
+  for (let i = 0; i < bytes.length; i++) if (bytes[i] !== 0) return false
+  return bytes.length > 0
 }
