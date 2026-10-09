@@ -113,7 +113,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは！初めてですよね？", "はじめまして！よろしくお願いします。"),
                     "de" to listOf("Hallo! Wir kennen uns noch nicht, oder?", "Hi, freut mich! Wie geht's?"),
                 ),
-                learnerSide = "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example) and often asks the same thing back."),
+                learnerSide = "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example). Asking the same thing back is something a speaker does now and then, not on every answer."),
             StarterSituation(
                 id = "order-cafe", icon = "cup.and.saucer.fill",
                 title = R.string.at_a_caf, role = R.string.a_barista,
