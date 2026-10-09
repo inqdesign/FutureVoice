@@ -283,7 +283,13 @@ export class CallSession implements DurableObject {
     // transcriber slip inside an otherwise verbatim run still counts.
     if (words.length > 16) return false
     const reply = CallSession.normWords(this.recentReplyText)
-    if (reply.includes(u)) return true
+    // WHOLE words where words are spaced. A bare substring test read the
+    // learner's "But" as echo of a reply saying "about" (and "I" as echo of
+    // anything), so a barge-in that opened on a short word never cut the
+    // line — device log 2026-09-28, founder 2026-10-09 "it never stops".
+    // Unspaced languages keep the substring test: there is no boundary.
+    const spaced = CallSession.writesSpaces(this.language)
+    if (spaced ? (" " + reply + " ").includes(" " + u + " ") : reply.includes(u)) return true
     if (words.length < 4) return false
     const run = CallSession.longestRun(words, reply.split(" "))
     return run >= Math.ceil(words.length * 0.75)
