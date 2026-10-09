@@ -67,8 +67,9 @@ class FreeTalkOpeners(private val context: Context) {
          *  cap only stops a long history of renames from growing the file. */
         private const val MAX_POOLS = 8
 
-        /** iOS `FreeTalkOpeners.warmAhead`. */
-        const val WARM_AHEAD = 2
+        /** iOS `FreeTalkOpeners.warmAhead` — one since 2026-10-09: the
+         *  launcher re-warms after every call, so a spare was rarely played. */
+        const val WARM_AHEAD = 1
 
         private fun key(language: String, personaName: String?) =
             "v$POOL_VERSION|" + language.take(2) + "|" + personaName.orEmpty().trim()
@@ -122,10 +123,13 @@ class FreeTalkOpeners(private val context: Context) {
         if (!voiceId.isNullOrBlank() && firstMeeting) {
             if (!warmLine(introOpener(language), voiceId)) return
         }
-        if (!voiceId.isNullOrBlank() && !hasPool(language, personaName)) {
+        if (!voiceId.isNullOrBlank() && !firstMeeting && !hasPool(language, personaName)) {
             if (!warmLine(fallbackOpener(language), voiceId)) return
         }
         if (!hasPool(language, personaName)) runCatching { generatePool(language, personaName, level) }
+        // An unmet learner's first call opens on the intro, never a pool line,
+        // so pool audio waits for the first call's own re-warm (iOS, 2026-10-09).
+        if (firstMeeting) return
         warmAudio(language, personaName, voiceId)
     }
 
