@@ -104,6 +104,15 @@ struct StudyDeckView: View {
     /// A card was dropped into a folder — the parent writes the store state
     /// (schedule or known) and the rep. Called for every drop.
     let onResolve: (StudyDeckItem, DrillBin) -> Void
+    /// What comes after the last card, if anything (the routine's Review
+    /// block goes on to its shadow lines). Drawn as the done state's button.
+    var nextStep: NextStep? = nil
+
+    struct NextStep {
+        let title: LocalizedStringKey
+        let systemImage: String
+        let action: () -> Void
+    }
 
     @EnvironmentObject private var appState: AppState
 
@@ -856,13 +865,24 @@ struct StudyDeckView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 44))
                 .foregroundStyle(.green)
-            Text("Done for today")
+            Text(nextStep == nil ? "Done for today" : "Cards done")
                 .font(.headline)
-            Text(explain("Every card in today's hand is sorted. Come back tomorrow — or keep going from the library below."))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            if nextStep == nil {
+                Text(explain("Every card in today's hand is sorted. Come back tomorrow — or keep going from the library below."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let nextStep {
+                Button(action: nextStep.action) {
+                    Label(nextStep.title, systemImage: nextStep.systemImage)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .padding(.top, 4)
+            }
             // The folders stay reachable AFTER the last card, which is the
             // one moment the learner actually asks "so where did all that
             // go?" — the deck used to answer by disappearing, and reopening

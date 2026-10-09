@@ -226,7 +226,7 @@ struct ActivityView: View {
     /// Today card opens for each kind.
     private enum RoutineSheet: Identifiable {
         case words, expressions, test
-        case review([StudyDeckItem])
+        case review([StudyDeckItem], [PracticeStats.ShadowPick])
         case shadow([PracticeStats.ShadowPick])
         var id: String {
             switch self {
@@ -247,9 +247,10 @@ struct ActivityView: View {
         case .words: routineSheet = .words
         case .expressions: routineSheet = .expressions
         case .review:
-            routineSheet = .review(DueReviewView.routineDeck(
+            let deck = DueReviewView.routineDeck(
                 goal: GoalStore.shared.target(.review) ?? StudyPlan.Kind.review.defaultAmount,
-                appState: appState))
+                appState: appState)
+            routineSheet = .review(deck.cards, deck.shadow)
         case .test: routineSheet = .test
         case .shadow:
             let picks = PracticeStats.shadowPicks(
@@ -266,10 +267,11 @@ struct ActivityView: View {
         switch sheet {
         case .words: DailyWordsView().environmentObject(appState)
         case .expressions: DailyExpressionsView().environmentObject(appState)
-        case .review(let hand):
+        case .review(let hand, let shadow):
             DueReviewView(hand: hand, title: "Review",
                           emptyTitle: "All caught up",
-                          emptyMessage: "Words, expressions and sentences from your talks show up here when it's time to review them.")
+                          emptyMessage: "Words, expressions and sentences from your talks show up here when it's time to review them.",
+                          shadowPicks: shadow)
                 .environmentObject(appState)
         case .test: WeeklyTestView().environmentObject(appState)
         case .shadow(let picks):
