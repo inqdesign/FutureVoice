@@ -97,6 +97,7 @@ final class SayItAgainRewrites {
             targetLanguage: session.targetLanguage, nativeLanguage: nativeLanguage,
             level: level, counterpart: counterpart,
             inScene: session.originScenarioId != nil)
+        let fast = ConversationEngine.correctionThinksFast(targetLanguage: session.targetLanguage)
 
         var failed = 0
         var filled = 0
@@ -108,7 +109,7 @@ final class SayItAgainRewrites {
                 next += 1
                 group.addTask {
                     let entry = await Self.ask(system: system, said: job.said, heard: job.heard,
-                                               turnId: job.id)
+                                               turnId: job.id, fastThinking: fast)
                     return (job.id, entry)
                 }
             }
@@ -135,7 +136,7 @@ final class SayItAgainRewrites {
     /// (`turnSuggestion`): a fix that isn't theirs or a rewrite that changes
     /// nothing audible never reaches the prompter. Nil = the call failed.
     nonisolated private static func ask(system: String, said: String, heard: String,
-                                        turnId: UUID) async -> Entry? {
+                                        turnId: UUID, fastThinking: Bool) async -> Entry? {
         let content = heard.isEmpty
             ? "They said: \"\(said)\""
             : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
@@ -145,7 +146,8 @@ final class SayItAgainRewrites {
                 messages: [GeminiClient.Message(role: .user, content: content)],
                 maxTokens: 2048,
                 purpose: "turn",
-                idempotencyKey: "say-again-fill:\(turnId.uuidString)")
+                idempotencyKey: "say-again-fill:\(turnId.uuidString)",
+                fastThinking: fastThinking)
             guard let s = payload.turnSuggestion(for: said) else {
                 return Entry(alternative: nil, reason: "")
             }

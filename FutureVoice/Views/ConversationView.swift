@@ -2860,7 +2860,8 @@ struct ConversationView: View {
                     // correction, and Say it again then reads the turn raw.
                     maxTokens: 2048,
                     purpose: "turn",
-                    idempotencyKey: "rt-suggest:\(turnId.uuidString)")
+                    idempotencyKey: "rt-suggest:\(turnId.uuidString)",
+                    fastThinking: ConversationEngine.correctionThinksFast(targetLanguage: target))
             } catch {
                 // Was invisible until 2026-10-06. One row per failed turn;
                 // `words` says whether it is the long turns that fail.

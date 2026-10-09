@@ -88,16 +88,26 @@ def content(case):
     said = case["line"]
     return f'They were just told: "{heard}"\nThey said: "{said}"' if heard else f'They said: "{said}"'
 
+import threading
+USAGE = {"calls": 0, "thoughts": 0, "out": 0}
+USAGE_LOCK = threading.Lock()
+
 def ask(line, system=None):
     body = {"systemInstruction": {"parts": [{"text": system or prompt}]},
             "contents": [{"role": "user", "parts": [{"text": line}]}],
-            "generationConfig": {"maxOutputTokens": 900, "thinkingConfig": {"thinkingLevel": "low"},
+            "generationConfig": {"maxOutputTokens": 2048,
+                                  "thinkingConfig": {"thinkingLevel": os.environ.get("THINKING", "low")},
                                   "responseMimeType": "application/json"}}
     req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     err = None
     for _ in range(3):
         try:
             r = json.load(urllib.request.urlopen(req, timeout=60))
+            u = r.get("usageMetadata", {})
+            with USAGE_LOCK:
+                USAGE["calls"] += 1
+                USAGE["thoughts"] += u.get("thoughtsTokenCount", 0)
+                USAGE["out"] += u.get("candidatesTokenCount", 0)
             return json.loads(r["candidates"][0]["content"]["parts"][0]["text"]).get("suggestion")
         except Exception as e:
             err = e
@@ -172,3 +182,6 @@ n_ok = sum(1 for j in jobs if j[0]["expect"] == "ok"); n_err = len(jobs) - n_ok
 print(f"\nfalse grammar accusations: {fp}/{n_ok}   missed real errors: {fn}/{n_err}"
       f"   fragment rewrites: {frag}/{len(jobs)}"
       f"\nfixes too short to credit: {short}/{nfix}   fixes not quoting the learner: {unq}/{nfix}")
+print(f"thinking={os.environ.get('THINKING', 'low')}  calls={USAGE['calls']}"
+      f"  thought tokens/call={USAGE['thoughts'] / max(1, USAGE['calls']):.0f}"
+      f"  output tokens/call={USAGE['out'] / max(1, USAGE['calls']):.0f}")

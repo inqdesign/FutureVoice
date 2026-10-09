@@ -1156,6 +1156,18 @@ enum ConversationEngine {
         """
     }
 
+    /// Whether the correction call (`correctionOnlyPrompt`) may skip thinking.
+    /// Measured 2026-10-09 with `scripts/correction-probe.py` (THINKING=low vs
+    /// minimal): en 8 runs, de 4, ja 2 — identical on every count (no false
+    /// fixes, no missed errors, no fragments), while thinking was ~half of the
+    /// call's cost (~300 thought tokens a turn in production). Korean is the
+    /// exception: minimal missed "놀았어서" 3 of 3 and 5/28 learner errors
+    /// against low's 1/28, so a Korean target keeps thinking. Re-run the probe
+    /// before adding a language here or touching the prompt.
+    static func correctionThinksFast(targetLanguage: String) -> Bool {
+        LanguageCatalog.base(targetLanguage) != "ko"
+    }
+
     /// The correction, asked for ON ITS OWN.
     ///
     /// The realtime path (`gateway/`) gets its reply as plain speech from a
