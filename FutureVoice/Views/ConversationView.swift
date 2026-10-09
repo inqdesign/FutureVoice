@@ -1581,9 +1581,15 @@ struct ConversationView: View {
             // grew under the bar with nothing scrolling it back into view,
             // and "Listening…" beside a bold sentence read as two voices in
             // one shape. A fixed spot can't be scrolled away.
+            // `geometryGroup` on both: they are inserted or re-filled inside
+            // an animation while the bar above the pill changes height, and
+            // without it their text is laid out from the slot's origin and
+            // animated into place — the whole block dropped in from the
+            // upper left instead of fading where it sits.
             if let reply = coachReply {
                 CoachReplyLabel(reply: reply)
                     .padding(.horizontal, 32)
+                    .geometryGroup()
                     .opacity(coachStale ? 0 : 1)
                     .accessibilityHidden(coachStale)
                     .transition(.opacity)
@@ -1592,6 +1598,7 @@ struct ConversationView: View {
                 CoachHintLine(item: item, used: usedGoalKeys.contains(item.key)) {
                     goalDetail = item
                 }
+                .geometryGroup()
                 .opacity(coachStale ? 0 : 1)
                 .allowsHitTesting(!coachStale)
                 .accessibilityHidden(coachStale)
