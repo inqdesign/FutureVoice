@@ -1,0 +1,148 @@
+[
+ {
+  "shot": "device-home",
+  "title": "나와나",
+  "caption": "몇 년 뒤 유창해진 내가\n내 목소리로 말을 걸어 와요",
+  "float": {
+   "icon": true,
+   "width": 280,
+   "x": 900,
+   "y": 600
+  }
+ },
+ {
+  "shot": "device-call-coach",
+  "title": "전화처럼",
+  "caption": "버튼 없이 번갈아 말해요\n막히면 써 볼 말을 살짝 알려 줘요",
+  "float": {
+   "crop": [
+    530,
+    1820,
+    1160,
+    2080
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 700
+  }
+ },
+ {
+  "shot": "transcript",
+  "title": "바로 교정",
+  "caption": "내가 한 말 바로 아래에\n더 자연스러운 한 문장이 붙어요",
+  "float": {
+   "crop": [
+    60,
+    1180,
+    1180,
+    1660
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 720
+  }
+ },
+ {
+  "shot": "device-watchtab",
+  "title": "미리 겪기",
+  "caption": "면접·병원·집 계약, 다가올 상황을\n유창한 내가 먼저 보여 줘요",
+  "float": {
+   "shot": "device-composer-attached",
+   "crop": [
+    20,
+    1970,
+    1190,
+    2440
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 720
+  }
+ },
+ {
+  "shot": "device-shadow-result",
+  "title": "섀도잉",
+  "caption": "유창한 나를 따라 말하면\n어디가 달랐는지 바로 보여요",
+  "float": {
+   "crop": [
+    30,
+    900,
+    1190,
+    1110
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 720
+  }
+ },
+ {
+  "shot": "practice-studying",
+  "title": "나만의 교재",
+  "caption": "통화마다 나온 단어·표현·문장이\n복습할 교재로 쌓여요",
+  "float": {
+   "crop": [
+    20,
+    1960,
+    1206,
+    2420
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 720
+  }
+ },
+ {
+  "shot": "device-daily-call",
+  "title": "매일 전화",
+  "caption": "정한 시간이 되면\n유창한 내가 먼저 전화를 걸어요",
+  "float": {
+   "crop": [
+    30,
+    1730,
+    1190,
+    2050
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 850,
+   "pad": 0
+  }
+ },
+ {
+  "shot": "progress",
+  "title": "내 레벨",
+  "caption": "대화만으로 재는 레벨과\n영역별로 자라는 모습",
+  "float": {
+   "crop": [
+    40,
+    1180,
+    1180,
+    1560
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 720
+  }
+ },
+ {
+  "shot": "device-widgets",
+  "title": "홈 화면에서",
+  "caption": "연속 기록과 오늘의 단어를\n앱을 열기 전에 봐요",
+  "float": {
+   "crop": [
+    130,
+    270,
+    1060,
+    770
+   ],
+   "width": 500,
+   "x": 763,
+   "y": 720,
+   "pad": 0
+  }
+ },
+ {
+  "kind": "outro",
+  "caption": "유창한 나에게\n언어를 배우세요"
+ }
+]
