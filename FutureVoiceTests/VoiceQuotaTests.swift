@@ -30,4 +30,13 @@ final class VoiceQuotaTests: XCTestCase {
         XCTAssertNotNil(error.voiceQuotaFull)
         XCTAssertNil(ElevenLabsError.insufficientCredits.voiceQuotaFull)
     }
+
+    /// The exact body a re-record got on 2026-10-10 must read as a dated
+    /// line, never as "ElevenLabs HTTP 503: {…}".
+    func testReservedBodyReadsAsALineNotJSON() {
+        let body = #"{"error":"voice_quota_reserved","message":"Making a new voice is paused for a few days. Your current voice keeps working.","available_at":"2026-10-12T09:24:07.000Z"}"#
+        let text = ElevenLabsError.httpError(status: 503, body: body).localizedDescription
+        XCTAssertFalse(text.contains("HTTP"), text)
+        XCTAssertFalse(text.contains("{"), text)
+    }
 }
