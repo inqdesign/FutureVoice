@@ -1972,6 +1972,7 @@ struct VoiceCloneOnboardingView: View {
             elapsedSeconds = 78
             status = .reviewing
         case "account":   status = .account
+        case "queued":    status = .queued
         case "uploading": status = .uploading
         case "meet":
             status = .meet

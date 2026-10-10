@@ -484,6 +484,15 @@ enum DebugCapture {
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "voice-queued":
+            // The month's voices are spent: the recording is kept, a preset
+            // stands in, and the learner picks which one until the reset.
+            once("voice-queued") {
+                appState.adoptStandInVoice(until: Date().addingTimeInterval(2 * 86_400))
+            }
+            UserDefaults.standard.register(defaults: ["cloneStage": "queued", "debugSkipAuth": true])
+            return AnyView(VoiceCloneOnboardingView().environmentObject(appState)
+                .environmentObject(AuthService()))
         case "setup":
             // The first-run picker steps (native language, target, level,
             // goal) — the only screen where the app-language choice is made

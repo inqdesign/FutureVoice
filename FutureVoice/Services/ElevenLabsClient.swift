@@ -874,7 +874,8 @@ enum VoiceQuota {
     static func when(_ date: Date) -> String {
         let half: TimeInterval = 1800
         let rounded = Date(timeIntervalSince1970: (date.timeIntervalSince1970 / half).rounded(.up) * half)
-        return rounded.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened)
+        // No year: the date is always within the month ahead.
+        return rounded.formatted(Date.FormatStyle().month(.abbreviated).day().hour().minute()
             .locale(Locale(identifier: UILanguage.chromeLanguage)))
     }
 
