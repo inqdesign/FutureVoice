@@ -60,6 +60,35 @@ final class ShadowEngineTests: XCTestCase {
                                      learner: "alpha xx yy zz")
         XCTAssertEqual(a.score, 50)
     }
+
+    // Korean is scored by eojeol (scripts/shadow-ko-probe.py, 2026-10-10).
+    func testKoreanDroppedWordCostsAWord() {
+        let a = ShadowEngine.analyze(target: "어제 친구랑 같이 영화를 봤어요.",
+                                     learner: "어제 친구랑 영화를 봤어요", language: "ko")
+        XCTAssertEqual(a.score, 89)   // 4 of 5 words; by syllable it read 92
+    }
+
+    func testKoreanWrongParticleFailsItsWord() {
+        let a = ShadowEngine.analyze(target: "어제 친구랑 같이 영화를 봤어요.",
+                                     learner: "어제 친구랑 같이 영화가 봤어요", language: "ko")
+        XCTAssertEqual(a.score, 89)   // by syllable it read 96
+    }
+
+    func testKoreanSpacingIsStillTheRecognizers() {
+        let a = ShadowEngine.analyze(target: "커피 한잔 할래?",
+                                     learner: "커피 한 잔 할래", language: "ko")
+        XCTAssertEqual(a.score, 100)
+        let b = ShadowEngine.analyze(target: "커피 한 잔 할래?",
+                                     learner: "커피 한잔할래", language: "ko")
+        XCTAssertEqual(b.score, 100)
+    }
+
+    func testKoreanExtraSpeechCountsAgainst() {
+        let a = ShadowEngine.analyze(target: "학교 끝나고 갈 거야",
+                                     learner: "학교 수업 끝나고 갈 거야", language: "ko")
+        XCTAssertLessThan(a.score, 100)
+        XCTAssertGreaterThan(a.score, 80)
+    }
 }
 
 final class ScorecardMetricsTests: XCTestCase {
