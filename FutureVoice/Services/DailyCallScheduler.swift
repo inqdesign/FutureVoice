@@ -127,6 +127,15 @@ enum DailyCallScheduler {
             await cancel()
             return
         }
+        // No plan and no minutes left: the call could only open onto the
+        // paywall, so it doesn't ring at all (2026-10-10, founder decision —
+        // a free learner who had spent their minutes answered at 08:30 and
+        // was walled before saying a word). Same stand-down as a parked voice;
+        // the first refresh after a purchase arms it again.
+        guard await !BillingGate.shared.blocks() else {
+            await cancel()
+            return
+        }
         guard await isAuthorized() else { return }
 
         let now = Date()

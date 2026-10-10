@@ -40,6 +40,9 @@ struct RootTabView: View {
     /// view in reach (and on a cold launch from the lock screen, no view
     /// exists yet), so it drops the plan here and this picks it up.
     @ObservedObject private var callInbox = DailyCallInbox.shared
+    /// The answered call once `BillingGate` has let it through — the cover
+    /// presents from this, never straight from the inbox.
+    @State private var answeredCall: DailyCallPlan?
     @ObservedObject private var referralInbox = ReferralInbox.shared
     @ObservedObject private var updates = AppUpdateService.shared
     /// The one look at the mirrored Find-people intro before it is published
@@ -83,6 +86,8 @@ struct RootTabView: View {
         // A Speech block's reminder or routine line: the Speech tab.
         .onAppear { consumeSpeechTap() }
         .onChange(of: callInbox.pendingSpeech) { _, _ in consumeSpeechTap() }
+        .onAppear { consumeAnsweredCall() }
+        .onChange(of: callInbox.pendingAnswer) { _, _ in consumeAnsweredCall() }
         // A tab opened while something else was up gets its introduction the
         // moment that closes.
         .onChange(of: anotherSheetUp) { _, up in
@@ -131,9 +136,9 @@ struct RootTabView: View {
             // no round trip and no second synthesis. Presented on the TabView
             // rather than the outer chain so it can't collide with the beta
             // welcome cover.
-            .fullScreenCover(item: $callInbox.pendingAnswer) { plan in
+            .fullScreenCover(item: $answeredCall) { plan in
                 ConversationView(initialOpener: plan.script,
-                                 onClose: { callInbox.pendingAnswer = nil })
+                                 onClose: { answeredCall = nil })
                     .environmentObject(appState)
             }
 
@@ -481,7 +486,7 @@ struct RootTabView: View {
     private var anotherSheetUp: Bool {
         showingAgeCheck || showingPaywall || showingWelcome || showingIntroPreview
             || weekRecap != nil || freeTalkCallId != nil
-            || callInbox.pendingAnswer != nil
+            || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
     }
@@ -545,7 +550,7 @@ struct RootTabView: View {
             }
             guard asked || (recap.hasActivity && !store.wasShown(recap)) else { return }
             guard weekRecap == nil, freeTalkCallId == nil, !freeTalkClosing,
-                  callInbox.pendingAnswer == nil,
+                  callInbox.pendingAnswer == nil, answeredCall == nil,
                   !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
                   appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
                   updates.pending == nil else { return }
@@ -564,6 +569,23 @@ struct RootTabView: View {
         case .talk:
             selection = .home
             startFreeTalk()
+        }
+    }
+
+    /// An answered daily call goes through the same gate as the Talk ring.
+    /// Calls stop being armed once the pool is spent, but one armed before
+    /// that can still ring; answering it opens the plans, not a call that
+    /// 402s before the learner speaks, and the refresh cancels what's left.
+    private func consumeAnsweredCall() {
+        guard let plan = callInbox.pendingAnswer else { return }
+        callInbox.pendingAnswer = nil
+        Task { @MainActor in
+            if await BillingGate.shared.blocks() {
+                showingPaywall = true
+                appState.refreshDailyCall()
+            } else {
+                answeredCall = plan
+            }
         }
     }
 
