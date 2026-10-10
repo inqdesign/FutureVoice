@@ -1414,15 +1414,21 @@ struct ConversationView: View {
                                     .transition(Self.placeholderTransition)
                             }
                         case .thinkingReply:
-                            ThinkingIndicator()
-                                .id("partial-thinking")
-                                .transition(Self.placeholderTransition)
+                            // Subtitles off means NO words in the feed: the
+                            // pill already scans while the reply is written,
+                            // and this line flashing for a second and going
+                            // read as a glitch (reported 2026-10-09).
+                            if showsTranscript {
+                                ThinkingIndicator()
+                                    .id("partial-thinking")
+                                    .transition(Self.placeholderTransition)
+                            }
                         default:
                             // The reply has begun but has no words yet: the
                             // thinking line keeps its place (same id, so it
                             // is not re-inserted) until the bubble that
                             // replaces it has text to be drawn with.
-                            if replyHasNoWordsYet {
+                            if showsTranscript, replyHasNoWordsYet {
                                 ThinkingIndicator()
                                     .id("partial-thinking")
                                     .transition(Self.placeholderTransition)
@@ -1438,9 +1444,11 @@ struct ConversationView: View {
                             .id("partial-listening")
                             .transition(Self.placeholderTransition)
                     } else if phase == .thinking && (turns.last?.role == .user) {
-                        ThinkingIndicator()
-                            .id("partial-thinking")
-                            .transition(Self.placeholderTransition)
+                        if showsTranscript {
+                            ThinkingIndicator()
+                                .id("partial-thinking")
+                                .transition(Self.placeholderTransition)
+                        }
                     } else if let fid = failedTurnId, turns.last?.id == fid {
                         RetryReplyRow(outOfCredits: outOfCredits,
                                       onRetry: retryReply,
@@ -1747,6 +1755,21 @@ struct ConversationView: View {
         let place = role.isEmpty ? s.environment : "\(s.environment) — talking with \(role)"
         guard let side = StarterSituation.of(s)?.learnerSide else { return place }
         return "\(place). \(side)"
+    }
+
+    /// How the learner speaks on this call, for the "try saying" coach — the
+    /// same level the call prompt gives the other side. With the fluent self
+    /// it is 반말 / du / tu (they are talking to themselves); with a person,
+    /// what the learner set for them, else what the relationship implies. nil
+    /// in a scene with no person: the scene decides, and the coach keeps the
+    /// level of its previous suggestion.
+    private var coachRegister: SpeechRegister? {
+        let scenario = sessionScenarioId.flatMap { sid in appState.scenarios.first { $0.id == sid } }
+        let person = counterpart ?? scenario?.counterpartId.flatMap { id in
+            appState.counterparts.first { $0.id == id }
+        }
+        if let person { return person.effectiveMyRegister ?? (person.isClose ? .casual : .polite) }
+        return scenario == nil ? .casual : nil
     }
 
     /// The example first line when this call's situation is one the learner
@@ -3650,11 +3673,14 @@ struct ConversationView: View {
         }
         let learnerSaid = turns.last(where: { $0.role == .user })?.transcript
         let earlier = turns.filter { $0.role == .fluentSelf && $0.id != turnId }.last?.transcript
+        let previousSay = coachReply?.say
         Task { @MainActor in
             let result = await CoachSuggester.suggest(
                     line: text, learnerSaid: learnerSaid,
                     earlier: learnerSaid == nil ? nil : earlier,
                     situation: coachSituation,
+                    register: coachRegister,
+                    previousSay: previousSay,
                     candidates: candidates,
                     target: appState.targetLanguage, native: appState.nativeLanguage,
                     level: appState.proficiency, turnId: turnId)
