@@ -14,7 +14,7 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta name="color-scheme" content="light" />
-<meta name="theme-color" content="#0B0A09" />
+<meta name="theme-color" content="#04081A" />
 <link rel="alternate" hreflang="en" href="https://nawana.app/" />
 <link rel="alternate" hreflang="ko" href="https://nawana.app/ko.html" />
 <style>
@@ -707,6 +707,111 @@ footer a:hover { color: var(--ink); }
 .m-line b .w { color: var(--faint); transition: color 0.42s ease; }
 .m-line b .w.on { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .m-line b .w { color: var(--ink); } }
+
+/* ═══════════════════════════════════════════════════════════
+   WELCOME LOOK (2026-10-10) — the app's Welcome film on paper:
+   a warm cream ground, the app's blue coming down from the top
+   like a sky (night at the very top edge), film grain over
+   everything, deep blue-black ink, capsule chips, pill buttons.
+   Layered over the editorial base above; delete this block to
+   go back.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --paper:  #F9F4E9;              /* the Welcome cream (0.975, 0.955, 0.915) */
+  --paper2: #F4EBDC;              /* the warmth gathering under its buttons */
+  --ink:    #1C2133;              /* storyInk */
+  --dim:    #4D5263;
+  --faint:  #8B8E99;
+  --line:   rgba(28,33,51,0.14);
+  --lns:    rgba(28,33,51,0.07);
+  --blue:   #2461F5;              /* the sky's second stop */
+  --blue-ink: #1A4FD6;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif;
+}
+body { background: var(--paper); }
+/* film grain, over everything, like the film */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  opacity: 0.16; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* no column grid: the film has none */
+.sec::before { display: none; }
+.plain { background: var(--paper); --surf: #FFFFFF; }
+.alt   { background: var(--paper2); --surf: #FFFFFF; }
+/* type: the film's captions — system sans, semibold, ink */
+h1, h2 { font-weight: 700; letter-spacing: -0.025em; color: var(--ink); }
+/* kickers become the film's glimpse chips */
+.kicker, .m-kick {
+  display: flex; width: fit-content; align-items: center; gap: 8px;
+  font-family: var(--sans); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none;
+  color: rgba(28,33,51,0.75); padding: 7px 14px; border-radius: 999px;
+  background: rgba(255,255,255,0.55); box-shadow: inset 0 0 0 0.5px rgba(28,33,51,0.12);
+}
+.kicker .mono { font-family: var(--sans); font-weight: 600; color: var(--blue); }
+/* buttons: the film's black pills */
+.btn { border-radius: 999px; justify-content: center; }
+.btn-white, .btn-black { background: var(--ink); color: #fff; }
+.btn-white:hover, .btn-black:hover { background: var(--blue); color: #fff; }
+.btn-store { border-radius: 999px; }
+/* ── the hero: sky over cream ── */
+.night {
+  background: var(--paper); color: var(--ink);
+  --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99;
+  --line: rgba(28,33,51,0.14); --lns: rgba(28,33,51,0.07); --surf: #FFFFFF;
+}
+.night .n-glow {
+  left: 0; right: 0; top: 0; width: auto; height: 100vh; transform: none;
+  background:
+    linear-gradient(to bottom, #04081A 0%, rgba(5,15,56,0.9) 7%, rgba(10,36,128,0.45) 15%, rgba(13,51,179,0) 24%),
+    radial-gradient(ellipse 85% 60% at 50% -8%, #0F42E6 0%, #245FF5 22%, #6699FF 46%, #B8D1FF 68%, rgba(249,244,233,0) 92%);
+}
+.night .btn-white, .night .btn-black { background: var(--ink); color: #fff; }
+.n-kicker { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; color: rgba(28,33,51,0.72); }
+.n-kicker i { background: var(--blue); }
+.n-sub { color: var(--dim); }
+.n-note { font-family: var(--sans); letter-spacing: 0; font-size: 13px; }
+.s-hero { padding-top: 22vh; }
+.s-hero h1 { margin-top: 22px; }
+.s-cap .ix { font-family: var(--sans); font-weight: 600; letter-spacing: 0.02em; color: var(--blue); }
+.s-num { font-family: var(--sans); font-weight: 700; color: rgba(36,97,245,0.10); }
+.iphone { box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 50px 90px -40px rgba(28,33,51,0.45); }
+/* nav: light on the night band, cream glass once past it */
+nav.sec.nav-solid {
+  background: rgba(249,244,233,0.86); border-bottom-color: rgba(28,33,51,0.08);
+  --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99; color: var(--ink);
+}
+nav.sec.nav-solid .logo, nav.sec.nav-solid .nav-burger { color: var(--ink); }
+nav.sec.nav-solid .navlinks .btn { background: var(--ink); color: #fff; }
+.nav-menu { background: rgba(249,244,233,0.97); border-bottom-color: rgba(28,33,51,0.08); }
+.nav-menu a { font-family: var(--sans); letter-spacing: 0; text-transform: none; color: var(--dim); }
+.nav-menu a:hover, .nav-menu a:active { color: var(--ink); }
+nav.sec.nav-open .nav-burger { color: var(--ink); }
+.navlinks { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-size: 14px; }
+/* the pixel face stays the wordmark's alone */
+.marquee .row { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; }
+.plan .p-price { font-family: var(--sans); font-weight: 700; letter-spacing: -0.02em; }
+/* plans: the film's soft white tiles */
+.plans { border-top: 0; gap: 14px; padding-top: 4px; }
+.plan { border-radius: 26px; background: rgba(255,255,255,0.6); box-shadow: inset 0 0 0 0.5px rgba(28,33,51,0.12); }
+.plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.plan .p-badge { font-family: var(--sans); letter-spacing: 0; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; }
+@media (max-width: 960px) { .plan { border-bottom: 0; } }
+.cycle-toggle { border-radius: 999px; overflow: hidden; }
+.cycle-toggle .ct { font-family: var(--sans); letter-spacing: 0; font-size: 14px; border-radius: 999px; }
+/* the ending: the film's night, lit from below */
+.final-demo, footer.night {
+  background: #04081A;
+  color: #F5F2EB; --ink: #F5F2EB; --dim: #B9C3E0; --faint: #8F9BC2; --line: rgba(245,242,235,0.14);
+}
+footer.night { background: #04081A; }
+.final-demo h2, footer.night h2 { color: #F5F2EB; }
+.final-demo .btn-black, .final-demo .btn-white, footer.night .btn-black { background: #F5F2EB; color: #1C2133; }
+.fd-hint { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-size: 13px; }
+.m-kick { margin-left: auto; margin-right: auto; }
+/* the footer's eight links wrap on a phone — on one line they made the
+   page 486px wide at 390, which slid the nav's buttons off screen */
+.foot-in .links { flex-wrap: wrap; gap: 10px 20px; }
 </style>
 <!-- PostHog web analytics -->
 <script>
@@ -1250,7 +1355,8 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var lastY = window.pageYOffset;
   var night = document.querySelector("header.night");
   function solidCheck(y) {
-    var edge = night ? night.offsetTop + night.offsetHeight - 70 : 400;
+    // the nav sits light on the sky's night band only; past it, cream glass
+    var edge = Math.round(window.innerHeight * 0.18);
     nav.classList.toggle("nav-solid", y > edge);
   }
   solidCheck(window.pageYOffset);
@@ -1535,7 +1641,7 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var w = Math.max(2, cv.clientWidth * dpr) | 0, hh = Math.max(2, cv.clientHeight * dpr) | 0;
     if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; gl.viewport(0, 0, w, hh); }
     // dark palette (this hero is always dark) — paper ≈ hero bg, ink = subtle
-    gl.uniform3f(uPC, .071, .067, .063); gl.uniform3f(uIC, .58, .55, .5); gl.uniform1f(uGR, .022);
+    gl.uniform3f(uPC, .016, .031, .102); gl.uniform3f(uIC, .40, .60, 1.0); // welcome night + sky gl.uniform1f(uGR, .022);
     mx += (tmx - mx) * 0.045; my += (tmy - my) * 0.045;
     gl.uniform2f(uM, reduce ? 0 : mx, reduce ? 0 : my);
     gl.uniform2f(uR, w, hh);
