@@ -26,6 +26,17 @@ struct StandInVoicePicker: View {
         }
         .padding(.horizontal, 32)
         .onDisappear { player.stop() }
+        #if DEBUG
+        // `-standInPreview <index>`: play that row on arrival, for a capture
+        // run that can't tap.
+        .task {
+            let i = UserDefaults.standard.integer(forKey: "standInPreview")
+            guard UserDefaults.standard.object(forKey: "standInPreview") != nil,
+                  VoicePreset.catalog.indices.contains(i) else { return }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            await preview(VoicePreset.catalog[i], restart: true)
+        }
+        #endif
     }
 
     private func row(_ preset: VoicePreset) -> some View {

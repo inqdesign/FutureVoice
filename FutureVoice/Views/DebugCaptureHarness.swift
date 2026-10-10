@@ -491,8 +491,16 @@ enum DebugCapture {
                 appState.adoptStandInVoice(until: Date().addingTimeInterval(2 * 86_400))
             }
             UserDefaults.standard.register(defaults: ["cloneStage": "queued", "debugSkipAuth": true])
+            // `-captureSession YES`: open the anonymous session a real learner
+            // has on this screen, so the sample previews are real requests.
+            let auth = AuthService()
             return AnyView(VoiceCloneOnboardingView().environmentObject(appState)
-                .environmentObject(AuthService()))
+                .environmentObject(auth)
+                .task {
+                    guard UserDefaults.standard.bool(forKey: "captureSession"),
+                          SupabaseProvider.shared.auth.currentSession == nil else { return }
+                    try? await auth.startAnonymousSession()
+                })
         case "setup":
             // The first-run picker steps (native language, target, level,
             // goal) — the only screen where the app-language choice is made
