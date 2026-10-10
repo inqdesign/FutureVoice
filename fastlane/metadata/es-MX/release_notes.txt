@@ -1,16 +1,7 @@
 Novedades
-• Si eliges inglés, primero te preguntamos si tu voz debe hablar con acento estadounidense, británico o australiano, o quedarse como la grabaste, y se crea así desde el principio.
-• Si aprendes alemán, tu voz ahora habla con acento alemán estándar.
-• Test semanal: un nuevo tipo de pregunta convierte tus propios errores de gramática en frases nuevas. Ves una frase en tu idioma y la armas con fichas de palabras en el idioma que aprendes.
+• Aunque se hayan agotado las voces de este mes, puedes terminar de registrarte. Tu grabación se guarda y mientras tanto practicas con una voz provisional; el día en que se puedan crear voces otra vez, cambia sola a tu propia voz.
 
 Correcciones
-• Discurso en iPad: la imagen de la cámara ya no aparece de lado. Si lo pones en horizontal o lo giras mientras grabas, el video queda derecho.
-• Discurso en iPad: la cámara se enciende de inmediato.
-• Volver a decirlo: las intervenciones largas también vuelven como una frase pulida.
-• En una llamada, lo que dices en tu propio idioma queda tal como lo dijiste, y una intervención cortada se entiende como una sola.
-• El saludo al empezar una llamada ya no lee sus frases sin pausa.
-• Las respuestas en una llamada aparecen con suavidad, sin saltos.
-• El enfoque de esta llamada ahora sale solo de errores de gramática que de verdad cometiste.
-• Si pones algo más en tu rutina después de terminar el día, ese día sigue contando como cumplido.
-• Si cierras el selector de acento y lo vuelves a abrir, las tomas que escuchaste siguen ahí.
-• Al configurar la app, solo necesitas escribir tu ciudad.
+• Las llamadas ya conectan cuando usas nawana en un Mac.
+• Con los subtítulos desactivados, ya no aparece la línea de «pensando» durante la llamada.
+• Cuando no se puede crear una voz en ese momento, te decimos desde cuándo se podrá, en lugar de mostrar un error.

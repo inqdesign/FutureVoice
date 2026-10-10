@@ -1,16 +1,7 @@
 New
-• Picked English? You're asked first whether your voice should speak with an American, British or Australian accent, or stay as you recorded it, and it's made that way from the start.
-• Learning German, your voice now speaks with a standard German accent.
-• Weekly test: a new kind of question turns your own grammar slips into fresh sentences. See a sentence in your language and build it in the one you're learning from word tiles.
+• Even when this month's voices are used up, you can finish signing up. Your recording is saved and you practice with a stand-in voice meanwhile; on the day voices can be made again, it switches to your own voice by itself.
 
 Fixed
-• Speech on iPad: the camera picture no longer shows up sideways. Hold it in landscape or turn it mid-take and the video stays upright.
-• Speech on iPad: the camera now comes on right away.
-• Say it again: long turns now come back as a polished line too.
-• In a call, what you say in your own language stays as you said it, and a turn that got cut off is understood as one.
-• The first greeting of a call no longer runs its sentences together.
-• Replies in a call now appear smoothly instead of jumping.
-• This call's focus now comes only from grammar slips you actually made.
-• Adding something to your routine after you've finished the day no longer takes the day back.
-• Close the accent picker and open it again, and the takes you heard are still there.
-• Setting up, you only need to enter your city.
+• Calls now connect when you use nawana on a Mac.
+• With subtitles off, the "thinking" line no longer shows during a call.
+• When a voice can't be made right now, you're told when it can, instead of seeing an error.

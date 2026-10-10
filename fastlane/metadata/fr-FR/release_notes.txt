@@ -1,16 +1,7 @@
 Nouveautés
-• Tu choisis l’anglais ? On te demande d’abord si ta voix doit parler avec un accent américain, britannique ou australien, ou rester telle que tu l’as enregistrée, et elle est créée ainsi dès le départ.
-• Si tu apprends l’allemand, ta voix parle maintenant avec un accent allemand standard.
-• Test hebdo : un nouveau type de question transforme tes propres fautes de grammaire en phrases nouvelles. Tu vois une phrase dans ta langue et tu la construis avec des étiquettes de mots dans la langue que tu apprends.
+• Même quand les voix du mois sont épuisées, tu peux terminer ton inscription. Ton enregistrement est sauvegardé et, en attendant, tu t’entraînes avec une voix provisoire ; le jour où les voix peuvent de nouveau être créées, elle passe toute seule à ta propre voix.
 
 Corrections
-• Discours sur iPad : l’image de la caméra ne s’affiche plus de travers. Tiens-le à l’horizontale ou tourne-le pendant la prise, la vidéo reste droite.
-• Discours sur iPad : la caméra s’allume tout de suite.
-• Redire : les longues répliques reviennent elles aussi sous forme de phrase soignée.
-• Pendant un appel, ce que tu dis dans ta propre langue reste tel quel, et une réplique coupée est comprise comme une seule.
-• Le salut au début d’un appel n’enchaîne plus ses phrases sans respirer.
-• Les réponses pendant un appel s’affichent en douceur, sans à-coups.
-• L’objectif de cet appel vient maintenant uniquement des fautes de grammaire que tu as vraiment faites.
-• Ajouter quelque chose à ta routine après avoir terminé ta journée ne te fait plus perdre ce jour.
-• Si tu fermes le choix de l’accent et le rouvres, les prises que tu as écoutées sont toujours là.
-• Pendant la configuration, il suffit d’indiquer ta ville.
+• Les appels se connectent maintenant quand tu utilises nawana sur un Mac.
+• Sous-titres désactivés, la ligne « réfléchit… » n’apparaît plus pendant l’appel.
+• Quand une voix ne peut pas être créée tout de suite, on te dit à partir de quand ce sera possible, au lieu d’afficher une erreur.

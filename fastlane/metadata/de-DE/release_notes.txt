@@ -1,16 +1,7 @@
 Neu
-• Lernst du Englisch, fragen wir zuerst, ob deine Stimme mit amerikanischem, britischem oder australischem Akzent sprechen soll – oder so bleiben, wie du sie aufgenommen hast. Genau so entsteht sie von Anfang an.
-• Lernst du Deutsch, spricht deine Stimme jetzt mit hochdeutschem Akzent.
-• Wochentest: Eine neue Aufgabe macht aus deinen eigenen Grammatikfehlern neue Sätze. Du siehst einen Satz in deiner Sprache und baust ihn aus Wortkacheln in der Sprache, die du lernst.
+• Auch wenn die Stimmen für diesen Monat aufgebraucht sind, kannst du die Anmeldung abschließen. Deine Aufnahme wird gespeichert, und bis dahin übst du mit einer Ersatzstimme. Sobald wieder Stimmen erstellt werden können, wechselt sie von selbst zu deiner eigenen.
 
 Behoben
-• Rede auf dem iPad: Das Kamerabild steht nicht mehr seitlich. Hältst du das iPad quer oder drehst es während der Aufnahme, bleibt das Video aufrecht.
-• Rede auf dem iPad: Die Kamera geht jetzt sofort an.
-• Nochmal sagen: Auch lange Beiträge kommen jetzt als ausgefeilter Satz zurück.
-• Was du im Anruf in deiner eigenen Sprache sagst, bleibt so stehen, und ein abgebrochener Beitrag wird als einer verstanden.
-• Die Begrüßung am Anfang eines Anrufs liest ihre Sätze nicht mehr in einem Atemzug.
-• Antworten im Anruf erscheinen jetzt ruhig statt ruckelnd.
-• Der Fokus dieses Anrufs kommt jetzt nur aus Grammatikfehlern, die du wirklich gemacht hast.
-• Fügst du deiner Routine etwas hinzu, nachdem du den Tag geschafft hast, bleibt der Tag geschafft.
-• Schließt du die Akzentauswahl und öffnest sie wieder, sind die gehörten Aufnahmen noch da.
-• Bei der Einrichtung reicht jetzt deine Stadt.
+• Anrufe verbinden sich jetzt auch, wenn du nawana auf einem Mac nutzt.
+• Sind die Untertitel aus, erscheint im Anruf auch die „denkt nach“-Zeile nicht mehr.
+• Kann gerade keine Stimme erstellt werden, siehst du statt eines Fehlers, ab wann es wieder geht.
