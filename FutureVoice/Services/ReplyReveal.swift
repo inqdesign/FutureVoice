@@ -1,0 +1,79 @@
+import Foundation
+
+/// The fluent self's line is SHOWN as it is HEARD (2026-10-10).
+///
+/// The gateway announces a line at its first written token and streams the
+/// text from there — but most turns adopt a speculative reply, whose text
+/// is already complete, so the whole line landed on screen at once and the
+/// voice followed ~1 s later (synthesis only starts once the turn is
+/// committed). Read as "it writes everything, then thinks again, then
+/// talks". So the text is held until the voice is audible and then revealed
+/// a SENTENCE at a time, each one when its audio should be starting.
+///
+/// Sentence timing is an estimate: the PCM stream carries no alignment. The
+/// rate is the line's own once all of its audio is in (letters ÷ seconds of
+/// audio received), a per-script default before that.
+enum ReplyReveal {
+    /// A sentence is shown this much before its estimated start, so the eye
+    /// is never behind the ear.
+    static let lead: TimeInterval = 0.2
+
+    /// The prefix of `text` to show `elapsed` seconds into the voice.
+    /// Only complete sentences are shown while the line is still being
+    /// written; the unterminated tail joins once `isFinal`.
+    static func visible(text: String, isFinal: Bool, elapsed: TimeInterval,
+                        charactersPerSecond cps: Double) -> String {
+        var ends = sentenceEnds(in: text)
+        if isFinal, ends.last != text.endIndex,
+           !text[(ends.last ?? text.startIndex)...].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            ends.append(text.endIndex)
+        }
+        guard !ends.isEmpty, cps > 0 else { return "" }
+        var shownEnd = ends[0]
+        for end in ends.dropFirst() {
+            // This sentence starts where the previous one ended.
+            let before = weight(text[text.startIndex..<shownEnd])
+            guard Double(before) / cps <= elapsed + lead else { break }
+            shownEnd = end
+        }
+        return String(text[..<shownEnd]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// End index of every COMPLETE sentence: a Latin terminator followed by
+    /// whitespace, or a CJK one (which needs no space after it). Closing
+    /// quotes and brackets ride with the sentence they close.
+    static func sentenceEnds(in text: String) -> [String.Index] {
+        let closers: Set<Character> = [")", "\"", "'", "”", "’", "」", "』"]
+        var ends: [String.Index] = []
+        var i = text.startIndex
+        while i < text.endIndex {
+            let c = text[i]
+            let cjk = "。！？".contains(c)
+            guard cjk || ".!?…".contains(c) else { i = text.index(after: i); continue }
+            var j = text.index(after: i)
+            while j < text.endIndex, ".!?…。！？".contains(text[j]) || closers.contains(text[j]) {
+                j = text.index(after: j)
+            }
+            if cjk || (j < text.endIndex && text[j].isWhitespace) { ends.append(j) }
+            i = j
+        }
+        return ends
+    }
+
+    /// What takes time to say: letters and digits, not spaces or punctuation.
+    static func weight<S: StringProtocol>(_ s: S) -> Int {
+        s.reduce(0) { $0 + (($1.isLetter || $1.isNumber) ? 1 : 0) }
+    }
+
+    /// Letters per second before the line's own audio has said. Hangul and
+    /// kana/kanji carry a syllable each; Latin letters are a fraction of one.
+    /// Scaled by the learner's speech speed (0.85–1.0).
+    static func defaultCharactersPerSecond(for text: String, speed: Double) -> Double {
+        let syllabic = text.unicodeScalars.contains { s in
+            (0xAC00...0xD7A3).contains(s.value)      // Hangul
+                || (0x3040...0x30FF).contains(s.value)  // kana
+                || (0x4E00...0x9FFF).contains(s.value)  // CJK ideographs
+        }
+        return (syllabic ? 7.0 : 14.0) * speed
+    }
+}

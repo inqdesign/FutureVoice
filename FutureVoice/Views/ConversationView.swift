@@ -1514,7 +1514,12 @@ struct ConversationView: View {
             .onChange(of: phase)       { _, _ in scroll(proxy) }
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
             .onChange(of: realtime.partial) { _, _ in scroll(proxy) }
-            .onChange(of: suggestionsShown) { _, _ in scroll(proxy) }
+            // A correction card grows the LEARNER's bubble, mid-list, often
+            // while the reply below it is still being revealed. The bottom
+            // anchor already moves the end with it in the same animation; a
+            // second scrollTo on its own curve on top of that is what made
+            // the whole list sway (2026-10-11).
+            .onChange(of: suggestionsShown) { _, _ in scroll(proxy, immediate: false) }
             // A streaming reply changes this on every delta. While following,
             // the bottom anchor already keeps the end in place in the same
             // frame; an animated scrollTo restarted per delta was a second
@@ -1570,8 +1575,11 @@ struct ConversationView: View {
         // layout as it was, and the content that arrives a frame later ends up
         // below the fold. A second pass, once it has settled, is what keeps
         // the newest line on screen.
+        // It waits out the feed's own 0.25 s height animation: fired inside
+        // it, the pass aimed at a layout still moving and corrected again
+        // once it stopped — a sway on every card.
         settleScroll = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 220_000_000)
+            try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled, followTail, !isTornDown else { return }
             withAnimation(.easeOut(duration: 0.15)) {
                 proxy.scrollTo(Self.bottomId, anchor: .bottom)
@@ -2761,6 +2769,7 @@ struct ConversationView: View {
             } else {
                 turns[idx].transcript += delta
             }
+            didSaveCurrentSession = false
         }
         realtime.onReplyWithdrawn = { context in
             guard let id = realtimeReplyTurns.removeValue(forKey: context) else { return }
@@ -2774,9 +2783,16 @@ struct ConversationView: View {
         }
         realtime.onReplyFinished = { context, text, url, ms in
             guard !isTornDown else { return }
-            guard let id = realtimeReplyTurns.removeValue(forKey: context),
+            guard let id = realtimeReplyTurns[context],
                   let idx = turns.firstIndex(where: { $0.id == id }) else { return }
-            turns[idx].transcript = text
+            // A line still draining through the player is still being
+            // revealed sentence by sentence; the reveal writes its last words,
+            // so its context keeps pointing at this bubble until then (the
+            // next line's `onReplyBegan` overwrites a stale entry).
+            if !realtime.isRevealing(context) {
+                realtimeReplyTurns.removeValue(forKey: context)
+                turns[idx].transcript = text
+            }
             turns[idx].durationMs = ms
             if let url, let data = try? Data(contentsOf: url) {
                 turns[idx].audioURL = TurnAudioStore.shared.save(data, turnId: id)

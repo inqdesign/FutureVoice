@@ -143,6 +143,30 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var replyText = ""
     /// The reply context on screen right now, shared by began/delta/finished.
     private var replyContext: String?
+    /// The line's text is held until its voice is AUDIBLE, then revealed a
+    /// sentence at a time as it is spoken (`ReplyReveal`). It outlives the
+    /// hand-off: `audio_end` means every byte was SENT, and a long line is
+    /// still draining through the player when it lands.
+    private struct Reveal {
+        let context: String
+        var text = ""
+        /// `reply` arrived (or the line was handed over): tail included.
+        var isFinal = false
+        var audibleAt: Date?
+        var firstTextAt: Date?
+        var lastChunkAt: Date?
+        /// Seconds of audio once all of it is in.
+        var totalSeconds: Double?
+        var shown = ""
+    }
+    private var reveal: Reveal?
+    private var revealTask: Task<Void, Never>?
+    /// A line whose voice never comes is shown anyway after this long.
+    private static let revealVoiceWait: TimeInterval = 3
+
+    /// The call screen asks this before overwriting a finished line's text:
+    /// while it is still being revealed, the reveal owns the bubble.
+    func isRevealing(_ context: String) -> Bool { reveal?.context == context }
     /// When that line began (`audio_start`), for telling a cut-in from a
     /// learner deliberately talking over a line they have been hearing.
     private var replyBeganAt: Date?
@@ -853,6 +877,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // that turn is the one Replay silently skips — always the call's
         // closing line (reported 2026-09-01).
         handOverReply()
+        finishReveal()
         isTornDown = true
         heldWallTask?.cancel()
         heldWallTask = nil
@@ -1946,6 +1971,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             streamLevel = AudioLoudness.StreamingLevelEstimator()
             replyPCM = Data()
             replyText = ""
+            finishReveal()
             // The bubble goes up WITH the voice, not after it. Waiting for
             // `audio_end` put the fluent self's text on screen only once
             // the line had finished playing — heard first, read seconds
@@ -1978,13 +2004,18 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             lines.append(Line(isUser: false, text: ""))
             serverAudioEnded = false
             state = .speaking
+            if let context = replyContext { beginReveal(context) }
         case "reply_delta":
             let delta = json["text"] as? String ?? ""
             if let idx = lines.lastIndex(where: { !$0.isUser }) {
                 lines[idx].text += delta
             }
             replyText += delta
-            if let context = replyContext { onReplyDelta?(context, delta) }
+            if reveal?.context == replyContext, replyContext != nil {
+                reveal?.text = replyText
+                if reveal?.firstTextAt == nil { reveal?.firstTextAt = Date() }
+            }
+            stepReveal()
         case "reply":
             if let full = json["text"] as? String {
                 replyText = full
@@ -1992,7 +2023,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     lines[idx].text = full
                 }
                 // The authoritative text, in case deltas were coalesced.
-                if let context = replyContext { onReplyDelta?(context, "\u{0}" + full) }
+                if reveal?.context == replyContext, replyContext != nil {
+                    reveal?.text = full
+                    reveal?.isFinal = true
+                    if reveal?.firstTextAt == nil { reveal?.firstTextAt = Date() }
+                }
+                stepReveal()
             }
         case "audio_end":
             Self.step("audio_end (queued=\(pendingBuffers))")
@@ -2034,12 +2070,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 replyText = ""
                 replyContext = nil
                 replyBeganAt = nil
+                reveal = nil
+                revealTask?.cancel()
             } else {
                 if let context = replyContext, let began = replyBeganAt,
                    Date().timeIntervalSince(began) < Self.cutInWindow {
                     onReplyCutIn?(context)
                 }
                 handOverReply()
+                // The rest will never be heard; the line keeps all its words.
+                finishReveal()
             }
             // A barge-in means the learner IS talking — the gate would only
             // stand in their way now.
@@ -2170,6 +2210,68 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         closeKeepingSessionRecord()
     }
 
+    private func beginReveal(_ context: String) {
+        finishReveal()
+        reveal = Reveal(context: context)
+        revealTask = Task { @MainActor [weak self] in
+            // Ten times a second: the next sentence goes up when its audio
+            // should be starting.
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                guard let self, !Task.isCancelled else { return }
+                self.stepReveal()
+            }
+        }
+    }
+
+    /// Show whatever is left of the line now and stop.
+    private func finishReveal() {
+        revealTask?.cancel()
+        revealTask = nil
+        guard let r = reveal else { return }
+        reveal = nil
+        if !r.text.isEmpty, r.shown != r.text { onReplyDelta?(r.context, "\u{0}" + r.text) }
+    }
+
+    private func stepReveal() {
+        guard var r = reveal, !r.text.isEmpty else { return }
+        let now = Date()
+        if r.audibleAt == nil {
+            // No voice yet. Text that has waited this long for one is shown
+            // anyway — a refused TTS line still has its words on screen.
+            guard let first = r.firstTextAt,
+                  now.timeIntervalSince(first) >= Self.revealVoiceWait else { return }
+            r.audibleAt = now
+        }
+        let elapsed = now.timeIntervalSince(r.audibleAt ?? now)
+        // The line's own pace once all of its audio is in; a default before.
+        let seconds: Double? = r.totalSeconds ?? {
+            guard r.context == replyContext,
+                  serverAudioEnded || (r.lastChunkAt.map { now.timeIntervalSince($0) > 0.5 } ?? false)
+            else { return nil }
+            return Double(replyPCM.count / 2) / replySampleRate
+        }()
+        let weight = ReplyReveal.weight(r.text)
+        let cps: Double
+        if r.isFinal, let seconds, seconds > 0.5, weight > 0 {
+            cps = Double(weight) / seconds
+        } else {
+            cps = ReplyReveal.defaultCharactersPerSecond(for: r.text,
+                                                         speed: SpeechSpeed.current.multiplier)
+        }
+        let shown = ReplyReveal.visible(text: r.text, isFinal: r.isFinal,
+                                        elapsed: elapsed, charactersPerSecond: cps)
+        if shown.count > r.shown.count {
+            r.shown = shown
+            onReplyDelta?(r.context, "\u{0}" + shown)
+        }
+        reveal = r
+        // Everything is up: the authoritative text, then done.
+        if r.isFinal, shown == r.text.trimmingCharacters(in: .whitespacesAndNewlines) {
+            finishReveal()
+        }
+    }
+
     private func handOverReply() {
         guard let context = replyContext else { return }
         let pcm = replyPCM
@@ -2178,7 +2280,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         replyText = ""
         replyContext = nil
         replyBeganAt = nil
-        guard !text.isEmpty else { return }
+        if reveal?.context == context {
+            reveal?.text = text
+            reveal?.isFinal = true
+            reveal?.totalSeconds = Double(pcm.count / 2) / replySampleRate
+            if reveal?.audibleAt == nil { reveal?.audibleAt = Date() }
+        }
+        guard !text.isEmpty else {
+            if reveal?.context == context { finishReveal() }
+            return
+        }
         let url = Self.saveWAV(pcm: pcm, sampleRate: replySampleRate)
         let ms = Int(Double(pcm.count / 2) / replySampleRate * 1000)
         onReplyFinished?(context, text, url, ms)
@@ -2382,6 +2493,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             }
         }
         if !scheduled { pendingBuffers = max(0, pendingBuffers - 1) }
+        if let context = replyContext, reveal?.context == context {
+            reveal?.lastChunkAt = Date()
+            if scheduled, reveal?.audibleAt == nil {
+                reveal?.audibleAt = Date()
+                stepReveal()
+            }
+        }
         // Rough playback level for the pill while the fluent self speaks.
         if state == .speaking {
             var sum: Float = 0
