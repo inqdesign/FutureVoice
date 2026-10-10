@@ -125783,48 +125783,48 @@
         }
       }
     },
-    "Your recording is saved. Open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with." : {
+    "Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aufnahme ist gespeichert. Öffne die App danach, und dein fließendes Ich spricht mit deiner Stimme. Bis dahin such dir unten eine Stimme aus und übe mit ihr."
+            "value" : "Gerade gibt es beim Erstellen von Stimmen ein kurzes Problem. Deine Aufnahme ist gespeichert: Öffne die App danach, und dein fließendes Ich spricht mit deiner Stimme. Bis dahin such dir unten eine Stimme aus und übe mit ihr."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu grabación está guardada. Abre la app después de esa fecha y tu yo fluido hablará con tu voz. Mientras tanto, elige una de las voces de abajo para practicar."
+            "value" : "Ahora mismo hay un problema temporal al crear voces. Tu grabación está guardada: abre la app después de esa fecha y tu yo fluido hablará con tu voz. Mientras tanto, elige una de las voces de abajo para practicar."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ton enregistrement est sauvegardé. Ouvre l’app après cette date et ton moi fluide parlera avec ta voix. D’ici là, choisis une des voix ci-dessous pour t’entraîner."
+            "value" : "Il y a en ce moment un petit souci pour créer les voix. Ton enregistrement est sauvegardé : ouvre l’app après cette date et ton moi fluide parlera avec ta voix. D’ici là, choisis une des voix ci-dessous pour t’entraîner."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録音は保存しました。その日以降にアプリを開くと、流暢な自分が自分の声で話します。それまでは、下の声から一つ選んで練習してください。"
+            "value" : "現在、声の作成に一時的な問題が起きています。録音は保存したので、その日以降にアプリを開くと、流暢な自分が自分の声で話します。それまでは、下の声から一つ選んで練習してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "녹음은 저장해 뒀어요. 그 뒤에 앱을 열면 유창해진 내가 내 목소리로 말해요. 그때까지는 아래 목소리 중 하나를 골라 연습하세요."
+            "value" : "지금 목소리를 만드는 데 잠시 문제가 있어요. 녹음은 저장해 뒀으니, 그 뒤에 앱을 열면 유창해진 내가 내 목소리로 말해요. 그때까지는 아래 목소리 중 하나를 골라 연습하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "录音已经保存好了。那之后打开 App，流利的自己就会用你的声音说话。在那之前，请从下面选一个声音来练习。"
+            "value" : "目前创建声音暂时出了点问题。录音已经保存好了，那之后打开 App，流利的自己就会用你的声音说话。在那之前，请从下面选一个声音来练习。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "錄音已經存好了。那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"
+            "value" : "目前建立聲音暫時出了點問題。錄音已經存好了，那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"
           }
         }
       }

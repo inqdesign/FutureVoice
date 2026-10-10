@@ -60,7 +60,7 @@ struct StandInVoicePicker: View {
                     .foregroundStyle(.tint)
             }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .onTapGesture {
             appState.chooseStandInVoice(preset.id)
