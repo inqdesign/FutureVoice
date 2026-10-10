@@ -46,7 +46,11 @@ enum ShadowEngine {
         let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
         let (matches, steps) = align(targetTokens, learnerTokens, key: key)
         let denom = max(targetTokens.count, learnerTokens.count)
-        let raw = denom > 0 ? Double(matches) / Double(denom) : 0
+        let raw = language.hasPrefix("ko")
+            ? koreanWordRatio(target: target, steps: steps,
+                              targetSyllables: targetTokens.count,
+                              learnerSyllables: learnerTokens.count)
+            : (denom > 0 ? Double(matches) / Double(denom) : 0)
         // Reanchor: 90+ excellent, 75 good, <60 noticeable. A pure
         // proportion already lives in 0–1; we soften the bottom by mapping
         // sqrt so single-word slips don't crater an otherwise good attempt.
@@ -59,6 +63,29 @@ enum ShadowEngine {
             learnerTokenCount: learnerTokens.count,
             matchCount: matches
         )
+    }
+
+    /// Korean is ALIGNED by syllable — the recognizer spaces it its own way
+    /// (한잔 / 한 잔) — but SCORED by the target's eojeol: a word counts only
+    /// when every syllable in it matched. Scored by syllable, one wrong
+    /// particle in a 25-syllable line was 1/25 and read 96, a dropped word
+    /// 92–96 (scripts/shadow-ko-probe.py, 2026-10-10) — a mistake the screen
+    /// showed and the number forgave, where English loses ~10 for the same
+    /// slip. Extra speech is converted to words at the line's own syllables
+    /// per word, so the denominator is English's max(target, learner).
+    private static func koreanWordRatio(target: String, steps: [DiffStep],
+                                        targetSyllables: Int, learnerSyllables: Int) -> Double {
+        let words = target.split(whereSeparator: \.isWhitespace).map(String.init)
+        let spans = tokenSpans(for: words, language: "ko").filter { !$0.isEmpty }
+        let ops = targetOps(steps)
+        guard !spans.isEmpty, targetSyllables > 0, ops.count == targetSyllables else {
+            let denom = max(targetSyllables, learnerSyllables)
+            return denom > 0 ? Double(steps.filter { $0.op == .match }.count) / Double(denom) : 0
+        }
+        let matched = spans.filter { span in span.allSatisfy { ops[$0] == .match } }.count
+        let perWord = Double(targetSyllables) / Double(spans.count)
+        let denom = max(Double(spans.count), Double(learnerSyllables) / perWord)
+        return Double(matched) / denom
     }
 
     /// Which diff tokens each SPOKEN word of a line occupies.
@@ -157,6 +184,36 @@ enum ShadowEngine {
     /// audio-grounded transcript landed the same day, that branch is rare.
     /// It is also why every attempt saved before then keeps its old score:
     /// no `rhythmScore`, no blend.
+    /// True when what the live recognizer heard ENDS with the line's last
+    /// words — the learner has reached the end of the line. Used to end an
+    /// attempt on content rather than on a silence a noisy room may never
+    /// give. Words for spaced languages (the last two, in order, inside the
+    /// last five heard), characters for Korean/Japanese/Chinese (the last
+    /// three, inside the last eight heard — the recognizer spaces those its
+    /// own way). Digits are spelled out first, as the diff does. False for a
+    /// line too short to tell its end from its middle.
+    static func heardLineEnd(target: String, heard: String, language: String) -> Bool {
+        let style = LanguageCatalog.tokenStyle(language)
+        let t = tokenize(expandForDiff(target, language: language), style: .word)
+        let h = tokenize(expandForDiff(heard, language: language), style: .word)
+        let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
+        switch style {
+        case .word:
+            guard t.count >= 2, h.count >= 2 else { return false }
+            let end = t.suffix(2).map(key)
+            let tail = Array(h.suffix(5).map(key))
+            for i in 0..<(tail.count - 1) where tail[i] == end[0] && tail[i + 1] == end[1] {
+                return true
+            }
+            return false
+        case .syllable:
+            let tc = t.joined().map { key(String($0)) }.joined()
+            let hc = h.joined().map { key(String($0)) }.joined()
+            guard tc.count >= 4 else { return false }
+            return String(hc.suffix(8)).contains(String(tc.suffix(3)))
+        }
+    }
+
     static func overallScore(match: Int, rhythm: Int?) -> Int {
         guard let rhythm else { return match }
         let blended = Double(match) * matchWeight + Double(rhythm) * rhythmWeight

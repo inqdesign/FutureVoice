@@ -195,6 +195,9 @@ let shadowCases: [[String: String]] = [
     ["target": "It slipped my mind completely", "learner": "it slipped completely", "language": "en"],
     ["target": "Nice to meet you", "learner": "", "language": "en"],
     ["target": "오늘 날씨가 좋네요", "learner": "오늘 날씨 좋네요", "language": "ko"],
+    ["target": "어제 친구랑 같이 영화를 봤어요.", "learner": "어제 친구랑 같이 영화가 봤어요", "language": "ko"],
+    ["target": "커피 한잔 할래?", "learner": "커피 한 잔 할래", "language": "ko"],
+    ["target": "학교 끝나고 갈 거야", "learner": "학교 수업 끝나고 갈 거야", "language": "ko"],
     // iOS ShadowEngineTests, one row per test.
     ["target": "hello world how are you", "learner": "hello world how are you", "language": "en"],
     ["target": "Hello, world!", "learner": "hello world", "language": "en"],

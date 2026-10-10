@@ -43,7 +43,9 @@ object ShadowScore {
             else { t -> t }
         val (matches, steps) = align(targetTokens, learnerTokens, key)
         val denom = maxOf(targetTokens.size, learnerTokens.size)
-        val raw = if (denom > 0) matches.toDouble() / denom else 0.0
+        val raw = if (language.startsWith("ko"))
+            koreanWordRatio(target, steps, targetTokens.size, learnerTokens.size)
+        else if (denom > 0) matches.toDouble() / denom else 0.0
         // sqrt curve: single-word slips don't crater a good attempt.
         val score = (sqrt(raw) * 100).let { Math.round(it) }.toInt().coerceIn(0, 100)
         return Analysis(score, steps, targetTokens.size, learnerTokens.size, matches)
@@ -83,6 +85,28 @@ object ShadowScore {
     /** Ops in TARGET order (`ins` skipped) — indexes align with [tokenSpans]. */
     fun targetOps(steps: List<DiffStep>): List<DiffOp> =
         steps.filter { it.op != DiffOp.INS }.map { it.op }
+
+    /**
+     * Korean is ALIGNED by syllable (the recognizer spaces it its own way) but
+     * SCORED by the target's eojeol: a word counts only when every syllable in
+     * it matched — by syllable a wrong particle read 96 (iOS
+     * ShadowEngine.koreanWordRatio). Extra speech converts to words at the
+     * line's own syllables per word, so the denominator is max(target, learner).
+     */
+    private fun koreanWordRatio(target: String, steps: List<DiffStep>,
+                                targetSyllables: Int, learnerSyllables: Int): Double {
+        val words = target.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val spans = tokenSpans(words, "ko").filter { !it.isEmpty() }
+        val ops = targetOps(steps)
+        if (spans.isEmpty() || targetSyllables == 0 || ops.size != targetSyllables) {
+            val denom = maxOf(targetSyllables, learnerSyllables)
+            return if (denom > 0) steps.count { it.op == DiffOp.MATCH }.toDouble() / denom else 0.0
+        }
+        val matched = spans.count { span -> span.all { ops[it] == DiffOp.MATCH } }
+        val perWord = targetSyllables.toDouble() / spans.size
+        val denom = maxOf(spans.size.toDouble(), learnerSyllables / perWord)
+        return matched / denom
+    }
 
     /** Which diff tokens each SPOKEN word occupies (see ShadowEngine.tokenSpans). */
     fun tokenSpans(words: List<String>, language: String = "en"): List<IntRange> {
