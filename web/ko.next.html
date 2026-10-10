@@ -719,6 +719,9 @@ footer a:hover { color: var(--ink); }
 :root {
   --paper:  #F9F4E9;              /* the Welcome cream (0.975, 0.955, 0.915) */
   --paper2: #F4EBDC;              /* the warmth gathering under its buttons */
+  /* the same two, lifted so the multiply grain (mean ×0.964) lands on them */
+  --paper-g:  #FFFDF2;
+  --paper2-g: #FDF4E4;
   --ink:    #1C2133;              /* storyInk */
   --dim:    #4D5263;
   --faint:  #8B8E99;
@@ -729,16 +732,21 @@ footer a:hover { color: var(--ink); }
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif;
 }
 body { background: var(--paper); }
-/* film grain, over everything, like the film */
-body::after {
-  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none;
-  opacity: 0.16; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+/* film grain IN the backgrounds — the welcome's FilmGrain tile (grain.png:
+   uniform random grey, 160px shown at 80 like its @2x UIImage) blended
+   with overlay into each section's own ground, so text and the phone
+   screens stay clean */
+.plain, .alt, .night, nav.sec.nav-solid, .nav-menu {
+  background-image: url(grain-light.png);
+  background-size: 80px 80px; background-blend-mode: multiply;
 }
+/* overlay barely moves a near-white ground, so the cream also gets a
+   multiply tile (grain-light.png: white with sparse specks up to ~10% darker) —
+   on the device the film reads stronger than overlay alone does here */
 /* no column grid: the film has none */
 .sec::before { display: none; }
-.plain { background: var(--paper); --surf: #FFFFFF; }
-.alt   { background: var(--paper2); --surf: #FFFFFF; }
+.plain { background-color: var(--paper-g); --surf: #FFFFFF; }
+.alt   { background-color: var(--paper2-g); --surf: #FFFFFF; }
 /* type: the film's captions — system sans, semibold, ink */
 h1, h2 { font-weight: 700; letter-spacing: -0.025em; color: var(--ink); }
 /* kickers become the film's glimpse chips */
@@ -760,11 +768,20 @@ h1, h2 { font-weight: 700; letter-spacing: -0.025em; color: var(--ink); }
   --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99;
   --line: rgba(28,33,51,0.14); --lns: rgba(28,33,51,0.07); --surf: #FFFFFF;
 }
-.night .n-glow {
-  left: 0; right: 0; top: 0; width: auto; height: 100vh; transform: none;
-  background:
+/* the sky is drawn IN the hero's own background, under the grain — a
+   separate glow layer goes transparent at the bottom, where a grain tile
+   would show as a grey block */
+.night .n-glow { display: none; }
+header.night {
+  background-color: var(--paper-g);
+  background-image:
+    url(grain-light.png),
+    url(grain.png),
     linear-gradient(to bottom, #04081A 0%, rgba(5,15,56,0.9) 7%, rgba(10,36,128,0.45) 15%, rgba(13,51,179,0) 24%),
     radial-gradient(ellipse 85% 60% at 50% -8%, #0F42E6 0%, #245FF5 22%, #6699FF 46%, #B8D1FF 68%, rgba(249,244,233,0) 92%);
+  background-size: 80px 80px, 80px 80px, 100% 100vh, 100% 100vh;
+  background-repeat: repeat, repeat, no-repeat, no-repeat;
+  background-blend-mode: multiply, overlay, normal, normal;
 }
 .night .btn-white, .night .btn-black { background: var(--ink); color: #fff; }
 .n-kicker { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; color: rgba(28,33,51,0.72); }
@@ -778,12 +795,12 @@ h1, h2 { font-weight: 700; letter-spacing: -0.025em; color: var(--ink); }
 .iphone { box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 50px 90px -40px rgba(28,33,51,0.45); }
 /* nav: light on the night band, cream glass once past it */
 nav.sec.nav-solid {
-  background: rgba(249,244,233,0.86); border-bottom-color: rgba(28,33,51,0.08);
+  background-color: rgba(255,253,242,0.86); border-bottom-color: rgba(28,33,51,0.08);
   --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99; color: var(--ink);
 }
 nav.sec.nav-solid .logo, nav.sec.nav-solid .nav-burger { color: var(--ink); }
 nav.sec.nav-solid .navlinks .btn { background: var(--ink); color: #fff; }
-.nav-menu { background: rgba(249,244,233,0.97); border-bottom-color: rgba(28,33,51,0.08); }
+.nav-menu { background-color: rgba(255,253,242,0.97); border-bottom-color: rgba(28,33,51,0.08); }
 .nav-menu a { font-family: var(--sans); letter-spacing: 0; text-transform: none; color: var(--dim); }
 .nav-menu a:hover, .nav-menu a:active { color: var(--ink); }
 nav.sec.nav-open .nav-burger { color: var(--ink); }
