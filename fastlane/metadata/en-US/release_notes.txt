@@ -1,5 +1,5 @@
 New
-• Even when this month's voices are used up, you can finish signing up. Your recording is saved and you practice with a stand-in voice meanwhile; on the day voices can be made again, it switches to your own voice by itself.
+• Even when this month's voices are used up, you can finish signing up. Your recording is saved and meanwhile you pick one of the preset voices to practice with; on the day voices can be made again, it switches to your own voice by itself.
 
 Fixed
 • Calls now connect when you use nawana on a Mac.

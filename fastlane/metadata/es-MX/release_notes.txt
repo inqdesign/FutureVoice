@@ -1,5 +1,5 @@
 Novedades
-• Aunque se hayan agotado las voces de este mes, puedes terminar de registrarte. Tu grabación se guarda y mientras tanto practicas con una voz provisional; el día en que se puedan crear voces otra vez, cambia sola a tu propia voz.
+• Aunque se hayan agotado las voces de este mes, puedes terminar de registrarte. Tu grabación se guarda y mientras tanto eliges una de las voces predeterminadas para practicar; el día en que se puedan crear voces otra vez, cambia sola a tu propia voz.
 
 Correcciones
 • Las llamadas ya conectan cuando usas nawana en un Mac.

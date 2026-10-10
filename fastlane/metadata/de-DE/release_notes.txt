@@ -1,5 +1,5 @@
 Neu
-• Auch wenn die Stimmen für diesen Monat aufgebraucht sind, kannst du die Anmeldung abschließen. Deine Aufnahme wird gespeichert, und bis dahin übst du mit einer Ersatzstimme. Sobald wieder Stimmen erstellt werden können, wechselt sie von selbst zu deiner eigenen.
+• Auch wenn die Stimmen für diesen Monat aufgebraucht sind, kannst du die Anmeldung abschließen. Deine Aufnahme wird gespeichert, und bis dahin übst du mit einer der Standardstimmen, die du dir aussuchst. Sobald wieder Stimmen erstellt werden können, wechselt sie von selbst zu deiner eigenen.
 
 Behoben
 • Anrufe verbinden sich jetzt auch, wenn du nawana auf einem Mac nutzt.

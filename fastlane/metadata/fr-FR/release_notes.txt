@@ -1,5 +1,5 @@
 Nouveautés
-• Même quand les voix du mois sont épuisées, tu peux terminer ton inscription. Ton enregistrement est sauvegardé et, en attendant, tu t’entraînes avec une voix provisoire ; le jour où les voix peuvent de nouveau être créées, elle passe toute seule à ta propre voix.
+• Même quand les voix du mois sont épuisées, tu peux terminer ton inscription. Ton enregistrement est sauvegardé et, en attendant, tu t’entraînes avec l’une des voix par défaut, au choix ; le jour où les voix peuvent de nouveau être créées, elle passe toute seule à ta propre voix.
 
 Corrections
 • Les appels se connectent maintenant quand tu utilises nawana sur un Mac.
