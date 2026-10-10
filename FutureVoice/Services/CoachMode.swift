@@ -274,6 +274,10 @@ enum CoachSuggester {
           by default "say" just answers. Never ask back what the line already \
           told them (they gave their name, then asked yours).
         \(address)
+        - Honorifics that raise a person (Korean -(으)시-, Japanese 尊敬語) \
+          are for the OTHER person only — never on the learner's own \
+          actions, even when the line used them: Korean 살았어요, not \
+          사셨어요.
         - "meaning": the \(nativeName) translation, natural, with the \
           bracketed example translated inside brackets in the matching place.
         - "word": if studied items are listed and one fits this answer \
