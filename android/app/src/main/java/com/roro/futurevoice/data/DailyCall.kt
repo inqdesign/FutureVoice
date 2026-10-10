@@ -14,6 +14,8 @@ import androidx.core.app.NotificationCompat
 import com.roro.futurevoice.MainActivity
 import com.roro.futurevoice.R
 import java.util.Calendar
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.launch
 
 /**
  * The daily call — the habit anchor, Android half (`android-launch-roadmap`
@@ -425,7 +427,41 @@ class DailyCallDeclineReceiver : BroadcastReceiver() {
 class DailyCallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         android.util.Log.d("DailyCall", "receiver fired")
-        DailyCallScheduler.ring(context)
-        android.util.Log.d("DailyCall", "ring posted")
+        // No plan and no minutes left: the call could only open onto the
+        // paywall, so it doesn't ring (iOS `DailyCallScheduler.refresh`,
+        // 2026-10-10). Asked at the ring rather than when arming, because
+        // here nothing re-arms after a purchase; the next slot is armed
+        // either way, so the calls come back by themselves once they can
+        // be answered. A failed read rings — the answer is gated too.
+        val pending = goAsync()
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val go = runCatching { canSpend() }.getOrDefault(true)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (go) {
+                        DailyCallScheduler.ring(context)
+                        android.util.Log.d("DailyCall", "ring posted")
+                    } else {
+                        com.roro.futurevoice.core.Analytics.capture("daily_call_skipped_no_plan")
+                        if (DailyCallStore.isEnabled(context)) DailyCallScheduler.schedule(context)
+                    }
+                }
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    private suspend fun canSpend(): Boolean {
+        // A cold process reads the session from storage first.
+        kotlinx.coroutines.withTimeoutOrNull(3_000) { Supa.client.auth.awaitInitialization() }
+        val auth = AuthRepository()
+        val (go, fresh) = BillingGate.decide(BillingGate.account, signedIn = auth.userId != null) {
+            kotlinx.coroutines.withTimeoutOrNull(5_000) {
+                runCatching { AccountStatus.load(auth) }.getOrNull()
+            }
+        }
+        fresh?.let { BillingGate.remember(it) }
+        return go
     }
 }

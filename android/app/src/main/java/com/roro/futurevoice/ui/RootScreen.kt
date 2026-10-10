@@ -388,7 +388,10 @@ fun RootScreen() {
     LaunchedEffect(callAnswered) {
         // Answering the daily call IS starting the talk — no second tap, and
         // no overlay (Me, a deck, a book) may stand in front of it.
-        if (callAnswered > 0 && state.voiceId != null) {
+        // Through the same gate as the Talk ring (iOS `consumeAnsweredCall`,
+        // 2026-10-10): a call armed before the pool ran out opens the plans,
+        // not a call that 402s before the learner speaks.
+        if (callAnswered > 0 && state.voiceId != null) gate {
             showMe = false; showDeck = false; detailSessionId = null
             watchScenarioId = null; shadowLine = null; clonePreview = false
             shadowHand = emptyList(); shadowAt = 0
