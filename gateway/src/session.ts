@@ -1054,6 +1054,28 @@ export class CallSession implements DurableObject {
       if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
       return
     }
+    // An app that didn't say which language they speak, and a line the
+    // re-read heard as some OTHER language (2026-10-10 — the old prompt
+    // turned a Korean line written in Devanagari into "drohen kann"). The
+    // script the re-read wrote it in names the language: Hangul or kana is
+    // their own language, kept as said and remembered, so every later line
+    // goes to the measured classifying prompt. Written in the target script
+    // it is the target after all (a heavy accent). Anything else can't be
+    // named — dropped, like a hesitation, never answered as invented words.
+    if (reread !== null && native === null && reread.spoken === "other") {
+      const named = CallSession.nativeFromScript(reread.text, this.language)
+      if (named !== null) {
+        this.warn("script_mismatch", `native, inferred ${named} (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
+        this.inferredNative = named
+        this.handleUtterance(reread.text, true)
+        return
+      }
+      if (!CallSession.inTargetScript(reread.text, this.language)) {
+        this.warn("script_mismatch", `reread other, dropped (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 40)}`)
+        if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+        return
+      }
+    }
     // They switched to their own language. Kept as SAID — never the
     // translation the old re-read invented — and answered as such. A
     // "target" label on a line written wholly in the native script is

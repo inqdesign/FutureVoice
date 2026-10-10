@@ -2084,6 +2084,14 @@ Found reading one A2 learner's calls; both were everywhere once counted.
   (`inferredNative`); never from Devanagari, which is a mishearing. A native-script letter inside a target line ("I want
   to… 승진") counts too, but only a letter the target script never uses
   (`hasNativeScript` — a Chinese speaker's Japanese is all shared Han).
+  **With no native at all** (an old build, a Devanagari final — 2026-10-10:
+  "हम दो आए हैं" became "drohen kann" on a 1.1.4 German learner's call),
+  the re-read still classifies, as `target` / `other` / `none`
+  (`unknownNativeSystem`): an `other` line written in Hangul or kana names
+  the native and is kept as said, one in the target script is the target,
+  anything else is dropped — never answered as invented words.
+  `test/probe-reread-unknown.mjs`: invented target sentences 72/76 → 2/76;
+  the cost is 7/68 heavy-accent Hangul-read German lines labelled `other`.
   Measured: `test/probe-reread-native.mjs` 86/88 (the 2 misses are fixed by
   the script check) vs the old prompt inventing a sentence for 40/40;
   `test/probe-native-reply.mjs` — the wrapped turn gets an English rendering
