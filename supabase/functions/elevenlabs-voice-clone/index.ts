@@ -8,7 +8,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
+import { reservedForNewLearners, reservedResponse, quotaSpent, spentResponse } from "../_shared/voice-quota.ts"
 import { changesLeft, recordVoiceChange, changeLimitResponse, type VoiceChangeKind } from "../_shared/voice-changes.ts"
 import {
   recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
@@ -75,6 +75,9 @@ Deno.serve(async (req) => {
   if (!isFirstClone && await reservedForNewLearners(apiKey)) {
     return reservedResponse(cors())
   }
+  // Nothing left at all: say so with the reset date instead of letting the
+  // upload fail upstream with a raw error (2026-10-10).
+  if (await quotaSpent(apiKey)) return spentResponse(cors())
 
   // One change per 30 days after the first voice (_shared/voice-changes.ts).
   // A parked voice coming back is a rebuild of what we took, not a change.
@@ -155,6 +158,8 @@ Deno.serve(async (req) => {
 
   if (!upstream.ok) {
     const detail = await upstream.text()
+    // The allowance may have run out between the check above and the upload.
+    if (await quotaSpent(apiKey, true)) return spentResponse(cors())
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }
 

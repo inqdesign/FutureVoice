@@ -149,6 +149,7 @@ struct VoiceCloneOnboardingView: View {
         case uploading
         case meet        // clone landed; greeting + theme pick
         case account     // sign-up: keep the voice they just heard
+        case queued      // the month's voices are spent: recording kept, voice made later
     }
 
     /// Which language the user reads the script in. The clone captures a
@@ -247,7 +248,8 @@ struct VoiceCloneOnboardingView: View {
                     error = nil
                     // Back to whatever this step interrupted: the voice
                     // they just met, or the take waiting to become one.
-                    status = appState.voiceCloneId == nil ? .reviewing : .meet
+                    status = appState.voiceCloneId == nil ? .reviewing
+                        : (appState.voiceIsStandIn ? .queued : .meet)
                 } label: {
                     Label("Back", systemImage: "chevron.left")
                 }
@@ -290,7 +292,12 @@ struct VoiceCloneOnboardingView: View {
             // the old order (sign up, then clone). A clone that belongs to a
             // throwaway user has to be rebuilt under the account that just
             // claimed the session. Either way: build it now.
-            if appState.voiceCloneId == nil || auth.adoptedExistingAccount {
+            // A stand-in under an account that already existed: that
+            // account's own voice (if any) is adopted by the restore, and an
+            // empty one keeps the queue — never a clone attempt that the
+            // spent allowance would refuse anyway.
+            if appState.voiceCloneId == nil
+                || (auth.adoptedExistingAccount && !appState.voiceIsStandIn) {
                 performClone()
             } else {
                 finishMeet()
@@ -407,12 +414,13 @@ struct VoiceCloneOnboardingView: View {
         case .account:   return chrome("Make it yours")
         case .uploading: return chrome("Becoming you")
         case .meet:      return chrome("Meet your fluent self")
+        case .queued:    return chrome("Voice saved")
         }
     }
 
     private var orbMode: Futureself.Mode {
         switch status {
-        case .intro, .consent, .mic, .script, .account:
+        case .intro, .consent, .mic, .script, .account, .queued:
             return .idle
         // The spot step wears listening: ambient noise visibly stirs the
         // surface, and finding a quiet room visibly settles it.
@@ -426,7 +434,7 @@ struct VoiceCloneOnboardingView: View {
 
     private var orbLevel: Float {
         switch status {
-        case .intro, .consent, .mic, .script, .account:
+        case .intro, .consent, .mic, .script, .account, .queued:
             return 0
         case .spot:      return recorder.levels
         case .recording: return recorder.levels
@@ -483,6 +491,7 @@ struct VoiceCloneOnboardingView: View {
         case .account:   accountContent
         case .uploading: uploadingContent
         case .meet:      meetContent
+        case .queued:    queuedContent
         }
     }
 
@@ -491,8 +500,13 @@ struct VoiceCloneOnboardingView: View {
     // anonymous session; nothing here creates the voice, it only keeps it.
     private var accountContent: some View {
         VStack(spacing: 26) {
-            stepHeader(explain("Save this voice to your account."),
-                       explain("It's built and it's yours. Sign in and it stays — with your progress, on whichever iPhone you use."))
+            if appState.voiceIsStandIn {
+                stepHeader(explain("Save your recording to your account."),
+                           explain("Sign in, and your voice lands in this account the day it's made."))
+            } else {
+                stepHeader(explain("Save this voice to your account."),
+                           explain("It's built and it's yours. Sign in and it stays — with your progress, on whichever iPhone you use."))
+            }
 
             // The code was typed on the Welcome screen, several steps back.
             // Showing it here is the only sign it's still coming.
@@ -931,6 +945,15 @@ struct VoiceCloneOnboardingView: View {
         .transition(.opacity)
     }
 
+    // Queued: the account's voices for the month are spent. The take is
+    // saved; a stand-in speaks until the date the server gave, then the voice
+    // is built on its own (`AppState.makeQueuedVoiceIfReady`).
+    private var queuedContent: some View {
+        stepHeader(VoiceQuota.readyLine(appState.voiceQueuedUntil),
+                   explain("Your recording is saved. Open the app after then and your fluent self speaks in your voice. Until then, practice with a stand-in voice."))
+            .transition(.opacity)
+    }
+
     // Meet: greeting + theme pick.
     private var meetContent: some View {
         VStack(spacing: 22) {
@@ -1349,6 +1372,25 @@ struct VoiceCloneOnboardingView: View {
                 .controlSize(.large)
                 .disabled(true)
 
+            case .queued:
+                if auth.isSignedIn || authBypassed {
+                    Button(action: finishMeet) {
+                        Text("Start talking")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                } else {
+                    Button {
+                        status = .account
+                    } label: {
+                        Text("Continue")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+
             case .meet:
                 // Two exits, one button. With an account behind the session
                 // this is onboarding's last tap, straight into the first call;
@@ -1617,6 +1659,15 @@ struct VoiceCloneOnboardingView: View {
                 isReRecordingClone = false
                 status = .meet
                 openMeet()
+            } catch let failure where failure.voiceQuotaFull != nil
+                        && (appState.voiceCloneId == nil || appState.voiceIsStandIn)
+                        && !isReRecordingClone {
+                // The month's voices are spent. The take is already saved
+                // (`VoiceSampleStore` above): keep going on a stand-in and
+                // build the voice when the allowance resets.
+                appState.adoptStandInVoice(until: failure.voiceQuotaFull ?? nil)
+                UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
+                status = .queued
             } catch {
                 self.error = error.localizedDescription
                 status = .reviewing

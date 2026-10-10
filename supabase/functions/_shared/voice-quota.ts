@@ -14,24 +14,44 @@
 // the counter can't be read, nothing is refused — a lookup hiccup must not
 // stop a voice the account could have made.
 
-let cached: { at: number; remaining: number } | null = null
+let cached: { at: number; remaining: number; resetAt: string | null } | null = null
 
-/** Voices the account can still add this month, or null if unknown. */
-export async function voicesLeft(apiKey: string): Promise<number | null> {
-  if (cached && Date.now() - cached.at < 60_000) return cached.remaining
+/** When the allowance next resets (ISO), as ElevenLabs last reported it —
+ *  the subscription's renewal, `next_character_count_reset_unix`. It moves
+ *  every month, so every refusal carries the current one (2026-10-10). */
+export function quotaResetAt(): string | null {
+  return cached?.resetAt ?? null
+}
+
+/** Voices the account can still add this month, or null if unknown.
+ *  `fresh` skips the 60 s cache — after an upstream refusal, to tell a spent
+ *  allowance from any other failure. */
+export async function voicesLeft(apiKey: string, fresh = false): Promise<number | null> {
+  if (!fresh && cached && Date.now() - cached.at < 60_000) return cached.remaining
   try {
     const r = await fetch("https://api.elevenlabs.io/v1/user/subscription", {
       headers: { "xi-api-key": apiKey },
     })
     if (!r.ok) return null
-    const s = await r.json() as { voice_add_edit_counter?: number; max_voice_add_edits?: number }
+    const s = await r.json() as {
+      voice_add_edit_counter?: number; max_voice_add_edits?: number
+      next_character_count_reset_unix?: number
+    }
     if (typeof s.voice_add_edit_counter !== "number" || typeof s.max_voice_add_edits !== "number") return null
     const remaining = s.max_voice_add_edits - s.voice_add_edit_counter
-    cached = { at: Date.now(), remaining }
+    const resetAt = typeof s.next_character_count_reset_unix === "number"
+      ? new Date(s.next_character_count_reset_unix * 1000).toISOString() : null
+    cached = { at: Date.now(), remaining, resetAt }
     return remaining
   } catch {
     return null
   }
+}
+
+/** Nothing left at all this month: even a first voice can't be made. */
+export async function quotaSpent(apiKey: string, fresh = false): Promise<boolean> {
+  const left = await voicesLeft(apiKey, fresh)
+  return left !== null && left <= 0
 }
 
 /** True when what is left is held for first clones. */
@@ -44,12 +64,28 @@ export async function reservedForNewLearners(apiKey: string): Promise<boolean> {
   return held
 }
 
-/** The refusal. 503 with a body every build shows as an error message. */
+/** The refusal. 503 with a body every build shows as an error message;
+ *  `available_at` is when voices can be made again (builds from 2026-10-10
+ *  turn it into a dated line in the app language). */
 export function reservedResponse(headers: HeadersInit): Response {
   const h = new Headers(headers)
   h.set("Content-Type", "application/json")
   return new Response(JSON.stringify({
     error: "voice_quota_reserved",
     message: "Making a new voice is paused for a few days. Your current voice keeps working.",
+    available_at: quotaResetAt(),
+  }), { status: 503, headers: h })
+}
+
+/** The month is spent: no voice at all can be made, a first one included.
+ *  A build from 2026-10-10 keeps the learner's recording, lets them in on a
+ *  stand-in voice and builds theirs after `available_at`. */
+export function spentResponse(headers: HeadersInit): Response {
+  const h = new Headers(headers)
+  h.set("Content-Type", "application/json")
+  return new Response(JSON.stringify({
+    error: "voice_quota_full",
+    message: "Making new voices is paused for a few days. Please try again later.",
+    available_at: quotaResetAt(),
   }), { status: 503, headers: h })
 }

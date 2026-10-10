@@ -166,6 +166,7 @@ struct FutureVoiceApp: App {
                 Analytics.notePerson(appState)
                 // Before the daily call re-arms on a voice that may be gone.
                 appState.checkForReclaimedVoice()
+                Task { await appState.makeQueuedVoiceIfReady() }
                 // A voice parked while the app was closed, or one that can
                 // come back now (a purchase made on another device).
                 Task { await appState.refreshParkedVoice() }
@@ -269,12 +270,35 @@ final class AppState: ObservableObject {
     /// the stats reload — behind the backdrop, before the reveal.
     @Published var talkHomeReloadToken = UUID()
 
+    /// The voice is a STAND-IN preset while the learner's own waits for the
+    /// account's monthly voice allowance to reset (2026-10-10). ElevenLabs
+    /// counts every voice added against a monthly cap; when it is spent a
+    /// first clone is refused, and the signup used to end there — the learner
+    /// recorded, saw an error and left. Now the recording is kept
+    /// (`VoiceSampleStore`), a preset speaks in the meantime so everything
+    /// works, and `makeQueuedVoiceIfReady` builds the real clone once
+    /// `voiceQueuedUntil` (the allowance's reset, as the server reported it)
+    /// has passed. `voiceCloneId` holds the preset meanwhile, because nil
+    /// means "no voice" everywhere and routes the learner into onboarding.
+    @Published private(set) var voiceIsStandIn: Bool {
+        didSet { UserDefaults.standard.set(voiceIsStandIn, forKey: Self.voiceIsStandInKey) }
+    }
+    /// When the server said voices can be made again; nil = it didn't say,
+    /// so the next foreground tries.
+    @Published private(set) var voiceQueuedUntil: Date? {
+        didSet { UserDefaults.standard.set(voiceQueuedUntil, forKey: Self.voiceQueuedUntilKey) }
+    }
+    /// Set when the queued voice lands; RootTabView says so once.
+    @Published var queuedVoiceArrived = false
+
     @Published var voiceCloneId: String? {
         didSet {
             UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey)
             // Remember the id so a LATER re-record doesn't orphan everything
-            // already synthesized in this voice — see PhraseAudioStore.
-            PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
+            // already synthesized in this voice — see PhraseAudioStore. A
+            // stand-in preset is nobody's own voice: its lines must never play
+            // as the learner's once their real voice arrives.
+            if !voiceIsStandIn { PhraseAudioStore.shared.registerOwnVoice(voiceCloneId) }
             // Which kind of user now owns this voice. An anonymous owner is on
             // the server's reclaim clock from the moment it was created.
             if voiceCloneId != nil, let owner = SupabaseProvider.shared.auth.currentSession?.user {
@@ -553,6 +577,8 @@ final class AppState: ObservableObject {
     private static let voiceAccentIdKey = "futurevoice.voiceAccentId"
     private static let cloneScriptLanguageKey = "futurevoice.cloneScriptLanguage"
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
+    private static let voiceIsStandInKey = "futurevoice.voiceIsStandIn"
+    private static let voiceQueuedUntilKey = "futurevoice.voiceQueuedUntil"
     private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
     static let proficiencyKey = "futurevoice.proficiency"
@@ -580,6 +606,8 @@ final class AppState: ObservableObject {
         proficiency = storedLevel
         appearance = UserDefaults.standard.string(forKey: Self.appearanceKey)
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
+        voiceIsStandIn = UserDefaults.standard.bool(forKey: Self.voiceIsStandInKey)
+        voiceQueuedUntil = UserDefaults.standard.object(forKey: Self.voiceQueuedUntilKey) as? Date
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         voiceName = UserDefaults.standard.string(forKey: Self.voiceNameKey) ?? ""
         voiceAccentId = UserDefaults.standard.string(forKey: Self.voiceAccentIdKey)
@@ -735,6 +763,57 @@ final class AppState: ObservableObject {
         voiceWasReclaimed = true
         if SupabaseProvider.shared.auth.currentSession?.user.isAnonymous == true {
             Task { try? await SupabaseProvider.shared.auth.signOut() }
+        }
+    }
+
+    // MARK: - Queued voice (the monthly voice allowance is spent)
+
+    /// The preset that speaks while the learner's own voice is queued.
+    static let standInPresetId = VoicePreset.catalog[0].id
+
+    /// The clone was refused because the account's monthly voice allowance is
+    /// spent. Keep going on a stand-in; the recording is already saved.
+    func adoptStandInVoice(until: Date?) {
+        voiceIsStandIn = true           // before the id, so the didSet sees it
+        voiceQueuedUntil = until
+        voiceAccentId = nil
+        voiceCloneId = Self.standInPresetId
+        Analytics.capture("voice_clone_queued", [
+            "until": until.map { ISO8601DateFormatter().string(from: $0) } ?? "unknown"
+        ])
+    }
+
+    private func endStandIn() {
+        voiceIsStandIn = false
+        voiceQueuedUntil = nil
+    }
+
+    private var makingQueuedVoice = false
+
+    /// Build the queued voice once the allowance is back. Runs at launch and
+    /// on every foreground; a no-op unless a voice is queued, its date has
+    /// passed and the recording is on this phone. Refused again (the reset
+    /// moved, or the month filled up again) → wait for the new date.
+    func makeQueuedVoiceIfReady() async {
+        guard voiceIsStandIn, !makingQueuedVoice, !holdVoiceOnboarding,
+              SupabaseProvider.shared.auth.currentSession != nil,
+              let sample = VoiceSampleStore.shared.url else { return }
+        if let until = voiceQueuedUntil, until > Date() { return }
+        makingQueuedVoice = true
+        defer { makingQueuedVoice = false }
+        do {
+            try await regenerateVoiceClone(fromSampleAt: sample)
+            await applyDefaultAccent()
+            queuedVoiceArrived = true
+            Analytics.capture("voice_clone_queue_made")
+        } catch {
+            if let next = error.voiceQuotaFull {
+                voiceQueuedUntil = next ?? Date().addingTimeInterval(6 * 3600)
+            } else {
+                // Offline, or anything else: try again in an hour, not on
+                // every foreground.
+                voiceQueuedUntil = Date().addingTimeInterval(3600)
+            }
         }
     }
 
@@ -1016,7 +1095,9 @@ final class AppState: ObservableObject {
             // clone function inserts the row before the id ever reaches the
             // client, so an empty answer is never "not mirrored yet".
             if rows.isEmpty {
-                if voiceCloneId != nil, !holdVoiceOnboarding, voiceCloneId != pendingDeleteVoiceId {
+                // A stand-in has no row by construction — its voice is queued.
+                if voiceCloneId != nil, !voiceIsStandIn, !holdVoiceOnboarding,
+                   voiceCloneId != pendingDeleteVoiceId {
                     voiceWasDeleted(reason: "no_server_voice")
                 }
                 return
@@ -1029,10 +1110,12 @@ final class AppState: ObservableObject {
             // A voice staged for deletion is on its way OUT — adopting it
             // would resurrect it into a re-record the user is still inside.
             guard active != pendingDeleteVoiceId else { return }
-            if voiceCloneId != nil {
+            if voiceCloneId != nil, !voiceIsStandIn {
                 Analytics.capture("voice_clone_id_repaired")
                 Telemetry.log("voice_clone_id_repaired")
             }
+            // Made on another device (or the queue ran there): it IS theirs.
+            if voiceIsStandIn { endStandIn() }
             self.voiceCloneId = active
         } catch {
             // Don't surface — onboarding will just have the user re-record,
@@ -1381,7 +1464,7 @@ final class AppState: ObservableObject {
     /// Wipe the clone so the user re-records. Stashes the current id so it
     /// can be deleted from ElevenLabs once a new clone is in place.
     func resetVoiceClone() {
-        pendingDeleteVoiceId = voiceCloneId
+        if !voiceIsStandIn { pendingDeleteVoiceId = voiceCloneId }
         voiceCloneId = nil
         voiceAccentId = nil
     }
@@ -1441,7 +1524,7 @@ final class AppState: ObservableObject {
     /// native-language take actually reduces re-records.
     func regenerateVoiceClone(fromSampleAt sampleURL: URL,
                               scriptLanguage: String? = nil) async throws {
-        let isFirstClone = voiceCloneId == nil
+        let isFirstClone = voiceCloneId == nil || voiceIsStandIn
         Analytics.capture("voice_clone_started", [
             "first_time": isFirstClone,
             "script_language": scriptLanguage ?? "unknown",
@@ -1490,12 +1573,15 @@ final class AppState: ObservableObject {
             reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: false)
             throw error
         }
-        if let old = voiceCloneId, old != newId {
+        if let old = voiceCloneId, old != newId, !voiceIsStandIn {
             // A parked voice is already gone upstream; its row went inactive
             // when the clone function inserted this one. Nothing to delete.
+            // A stand-in is a shared preset: deleting it would silence it for
+            // everyone, so it is never staged.
             if VoiceParking.isParked(old) { setParkedVoice(nil) }
             else { pendingDeleteVoiceId = old }
         }
+        if voiceIsStandIn { endStandIn() }
         voiceCloneId = newId
         voiceWasReclaimed = false
         // A clone straight off the recording is un-remixed again, whatever
@@ -1643,6 +1729,7 @@ final class AppState: ObservableObject {
     /// learner can still audition takes or another accent from the pills.
     /// Best-effort: a failure leaves the plain clone, which works.
     func applyDefaultAccent() async {
+        guard !voiceIsStandIn else { return }
         let options = VoiceAccentCatalog.options(for: targetLanguage)
         // Picked "as I recorded it" in setup: no remix.
         guard preferredAccentId != SetupFlowView.noAccent else { return }
@@ -1725,6 +1812,11 @@ final class AppState: ObservableObject {
         // Never delete the voice currently in use (a restore could have handed
         // the same id back).
         guard oldId != voiceCloneId else { pendingDeleteVoiceId = nil; return }
+        // Never a shared preset (a stand-in): deleting it silences it for
+        // every learner whose scenes and strangers speak with it.
+        guard !VoicePreset.catalog.contains(where: { $0.id == oldId }) else {
+            pendingDeleteVoiceId = nil; return
+        }
         do {
             try await ElevenLabsClient.shared.deleteVoice(voiceId: oldId)
             pendingDeleteVoiceId = nil

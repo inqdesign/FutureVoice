@@ -809,6 +809,9 @@ enum ElevenLabsError: Error, LocalizedError {
             if Self.isVoiceLimitBody(body) {
                 return "We've hit our voice-creation limit right now — nothing you did wrong. We've been alerted; please try again a bit later."
             }
+            if let until = VoiceQuota.availableAt(inBody: body) {
+                return VoiceQuota.pausedLine(until: until)
+            }
             return "ElevenLabs HTTP \(status): \(body)"
         case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
         case .sceneCapReached:
@@ -849,10 +852,57 @@ enum ElevenLabsError: Error, LocalizedError {
     }
 }
 
+/// The account's monthly voice allowance (2026-10-10). The server answers
+/// `voice_quota_full` (a first voice can't be made: the month is spent) or
+/// `voice_quota_reserved` (what is left is kept for first voices), both with
+/// `available_at` = when ElevenLabs resets the allowance. The date moves every
+/// month, so it is always the server's, never a constant.
+enum VoiceQuota {
+    /// nil = not a quota answer; .some(nil) = a quota answer with no date.
+    static func availableAt(inBody body: String) -> Date?? {
+        guard body.contains("voice_quota_full") || body.contains("voice_quota_reserved") else { return nil }
+        struct Body: Decodable { let available_at: String? }
+        let raw = (body.data(using: .utf8)).flatMap { try? JSONDecoder().decode(Body.self, from: $0) }?.available_at
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = raw.flatMap { iso.date(from: $0) ?? ISO8601DateFormatter().date(from: $0) }
+        return .some(date)
+    }
+
+    /// "Oct 12, 6:30 PM" in the app language and this phone's time zone,
+    /// rounded UP to the next half hour so the moment named is never early.
+    static func when(_ date: Date) -> String {
+        let half: TimeInterval = 1800
+        let rounded = Date(timeIntervalSince1970: (date.timeIntervalSince1970 / half).rounded(.up) * half)
+        return rounded.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened)
+            .locale(Locale(identifier: UILanguage.chromeLanguage)))
+    }
+
+    /// When a queued voice will be made (onboarding, Me → Voice).
+    static func readyLine(_ until: Date?) -> String {
+        if let until { return explain("Your voice will be ready on \(when(until)).") }
+        return explain("Your voice will be ready in a few days.")
+    }
+
+    /// For a change (re-record, accent) refused while the allowance is spent.
+    static func pausedLine(until: Date?) -> String {
+        if let until {
+            return explain("New voices can be made again from \(when(until)). The voice you have keeps working until then.")
+        }
+        return explain("New voices can be made again in a few days. The voice you have keeps working until then.")
+    }
+}
+
 extension Error {
     /// Convenience for call sites that only hold an `Error`.
     var isVoiceLimitReached: Bool {
         (self as? ElevenLabsError)?.isVoiceLimitReached ?? false
+    }
+
+    /// The monthly voice allowance refused this: .some(reset date, if known).
+    var voiceQuotaFull: Date?? {
+        guard case .httpError(_, let body)? = self as? ElevenLabsError else { return nil }
+        return VoiceQuota.availableAt(inBody: body)
     }
 
     /// Upstream HTTP status for telemetry, when this is an ElevenLabs failure.

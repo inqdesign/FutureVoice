@@ -176,6 +176,13 @@ struct RootTabView: View {
             SayItAgainPicker().environmentObject(appState)
         }
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
+        // The voice queued at signup (the month's voices were spent) was
+        // just built from their recording — said once, here.
+        .alert("Your voice is ready", isPresented: $appState.queuedVoiceArrived) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("From now on your fluent self speaks in your own voice.")
+        }
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "free_talk") }
         .sheet(isPresented: $showingWelcome, onDismiss: {
                    Analytics.capture("free_talk_welcome_closed",

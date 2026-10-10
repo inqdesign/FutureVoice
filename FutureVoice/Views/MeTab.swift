@@ -830,7 +830,14 @@ struct MeTab: View {
                     title: explain("Scene partner voice: \(VoicePreset.by(id: defaultSceneVoiceId).displayName)"),
                     subtitle: explain("For Watch scenes without a saved person"))
             }
-            if appState.voiceCloneId != nil,
+            // The month's voices were spent when they signed up: say when
+            // theirs arrives, and hide what would act on a stand-in preset.
+            if appState.voiceIsStandIn {
+                row(icon: "hourglass",
+                    title: VoiceQuota.readyLine(appState.voiceQueuedUntil),
+                    subtitle: explain("Made from the recording on this phone. A stand-in voice speaks until then."))
+            }
+            if appState.voiceCloneId != nil, !appState.voiceIsStandIn,
                !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
                 let applied = VoiceAccentCatalog.options(for: appState.targetLanguage)
                     .first { $0.id == appState.voiceAccentId }
@@ -861,7 +868,7 @@ struct MeTab: View {
             // claim first. Most of the time the clone is fine and what sounds
             // foreign is the LANGUAGE; hearing both voices say the same
             // sentence is what separates those two.
-            if appState.voiceCloneId != nil, VoiceSampleStore.shared.exists {
+            if appState.voiceCloneId != nil, !appState.voiceIsStandIn, VoiceSampleStore.shared.exists {
                 Button {
                     comparingVoice = true
                 } label: {
@@ -882,8 +889,8 @@ struct MeTab: View {
                         ? explain("Replace your current clone with a new one")
                         : VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
             }
-            .disabled(!appState.canChangeVoice)
-            if VoiceSampleStore.shared.exists {
+            .disabled(!appState.canChangeVoice || appState.voiceIsStandIn)
+            if VoiceSampleStore.shared.exists, !appState.voiceIsStandIn {
                 Button {
                     confirmingVoiceRegenerate = true
                 } label: {
