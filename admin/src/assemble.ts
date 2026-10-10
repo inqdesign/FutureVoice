@@ -24,6 +24,9 @@ const TEST_IDS = new Set([
   // re-created on 2026-09-16 that carries the admin flag. Its 09-15
   // predecessor (c7565d27-…) was already flagged; this id replaced it.
   "b28ca7b1-dbd8-46de-bfd2-5857e05665bc",
+  // The same relay account again, re-created 2026-10-09 after the iPad
+  // deleted b28ca7b1 (`20261009120000`).
+  "4d63c941-f08c-4509-8958-7092a4357778",
 ]);
 // Store review accounts, matched by email so a re-created account stays
 // filtered: Google Play's reviewer signs in as this one (2026-10-06,

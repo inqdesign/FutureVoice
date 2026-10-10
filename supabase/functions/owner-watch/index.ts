@@ -40,6 +40,9 @@ const TEST_IDS = new Set([
   "c5a85f25-a631-47c5-b32b-fb5bc89c551e",
   "5692cfc2-13ec-4f7e-a3bc-31daee02e28f",
   "b28ca7b1-dbd8-46de-bfd2-5857e05665bc",
+  // The same relay account again, re-created 2026-10-09 after the iPad
+  // deleted b28ca7b1 (`20261009120000`).
+  "4d63c941-f08c-4509-8958-7092a4357778",
 ])
 
 type Alert = { kind: string; key: string; payload: Record<string, unknown> }
