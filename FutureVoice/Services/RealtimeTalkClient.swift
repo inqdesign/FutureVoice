@@ -309,6 +309,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// 2026-10-04: every call's first line cut at ~3 s). Cleared once the
     /// device leaves the list, so a later real attach is still noticed.
     private var hfpRefusedAtBuild = false
+    /// The engine would not START with voice processing on, so this call runs
+    /// without it — every rebuild too. Measured 2026-10-10 on the iPhone app
+    /// running on a Mac: VPIO turns the built-in mic into 9 input channels
+    /// and `kAUInitialize` on the output node fails (-10875) on every
+    /// attempt, so the call never opened. No echo cancellation beats no
+    /// call; the gateway's echo gate still sits between speaker and mic.
+    private var voiceProcessingRefused = false
     /// Tap buffers since the CURRENT engine build — written on the audio
     /// thread, read by the per-build tap watchdog. The original mic watchdog
     /// guards only the call's FIRST build; a REBUILD can also come up with a
@@ -501,7 +508,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 stopAudio()
                 try? await Task.sleep(nanoseconds: 600_000_000)
                 guard !isTornDown else { return }
-                try startAudio()
+                do { try startAudio() } catch {
+                    // Refused twice with voice processing on: once more
+                    // without it (see `voiceProcessingRefused`).
+                    Self.step("connect: startAudio threw again (\(error)) — retrying without voice processing")
+                    stopAudio()
+                    guard !isTornDown else { return }
+                    voiceProcessingRefused = true
+                    try startAudio()
+                }
             }
             Self.step("connect: audio up")
             receiveNext()
@@ -877,7 +892,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// inline, as it always has.
     private func startAudio(prepared: PreparedAudio? = nil) throws {
         // Fresh graph every time — see the `engine` declaration.
-        let built = try prepared ?? Self.prepareAudio()
+        let built = try prepared ?? Self.prepareAudio(voiceProcessing: !voiceProcessingRefused)
         engine = built.engine
         hfpRefusedAtBuild = built.hfpRefused
         player = AVAudioPlayerNode()
@@ -897,7 +912,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// no pill, no indicator, then the voice. Touches nothing of the
     /// client's, so the first build runs it detached; `AVAudioSession` is
     /// thread-safe and an engine that isn't running yet belongs to no one.
-    nonisolated static func prepareAudio() throws -> PreparedAudio {
+    nonisolated static func prepareAudio(voiceProcessing: Bool = true) throws -> PreparedAudio {
         let engine = AVAudioEngine()
         let session = AVAudioSession.sharedInstance()
         // Same category/options as a Talk call: whatever the learner is
@@ -1039,9 +1054,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // note. AGC is left ON (unlike LiveTranscriber, which turns it off to
         // protect the learner's own recording): nothing here is replayed to
         // them, and levelling helps the server's endpointing.
-        do { try input.setVoiceProcessingEnabled(true) } catch {
-            // Some routes refuse it. The call still works; on the speaker it
-            // will barge-in on itself, which is why the view warns.
+        if voiceProcessing {
+            do { try input.setVoiceProcessingEnabled(true) } catch {
+                // Some routes refuse it. The call still works; on the speaker it
+                // will barge-in on itself, which is why the view warns.
+            }
         }
         // Keep noise suppression, drop the AGC — LiveTranscriber's hard-won
         // rule, and it applies here for the same reason it applies there:
