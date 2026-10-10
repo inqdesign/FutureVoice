@@ -1725,6 +1725,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 if muted { mic.learnEcho(rms: rms, counts: false) }
             }
         }
+        #if DEBUG
+        // Barge-in investigation (2026-10-09): every frame the gate judged,
+        // and every audible frame after it opened, so a device log can say
+        // whether the learner's voice was forwarded or muted as echo.
+        if gate.active || rms > 0.01 {
+            Self.step(String(format: "gate %@ rms=%.4f floor=%.4f bar=%.4f learned=%d hd=%d playing=%d",
+                             !gate.active ? "OPEN " : (muted ? "MUTE " : "PASS "),
+                             rms, gate.floor, gate.floor * Self.echoMargin,
+                             gate.learnedFrames, gate.halfDuplex ? 1 : 0, gate.playing ? 1 : 0))
+        }
+        #endif
         if muted {
             // Silence, not a gap: the transcriber is streaming and a hole in
             // the timeline is worse than quiet.
@@ -2000,6 +2011,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // A drained queue closes it below, in the playback completion.
             if pendingBuffers == 0 { closeEchoGateAfterTail() }
         case "interrupted":
+            Self.step("interrupted\(json["reopened"] as? Bool == true ? " (reopened)" : "") queued=\(pendingBuffers)")
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
             // player is a voice arguing with them.
@@ -2139,6 +2151,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(tail * 1_000_000_000))
             guard let self, self.echoHoldUntil <= deadline else { return }
+            Self.step("echo gate: closed after \(tail)s tail")
             self.mic.setEchoGate(active: false)
         }
     }
