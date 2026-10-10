@@ -203,7 +203,69 @@ async function fetchData(env: Env) {
     console.log(`voiceSlots: ${(e as Error).message}`);
     return null;
   });
+  // Joined through a friend's invite (2026-10-08): the invitee's
+  // `referral_invitee` grant names who invited them. A strong subscribe
+  // signal — the page marks the name and scores it. Optional.
+  const refs = await referralRows(env).catch((e) => {
+    console.log(`referrals: ${(e as Error).message}`);
+    return [] as Array<{ u: string; at: string; inviter: string | null }>;
+  });
+  {
+    const byId = new Map((data.users as { id: string }[]).map((u) => [u.id, u]));
+    for (const r of refs) {
+      const u = byId.get(r.u) as { referredAt?: string; referredBy?: string | null } | undefined;
+      if (u) { u.referredAt = r.at; u.referredBy = r.inviter; }
+    }
+  }
+  // Say it again (다시 말하기, 2026-09-27): one row per FINISHED run
+  // (`say_again_run`) and, from the build that added it, one per run
+  // STARTED (`say_again_start`), so the funnel card can say how many got
+  // to the end. Keyed by user index like everything else. Optional.
+  const uidx = new Map((data.users as { id: string }[]).map((u, i) => [u.id, i]));
+  (data as any).sayAgain = await sayAgainRows(env).then((rows) => rows
+    .filter((r) => uidx.has(r.u))
+    .map((r) => ({ ...r, u: uidx.get(r.u) }))).catch((e) => {
+    console.log(`sayAgain: ${(e as Error).message}`);
+    return null;
+  });
   return data;
+}
+
+async function referralRows(env: Env): Promise<Array<{ u: string; at: string; inviter: string | null }>> {
+  const url = `${env.SUPABASE_URL}/rest/v1/usage_ledger`
+    + `?select=u:user_id,at:created_at,inviter:metadata->>inviter`
+    + `&action=eq.referral_invitee&order=created_at.asc&limit=5000`;
+  const r = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!r.ok) throw new Error(`usage_ledger ${r.status}`);
+  return await r.json();
+}
+
+async function sayAgainRows(env: Env): Promise<Array<Record<string, any>>> {
+  const rows: Array<Record<string, any>> = [];
+  const page = 1000;
+  for (let from = 0; from < 50_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/client_events`
+      + `?select=u:user_id,at:created_at,event,kind:properties->>kind,lines:properties->>lines,`
+      + `read:properties->>read,avg:properties->>avg,platform:properties->>platform`
+      + `&event=in.(say_again_run,say_again_start)&user_id=not.is.null&order=created_at.asc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) throw new Error(`client_events ${r.status}`);
+    const batch = await r.json() as Array<Record<string, any>>;
+    rows.push(...batch);
+    if (batch.length < page) break;
+  }
+  return rows;
 }
 
 /** Who is holding the account's custom-voice slots.
@@ -287,10 +349,34 @@ async function voiceSlots(
 /** Every usage_ledger row of the last 24 h, thin, oldest first — the 라이브
  *  tab folds them into per-person episodes ("18:32–18:41 영어로 통화"). */
 async function dayLedger(env: Env): Promise<unknown[]> {
-  const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+  return ledgerSince(env, new Date(Date.now() - 24 * 3_600_000).toISOString(), 20_000);
+}
+
+/** Every row since LAUNCH for the 라이브 tab's 타임랩스, squeezed: one row per
+ *  person × 10-minute slot × kind of row (talk seconds summed), which keeps
+ *  what the replay draws — who was on, doing what, in which slot — at a tenth
+ *  of the size (27k rows → a few thousand on 2026-10-08). Fetched only when
+ *  the reader picks "출시부터", held 10 min per isolate. */
+let historyCache: { at: number; rows: unknown[] } | null = null;
+async function historyLedger(env: Env): Promise<unknown[]> {
+  if (historyCache && Date.now() - historyCache.at < 10 * 60_000) return historyCache.rows;
+  const raw = await ledgerSince(env, "2026-09-12T00:00:00Z", 80_000) as Array<Record<string, unknown>>;
+  const slot = 10 * 60_000, by = new Map<string, Record<string, unknown>>();
+  for (const r of raw) {
+    const k = [r.u, Math.floor(Date.parse(String(r.at)) / slot), r.action, r.purpose, r.err, r.code].join("|");
+    const o = by.get(k);
+    if (!o) by.set(k, { ...r });
+    else if (r.action === "talk_time") o.seconds = (Number(o.seconds) || 0) + (Number(r.seconds) || 0);
+  }
+  const rows = [...by.values()];   // insertion order is time order
+  historyCache = { at: Date.now(), rows };
+  return rows;
+}
+
+async function ledgerSince(env: Env, since: string, maxRows: number): Promise<unknown[]> {
   const page = 1000;
   const rows: unknown[] = [];
-  for (let from = 0; from < 20_000; from += page) {
+  for (let from = 0; from < maxRows; from += page) {
     const url = `${env.SUPABASE_URL}/rest/v1/usage_ledger`
       + `?select=u:user_id,at:created_at,action,purpose:metadata->>purpose,`
       + `language:metadata->>language,seconds:metadata->seconds`
@@ -314,7 +400,7 @@ async function dayLedger(env: Env): Promise<unknown[]> {
   // timeout looked like one who simply wandered off. Same row shape, the
   // event as `event:<name>` (what admin_live already calls them).
   const events: unknown[] = [];
-  for (let from = 0; from < 20_000; from += page) {
+  for (let from = 0; from < maxRows; from += page) {
     const url = `${env.SUPABASE_URL}/rest/v1/client_events`
       + `?select=u:user_id,at:created_at,event,language:properties->>language,`
       + `err:properties->>error,code:properties->>code,build:properties->>build,version:properties->>version`
@@ -675,7 +761,7 @@ export default {
     const signedIn = !!session && constantTimeEqual(session, expected);
     if (!signedIn) {
       // data.json is for scripts, and a script gets a 404 rather than a form.
-      if (path === "/data.json" || path === "/live.json") return text("Not found", 404);
+      if (path === "/data.json" || path === "/live.json" || path === "/history.json") return text("Not found", 404);
       return html(loginPage(base), 401);
     }
 
@@ -687,6 +773,19 @@ export default {
         "키는 Supabase 대시보드 → Project Settings → API keys → service_role.\n",
         503,
       );
+    }
+
+    if (path === "/history.json") {
+      try {
+        const events = await historyLedger(env);
+        return new Response(JSON.stringify({ events }), {
+          headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: (e as Error).message }), {
+          status: 502, headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
+        });
+      }
     }
 
     // The 라이브 tab polls this every 15 s — its own small RPC, never the whole

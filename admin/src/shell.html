@@ -38,6 +38,10 @@
 .livebeat{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-2)}
 .livebeat i{width:8px; height:8px; border-radius:50%; background:var(--good); display:inline-block;
   animation:beat 1.6s ease-out infinite}
+.soundbtn{border:1px solid var(--ring); background:var(--chip); color:var(--ink); border-radius:999px;
+  padding:3px 11px; font:inherit; font-size:12.5px; cursor:pointer; white-space:nowrap}
+.soundbtn[aria-pressed=true]{background:var(--ink); color:#fff; border-color:var(--ink)}
+.soundbtn.blocked{background:var(--warn); color:#fff; border-color:var(--warn)}
 .livebeat.stale i{background:var(--muted); animation:none}
 @keyframes beat{0%{box-shadow:0 0 0 0 rgba(12,163,12,.55)}100%{box-shadow:0 0 0 9px rgba(12,163,12,0)}}
 /* The map is the point of this tab, so it breaks out of the page column:
@@ -54,27 +58,118 @@
   position:sticky; top:48px; z-index:4;
   width:var(--mapw); margin-left:calc(50% - var(--mapw) / 2);
   height:clamp(320px, 52vh, 640px);
-  border-radius:12px; border:1px solid var(--ring); background:#dde6ee;
-  box-shadow:0 10px 18px -12px rgba(0,0,0,.25)}
+  border-radius:16px; border:1px solid var(--ring); background:#dde6ee; overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.05), 0 18px 36px -20px rgba(15,30,60,.35)}
 @media (max-width:560px){ #liveMap{--mapw:calc(100vw - 32px); height:38vh} }
 .leaflet-container{font-family:inherit}
-.lm{position:relative; width:34px; height:34px}
+/* 타임랩스: the last 24 h replayed on the map, 10 minutes a frame. */
+/* The replay player: one quiet row on frosted glass, centred under the map.
+   Icon play button, a thin scrubber that fills as it plays, the moment and
+   the count in small type, the range as a two-way switch at the end. */
+.playctl{--pw:min(640px, calc(var(--mapw, 100vw) - 40px));
+  display:flex; align-items:center; gap:12px; width:var(--pw); box-sizing:border-box;
+  margin:0 0 14px calc((var(--mapw, 100vw) - var(--pw)) / 2) !important;
+  padding:7px 10px 7px 7px; border-radius:999px; color:var(--ink); font-size:12px;
+  background:rgba(255,255,255,.62); border:1px solid rgba(255,255,255,.7);
+  backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4);
+  box-shadow:0 0 0 .5px rgba(15,23,42,.08), 0 10px 30px -12px rgba(15,23,42,.35)}
+.playctl button{font:inherit; color:inherit; cursor:pointer; border:0; background:none; padding:0}
+.playctl .pbtn{flex:none; width:32px; height:32px; border-radius:50%; display:grid; place-items:center;
+  background:var(--ink); color:#fff; transition:transform .15s ease, background .15s}
+.playctl .pbtn:hover{transform:scale(1.06)}
+.playctl .pbtn:active{transform:scale(.94)}
+.playctl .pbtn svg{width:12px; height:12px; fill:currentColor}
+.playctl .pbtn .i-pause{display:none}
+.playctl.playing .pbtn .i-play{display:none}
+.playctl.playing .pbtn .i-pause{display:block}
+.playctl input[type=range]{--p:100%; flex:1; min-width:60px; height:16px; margin:0; background:none;
+  -webkit-appearance:none; appearance:none; cursor:pointer}
+.playctl input[type=range]::-webkit-slider-runnable-track{height:3px; border-radius:3px;
+  background:linear-gradient(90deg, var(--ink) var(--p), rgba(15,23,42,.14) var(--p))}
+.playctl input[type=range]::-moz-range-track{height:3px; border-radius:3px; background:rgba(15,23,42,.14)}
+.playctl input[type=range]::-moz-range-progress{height:3px; border-radius:3px; background:var(--ink)}
+.playctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:12px; height:12px; margin-top:-4.5px;
+  border-radius:50%; background:#fff; box-shadow:0 0 0 .5px rgba(15,23,42,.2), 0 1px 4px rgba(15,23,42,.35);
+  transition:transform .12s}
+.playctl input[type=range]::-moz-range-thumb{width:12px; height:12px; border:0; border-radius:50%; background:#fff;
+  box-shadow:0 0 0 .5px rgba(15,23,42,.2), 0 1px 4px rgba(15,23,42,.35)}
+.playctl input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.25)}
+.playctl .pmeta{display:flex; flex-direction:column; line-height:1.25; min-width:92px; white-space:nowrap}
+.playctl .pclock{font-variant-numeric:tabular-nums; font-weight:600; font-size:12.5px}
+.playctl .pcount{color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums}
+.playctl .pcount:empty{display:none}
+.playctl .pseg{flex:none; display:flex; padding:2px; border-radius:999px; background:rgba(15,23,42,.06)}
+.playctl .pseg button{padding:3px 9px; border-radius:999px; color:var(--ink-2); font-size:11.5px; white-space:nowrap;
+  transition:background .15s, color .15s}
+.playctl .pseg button[aria-pressed=true]{background:#fff; color:var(--ink); font-weight:600;
+  box-shadow:0 1px 3px rgba(15,23,42,.16)}
+.playctl .pnow{flex:none; width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+  color:var(--ink-2); font-size:14px; line-height:1}
+.playctl .pnow:hover{background:rgba(15,23,42,.08); color:var(--ink)}
+@media (max-width:560px){ .playctl{gap:8px} .playctl .pmeta{min-width:0} .playctl .pcount{display:none} }
+/* Pins are KEPT between renders (syncPins), so a change of state is a
+   transition, not a redraw: every pin is one 34px box and its state is a
+   SCALE — live pops up past full size, recent and today settle smaller, quiet
+   shrinks to a dot. Arrivals grow out of nothing, departures shrink away. */
+.lmicon{background:none; border:0}
+.lmw{position:absolute; inset:0; transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.lm{--sc:1; position:absolute; inset:0; transform:scale(var(--sc)); transform-origin:50% 50%;
+  transition:transform .48s cubic-bezier(.34,1.56,.64,1), opacity .3s ease}
+.lm.live{--sc:1.12} .lm.recent{--sc:.86} .lm.today{--sc:.66} .lm.quiet{--sc:.36}
+.lm.sel{transform:scale(calc(var(--sc) * 1.22))}
+.lmicon:hover .lm{transform:scale(calc(var(--sc) * 1.18))}
+.lmicon:hover .lm.quiet{transform:scale(.6)}
+.lmicon .lm.enter{transform:scale(0); opacity:0}
+.lmicon .lm.leave{transform:scale(0); opacity:0; transition:transform .32s cubic-bezier(.5,0,.75,0), opacity .32s ease}
 .lm .face{position:absolute; inset:0; border-radius:50%; display:grid; place-items:center;
-  font-size:17px; background:#fff; border:2.5px solid var(--st); box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  font-size:17px; line-height:1; background:#fff;
+  box-shadow:0 0 0 2px var(--st), 0 6px 14px -6px rgba(15,23,42,.45), 0 1px 2px rgba(15,23,42,.18);
+  transition:background .35s ease, box-shadow .35s ease}
+.lm .emo{transition:opacity .3s ease, filter .3s ease}
+.lm.live .face{background:radial-gradient(circle at 34% 28%, #fff 0 45%, #eefaee);
+  box-shadow:0 0 0 2.5px var(--st), 0 0 0 7px color-mix(in srgb, var(--st) 16%, transparent),
+    0 10px 20px -8px color-mix(in srgb, var(--st) 70%, #000)}
 .lm.live .face{animation:bob 2.4s ease-in-out infinite}
-.lm.live::before{content:""; position:absolute; inset:-2px; border-radius:50%; background:var(--st);
-  opacity:.45; animation:ripple 1.8s ease-out infinite}
-@keyframes ripple{0%{transform:scale(1); opacity:.45}100%{transform:scale(2.3); opacity:0}}
+.lm.live::before, .lm.live::after{content:""; position:absolute; inset:0; border-radius:50%;
+  border:2px solid var(--st); opacity:0; animation:ripple 2.2s cubic-bezier(.2,.6,.3,1) infinite}
+.lm.live::after{animation-delay:1.1s}
+@keyframes ripple{0%{transform:scale(1); opacity:.55}100%{transform:scale(2.4); opacity:0}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-.lm .tag{position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%);
-  background:var(--ink); color:#fff; font-size:11.5px; font-weight:600; white-space:nowrap;
-  padding:3px 8px; border-radius:12px; pointer-events:none}
-.lm .tag::after{content:""; position:absolute; left:50%; top:100%; margin-left:-4px;
-  border:4px solid transparent; border-top-color:var(--ink)}
-.lm.sel .face{outline:3px solid var(--s1); outline-offset:2px}
-.lm.quiet{width:12px; height:12px}
-.lm.quiet .face{border-width:0; background:var(--st); font-size:0; box-shadow:none; opacity:.55}
-.lm.today .face{filter:grayscale(.2); opacity:.9}
+.lm.recent .face{box-shadow:0 0 0 2px var(--st), 0 6px 14px -7px color-mix(in srgb, var(--st) 60%, #000)}
+.lm.today .face{background:#f6f5f1; box-shadow:0 0 0 1.5px color-mix(in srgb, var(--st) 55%, transparent),
+  0 3px 8px -5px rgba(15,23,42,.4)}
+.lm.today .emo{opacity:.7; filter:grayscale(.5)}
+.lm.quiet .face{background:color-mix(in srgb, var(--st) 75%, #fff);
+  box-shadow:0 0 0 3.5px rgba(255,255,255,.95), 0 2px 5px rgba(15,23,42,.3)}
+.lm.quiet .emo{opacity:0}
+.lm.sel .face{box-shadow:0 0 0 2.5px var(--st), 0 0 0 5px #fff, 0 0 0 7.5px var(--s1),
+  0 10px 20px -8px rgba(15,23,42,.5)}
+/* The tag lives OUTSIDE the scaled disc so its text stays one size. */
+.lmw .tag{position:absolute; left:50%; bottom:calc(50% + 25px); transform:translate(-50%, 5px) scale(.92);
+  opacity:0; transform-origin:50% 100%; pointer-events:none;
+  background:rgba(17,17,17,.88); color:#fff; font-size:11.5px; font-weight:600; white-space:nowrap;
+  padding:4px 9px; border-radius:999px; box-shadow:0 6px 16px -6px rgba(0,0,0,.45);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  transition:opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1)}
+.lmw .tag::after{content:""; position:absolute; left:50%; top:100%; margin-left:-4px;
+  border:4px solid transparent; border-top-color:rgba(17,17,17,.88)}
+.lmw.hastag .tag{opacity:1; transform:translate(-50%, 0) scale(1)}
+@media (prefers-reduced-motion: reduce){
+  .lm, .lmw, .lmw .tag{transition:none} .lm.live .face, .lm.live::before, .lm.live::after{animation:none}
+}
+/* The map itself: a soft sea, paper land with a lift, a faint graticule,
+   and night as a blurred band rather than a hard-edged polygon. */
+#liveMap.leaflet-container{background:radial-gradient(120% 90% at 50% 35%, #e9f0f6 0%, #dbe5ee 60%, #cfdbe7 100%)}
+.leaflet-land-pane{filter:drop-shadow(0 1.5px 1.5px rgba(40,60,90,.16))}
+.leaflet-night-pane{filter:blur(10px)}
+#liveMap .leaflet-bar{border:0; border-radius:10px; overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.08), 0 6px 18px -8px rgba(0,0,0,.3)}
+#liveMap .leaflet-bar a{width:32px; height:32px; line-height:32px; color:var(--ink); background:rgba(255,255,255,.92);
+  border-bottom:1px solid var(--grid); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .15s}
+#liveMap .leaflet-bar a:last-child{border-bottom:0}
+#liveMap .leaflet-bar a:hover{background:#fff}
+#liveMap .leaflet-control-attribution{background:rgba(255,255,255,.6); border-radius:8px 0 0 0;
+  font-size:10px; color:var(--muted); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px)}
 .leaflet-tooltip.lt{background:var(--surface); color:var(--ink); border:1px solid var(--ring);
   border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.12); padding:10px 12px; font-size:12.5px;
   line-height:1.55; width:max-content; max-width:min(460px, 86vw); white-space:normal}
@@ -298,6 +393,7 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
 .hm .who .s .langpair{margin:0 4px 0 0; font-size:12px}
 .hm .sd{width:7px; height:7px; border-radius:50%; flex:none}
 .pstar{color:var(--warn); font-size:12px; line-height:1; flex:none; cursor:help}
+.refico{display:inline-flex; vertical-align:-1px; margin-left:4px; color:var(--good); cursor:help}
 .hm .c{width:var(--cs); height:var(--cs); border-radius:5px; position:relative}
 .hm .c.su{outline:1.5px solid var(--ink-2); outline-offset:1.5px}
 .hm .c.used::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px;
@@ -490,6 +586,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <div class="livehead">
     <h2 style="margin:0">지금 누가, 어디서, 뭘 하나</h2>
     <span class="livebeat" id="liveBeat"><i></i><span>불러오는 중</span></span>
+    <button type="button" id="liveSound" class="soundbtn" aria-pressed="false">🔕 소리 꺼짐</button>
   </div>
   <p class="sub">서버 요청과 PostHog 앱 이벤트를 합쳐 읽어요. 앱이 열려 있거나 3분 안에 요청이 있으면 <b>지금</b>,
   30분 안이면 <b>방금</b>이에요. 위치는 PostHog가 IP로 본 도시예요. 어두운 띠는 지금 밤인 곳이에요.
@@ -646,6 +743,15 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <p class="sub">무료 기능의 일일 사용 기록이에요. 전 계정 합산이라 위쪽 토글의 영향을 받지 않아요.</p>
     <div class="card bars" id="features"></div>
   </div>
+</section>
+
+<section data-tab="funnel" hidden id="sayAgainSec">
+  <h2>다시 말하기는 누가 쓰나</h2>
+  <p class="sub">통화나 장면을 처음부터 다시, 내 줄은 교정된 대로 읽는 기능(2026-09-27 출시)이에요.
+  끝까지 간 판(<code>say_again_run</code>)만 기록돼 왔고, 시작 기록(<code>say_again_start</code>)은
+  그걸 보내는 빌드부터 쌓여요. 위쪽 토글을 따라요.</p>
+  <div class="tiles" id="sayAgainTiles"></div>
+  <div class="card scroll" style="margin-top:12px"><table id="sayAgainTable"></table></div>
 </section>
 
 <section data-tab="funnel" hidden>
@@ -1138,13 +1244,22 @@ function verChip(u, b){
     + `${esc(version||'')} (${esc(build)})</span>`;
 }
 const badge = u => verChip(u) + badgeOnly(u);
-const badgeOnly = u => u.owner ? '<span class="ownchip">본인</span>'
+/** Joined through a friend's invite (index.ts referralRows) — a strong
+ *  subscribe signal, so it sits beside the name on every tab. */
+const refIcon = u => {
+  if(!u || !u.referredAt) return '';
+  const inv = u.referredBy && (DATA.users||[]).find(x=>x.id===u.referredBy);
+  const tip = `친구 초대로 가입 · ${fmtD(u.referredAt.slice(0,10))}${inv?` · ${nameOf(inv)}의 초대`:''}`;
+  return `<span class="refico" title="${esc(tip)}"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">`
+    + `<circle cx="8" cy="5" r="3" fill="currentColor"/><path d="M2 15c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5z" fill="currentColor"/></svg></span>`;
+};
+const badgeOnly = u => refIcon(u) + (u.owner ? '<span class="ownchip">본인</span>'
   : u.dev ? '<span class="devchip">TEST</span>'
   // Cloned a voice, never reached Apple sign-in — not a signup. Swept 30 min
   // after creation, so one on screen is either mid-onboarding right now or
   // the sweep is stuck (2026-09-23: it was, on ElevenLabs' 400 for a voice
   // already gone).
-  : u.anonymous ? '<span class="devchip">미가입</span>' : '';
+  : u.anonymous ? '<span class="devchip">미가입</span>' : '');
 const stateOf = u => u.subState || ({active:'paid', trialing:'trial'}[u.subStatus] || u.subStatus || 'none');
 const isSale = u => stateOf(u)!=='none' && stateOf(u)!=='comp' && u.subSource!=='comp';
 /** 체험 중 — 자동갱신을 꺼둔 체험도 기간이 끝나기 전까지는 체험이다. 되살릴지
@@ -1233,19 +1348,20 @@ const subChip = u => {
 };
 /** The same state as `subChip`, small enough to sit in a heatmap row: a
  *  coloured dot (hover for the plan and the date) plus a two-word label. */
-/** A 구독 후보 (renderProspects) wears a star where the grey no-plan dot
- *  would be, on every tab. Looked up by id so a caller holding a row
+/** A 유력 구독 후보 (renderProspects' `hot`: high score, active lately) wears
+ *  a star where the grey no-plan dot would be, on every tab. Only the hot
+ *  ones — a star on every weak or cooling signal stopped meaning anything. Looked up by id so a caller holding a row
  *  without idx (the live tab) gets the same answer; cached per render. */
 let prospectCache = null;
 const prospectFor = u => {
   if(!u || !u.id) return null;
   if(!prospectCache){
     prospectCache = new Map();
-    (DATA.users||[]).forEach((x,i)=>{ const p = prospectOf({...x, idx:i}); if(p) prospectCache.set(x.id, p); });
+    (DATA.users||[]).forEach((x,i)=>{ const p = prospectOf({...x, idx:i}); if(p && p.hot) prospectCache.set(x.id, p); });
   }
   return prospectCache.get(u.id) || null;
 };
-const prospectStar = (p, style='') => `<span class="pstar" style="${style}" title="${esc(`구독 후보 · 점수 ${p.score}`
+const prospectStar = (p, style='') => `<span class="pstar" style="${style}" title="${esc(`유력 구독 후보 · 점수 ${p.score}`
   + ` · ${PROSPECT_SIGNALS.filter(x=>p.has.has(x.k)).map(x=>x.t).join(', ')}${p.cold?' · 식는 중':''}`)}">★</span>`;
 const subDot = u => {
   const k = stateOf(u), st = SUB_KO[k];
@@ -1525,6 +1641,7 @@ function renderNotes(){
  * launch data (CLAUDE.md, 2026-09-26) had only the people who hit it ever
  * subscribing. Weights are a judgment call; tune them here. */
 const PROSPECT_SIGNALS = [
+  {k:'referred',w:6, t:'친구 초대로 가입', tip:'친구의 초대 코드로 들어온 사람 — 아는 사람이 권한 앱이라 남을 확률이 높아요'},
   {k:'tried',   w:4, t:'결제 눌러봄',     tip:'최근 7일 요금제 화면에서 구독 버튼을 눌렀는데 아직 구독이 아니에요'},
   {k:'wall',    w:4, t:'무료 다 씀',      tip:'무료 잔액 0, 또는 최근 7일 통화 중 무료 시간이 끝남'},
   {k:'near',    w:2, t:'무료 거의 씀',    tip:'무료 잔액 5분 이하'},
@@ -1548,6 +1665,7 @@ function prospectOf(u){
       || (e.event==='talk_rt_failed' && e.code==='insufficient_credits'))){ has.delete('near'); has.add('wall'); }
   if(ev.some(e => e.event==='paywall_purchase_tapped')) has.add('tried');
   else if(ev.some(e => /^(paywall_shown|onboarding_paywall|post_call_pitch)/.test(e.event))) has.add('pay');
+  if(u.referredAt) has.add('referred');
   if(st!=='none') has.add('lapsed');   // expired, trial_cancelled, past_due, …
   if(u.activeDays >= 3) has.add('days');
   if(u.talkSecs >= 600) has.add('talk');
@@ -1587,7 +1705,7 @@ function renderProspects(users){
     + list.map(p => { const u = p.u;
       const chips = PROSPECT_SIGNALS.filter(x=>p.has.has(x.k)).map(x=>
         `<span class="chip" title="${esc(x.tip)}"><span class="dot" style="background:${
-          x.k==='wall'||x.k==='pay'||x.k==='tried' ? 'var(--good)' : x.k==='lapsed' ? 'var(--warn)' : 'var(--s1)'}"></span>${x.t}</span>`).join(' ');
+          x.k==='wall'||x.k==='pay'||x.k==='tried'||x.k==='referred' ? 'var(--good)' : x.k==='lapsed' ? 'var(--warn)' : 'var(--s1)'}"></span>${x.t}</span>`).join(' ');
       return `<tr${p.cold?' style="opacity:.6"':''}><td><span class="uname"${whoAttr(u)}>${esc(nameOf(u))}</span>${badge(u)}`
         + `<div class="usub">${subChip(u)}</div></td>`
         + `<td class="num"><b>${p.score}</b><div style="height:4px;margin-top:3px;min-width:40px;background:var(--chip);border-radius:2px">`
@@ -1988,6 +2106,54 @@ function renderFeatures(){
     + `<div class="legend">출시일 이후 · 전 계정 합산</div>`;
 }
 
+/* ---- 다시 말하기 ----------------------------------------------------------
+ * DATA.sayAgain (index.ts sayAgainRows): every say_again_run / _start row,
+ * keyed by user index. A start without a run is an abandoned run — only
+ * meaningful from the first build that sends starts, so the "끝까지" figure
+ * is shown only once any start exists. */
+function renderSayAgain(users){
+  const tiles = document.getElementById('sayAgainTiles'), tbl = document.getElementById('sayAgainTable');
+  if(!tiles) return;
+  if(!DATA.sayAgain){ tiles.innerHTML='<div class="empty">기록을 못 읽었어요 (Worker 로그의 sayAgain).</div>'; tbl.innerHTML=''; return; }
+  const vis = new Set(users.map(u=>u.idx));
+  const rows = DATA.sayAgain.filter(r=>vis.has(r.u));
+  const runs = rows.filter(r=>r.event==='say_again_run'), starts = rows.filter(r=>r.event==='say_again_start');
+  const week = Date.now() - 7*86400000;
+  const runs7 = runs.filter(r=>Date.parse(r.at)>=week);
+  const people = s => new Set(s.map(r=>r.u)).size;
+  const scored = runs.filter(r=>r.avg!==null && r.avg!=='' && +r.read>0);
+  const avg = scored.length ? Math.round(scored.reduce((a,r)=>a+ +r.avg,0)/scored.length) : null;
+  const lines = runs.reduce((a,r)=>a+ +(r.lines||0),0), read = runs.reduce((a,r)=>a+ +(r.read||0),0);
+  const t = [
+    {k:'써 본 사람', v:num(people(runs)), d:`끝까지 한 번 이상 · 최근 7일 ${num(people(runs7))}명`, good: people(runs)>0},
+    {k:'끝낸 판', v:num(runs.length), d:`최근 7일 ${num(runs7.length)}판 · 통화 ${num(runs.filter(r=>r.kind==='talk').length)} / 장면 ${num(runs.filter(r=>r.kind==='scene').length)}`},
+    {k:'시작한 판', v: starts.length ? num(starts.length) : '—',
+      d: starts.length ? `끝까지 ${Math.round(Math.min(1, runs.filter(r=>Date.parse(r.at)>=Date.parse(starts[0].at)).length/starts.length)*100)}% · ${num(people(starts))}명`
+        : '시작 기록을 보내는 빌드 전'},
+    {k:'읽은 줄', v: lines ? `${num(read)} / ${num(lines)}` : '—', d:'전체 줄 중 소리 내 읽은 줄'},
+    {k:'평균 점수', v: avg==null ? '—' : avg, d:'한 줄이라도 읽은 판의 평균'},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  const by = new Map();
+  for(const r of rows){
+    const o = by.get(r.u) || {u:r.u, runs:0, starts:0, talk:0, scene:0, sum:0, n:0, last:null};
+    if(r.event==='say_again_run'){
+      o.runs++; o[r.kind==='scene'?'scene':'talk']++;
+      if(r.avg!==null && r.avg!=='' && +r.read>0){ o.sum += +r.avg; o.n++; }
+    } else o.starts++;
+    if(!o.last || r.at>o.last) o.last = r.at;
+    by.set(r.u, o);
+  }
+  const list = [...by.values()].sort((a,b)=>b.last.localeCompare(a.last));
+  if(!list.length){ tbl.innerHTML='<tr><td class="empty">아직 아무도 안 썼어요.</td></tr>'; return; }
+  tbl.innerHTML = '<tr><th>사람</th><th>끝낸 판</th><th>통화 · 장면</th><th>시작</th><th>평균</th><th>마지막</th></tr>'
+    + list.map(o => { const u = DATA.users[o.u];
+      return `<tr><td><b${whoAttr(u)}>${esc(nameOf(u))}</b> ${badge(u)}</td><td>${num(o.runs)}</td><td>${o.talk} · ${o.scene}</td>`
+        + `<td>${o.starts ? num(o.starts) : '—'}</td><td>${o.n ? Math.round(o.sum/o.n) : '—'}</td>`
+        + `<td title="${esc(fmtTs(o.last))}">${ago(o.last)}</td></tr>`; }).join('');
+}
+
 /* ---------------------------------------------------------------- 시간대 */
 const tzOffset = () => zoneOffsetHours(tzZone());
 
@@ -2089,6 +2255,11 @@ function renderHours(users){
  *  up to NOW (the current hour's average pro-rated by the minute), which is
  *  the question this card exists to answer: is today busier than usual so
  *  far? */
+// What today is measured against. All three fit inside the 8 days of rows
+// recentLedger sends: yesterday is day −1, the same weekday last week day −7.
+let hourCompare = 'avg';
+const HOUR_COMPARES = [['avg','지난 7일 평균'], ['yday','어제'], ['week','지난주 같은 요일']];
+
 function renderHoursToday(users){
   const el = document.getElementById('hoursToday'); if(!el) return;
   const rows = DATA.recentActivity || [];
@@ -2102,8 +2273,14 @@ function renderHoursToday(users){
   const now = parts(Date.now());
   const today = `${now.year}-${now.month}-${now.day}`;
   const nowH = +now.hour, nowFrac = +now.minute/60;
-  const pastDays = new Set();
-  for(let k=1;k<=7;k++) pastDays.add(localDay(Date.now() - k*86400000));
+  const ks = hourCompare==='yday' ? [1] : hourCompare==='week' ? [7] : [1,2,3,4,5,6,7];
+  const pastDays = new Set(ks.map(k => localDay(Date.now() - k*86400000)));
+  const weekdayKo = new Intl.DateTimeFormat('ko-KR', {timeZone: tzZone(), weekday:'short'})
+    .format(new Date(Date.now() - 7*86400000));
+  // [legend name, verdict noun ("…보다"), tooltip label]
+  const [baseName, baseNoun, baseTip] = hourCompare==='yday' ? ['어제', '어제', '어제']
+    : hourCompare==='week' ? [`지난주 ${weekdayKo}요일`, `지난주 ${weekdayKo}요일`, `지난주 ${weekdayKo}`]
+    : ['지난 7일 평균', '평소', '평균'];
   const todayV = Array(24).fill(0), pastV = Array(24).fill(0);
   const todayPeople = Array.from({length:24},()=>new Set());
   for(const [u, t, secs] of rows){
@@ -2114,7 +2291,7 @@ function renderHoursToday(users){
     if(day === today){ todayV[h] += v; todayPeople[h].add(u); }
     else if(pastDays.has(day)) pastV[h] += v;
   }
-  const avgV = pastV.map(v => v/7);
+  const avgV = pastV.map(v => v/ks.length);
 
   // So far: today through now vs the average through the same minute.
   let sofar = 0, usual = 0;
@@ -2122,12 +2299,12 @@ function renderHoursToday(users){
   const fmtAvg = v => secsMode ? fmtMin(Math.round(v)) : `${num(Math.round(v))}회`;
   let verdict;
   if(usual < 1){
-    verdict = `오늘 지금까지 <b>${fmtVal(sofar)}</b> · 평소 이 시각까지는 거의 없었어요`;
+    verdict = `오늘 지금까지 <b>${fmtVal(sofar)}</b> · ${baseNoun} 이 시각까지는 거의 없었어요`;
   } else {
     const pct = Math.round((sofar/usual - 1)*100);
     const color = pct >= 10 ? 'var(--good-text)' : pct <= -10 ? 'var(--crit)' : 'var(--ink-2)';
-    const word = pct >= 10 ? `평소보다 ${pct}% 많아요` : pct <= -10 ? `평소보다 ${-pct}% 적어요` : '평소와 비슷해요';
-    verdict = `오늘 지금까지 <b>${fmtVal(sofar)}</b> · 평소 이 시각까지 ${fmtAvg(usual)}`
+    const word = pct >= 10 ? `${baseNoun}보다 ${pct}% 많아요` : pct <= -10 ? `${baseNoun}보다 ${-pct}% 적어요` : `${baseNoun}${hourCompare==='week'?'과':'와'} 비슷해요`;
+    verdict = `오늘 지금까지 <b>${fmtVal(sofar)}</b> · ${baseNoun} 이 시각까지 ${fmtAvg(usual)}`
       + ` — <b style="color:${color}">${word}</b>`;
   }
 
@@ -2135,18 +2312,21 @@ function renderHoursToday(users){
   const bw = (W - LEFT - RIGHT) / 24;
   const max = Math.max(1, ...todayV, ...avgV);
   const hh = h => `${String(h).padStart(2,'0')}시`;
-  let svg = `<div class="panel-label" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">`
+  let svg = `<div class="seg" data-compare role="group" aria-label="무엇과 비교할지" style="margin:0 0 8px">`
+    + HOUR_COMPARES.map(([k,lab]) => `<button type="button" data-k="${k}" aria-pressed="${k===hourCompare}">${lab}</button>`).join('')
+    + `</div>`
+    + `<div class="panel-label" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">`
     + `<span><span class="swatch" style="background:var(--s1)"></span>오늘</span>`
-    + `<span><span class="swatch" style="background:var(--baseline)"></span>지난 7일 평균</span>`
+    + `<span><span class="swatch" style="background:var(--baseline)"></span>${baseName}</span>`
     + `<span style="font-weight:400;color:var(--muted);margin-left:auto">${metricLabel}</span></div>`
     + `<div style="font-size:14px;margin:4px 0 6px">${verdict}</div>`
-    + `<svg width="${W}" height="${H}" role="img" aria-label="오늘과 평균 비교">`
+    + `<svg width="${W}" height="${H}" role="img" aria-label="오늘과 ${baseName} 비교">`
     + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`;
   for(let h=0;h<24;h++){
     const x = LEFT + h*bw;
     if(h % 3 === 0) svg += `<text x="${(x+bw/2).toFixed(1)}" y="${H-16}" class="axis" text-anchor="middle">${h}</text>`;
     const tip = `<b>${hh(h)}–${hh((h+1)%24)}</b><br>오늘 ${h>nowH?'—':fmtVal(todayV[h])}`
-      + `<br>평균 ${fmtAvg(avgV[h])}${h<=nowH && todayPeople[h].size ? `<br>오늘 ${todayPeople[h].size}명` : ''}`;
+      + `<br>${baseTip} ${fmtAvg(avgV[h])}${h<=nowH && todayPeople[h].size ? `<br>오늘 ${todayPeople[h].size}명` : ''}`;
     // Average: a wide pale bar behind. Today: a narrow solid bar in front,
     // drawn only for hours that have started.
     const wide = Math.max(3, bw-2);
@@ -2170,8 +2350,13 @@ function renderHoursToday(users){
     + ` stroke="var(--crit)" stroke-width="1.5" stroke-dasharray="3 2"/>`
     + `<text x="${nx.toFixed(1)}" y="${top-8}" class="axis" text-anchor="${anchor}"`
     + ` style="fill:var(--crit);font-weight:600">지금 ${now.hour}:${now.minute}</text></svg>`;
-  el.innerHTML = svg + `<div class="legend">${tzLabel()} 시간 기준. 평균은 오늘 전 7일을 같은 시간대로 잘라 7로 나눈 값이고,`
+  const how = hourCompare==='avg' ? '평균은 오늘 전 7일을 같은 시간대로 잘라 7로 나눈 값이고,'
+    : `${baseName}도 같은 시간대로 잘랐고,`;
+  el.innerHTML = svg + `<div class="legend">${tzLabel()} 시간 기준. ${how}`
     + ` 지금 시간대는 지난 분만큼만 비교에 넣었어요. 막대 아래 숫자는 오늘 그 시간에 뭔가를 한 사람 수예요.</div>`;
+  el.querySelectorAll('[data-compare] button').forEach(b=>b.addEventListener('click', ()=>{
+    hourCompare = b.dataset.k; renderHoursToday(visibleUsers());
+  }));
 }
 
 /** Everyone's day, one row each: user × hour-of-day in the chosen zone.
@@ -3012,6 +3197,45 @@ function renderTrials(){
 }
 
 const USAGE_STATUS_KO = {trialing:'체험', active:'이용 중', grace:'유예'};
+/** Where this period's talk pool lands if the learner keeps talking the way
+ *  they have — the question "will they use what they paid for, or leave it?".
+ *  Pace is the last 7 days of ALL metered talk (plan + invite + pack: what the
+ *  person does, whoever pays for it), over fewer days only for an account
+ *  younger than that. The rest of the period is spent at that pace, minus the
+ *  extra balance the meter spends first. Null for an uncapped row. */
+const PACE_DAYS = 7;
+function poolForecast(r, u){
+  if(r.unlimited || !r.talk_cap || !r.period_end) return null;
+  const now = Date.now(), DAY = 86400000;
+  const end = ts(r.period_end); if(!end) return null;
+  const born = ts(u && u.signedUpAt);
+  const win = Math.max(1, Math.min(PACE_DAYS, born ? (now - born)/DAY : PACE_DAYS));
+  const from = now - win*DAY;
+  let secs = 0;
+  for(const [ui,d,h,s] of (DATA.dayHours||[])){
+    if(ui !== r.u) continue;
+    const t = Date.parse(d+'T00:00:00Z') + h*3600000;
+    if(t >= from - 3600000 && t <= now) secs += s;
+  }
+  const pace = secs / win;                                  // seconds a day
+  const restDays = Math.max(0, (end - now)/DAY);
+  const ahead = Math.max(0, pace*restDays - (r.bonus||0));
+  const total = (r.talk_used||0) + ahead;
+  const room = Math.max(0, r.talk_cap - (r.talk_used||0)) + (r.bonus||0);
+  const runOut = pace > 0 && pace*restDays > room ? new Date(now + room/pace*DAY) : null;
+  return {pace, total, pct: total / r.talk_cap, runOut, win};
+}
+function forecastCell(f, r){
+  if(!f) return '<td class="num"><span class="muted">—</span></td>';
+  const pct = Math.round(Math.min(f.pct, 9.99)*100);
+  const tip = `최근 ${f.win<PACE_DAYS?f.win.toFixed(1):PACE_DAYS}일 하루 ${fmtMin(f.pace)} 속도로 주기 끝까지`;
+  if(f.runOut){
+    return `<td class="num" title="${tip}"><b class="warn">다 씀</b>`
+      + `<div class="usub">${fmtD(f.runOut.toISOString().slice(0,10))}쯤 · 하루 ${fmtMin(f.pace)}</div></td>`;
+  }
+  return `<td class="num" title="${tip}">${fmtMin(f.total)} <span class="muted">· ${pct}%</span>`
+    + `<div class="usub">${fmtMin(Math.max(0, r.talk_cap - f.total))} 남김 · 하루 ${fmtMin(f.pace)}</div></td>`;
+}
 function renderPlanUsage(){
   const rows = (DATA.planUsage||[]).slice();
   const el = document.getElementById('planUsage');
@@ -3033,7 +3257,7 @@ function renderPlanUsage(){
   // Soonest ending first — this table exists to answer "who runs out next".
   rows.sort((a,b)=>(a.period_end||'').localeCompare(b.period_end||''));
   let html = `<thead><tr><th>유저</th><th>플랜</th><th>상태</th>`
-    + `<th class="num">통화</th><th class="num">장면</th>`
+    + `<th class="num">통화</th><th class="num" title="최근 7일 속도로 주기 끝까지">예상(주기 끝)</th><th class="num">장면</th>`
     + `<th>주기</th><th>${'갱신 · 종료'}</th></tr></thead><tbody>`;
   for(const r of rows){
     const u = byIdx[r.u]; if(!u) continue;
@@ -3051,6 +3275,7 @@ function renderPlanUsage(){
             + (talkPct!=null?`<div class="usub">${talkPct}%</div>`:'')}
         ${r.bonus>0?`<div class="usub">+${fmtMin(r.bonus)} 추가</div>`:''}
         ${bar(r.talk_used, r.unlimited?null:r.talk_cap, 'var(--s1)')}</td>
+      ${forecastCell(poolForecast(r, u), r)}
       <td class="num">${r.scenes_used} <span class="muted">/ ${r.scenes_cap}</span>
         ${scenePct!=null?`<div class="usub">${scenePct}%</div>`:''}
         ${bar(r.scenes_used, r.scenes_cap, 'var(--s2)')}</td>
@@ -3065,12 +3290,24 @@ function renderPlanUsage(){
 
   // The comps are the ones with a date nobody can renew.
   const comps = rows.filter(r => r.source==='comp' && r.ends);
+  // The forecast in one line: of the paying, counted pools, how many run out
+  // and what share of the minutes sold the rest are on course to use.
+  const paid = rows.filter(r => r.source!=='comp' && r.status!=='trialing' && byIdx[r.u] && !byIdx[r.u].dev && !byIdx[r.u].owner)
+    .map(r => [r, poolForecast(r, byIdx[r.u])]).filter(([,f]) => f);
+  const outN = paid.filter(([,f]) => f.runOut).length;
+  const sold = paid.reduce((a,[r])=>a+r.talk_cap,0);
+  const used = paid.reduce((a,[r,f])=>a+Math.min(r.talk_cap, f.total),0);
+  const fc = paid.length
+    ? `<b>예상</b>: 유료 ${paid.length}명 중 <b>${outN}명</b>이 주기 안에 풀을 다 써요. `
+      + `판 통화 ${fmtMin(sold)} 중 <b>${Math.round(used/Math.max(1,sold)*100)}%</b>를 쓸 속도예요 `
+      + `(최근 ${PACE_DAYS}일 속도, 무료 제공·체험 제외).`
+    : '';
   if(note){
-    note.innerHTML = comps.length
+    note.innerHTML = fc + (fc && comps.length ? '<br>' : '') + (comps.length
       ? `무료 제공 <b>${comps.length}명</b>은 <b>${fmtD((comps[0].period_end||'').slice(0,10))}</b>에 끝나요 — `
         + `그날 밤 00:25 UTC 정리 작업이 <code>expired</code>로 바꾸고, 그 뒤로는 요금제 없이 `
         + `남은 일회성 잔액으로만 통화해요. 이어서 쓰게 하려면 그 전에 코드를 보내야 해요.`
-      : '';
+      : '');
   }
 }
 
@@ -3822,7 +4059,7 @@ function render(){
   renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
   renderHoursMetric(); renderHoursToday(users); renderHours(users); renderHoursByUser(users);
   renderDow(users); renderSpanPick(); renderSpan(users);
-  renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
+  renderDaily(users); renderSessionLengths(users); renderFeatures(); renderSayAgain(users); renderChannels();
   renderPeopleTiles(users); renderLangs(users); renderLevels(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers(); renderGemini();
@@ -3870,7 +4107,8 @@ function activityOf(r){
   if(p==='shadow' || a.startsWith('event:shadow')) return {k:'shadow', e:'🎙️', t:'쉐도잉'};
   // The Speech tab: one coach review per finished take, a written script.
   if(p==='speech-review' || p==='speech-script' || a.startsWith('event:speech')) return {k:'speech', e:'🎤', t:'스피치'};
-  if(p==='drill' || p==='enrichment' || a==='event:say_again_run') return {k:'review', e:'🃏', t:'복습 카드'};
+  if(a==='event:say_again_run' || a==='event:say_again_start') return {k:'sayagain', e:'🔁', t:'다시 말하기'};
+  if(p==='drill' || p==='enrichment') return {k:'review', e:'🃏', t:'복습 카드'};
   if(p==='library') return {k:'review', e:'📚', t:'표현 듣기'};
   if(p==='topics') return {k:'browse', e:'📰', t:'주제 고르기'};
   if(p==='weekly') return {k:'browse', e:'📊', t:'주간 리포트'};
@@ -3923,6 +4161,16 @@ function ensureMap(){
   // unpredictably. The countries are drawn from Natural Earth (world-atlas)
   // instead, in the page's own palette — nothing to be blocked from.
   liveMap.attributionControl.addAttribution('Natural Earth');
+  // Own panes so the land can carry one drop shadow and night one blur
+  // (a filter per path would be ~250 filters).
+  liveMap.createPane('grat').style.zIndex = 330;
+  liveMap.createPane('land').style.zIndex = 340;
+  liveMap.createPane('night').style.zIndex = 360;
+  for(const p of ['grat','land','night']) liveMap.getPane(p).style.pointerEvents = 'none';
+  const grat = [];
+  for(let lat=-60; lat<=75; lat+=15) grat.push([[lat,-540],[lat,540]]);
+  for(let lon=-540; lon<=540; lon+=15) grat.push([[-85,lon],[85,lon]]);
+  L.polyline(grat, {pane:'grat', interactive:false, color:'#9fb3c8', weight:.6, opacity:.35, dashArray:'2 4'}).addTo(liveMap);
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json')
     .then(r => r.json())
     .then(topo => {
@@ -3939,14 +4187,65 @@ function ensureMap(){
         return f;
       });
       L.geoJSON(fc, {
-        interactive:false,
-        style:{color:'#c9c7bd', weight:.7, fillColor:'#f7f6f2', fillOpacity:1},
-      }).addTo(liveMap).bringToBack();
+        pane:'land', interactive:false,
+        style:{color:'#d9d5ca', weight:.6, fillColor:'#fbfaf6', fillOpacity:1},
+      }).addTo(liveMap);
     })
     .catch(() => {});
-  nightLayer = L.polygon(nightPolygon(new Date()), {stroke:false, fillColor:'#0b1a33',
-    fillOpacity:.1, interactive:false}).addTo(liveMap);
+  nightLayer = L.polygon(nightPolygon(new Date()), {pane:'night', stroke:false, fillColor:'#1b2a4e',
+    fillOpacity:.13, interactive:false}).addTo(liveMap);
   liveLayer = L.layerGroup().addTo(liveMap);
+}
+
+/** The pins on the map, KEPT across renders and keyed by person, so a
+ *  change of state animates (CSS scale) instead of redrawing. Each pin is
+ *  {id, kind, lat, lon, dx, dy, emoji, tag, sel, tip, onClick}; anyone not in
+ *  `pins` shrinks away. Returns id → marker. */
+const pinRecs = new Map();
+const PIN_Z = {live:1000, recent:500, today:100, quiet:0};
+function syncPins(pins){
+  const out = new Map();
+  for(const p of pins){
+    let r = pinRecs.get(p.id);
+    if(r && r.gone){ clearTimeout(r.gone); r.gone = null; r.lm.classList.remove('leave'); }
+    if(!r){
+      const mk = L.marker([+p.lat, +p.lon], {riseOnHover:true, icon: L.divIcon({className:'lmicon',
+        iconSize:[34,34], iconAnchor:[17,17],
+        html:'<div class="lmw"><div class="tag"></div><div class="lm enter"><div class="face"><span class="emo"></span></div></div></div>'})});
+      mk.bindTooltip('', {className:'lt', direction:'top', offset:[0,-14]});
+      mk.addTo(liveLayer);
+      const el = mk.getElement();
+      r = {mk, wrap: el.querySelector('.lmw'), lm: el.querySelector('.lm'), tag: el.querySelector('.tag'),
+           emo: el.querySelector('.emo'), onClick:null, gone:null, key:''};
+      mk.on('click', () => r.onClick && r.onClick());
+      pinRecs.set(p.id, r);
+      // Grow in from nothing on the next frame.
+      requestAnimationFrame(() => requestAnimationFrame(() => r.lm.classList.remove('enter')));
+    }
+    const ll = r.mk.getLatLng();
+    if(ll.lat !== +p.lat || ll.lng !== +p.lon) r.mk.setLatLng([+p.lat, +p.lon]);
+    r.mk.setZIndexOffset(PIN_Z[p.kind] + (p.sel ? 2000 : 0));
+    r.wrap.style.transform = `translate(${p.dx||0}px, ${p.dy||0}px)`;
+    r.lm.classList.remove('live','recent','today','quiet');
+    r.lm.classList.add(p.kind);
+    r.lm.classList.toggle('sel', !!p.sel);
+    r.lm.style.setProperty('--st', ST_COLOR[p.kind]);
+    if(r.emo.textContent !== (p.emoji||'')) r.emo.textContent = p.emoji || '';
+    if(p.tag) r.tag.textContent = p.tag;
+    r.wrap.classList.toggle('hastag', !!p.tag);
+    const t = r.mk.getTooltip();
+    t.options.offset = L.point(p.dx||0, (p.dy||0) - 14);
+    if(r.key !== p.tip){ r.key = p.tip; r.mk.setTooltipContent(p.tip); }
+    r.onClick = p.onClick || null;
+    out.set(p.id, r.mk);
+  }
+  for(const [id, r] of pinRecs){
+    if(out.has(id) || r.gone) continue;
+    r.wrap.classList.remove('hastag');
+    r.lm.classList.add('leave');
+    r.gone = setTimeout(() => { liveLayer.removeLayer(r.mk); pinRecs.delete(id); }, 340);
+  }
+  return out;
 }
 
 /** People in the same city stack on one point — fan them out on a spiral in
@@ -3982,9 +4281,9 @@ function failOf(r){
   return (FAIL_KO[m[1]] || m[1]) + (why ? ` (${why})` : '');
 }
 /** Activity colours: one per kind, shared by the hour strip and the rows. */
-const CAT_COLOR = {talk:'var(--s1)', try:'var(--seq2)', scene:'var(--s2)', shadow:'var(--s3)', speech:'var(--seq3)', review:'var(--warn)',
+const CAT_COLOR = {talk:'var(--s1)', try:'var(--seq2)', scene:'var(--s2)', shadow:'var(--s3)', speech:'var(--seq3)', sayagain:'var(--s3)', review:'var(--warn)',
   voice:'#8a5cd6', browse:'var(--baseline)', prep:'var(--seq1)', pay:'var(--seq3)', app:'var(--baseline)'};
-const CAT_ORDER = ['talk','scene','shadow','speech','review','voice','browse','app'];
+const CAT_ORDER = ['talk','scene','shadow','speech','sayagain','review','voice','browse','app'];
 
 /** A day of ledger rows → SESSIONS: one person using the app once — rows
  *  less than 10 min apart, whatever they were for. One row per session reads
@@ -3998,9 +4297,9 @@ const CAT_ORDER = ['talk','scene','shadow','speech','review','voice','browse','a
  *      a voice clone they are the onboarding greeting, alone they are a call
  *      that never got going ("통화 시도");
  *    - talk minutes are the metered ticks, the same figure billing uses. */
-const KIND_RANK = ['talk','scene','shadow','speech','review','voice','browse','try','prep','pay','app'];
+const KIND_RANK = ['talk','scene','shadow','speech','sayagain','review','voice','browse','try','prep','pay','app'];
 const KIND_META = {
-  talk:{e:'📞', t:'통화'}, scene:{e:'🎬', t:'장면'}, shadow:{e:'🎙️', t:'쉐도잉'}, speech:{e:'🎤', t:'스피치'},
+  talk:{e:'📞', t:'통화'}, scene:{e:'🎬', t:'장면'}, shadow:{e:'🎙️', t:'쉐도잉'}, speech:{e:'🎤', t:'스피치'}, sayagain:{e:'🔁', t:'다시 말하기'},
   review:{e:'🃏', t:'복습'}, voice:{e:'🧬', t:'목소리 만들기'}, browse:{e:'📰', t:'둘러보기'},
   try:{e:'📞', t:'통화 시도 · 과금 0초'}, prep:{e:'👋', t:'통화 준비만'}, pay:{e:'💳', t:'요금제 화면'},
   app:{e:'📱', t:'앱 열어봄'},
@@ -4047,6 +4346,29 @@ const hourOf = t => +new Intl.DateTimeFormat('en-GB', {timeZone: tzZone(), hour:
   hourCycle:'h23'}).format(new Date(t));
 
 let liveHour = null, liveUser = null;   // the two filters: an hour-start (ms), a user id
+// 타임랩스: while livePlayT is set the map shows that moment instead of now.
+// renderLive leaves what a frame needs in liveCtx, so a frame redraws the
+// pins and the night band and nothing else (the list below doesn't move).
+let livePlayT = null, livePlayTimer = null, liveCtx = null, playCtl = null;
+// Two ranges: the last 24 h from live.json (10 min a frame, ~17 s a lap) and
+// everything since launch from history.json (an hour a frame, ~45 s a lap).
+let playRange = 'day', historyRows = null, historyLoading = false;
+const PLAY = {
+  day:    {step: 10*60e3, frame: 120, trail: 60*60e3},
+  launch: {step: 60*60e3, frame: 70,  trail: 3*3600e3},
+};
+const LAUNCH_AT = Date.parse('2026-09-12T00:00:00Z');
+/** What a frame reads: the live context, or the same with launch-to-now rows. */
+function playCtx(){
+  const c = liveCtx; if(!c) return null;
+  if(playRange !== 'launch') return c;
+  if(!historyRows) return null;
+  if(!c.historyEps || c.historyKeep !== c.keep){
+    c.historyEps = sessionsOf(historyRows.filter(r => c.keep(r.u)));
+    c.historyKeep = c.keep;
+  }
+  return {...c, eps: c.historyEps, from: LAUNCH_AT};
+}
 
 function renderLive(){
   if(!liveData) return;
@@ -4107,6 +4429,10 @@ function renderLive(){
   const liveUsers = new Set(eps.filter(isNow).map(e=>e.u));
   const calling = new Set(eps.filter(e=>isNow(e) && e.k==='talk' && now - e.end < 60e3).map(e=>e.u));
   const recent = new Set(eps.filter(e=>now - e.end < RECENT_MS && !liveUsers.has(e.u)).map(e=>e.u));
+  liveAlert(liveUsers, calling, id => liveName(person(id)));
+  // Polled for the alarm while another tab is up: nothing to draw (a hidden
+  // map measures 0 and would fit its bounds to nothing).
+  if(document.querySelector('section[data-tab=live]').hidden) return;
   const dayUsers = new Set(eps.map(e=>e.u));
   const located = [...dayUsers].filter(id=>geoOf(PH[id])).length;
   document.getElementById('liveTiles').innerHTML = [
@@ -4164,7 +4490,7 @@ function renderLive(){
     if(e.app) return '앱 보는 중';
     if(e.k==='talk'){
       const lang = LANG_KO[e.lang] || LANG_KO[person(e.u).target] || '';
-      return `${lang ? lang+'로 ' : ''}통화${isNow(e)?' 중':''}`;
+      return `${lang ? lang+'로 ' : ''}${isNow(e)?'대화 중':'대화'}`;
     }
     return KIND_META[e.k].t + (isNow(e) && !['voice','try','prep','pay','app'].includes(e.k) ? ' 중' : '');
   };
@@ -4216,8 +4542,11 @@ function renderLive(){
   // ---- map: everyone located; the selected hour (or the whole day) decides who is lit
   ensureMap();
   if(!liveMap) return;
+  liveCtx = {eps, dir, keep, PH, geoOf, person, label, emojiOf, where, whoBits,
+             from: hours[0], to: now};
+  ensurePlayControl();
+  if(livePlayT != null){ drawPlayFrame(); return; }
   nightLayer.setLatLngs(nightPolygon(liveHour!=null ? new Date(liveHour + H/2) : new Date()));
-  liveLayer.clearLayers();
   const lastEp = new Map();
   for(const e of shown) if(!lastEp.has(e.u)) lastEp.set(e.u, e);   // shown is newest-first
   const pins = spread([...dir.keys()].filter(keep).map(id => {
@@ -4227,26 +4556,18 @@ function renderLive(){
     return {id, e, kind, lat:g.lat, lon:g.lon, g};
   }).filter(Boolean));
   const bounds = [];
-  const markers = new Map();
-  for(const p of pins){
+  const markers = syncPins(pins.map(p => {
     const st = p.kind, u = person(p.id);
-    const tag = p.e && st==='live' ? `<div class="tag">${esc(label(p.e))}</div>` : '';
-    const half = st==='quiet' ? 6 : 17;
-    const icon = L.divIcon({className:'', iconSize: st==='quiet'?[12,12]:[34,34],
-      iconAnchor: [half - p.dx, half - p.dy],
-      html:`<div class="lm ${st}${liveUser===p.id?' sel':''}" style="--st:${ST_COLOR[st]}">${tag}<div class="face">${p.e?emojiOf(p.e):''}</div></div>`});
-    const mk = L.marker([+p.lat, +p.lon], {icon, zIndexOffset: st==='live'?1000:st==='recent'?500:st==='today'?100:0});
     const mine = shown.filter(e=>e.u===p.id).slice(0,4);
     const tip = `<b>${esc(liveName(u))}</b>${whoBits(p.id) ? ` · ${whoBits(p.id)}` : ''} · ${where(p.g)}`
       + (mine.length
           ? mine.map(e=>`<br>${fmtClock(new Date(e.start).toISOString())} ${emojiOf(e)} ${esc(label(e))} <span class="muted">${detail(e)}</span>`).join('')
           : `<br><span class="muted">${liveHour!=null?'이 시간엔 조용':'24시간 넘게 조용'} · 앱 연 곳 ${ago(PH[p.id]?.lastAt)}</span>`);
-    mk.bindTooltip(tip, {className:'lt', direction:'top', offset:[p.dx,p.dy-14]});
-    mk.on('click', () => { liveUser = liveUser===p.id ? null : p.id; renderLive(); });
-    mk.addTo(liveLayer);
-    markers.set(p.id, mk);
     if(st!=='quiet') bounds.push([+p.lat, +p.lon]);
-  }
+    return {id:p.id, kind:st, lat:p.lat, lon:p.lon, dx:p.dx, dy:p.dy,
+      emoji: p.e ? emojiOf(p.e) : '', tag: p.e && st==='live' ? label(p.e) : '',
+      sel: liveUser===p.id, tip, onClick: () => { liveUser = liveUser===p.id ? null : p.id; renderLive(); }};
+  }));
   if(!liveFit && bounds.length){
     liveFit = true;
     liveMap.fitBounds(bounds, {padding:[60,60], maxZoom:4});
@@ -4266,6 +4587,197 @@ function renderLive(){
   });
 }
 
+/** The play / scrub control, drawn inside the map so it stays with the
+ *  sticky map while the list scrolls. */
+function ensurePlayControl(){
+  if(playCtl || !liveMap) return;
+  const Ctl = L.Control.extend({ onAdd(){
+    const d = L.DomUtil.create('div', 'playctl');
+    d.innerHTML = `<button type="button" class="pbtn" data-act="play" aria-label="타임랩스 재생">`
+      + `<svg class="i-play" viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z"/></svg>`
+      + `<svg class="i-pause" viewBox="0 0 12 12"><path d="M2.5 1.5h2.6v9H2.5zM6.9 1.5h2.6v9H6.9z"/></svg></button>`
+      + `<input type="range" min="0" max="1000" value="1000" aria-label="시각">`
+      + `<div class="pmeta"><span class="pclock">지금</span><span class="pcount"></span></div>`
+      + `<div class="pseg"><button type="button" data-range="day" aria-pressed="true">24시간</button>`
+      + `<button type="button" data-range="launch" aria-pressed="false">출시 후</button></div>`
+      + `<button type="button" class="pnow" data-act="stop" hidden title="지금으로" aria-label="지금으로">✕</button>`;
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    return d; }});
+  playCtl = new Ctl({position:'bottomleft'}).addTo(liveMap).getContainer();
+  const range = playCtl.querySelector('input');
+  playCtl.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', async () => {
+    if(playRange === b.dataset.range) return;
+    playRange = b.dataset.range;
+    playCtl.querySelectorAll('[data-range]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    pausePlay();
+    if(playRange === 'launch' && !(await loadHistory())) return;
+    const c = playCtx(); if(!c) return;
+    livePlayT = c.from; drawPlayFrame();
+  }));
+  playCtl.querySelector('[data-act=play]').addEventListener('click', async () => {
+    if(livePlayTimer){ pausePlay(); return; }
+    if(playRange === 'launch' && !(await loadHistory())) return;
+    const c = playCtx(); if(!c) return;
+    if(livePlayT == null || livePlayT < c.from || livePlayT >= c.to) livePlayT = c.from;
+    startPlay();
+  });
+  playCtl.querySelector('[data-act=stop]').addEventListener('click', stopPlay);
+  range.addEventListener('input', () => {
+    const c = playCtx(); if(!c) return;
+    pausePlay();
+    const {from, to} = c;
+    livePlayT = from + (to - from) * (+range.value / 1000);
+    setScrub(+range.value);
+    drawPlayFrame();
+  });
+}
+/** The scrubber's filled half is a CSS variable (WebKit has no
+ *  progress pseudo-element), so every move of the value goes through here. */
+function setScrub(v){
+  const r = playCtl && playCtl.querySelector('input'); if(!r) return;
+  r.value = v; r.style.setProperty('--p', `${v / 10}%`);
+}
+async function loadHistory(){
+  if(historyRows) return true;
+  if(historyLoading) return false;
+  historyLoading = true;
+  const clock = playCtl && playCtl.querySelector('.pclock');
+  if(clock) clock.textContent = '9/12부터 불러오는 중…';
+  try{
+    const r = await fetch('__ADMIN_BASE__/history.json', {credentials:'same-origin'});
+    const j = await r.json();
+    if(!r.ok || j.error) throw new Error(j.error || r.status);
+    historyRows = j.events || [];
+    return true;
+  }catch(e){
+    if(clock) clock.textContent = `못 읽었어요 (${e.message||'오류'})`;
+    return false;
+  }finally{ historyLoading = false; }
+}
+function startPlay(){
+  clearInterval(livePlayTimer);
+  const P = PLAY[playRange];
+  livePlayTimer = setInterval(() => {
+    const c = playCtx(); if(!c) return;
+    livePlayT += P.step;
+    if(livePlayT >= c.to){ livePlayT = c.to; drawPlayFrame(); pausePlay(); return; }
+    drawPlayFrame();
+  }, P.frame);
+  drawPlayFrame();
+}
+function pausePlay(){
+  clearInterval(livePlayTimer); livePlayTimer = null;
+  if(playCtl) playCtl.classList.remove('playing');
+}
+function stopPlay(){
+  clearInterval(livePlayTimer); livePlayTimer = null; livePlayT = null;
+  if(playCtl){
+    playCtl.classList.remove('playing');
+    playCtl.querySelector('[data-act=stop]').hidden = true;
+    setScrub(1000);
+    playCtl.querySelector('.pclock').textContent = '지금';
+    playCtl.querySelector('.pcount').textContent = '';
+  }
+  renderLive();
+}
+/** One frame: who was using the app in the 10 minutes from livePlayT (lit,
+ *  with what they were doing), who had been within the hour before (fading),
+ *  who earlier in the day (grey), and the night band at that moment. */
+function drawPlayFrame(){
+  const c = playCtx(); if(!c || !liveMap || livePlayT == null) return;
+  const P = PLAY[playRange];
+  const t = livePlayT, t1 = t + P.step;
+  nightLayer.setLatLngs(nightPolygon(new Date(t)));
+  // act: the sitting under way in this frame; last: the latest one begun by
+  // then, whose emoji a fading or grey pin keeps wearing (an empty disc read
+  // as a pin with nothing in it).
+  const act = new Map(), last = new Map(), seen = new Set();
+  for(const e of c.eps){
+    if(e.app) continue;   // "app open now" is about the present, not the replay
+    if(e.start < t1 && e.end >= t){ const o = act.get(e.u); if(!o || e.start > o.start) act.set(e.u, e); }
+    if(e.start < t1){ seen.add(e.u); const o = last.get(e.u); if(!o || e.start > o.start) last.set(e.u, e); }
+  }
+  // Only people who have shown up by this moment: a replay starts on an
+  // empty map and fills in (the live map's grey "located but quiet" dots
+  // would be everyone, from the first frame).
+  const pins = spread([...c.dir.keys()].filter(id => c.keep(id) && seen.has(id)).map(id => {
+    const g = c.geoOf(c.PH[id]); if(!g) return null;
+    const e = act.get(id);
+    const l = last.get(id);
+    const kind = e ? 'live' : l && t - Math.min(l.end, t) < P.trail ? 'recent' : seen.has(id) ? 'today' : 'quiet';
+    return {id, e, l, kind, lat:g.lat, lon:g.lon, g};
+  }).filter(Boolean));
+  syncPins(pins.map(p => ({id:p.id, kind:p.kind, lat:p.lat, lon:p.lon, dx:p.dx, dy:p.dy,
+    emoji: p.e||p.l ? c.emojiOf(p.e||p.l) : '', tag: p.e ? c.label(p.e).replace(/ 중$/,'') : '',
+    tip: `<b>${esc(liveName(c.person(p.id)))}</b> · ${c.where(p.g)}`})));
+  if(playCtl){
+    const d = new Date(t);
+    const day = new Intl.DateTimeFormat('ko-KR', {timeZone: tzZone(), month:'numeric', day:'numeric', weekday:'short'}).format(d);
+    const hm = new Intl.DateTimeFormat('en-GB', {timeZone: tzZone(), hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(d);
+    playCtl.querySelector('.pclock').textContent = `${day} ${hm}`;
+    playCtl.querySelector('.pcount').textContent = `지금 ${act.size}명 · 누적 ${seen.size}명`;
+    setScrub(Math.round((t - c.from) / Math.max(1, c.to - c.from) * 1000));
+    playCtl.querySelector('[data-act=stop]').hidden = false;
+    playCtl.classList.toggle('playing', !!livePlayTimer);
+  }
+}
+
+/** 소리 알림: someone new is using the app (one soft note) or has started a
+ *  talk (two rising notes). Only CHANGES ring — the first poll after the page
+ *  opens just learns who is already here. Browsers keep audio locked until
+ *  the page is clicked, so a stored "on" waits for that click and says so. */
+let soundOn = false, audioCtx = null, prevLive = null, prevCall = null, titleTimer = null;
+const BASE_TITLE = document.title;
+try{ soundOn = localStorage.getItem('nawana.admin.sound') === '1'; }catch(e){}
+function ensureAudio(){
+  if(!audioCtx){ const C = window.AudioContext || window.webkitAudioContext; if(C) audioCtx = new C(); }
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().then(renderSoundBtn, ()=>{});
+}
+function chime(notes){
+  if(!soundOn || !audioCtx || audioCtx.state !== 'running') return;
+  const t0 = audioCtx.currentTime + .02;
+  notes.forEach((f, i) => {
+    const t = t0 + i*.16, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.22, t + .015);
+    g.gain.exponentialRampToValueAtTime(.0001, t + .9);
+    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + .95);
+  });
+}
+const CHIME_ARRIVE = [880], CHIME_TALK = [660, 990];
+function renderSoundBtn(){
+  const b = document.getElementById('liveSound'); if(!b) return;
+  const blocked = soundOn && (!audioCtx || audioCtx.state !== 'running');
+  b.setAttribute('aria-pressed', String(soundOn));
+  b.classList.toggle('blocked', blocked);
+  b.textContent = !soundOn ? '🔕 소리 꺼짐' : blocked ? '🔔 페이지를 한 번 클릭하면 소리가 나요' : '🔔 소리 켜짐';
+}
+function flashTitle(text){
+  if(!document.hidden) return;
+  clearInterval(titleTimer); let on = false, n = 0;
+  titleTimer = setInterval(() => { on = !on; document.title = on ? text : BASE_TITLE;
+    if(++n > 12){ clearInterval(titleTimer); document.title = BASE_TITLE; } }, 1000);
+}
+function liveAlert(live, calling, nameOf){
+  if(prevLive){
+    const arrived = [...live].filter(id => !prevLive.has(id));
+    const talking = [...calling].filter(id => !prevCall.has(id));
+    if(talking.length){ chime(CHIME_TALK); flashTitle(`🔔 ${talking.map(nameOf).join(', ')} 대화 시작`); }
+    else if(arrived.length){ chime(CHIME_ARRIVE); flashTitle(`🔔 ${arrived.map(nameOf).join(', ')} 사용 중`); }
+  }
+  prevLive = new Set(live); prevCall = new Set(calling);
+}
+document.getElementById('liveSound').addEventListener('click', ev => {
+  ev.stopPropagation();
+  soundOn = !soundOn;
+  try{ localStorage.setItem('nawana.admin.sound', soundOn ? '1' : '0'); }catch(e){}
+  if(soundOn){ ensureAudio(); setTimeout(() => { renderSoundBtn(); chime(CHIME_ARRIVE); }, 60); }
+  renderSoundBtn();
+  liveShow(!document.querySelector('section[data-tab=live]').hidden);
+});
+document.addEventListener('pointerdown', () => { if(soundOn) ensureAudio(); }, {passive:true});
+renderSoundBtn();
+
 function renderLiveBeat(err){
   const el = document.getElementById('liveBeat'); if(!el) return;
   el.classList.toggle('stale', !!err || !liveAt);
@@ -4282,11 +4794,12 @@ async function pollLive(){
 }
 function liveShow(on){
   clearInterval(liveTimer); liveTimer = null;
-  if(!on) return;
-  ensureMap();
-  setTimeout(()=>liveMap && liveMap.invalidateSize(), 0);
+  // With sound on, the poll keeps running on other tabs and in a hidden
+  // window — that's the whole point of an alarm.
+  if(!on && !soundOn) return;
+  if(on){ ensureMap(); setTimeout(()=>liveMap && liveMap.invalidateSize(), 0); }
   pollLive();
-  liveTimer = setInterval(()=>{ if(!document.hidden) pollLive(); }, POLL_MS);
+  liveTimer = setInterval(()=>{ if(soundOn || !document.hidden) pollLive(); }, POLL_MS);
 }
 function showTab(name){
   document.querySelectorAll('section[data-tab]').forEach(s => { s.hidden = s.dataset.tab !== name; });
