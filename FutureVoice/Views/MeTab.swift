@@ -836,6 +836,16 @@ struct MeTab: View {
                 row(icon: "hourglass",
                     title: VoiceQuota.readyLine(appState.voiceQueuedUntil),
                     subtitle: explain("Made from the recording on this phone. A stand-in voice speaks until then."))
+                NavigationLink {
+                    VoicePresetPickerView(selection: Binding(
+                        get: { appState.voiceCloneId ?? "" },
+                        set: { appState.chooseStandInVoice($0) }))
+                        .environmentObject(appState)
+                } label: {
+                    row(icon: "person.wave.2",
+                        title: explain("Voice until then: \(VoicePreset.by(id: appState.voiceCloneId ?? "").displayName)"),
+                        subtitle: explain("Pick who you practice with"))
+                }
             }
             if appState.voiceCloneId != nil, !appState.voiceIsStandIn,
                !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {

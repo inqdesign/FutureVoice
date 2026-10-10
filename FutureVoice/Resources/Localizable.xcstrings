@@ -125507,52 +125507,6 @@
         }
       }
     },
-    "Your recording is saved. Open the app after then and your fluent self speaks in your voice. Until then, practice with a stand-in voice." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Aufnahme ist gespeichert. Öffne die App danach, und dein fließendes Ich spricht mit deiner Stimme. Bis dahin übst du mit einer Ersatzstimme."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu grabación está guardada. Abre la app después de esa fecha y tu yo fluido hablará con tu voz. Mientras tanto, practica con una voz provisional."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ton enregistrement est sauvegardé. Ouvre l’app après cette date et ton moi fluide parlera avec ta voix. D’ici là, entraîne-toi avec une voix provisoire."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "録音は保存しました。その日以降にアプリを開くと、流暢な自分が自分の声で話します。それまでは仮の声で練習できます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "녹음은 저장해 뒀어요. 그 뒤에 앱을 열면 유창해진 내가 내 목소리로 말해요. 그때까지는 임시 목소리로 연습할 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "录音已经保存好了。那之后打开 App，流利的自己就会用你的声音说话。在那之前，可以先用临时声音练习。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "錄音已經存好了。那之後打開 App，流利的自己就會用你的聲音說話。在那之前，可以先用臨時聲音練習。"
-          }
-        }
-      }
-    },
     "Voice saved" : {
       "localizations" : {
         "de" : {
@@ -125825,6 +125779,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "從現在起，流利的自己會用你自己的聲音說話。"
+          }
+        }
+      }
+    },
+    "Your recording is saved. Open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahme ist gespeichert. Öffne die App danach, und dein fließendes Ich spricht mit deiner Stimme. Bis dahin such dir unten eine Stimme aus und übe mit ihr."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu grabación está guardada. Abre la app después de esa fecha y tu yo fluido hablará con tu voz. Mientras tanto, elige una de las voces de abajo para practicar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton enregistrement est sauvegardé. Ouvre l’app après cette date et ton moi fluide parlera avec ta voix. D’ici là, choisis une des voix ci-dessous pour t’entraîner."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音は保存しました。その日以降にアプリを開くと、流暢な自分が自分の声で話します。それまでは、下の声から一つ選んで練習してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음은 저장해 뒀어요. 그 뒤에 앱을 열면 유창해진 내가 내 목소리로 말해요. 그때까지는 아래 목소리 중 하나를 골라 연습하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录音已经保存好了。那之后打开 App，流利的自己就会用你的声音说话。在那之前，请从下面选一个声音来练习。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "錄音已經存好了。那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"
+          }
+        }
+      }
+    },
+    "Voice until then: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stimme bis dahin: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voz hasta entonces: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voix d’ici là : %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "それまでの声：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그때까지 쓸 목소리: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在那之前的声音：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在那之前的聲音：%@"
+          }
+        }
+      }
+    },
+    "Pick who you practice with" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle, mit wem du übst"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige con quién practicas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis avec qui tu t’entraînes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習する相手を選べます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "누구와 연습할지 골라요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择要跟谁练习"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇要跟誰練習"
           }
         }
       }

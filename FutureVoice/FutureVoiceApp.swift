@@ -783,6 +783,13 @@ final class AppState: ObservableObject {
         ])
     }
 
+    /// The learner picked which preset speaks while their voice is queued.
+    func chooseStandInVoice(_ presetId: String) {
+        guard voiceIsStandIn,
+              VoicePreset.catalog.contains(where: { $0.id == presetId }) else { return }
+        voiceCloneId = presetId
+    }
+
     private func endStandIn() {
         voiceIsStandIn = false
         voiceQueuedUntil = nil

@@ -949,9 +949,12 @@ struct VoiceCloneOnboardingView: View {
     // saved; a stand-in speaks until the date the server gave, then the voice
     // is built on its own (`AppState.makeQueuedVoiceIfReady`).
     private var queuedContent: some View {
-        stepHeader(VoiceQuota.readyLine(appState.voiceQueuedUntil),
-                   explain("Your recording is saved. Open the app after then and your fluent self speaks in your voice. Until then, practice with a stand-in voice."))
-            .transition(.opacity)
+        VStack(spacing: 20) {
+            stepHeader(VoiceQuota.readyLine(appState.voiceQueuedUntil),
+                       explain("Your recording is saved. Open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with."))
+            StandInVoicePicker()
+        }
+        .transition(.opacity)
     }
 
     // Meet: greeting + theme pick.
