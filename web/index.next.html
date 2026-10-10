@@ -1619,10 +1619,12 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
 // (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
 const BILLING = {
-  // ON since 2026-09-03 — Stripe products/prices/webhook/portal and Apple web
-  // sign-in are all live (web/README.md § Web billing). This page is not
-  // deployed until launch day, so nothing is sold before the root swap.
-  enabled: true,
+  // OFF since 2026-10-10. The Stripe side is still live (web/README.md § Web
+  // billing), but this page IS reachable at its .next URL and its plan copy
+  // predates the 2026-09-26 bounded plans (it promised an uncapped Plus, 60
+  // Light scenes, a trial and annual plans). Turn it back on only once the
+  // pricing section matches subscription_plans again.
+  enabled: false,
   supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
 }
