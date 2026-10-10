@@ -1379,10 +1379,34 @@ struct VoicePreset: Hashable, Identifiable {
     /// The picker's caption. The accent and description are the ENGLISH
     /// voice's, so a slot voiced by someone else in `language` shows only
     /// what is still true of it: the gender.
+    ///
+    /// Drawn in the APP language (2026-10-10): it is chrome describing the
+    /// voice, while the name and the sample follow the language practised.
+    /// `gender` / `accent` / `description` stay English — prompts read them.
     func caption(in language: String) -> String {
         Self.speaking(id, in: language) == id
-            ? "\(gender) · \(accent) · \(description)"
-            : gender
+            ? "\(genderLabel) · \(accentLabel) · \(descriptionLabel)"
+            : genderLabel
+    }
+
+    private var genderLabel: String {
+        gender == "Male" ? explain(key: "voicePreset.male", default: "Male")
+                         : explain(key: "voicePreset.female", default: "Female")
+    }
+
+    private var accentLabel: String {
+        accent == "British" ? explain(key: "voicePreset.british", default: "British")
+                            : explain(key: "voicePreset.american", default: "American")
+    }
+
+    private var descriptionLabel: String {
+        switch id {
+        case "NDTYOmYEjbDIVCKB35i3": return explain(key: "voicePreset.paige", default: "Engaging, natural")
+        case "UgBBYS2sOqTuMpoF3BR0": return explain(key: "voicePreset.mark", default: "Natural, conversational")
+        case "FF59babHL8N8gfTgtBMT": return explain(key: "voicePreset.emma", default: "Clear, friendly")
+        case "L0Dsvb3SLTyegXwtm47J": return explain(key: "voicePreset.james", default: "Warm, easygoing")
+        default: return description
+        }
     }
 
     /// Same, for the language being practised right now. Every synthesis runs
