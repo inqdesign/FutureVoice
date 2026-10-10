@@ -77,7 +77,11 @@ struct StarterSituation: Identifiable, Hashable {
         follow up on what they answer, and give your own answer too (your name, \
         your work, where you're from) so it's an exchange, not an interview. \
         Stay on getting to know each other — no TV, films, news or other small \
-        talk unless they bring it up. One short line at a time, no speech.
+        talk unless they bring it up. One short line at a time, no speech. \
+        You are two adults who have never met, so address them in the POLITE \
+        form the whole call (German Sie, French vous, Spanish usted, Korean \
+        존댓말, Japanese です・ます) and never switch to the informal one on \
+        your own; only if the learner offers it.
         """
 
     private static let openNote = "Keep it open and easygoing: one short line the way this person really talks at work (no \"welcome\" speech, no script), then follow whatever the learner brings up. Never push a task, a checklist or specifics they haven't raised."
@@ -93,9 +97,9 @@ struct StarterSituation: Identifiable, Hashable {
                     "en": ["Hi! I don't think we've met yet.", "Hello! Nice to meet you."],
                     "ko": ["안녕하세요! 처음 뵙는 것 같네요.", "안녕하세요, 반가워요!"],
                     "ja": ["こんにちは！初めてですよね？", "はじめまして！よろしくお願いします。"],
-                    "de": ["Hallo! Wir kennen uns noch nicht, oder?", "Hi, freut mich! Wie geht's?"],
+                    "de": ["Hallo! Ich glaube, wir kennen uns noch nicht.", "Hallo, freut mich, Sie kennenzulernen!"],
                 ],
-                learnerSide: "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example). Asking the same thing back is something a speaker does now and then, not on every answer."),
+                learnerSide: "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example). Asking the same thing back is something a speaker does now and then, not on every answer. They have just met, so the learner speaks in the polite form (German Sie, French vous, Spanish usted, Korean 존댓말, Japanese です・ます) whatever form the line uses."),
             StarterSituation(
                 id: "order-cafe", icon: "cup.and.saucer.fill",
                 title: explain("At a café"),
