@@ -541,10 +541,11 @@ nav.sec .logo { color: #F5F2EB; }
 .cycle-toggle { margin-top: 40px; display: inline-flex; box-shadow: inset 0 0 0 1px var(--line); }
 .cycle-toggle .ct { border: 0; cursor: pointer; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em; padding: 12px 24px; }
 .cycle-toggle .ct.on { background: var(--ink); color: var(--paper); }
-.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; padding: 0 var(--pad); position: relative; z-index: 1; }
+.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0 var(--pad); position: relative; z-index: 1; }
 .plan { padding: 50px var(--cell) 66px; display: flex; flex-direction: column; align-items: flex-start; }
 .plan .p-name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
 .plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.plan.monthly-only { opacity: 0.55; }
 .plan .p-badge { margin-left: 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; background: var(--blue); color: #fff; padding: 3px 8px; }
 .plan .p-price { margin-top: 30px; font-family: var(--pixel); font-size: clamp(34px, 3.4vw, 48px); letter-spacing: -0.01em; }
 .plan .p-price span { font-family: var(--mono); font-size: 14px; color: var(--faint); letter-spacing: 0; }
@@ -566,7 +567,7 @@ nav.sec .logo { color: #F5F2EB; }
 .p-fine { margin-top: 40px; font-size: 13.5px; color: var(--faint); max-width: 46em; padding-bottom: 60px; line-height: 1.6; }
 .p-error { margin-top: 16px; font-size: 14px; color: #B4372C; display: none; }
 .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 100; background: var(--ink); color: var(--paper); padding: 15px 22px; font-size: 14.5px; max-width: 90vw; }
-@media (max-width: 700px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
+@media (max-width: 960px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
 
 /* ── faq: hairline accordion on the grid ──────────────────── */
 .faq-sec { padding-top: 130px; }
@@ -771,7 +772,7 @@ footer a:hover { color: var(--ink); }
       <div class="n-ctas rv" style="--d:0.18s">
         <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>App Store에서</small><b>다운로드</b></span></a>
       </div>
-      <span class="n-note rv" style="--d:0.24s"><b>iOS 17 이상</b> · 7일 무료</span>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17 이상</b> · 첫 20분 무료</span>
     </div>
     <div class="s-pin">
       <div class="s-caps">
@@ -989,8 +990,8 @@ footer a:hover { color: var(--ink); }
 <section class="sec plain pricing-wrap" id="pricing">
   <div class="inner pricing-sec">
     <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>가격</div>
-    <h2 class="rv" style="--d:0.08s">내 상황에 맞는<br />구독을 고르세요.</h2>
-    <p class="pr-sub rv" style="--d:0.11s">어느 쪽이든 7일 무료로 시작합니다.</p>
+    <h2 class="rv" style="--d:0.08s">한 달에 얼마나<br />이야기할지 고르세요.</h2>
+    <p class="pr-sub rv" style="--d:0.11s">처음 20분은 구독 없이 무료로 이야기해 볼 수 있습니다.</p>
     <div class="cycle-toggle rv" style="--d:0.14s">
       <button class="ct on" data-cycle="monthly" type="button">월간</button>
       <button class="ct" data-cycle="annual" type="button">연간</button>
@@ -1003,7 +1004,7 @@ footer a:hover { color: var(--ink); }
       <p class="p-note">취미로 꾸준히, 루틴부터.</p>
       <dl class="p-specs">
         <div><dt>통화</dt><dd data-talk="light">—</dd></div>
-        <div class="p-sub"><dt></dt><dd>하루 5분꼴</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="light">—</dd></div>
         <div><dt>상황연습</dt><dd data-scenes="light">—</dd></div>
         <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
         <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
@@ -1012,24 +1013,43 @@ footer a:hover { color: var(--ink); }
       <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
-      <div><span class="p-name">플러스</span><span class="p-badge">인기</span></div>
+      <div><span class="p-name">플러스</span><span class="p-badge">가장 많이 선택</span></div>
       <div class="p-price" data-price="plus">—</div>
-      <p class="p-note">원하는 만큼, 제한 없이.</p>
+      <p class="p-note">매일, 하고 싶은 만큼 길게.</p>
       <dl class="p-specs">
-        <div><dt>통화</dt><dd>제한 없음</dd></div>
+        <div><dt>통화</dt><dd data-talk="plus">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="plus">—</dd></div>
         <div><dt>상황연습</dt><dd data-scenes="plus">—</dd></div>
+        <div><dt>스피치 기능</dt><dd>포함</dd></div>
         <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
         <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
       </dl>
       <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App Store에서 시작 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
+    <!-- Max has no Stripe price yet, so it carries no data-tier buy button:
+         if web billing is switched back on, Max still sends people to the
+         App Store. Monthly only, like the app's ladder. -->
+    <div class="plan" data-plan="max">
+      <div><span class="p-name">맥스</span></div>
+      <div class="p-price" data-price="max">—</div>
+      <p class="p-note">준비할 게 많은 달에, 마음껏.</p>
+      <dl class="p-specs">
+        <div><dt>통화</dt><dd data-talk="max">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="max">—</dd></div>
+        <div><dt>상황연습</dt><dd data-scenes="max">—</dd></div>
+        <div><dt>스피치 기능</dt><dd>포함</dd></div>
+        <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
+        <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App Store에서 시작 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+    </div>
   </div>
   <div class="inner">
     <p class="p-error" id="pricing-error"></p>
     <p class="p-fine" id="signin-choice" hidden>앱에서 쓰는 계정으로 로그인해 주세요: <a href="#" data-signin="apple">Apple로 계속</a> · <a href="#" data-signin="google">Google로 계속</a></p>
     <p class="p-fine" id="manage-sub" hidden>웹에서 구독 중이라면 <a href="#" id="manage-link">구독 관리</a>에서 변경·해지할 수 있습니다.</p>
-    <p class="p-fine">플러스는 통화 시간에 제한이 없습니다. 말하는 데는 실제로 힘이 들어가니, 아껴 쓸 이유를 따로 만들지 않았습니다. 상황연습은 탭 한 번이면 재생되는 쪽이라 편수로 셉니다 — 두 몫은 서로 별개고, 상황연습을 봐도 통화 시간은 줄지 않습니다. 7일 무료 체험이고 언제든 해지할 수 있습니다.</p>
+    <p class="p-fine">통화 시간은 대화가 오가는 동안만 줄고, 말이 멈춘 동안은 세지 않습니다. 상황연습은 탭 한 번에 재생되니 편수로 셉니다. 두 몫은 따로라, 상황연습을 봐도 통화 시간은 줄지 않습니다. 시간이 모자란 달에는 50분을 ₩5,900에 더할 수 있고, 구독은 App Store에서 언제든 해지할 수 있습니다.</p>
   </div>
 </section>
 
@@ -1042,7 +1062,7 @@ footer a:hover { color: var(--ink); }
   <div class="trust">
     <div class="tcell rv"><div class="ix">A</div><h4>녹음은 단 한 번</h4><p>설정할 때 60초가 전부입니다. 내가 시작한 대화 밖에서는 절대 녹음하지 않습니다.</p></div>
     <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>클론의 결정권은 나에게</h4><p>언제든 다시 녹음하거나 삭제할 수 있습니다. 교체하면 이전 클론은 영구 삭제됩니다.</p></div>
-    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>연습 기록은 내 기기에</h4><p>대화, 드릴, 진행 상황은 서버가 아니라 내 iPhone에 저장됩니다.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>연습 기록은 내 기기에</h4><p>대화, 드릴, 진행 상황은 내 iPhone에 저장됩니다. 다른 기기와 이어 쓰고 싶다면, 우리 서버가 아니라 내 iCloud로 동기화합니다.</p></div>
   </div>
 </section>
 
@@ -1059,11 +1079,11 @@ footer a:hover { color: var(--ink); }
     </details>
     <details>
       <summary><span class="ix">02</span>무료로 써볼 수 있나요?</summary>
-      <p class="a"><span>네, 7일 무료 체험이 있어요. 보이스 클론과 첫 인사는 체험 전에도 무료고, 언제든 해지할 수 있어요.</span></p>
+      <p class="a"><span>네, 처음 20분은 구독 없이 무료로 이야기할 수 있어요. 목소리를 만드는 것도 무료예요.</span></p>
     </details>
     <details>
       <summary><span class="ix">03</span>구독하면 뭘 얻나요?</summary>
-      <p class="a"><span>라이트는 한 달 150분의 통화 시간을 사는 거예요. 플러스는 통화에 제한이 없어요. 상황연습은 별도 몫이라 봐도 통화 시간이 줄지 않아요. 복습·다시 듣기·상황 만들기는 언제나 무료예요.</span></p>
+      <p class="a"><span>한 달 치 통화 시간을 사는 거예요. 라이트는 150분, 플러스는 600분, 맥스는 1,200분이에요. 상황연습은 별도 몫이라 봐도 통화 시간이 줄지 않아요. 복습·다시 듣기·섀도잉은 어느 요금제든 무제한이에요.</span></p>
     </details>
     <details>
       <summary><span class="ix">04</span>완전 초보도 할 수 있나요?</summary>
@@ -1075,11 +1095,11 @@ footer a:hover { color: var(--ink); }
     </details>
     <details>
       <summary><span class="ix">06</span>내 목소리와 데이터는 안전한가요?</summary>
-      <p class="a"><span>내가 시작한 대화 밖에서는 절대 녹음하지 않아요. 클론은 언제든 다시 만들거나 삭제할 수 있고, 대화·드릴·진행 기록은 서버가 아니라 내 아이폰에 저장돼요.</span></p>
+      <p class="a"><span>내가 시작한 대화 밖에서는 절대 녹음하지 않아요. 클론은 언제든 다시 만들거나 삭제할 수 있어요. 대화·드릴·진행 기록은 내 아이폰에 저장되고, 동기화를 켜면 우리 서버가 아니라 내 iCloud로만 가요.</span></p>
     </details>
     <details>
       <summary><span class="ix">07</span>어떤 언어를 배울 수 있나요?</summary>
-      <p class="a"><span>영어, 한국어, 독일어를 지원해요. 한국어와 독일어는 아직 베타예요. 언어를 추가해도 요금은 그대로예요.</span></p>
+      <p class="a"><span>영어, 독일어, 일본어, 한국어를 배울 수 있어요. 언어를 추가해도 요금은 그대로예요.</span></p>
     </details>
   </div>
 </section>
@@ -1624,33 +1644,33 @@ const BILLING = {
 // the won figure this page shows — the Stripe Prices must carry a krw
 // currency_option (see web/README.md). Do not flip billing on without it.
 //
-// Allowances are MONTHLY POOLS since 2026-08-20, and the tiers are Light /
-// Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
-// `monthly_scenes`; annual buys the same monthly pool, twelve times, so the
-// figures do not change with the cycle — only the price does.
-//
-// Plus's scene pool went 600 → 120 on 2026-08-23
-// (`20260823140000_plus_scene_count`): 600 was 20 a day, a number nobody could
-// spend and $114/mo of upstream cost against $17 of net revenue. These two
-// figures are the ONE thing on this page that must match the database — the
-// app's paywall reads `monthly_scenes` live, so a stale number here is a
-// promise the app then breaks.
+// Allowances are MONTHLY POOLS, bounded on every tier since 2026-09-26
+// (Light 150 min + 10 scenes, Plus 600 + 30, Max 1,200 + 30 — monthly only).
+// What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
+// `monthly_scenes`; annual buys the same monthly pool, twelve times, at
+// "2 months free" (back on sale 2026-10-07). These figures are the ONE thing
+// on this page that must match the database and App Store Connect — the
+// app's paywall reads them live, so a stale number here is a promise the
+// app then breaks.
 const PLANS = {
   light: {
-    talk: "150분/월", scenes: "60개/월",
+    talk: "150분/월", perDay: "하루 5분꼴", scenes: "10개/월",
     monthly: { id: "light_monthly", price: "₩15,000",  per: "/ 월" },
-    annual:  { id: "light_annual",  price: "₩110,000", per: "/ 년" },
+    annual:  { id: "light_annual",  price: "₩149,000", per: "/ 년 · 2개월 무료" },
   },
   plus: {
-    // 플러스의 `talk`은 렌더링되지 않아요 — 통화 행은 "제한 없음"으로 고정
-    // (`20260821120000_plus_talk_unlimited`). `monthly_seconds`의 서술용
-    // 값으로만 남겨두고, 화면에는 절대 찍지 마세요.
-    talk: null, scenes: "120개/월",
+    talk: "600분/월", perDay: "하루 20분꼴", scenes: "30개/월",
     monthly: { id: "plus_monthly",  price: "₩29,000",  per: "/ 월" },
-    annual:  { id: "plus_annual",   price: "₩209,000", per: "/ 년" },
+    annual:  { id: "plus_annual",   price: "₩290,000", per: "/ 년 · 2개월 무료" },
+  },
+  max: {
+    // Monthly only (the app's ladder greys it out under Annual).
+    talk: "1,200분/월", perDay: "하루 40분꼴", scenes: "30개/월",
+    monthly: { id: "max_monthly",   price: "₩58,000",  per: "/ 월" },
+    annual:  null,
   },
 }
-const TIERS = ["light", "plus"]
+const TIERS = ["light", "plus", "max"]
 
 // Prices render ALWAYS — they are the section, and they need no backend.
 ;(function renderPricing() {
@@ -1658,8 +1678,13 @@ const TIERS = ["light", "plus"]
   function paint() {
     for (const tier of TIERS) {
       const t = PLANS[tier], p = t[cycle]
-      document.querySelector(`[data-price="${tier}"]`).innerHTML =
-        p.price + ' <span>' + p.per + "</span>"
+      const priceEl = document.querySelector(`[data-price="${tier}"]`)
+      priceEl.innerHTML = p
+        ? p.price + ' <span>' + p.per + "</span>"
+        : '<span>월간만 있어요</span>'
+      priceEl.closest(".plan").classList.toggle("monthly-only", !p)
+      const dayEl = document.querySelector(`[data-perday="${tier}"]`)
+      if (dayEl) dayEl.textContent = t.perDay
       // Plus has no talk figure to print (its row is hardcoded "no limit"),
       // so the hook is absent by design — an unguarded write threw here and
       // killed the rest of this module: the cycle toggle, the nav link, and
