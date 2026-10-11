@@ -41,6 +41,30 @@ struct WatchTab: View {
     /// whenever the tab appears or the Find sheet closes.
     @State private var bookmarkedRemoteIds: Set<String> = []
 
+    // The people map (`PeopleSky`) — a DEBUG experiment; the Me → Developer
+    // toggle brings back the page below it.
+    @AppStorage(PeopleSky.defaultsKey) private var peopleSkyFlag = true
+    @State private var skyLens: PeopleSky.Lens =
+        PeopleSky.Lens(rawValue: UserDefaults.standard.string(forKey: "skyLens") ?? "") ?? .all
+    /// Find-people strangers not met yet, for the map's outer ring.
+    @State private var skyPool: [Counterpart] = []
+    /// Each pool persona's job, by remote id — the stranger's face icon.
+    @State private var skyJobs: [String: String] = [:]
+    /// Talks per person, read once per appearance (sessions aren't published).
+    @State private var talksByPerson: [UUID: Int] = [:]
+    @State private var showingSavedScenarios = false
+    /// The category tab picked over the saved situations; nil = all.
+    @State private var savedCategory: String?
+    @State private var showingProfile = false
+
+    private var usesPeopleSky: Bool {
+        #if DEBUG
+        return peopleSkyFlag
+        #else
+        return false
+        #endif
+    }
+
     struct ComposerConfig: Identifiable {
         let id = UUID()
         var person: Counterpart?
@@ -60,25 +84,38 @@ struct WatchTab: View {
 
     var body: some View {
         NavigationStack {
-            // A ScrollView, NOT a List: every section here is a custom grid or
-            // card. Inside a List each grid lives in one row, and the
-            // inset-grouped cell mask rounds the row's corners — visibly
-            // clipping whatever chip/card sits at an edge — and long-press
-            // context menus preview the WHOLE row instead of one card.
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    peopleSection
-                    newSituationSection
-                    scenariosSection
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
+            Group {
+                if usesPeopleSky { peopleSkyPage } else { classicPage }
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Watch")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
+                if usesPeopleSky {
+                    // The lens is an occasional choice, so it lives in a menu
+                    // rather than a row the map gives up space to. The icon
+                    // fills while the map is narrowed, so it can't be missed.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Picker(selection: $skyLens) {
+                                ForEach(PeopleSky.Lens.allCases) { l in Text(l.title).tag(l) }
+                            } label: { EmptyView() }
+                        } label: {
+                            Image(systemName: skyLens == .all
+                                  ? "line.3.horizontal.decrease.circle"
+                                  : "line.3.horizontal.decrease.circle.fill")
+                        }
+                        .accessibilityLabel(Text(skyLens.title))
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        // Every situation made before the map still has a
+                        // home: the map shows people, this lists the rest.
+                        Button { showingSavedScenarios = true } label: {
+                            Image(systemName: "square.stack")
+                        }
+                        .accessibilityLabel(Text("Your scenarios"))
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     // ONE people page: your own people and the shared pool,
                     // merged — the header button answers "who can I talk to".
@@ -87,6 +124,23 @@ struct WatchTab: View {
                     }
                     .accessibilityLabel("People")
                 }
+            }
+            .sheet(isPresented: $showingSavedScenarios) {
+                NavigationStack {
+                    savedScenariosPage
+                    .background(Color(.systemGroupedBackground))
+                    .navigationTitle("Your scenarios")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Done") { showingSavedScenarios = false }
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingProfile) {
+                PersonaOnboardingView(initialPersona: appState.persona)
+                    .environmentObject(appState)
             }
             .sheet(item: $composer) { cfg in
                 // The ONE unified composer — same as Talk's "+", but its action
@@ -182,6 +236,150 @@ struct WatchTab: View {
                     .environmentObject(appState)
             }
         }
+    }
+
+    // MARK: - The people map (DEBUG experiment, see `PeopleSky`)
+
+    private var peopleSkyPage: some View {
+        // The map starts panned to its centre, so if the navigation bar read
+        // ITS offset the large title would come up already collapsed. An
+        // outer vertical ScrollView that never moves is the one the bar
+        // tracks, so "Watch" sits large like every other tab.
+        GeometryReader { geo in
+            ScrollView(.vertical) {
+                VStack(spacing: 0) {
+                    PeopleSkyMap(nodes: skyNodes,
+                                 meName: appState.persona?.displayName ?? "",
+                                 lens: $skyLens,
+                                 onTap: { n in
+                                     switch n.kind {
+                                     case .person(let c), .pooled(let c): personCard = c
+                                     case .role(let cat): composer = ComposerConfig(mode: .browse, category: cat)
+                                     }
+                                 },
+                                 onTapMe: { showingProfile = true })
+                        .frame(height: max(geo.size.height, 200))
+                }
+            }
+            .scrollDisabled(true)
+        }
+            .overlay(alignment: .bottomTrailing) {
+                // Writing your own situation is its own button, not a tap on
+                // "me": tapping a person opens that person, so tapping me
+                // opens me (the profile).
+                Button { composer = ComposerConfig(mode: .custom) } label: {
+                    Label("New situation", systemImage: "square.and.pencil")
+                        .font(.body.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                }
+                .modifier(GlassFloatingButton())
+                .padding(16)
+            }
+            .task(id: appState.targetLanguage) { await loadSkyPool() }
+            .onAppear {
+                countTalks()
+                #if DEBUG
+                if UserDefaults.standard.bool(forKey: "openSaved") { showingSavedScenarios = true }
+                #endif
+            }
+    }
+
+    private var skyNodes: [PeopleSky.Node] {
+        var practiced: [UUID: Int] = talksByPerson
+        var kept: Set<UUID> = []
+        for s in appState.scenarios {
+            guard let id = s.counterpartId else { continue }
+            practiced[id, default: 0] += 1
+            if !s.isMeetingScene && s.isTopic != true { kept.insert(id) }
+        }
+        var nodes: [PeopleSky.Node] = appState.counterparts.map { c in
+            PeopleSky.Node(id: c.id.uuidString, name: c.name, kind: .person(c),
+                           ring: PeopleSky.ring(for: c), isMine: c.remoteId == nil,
+                           practiced: practiced[c.id] ?? 0, hasKept: kept.contains(c.id),
+                           symbol: PeopleSky.symbol(for: c, occupation: c.remoteId.flatMap { skyJobs[$0] }),
+                           eyebrow: skyEyebrow(c))
+        }
+        let metRemote = Set(appState.counterparts.compactMap(\.remoteId))
+        let unmet = skyPool.filter { !metRemote.contains($0.remoteId ?? "") }
+        // a few new faces on "All", the same few every visit
+        let featured = Set(unmet.map(\.id.uuidString).sorted().prefix(6))
+        nodes += unmet.map { c in
+            PeopleSky.Node(id: c.id.uuidString, name: c.name, kind: .pooled(c), ring: 2,
+                           isMine: false, practiced: 0, hasKept: false,
+                           symbol: PeopleSky.symbol(for: c, occupation: c.remoteId.flatMap { skyJobs[$0] }),
+                           eyebrow: skyEyebrow(c),
+                           featured: featured.contains(c.id.uuidString))
+        }
+        // The common situations (cafe, travel, work…) are chips in the
+        // "Your own situation" sheet, not faces on the map: the map is people.
+        return nodes
+    }
+
+    /// Over the name on the map: the relationship in the learner's own words
+    /// for their people, the job (else the city) for a stranger, and who a
+    /// public figure is.
+    private func skyEyebrow(_ c: Counterpart) -> String? {
+        switch c.cast {
+        case .ownPerson: return c.relationship
+        case .publicFigure:
+            return c.publicIdentity?.components(separatedBy: "·").last?
+                .trimmingCharacters(in: .whitespaces)
+        case .stranger:
+            // a label, not a sentence: the job's first phrase, else the city,
+            // else nothing — a cut-off intro line is noise
+            let short: (String) -> String? = { text in
+                let head = text.split(whereSeparator: { ",.;·(".contains($0) }).first
+                    .map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+                return (1...18).contains(head.count) ? head : nil
+            }
+            return short(c.remoteId.flatMap { skyJobs[$0] } ?? "") ?? short(c.location)
+        }
+    }
+
+    private func loadSkyPool() async {
+        guard let pool = try? await PublicPersonaService.fetchPool(language: appState.targetLanguage)
+        else { return }
+        skyPool = pool.map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
+        skyJobs = Dictionary(pool.map { ($0.id, $0.occupation) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    private func countTalks() {
+        var counts: [UUID: Int] = [:]
+        for s in SessionStore.shared.load() {
+            if let id = s.counterpartId { counts[id, default: 0] += 1 }
+        }
+        talksByPerson = counts
+    }
+
+    /// Opens the composer, closing the saved-situations sheet first when it
+    /// is up — two sheets can't be presented from one stack at once.
+    private func open(_ cfg: ComposerConfig) {
+        if showingSavedScenarios {
+            showingSavedScenarios = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { composer = cfg }
+        } else {
+            composer = cfg
+        }
+    }
+
+    /// The page before the people map — three sections stacked.
+    private var classicPage: some View {
+            // A ScrollView, NOT a List: every section here is a custom grid or
+            // card. Inside a List each grid lives in one row, and the
+            // inset-grouped cell mask rounds the row's corners — visibly
+            // clipping whatever chip/card sits at an edge — and long-press
+            // context menus preview the WHOLE row instead of one card.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    peopleSection
+                    newSituationSection
+                    scenariosSection
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+            }
     }
 
     /// The scenario behind "Watch" on a Find-people card: no situation to
@@ -341,14 +539,76 @@ struct WatchTab: View {
         if !savedScenarios.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 sectionHeader("Your scenarios")
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                          spacing: 12) {
-                    ForEach(savedScenarios) { s in
-                        scenarioCard(s)
-                    }
-                }
+                scenariosGrid
             }
         }
+    }
+
+    private var scenariosGrid: some View {
+        scenarioGrid(savedScenarios)
+    }
+
+    private func scenarioGrid(_ list: [Scenario]) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                  spacing: 12) {
+            ForEach(list) { s in
+                scenarioCard(s)
+            }
+        }
+    }
+
+    /// The categories the saved situations actually carry, most used first —
+    /// the tabs over the list. A category with nothing in it is never a tab.
+    private var savedCategories: [(name: String, icon: String?)] {
+        var count: [String: Int] = [:], icon: [String: String] = [:]
+        for s in savedScenarios {
+            guard let c = s.category?.trimmingCharacters(in: .whitespaces), !c.isEmpty else { continue }
+            count[c, default: 0] += 1
+            if icon[c] == nil { icon[c] = s.categoryIcon }
+        }
+        return count.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .map { ($0.key, icon[$0.key]) }
+    }
+
+    /// The saved-situations sheet: category tabs on top, the cards below.
+    private var savedScenariosPage: some View {
+        let shown = savedCategory.map { c in savedScenarios.filter { $0.category == c } } ?? savedScenarios
+        return ScrollView {
+            scenarioGrid(shown)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if savedCategories.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        categoryTab(title: explain("All"), icon: nil, selected: savedCategory == nil) {
+                            savedCategory = nil
+                        }
+                        ForEach(savedCategories, id: \.name) { c in
+                            categoryTab(title: explain(String.LocalizationValue(c.name)), icon: c.icon,
+                                        selected: savedCategory == c.name) {
+                                savedCategory = c.name
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
+                .background(Color(.systemGroupedBackground))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: savedCategory)
+    }
+
+    @ViewBuilder
+    private func categoryTab(title: String, icon: String?, selected: Bool,
+                             action: @escaping () -> Void) -> some View {
+        let label = Group {
+            if let icon { Label(title, systemImage: icon) } else { Text(title) }
+        }
+        Button(action: action) { label }
+            .buttonStyle(SoftChipStyle(selected: selected))
     }
 
     /// Grouped-list-style section title, hand-rolled since the page left List.
@@ -372,7 +632,7 @@ struct WatchTab: View {
         return Button {
             // Settings sheet first, not straight to generation — check the
             // situation/voice, tweak or delete, then Watch from there.
-            composer = ComposerConfig(editing: s)
+            open(ComposerConfig(editing: s))
         } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
@@ -624,5 +884,26 @@ struct PersonBubble: View {
             }
         }
         .id(photos.version)
+    }
+}
+
+/// The floating "Your own situation" button wears the same glass as the tab
+/// bar and the header buttons around it — a solid blue pill with a shadow sat
+/// on the map like a sticker. Before iOS 26 it falls back to a material pill.
+private struct GlassFloatingButton: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .buttonStyle(.glass)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(.accentColor)
+        } else {
+            content
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .background(Capsule().fill(.regularMaterial))
+        }
     }
 }

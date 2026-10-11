@@ -8,7 +8,20 @@ import SwiftUI
 struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selection: Tab = .home
+    @State private var selection: Tab = {
+        #if DEBUG
+        // Captures open on a chosen tab: `-startTab watch`.
+        switch UserDefaults.standard.string(forKey: "startTab") {
+        case "watch": return .watch
+        case "practice": return .practice
+        case "progress": return .progress
+        case "speech": return .speech
+        default: return .home
+        }
+        #else
+        return .home
+        #endif
+    }()
     /// Retroactive age declaration for pre-consent-step installs — see
     /// `AgeCheckSheet`. Never shown to anyone who came through onboarding.
     @State private var showingAgeCheck = false

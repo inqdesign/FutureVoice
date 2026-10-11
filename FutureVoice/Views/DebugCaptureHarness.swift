@@ -1348,6 +1348,15 @@ enum DebugCapture {
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
             return AnyView(WatchTab())
+        case "watchtab-sky":
+            // The people map with a realistic cast: close people, people
+            // around, met strangers. `-skyLens strangers` opens on a lens.
+            once("watchtab-sky") {
+                seedSkyPeople(into: appState,
+                              withClose: !UserDefaults.standard.bool(forKey: "skyNoClose"))
+            }
+            UserDefaults.standard.set(true, forKey: PeopleSky.defaultsKey)
+            return AnyView(WatchTab())
         case "watchtab-empty":
             // First-run Watch: no saved scenarios, so the "Likely situations"
             // chips sit high enough to capture without scrolling.
@@ -1464,6 +1473,11 @@ enum DebugCapture {
             }
             .padding(20)
             .background(Color(.systemBackground)))
+        case "composer-box":
+            // The "Your own situation" box with the category chips over it.
+            return AnyView(ScenarioComposerSheet(person: nil, host: .watch, mode: .custom,
+                                                 ctaTitle: "Watch", ctaIcon: "play.fill") { _ in }
+                .environmentObject(appState))
         case "composer":
             once("composer") { seedNews(into: appState); composerPreview = true }
             return AnyView(ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { _ in }
@@ -1642,6 +1656,15 @@ enum DebugCapture {
             return AnyView(FreeTalkWidgetGallery(page: 0).fontDesign(nil))
         case "widget-freetalk-themes":
             return AnyView(FreeTalkWidgetGallery(page: 1).fontDesign(nil))
+        case "tabs-sky":
+            // The people map inside the real tab shell (with -startTab watch),
+            // to check what the tab bar and the floating button cover.
+            once("tabs-sky") {
+                seedSkyPeople(into: appState)
+                if UserDefaults.standard.bool(forKey: "openSaved") { seedScenarios(into: appState) }
+            }
+            UserDefaults.standard.set(true, forKey: PeopleSky.defaultsKey)
+            return AnyView(RootTabView())
         case "tabs":
             // The full tab shell — used to review the floating Free talk pill
             // sitting above the real tab bar.
@@ -2413,6 +2436,30 @@ enum DebugCapture {
                            blurb: "A startup demoed a household robot completing chores end to end.",
                            category: "ai / tech"),
         ], interests: effective)
+    }
+
+    static func seedSkyPeople(into appState: AppState, withClose: Bool = true) {
+        for c in appState.counterparts { appState.deleteCounterpart(id: c.id) }
+        let cast: [(String, String, String?, String?)] = [
+            ("Jisu", "Partner", "Partner", nil), ("Mom", "Mother", "Family", nil),
+            ("Minho", "Best friend", "Friend", nil), ("Harin", "Friend from school", "Friend", nil),
+            ("Kim", "Team lead", "Manager", nil), ("Sarah", "Colleague", "Coworker", nil),
+            ("Mr. Becker", "Landlord", "Other", nil), ("Tom", "Neighbor", "Neighbor", nil),
+            ("Mia", "Yoga teacher", "Teacher", nil),
+            ("Emma", "Met on nawana", nil, "seed-emma"), ("Lukas", "Met on nawana", nil, "seed-lukas"),
+        ]
+        let closeKinds: Set<String> = ["Partner", "Family", "Friend"]
+        for (name, rel, kind, remote) in cast where withClose || !closeKinds.contains(kind ?? "") {
+            var c = Counterpart(name: name, relationship: rel, background: "",
+                                conversationStyle: "", voicePresetId: VoicePreset.catalog[0].id)
+            c.relationshipKind = kind
+            c.remoteId = remote
+            if remote != nil {
+                c.personaKind = "user"
+                c.intro = name == "Emma" ? "I'm a nurse in London." : "Developer in Berlin."
+            }
+            appState.saveCounterpart(c)
+        }
     }
 
     static func seedScenarios(into appState: AppState) {

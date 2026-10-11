@@ -296,9 +296,14 @@ struct ScenarioComposerSheet: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") { situationFocused = false }
+                // The box (custom door) closes the keyboard with a tap on the
+                // empty space above it; a bar of its own floated a lone
+                // "Done" between the box and the keys.
+                if !usesBox {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") { situationFocused = false }
+                    }
                 }
             }
             // Attachments. The Files picker hands over a security-scoped
@@ -354,6 +359,47 @@ struct ScenarioComposerSheet: View {
     /// chips, the line itself, then one tool row. The mockup this follows
     /// puts everything about the situation in one place, so writing it and
     /// attaching to it are one gesture rather than two sections.
+    /// One row of chips over the situation box: the categories, or — once
+    /// one is picked — a back chip naming where you are, then the next step's
+    /// choices from the same chain the browse door uses.
+    private var categoryChipRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                if path.isEmpty {
+                    ForEach(Self.presets) { c in
+                        Button { pickCategory(c) } label: {
+                            Label(explain(String.LocalizationValue(c.title)), systemImage: c.icon)
+                        }
+                        .buttonStyle(SoftChipStyle())
+                    }
+                } else {
+                    Button {
+                        let back = Array(path.dropLast())
+                        if back.isEmpty {
+                            withAnimation(.easeOut(duration: 0.15)) { path = []; options = [] }
+                        } else {
+                            navigate(to: back)
+                        }
+                    } label: {
+                        Label(explain(String.LocalizationValue(path.last?.label ?? "")),
+                              systemImage: "chevron.left")
+                    }
+                    .buttonStyle(SoftChipStyle(selected: true))
+                    if loadingOptions {
+                        ProgressView().controlSize(.small).padding(.horizontal, 8)
+                    } else if canDrillDeeper {
+                        ForEach(options) { o in
+                            Button(o.title) { pickOption(o) }
+                                .buttonStyle(SoftChipStyle())
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+        }
+    }
+
     private var customBox: some View {
         VStack(spacing: 0) {
             VStack(spacing: 6) {
@@ -372,7 +418,7 @@ struct ScenarioComposerSheet: View {
             // worth writing. They go away the moment there IS something to
             // write, so they never compete with the learner's own line.
             if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && !situationFocused && !reelLines.isEmpty {
+                && !situationFocused && !reelLines.isEmpty && path.isEmpty {
                 SituationReel(lines: reelLines) { line in
                     programmaticSituation = true
                     situation = line
@@ -381,8 +427,33 @@ struct ScenarioComposerSheet: View {
                 .frame(maxHeight: .infinity)
                 .transition(.opacity)
             } else {
-                Spacer(minLength: 0)
+                // The empty middle closes the keyboard when tapped.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .frame(maxHeight: .infinity)
+                    .onTapGesture { situationFocused = false }
             }
+            // The common situations, as chips right above the box: a tap
+            // goes one step deeper in the same row (Cafe → Ordering → …),
+            // and the last step writes its sentence into the box, where it
+            // can still be changed. The same chain the browse door walks.
+            // Once the learner types, the row gives way to one mark saying
+            // this one is theirs.
+            Group {
+                if customMode && !situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Label(explain(key: "composer.customSituation", default: "Custom situation"),
+                          systemImage: "square.and.pencil")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                        .transition(.opacity)
+                } else {
+                    categoryChipRow
+                        .transition(.opacity)
+                }
+            }
+            .padding(.bottom, 10)
             VStack(alignment: .leading, spacing: 8) {
                 if !sources.isEmpty {
                     attachmentChips
@@ -440,6 +511,24 @@ struct ScenarioComposerSheet: View {
         .animation(.easeInOut(duration: 0.2), value: situationFocused)
         .animation(.easeInOut(duration: 0.25), value: reelLines.count)
         .scrollDismissesKeyboard(.interactively)
+        // Emptying the box by hand starts over: the chips go back to the
+        // categories, the picked one is dropped (it would otherwise file
+        // whatever is written next under it), and the examples return.
+        // Edits that leave text keep the pick — refining a chip's sentence
+        // is what the box is for.
+        .onChange(of: situation) { _, text in
+            if programmaticSituation { programmaticSituation = false; return }
+            let empty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            withAnimation(.easeInOut(duration: 0.25)) {
+                // A keystroke makes it the learner's own situation: the
+                // chips slide away for a "Custom situation" mark, and a
+                // chip's category is dropped — the CTA files what was
+                // actually written. Emptied, the chips come back.
+                customMode = !empty
+                if !path.isEmpty { path = []; options = [] }
+            }
+            summary = ""
+        }
     }
 
     /// What rolls past the box. With a person attached it is THEIR ideas —
@@ -1534,5 +1623,24 @@ private struct SkeletonChip: View {
                 }
             }
             .accessibilityHidden(true)
+    }
+}
+
+/// A quiet chip: the page's card colour and plain text, so a row of choices
+/// reads as an offer, not as something that must be picked. Only `selected`
+/// (where you are — a breadcrumb, the chosen tab) wears the accent.
+struct SoftChipStyle: ButtonStyle {
+    var selected = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .background(Capsule().fill(selected ? Color.accentColor.opacity(0.14)
+                                                : Color(.secondarySystemGroupedBackground)))
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            .contentShape(Capsule())
     }
 }

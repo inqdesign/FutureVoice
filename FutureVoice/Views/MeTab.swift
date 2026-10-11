@@ -71,6 +71,7 @@ struct MeTab: View {
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
     @State private var previewFeedback: FeedbackSheet.Context?
+    @AppStorage(PeopleSky.defaultsKey) private var peopleSkyOn = true
     #endif
     var body: some View {
         NavigationStack {
@@ -247,6 +248,13 @@ struct MeTab: View {
 
                 #if DEBUG
                 Section {
+                    // The Watch tab's people map is an experiment; off brings
+                    // back the page it replaced, untouched.
+                    Toggle(isOn: $peopleSkyOn) {
+                        row(icon: "person.3",
+                            title: explain(key: "dev.peopleSky.title", default: "Watch as a people map"),
+                            subtitle: explain(key: "dev.peopleSky.subtitle", default: "Off brings back the previous Watch page"))
+                    }
                     Button {
                         confirmingOnboardingReset = true
                     } label: {
