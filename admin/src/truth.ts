@@ -66,11 +66,15 @@ export const TIER_LIST = Object.entries(TIERS)
   .filter(([k]) => k !== "free")
   .map(([name, t]) => ({ name, ...t }));
 
+// Measured 2026-10-11 in ElevenLabs Analytics (credits ÷ characters, model
+// filter): turbo 0.30 on 09-20, 0.24 since the v4 launch (~09-29). The old
+// 0.5 / 1.0 were never true. multilingual_v2 and v3 are 2× turbo on the API
+// price table. Current ratios only — the window this reads is recent.
 const CREDITS_PER_CHAR: Record<string, number> = {
-  eleven_multilingual_v2: 1.0,
-  eleven_turbo_v2_5: 0.5,
-  eleven_flash_v2_5: 0.5,
-  eleven_v3: 1.0,
+  eleven_multilingual_v2: 0.48,
+  eleven_turbo_v2_5: 0.24,
+  eleven_flash_v2_5: 0.24,
+  eleven_v3: 0.48,
 };
 
 const HOLD_MS = 5 * 60_000;

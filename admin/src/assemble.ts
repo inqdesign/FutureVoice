@@ -47,11 +47,12 @@ const MONTHLY_PRICE: Record<string, number> = {
   plus_monthly: 24.99,
   plus_annual: 143.99 / 12,
 };
-// Credits per character come from the model, not the plan: multilingual_v2
-// bills 1.0 credit/char, turbo and flash 0.5. Since 2026-09-26 every
+// Credits per character come from the model, not the plan. Measured
+// 2026-10-11 (ElevenLabs Analytics): turbo/flash 0.24, multilingual_v2 2× that
+// (it was 0.30 / 0.60 before the v4 launch; 0.5 / 1.0 never held). Since 2026-09-26 every
 // clone-voice surface is turbo (`ElevenLabsClient.cloneModelId`), so the
 // fidelity rate applies to history only.
-const CREDITS_PER_CHAR = { fidelity: 1.0, conversation: 0.5 };
+const CREDITS_PER_CHAR = { fidelity: 0.48, conversation: 0.24 };
 
 // The same catalog per storefront (docs/launch-billing.md §1 — ASC values,
 // KRW set by hand). What lands in the bank differs by store: the US price
