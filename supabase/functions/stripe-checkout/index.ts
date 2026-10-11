@@ -72,11 +72,9 @@ Deno.serve(async (req) => {
       : errorResponse(409, "store_subscription_active", existing.source)
   }
 
-  // Web parity with Apple's 7-day intro offer — but only for a user with no
-  // subscription history at all. The one-row-per-user shape makes any past
-  // row (Apple trial included) the "already sampled" record, which is the
-  // same one-trial-ever rule Apple enforces per subscription group.
-  const offerTrial = !existing
+  // No trial on the web, as in the store since 2026-09-26: the free first
+  // 20 minutes (user_credits.balance) are the sample, and a 7-day trial here
+  // would be a free week the App Store no longer gives.
 
   const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient() })
 
@@ -95,7 +93,6 @@ Deno.serve(async (req) => {
       metadata: { project: "futurevoice", user_id: user.id, plan_id: plan.id },
       subscription_data: {
         metadata: { project: "futurevoice", user_id: user.id, plan_id: plan.id },
-        ...(offerTrial ? { trial_period_days: 7 } : {}),
       },
       ...(currency ? { currency } : {}),
       allow_promotion_codes: true,
