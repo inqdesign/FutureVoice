@@ -198,6 +198,996 @@
         }
       }
     },
+    "A call with a client" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "고객과 통화"
+          }
+        }
+      }
+    },
+    "a clerk" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "창구 직원"
+          }
+        }
+      }
+    },
+    "a client" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "고객"
+          }
+        }
+      }
+    },
+    "A company, a team, a person — anything" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회사, 팀, 사람… 뭐든 적어 보세요"
+          }
+        }
+      }
+    },
+    "a coworker" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동료"
+          }
+        }
+      }
+    },
+    "A project you're proud of" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자랑하고 싶은 프로젝트"
+          }
+        }
+      }
+    },
+    "a recruiter" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "채용 담당자"
+          }
+        }
+      }
+    },
+    "A short update, the way you'd give it in a meeting" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회의에서 하듯 짧게 진행 상황 말하기"
+          }
+        }
+      }
+    },
+    "a teacher" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선생님"
+          }
+        }
+      }
+    },
+    "A week made for you" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나를 위한 한 주"
+          }
+        }
+      }
+    },
+    "A week of exam practice" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험을 준비하는 한 주"
+          }
+        }
+      }
+    },
+    "A week of handling life where you live" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사는 곳에서 혼자 해결하는 한 주"
+          }
+        }
+      }
+    },
+    "A week of talking about what you love" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋아하는 이야기로 채우는 한 주"
+          }
+        }
+      }
+    },
+    "A week of talking about what you study" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 전공을 말로 풀어 보는 한 주"
+          }
+        }
+      }
+    },
+    "A week of the talk you need at work" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일에서 쓰는 말을 익히는 한 주"
+          }
+        }
+      }
+    },
+    "A week to get interview-ready" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접을 준비하는 한 주"
+          }
+        }
+      }
+    },
+    "A week to get ready for your trip" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행을 준비하는 한 주"
+          }
+        }
+      }
+    },
+    "A week to get you talking" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말문을 트는 한 주"
+          }
+        }
+      }
+    },
+    "About %lld minutes of talk a day, and what it corrected comes back the same evening." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루 %lld분쯤 말하고, 고친 문장은 그날 저녁에 다시 봐요."
+          }
+        }
+      }
+    },
+    "Add the role you're applying for — I'll ask its questions" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지원하는 직무를 적으면 그 직무 면접 질문을 만들어 줘요"
+          }
+        }
+      }
+    },
+    "Add your job and role for topics from your work" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하는 일과 역할을 적으면 내 일에 맞춘 주제를 만들어 줘요"
+          }
+        }
+      }
+    },
+    "Add your school and subject for topics from your field" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학교와 전공을 적으면 내 분야 주제를 만들어 줘요"
+          }
+        }
+      }
+    },
+    "Airport, hotel, restaurants" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공항, 호텔, 식당"
+          }
+        }
+      }
+    },
+    "an airline agent" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "항공사 직원"
+          }
+        }
+      }
+    },
+    "an interviewer" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접관"
+          }
+        }
+      }
+    },
+    "At talk times your fluent self calls you. You can change all of it later in My routine." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 시간이 되면 미래의 내가 전화를 걸어요. 나중에 '나의 루틴'에서 전부 바꿀 수 있어요."
+          }
+        }
+      }
+    },
+    "At the check-in desk" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체크인 카운터에서"
+          }
+        }
+      }
+    },
+    "At the town hall" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "관공서에서"
+          }
+        }
+      }
+    },
+    "At your routine's talk times: %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴에 정한 시간에 걸게: %@"
+          }
+        }
+      }
+    },
+    "Calling your landlord" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집주인에게 전화하기"
+          }
+        }
+      }
+    },
+    "Choose exam" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험 고르기"
+          }
+        }
+      }
+    },
+    "Couldn't write topics — try again" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주제를 못 만들었어요 · 다시 시도"
+          }
+        }
+      }
+    },
+    "Decide later" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나중에 정할게요"
+          }
+        }
+      }
+    },
+    "Everyday chip · a café, asking the way, a neighbor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일상 칩 · 카페, 길 묻기, 이웃"
+          }
+        }
+      }
+    },
+    "Exam" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험"
+          }
+        }
+      }
+    },
+    "Exam chip · topics the exam keeps asking" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험 칩 · 시험에 자주 나오는 주제"
+          }
+        }
+      }
+    },
+    "For a job hunt" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "취업·이직 준비"
+          }
+        }
+      }
+    },
+    "For an exam" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험 준비"
+          }
+        }
+      }
+    },
+    "For fun" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "취미로"
+          }
+        }
+      }
+    },
+    "For my studies" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대학·공부"
+          }
+        }
+      }
+    },
+    "For travel" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행 가요"
+          }
+        }
+      }
+    },
+    "Giving your view in a meeting" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회의에서 의견 말하기"
+          }
+        }
+      }
+    },
+    "I live abroad" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해외에서 살아요"
+          }
+        }
+      }
+    },
+    "I need it at work" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일에서 써야 해요"
+          }
+        }
+      }
+    },
+    "I want to start speaking" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말문을 트고 싶어요"
+          }
+        }
+      }
+    },
+    "IELTS, OPIc, TOEIC Speaking…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IELTS, OPIc, TOEIC Speaking…"
+          }
+        }
+      }
+    },
+    "Interview" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접"
+          }
+        }
+      }
+    },
+    "Interview chip · about yourself, why this job" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접 칩 · 자기소개, 지원 동기"
+          }
+        }
+      }
+    },
+    "Interviews, the field I'm applying to" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접, 지원하는 업계 이야기"
+          }
+        }
+      }
+    },
+    "Landlord, town hall, doctor, my kid's school" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집주인, 관공서, 병원, 아이 학교"
+          }
+        }
+      }
+    },
+    "Life" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "생활"
+          }
+        }
+      }
+    },
+    "Life chip · landlord, town hall, doctor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "생활 칩 · 집주인, 관공서, 병원"
+          }
+        }
+      }
+    },
+    "Meetings, presentations, client calls" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회의, 발표, 고객 통화"
+          }
+        }
+      }
+    },
+    "News chip · stories on what you're into" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뉴스 칩 · 내 관심사 기사"
+          }
+        }
+      }
+    },
+    "Once a week, everything the week taught" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일에 한 번, 그 주에 배운 것 전부"
+          }
+        }
+      }
+    },
+    "Other topics" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 주제"
+          }
+        }
+      }
+    },
+    "Pick as many as you like. The first one is where Talk opens." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여러 개 골라도 돼요. 처음 고른 게 대화 탭의 첫 칸이 돼요."
+          }
+        }
+      }
+    },
+    "Pick up to three. The first one is where Talk opens." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "세 개까지 고를 수 있어요. 처음 고른 게 대화 탭의 첫 칸이 돼요."
+          }
+        }
+      }
+    },
+    "Polish your one-minute self-introduction" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접 첫 질문, 1분 자기소개 다듬기"
+          }
+        }
+      }
+    },
+    "Remove %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 빼기"
+          }
+        }
+      }
+    },
+    "Role you're applying for — e.g. backend developer" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지원하는 직무 — 예: 백엔드 개발자"
+          }
+        }
+      }
+    },
+    "School or university" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학교 또는 대학"
+          }
+        }
+      }
+    },
+    "Seminars, presentations, my subject" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 토론, 발표, 내 전공 이야기"
+          }
+        }
+      }
+    },
+    "Small talk with a coworker" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동료와 가벼운 이야기"
+          }
+        }
+      }
+    },
+    "Start with this routine" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 루틴으로 시작"
+          }
+        }
+      }
+    },
+    "Strengths and weaknesses" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "강점과 약점"
+          }
+        }
+      }
+    },
+    "Studies" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전공"
+          }
+        }
+      }
+    },
+    "Studies chip · topics from your subject" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전공 칩 · 내 전공에서 나온 주제"
+          }
+        }
+      }
+    },
+    "Subject — e.g. mechanical engineering" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전공 — 예: 기계공학"
+          }
+        }
+      }
+    },
+    "Talk about what I like" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋아하는 걸 마음껏 이야기"
+          }
+        }
+      }
+    },
+    "Talk settings" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 설정"
+          }
+        }
+      }
+    },
+    "Talking about salary" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연봉 이야기"
+          }
+        }
+      }
+    },
+    "Tell me about yourself" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자기소개 해 주세요"
+          }
+        }
+      }
+    },
+    "That day's talk, said the way it should have gone" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 대화를 고친 대로 다시"
+          }
+        }
+      }
+    },
+    "The chips under Talk follow this, in the order you picked." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 탭의 칩이 이 순서대로 놓여요."
+          }
+        }
+      }
+    },
+    "The chips under Talk follow this, in the order you picked. What you write under one shapes its topics." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 탭의 칩이 고른 순서대로 놓여요. 아래에 적은 내용으로 그 칩의 주제를 만들어요."
+          }
+        }
+      }
+    },
+    "The Exam chip shows topics this exam keeps asking." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험 칩에 이 시험의 단골 주제가 나와요."
+          }
+        }
+      }
+    },
+    "The News chip brings this week's stories for each one." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뉴스 칩에서 관심사마다 이번 주 기사를 가져와요."
+          }
+        }
+      }
+    },
+    "The sentences your talks corrected" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화에서 고친 문장"
+          }
+        }
+      }
+    },
+    "The week at a glance" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 주 한눈에 보기"
+          }
+        }
+      }
+    },
+    "Topics that exam asks again and again, to talk through with your fluent self." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그 시험에 자꾸 나오는 주제로 미래의 나와 이야기해요."
+          }
+        }
+      }
+    },
+    "Travel chip · airport, hotel, restaurants" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행 칩 · 공항, 호텔, 식당"
+          }
+        }
+      }
+    },
+    "Two minutes on one topic, without stopping" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 주제로 2분, 멈추지 않고"
+          }
+        }
+      }
+    },
+    "Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "세 개까지 골라요. 대화 탭의 칩이 고른 순서대로 놓이고, 아래에 적은 내용으로 그 칩의 주제를 만들어요."
+          }
+        }
+      }
+    },
+    "What do you want it for?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어디에 쓰고 싶어요?"
+          }
+        }
+      }
+    },
+    "What you do in it — e.g. I run the mobile team" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "맡은 역할 — 예: 모바일 팀을 이끌어요"
+          }
+        }
+      }
+    },
+    "When something goes wrong" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제가 생겼을 때"
+          }
+        }
+      }
+    },
+    "Which exam?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떤 시험?"
+          }
+        }
+      }
+    },
+    "Why are you learning?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "왜 배워요?"
+          }
+        }
+      }
+    },
+    "Why do you want this job?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지원 동기"
+          }
+        }
+      }
+    },
+    "Words don't come out yet" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 말이 잘 안 나와요"
+          }
+        }
+      }
+    },
+    "Work" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "업무"
+          }
+        }
+      }
+    },
+    "Work chip · meetings, presentations, client calls" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "업무 칩 · 회의, 발표, 고객 통화"
+          }
+        }
+      }
+    },
+    "Writing topics for your field…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 분야 주제를 만드는 중…"
+          }
+        }
+      }
+    },
+    "Your child's teacher" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아이 선생님과"
+          }
+        }
+      }
+    },
+    "Your job — e.g. product manager" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하는 일 — 예: 프로덕트 매니저"
+          }
+        }
+      }
+    },
+    "your landlord" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집주인"
+          }
+        }
+      }
+    },
+    "your manager" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팀장님"
+          }
+        }
+      }
+    },
+    "Your project update" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진행 상황 보고"
+          }
+        }
+      }
+    },
     "—" : {
       "shouldTranslate" : false
     },
@@ -19385,9 +20375,7 @@
         }
       }
     },
-    "Busy day? What did you do this morning?" : {
-
-    },
+    "Busy day? What did you do this morning?" : {},
     "Busy today?" : {
       "localizations" : {
         "de" : {
@@ -44977,9 +45965,7 @@
         }
       }
     },
-    "I go to the office early yesterday, so I left at four." : {
-
-    },
+    "I go to the office early yesterday, so I left at four." : {},
     "I know" : {
       "localizations" : {
         "de" : {

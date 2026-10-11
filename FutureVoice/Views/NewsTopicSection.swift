@@ -11,35 +11,44 @@ import SwiftUI
 /// padding, and nothing can clip them at a section boundary.
 struct DiscoverSection: View {
     let onPickNews: (SuggestedTopic) -> Void
+    let onPickExam: (ExamTopic, ExamKind) -> Void
+    /// A topic made from the learner's own field (`PurposeTopicEngine`).
+    let onPickTopic: (SuggestedTopic) -> Void
     let onPickScenario: (Scenario) -> Void
     let onAllScenarios: () -> Void
     let onBuildScenario: () -> Void
 
     @EnvironmentObject private var appState: AppState
 
-    @State private var tab: Tab = .news
+    @State private var tab: DiscoverChip = .news
+    /// The row opens on the first chip once, then stays where the learner put it.
+    @State private var tabResolved = false
+    /// Exam chip: which slice of the topic list is showing, and the filter.
+    @State private var examShift = 0
+    @State private var exam: ExamKind = .ielts
+    /// Field topics per chip, once loaded; the chips being written now.
+    @State private var fieldTopics: [DiscoverChip: [SuggestedTopic]] = [:]
+    @State private var writingTopics: Set<DiscoverChip> = []
+    @State private var failedTopics: Set<DiscoverChip> = []
+    /// Where in a field's pool the shown eight start.
+    @State private var fieldShift: [DiscoverChip: Int] = [:]
     @State private var newsTopics: [SuggestedTopic] = []
     @State private var loadingNews = false
     /// The last fetch failed. Painted as a quiet caption, never the raw
     /// error: with a list on screen it means "these may be yesterday's",
     /// with none it means "tap to retry".
     @State private var newsFetchFailed = false
-    @State private var showingInterests = false
+    /// The one settings page for the whole row (`DiscoverSettingsSheet`).
+    @State private var showingSettings = false
+    /// Bumped when settings close, so the row re-reads its chips.
+    @State private var settingsVersion = 0
 
-    enum Tab: String, CaseIterable {
-        case news = "News"
-        case everyday = "Everyday"
-        case scenarios = "Scenarios"
-
-        /// Chrome, so it follows the TARGET language. The raw value stays an
-        /// identifier — localizing it would key state off translated text.
-        var label: String {
-            switch self {
-            case .news:      return chrome("News")
-            case .everyday:  return chrome("Everyday")
-            case .scenarios: return chrome("Scenarios")
-            }
-        }
+    /// The row is the learner's purposes (`LearningPurposeStore.chips`):
+    /// each purpose's own chip first, in the order picked, then news and
+    /// their own situations. Never answered = the row as it always was.
+    private var chips: [DiscoverChip] {
+        _ = settingsVersion
+        return LearningPurposeStore.chips(level: appState.proficiency)
     }
 
     private var interests: [String] { appState.persona?.interests ?? [] }
@@ -56,17 +65,31 @@ struct DiscoverSection: View {
             header
             switch tab {
             case .news:      newsContent
-            case .everyday:  startersContent
             case .scenarios: scenariosContent
+            case .exam:      examContent
+            case .study, .work, .interview: fieldContent(tab)
+            default:         startersContent(tab.starters ?? StarterSituation.all)
             }
         }
-        .sheet(isPresented: $showingInterests, onDismiss: reloadNewsForInterests) {
-            InterestsEditorSheet()
+        .sheet(isPresented: $showingSettings, onDismiss: settingsClosed) {
+            DiscoverSettingsSheet()
                 .environmentObject(appState)
         }
         .onAppear {
+            exam = LearningPurposeStore.exam(for: appState.targetLanguage)
+            if !tabResolved || !chips.contains(tab) {
+                tab = chips.first ?? .news
+                tabResolved = true
+            }
             #if DEBUG
             if DebugCapture.previewScenariosTab { tab = .everyday }
+            if let c = UserDefaults.standard.string(forKey: "discoverChip").flatMap(DiscoverChip.init(rawValue:)) { tab = c }
+            if UserDefaults.standard.bool(forKey: "discoverSettings") { showingSettings = true }
+            if let json = UserDefaults.standard.string(forKey: "seedPurposeDetails"),
+               let d = try? JSONDecoder().decode(PurposeDetails.self, from: Data(json.utf8)) {
+                LearningPurposeStore.details = d
+                settingsVersion += 1
+            }
             #endif
         }
         .task {
@@ -96,16 +119,47 @@ struct DiscoverSection: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            ForEach(Tab.allCases, id: \.self) { t in
-                chip(t)
-            }
-            Spacer()
-            if tab == .news {
-                Button { showingInterests = true } label: {
-                    Image(systemName: "slider.horizontal.3")
+            // Four chips and two buttons don't fit a phone in every
+            // language; past three the chips scroll sideways instead.
+            if chips.count > 3 {
+                // Clipped BEFORE the buttons, and faded at that edge so the
+                // cut reads as "slide for more" rather than a chip broken in
+                // half. Unclipped, the chips ran under the buttons.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) { ForEach(chips) { chip($0) } }
+                        .padding(.trailing, 16)
                 }
-                .accessibilityLabel("Edit interests")
-                if !newsTopics.isEmpty {
+                .frame(maxWidth: .infinity)
+                .mask(
+                    HStack(spacing: 0) {
+                        Rectangle()
+                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: 20)
+                    }
+                )
+            } else {
+                ForEach(chips) { chip($0) }
+                Spacer()
+            }
+            // The row's own buttons as one group, spaced for a thumb — at the
+            // row's 8 pt they read as one control and a tap hit the wrong one.
+            HStack(spacing: 20) {
+                if tab == .exam {
+                    Button { examShift += Self.examShown } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .accessibilityLabel("Other topics")
+                } else if fieldContext(tab) != nil {
+                    Button { Task { await loadFieldTopics(tab, fresh: true) } } label: {
+                        if writingTopics.contains(tab) {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(writingTopics.contains(tab))
+                    .accessibilityLabel("Other topics")
+                } else if tab == .news, !newsTopics.isEmpty {
                     Button {
                         Task { await refreshNews() }
                     } label: {
@@ -117,18 +171,24 @@ struct DiscoverSection: View {
                     }
                     .disabled(loadingNews)
                     .accessibilityLabel("Refresh stories")
+                } else if tab == .scenarios {
+                    Button(action: onBuildScenario) {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Build a scenario")
                 }
-            } else if tab == .scenarios {
-                Button(action: onBuildScenario) {
-                    Image(systemName: "plus")
+                // One settings button whatever chip is showing — the chips,
+                // the exam and the interests are one page.
+                Button { showingSettings = true } label: {
+                    Image(systemName: "slider.horizontal.3")
                 }
-                .accessibilityLabel("Build a scenario")
+                .accessibilityLabel("Talk settings")
             }
         }
         .padding(.horizontal, 20)
     }
 
-    private func chip(_ t: Tab) -> some View {
+    private func chip(_ t: DiscoverChip) -> some View {
         Button { withAnimation(.easeOut(duration: 0.15)) { tab = t } } label: {
             Text(t.label)
                 .font(.subheadline.weight(.medium))
@@ -209,7 +269,7 @@ struct DiscoverSection: View {
     @ViewBuilder
     private var newsContent: some View {
         if interests.isEmpty {
-            Button { showingInterests = true } label: {
+            Button { showingSettings = true } label: {
                 Label("Add interests", systemImage: "plus.circle")
                     .font(.subheadline)
             }
@@ -253,6 +313,138 @@ struct DiscoverSection: View {
         }
     }
 
+    // MARK: - Exam
+
+    private static let examShown = 5
+
+    /// Common questions of the picked exam, five at a time; refresh shows the
+    /// next five. Same card as a news story — tapping talks it through.
+    private var examContent: some View {
+        let all = ExamTopics.topics(for: exam, language: appState.targetLanguage)
+        let start = all.isEmpty ? 0 : (examShift % all.count)
+        let shown = (0..<min(Self.examShown, all.count)).map { all[(start + $0) % all.count] }
+        return list {
+            ForEach(shown) { topic in
+                Button { onPickExam(topic, exam) } label: {
+                    listCard(title: topic.title, caption: "\(exam.name) · \(topic.part)") {
+                        Image(systemName: "graduationcap.fill")
+                            .font(.subheadline)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Field topics (studies, work, interview)
+
+    private var details: PurposeDetails {
+        _ = settingsVersion
+        return LearningPurposeStore.details
+    }
+
+    private func fieldContext(_ chip: DiscoverChip) -> String? { PurposeTopicEngine.field(for: chip, details: details) }
+
+    /// Topics from what the learner wrote about their field, then — for work
+    /// and interviews — the ready-made situations under them. Nothing written
+    /// yet: one row that says what writing it buys, opening the settings.
+    @ViewBuilder
+    private func fieldContent(_ chip: DiscoverChip) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if fieldContext(chip) == nil {
+                list {
+                    Button { showingSettings = true } label: {
+                        listCard(title: Self.askLine(chip), caption: nil) {
+                            Image(systemName: "square.and.pencil").font(.subheadline)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else if let pool = fieldTopics[chip], !pool.isEmpty {
+                list {
+                    ForEach(shownField(chip, pool)) { t in
+                        Button {
+                            onPickTopic(SuggestedTopic(
+                                title: t.title,
+                                blurb: PurposeTopicEngine.launchBlurb(t, chip: chip, details: details)))
+                        } label: {
+                            listCard(title: t.title, caption: nil) {
+                                Image(systemName: Self.fieldIcon(chip)).font(.subheadline)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } else if failedTopics.contains(chip) {
+                Button { Task { await loadFieldTopics(chip, fresh: true) } } label: {
+                    Label("Couldn't write topics — try again", systemImage: "arrow.clockwise")
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, 20)
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Writing topics for your field…").foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 20)
+            }
+            if let starters = chip.starters { startersContent(starters) }
+        }
+        .task(id: "\(chip.rawValue)|\(fieldContext(chip) ?? "")|\(appState.targetLanguage)") {
+            await loadFieldTopics(chip, fresh: false)
+        }
+    }
+
+    /// Eight at a time from the shared pool, starting where refresh left off.
+    private func shownField(_ chip: DiscoverChip, _ pool: [SuggestedTopic]) -> [SuggestedTopic] {
+        let start = (fieldShift[chip] ?? 0) % pool.count
+        return (0..<min(PurposeTopicEngine.shown, pool.count)).map { pool[(start + $0) % pool.count] }
+    }
+
+    /// `fresh`: the refresh button. Walk on through the pool while it has
+    /// unseen topics; at its end, ask the server to grow it (capped there).
+    private func loadFieldTopics(_ chip: DiscoverChip, fresh: Bool) async {
+        guard fieldContext(chip) != nil, !writingTopics.contains(chip) else { return }
+        let lang = appState.targetLanguage, level = appState.proficiency
+        if !fresh, let cached = PurposeTopicEngine.cached(for: chip, details: details, language: lang, level: level) {
+            fieldTopics[chip] = cached
+            return
+        }
+        if fresh, let pool = fieldTopics[chip] {
+            let next = (fieldShift[chip] ?? 0) + PurposeTopicEngine.shown
+            if next < pool.count { fieldShift[chip] = next; return }
+        }
+        writingTopics.insert(chip)
+        failedTopics.remove(chip)
+        defer { writingTopics.remove(chip) }
+        let before = fieldTopics[chip]?.count ?? 0
+        if let topics = try? await PurposeTopicEngine.fetch(for: chip, details: details, language: lang,
+                                                            level: level, refresh: fresh),
+           !topics.isEmpty {
+            fieldTopics[chip] = topics
+            // Grown: show the new ones. Not grown (the pool is full): start over.
+            fieldShift[chip] = fresh ? (topics.count > before ? before : 0) : 0
+        } else if fieldTopics[chip] == nil {
+            failedTopics.insert(chip)
+        }
+    }
+
+    private static func askLine(_ chip: DiscoverChip) -> String {
+        switch chip {
+        case .study:     return explain("Add your school and subject for topics from your field")
+        case .interview: return explain("Add the role you're applying for — I'll ask its questions")
+        default:         return explain("Add your job and role for topics from your work")
+        }
+    }
+
+    private static func fieldIcon(_ chip: DiscoverChip) -> String {
+        switch chip {
+        case .study:     return "book.fill"
+        case .interview: return "person.crop.square"
+        default:         return "briefcase.fill"
+        }
+    }
+
     // MARK: - Scenarios
 
     @ViewBuilder
@@ -272,10 +464,10 @@ struct DiscoverSection: View {
     /// chip of their own, so they sit right under the chips instead of below
     /// the learner's own list. A tap starts the call; one already talked
     /// through carries a check.
-    private var startersContent: some View {
+    private func startersContent(_ starters: [StarterSituation]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             list {
-                ForEach(StarterSituation.all) { starter in
+                ForEach(starters) { starter in
                     let existing = appState.scenarios.first { $0.starterId == starter.id }
                     Button {
                         onPickScenario(starter.scenario(in: appState.scenarios,
@@ -440,6 +632,17 @@ struct DiscoverSection: View {
         return Array((unseen + seenOffscreen + onscreen).prefix(NewsTopicEngine.maxShown))
     }
 
+    /// Settings closed: the chips may have changed (stay on the chip if it
+    /// is still there, else the new first one), the exam, the interests.
+    private func settingsClosed() {
+        settingsVersion += 1
+        if !chips.contains(tab) { tab = chips.first ?? .news }
+        let newExam = LearningPurposeStore.exam(for: appState.targetLanguage)
+        if newExam != exam { exam = newExam; examShift = 0 }
+        fieldTopics = fieldTopics.filter { fieldContext($0.key) != nil }
+        reloadNewsForInterests()
+    }
+
     /// After editing interests, refresh the news list against the new set.
     private func reloadNewsForInterests() {
         guard !interests.isEmpty else { newsTopics = []; return }
@@ -451,3 +654,5 @@ struct DiscoverSection: View {
         }
     }
 }
+
+

@@ -84,6 +84,8 @@ struct ConversationHome: View {
                     }
                     DiscoverSection(
                         onPickNews: { runNews($0) },
+                        onPickExam: { runExam($0, $1) },
+                        onPickTopic: { runFieldTopic($0) },
                         onPickScenario: { runScenario($0) },
                         onAllScenarios: { showingAllScenarios = true },
                         onBuildScenario: { showingBuilder = true })
@@ -450,6 +452,22 @@ struct ConversationHome: View {
                 origin: .news,
                 newsFacts: t.facts ?? []
             )
+        }
+    }
+
+    /// A common exam question, talked through with the fluent self. An
+    /// ordinary topic call: the blurb tells it which exam and which part.
+    private func runExam(_ t: ExamTopic, _ exam: ExamKind) {
+        BillingGate.start(orShow: $showingPaywall) {
+            callLaunch = CallLaunch(topic: t.title, blurb: t.callBlurb(exam: exam))
+        }
+    }
+
+    /// A topic from the learner's own field (their subject, job, the role
+    /// they're applying for). An ordinary topic call.
+    private func runFieldTopic(_ t: SuggestedTopic) {
+        BillingGate.start(orShow: $showingPaywall) {
+            callLaunch = CallLaunch(topic: t.title, blurb: t.blurb)
         }
     }
 
