@@ -385,6 +385,11 @@ if xcodebuild -exportArchive \
      | grep -E '^\*\* |Upload succeeded|error: ' ; then
   echo "✓ $VERSION ($BUILD) uploaded — it appears in TestFlight once Apple finishes processing."
   publish_release_row
+  # Marketing autopilot (marketing/AUTOMATION.md §1): starts in the background and
+  # returns at once; nothing it does can fail the upload. MARKETING_AUTOPILOT=0 skips it.
+  if [[ "${MARKETING_AUTOPILOT:-1}" != "0" ]]; then
+    "$ROOT/scripts/marketing/kickoff.sh" upload "$VERSION" "$BUILD" || true
+  fi
   echo "  Commit the bumped build number:  git add $APP_PLIST $WIDGET_PLIST"
 else
   # Apple usually names the cause exactly; printing a stock guess next to its

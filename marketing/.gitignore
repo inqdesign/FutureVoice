@@ -1,0 +1,7 @@
+# regenerable: scripts/marketing/capture.sh / record.mjs
+captures/
+content/*/renders/
+content/*/renders-*/
+
+# headless kickoff runs (scripts/marketing/kickoff.sh) and scheduler/metrics output
+logs/

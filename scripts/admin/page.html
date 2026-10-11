@@ -501,6 +501,74 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   display:none; box-shadow:0 4px 14px rgba(0,0,0,.18)}
 #tooltip b{font-weight:600}
 
+/* --- 마케팅 (marketing/AUTOMATION.md §7) -------------------------------- */
+.mkpipe{display:flex; flex-wrap:wrap; gap:4px; align-items:center}
+.mkpipe button{appearance:none; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
+  background:var(--surface); color:var(--ink-2); border:1px solid var(--ring); border-radius:7px;
+  padding:5px 10px; display:inline-flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums}
+.mkpipe button:hover{background:var(--chip)}
+.mkpipe button.zero{color:var(--muted); opacity:.6}
+.mkpipe button[aria-pressed="true"]{background:var(--ink); color:var(--page); border-color:var(--ink); opacity:1}
+.mkpipe button b{font-weight:700}
+.mkpipe .arr{color:var(--baseline); font-size:12px}
+.mkpipe .gap{width:10px}
+.mklist{display:flex; flex-direction:column; gap:14px}
+.mkcard{display:flex; flex-direction:column; gap:10px; min-width:0}
+.mkcard > *{min-width:0}
+.mkhead{display:flex; justify-content:space-between; align-items:flex-start; gap:8px 14px; flex-wrap:wrap}
+.mktitle{font-size:16px; font-weight:700; letter-spacing:-.01em; line-height:1.35}
+.mktitle small{display:block; font-size:12.5px; font-weight:400; color:var(--muted); letter-spacing:0}
+.mkchips{display:flex; gap:5px; flex-wrap:wrap; align-items:center}
+.mkmsg{font-size:13px; color:var(--ink-2); margin:-4px 0 0}
+.mkstate{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:10px 12px;
+  background:var(--page); border:1px solid var(--grid); border-radius:8px; font-size:13.5px}
+.mkstate .what{flex:1; min-width:200px}
+.mkstate .what .muted{font-size:12px}
+.mkcd{font-weight:700; font-variant-numeric:tabular-nums}
+.mkbtns{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.mkbtn{appearance:none; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;
+  background:var(--surface); color:var(--ink); border:1px solid var(--ring); border-radius:7px; padding:6px 11px}
+.mkbtn:hover{background:var(--chip)}
+.mkbtn:disabled{opacity:.5; cursor:default}
+.mkbtn.primary{background:var(--ink); color:var(--page); border-color:var(--ink)}
+.mkbtn.danger{color:var(--crit); border-color:color-mix(in srgb, var(--crit) 45%, transparent)}
+.mkbtn.danger:hover{background:#fbe3e3}
+.mkbtns select{font:inherit; font-size:12.5px; padding:5px 6px; border:1px solid var(--ring); border-radius:7px;
+  background:var(--surface); color:var(--ink)}
+.mkveto{display:flex; gap:6px; flex-wrap:wrap; width:100%}
+.mkveto input{flex:1; min-width:180px; font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--ring);
+  border-radius:7px; background:var(--surface); color:var(--ink)}
+.mkveto input:focus{outline:2px solid var(--s1); outline-offset:1px; border-color:transparent}
+.mknote{font-size:12.5px; width:100%}
+.mkslides{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scroll-snap-type:x proximity}
+.mkslide{flex:none; width:132px; aspect-ratio:4/5; border-radius:8px; overflow:hidden; position:relative;
+  background:var(--chip); border:1px solid var(--ring); scroll-snap-align:start; display:block}
+.mkslide video, .mkslide img{width:100%; height:100%; object-fit:cover; display:block}
+.mkslide .n{position:absolute; left:6px; top:6px; font-size:10.5px; font-weight:700; color:#fff;
+  background:rgba(11,11,11,.55); border-radius:4px; padding:0 5px; line-height:16px}
+.mkslide .none{position:absolute; inset:0; display:grid; place-items:center; font-size:11px; color:var(--muted)}
+.mklinks{display:flex; gap:6px 14px; flex-wrap:wrap; font-size:12.5px; align-items:center}
+.mklinks a{color:var(--s1); text-decoration:none; font-weight:600}
+.mklinks a:hover{text-decoration:underline}
+.mkmets{display:flex; flex-direction:column; gap:3px; font-size:12.5px; color:var(--ink-2)}
+.mkmets b{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+.mkmets .ch{display:inline-block; min-width:72px; font-weight:600; color:var(--ink)}
+.mkcharts{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px 14px}
+.mkcharts .panel{margin-top:0; min-width:0}
+.mkcard details{font-size:13px}
+.mkcard details summary{cursor:pointer; color:var(--ink-2); font-weight:600; font-size:12.5px}
+.mkcaps{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px 16px; margin-top:8px}
+.mkcaps h4{margin:0 0 4px; font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.04em}
+.mkcaps div.t{white-space:pre-wrap; font-size:12.5px; color:var(--ink); line-height:1.5}
+.mkev{display:grid; grid-template-columns:auto auto 1fr; gap:3px 10px; margin-top:8px; font-size:12px}
+.mkev .t{color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+.mkev .k{color:var(--ink-2); font-weight:600; white-space:nowrap}
+.mkev .m{color:var(--ink); overflow-wrap:anywhere}
+.mkerr{font-size:12.5px; color:var(--crit); overflow-wrap:anywhere}
+.mkempty{text-align:center; padding:34px 16px; color:var(--ink-2); font-size:14px}
+.mkempty .muted{display:block; font-size:12.5px; margin-top:4px}
+.mkline{fill:none; stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round}
+
 /* --- phone -------------------------------------------------------------- */
 @media (max-width: 700px){
   .wrap{padding:22px 14px 60px}
@@ -579,6 +647,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <button role="tab" data-go="funnel" aria-selected="false">퍼널</button>
   <button role="tab" data-go="people" aria-selected="false">사람</button>
   <button role="tab" data-go="money"  aria-selected="false">돈</button>
+  <button role="tab" data-go="marketing" aria-selected="false">마케팅</button>
 </nav>
 
 <!-- ====================================================== 라이브 -->
@@ -961,6 +1030,41 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub">상한 없는 요금제에서 공정사용 선을 넘은 계정이에요. 넘었다고 통화가 막히지는 않아요 —
   훨씬 위(차단선)까지 가야 멈춰요. 그래서 이 목록을 사람이 보는 게 유일한 제재 경로예요.</p>
   <div class="card scroll"><table id="fairUseTable"></table></div>
+</section>
+
+<!-- ====================================================== 마케팅 -->
+<section data-tab="marketing" hidden>
+  <h2>마케팅</h2>
+  <p class="sub">빌드를 올리면 팀이 알아서 캐러셀을 만들고, 검토를 통과한 건 출시 뒤 정해진 시간(기본 12시간)을
+  기다렸다가 Instagram·Threads·커뮤니티에 저절로 올라가요. 그 사이에 <b>게시 막기</b>로 멈추거나
+  <b>지금 올리기</b>로 바로 내보낼 수 있어요. 이 탭은 열 때마다 새로 읽어요.</p>
+  <p class="sub warn" id="mkNote" hidden></p>
+  <div class="tiles" id="mkTiles"></div>
+</section>
+
+<section data-tab="marketing" hidden>
+  <h2>단계별</h2>
+  <p class="sub">왼쪽에서 오른쪽으로 흘러가요. 단계를 누르면 그 단계의 작업만 보여요.</p>
+  <div class="mkpipe" id="mkPipe" role="group" aria-label="단계"></div>
+</section>
+
+<section data-tab="marketing" hidden>
+  <h2>작업</h2>
+  <p class="sub">최신순이에요. 영상 슬라이드는 소리 없이 반복 재생돼요. 누르면 원본이 새 탭에 열려요.</p>
+  <div class="mklist" id="mkPieces"></div>
+</section>
+
+<section data-tab="marketing" hidden id="mkTotalsSec">
+  <h2>올라간 것들의 반응, 30일</h2>
+  <p class="sub">Instagram·Threads 인사이트를 매일 9시에 읽어요. 막대 하나가 그날 늘어난 만큼이고,
+  오른쪽 숫자는 지금까지 쌓인 합계예요. 날짜는 UTC.</p>
+  <div class="card" id="mkTotals"></div>
+</section>
+
+<section data-tab="marketing" hidden>
+  <h2>실행 기록</h2>
+  <p class="sub">작업 하나에 묶이지 않는 기록이에요 — 팀이 깨어난 때와 끝난 때, 반응을 읽은 때. 최근 30개.</p>
+  <div class="card" id="mkRuns"></div>
 </section>
 
 </div>
@@ -4072,7 +4176,7 @@ function render(){
 function redrawCharts(){
   const users = visibleUsers();
   renderDaily(users); renderHeatmap(users); renderHoursToday(users); renderHours(users); renderHoursByUser(users); renderBurn();
-  renderEconDaily(); drawPnlCharts();
+  renderEconDaily(); drawPnlCharts(); redrawMarketing();
 }
 /* ============================================================ 라이브
  * Polls __ADMIN_BASE__/live.json (admin_live()) every 15 s while the tab is
@@ -4801,6 +4905,377 @@ function liveShow(on){
   pollLive();
   liveTimer = setInterval(()=>{ if(soundOn || !document.hidden) pollLive(); }, POLL_MS);
 }
+/* ============================================================ 마케팅
+ * marketing/AUTOMATION.md §7. Not baked into DATA: the tab reads
+ * __ADMIN_BASE__/marketing.json when it opens (and every minute while it is
+ * open), because a veto has to be made against the state of NOW, not the
+ * state of when the page was loaded. The three buttons POST and re-read. */
+const MK_STAGES = [
+  ['idea','아이디어'], ['brief','기획'], ['copy','카피'], ['design','디자인'], ['review','검토'],
+  ['ready','준비됨'], ['scheduled','예약됨'], ['posting','올리는 중'], ['posted','올라감'],
+  ['vetoed','막음'], ['failed','실패'],
+];
+const MK_KO = Object.fromEntries(MK_STAGES);
+const MK_MAKING = new Set(['idea','brief','copy','design','review']);
+const MK_COLOR = {idea:'var(--baseline)', brief:'var(--baseline)', copy:'var(--seq2)', design:'var(--seq2)',
+  review:'var(--seq3)', ready:'var(--s1)', scheduled:'var(--warn)', posting:'var(--s2)',
+  posted:'var(--good)', vetoed:'var(--ink-2)', failed:'var(--crit)'};
+const MK_PHASE = {upload:'빌드 업로드', release:'출시', manual:'직접'};
+const MK_CH = {instagram:'Instagram', threads:'Threads', community:'커뮤니티'};
+const MK_METRICS = [['views','조회','var(--s1)'], ['reach','도달','var(--s3)'],
+  ['likes','좋아요','var(--s2)'], ['saves','저장','var(--seq4)']];
+const MK_ALLMET = [['views','조회'],['reach','도달'],['likes','좋아요'],['comments','댓글'],['saves','저장'],['shares','공유']];
+const MK_EVENT = {stage:'단계', run_start:'시작', run_end:'끝', media:'미디어', scheduled:'예약',
+  veto:'막음', post:'게시', post_error:'게시 오류', metrics:'반응', note:'메모'};
+const MK_ERR = {state_changed:'그 사이에 상태가 바뀌었어요. 새로 읽었어요.', reason_required:'막는 이유를 적어 주세요.',
+  not_reviewed:'검토를 통과하지 않은 작업이라 팀을 다시 거쳐야 해요.', tables_missing:'마케팅 테이블이 아직 없어요.',
+  origin:'이 페이지에서만 누를 수 있어요.', bad_hours:'시간이 이상해요.'};
+const MK_HOURS = [1, 3, 6, 12, 24, 48];
+let mkData = null, mkErr = null, mkLoading = false, mkFilter = 'all',
+    mkVetoOpen = null, mkBusy = null, mkNotes = {}, mkLoadedAt = 0;
+
+const mkSafe = u => (typeof u === 'string' && /^(https:\/\/|\/)/.test(u)) ? u : null;
+function mkLeft(iso){
+  const ms = ts(iso) - Date.now();
+  if(ms <= 0) return '곧';
+  const m = Math.ceil(ms/60000);
+  if(m < 60) return `${m}분 뒤`;
+  const h = Math.floor(m/60), d = Math.floor(h/24);
+  return d ? `${d}일 ${h%24}시간 뒤` : `${h}시간 ${m%60}분 뒤`;
+}
+const mkStageChip = s => `<span class="chip"><span class="dot" style="background:${MK_COLOR[s]||'var(--muted)'}"></span>${esc(MK_KO[s]||s)}</span>`;
+function mkVerdictChip(p){
+  const v = String(p.review_verdict||'');
+  if(!v && p.review_fixes == null) return '';
+  if(/^pass/i.test(v)) return `<span class="rec yes">검토 통과</span>`;
+  if(p.review_fixes) return `<span class="rec part" title="${esc(v)}">고칠 것 ${num(p.review_fixes)}</span>`;
+  return `<span class="rec" title="${esc(v)}">${esc(v.slice(0,24))}</span>`;
+}
+
+async function loadMarketing(){
+  if(mkLoading) return;
+  mkLoading = true;
+  try{
+    const r = await fetch('__ADMIN_BASE__/marketing.json', {cache:'no-store', credentials:'same-origin'});
+    const j = await r.json().catch(() => ({error: String(r.status)}));
+    if(!r.ok || j.error) throw new Error(j.error || r.status);
+    mkData = j; mkErr = null; mkLoadedAt = Date.now();
+  }catch(e){ mkErr = e.message || '오류'; }
+  mkLoading = false;
+  renderMarketing();
+}
+
+function renderMarketing(){
+  const note = document.getElementById('mkNote');
+  note.hidden = !mkErr && !(mkData && mkData.missing);
+  note.textContent = mkErr ? `읽지 못했어요 (${mkErr}) — 아래는 마지막으로 읽은 거예요.`
+    : (mkData && mkData.missing) ? '마케팅 테이블이 아직 없어요 — 마이그레이션 20261011121500_marketing.sql이 들어가면 채워져요.' : '';
+  renderMkTiles(); renderMkPipe(); renderMkPieces(); renderMkTotals(); renderMkRuns();
+}
+
+function renderMkTiles(){
+  const el = document.getElementById('mkTiles');
+  if(!mkData){ el.innerHTML = `<div class="empty">${mkErr ? '' : '불러오는 중이에요.'}</div>`; return; }
+  const P = mkData.pieces || [];
+  const by = s => P.filter(p => p.stage === s);
+  const sched = by('scheduled').sort((a,b) => String(a.scheduled_at).localeCompare(String(b.scheduled_at)));
+  const since = Date.now() - 30*86400000;
+  const posted30 = P.filter(p => p.stage === 'posted' && ts(p.posted_at) >= since);
+  const T = mkData.totals || [], last = T[T.length-1] || {}, wk = T[T.length-8] || {};
+  const tile = (k, v, d, cls='') => `<div class="tile ${cls}"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+  el.innerHTML =
+      tile('예약됨', num(sched.length), sched[0] ? `다음 <span data-mkcd="${esc(sched[0].scheduled_at)}">${mkLeft(sched[0].scheduled_at)}</span>` : '기다리는 게 없어요')
+    + tile('만드는 중', num(P.filter(p => MK_MAKING.has(p.stage)).length), `준비됨 ${num(by('ready').length)}`)
+    + tile('올라감 (30일)', num(posted30.length), `전체 ${num(by('posted').length)}`)
+    + tile('조회', num(last.views||0), `지난 7일 +${num(Math.max(0,(last.views||0)-(wk.views||0)))}`)
+    + tile('저장', num(last.saves||0), `좋아요 ${num(last.likes||0)}`)
+    + (by('failed').length ? tile('실패', num(by('failed').length), '아래 카드에 이유가 있어요', 'alert') : '');
+}
+
+function renderMkPipe(){
+  const el = document.getElementById('mkPipe');
+  const P = (mkData && mkData.pieces) || [];
+  const n = s => P.filter(p => p.stage === s).length;
+  const btn = (k, lab, c) => `<button type="button" data-mkf="${k}" aria-pressed="${mkFilter===k}" class="${c?'':'zero'}">`
+    + (k === 'all' ? '' : `<span class="dot" style="background:${MK_COLOR[k]}"></span>`) + `${lab} <b>${num(c)}</b></button>`;
+  let h = btn('all', '전부', P.length) + '<span class="gap"></span>';
+  MK_STAGES.forEach(([k, lab], i) => {
+    if(k === 'vetoed') h += '<span class="gap"></span>';
+    else if(i) h += '<span class="arr">›</span>';
+    h += btn(k, lab, n(k));
+  });
+  el.innerHTML = h;
+}
+
+function mkStateHtml(p){
+  const busy = mkBusy === p.id ? ' disabled' : '';
+  const vetoBtn = `<button type="button" class="mkbtn danger" data-mk="veto-open" data-id="${p.id}"${busy}>게시 막기</button>`;
+  const hoursSel = (label, def) => `<select data-mkh="${p.id}" aria-label="몇 시간 뒤">`
+    + MK_HOURS.map(h => `<option value="${h}"${h===def?' selected':''}>${h}시간 뒤</option>`).join('') + `</select>`
+    + `<button type="button" class="mkbtn" data-mk="reschedule" data-id="${p.id}"${busy}>${label}</button>`;
+  // 지금 올리기 / 미루기 put a piece back on the scheduler from ready, vetoed
+  // or failed too — only once it has a reviewer PASS (the Worker checks too).
+  const passed = /^pass/i.test(String(p.review_verdict||''));
+  const nowBtn = `<button type="button" class="mkbtn primary" data-mk="post-now" data-id="${p.id}"${busy}>지금 올리기</button>`;
+  const revive = (label) => passed ? nowBtn + hoursSel(label, 12) : '';
+  let what = '', btns = '';
+  switch(p.stage){
+    case 'scheduled': {
+      const due = ts(p.scheduled_at) <= Date.now();
+      what = due ? `<b>곧 올라가요</b> <span class="muted">· 다음 스케줄러 실행(15분 안)을 기다리는 중</span>`
+        : `⏱ <span class="mkcd" data-mkcd="${esc(p.scheduled_at)}">${mkLeft(p.scheduled_at)}</span>에 올라가요`
+          + ` <span class="muted">· ${fmtTs(p.scheduled_at)} ${tzLabel()} 시간</span>`;
+      btns = vetoBtn + (due ? '' : `<button type="button" class="mkbtn primary" data-mk="post-now" data-id="${p.id}"${busy}>지금 올리기</button>`)
+        + hoursSel('미루기', 12);
+      break;
+    }
+    case 'ready':
+      what = `검토를 통과했어요 <span class="muted">· 출시되면 예약돼요</span>`; btns = vetoBtn + revive('예약'); break;
+    case 'posting':
+      what = `올리는 중이에요 <span class="muted">· 스케줄러가 채널마다 올리고 있어요</span>`; break;
+    case 'posted':
+      what = `<b class="ok">올라갔어요</b> <span class="muted">· ${fmtTs(p.posted_at)} (${ago(p.posted_at)})</span>`; break;
+    case 'vetoed':
+      what = `막았어요${p.veto_reason ? ` — “${esc(p.veto_reason)}”` : ''} <span class="muted">· ${fmtTs(p.vetoed_at)}</span>`;
+      btns = revive('다시 예약');
+      if(!passed) what += ` <span class="muted">· 검토를 통과하면 다시 예약할 수 있어요</span>`;
+      break;
+    case 'failed':
+      what = `<b class="bad">올리지 못했어요</b> <span class="muted">· 아래에 이유가 있어요</span>`; btns = vetoBtn + revive('다시 예약'); break;
+    default:
+      what = `팀이 만들고 있어요 <span class="muted">· 지금 ${esc(MK_KO[p.stage]||p.stage)} 단계</span>`; btns = vetoBtn;
+  }
+  let form = '';
+  if(mkVetoOpen === p.id){
+    form = `<div class="mkveto"><input type="text" maxlength="500" data-mkr="${p.id}" placeholder="막는 이유 — 팀이 다음에 참고해요" aria-label="막는 이유">`
+      + `<button type="button" class="mkbtn danger" data-mk="veto-send" data-id="${p.id}"${busy}>막기</button>`
+      + `<button type="button" class="mkbtn" data-mk="veto-cancel" data-id="${p.id}">그만두기</button></div>`;
+    btns = btns.replace(vetoBtn, '');
+  }
+  const nt = mkNotes[p.id];
+  return `<div class="mkstate"><div class="what">${what}</div>`
+    + (btns ? `<div class="mkbtns">${btns}</div>` : '') + form
+    + (mkBusy === p.id ? `<div class="mknote muted">보내는 중이에요…</div>` : '')
+    + (nt ? `<div class="mknote ${nt.ok?'ok':'bad'}">${esc(nt.text)}</div>` : '')
+    + `</div>`;
+}
+
+function mkSlidesHtml(p){
+  if(!p.slides || !p.slides.length) return '';
+  return `<div class="mkslides">` + p.slides.map(s => {
+    const v = mkSafe(s.video), im = mkSafe(s.image), href = v || im;
+    const inner = s.kind === 'video' && v
+      ? `<video data-src="${esc(v)}"${im ? ` poster="${esc(im)}"` : ''} muted loop playsinline preload="none" aria-label="${esc(s.alt)}"></video>`
+      : im ? `<img src="${esc(im)}" alt="${esc(s.alt)}" loading="lazy">` : `<span class="none">파일 없음</span>`;
+    return href ? `<a class="mkslide" href="${esc(href)}" target="_blank" rel="noopener">${inner}<span class="n">${s.n}</span></a>`
+      : `<span class="mkslide">${inner}<span class="n">${s.n}</span></span>`;
+  }).join('') + `</div>`;
+}
+
+function mkMetricsHtml(p){
+  const chs = Object.keys(p.latest || {});
+  if(!chs.length) return p.stage === 'posted' ? `<div class="muted" style="font-size:12.5px">반응은 내일 아침 9시에 처음 읽어요.</div>` : '';
+  return `<div class="mkmets">` + chs.map(ch => {
+    const m = p.latest[ch];
+    const parts = MK_ALLMET.filter(([k]) => m[k] != null).map(([k, lab]) => `${lab} <b>${num(m[k])}</b>`);
+    return `<div><span class="ch">${esc(MK_CH[ch]||ch)}</span>${parts.join(' · ')} <span class="muted">· ${ago(m.at)}</span></div>`;
+  }).join('') + `</div>`;
+}
+
+function mkCardHtml(p){
+  const ver = p.version ? `<span class="chip">${esc(p.version)}${p.build ? ` (${esc(p.build)})` : ''}</span>` : '';
+  const phase = p.phase ? `<span class="chip">${esc(MK_PHASE[p.phase]||p.phase)}</span>` : '';
+  const ig = mkSafe(p.ig_permalink), th = mkSafe(p.threads_permalink);
+  const links = [
+    ig ? `<a href="${esc(ig)}" target="_blank" rel="noopener">Instagram에서 보기 ↗</a>` : '',
+    th ? `<a href="${esc(th)}" target="_blank" rel="noopener">Threads에서 보기 ↗</a>` : '',
+    p.stage === 'posted' ? (p.show_in_community ? `<span class="muted">커뮤니티에도 보여요</span>` : `<span class="muted">커뮤니티엔 안 보여요</span>`) : '',
+  ].filter(Boolean).join('');
+  const caps = [['한국어 캡션', p.caption_ko], ['English caption', p.caption_en], ['Threads', p.threads_text]]
+    .filter(([, t]) => t);
+  const evs = p.events || [];
+  const hasSeries = p.series && p.series.length;
+  return `<article class="card mkcard" data-mkid="${p.id}">`
+    + `<div class="mkhead"><div class="mktitle">${esc(p.title_ko || p.slug)}`
+    + (p.title_en ? `<small>${esc(p.title_en)}</small>` : '') + `</div>`
+    + `<div class="mkchips">${mkStageChip(p.stage)}${ver}${phase}${mkVerdictChip(p)}</div></div>`
+    + (p.one_message ? `<p class="mkmsg">${esc(p.one_message)}</p>` : '')
+    + mkStateHtml(p)
+    + (p.error ? `<div class="mkerr">${esc(p.error)}</div>` : '')
+    + mkSlidesHtml(p)
+    + (links ? `<div class="mklinks">${links}</div>` : '')
+    + mkMetricsHtml(p)
+    + (hasSeries ? `<div class="mkcharts" data-mkchart="${p.id}"></div>` : '')
+    + (caps.length ? `<details><summary>캡션</summary><div class="mkcaps">`
+        + caps.map(([h, t]) => `<div><h4>${h}</h4><div class="t">${esc(t)}</div></div>`).join('') + `</div></details>` : '')
+    + (evs.length ? `<details><summary>기록 ${evs.length}개</summary><div class="mkev">`
+        + evs.map(e => `<span class="t">${fmtTs(e.at)}</span><span class="k">${esc(MK_EVENT[e.kind]||e.kind)}</span><span class="m">${esc(e.message||'')}</span>`).join('')
+        + `</div></details>` : '')
+    + `<div class="muted" style="font-size:11.5px">${esc(p.slug)} · 만든 날 ${fmtTs(p.created_at)}</div>`
+    + `</article>`;
+}
+
+let mkObserver = null;
+function mkWatchVideos(root){
+  const vids = root.querySelectorAll('video[data-src]');
+  if(!('IntersectionObserver' in window)){ vids.forEach(v => { v.src = v.dataset.src; v.play().catch(()=>{}); }); return; }
+  mkObserver = mkObserver || new IntersectionObserver(es => {
+    for(const e of es){
+      const v = e.target;
+      if(e.isIntersecting){ if(!v.getAttribute('src')) v.src = v.dataset.src; v.play().catch(()=>{}); }
+      else v.pause();
+    }
+  }, {rootMargin:'200px'});
+  vids.forEach(v => mkObserver.observe(v));
+}
+
+function renderMkPieces(){
+  const el = document.getElementById('mkPieces');
+  if(mkObserver){ mkObserver.disconnect(); }
+  if(!mkData){ el.innerHTML = `<div class="card empty">${mkErr ? '읽지 못했어요. 탭을 다시 열어 보세요.' : '불러오는 중이에요.'}</div>`; return; }
+  const P = (mkData.pieces || []).filter(p => mkFilter === 'all' || p.stage === mkFilter);
+  if(!(mkData.pieces || []).length){
+    el.innerHTML = `<div class="card mkempty">아직 마케팅 작업이 없어요 — 빌드를 올리면 여기서 시작돼요
+      <span class="muted">TestFlight 업로드가 팀을 깨우고, 검토를 통과한 작업이 여기에 카드로 쌓여요.</span></div>`;
+    return;
+  }
+  if(!P.length){ el.innerHTML = `<div class="card empty">${esc(MK_KO[mkFilter]||'')} 단계에 있는 작업이 없어요.</div>`; return; }
+  // Keep a half-typed veto reason across a re-render (the minute refresh).
+  const typed = mkVetoOpen ? (el.querySelector(`input[data-mkr="${mkVetoOpen}"]`)||{}).value : null;
+  el.innerHTML = P.map(mkCardHtml).join('');
+  if(mkVetoOpen){
+    const inp = el.querySelector(`input[data-mkr="${mkVetoOpen}"]`);
+    if(inp){ if(typed) inp.value = typed; }
+  }
+  mkWatchVideos(el);
+  drawMkCharts();
+}
+
+/** One small panel per metric. `mode` 'line' draws the standing (cumulative)
+ *  for a piece; 'gain' draws what was added each day, for the totals. */
+function mkPanels(el, series, mode){
+  el.innerHTML = MK_METRICS.map(([k]) => `<div class="panel" data-k="${k}"></div>`).join('');
+  const n = series.length;
+  for(const [k, lab, color] of MK_METRICS){
+    const box = el.querySelector(`[data-k="${k}"]`);
+    const W = innerW(box, 120), H = mode === 'gain' ? 96 : 70, L = 6, R = 6, top = 6, bh = H - top - 16;
+    const vals = series.map(s => +s[k] || 0);
+    const data = mode === 'gain' ? vals.map((v,i) => i ? Math.max(0, v - vals[i-1]) : 0) : vals;
+    const max = Math.max(1, ...data), bw = (W - L - R) / Math.max(1, n);
+    const cur = vals[n-1] || 0;
+    let s = `<div class="panel-label"><span class="swatch" style="background:${color}"></span>${lab}`
+      + `<span style="font-weight:400;color:var(--muted);margin-left:auto">${num(cur)}</span></div>`
+      + `<svg width="${W}" height="${H}" role="img" aria-label="${lab} ${mode==='gain'?'일별 증가':'누적'}">`
+      + `<line x1="${L}" y1="${top+bh}" x2="${W-R}" y2="${top+bh}" class="baseline"/>`;
+    if(mode === 'gain'){
+      data.forEach((v, i) => {
+        const x = L + i*bw, w = Math.max(2, bw - 2), h = v ? Math.max(2, v/max*bh) : 0;
+        const tip = `<b>${fmtDate(series[i].d)}</b><br>${lab} +${num(v)} · 누적 ${num(vals[i])}`;
+        s += `<rect x="${x.toFixed(1)}" y="${top}" width="${Math.max(1,bw).toFixed(1)}" height="${bh}" fill="transparent" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+        if(h) s += `<rect x="${(x+1).toFixed(1)}" y="${(top+bh-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${color}" pointer-events="none"/>`;
+      });
+    }else{
+      const px = i => L + i*bw + bw/2, py = v => top + bh - v/max*bh;
+      const pts = data.map((v,i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
+      s += `<polyline points="${pts}" class="mkline" stroke="${color}"/>`;
+      data.forEach((v, i) => {
+        const tip = `<b>${fmtDate(series[i].d)}</b><br>${lab} ${num(v)}`;
+        s += `<rect x="${(L+i*bw).toFixed(1)}" y="${top}" width="${Math.max(1,bw).toFixed(1)}" height="${bh}" fill="transparent" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+      });
+    }
+    s += `<text x="${L}" y="${H-3}" class="axis">${fmtD(series[0].d)}</text>`
+      + `<text x="${W-R}" y="${H-3}" class="axis" text-anchor="end">${fmtD(series[n-1].d)}</text></svg>`;
+    box.innerHTML = s;
+  }
+}
+function drawMkCharts(){
+  if(!mkData) return;
+  document.querySelectorAll('[data-mkchart]').forEach(el => {
+    const p = (mkData.pieces||[]).find(x => x.id === el.dataset.mkchart);
+    if(p && p.series && p.series.length) mkPanels(el, p.series, 'line');
+  });
+}
+function renderMkTotals(){
+  const el = document.getElementById('mkTotals');
+  const T = (mkData && mkData.totals) || [];
+  if(!T.length || !T.some(t => t.views || t.reach || t.likes || t.saves)){
+    el.innerHTML = `<div class="empty">올라간 작업의 반응이 쌓이면 여기에 그려져요.</div>`; return;
+  }
+  el.innerHTML = `<div class="mkcharts" id="mkTotalCharts"></div>`;
+  mkPanels(document.getElementById('mkTotalCharts'), T, 'gain');
+}
+function renderMkRuns(){
+  const el = document.getElementById('mkRuns');
+  const R = (mkData && mkData.runs) || [];
+  if(!R.length){ el.innerHTML = `<div class="empty">${mkData ? '아직 기록이 없어요.' : '불러오는 중이에요.'}</div>`; return; }
+  el.innerHTML = `<div class="mkev" style="margin-top:0">` + R.map(e =>
+    `<span class="t">${fmtTs(e.at)}</span><span class="k">${esc(MK_EVENT[e.kind]||e.kind)}</span><span class="m">${esc(e.message||'')}</span>`).join('') + `</div>`;
+}
+function redrawMarketing(){
+  if(!mkData || document.querySelector('section[data-tab=marketing]').hidden) return;
+  drawMkCharts(); renderMkTotals();
+}
+
+async function mkPost(id, action, body, okText){
+  mkBusy = id; mkNotes[id] = null; renderMkPieces();
+  try{
+    const r = await fetch(`__ADMIN_BASE__/marketing/${encodeURIComponent(id)}/${action}`, {
+      method:'POST', credentials:'same-origin', cache:'no-store',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {}),
+    });
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok || !j.ok) throw new Error(MK_ERR[j.error] || j.error || String(r.status));
+    mkNotes[id] = {ok:true, text: okText};
+    if(action === 'veto') mkVetoOpen = null;
+  }catch(e){ mkNotes[id] = {ok:false, text:`안 됐어요 — ${e.message}`}; }
+  mkBusy = null;
+  await loadMarketing();
+}
+
+document.getElementById('mkPipe').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-mkf]'); if(!b) return;
+  mkFilter = b.dataset.mkf; renderMkPipe(); renderMkPieces();
+});
+document.getElementById('mkPieces').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-mk]'); if(!b || b.disabled) return;
+  const id = b.dataset.id, root = document.getElementById('mkPieces');
+  switch(b.dataset.mk){
+    case 'veto-open':
+      mkVetoOpen = id; mkNotes[id] = null; renderMkPieces();
+      setTimeout(() => { const i = root.querySelector(`input[data-mkr="${id}"]`); if(i) i.focus(); }, 0);
+      break;
+    case 'veto-cancel': mkVetoOpen = null; renderMkPieces(); break;
+    case 'veto-send': {
+      const i = root.querySelector(`input[data-mkr="${id}"]`), reason = (i && i.value || '').trim();
+      if(!reason){ mkNotes[id] = {ok:false, text:'막는 이유를 적어 주세요.'}; renderMkPieces();
+        setTimeout(() => { const j = root.querySelector(`input[data-mkr="${id}"]`); if(j) j.focus(); }, 0); return; }
+      mkPost(id, 'veto', {reason}, '막았어요. 팀이 이유를 보고 다음에 참고해요.');
+      break;
+    }
+    case 'post-now': mkPost(id, 'post-now', {}, '곧 올라가요 — 다음 스케줄러 실행(15분 안)에 나가요.'); break;
+    case 'reschedule': {
+      const sel = root.querySelector(`select[data-mkh="${id}"]`), hours = +(sel && sel.value || 12);
+      mkPost(id, 'reschedule', {hours}, `${hours}시간 뒤로 예약했어요.`);
+      break;
+    }
+  }
+});
+document.getElementById('mkPieces').addEventListener('keydown', ev => {
+  const i = ev.target.closest('input[data-mkr]'); if(!i) return;
+  if(ev.key === 'Enter'){ ev.preventDefault(); const b = i.parentElement.querySelector('button[data-mk="veto-send"]'); if(b) b.click(); }
+  if(ev.key === 'Escape'){ mkVetoOpen = null; renderMkPieces(); }
+});
+// Countdowns tick; the data itself is re-read every minute while the tab is
+// open — but never under a half-written veto reason.
+setInterval(() => document.querySelectorAll('[data-mkcd]').forEach(el => { el.textContent = mkLeft(el.dataset.mkcd); }), 30000);
+setInterval(() => {
+  if(document.hidden || document.querySelector('section[data-tab=marketing]').hidden || mkVetoOpen || mkBusy) return;
+  loadMarketing();
+}, 60000);
+function marketingShow(on){
+  if(on && (!mkData || Date.now() - mkLoadedAt > 15000)){ renderMarketing(); loadMarketing(); }
+}
+
 function showTab(name){
   document.querySelectorAll('section[data-tab]').forEach(s => { s.hidden = s.dataset.tab !== name; });
   document.querySelectorAll('.tabs button').forEach(b =>
@@ -4808,6 +5283,7 @@ function showTab(name){
   try{ localStorage.setItem('nawana.admin.tab3', name); }catch(e){}
   hideTip();
   liveShow(name === 'live');
+  marketingShow(name === 'marketing');
   redrawCharts();   // a hidden section measures 0 — now it can be measured
 }
 document.querySelectorAll('.tabs button').forEach(b =>

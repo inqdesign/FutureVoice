@@ -1,17 +1,44 @@
 {
-  "name": "nawana-admin",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-09-01",
-  // shell.html is imported as a string and inlined into the bundle — the page
-  // is served from the Worker, not from an assets bucket, because every byte
-  // of it is behind the token check.
-  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
-  "vars": {
-    "SUPABASE_URL": "https://chhzjtigzdotacutwcyo.supabase.co"
-  },
-  "observability": { "enabled": true }
-  // Secrets (set with `wrangler secret put <NAME>`):
-  //   ADMIN_TOKEN                — the ?k= key; without it every path 404s
-  //   SUPABASE_SERVICE_ROLE_KEY  — admin_raw() is granted to service_role only
-  //   ELEVENLABS_API_KEY         — the 돈 tab's 실제 원가 (truth.ts); optional
+	"name": "nawana-admin",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	// shell.html is imported as a string and inlined into the bundle — the page
+	// is served from the Worker, not from an assets bucket, because every byte
+	// of it is behind the token check.
+	"rules": [
+		{
+			"type": "Text",
+			"globs": [
+				"**/*.html"
+			],
+			"fallthrough": true
+		}
+	],
+	"vars": {
+		"SUPABASE_URL": "https://chhzjtigzdotacutwcyo.supabase.co"
+	},
+	"observability": {
+		"enabled": true
+	},
+	// The 마케팅 tab's carousel files (marketing/AUTOMATION.md §4), served
+	// publicly at /admin/media/<slug>/<file> — Instagram and Threads fetch them
+	// from there. The bucket must exist before the first deploy with this
+	// binding, or the deploy fails:
+	//   bash -c 'cd admin && PATH=/opt/homebrew/opt/node@22/bin:$PATH \
+	//     ../gateway/node_modules/.bin/wrangler r2 bucket create nawana-marketing'
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "nawana-marketing"
+		},
+		{
+			"bucket_name": "nawana-marketing",
+			"binding": "nawana_marketing",
+			"remote": true
+		}
+	]
+	// Secrets (set with `wrangler secret put <NAME>`):
+	//   ADMIN_TOKEN                — the ?k= key; without it every path 404s
+	//   SUPABASE_SERVICE_ROLE_KEY  — admin_raw() is granted to service_role only
+	//   ELEVENLABS_API_KEY         — the 돈 tab's 실제 원가 (truth.ts); optional
 }

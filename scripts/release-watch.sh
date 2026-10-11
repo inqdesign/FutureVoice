@@ -38,3 +38,9 @@ if (( build <= current )); then exit 0; fi
 log "store is on $version ($build), update sheet on $current → releasing"
 RELEASE_VERSION="$version" NOTES_KO_FILE="$tmp/ko.txt" NOTES_EN_FILE="$tmp/en.txt" \
   ./scripts/beta.sh released "$build"
+
+# Marketing autopilot (marketing/AUTOMATION.md §1): schedule this version's ready
+# pieces. Background, never fails the watch; MARKETING_AUTOPILOT=0 skips it.
+if [[ "${MARKETING_AUTOPILOT:-1}" != "0" ]]; then
+  ./scripts/marketing/kickoff.sh release "$version" "$build" || log "marketing kickoff failed"
+fi

@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- Fidelity harness: renders one kit screen at 402×874 CSS px with no animation, posed into a
+     named state, so a headless capture at device-scale 3 lines up pixel for pixel with an app
+     simulator capture (1206×2622).
+       _harness.html?tag=nw-call&pose=coach&lang=ko                (status bar drawn)
+       _harness.html?tag=nw-speech&pose=list&nochallenges          (extra params → attributes)
+     Then: chrome --headless=new --window-size=402,874 --force-device-scale-factor=3 --screenshot … -->
+<html><meta charset="utf-8"><meta name="robots" content="noindex">
+<style>html,body{margin:0;background:#fff}#host{position:relative;width:402px;height:874px;overflow:hidden}</style>
+<div id="host"></div>
+<script type="module">
+import "./nawana-ui.js";
+const q = new URLSearchParams(location.search);
+document.documentElement.lang = q.get("lang") || "ko";
+const tag = q.get("tag") || "nw-call";
+await customElements.whenDefined(tag);
+const el = document.createElement(tag);
+el.setAttribute("fill", ""); el.setAttribute("static", "");
+if (q.get("statusbar") !== "0") el.setAttribute("statusbar", "");
+// Any other parameter passes through as an attribute: &nochallenges, &level=b1 …
+for (const [k, v] of q) if (!["tag", "pose", "lang", "statusbar"].includes(k)) el.setAttribute(k, v);
+document.getElementById("host").append(el);
+await new Promise(r => setTimeout(r, 50));
+if (q.get("pose")) await el.pose(q.get("pose"));
+document.body.dataset.ready = "1";
+</script>
+</html>

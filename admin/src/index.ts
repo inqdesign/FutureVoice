@@ -29,6 +29,7 @@
 import shell from "./shell.html";
 import { assemble } from "./assemble";
 import { elevenTruth } from "./truth";
+import { marketingAction, marketingData, serveMedia } from "./marketing";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -45,6 +46,9 @@ export interface Env {
    *  truth.ts). Without it that section says how to set it; every other
    *  cost figure falls back to the ledger at the database's rate. */
   ELEVENLABS_API_KEY?: string;
+  /** R2 bucket `nawana-marketing` — the 마케팅 tab's carousel files, served
+   *  publicly at /admin/media/<slug>/<file> (marketing.ts). */
+  MEDIA?: R2Bucket;
 }
 
 const COOKIE = "nawana_admin";
@@ -692,6 +696,9 @@ export default {
     // every path we hand back.
     const base = url.pathname === "/admin" || url.pathname.startsWith("/admin/") ? "/admin" : "";
     const path = url.pathname.slice(base.length) || "/";
+    // Marketing media is PUBLIC and answered before anything else: Instagram's
+    // and Threads' servers fetch it with no cookie (marketing/AUTOMATION.md §4).
+    if (path.startsWith("/media/")) return serveMedia(req, env, path.slice("/media/".length));
     const secret = secretOf(env);
     if (!secret) return text("Not found", 404);
 
@@ -761,7 +768,8 @@ export default {
     const signedIn = !!session && constantTimeEqual(session, expected);
     if (!signedIn) {
       // data.json is for scripts, and a script gets a 404 rather than a form.
-      if (path === "/data.json" || path === "/live.json" || path === "/history.json") return text("Not found", 404);
+      if (path === "/data.json" || path === "/live.json" || path === "/history.json"
+        || path === "/marketing.json" || path.startsWith("/marketing/")) return text("Not found", 404);
       return html(loginPage(base), 401);
     }
 
@@ -773,6 +781,14 @@ export default {
         "키는 Supabase 대시보드 → Project Settings → API keys → service_role.\n",
         503,
       );
+    }
+
+    // 마케팅 tab: its own small read, fetched when the tab opens, and the
+    // three buttons on a piece (게시 막기 · 지금 올리기 · 미루기).
+    if (path === "/marketing.json") return marketingData(env, base);
+    {
+      const m = path.match(/^\/marketing\/([^/]+)\/(veto|post-now|reschedule)$/);
+      if (m) return marketingAction(req, env, m[1], m[2]);
     }
 
     if (path === "/history.json") {

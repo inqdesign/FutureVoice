@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>nawana UI kit</title>
+<script>try{const l=localStorage.getItem("nw-kit-lang");if(l)document.documentElement.lang=l}catch{}</script>
+<script type="module" src="./nawana-ui.js"></script>
+<style>figcaption{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5A6170;margin-top:8px}
+/* Layout: a catalogue — each component live on the left, the markup that makes it on the right. */
+:root{
+  color-scheme:light;
+  --bg:#F2F3F6; --surface:#FFFFFF; --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7; --accent:#0A84FF;
+  --code-bg:#0F1218; --code-ink:#D7DCE5;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",monospace;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:40px 80px}
+header h1{font-family:var(--pixel);font-weight:400;font-size:40px;line-height:1.15;margin:0 0 10px}
+header p{max-width:68ch;color:var(--sub);margin:0 0 6px}
+header code,p code{font-family:var(--mono);font-size:.88em;background:#E6E9EF;padding:1px 6px;border-radius:5px}
+.lang{display:flex;gap:6px;margin:18px 0 0}
+.lang button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 14px;font:inherit;font-size:13px;cursor:pointer}
+.lang button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+section{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start;padding:40px 0;border-top:1px solid var(--line)}
+section:first-of-type{margin-top:32px}
+.demo{background:var(--surface);border-radius:20px;padding:28px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:center;min-height:200px}
+h2{font-family:var(--pixel);font-weight:400;font-size:24px;margin:0 0 6px}
+.meta p{margin:0 0 12px;color:var(--sub)}
+pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;padding:16px 18px;font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-x:auto;white-space:pre}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.row button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.row button:focus-visible,.lang button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.crop{width:300px;height:420px;overflow:hidden;border-radius:0 0 0 0;-webkit-mask-image:linear-gradient(#000 85%,transparent);mask-image:linear-gradient(#000 85%,transparent)}
+@media (max-width:820px){section{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>nawana UI kit</h1>
+    <p>앱 화면을 웹 컴포넌트로 옮긴 키트예요. 웹사이트에도, 캐러셀·릴스 녹화에도 같은 요소를 써요. 스크립트 한 줄로 불러오고, 태그로 놓으면 돼요.</p>
+    <p><code>&lt;script type="module" src="/kit/nawana-ui.js"&gt;&lt;/script&gt;</code></p>
+    <p>화면 글자(버튼, 안내)는 가장 가까운 <code>lang</code>을 따라요. <code>ko</code>면 한국어, 그 밖은 영어예요. 대화 문장은 학습 언어라 영어 그대로예요. 폰트는 이 폴더 위의 <code>GeistPixel.ttf</code>, <code>Galmuri14.woff2</code>를 읽어요.</p>
+    <div class="lang" role="group" aria-label="화면 언어"><button id="ko" aria-pressed="true">한국어 화면</button><button id="en" aria-pressed="false">English UI</button></div>
+  </header>
+
+  <section>
+    <div class="demo" id="fs-demo">
+      <nw-futureself mode="speaking" level="voice"></nw-futureself>
+      <nw-futureself mode="listening" level="0.5"></nw-futureself>
+      <nw-futureself mode="thinking" level="0"></nw-futureself>
+      <nw-futureself mode="idle" level="0"></nw-futureself>
+      <nw-futureself shape="circle" ring mode="idle" level="0" cell="12.8" style="width:220px;height:220px"></nw-futureself>
+      <nw-futureself mode="speaking" level="voice" style="width:320px;height:120px"></nw-futureself>
+    </div>
+    <div class="meta">
+      <h2>nw-futureself</h2>
+      <p>미래의 나 모자이크예요. 앱 셰이더(<code>Futureself.metal</code>) 수식을 그대로 옮겨서, 셀마다 해시로 숨 쉬고, 말할 때는 가운데에서 바깥으로 켜지고, 안쪽 그림자까지 같아요. 크기는 CSS로 정하고, 셀은 높이의 1/5이에요.</p>
+      <pre>&lt;nw-futureself mode="speaking" level="voice"&gt;&lt;/nw-futureself&gt;
+&lt;nw-futureself mode="listening" level="0.5"&gt;&lt;/nw-futureself&gt;
+&lt;nw-futureself mode="thinking"&gt;&lt;/nw-futureself&gt;
+&lt;!-- 홈 링: 원형 + 링 그림자, 셀 12.8 고정 --&gt;
+&lt;nw-futureself shape="circle" ring mode="idle" cell="12.8"
+  style="width:220px;height:220px"&gt;&lt;/nw-futureself&gt;
+
+el.mode = "speaking"; el.level = 0.7;   // 실시간 변경</pre>
+      <div class="row"><button data-mode="speaking">speaking</button><button data-mode="listening">listening</button><button data-mode="thinking">thinking</button><button data-mode="idle">idle</button></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="demo"><nw-phone style="width:330px"><nw-call id="call" autoplay></nw-call></nw-phone></div>
+    <div class="meta">
+      <h2>nw-call</h2>
+      <p>통화 화면이에요. <code>autoplay</code>를 넣으면 화면에 보일 때만 기본 장면을 반복해요. 원하는 대화를 직접 짤 수도 있어요.</p>
+      <pre>&lt;nw-phone style="width:330px"&gt;
+  &lt;nw-call autoplay&gt;&lt;/nw-call&gt;
+&lt;/nw-phone&gt;
+
+// 내가 짠 대화로 재생
+call.run(async c =&gt; {
+  c.goals(["weekend", "hiking"]);
+  await c.say("So what did you end up doing this weekend?");
+  await c.listen();
+  await c.user("I go to hiking with my friends.");
+  c.tick(1);
+  c.fix({ text: "I <b>went hiking</b> with my friends.",
+          note: "지난 일이라 과거형이에요" });
+  await c.say("Nice! Where did you go?");
+  c.done();
+});</pre>
+      <div class="row"><button id="call-custom">이 대화로 재생</button><button id="call-demo">기본 장면 다시</button></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="demo"><nw-phone style="width:330px"><nw-home autoplay></nw-home></nw-phone></div>
+    <div class="meta">
+      <h2>nw-home</h2>
+      <p>Talk 탭이에요. 링을 누르고, 아래로 내려가 뉴스, 일상, 상황을 차례로 넘겨요.</p>
+      <pre>&lt;nw-home autoplay greeting="What's on your mind this evening?"&gt;&lt;/nw-home&gt;
+
+home.tapRing();  home.scrollTo(640);
+home.tab(1);     home.tapRow(0);
+home.lists = { news: [["chip", "Title", "Ai / Tech"]], everyday: [...], scenarios: [...] };</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="demo"><nw-phone style="width:330px"><nw-speech autoplay></nw-speech></nw-phone></div>
+    <div class="meta">
+      <h2>nw-speech</h2>
+      <p>스피치 탭이에요. 챌린지를 열고, 녹음하면서 원고가 넘어가고, 점수와 순위 시트가 올라와요.</p>
+      <pre>&lt;nw-speech autoplay&gt;&lt;/nw-speech&gt;
+
+await speech.open();
+await speech.record(4600, 21);   // ms, 타이머 초
+await speech.result(81);
+await speech.rankUp(14, 8);</pre>
+    </div>
+  </section>
+
+  <section style="grid-template-columns:1fr">
+    <div class="meta"><h2>모든 화면</h2><p>폰 안에 넣는 화면 12개예요. 모두 <code>autoplay</code>로 화면에 보일 때만 돌고, <code>beats="#섹션 .hows"</code>를 주면 그 안의 <code>[data-beat]</code> 항목이 장면에 맞춰 강조돼요.</p></div>
+    <div class="demo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:24px;align-items:start">
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-home autoplay></nw-home></nw-phone><figcaption>nw-home</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-call autoplay></nw-call></nw-phone><figcaption>nw-call</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-ring autoplay></nw-ring></nw-phone><figcaption>nw-ring</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-sayagain autoplay></nw-sayagain></nw-phone><figcaption>nw-sayagain</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-watch autoplay></nw-watch></nw-phone><figcaption>nw-watch</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-shadow autoplay></nw-shadow></nw-phone><figcaption>nw-shadow</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-speech autoplay></nw-speech></nw-phone><figcaption>nw-speech</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-routine autoplay></nw-routine></nw-phone><figcaption>nw-routine</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-people autoplay></nw-people></nw-phone><figcaption>nw-people</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-book autoplay></nw-book></nw-phone><figcaption>nw-book</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-words autoplay></nw-words></nw-phone><figcaption>nw-words</figcaption></figure>
+      <figure style="margin:0"><nw-phone style="width:100%"><nw-progress autoplay></nw-progress></nw-phone><figcaption>nw-progress</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="demo" style="flex-direction:column;align-items:stretch">
+      <nw-bubble who="self" id="b1" style="font-size:22px">Three a day? No wonder you sound tired.</nw-bubble>
+      <nw-bubble who="me" style="font-size:22px">It was busy week. I go to three meetings.</nw-bubble>
+      <nw-fix note="지난 일이라 과거형이에요" style="font-size:22px">It was a busy week. I <b>went</b> to three meetings.</nw-fix>
+    </div>
+    <div class="meta">
+      <h2>nw-bubble · nw-fix</h2>
+      <p>폰 없이 문장 하나만 크게 보여줄 때 써요. 호스트의 <code>font-size</code>로 전체 크기가 바뀌고, 17px이 앱과 같은 크기예요.</p>
+      <pre>&lt;nw-bubble who="self"&gt;Three a day? No wonder…&lt;/nw-bubble&gt;
+&lt;nw-bubble who="me"&gt;It was busy week…&lt;/nw-bubble&gt;
+&lt;nw-fix note="지난 일이라 과거형이에요"&gt;
+  It was a busy week. I &lt;b&gt;went&lt;/b&gt; to three meetings.
+&lt;/nw-fix&gt;
+
+bubble.play();   // 단어가 하나씩 켜져요</pre>
+      <div class="row"><button id="b-play">말풍선 재생</button></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="demo"><div class="crop"><nw-phone style="width:300px"><nw-call autoplay></nw-call></nw-phone></div></div>
+    <div class="meta">
+      <h2>잘라서 쓰기</h2>
+      <p>폰을 다 보여줄 필요가 없으면 감싸는 상자에 높이와 <code>overflow:hidden</code>을 주면 돼요. 캐러셀이 이 방식이에요.</p>
+      <pre>&lt;div style="height:420px;overflow:hidden"&gt;
+  &lt;nw-phone style="width:300px"&gt;&lt;nw-call autoplay&gt;&lt;/nw-call&gt;&lt;/nw-phone&gt;
+&lt;/div&gt;</pre>
+    </div>
+  </section>
+</div>
+<script type="module">
+await customElements.whenDefined("nw-call");
+const $ = s => document.querySelector(s);
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+  const el = $("#fs-demo nw-futureself"); el.mode = b.dataset.mode; el.level = b.dataset.mode === "speaking" ? "voice" : (b.dataset.mode === "listening" ? 0.5 : 0);
+});
+$("#call-custom").onclick = () => $("#call").run(async c => {
+  c.goals(["weekend", "hiking"]);
+  await c.say("So what did you end up doing this weekend?");
+  await c.listen();
+  await c.user("I go to hiking with my friends.");
+  c.tick(1);
+  c.fix({ text: "I <b>went hiking</b> with my friends.", note: document.documentElement.lang === "ko" ? "지난 일이라 과거형이에요" : "It already happened, so past tense." });
+  await c.say("Nice! Where did you go?");
+  c.done();
+});
+$("#call-demo").onclick = () => $("#call").loop();
+$("#b-play").onclick = () => $("#b1").play();
+for (const id of ["ko", "en"]) $("#" + id).onclick = () => {
+  document.documentElement.lang = id; try { localStorage.setItem("nw-kit-lang", id); } catch {}
+  location.reload();
+};
+$("#ko").setAttribute("aria-pressed", document.documentElement.lang === "ko");
+$("#en").setAttribute("aria-pressed", document.documentElement.lang !== "ko");
+</script>
+</body>
+</html>

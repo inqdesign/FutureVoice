@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Collects Instagram/Threads views and engagement for posted pieces (scripts/marketing/metrics.py), daily at 09:00.
+  Install with scripts/marketing/install-launchd.sh (copies to ~/Library/LaunchAgents and loads).
+  Remove:  launchctl unload ~/Library/LaunchAgents/com.nawana.marketing-metrics.plist
+  Output:  /Users/eunggyuelee/FutureVoice/marketing/logs/metrics.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nawana.marketing-metrics</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>/Users/eunggyuelee/FutureVoice/scripts/marketing/metrics.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/eunggyuelee/FutureVoice</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>9</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string>
+    <key>HOME</key>
+    <string>/Users/eunggyuelee</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/eunggyuelee/FutureVoice/marketing/logs/metrics.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/eunggyuelee/FutureVoice/marketing/logs/metrics.log</string>
+</dict>
+</plist>

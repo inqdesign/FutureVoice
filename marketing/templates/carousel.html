@@ -1,0 +1,299 @@
+<title>나와나로 할 수 있는 것들</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A84FF; --ios-blue:#007AFF;
+  /* iOS system values sampled from the app's own screenshots */
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+/* ── compare ── */
+.cmp{position:absolute;left:84px;right:84px;top:60px;display:flex;flex-direction:column;gap:30px}
+.cmp .q{font-size:30px;color:var(--sub)}
+.cmp .q b{display:block;color:var(--ink);font-size:38px;line-height:52px;font-weight:600;margin-top:6px}
+.vr{position:relative;background:#fff;border-radius:40px;padding:30px 34px;display:grid;grid-template-columns:174px 1fr;gap:10px 30px;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:box-shadow .3s,opacity .3s,outline-color .3s;outline:4px solid transparent}
+.vr .av{grid-row:1/3;width:174px;height:96px;border-radius:48px;overflow:hidden;background:var(--sys-grouped);display:grid;place-items:center}
+.vr nw-futureself.av{display:block}
+.vr .av svg{width:46px;height:46px;color:#B0B5BF}
+.vr .lab{font-size:31px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
+.vr .lab small{font-size:24px;color:var(--faint);font-weight:500}
+.wave{display:flex;align-items:center;gap:6px;height:70px}
+.wave i{flex:1;height:100%;border-radius:4px;background:currentColor;transform:scaleY(calc(var(--h) * .3))}
+.vr.a .wave{color:#C2C6CE}.vr.b .wave{color:var(--blue)}
+.vr.playing .wave i{animation:lv .8s ease-in-out infinite alternate;animation-delay:calc(var(--d) * -1s)}
+.vr.b.win{outline-color:var(--blue)}
+.vr.dimmed{opacity:.5}
+.react{position:absolute;right:28px;bottom:-26px;background:var(--ink);color:#fff;font-size:26px;font-weight:600;padding:12px 22px;border-radius:24px 24px 6px 24px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.vr.b .react{background:var(--blue)}
+.react.in{opacity:1;transform:none}
+
+/* ── cover / outro ── */
+.c-cover .ttl{top:270px;font-size:110px;line-height:130px;letter-spacing:-2px}
+.c-cover .desc{top:550px}
+.c-cover nw-futureself{position:absolute;left:84px;top:800px;width:330px;height:182px}
+.chips{position:absolute;left:470px;top:772px;display:flex;flex-direction:column;gap:20px}
+.chip{display:flex;align-items:center;gap:16px;font-size:34px;font-weight:600;opacity:0;transform:translateX(-20px);transition:opacity .4s,transform .4s}
+.chip.in{opacity:1;transform:none}
+.chip span{font-family:var(--pixel);font-weight:400;font-size:26px;color:var(--blue);width:44px}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.chip,.react,.phonewin{transition:none!important}
+  .wave i{animation:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="나와나로 할 수 있는 것들">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">나와나로<br>할 수 있는 것들</h2>
+          <p class="desc">유창한 내가 되어 말해보는 외국어 앱, 나와나.<br>할 수 있는 걸 하나씩 보여드릴게요.</p>
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="chips">
+            <div class="chip"><span>02</span>유창한 나와 대화</div>
+            <div class="chip"><span>03</span>왜 내 목소리일까</div>
+            <div class="chip"><span>04</span>Talk · 하고 싶은 대화</div>
+            <div class="chip"><span>05</span>Speech · 원고 연습</div>
+          </div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="call">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">유창한 나와<br>대화를 한다고?</h2>
+          <p class="desc">내 목소리로 외국어를 유창하게 하는 <b>몇 년 뒤의 나</b>와 전화하듯 이야기해요. 어색한 말은 통화 중에 바로 고쳐줘요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-compare" data-k="compare">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">왜 원어민 말고<br>내 목소리일까?</h2>
+          <p class="desc">원어민을 따라 하면 연기하는 것 같아요. 내 목소리로 들으면 <b>‘나도 이렇게 말할 수 있구나’</b>가 돼요.</p>
+          <div class="stage" style="-webkit-mask-image:none;mask-image:none"><div class="cmp">
+            <div class="q">같은 문장을 두 목소리로<b>“I'd love to tell you about my project.”</b></div>
+            <div class="vr a"><div class="av"><svg viewBox="0 0 24 24"><g fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.4 4.2-7 8.5-7s7.7 2.6 8.5 7z"/></g></svg></div><div class="lab">AI 원어민 음성<small>남의 목소리</small></div><div class="wave"></div><div class="react">따라 하면 연기하는 것 같아. 나 같지가 않아</div></div>
+            <div class="vr b"><nw-futureself class="av" mode="idle" level="0"></nw-futureself><div class="lab">유창한 나<small>내 목소리</small></div><div class="wave"></div><div class="react">어? 이거 나잖아. 나도 되겠는데?</div></div>
+          </div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="talk">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl"><span class="en">Talk</span><br>하고 싶은 대화로</h2>
+          <p class="desc">링을 누르면 자유 대화, 아래에선 <b>오늘의 뉴스</b>, <b>카페·병원 같은 일상</b>, <b>내가 만든 상황</b>으로 시작해요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="speech">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl"><span class="en">Speech</span><br>원고를 소리 내어</h2>
+          <p class="desc">원고가 내 목소리를 따라 넘어가요. 다 읽으면 점수가 나오고, <b>챌린지 원고는 모두와 같은 순위표</b>에 올라가요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-speech></nw-speech></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>나와나로 할 수 있는 것들</h1>
+    <p>글자 자리는 고정하고, 아래 화면만 움직이는 6장짜리 시안이에요. 폰 화면, 미래의 나 모자이크, 말풍선은 모두 웹사이트와 같은 UI 키트(<b>web/kit/nawana-ui.js</b>)로 그려요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 시리즈 목차</button></li>
+      <li><button data-go="1">유창한 나와 대화를 한다고? · 통화 화면</button></li>
+      <li><button data-go="2">왜 원어민 말고 내 목소리일까?</button></li>
+      <li><button data-go="3">Talk · 홈의 링, 뉴스 / 일상 / 상황</button></li>
+      <li><button data-go="4">Speech · 원고, 녹음, 순위</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>올리는 방법</h3>
+    <p>인스타그램 캐러셀은 장마다 영상을 넣을 수 있어요. 각 장을 1080×1350, 8–12초 반복 MP4로 녹화해서 올리고, 커버만 정지 이미지로 둘 수도 있어요.</p>
+  </aside>
+</div>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+$$(".wave").forEach((w, s) => { for (let i = 0; i < 30; i++) { const b = document.createElement("i"); b.style.setProperty("--h", (.25 + .75 * Math.abs(Math.sin(i * 1.7 + s) * Math.cos(i * .45))).toFixed(2)); b.style.setProperty("--d", ((i * .137) % .8).toFixed(2)); w.append(b); } });
+
+/* Each card: one loop of its scene. Screens are scripted through the kit's own API;
+   the only thing the post adds is the camera — panning the phone inside the window. */
+const pan = (c, y) => $(".phonewin", c).style.transform = y ? `translateY(${-y}px)` : "none";
+const ko = true;
+const PLAY = {
+  async cover(c, alive) {
+    const chips = $$(".chip", c); chips.forEach(x => x.classList.remove("in"));
+    await sleep(500);
+    for (const ch of chips) { if (!alive()) return; ch.classList.add("in"); await sleep(380); }
+    await sleep(3800);
+  },
+  async call(c) {
+    // the call's feed sits on the pill (bottom-anchored, as in the app), so the camera starts low
+    const call = $("nw-call", c); pan(c, 380);
+    await call.run(async s => {
+      s.goals(["busy week", "catch up", "no wonder"]);
+      await s.sleep(600);
+      const first = s.say("Hey, it's you, a few years from now. So, how was your week?"); first.catch(() => {});
+      await first;
+      await s.listen();
+      s.coach({ line: "It was a <u>busy</u> week, honestly.", gloss: "솔직히 <u>바쁜</u> 한 주였어." });
+      await s.sleep(1800);
+      await s.user("It was busy week. I go to three meetings a day.");
+      s.tick(0);
+      s.fix({ text: "It was a busy week. I <b>went</b> to three meetings a day.", note: "지난 일이라 과거형이에요" });
+      await s.sleep(500);
+      await s.say("Three a day? No wonder you sound tired. Which one went best?");
+      s.tick(2); s.done();
+      await s.sleep(2600);
+    });
+  },
+  async compare(c, alive) {
+    const a = $(".vr.a", c), b = $(".vr.b", c), fs = $("nw-futureself", b);
+    [a, b].forEach(r => { r.classList.remove("playing", "win", "dimmed"); $(".react", r).classList.remove("in"); });
+    fs.mode = "idle"; fs.level = 0;
+    await sleep(600);
+    a.classList.add("playing"); await sleep(2200); if (!alive()) return;
+    a.classList.remove("playing"); $(".react", a).classList.add("in"); await sleep(1500); if (!alive()) return;
+    a.classList.add("dimmed");
+    b.classList.add("playing"); fs.mode = "speaking"; fs.level = "voice"; await sleep(2200); if (!alive()) return;
+    fs.mode = "idle"; fs.level = 0;
+    b.classList.remove("playing"); b.classList.add("win"); $(".react", b).classList.add("in");
+    await sleep(3200);
+  },
+  async talk(c) {
+    const home = $("nw-home", c); pan(c, 0);
+    await home.run(async h => {
+      await h.sleep(1200); await h.tapRing(); await h.sleep(1100);
+      h.scrollTo(640); pan(c, 500); await h.sleep(1400);
+      for (let i = 0; i < 3; i++) { if (i) await h.tab(i); await h.sleep(1600); await h.tapRow(0); await h.sleep(500); }
+      await h.sleep(1000);
+    });
+  },
+  async speech(c) {
+    const sp = $("nw-speech", c); pan(c, 0);
+    await sp.run(async s => {
+      await s.sleep(1300); await s.open(); await s.record();
+      await s.sleep(500); await s.result(81); await s.sleep(900);
+      const up = s.rankUp(14, 8); up.catch(() => {}); await s.sleep(300); pan(c, 330); await up;
+      await s.sleep(3200);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-call,nw-home,nw-speech").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-call");
+  await sleep(350);
+  do { await PLAY[card.dataset.k](card, alive); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(new URLSearchParams(location.search).get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

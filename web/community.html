@@ -125,6 +125,8 @@ section{margin-top:56px}
 .sl{display:block;border:0;padding:0;background:#FAF9F6;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 6px 18px rgba(27,26,24,.08);cursor:zoom-in;transition:transform .2s ease, box-shadow .2s ease}
 .sl:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--line-2),0 12px 28px rgba(27,26,24,.12)}
 .sl img{display:block;width:100%;height:auto;aspect-ratio:4/5}
+/* Posted carousels (marketing_public): a video slide plays in place, muted, over its PNG poster. */
+.sl video{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;pointer-events:none;background:#FAF9F6}
 .note{color:var(--faint);font-size:12.5px;margin-top:16px}
 
 /* chat */
@@ -207,6 +209,7 @@ section{margin-top:56px}
 .track{width:min(560px,100%);display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:14px}
 .track::-webkit-scrollbar{display:none}
 .track img{flex:0 0 100%;width:100%;aspect-ratio:4/5;object-fit:contain;scroll-snap-align:center;max-height:calc(100vh - 190px);background:#FAF9F6}
+.track video{flex:0 0 100%;width:100%;aspect-ratio:4/5;object-fit:contain;scroll-snap-align:center;max-height:calc(100vh - 190px);background:#FAF9F6}
 .v-nav{display:flex;align-items:center;gap:16px;margin-top:14px}
 .v-nav button{width:42px;height:42px;border-radius:50%;border:1px solid #3A3834;background:#1F1E1B;font-size:18px;color:#EDECE8}
 .v-nav button:disabled{opacity:.35;cursor:default}
@@ -347,7 +350,7 @@ const T = {
     e_name:"이 닉네임은 쓸 수 없어요. 다른 이름으로 바꿔주세요.", e_parent:"원래 메시지가 사라져서 답글을 달 수 없어요.",
     like:"좋아요", reply:"답글", del:"삭제", delAsk:"삭제할까요?", cancel:"취소", e_del:"삭제하지 못했어요.", online:(s, a) => `로그인 ${s}명 · 전체 ${a}명이 보고 있어요`, unreadLabel:n => `새 메시지 ${n}개`, stViews:"누적 방문", stAccounts:"로그인 방문자", stToday:"오늘", stTimes:"회", stPeople:"명", stNote:"운영자에게만 보여요", replies:n => `답글 ${n}개`, hideReplies:"답글 접기", replyingTo:"에게 답글", likeSignin:"로그인하면 좋아요와 답글을 남길 수 있어요.", e_generic:"보내지 못했어요. 잠시 뒤에 다시 해보세요.", e_signin:"로그인을 시작하지 못했어요.",
     tryIt:"직접 해보고 싶다면", privacy:"개인정보 처리방침", terms:"이용약관", support:"지원", close:"닫기", prev:"이전", next:"다음",
-    cats:{start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
+    cats:{latest:"최신", start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
   },
   en: {
     crumb:"Community", store:"Get it on the App Store", videos:"Videos", title:"Community",
@@ -364,10 +367,11 @@ const T = {
     e_name:"That name is reserved. Please pick another.", e_parent:"The original message is gone, so it can't take a reply.",
     like:"Like", reply:"Reply", del:"Delete", delAsk:"Delete this?", cancel:"Cancel", e_del:"Couldn't delete.", online:(s, a) => `${s} signed in · ${a} viewing now`, unreadLabel:n => n === 1 ? "1 new message" : `${n} new messages`, stViews:"Total visits", stAccounts:"Signed-in visitors", stToday:"Today", stTimes:"", stPeople:"", stNote:"Only the team sees this", replies:n => n === 1 ? "1 reply" : `${n} replies`, hideReplies:"Hide replies", replyingTo:"Replying to", likeSignin:"Sign in to like and reply.", e_generic:"Couldn't send. Please try again in a moment.", e_signin:"Couldn't start sign-in.",
     tryIt:"Want to try it yourself?", privacy:"Privacy", terms:"Terms", support:"Support", close:"Close", prev:"Previous", next:"Next",
-    cats:{start:"Getting started", talk:"Talk", watch:"Watch", practice:"Review", progress:"Progress"},
+    cats:{latest:"Latest", start:"Getting started", talk:"Talk", watch:"Watch", practice:"Review", progress:"Progress"},
   },
 };
-const CAT_ORDER = ["start","talk","watch","practice","progress"];
+// "latest" holds the posted carousels from marketing_public, newest first; the rest are series.json.
+const CAT_ORDER = ["latest","start","talk","watch","practice","progress"];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
@@ -378,6 +382,7 @@ const t = k => T[lang][k] ?? T.ko[k] ?? k;
 /* ---------- state ---------- */
 let sb = null, session = null;
 let news = [], series = [];
+let staticEps = [], postedEps = [];   // series = postedEps + staticEps (see mergeSeries)
 const messages = new Map();   // id -> row (top-level messages and replies alike)
 const likes = new Map();      // message id -> Set of user ids
 const openThreads = new Set(); // message ids whose replies are expanded
@@ -454,7 +459,7 @@ function renderFeatures(){
           <button class="edge r" data-row="${esc(e.id)}" data-dir="1" aria-label="${esc(t("next"))}">›</button>
           <div class="slides" data-slides="${esc(e.id)}">${body.map((src, k) => `
             <button class="sl" data-ep="${esc(e.id)}" data-at="${k + off}" aria-label="${esc(e[lang].title)} ${k + off + 1}/${e.slides.length}">
-              <img src="${esc(src)}" alt="" loading="lazy" width="720" height="900">
+              ${cardMedia(src)}
             </button>`).join("")}
           </div>
           </div>
@@ -463,6 +468,7 @@ function renderFeatures(){
     </div>`).join("");
   spyCat = null; requestAnimationFrame(spy);
   requestAnimationFrame(() => document.querySelectorAll(".slides").forEach(syncArrows));
+  document.querySelectorAll("#grid video").forEach(v => cardVideoIO?.observe(v));
 }
 // Scroll-spy: the chip of the section under the sticky bar is lit.
 let spyCat = null, spyTick = false;
@@ -494,6 +500,65 @@ $("#chips").addEventListener("click", e => {
   scrollTo({ top: y, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 });
 
+/* ---------- posted carousels (marketing_public) ---------- */
+// What the scheduler posts to Instagram shows up here the same moment, with no deploy:
+// the anon-readable view marketing_public, media on the admin Worker's /admin/media/<key>.
+// A failed or empty read leaves the page exactly as series.json alone draws it.
+const MEDIA_BASE = "https://nawana.app/admin/media/";
+const mediaURL = k => !k ? "" : /^(https?:)?\/\//.test(k) || k.startsWith("/") ? k : MEDIA_BASE + String(k).split("/").map(encodeURIComponent).join("/");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+// A card video plays only while it is on screen (and never under reduced motion).
+const cardVideoIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(en => {
+  const v = en.target;
+  if (en.isIntersecting && !reduceMotion.matches) v.play()?.catch?.(() => {}); else v.pause();
+}), { threshold: .4 }) : null;
+function cardMedia(s){
+  if (typeof s === "string") return `<img src="${esc(s)}" alt="" loading="lazy" width="720" height="900">`;
+  if (s.video) return `<video src="${esc(s.video)}" poster="${esc(s.poster)}" muted loop playsinline preload="none" width="720" height="900" aria-hidden="true"></video>`;
+  return `<img src="${esc(s.image)}" alt="" loading="lazy" width="720" height="900">`;
+}
+function viewerMedia(x, far){
+  const s = x.src, alt = (lang === "en" ? s.alt_en || s.alt_ko : s.alt_ko || s.alt_en) || `${x.e[lang].title} ${x.si + 1}/${x.e.slides.length}`;
+  if (s.video) return `<video src="${esc(s.video)}" poster="${esc(s.poster)}" muted loop playsinline preload="${far ? "none" : "metadata"}" aria-label="${esc(alt)}"></video>`;
+  return `<img src="${esc(s.image)}" alt="${esc(alt)}" ${far ? 'loading="lazy"' : ""}>`;
+}
+// The caption's first line, without hashtags, stands in for the series' tagline.
+function captionLine(c){
+  const line = String(c || "").split(/\n/).map(l => l.replace(/#[^\s#]+/g, "").trim()).find(Boolean) || "";
+  return line.length > 90 ? line.slice(0, 88).trimEnd() + "…" : line;
+}
+function pieceToEpisode(p){
+  const slides = (Array.isArray(p.slides) ? p.slides : []).slice().sort((a, b) => (a?.n ?? 0) - (b?.n ?? 0)).map(s => {
+    const poster = mediaURL(s?.png) || mediaURL(s?.jpg_web);
+    const image = mediaURL(s?.jpg_web) || mediaURL(s?.png);
+    const video = s?.kind === "video" && s?.mp4 ? mediaURL(s.mp4) : "";
+    return (video || image) ? { video, poster, image: image || poster, alt_ko: s?.alt_ko || "", alt_en: s?.alt_en || "" } : null;
+  }).filter(Boolean);
+  if (!slides.length) return null;
+  const ko = p.title_ko || p.title_en || "", en = p.title_en || p.title_ko || "";
+  return { id: "m-" + p.slug, cat: "latest", posted: true, slides,
+    ko: { title: ko, tagline: captionLine(p.caption_ko || p.caption_en) },
+    en: { title: en, tagline: captionLine(p.caption_en || p.caption_ko) } };
+}
+const titleKey = s => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+// Posted pieces come first; a static episode carrying the same title as one of them steps aside.
+function mergeSeries(){
+  const taken = new Set(postedEps.flatMap(e => [titleKey(e.ko.title), titleKey(e.en.title)]).filter(Boolean));
+  series = [...postedEps, ...staticEps.filter(e => !taken.has(titleKey(e.ko?.title)) && !taken.has(titleKey(e.en?.title)))];
+  renderFeatures();
+}
+async function loadPosted(){
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/marketing_public?select=slug,title_ko,title_en,caption_ko,caption_en,slides,posted_at&order=posted_at.desc.nullslast&limit=40`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return;
+    postedEps = rows.filter(p => p?.slug).map(pieceToEpisode).filter(Boolean);
+    if (postedEps.length) mergeSeries();
+  } catch {}
+}
+
 /* ---------- viewer ---------- */
 // One continuous strip of every slide in the series: swiping past an episode's
 // last slide lands on the next episode's first, with no close-and-reopen.
@@ -508,8 +573,9 @@ function openViewer(id, start = 0){
   const idx = first + Math.min(start, flat[first].e.slides.length - 1);
   lastFocus = document.activeElement; openedEp = id; vOpen = true;
   track("community_viewer_open", { episode: id, slide: start + 1 });
-  $("#track").innerHTML = flat.map((x, k) =>
-    `<img src="${esc(x.src)}" alt="${esc(x.e[lang].title)} ${x.si + 1}/${x.e.slides.length}" ${Math.abs(k - idx) > 2 ? 'loading="lazy"' : ""}>`).join("");
+  $("#track").innerHTML = flat.map((x, k) => typeof x.src === "string"
+    ? `<img src="${esc(x.src)}" alt="${esc(x.e[lang].title)} ${x.si + 1}/${x.e.slides.length}" ${Math.abs(k - idx) > 2 ? 'loading="lazy"' : ""}>`
+    : viewerMedia(x, Math.abs(k - idx) > 2)).join("");
   $("#viewer").hidden = false; document.body.style.overflow = "hidden";
   const tr = $("#track");
   vIdx = -1; setIdx(idx);
@@ -518,6 +584,7 @@ function openViewer(id, start = 0){
 }
 function closeViewer(){
   $("#viewer").hidden = true; document.body.style.overflow = ""; vOpen = false;
+  $("#track").querySelectorAll("video").forEach(v => v.pause());
   // If they swiped on to another episode, leave the page at that one.
   const cur = flat[vIdx]?.e.id;
   if (cur && cur !== openedEp) document.getElementById("ep-" + cur)?.scrollIntoView({ block: "start" });
@@ -537,6 +604,11 @@ function setIdx(i){
   $("#vPrev").disabled = i === 0; $("#vNext").disabled = i === flat.length - 1;
   // warm the neighbours so a swipe never lands on a blank frame
   [i - 1, i + 1, i + 2].forEach(k => { const im = $("#track").children[k]; if (im) im.loading = "eager"; });
+  // Only the slide on screen plays; a posted video next to it waits on its poster.
+  [...$("#track").children].forEach((el, k) => {
+    if (el.tagName !== "VIDEO") return;
+    if (k === i) { el.preload = "auto"; el.play()?.catch?.(() => {}); } else el.pause();
+  });
 }
 function go(i){ if (i < 0 || i >= flat.length) return; const tr = $("#track"); tr.scrollTo({ left: i * tr.clientWidth, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
 $("#grid").addEventListener("click", e => {
@@ -938,7 +1010,8 @@ function onIdentity(){
 
 /* ---------- boot ---------- */
 applyLang();
-fetch("/community/series.json").then(r => r.json()).then(j => { series = j.episodes || []; renderFeatures(); }).catch(() => {});
+fetch("/community/series.json").then(r => r.json()).then(j => { staticEps = j.episodes || []; mergeSeries(); }).catch(() => {});
+loadPosted();
 try {
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
   sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
