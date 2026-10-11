@@ -46,8 +46,8 @@ enum ShadowEngine {
         let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
         let (matches, steps) = align(targetTokens, learnerTokens, key: key)
         let denom = max(targetTokens.count, learnerTokens.count)
-        let raw = language.hasPrefix("ko")
-            ? koreanWordRatio(target: target, steps: steps,
+        let raw = style == .syllable
+            ? wordCreditRatio(target: target, language: language, steps: steps,
                               targetSyllables: targetTokens.count,
                               learnerSyllables: learnerTokens.count)
             : (denom > 0 ? Double(matches) / Double(denom) : 0)
@@ -65,18 +65,28 @@ enum ShadowEngine {
         )
     }
 
-    /// Korean is ALIGNED by syllable — the recognizer spaces it its own way
-    /// (한잔 / 한 잔) — but SCORED by the target's eojeol: a word counts only
-    /// when every syllable in it matched. Scored by syllable, one wrong
-    /// particle in a 25-syllable line was 1/25 and read 96, a dropped word
-    /// 92–96 (scripts/shadow-ko-probe.py, 2026-10-10) — a mistake the screen
-    /// showed and the number forgave, where English loses ~10 for the same
-    /// slip. Extra speech is converted to words at the line's own syllables
-    /// per word, so the denominator is English's max(target, learner).
-    private static func koreanWordRatio(target: String, steps: [DiffStep],
+    /// Korean and Japanese are ALIGNED by character — the recognizer spaces
+    /// Korean its own way (한잔 / 한 잔) and Japanese not at all — but SCORED
+    /// by the target's words (Korean eojeol, Japanese segmenter words): a
+    /// word counts only when every character in it matched. Scored by
+    /// character, one wrong particle in a 25-syllable line was 1/25 and read
+    /// 96, a dropped word 92–96 (scripts/shadow-probe.py, 2026-10-10) — a
+    /// mistake the screen showed and the number forgave, where English
+    /// loses ~10 for the same slip. Extra speech is converted to words at the
+    /// line's own characters per word, so the denominator is English's
+    /// max(target, learner). Chinese (not selectable) has no segmenter here
+    /// and stays character-scored.
+    private static func wordCreditRatio(target: String, language: String, steps: [DiffStep],
                                         targetSyllables: Int, learnerSyllables: Int) -> Double {
-        let words = target.split(whereSeparator: \.isWhitespace).map(String.init)
-        let spans = tokenSpans(for: words, language: "ko").filter { !$0.isEmpty }
+        let words: [String]
+        if language.hasPrefix("ko") {
+            words = target.split(whereSeparator: \.isWhitespace).map(String.init)
+        } else if language.hasPrefix("ja") {
+            words = JapaneseMorph.segments(in: target)
+        } else {
+            words = []
+        }
+        let spans = tokenSpans(for: words, language: language).filter { !$0.isEmpty }
         let ops = targetOps(steps)
         guard !spans.isEmpty, targetSyllables > 0, ops.count == targetSyllables else {
             let denom = max(targetSyllables, learnerSyllables)

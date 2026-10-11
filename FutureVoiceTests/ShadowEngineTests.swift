@@ -83,6 +83,26 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertEqual(b.score, 100)
     }
 
+    // Japanese gets the same word credit, words from the segmenter.
+    func testJapaneseWrongParticleFailsItsWord() {
+        let a = ShadowEngine.analyze(target: "昨日友達と映画を見ました。",
+                                     learner: "昨日友達と映画が見ました", language: "ja")
+        XCTAssertEqual(a.score, 94)   // 1 of 8 segmenter words; by character it read 96
+    }
+
+    func testJapaneseDroppedWordCostsAWord() {
+        let a = ShadowEngine.analyze(target: "週末に時間があったらコーヒーでも飲もう。",
+                                     learner: "週末に時間があったらコーヒー飲もう", language: "ja")
+        XCTAssertLessThan(a.score, 94)   // by character it read 95
+    }
+
+    func testJapaneseScriptIsStillTheRecognizers() {
+        XCTAssertEqual(ShadowEngine.analyze(target: "ちょっと待ってください。",
+                                            learner: "ちょっと待ってください", language: "ja").score, 100)
+        XCTAssertEqual(ShadowEngine.analyze(target: "nawana で毎日練習しています。",
+                                            learner: "ナワナで毎日練習しています", language: "ja").score, 100)
+    }
+
     func testKoreanExtraSpeechCountsAgainst() {
         let a = ShadowEngine.analyze(target: "학교 끝나고 갈 거야",
                                      learner: "학교 수업 끝나고 갈 거야", language: "ko")
