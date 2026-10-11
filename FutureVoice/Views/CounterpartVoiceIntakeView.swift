@@ -200,6 +200,15 @@ struct CounterpartVoiceIntakeView: View {
                     }
                 }
                 TextField("More precisely? — e.g. College roommate", text: $kindDetail)
+                    // Typing here with no chip picked used to do nothing at
+                    // all — Next waits for a chip, and "house doctor" fits
+                    // none. Writing the relationship IS answering, so it
+                    // lights Other, which the learner can still change.
+                    .onChange(of: kindDetail) { _, text in
+                        if kind == nil, !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                            kind = .other
+                        }
+                    }
             }
             .padding(14)
             .background(Color(.secondarySystemBackground))
