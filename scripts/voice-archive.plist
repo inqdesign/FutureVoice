@@ -8,7 +8,7 @@
     launchctl load ~/Library/LaunchAgents/com.nawana.voice-archive.plist
 
   Remove:  launchctl unload ~/Library/LaunchAgents/com.nawana.voice-archive.plist
-  Output:  ~/Desktop/beta audio/voices/archive.log (+ launchd.log for stderr)
+  Output:  ~/Desktop/beta audio/voices/archive.log (+ ~/Library/Logs/nawana/voice-archive.log for stdout/stderr — launchd cannot open files inside Google Drive)
 -->
 <plist version="1.0">
 <dict>
@@ -31,8 +31,8 @@
     <string>/Users/eunggyuelee</string>
   </dict>
   <key>StandardOutPath</key>
-  <string>/Users/eunggyuelee/Desktop/beta audio/voices/launchd.log</string>
+  <string>/Users/eunggyuelee/Library/Logs/nawana/voice-archive.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/eunggyuelee/Desktop/beta audio/voices/launchd.log</string>
+  <string>/Users/eunggyuelee/Library/Logs/nawana/voice-archive.log</string>
 </dict>
 </plist>

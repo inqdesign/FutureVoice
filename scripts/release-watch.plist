@@ -8,7 +8,7 @@
     launchctl load ~/Library/LaunchAgents/com.nawana.release-watch.plist
 
   Remove:  launchctl unload ~/Library/LaunchAgents/com.nawana.release-watch.plist
-  Output:  ~/Desktop/beta audio/release-watch.log
+  Output:  ~/Library/Logs/nawana/release-watch.log (launchd cannot open files inside Google Drive)
 -->
 <plist version="1.0">
 <dict>
@@ -31,8 +31,8 @@
     <string>/Users/eunggyuelee</string>
   </dict>
   <key>StandardOutPath</key>
-  <string>/Users/eunggyuelee/Desktop/beta audio/release-watch.log</string>
+  <string>/Users/eunggyuelee/Library/Logs/nawana/release-watch.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/eunggyuelee/Desktop/beta audio/release-watch.log</string>
+  <string>/Users/eunggyuelee/Library/Logs/nawana/release-watch.log</string>
 </dict>
 </plist>
