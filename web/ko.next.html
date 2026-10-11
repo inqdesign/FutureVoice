@@ -211,6 +211,28 @@ nav.sec .logo { color: #F5F2EB; }
 .call-bottom .end svg { width: 20px; height: 20px; transform: rotate(135deg); }
 /* app-scale overrides inside the screen */
 .iphone .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* live screens from the UI kit (web/kit) sit over the capture; the capture stays as the
+   fallback until the kit has loaded (and if it never does) */
+[data-nw]:not(:defined) { display: none; }
+.s-scr > [data-nw] { z-index: 1; }
+.s-scr .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* the device is the kit's iPhone 17 Pro (web/kit): island, status bar and frame drawn to the
+   real proportions. Until the kit loads it shows the capture in a plain black frame. */
+nw-phone.iphone-k { width: 330px; flex: none; }
+.weekly-show { gap: 24px; }
+.weekly-show nw-phone.iphone-k { width: 270px; }
+@media (max-width: 700px) { .weekly-show nw-phone.iphone-k { width: 46vw; } .weekly-show { gap: 10px; } }
+@media (max-width: 700px) { nw-phone.iphone-k { width: 290px; } }
+nw-phone:not(:defined) { display: block; aspect-ratio: 430 / 902; border-radius: 52px; background: #0B0B0C; padding: 3.3%; }
+nw-phone:not(:defined) > :not(img):not(.s-screens) { display: none; }
+nw-phone:not(:defined) > img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 42px; }
+/* a section's bullets follow its live screen: the bullet for the moment on screen stays,
+   the others step back */
+.hows li { transition: opacity 0.35s ease; }
+.hows.nw-beating li:not(.nw-beat-on) { opacity: 0.4; }
+.hows li.nw-beat-on .dot { animation: beatdot 1.4s ease-in-out infinite; }
+@keyframes beatdot { 50% { transform: scale(1.45); } }
+@media (prefers-reduced-motion: reduce) { .hows.nw-beating li:not(.nw-beat-on) { opacity: 1; } .hows li.nw-beat-on .dot { animation: none; } }
 .iphone .dl { gap: 10px; margin-top: auto; }
 .iphone .dl-bub { font-size: 13.5px; padding: 9px 12px; border-radius: 15px; }
 .iphone .dl-call .dl-bub { font-size: 14px; }
@@ -253,6 +275,50 @@ nav.sec .logo { color: #F5F2EB; }
    properly big device (caps at 400px; ~85vh tall on a laptop) */
 @media (min-width: 861px) { .s-phone { width: min(400px, 40vh); --dr: min(68px, 7vh); } }
 .s-caps { position: absolute; inset: 0; z-index: 1; }
+/* ── stickers: small pieces of the real app float around the pinned phone, one set per beat.
+   They are the kit's own pieces (a correction, a line, the fluent self's pill), not drawings. ── */
+.s-stk { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 3; pointer-events: none; --pw: 316px; }
+@media (min-width: 861px) { .s-stk { --pw: min(400px, 40vh); } }
+.stg { position: absolute; inset: 0; }
+.stk { position: absolute; opacity: 0; transform: translateY(14px) scale(.86) rotate(var(--r, 0deg));
+  transition: opacity .4s ease, transform .6s cubic-bezier(.3, 1.45, .5, 1); }
+.stg.on .stk { opacity: 1; transform: rotate(var(--r, 0deg)); }
+.stg.on .stk:nth-child(2) { transition-delay: .14s; }
+.stg.on .stk:nth-child(3) { transition-delay: .28s; }
+.stk > .b { background: #fff; color: #101013; border-radius: 18px; padding: 11px 14px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 14px 34px rgba(8,22,60,.22), 0 2px 6px rgba(8,22,60,.10);
+  font-size: 13.5px; line-height: 1.35; animation: stkbob 6s ease-in-out infinite; }
+.stk:nth-child(2) > .b { animation-delay: -2s; } .stk:nth-child(3) > .b { animation-delay: -4s; }
+@keyframes stkbob { 50% { transform: translateY(-6px); } }
+.stk .k { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #8E8E93; margin-bottom: 4px; }
+.stk .k svg { width: 13px; height: 13px; color: var(--blue); }
+.stk b { font-weight: 600; }
+.stk .row { display: flex; align-items: center; gap: 10px; }
+.stk .ic { width: 30px; height: 30px; border-radius: 50%; background: #E5EEFC; color: var(--blue); display: grid; place-items: center; flex: none; }
+.stk .ic svg { width: 16px; height: 16px; }
+.stk .num { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.stk .px { font-family: var(--pixel); font-size: 30px; line-height: 1; color: var(--blue); }
+.stk .chips { display: flex; gap: 6px; }
+.stk .chips span { padding: 5px 10px; border-radius: 99px; background: #F2F2F7; font-size: 12.5px; font-weight: 600; }
+.stk .chips span i { font-style: normal; color: var(--blue); }
+.stk .ok { color: #34C759; }
+.stk .bars { display: grid; gap: 5px; margin-top: 6px; width: 150px; }
+.stk .bars span { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; font-size: 11px; color: #55555A; }
+.stk .bars i { height: 4px; border-radius: 2px; background: #E5E5EA; overflow: hidden; }
+.stk .bars i b { display: block; height: 100%; background: #34C759; border-radius: 2px; }
+.stk nw-futureself { display: block; }
+.stk nw-fix, .stk nw-bubble { font-size: 13px; }
+.stk.bare > .b { background: none; box-shadow: none; padding: 0; filter: drop-shadow(0 12px 24px rgba(8,22,60,.20)) drop-shadow(0 2px 4px rgba(8,22,60,.08)); }
+.stg0 { will-change: transform; }
+.stg0 .stk > .b { font-size: 14.5px; padding: 13px 16px; border-radius: 20px; }
+.stg0 .stk .k { font-size: 12px; }
+.stg0.on .stk:nth-child(2) { transition-delay: .55s; } .stg0.on .stk:nth-child(6) { transition-delay: .62s; }
+.stg0.on .stk:nth-child(5) { transition-delay: .72s; } .stg0.on .stk:nth-child(1) { transition-delay: .8s; }
+.stg0.on .stk:nth-child(3) { transition-delay: .9s; } .stg0.on .stk:nth-child(7) { transition-delay: .98s; }
+.stg0.on .stk:nth-child(4) { transition-delay: 1.06s; } .stg0.on .stk:nth-child(8) { transition-delay: 1.14s; }
+@media (max-width: 860px) { .s-stk { display: none; } }
+@media (prefers-reduced-motion: reduce) { .stk > .b { animation: none; } .stk { transition: opacity .2s; } }
+
 .s-cap { position: absolute; top: 50%; left: var(--pad); right: 66%; transform: translateY(calc(-50% + 14px));
   opacity: 0; transition: opacity 0.45s ease, transform 0.45s ease; padding-left: var(--cell); text-align: left; }
 .s-cap.on { opacity: 1; transform: translateY(-50%); }
@@ -491,21 +557,23 @@ nav.sec .logo { color: #F5F2EB; }
 /* ── stages: copy + live app artifact, ruled apart ────────── */
 .stage {
   border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: 1fr 1fr; min-height: 620px;
-  padding: 0 var(--pad); position: relative; z-index: 1;
+  /* copy and screen sit TOGETHER in the middle, so one glance takes in both;
+     the rule above still runs the full width */
+  display: grid; grid-template-columns: minmax(0, 480px) auto; justify-content: center; column-gap: clamp(48px, 7vw, 104px);
+  min-height: 620px; padding: 0 var(--pad); position: relative; z-index: 1;
 }
-.stage-copy { padding: 88px var(--cell) 100px; display: flex; flex-direction: column; }
+.stage-copy { padding: 88px 0 100px; display: flex; flex-direction: column; justify-content: center; }
 .stage.flip .stage-copy { order: 2; }
 .stage-copy h2 { margin-top: 46px; max-width: 10em; font-size: clamp(28px, 3.8vw, 52px); }
 .stage-copy .one { margin-top: 24px; font-size: 19px; color: var(--dim); max-width: 26em; line-height: 1.6; }
 .stage-copy .one strong { color: var(--ink); font-weight: 700; }
-.hows { margin-top: auto; padding-top: 52px; list-style: none; }
+.hows { margin-top: 40px; padding-top: 0; list-style: none; }
 .hows li { border-top: 1px solid var(--lns); padding: 16px 0; font-size: 16px; color: var(--dim); display: flex; gap: 13px; line-height: 1.55; }
 .hows li b { color: var(--ink); font-weight: 700; }
 .hows li .dot { width: 9px; height: 9px; margin-top: 7px; color: var(--blue); }
-.stage-show { padding: 88px var(--cell) 100px; display: flex; align-items: center; justify-content: center; }
+.stage-show { padding: 72px 0 80px; display: flex; align-items: center; justify-content: center; }
 @media (max-width: 960px) {
-  .stage, .stage.flip { grid-template-columns: 1fr; min-height: 0; }
+  .stage, .stage.flip { grid-template-columns: minmax(0, 560px); min-height: 0; }
   .stage-copy, .stage.flip .stage-copy { order: 0; padding-bottom: 36px; }
   .stage-show { padding-top: 0; }
 }
@@ -732,17 +800,18 @@ footer a:hover { color: var(--ink); }
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif;
 }
 body { background: var(--paper); }
-/* film grain IN the backgrounds — the welcome's FilmGrain tile (grain.png:
-   uniform random grey, 160px shown at 80 like its @2x UIImage) blended
-   with overlay into each section's own ground, so text and the phone
-   screens stay clean */
-.plain, .alt, .night, nav.sec.nav-solid, .nav-menu {
-  background-image: url(grain-light.png);
-  background-size: 80px 80px; background-blend-mode: multiply;
+/* film grain, PINNED to the screen like the welcome's: one fixed layer
+   that multiplies the specks (grain-light.png, white with sparse specks up
+   to ~10% darker, 160px shown at 80 like its @2x tile) into whatever is
+   under it. Drawn in the section backgrounds it scrolled with the page,
+   and on a phone the specks crawling past read as motion sickness. The
+   ground colours are lifted (--paper-g / --paper2-g) by the tile's mean
+   (×0.964) so the cream lands where it was. */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  background: url(grain-light.png) 0 0 / 80px 80px repeat;
+  mix-blend-mode: multiply;
 }
-/* overlay barely moves a near-white ground, so the cream also gets a
-   multiply tile (grain-light.png: white with sparse specks up to ~10% darker) —
-   on the device the film reads stronger than overlay alone does here */
 /* no column grid: the film has none */
 .sec::before { display: none; }
 .plain { background-color: var(--paper-g); --surf: #FFFFFF; }
@@ -768,20 +837,16 @@ h1, h2 { font-weight: 700; letter-spacing: -0.025em; color: var(--ink); }
   --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99;
   --line: rgba(28,33,51,0.14); --lns: rgba(28,33,51,0.07); --surf: #FFFFFF;
 }
-/* the sky is drawn IN the hero's own background, under the grain — a
-   separate glow layer goes transparent at the bottom, where a grain tile
-   would show as a grey block */
+/* the sky is drawn in the hero's own background (the separate glow layer
+   is off) */
 .night .n-glow { display: none; }
 header.night {
   background-color: var(--paper-g);
   background-image:
-    url(grain-light.png),
-    url(grain.png),
     linear-gradient(to bottom, #04081A 0%, rgba(5,15,56,0.9) 7%, rgba(10,36,128,0.45) 15%, rgba(13,51,179,0) 24%),
     radial-gradient(ellipse 85% 60% at 50% -8%, #0F42E6 0%, #245FF5 22%, #6699FF 46%, #B8D1FF 68%, rgba(249,244,233,0) 92%);
-  background-size: 80px 80px, 80px 80px, 100% 100vh, 100% 100vh;
-  background-repeat: repeat, repeat, no-repeat, no-repeat;
-  background-blend-mode: multiply, overlay, normal, normal;
+  background-size: 100% 100vh, 100% 100vh;
+  background-repeat: no-repeat, no-repeat;
 }
 .night .btn-white, .night .btn-black { background: var(--ink); color: #fff; }
 .n-kicker { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; color: rgba(28,33,51,0.72); }
@@ -829,6 +894,19 @@ footer.night { background: #04081A; }
 /* the footer's eight links wrap on a phone — on one line they made the
    page 486px wide at 390, which slid the nav's buttons off screen */
 .foot-in .links { flex-wrap: wrap; gap: 10px 20px; }
+
+/* sign-in chooser: a centred sheet, not a line of fine print far below the button */
+.signin-pop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px;
+  background: rgba(10,14,28,.42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.signin-pop[hidden] { display: none; }
+.sp-card { width: min(380px, 100%); background: #fff; color: #141310; border-radius: 22px; padding: 26px 22px 18px;
+  box-shadow: 0 30px 80px rgba(8,22,60,.3); text-align: center; }
+.sp-card h3 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.sp-card p { margin: 8px 0 20px; font-size: 14.5px; color: #55555A; line-height: 1.5; }
+.sp-btn { display: flex; width: 100%; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+.sp-btn svg { width: 16px; height: 16px; }
+.sp-g { background: #fff; color: #141310; box-shadow: inset 0 0 0 1px rgba(20,19,16,.18); }
+.sp-x { margin-top: 12px; background: none; border: 0; font: inherit; font-size: 14px; color: #8E8E93; cursor: pointer; padding: 6px 12px; }
 </style>
 <!-- PostHog web analytics -->
 <script>
@@ -865,7 +943,7 @@ footer.night { background: #04081A; }
     <div class="navlinks">
       <a href="#talk">Talk</a>
       <a href="#watch">Watch</a>
-      <a href="#practice">Review</a>
+      <a href="#review">Review</a>
       <a href="#pricing" id="nav-pricing" hidden>가격</a>
       <a href="index.html">English</a>
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>App Store에서</small><b>App Store</b></span></a>
@@ -875,7 +953,7 @@ footer.night { background: #04081A; }
   <div class="nav-menu" id="nav-menu">
     <a href="#talk">Talk</a>
     <a href="#watch">Watch</a>
-    <a href="#practice">Review</a>
+    <a href="#review">Review</a>
     <a href="#pricing" id="nav-pricing-m" hidden>가격</a>
     <a href="index.html">English</a>
   </div>
@@ -905,21 +983,28 @@ footer.night { background: #04081A; }
         <div class="s-cap"><div class="ix">05 / 05</div><h3>레벨은 의견이 아니라<br />측정이다</h3><p>실제로 말한 것들로만.</p></div>
         <span class="s-num">01</span><span class="s-num">02</span><span class="s-num">03</span><span class="s-num">04</span><span class="s-num">05</span>
       </div>
-      <div class="iphone s-phone" id="s-phone">
-        <div class="screen">
+      <nw-phone class="s-phone" id="s-phone">
           <div class="s-screens">
             <!-- 01 · Talk home — real capture -->
-            <div class="s-scr on"><img class="shot" src="shots/ko-home.png" alt="" /></div>
+            <div class="s-scr on"><img class="shot" src="shots/ko-home.png" alt="" /><nw-home fill data-nw></nw-home></div>
             <!-- 02 · in-call — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/ko-call.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/ko-call.png" alt="" /><nw-call fill data-nw></nw-call></div>
             <!-- 03 · after the call: the talk is a scored book — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/ko-practice.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/ko-practice.png" alt="" /><nw-book fill data-nw></nw-book></div>
             <!-- 04 · word cloud — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/ko-words.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/ko-words.png" alt="" /><nw-words fill data-nw></nw-words></div>
             <!-- 05 · measured level — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/ko-progress.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/ko-progress.png" alt="" /><nw-progress fill data-nw></nw-progress></div>
           </div>
-        </div>
+      </nw-phone>
+
+      <div class="s-stk" aria-hidden="true">
+        <div class="stg stg0" data-step="0"><div class="stk" style="left:calc(var(--pw) * -0.5 - min(300px, 15.6vw) - 206px);top:-150px;width:206px;--r:-4deg"><div class="b"><div class="k">내 목소리로, 유창하게</div><nw-futureself mode="speaking" level="voice" style="width:170px;height:60px"></nw-futureself></div></div><div class="stk bare" style="left:calc(var(--pw) * -0.5 - min(40px, 2.1vw) - 262px);top:30px;width:262px;--r:3deg"><div class="b"><nw-fix noshadow note="지난 일이라 과거형이에요">I <b>went</b> to the gym yesterday.</nw-fix></div></div><div class="stk" style="left:calc(var(--pw) * -0.5 - min(260px, 13.5vw) - 214px);top:190px;width:214px;--r:-2deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4h11a1 1 0 0 1 1 1v15H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM5 18a2 2 0 0 1 2-2h11"/></svg> 통화가 교재로</div><div class="chips"><span>단어 <i>+5</i></span><span>표현 <i>+3</i></span></div></div></div><div class="stk" style="left:calc(var(--pw) * -0.5 - min(90px, 4.7vw) - 206px);top:330px;width:206px;--r:4deg"><div class="b"><div class="row"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17"/></svg></span><div><div class="k" style="margin:0">상황연습</div><b>카페에서 주문이 잘못 나왔을 때</b></div></div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-120px;width:214px;--r:4deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="7"/><path d="M12 9.5V13l2.3 1.6M4.5 5.5l2.5-2M19.5 5.5l-2.5-2"/></svg> 매일 8:00</div><b>미래의 나</b><div style="margin-top:8px;height:32px;border-radius:16px;background:#3F8EF7;color:#86F7A6;display:grid;place-items:center;font-weight:600;font-size:13.5px">받기</div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:70px;width:188px;--r:-3deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4"/></svg> 섀도잉</div><div class="row"><span class="num">96</span><span class="k" style="margin:0">점 · 박자 15/18</span></div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 + min(300px, 15.6vw));top:170px;width:216px;--r:3deg"><div class="b"><div class="row"><span style="width:38px;height:38px;border-radius:11px;background:#F2F2F7;display:flex;gap:6px;align-items:center;justify-content:center;flex:none"><i style="width:6px;height:9px;border-radius:1px;background:#1C1C1E"></i><i style="width:6px;height:9px;border-radius:1px;background:#1C1C1E"></i></span><div><div class="k" style="margin:0">주간 테스트</div><b>6 / 7 · 잘한 한 주</b></div></div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 + min(110px, 5.7vw));top:320px;width:200px;--r:-3deg"><div class="b"><div class="row"><div style="flex:1"><b style="font-size:17px">exhausting</b><div class="k" style="margin:2px 0 0">이번 주 내 단어가 됐어요</div></div><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none"><circle cx="12" cy="12" r="9" fill="#34C759"/><path d="M8 12.3l2.6 2.6 5-5.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div></div></div>
+        <div class="stg" data-step="1"><div class="stk" style="left:calc(var(--pw) * -0.5 - 220px + 34px);top:-34vh;width:220px;--r:-3deg"><div class="b"><div class="row"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M8 9h8M8 12.5h8M8 16h5"/></svg></span><div><div class="k">오늘의 뉴스</div><b>Did you hear about OpenAI's model…</b></div></div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 - 34px);top:-12vh;width:200px;--r:3deg"><div class="b"><div class="row"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17"/></svg></span><div><div class="k">일상</div><b>카페에서</b><div class="k" style="margin:2px 0 0">상대: 바리스타</div></div></div></div></div><div class="stk" style="left:calc(var(--pw) * -0.5 - 196px + 34px);top:18vh;width:196px;--r:2deg"><div class="b"><div class="k">탭 한 번이면 통화</div><nw-futureself mode="speaking" level="voice" style="width:120px;height:46px"></nw-futureself></div></div></div>
+        <div class="stg" data-step="2"><div class="stk bare" style="left:calc(var(--pw) * -0.5 - 250px + 34px);top:-30vh;width:250px;--r:-2deg"><div class="b"><nw-fix note="지난 일이라 과거형이에요" noshadow>It was a busy week. I <b>went</b> to three meetings.</nw-fix></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 - 34px);top:-20vh;width:214px;--r:3deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4"/></svg> 내 목소리로</div><nw-futureself mode="speaking" level="voice" style="width:150px;height:56px"></nw-futureself></div></div><div class="stk bare" style="left:calc(var(--pw) * 0.5 - 34px);top:16vh;width:200px;--r:-2deg"><div class="b"><nw-bubble who="me" nolabel style="--max:100%">I go to three meetings a day.</nw-bubble></div></div></div>
+        <div class="stg" data-step="3"><div class="stk" style="left:calc(var(--pw) * -0.5 - 214px + 34px);top:-28vh;width:214px;--r:-3deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4h11a1 1 0 0 1 1 1v15H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM5 18a2 2 0 0 1 2-2h11"/></svg> 방금 생긴 교재</div><div class="chips"><span>단어 <i>+5</i></span><span>표현 <i>+3</i></span></div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 - 34px);top:-16vh;width:170px;--r:3deg"><div class="b"><div class="k">이번 대화 점수</div><div class="row"><span class="num">75</span><span class="k" style="margin:0">B1 기준</span></div></div></div><div class="stk" style="left:calc(var(--pw) * -0.5 - 200px + 34px);top:16vh;width:200px;--r:2deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/></svg> 드릴 2장</div><span style="color:#8E8E93;text-decoration:line-through">I go to</span> → <b style="color:var(--blue)">I went to</b></div></div></div>
+        <div class="stg" data-step="4"><div class="stk" style="left:calc(var(--pw) * -0.5 - 196px + 34px);top:-28vh;width:196px;--r:-3deg"><div class="b"><div class="row"><div style="flex:1"><b style="font-size:17px">exhausting</b><div class="k" style="margin:2px 0 0">형용사 · 기진맥진한</div></div><span style="width:22px;height:22px;display:block"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#34C759"/><path d="M8 12.3l2.6 2.6 5-5.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 - 34px);top:-14vh;width:190px;--r:3deg"><div class="b"><div class="k">이번 주 내가 쓴 단어</div><span class="num">+12</span></div></div><div class="stk" style="left:calc(var(--pw) * -0.5 - 180px + 34px);top:18vh;width:180px;--r:2deg"><div class="b"><div class="chips"><span>negotiate</span><span>genuinely</span></div></div></div></div>
+        <div class="stg" data-step="5"><div class="stk" style="left:calc(var(--pw) * 0.5 - 34px);top:-26vh;width:190px;--r:3deg"><div class="b"><div class="k">추정 레벨</div><span class="px">B1 → B2</span></div></div><div class="stk" style="left:calc(var(--pw) * 0.5 - 34px);top:12vh;width:214px;--r:-2deg"><div class="b"><div class="k">실제로 말한 것만으로</div><div class="bars"><span>Vocabulary<i><b style="width:82%"></b></i></span><span>Grammar<i><b style="width:71%"></b></i></span><span>Fluency<i><b style="width:74%"></b></i></span></div></div></div></div>
       </div>
     </div>
   </div>
@@ -993,14 +1078,14 @@ footer.night { background: #04081A; }
       <h2 class="rv" style="--d:0.06s">머릿속 생각을,<br />편하게 내뱉는다.</h2>
       <p class="one rv" style="--d:0.12s"><strong>낯선 목소리가 아니라, 내 목소리니까.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>틀려도 눈치 볼 상대가 없다.</b> 긴장 없이 말문이 트인다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>관심사 뉴스, 내 상황, 자유 주제.</b> 원할 때 언제든.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>매 턴, 유창한 버전이 돌아온다.</b></span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>틀려도 눈치 볼 상대가 없다.</b> 긴장 없이 말문이 트인다.</span></li>
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>관심사 뉴스, 내 상황, 자유 주제.</b> 원할 때 언제든.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>매 턴, 유창한 버전이 돌아온다.</b></span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 통화 화면 — replace shots/ko-call.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-call.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-call.png" alt="" /><nw-call autoplay id="talk-call" title="Bike lanes in the city" beats="#talk .hows"></nw-call></nw-phone>
     </div>
   </div>
 </section>
@@ -1013,14 +1098,14 @@ footer.night { background: #04081A; }
       <h2 class="rv" style="--d:0.06s">앱을 여는 대신,<br />전화를 받는다.</h2>
       <p class="one rv" style="--d:0.12s"><strong>정한 시간에, 미래의 내가 먼저 전화를 건다.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>알람처럼 울리고,</b> 받으면 바로 대화가 시작된다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>지난 대화를 기억하고 건다.</b> 첫마디는 늘 질문으로.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>못 받아도 괜찮다.</b> 다그치지 않고, 다음 시간에 다시 건다.</span></li>
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>알람처럼 울리고,</b> 받으면 바로 대화가 시작된다.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>지난 대화를 기억하고 건다.</b> 첫마디는 늘 질문으로.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>못 받아도 괜찮다.</b> 다그치지 않고, 다음 시간에 다시 건다.</span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 매일 전화 — TEMP ko-home.png, needs a real ring capture → shots/ko-dailycall.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-home.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-home.png" alt="" /><nw-ring autoplay beats="#call .hows"></nw-ring></nw-phone>
     </div>
   </div>
 </section>
@@ -1033,14 +1118,14 @@ footer.night { background: #04081A; }
       <h2 class="rv" style="--d:0.06s">방금 한 통화를,<br />제대로 한 번 더.</h2>
       <p class="one rv" style="--d:0.12s"><strong>내 대사는 고쳐진 문장으로, 상대의 답은 그 통화 그대로.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>고친 문장만이 아니라, 통화 전체를</b> 처음부터 다시 산다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>프롬프터의 줄을 읽으면,</b> 그때 들었던 답이 이어진다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>줄마다 점수가 붙는다.</b> 막힌 줄은 그 자리에서 다시.</span></li>
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>고친 문장만이 아니라, 통화 전체를</b> 처음부터 다시 산다.</span></li>
+        <li data-beat="2 3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>프롬프터의 줄을 읽으면,</b> 그때 들었던 답이 이어진다.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>줄마다 점수가 붙는다.</b> 막힌 줄은 그 자리에서 다시.</span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 다시 말하기 — replace shots/ko-sayagain.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-sayagain.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-sayagain.png" alt="" /><nw-sayagain autoplay beats="#sayagain .hows"></nw-sayagain></nw-phone>
     </div>
   </div>
 </section>
@@ -1053,74 +1138,114 @@ footer.night { background: #04081A; }
       <h2 class="rv" style="--d:0.06s">영어가 필요한 순간은,<br />누구나 다르다.</h2>
       <p class="one rv" style="--d:0.12s"><strong>곧 다가올 내 상황을 설정하고, 미리 겪어본다.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>시험, 면접, 스피치, 여행, 스몰토크.</b> 한 줄로 적으면 대화가 통째로 열린다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>내 대사는 유창한 내 목소리로.</b></span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>갖고 싶은 문장은 탭 한 번,</b> 그 자리에서 샤도잉.</span></li>
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>시험, 면접, 스피치, 여행, 스몰토크.</b> 한 줄로 적으면 대화가 통째로 열린다.</span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>내 대사는 유창한 내 목소리로.</b></span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>갖고 싶은 문장은 탭 한 번,</b> 그 자리에서 샤도잉.</span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: Watch 시나리오 북 — replace shots/ko-book.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-book.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-book.png" alt="" /><nw-watch autoplay beats="#watch .hows"></nw-watch></nw-phone>
     </div>
   </div>
 </section>
 
-<!-- ═════════ 05 PRACTICE ═════════ -->
-<section class="sec alt" id="practice">
+<!-- ═════════ 05 REVIEW — the talk becomes a book ═════════ -->
+<section class="sec alt" id="review">
   <div class="stage">
     <div class="stage-copy">
-      <div class="kicker rv"><span class="mono">05</span>Review · 각인</div>
+      <div class="kicker rv"><span class="mono">05</span>Review · 교재</div>
+      <h2 class="rv" style="--d:0.06s">방금 한 통화가,<br />한 권의 교재로.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>남이 만든 문제집 대신, 내가 실제로 한 말로 공부한다.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>통화가 끝나면 교재가 생긴다.</b> 단어, 표현, 섀도잉, 드릴 네 챕터로.</span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>내가 쓴 표현과, 유창한 내가 쓴 표현.</b> 둘 다 내 단어장으로.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>틀린 문장은 고친 문장과 나란히.</b> 왜 고쳤는지 한 줄로.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>잊을 때쯤 돌아오는 간격 반복,</b> 입으로 답한다.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-practice.png" alt="" /><nw-review autoplay beats="#review .hows"></nw-review></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 06 SHADOWING ═════════ -->
+<section class="sec plain" id="practice">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">06</span>Shadowing · 각인</div>
       <h2 class="rv" style="--d:0.06s">자동으로 나올 때까지,<br />샤도잉.</h2>
       <p class="one rv" style="--d:0.12s"><strong>따라 할 목소리는 나 자신이다.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>싱크 샤도잉.</b> 단어마다 결과가 보인다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>걸리는 구간만 0.5배속 반복.</b></span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>잊을 때쯤 돌아오는 간격 반복,</b> 입으로 답한다.</span></li>
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>싱크 샤도잉.</b> 단어마다 결과가 보인다.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>걸리는 구간만 0.5배속 반복.</b></span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 샤도잉 화면 — replace shots/ko-shadow.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-shadow.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-shadow.png" alt="" /><nw-shadow autoplay beats="#practice .hows"></nw-shadow></nw-phone>
     </div>
   </div>
 </section>
 
 <!-- ═════════ SPEECH ═════════ -->
-<section class="sec plain" id="speech">
-  <div class="stage flip">
+<section class="sec alt" id="speech">
+  <div class="stage">
     <div class="stage-copy">
-      <div class="kicker rv"><span class="mono">06</span>Speech · 발표</div>
+      <div class="kicker rv"><span class="mono">07</span>Speech · 발표</div>
       <h2 class="rv" style="--d:0.06s">준비한 말을,<br />준비한 대로.</h2>
       <p class="one rv" style="--d:0.12s"><strong>대본을 띄우고, 발표하듯 소리 내어 읽는다.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>목소리를 따라 넘어가는 프롬프터.</b> 카메라는 켜도, 꺼도.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>읽고 나면 점수와 코치의 한마디.</b> 무엇을 기준으로 쟀는지까지.</span></li>
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>목소리를 따라 넘어가는 프롬프터.</b> 카메라는 켜도, 꺼도.</span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>읽고 나면 점수와 코치의 한마디.</b> 무엇을 기준으로 쟀는지까지.</span></li>
         <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>대본은 직접 쓰거나, AI와 함께.</b> 플러스·맥스에서.</span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 스피치 — replace shots/ko-speech.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-speech.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-speech.png" alt="" /><nw-speech autoplay beats="#speech .hows"></nw-speech></nw-phone>
     </div>
   </div>
 </section>
 
 <!-- ═════════ ROUTINE ═════════ -->
-<section class="sec alt" id="routine">
-  <div class="stage">
+<section class="sec plain" id="routine">
+  <div class="stage flip">
     <div class="stage-copy">
-      <div class="kicker rv"><span class="mono">07</span>Routine · 약속</div>
+      <div class="kicker rv"><span class="mono">08</span>Routine · 약속</div>
       <h2 class="rv" style="--d:0.06s">한 주를 계획하고,<br />한 주를 시험 본다.</h2>
       <p class="one rv" style="--d:0.12s"><strong>요일마다 할 일을 정하면, 그게 나와의 약속이 된다.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>대화, 단어, 섀도잉, 복습.</b> 정한 시간에 알려준다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>스트릭은 내가 정한 만큼.</b> 약속을 지킨 날만 이어진다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>주간 테스트는 내 한 주로만.</b> 내가 들은 표현, 내가 틀린 문장으로.</span></li>
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>대화, 단어, 섀도잉, 복습.</b> 정한 시간에 알려준다.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>스트릭은 내가 정한 만큼.</b> 약속을 지킨 날만 이어진다.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>주간 테스트는 내 한 주로만.</b> 내가 들은 표현, 내가 틀린 문장으로.</span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 루틴·주간 테스트 — replace shots/ko-routine.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-routine.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-routine.png" alt="" /><nw-routine autoplay beats="#routine .hows"></nw-routine></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 09 WEEKLY ═════════ -->
+<section class="sec alt" id="weekly">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">09</span>Weekly · 점검</div>
+      <h2 class="rv" style="--d:0.06s">한 주가 끝나면,<br />내 한 주로 시험 본다.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>남이 만든 문제집이 아니라, 이번 주에 내가 말한 것들로.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>한 주 돌아보기.</b> 며칠 했는지, 무엇이 내 것이 됐는지.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>코치의 한마디.</b> 자주 걸린 문법과 더 나은 단어를, 내 문장 그대로.</span></li>
+        <li data-beat="11 12 13"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>주간 테스트.</b> 내가 들은 표현, 내가 틀린 문장으로만 낸다.</span></li>
+        <li data-beat="14"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>틀린 건 돌아온다.</b> 다음 주 시험에서 다시.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show weekly-show">
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-routine.png" alt="" /><nw-weekreport autoplay beats="#weekly .hows"></nw-weekreport></nw-phone>
+      <nw-phone class="iphone-k rv" style="--d:0.16s"><img class="shot" src="shots/ko-routine.png" alt="" /><nw-weeklytest autoplay beats="#weekly .hows" beat-offset="10"></nw-weeklytest></nw-phone>
     </div>
   </div>
 </section>
@@ -1133,13 +1258,13 @@ footer.night { background: #04081A; }
       <h2 class="rv" style="--d:0.06s">내 삶의 사람들이,<br />연습의 등장인물로.</h2>
       <p class="one rv" style="--d:0.12s"><strong>연습은 늘 내 사람들과, 내 상황으로.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>바리스타, 팀장, 주치의.</b> 말로 소개하면 페르소나가 된다.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>중심엔 유창해진 나.</b></span></li>
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>바리스타, 팀장, 주치의.</b> 말로 소개하면 페르소나가 된다.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>중심엔 유창해진 나.</b></span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: Watch 탭 People + 시나리오 — replace shots/ko-people.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-people.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-people.png" alt="" /><nw-people autoplay beats="#people .hows"></nw-people></nw-phone>
     </div>
   </div>
 </section>
@@ -1152,13 +1277,13 @@ footer.night { background: #04081A; }
       <h2 class="rv" style="--d:0.06s">말한 단어가 모여,<br />내 단어 세계로.</h2>
       <p class="one rv" style="--d:0.12s"><strong>살아 있는 내 어휘 지도.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>레벨이 크기로 보인다.</b></span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>탭 한 번에 뜻과 예문.</b> 북마크는 공부 중, 체크는 아는 단어.</span></li>
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>레벨이 크기로 보인다.</b></span></li>
+        <li data-beat="2 3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>탭 한 번에 뜻과 예문.</b> 북마크는 공부 중, 체크는 아는 단어.</span></li>
       </ul>
     </div>
     <div class="stage-show">
       <!-- SHOT SLOT: 단어 구름 — replace shots/ko-words.png -->
-      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-words.png" alt="" /></div></div>
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-words.png" alt="" /><nw-words autoplay beats="#words .hows"></nw-words></nw-phone>
     </div>
   </div>
 </section>
@@ -1229,9 +1354,8 @@ footer.night { background: #04081A; }
       <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App Store에서 시작 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
-    <!-- Max has no Stripe price yet, so it carries no data-tier buy button:
-         if web billing is switched back on, Max still sends people to the
-         App Store. Monthly only, like the app's ladder. -->
+    <!-- Max is monthly only, like the app's ladder; under Annual its button
+         still buys the monthly plan (the card says so). -->
     <div class="plan" data-plan="max">
       <div><span class="p-name">맥스</span></div>
       <div class="p-price" data-price="max">—</div>
@@ -1245,11 +1369,17 @@ footer.night { background: #04081A; }
         <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
       </dl>
       <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App Store에서 시작 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="max" type="button" hidden>구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
   <div class="inner">
     <p class="p-error" id="pricing-error"></p>
-    <p class="p-fine" id="signin-choice" hidden>앱에서 쓰는 계정으로 로그인해 주세요: <a href="#" data-signin="apple">Apple로 계속</a> · <a href="#" data-signin="google">Google로 계속</a></p>
+    <div class="signin-pop" id="signin-choice" hidden><div class="sp-card" role="dialog" aria-modal="true" aria-labelledby="sp-title">
+      <h3 id="sp-title">앱에서 쓰는 계정으로 로그인</h3><p>구독이 앱과 같은 계정에 바로 연결돼요.</p>
+      <a class="btn btn-black sp-btn" href="#" data-signin="apple"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg>Apple로 계속</a>
+      <a class="btn sp-btn sp-g" href="#" data-signin="google">Google로 계속</a>
+      <button class="sp-x" type="button" data-signin-close>닫기</button>
+    </div></div>
     <p class="p-fine" id="manage-sub" hidden>웹에서 구독 중이라면 <a href="#" id="manage-link">구독 관리</a>에서 변경·해지할 수 있습니다.</p>
     <p class="p-fine">통화 시간은 대화가 오가는 동안만 줄고, 말이 멈춘 동안은 세지 않습니다. 상황연습은 탭 한 번에 재생되니 편수로 셉니다. 두 몫은 따로라, 상황연습을 봐도 통화 시간은 줄지 않습니다. 시간이 모자란 달에는 50분을 ₩5,900에 더할 수 있고, 구독은 App Store에서 언제든 해지할 수 있습니다.</p>
   </div>
@@ -1512,6 +1642,8 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
   var caps = [].slice.call(wrap.querySelectorAll(".s-cap"));
   var nums = [].slice.call(wrap.querySelectorAll(".s-num"));
   var scrs = [].slice.call(wrap.querySelectorAll(".s-scr"));
+  var stks = [].slice.call(wrap.querySelectorAll(".stg:not(.stg0)"));
+  var stk0 = wrap.querySelector(".stg0"), stkWrap = wrap.querySelector(".s-stk");
   var pill = document.getElementById("s-callpill");
   var note = wrap.querySelector(".n-note");
   var applied = 0; // translateY currently on the phone, in px
@@ -1538,9 +1670,20 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
     var scale = 0.84 + 0.16 * Math.min(1, Math.max(0, f));
     phone.style.transform = "translateY(" + applied.toFixed(1) + "px) scale(" + scale.toFixed(3) + ")";
     var idx = Math.min(5, Math.max(1, Math.floor(f)));
-    scrs.forEach(function (el, i) { el.classList.toggle("on", i + 1 === idx); });
+    scrs.forEach(function (el, i) {
+      el.classList.toggle("on", i + 1 === idx);
+      var live = el.querySelector("[data-nw]");
+      if (live) live.toggleAttribute("active", f >= 0.6 && i + 1 === idx);
+    });
     caps.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
     nums.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    stks.forEach(function (el, i) { el.classList.toggle("on", f >= 1.15 && i + 1 === idx); });
+    if (stk0) {
+      var pr = phone.getBoundingClientRect(), sr = stkWrap.getBoundingClientRect();
+      stk0.style.transform = "translateY(" + (pr.top - sr.top).toFixed(1) + "px)";
+      stk0.style.setProperty("--pw", pr.width.toFixed(1) + "px");
+      stk0.classList.toggle("on", f < 0.3);
+    }
     if (pill) pill.dataset.drive = idx === 2 ? 0.9 : 0.15;
   }
   window.addEventListener("scroll", update, { passive: true });
@@ -1831,12 +1974,10 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
 // (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
 const BILLING = {
-  // OFF since 2026-10-10. The Stripe side is still live (web/README.md § Web
-  // billing), but this page IS reachable at its .next URL and its plan copy
-  // predates the 2026-09-26 bounded plans (it promised an uncapped Plus, 60
-  // Light scenes, a trial and annual plans). Turn it back on only once the
-  // pricing section matches subscription_plans again.
-  enabled: false,
+  // ON again 2026-10-11: the Stripe prices were re-cut to the App Store's live prices
+  // (light/plus/max, no trial) and subscription_plans.stripe_price_id points at them
+  // (20261011100000). Keep this page's PLANS, the Stripe prices and App Store Connect in step.
+  enabled: true,
   supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
 }
@@ -1983,6 +2124,10 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   // the same Supabase user with no email matching.
   let pendingAuth = null
   const signinRow = document.getElementById("signin-choice")
+  document.body.appendChild(signinRow)   // out of the section's stacking context: always on top
+  const closeSignin = () => { signinRow.hidden = true; pendingAuth = null }
+  signinRow.addEventListener("click", (ev) => { if (ev.target === signinRow || ev.target.closest("[data-signin-close]")) closeSignin() })
+  addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !signinRow.hidden) closeSignin() })
   document.querySelectorAll("[data-signin]").forEach((a) => {
     a.addEventListener("click", (ev) => {
       ev.preventDefault()
@@ -2044,7 +2189,10 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   // The cycle lives on the renderer above (window.__cycle), so the toggle and
   // the checkout can never disagree about which SKU is on screen.
   document.querySelectorAll(".p-buy[data-tier]").forEach((btn) => {
-    btn.addEventListener("click", () => buy(PLANS[btn.dataset.tier][window.__cycle].id, btn))
+    btn.addEventListener("click", () => {
+      const t = PLANS[btn.dataset.tier]
+      buy((t[window.__cycle] || t.monthly).id, btn)   // a monthly-only tier buys monthly under Annual
+    })
   })
 
   // Returning from the Apple sign-in redirect with ?plan= → continue to
@@ -2064,6 +2212,28 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     }
   }
 }
+</script>
+<script type="module">
+// ── live app screens (web/kit): the Talk section plays a news talk, beat by beat with its bullets
+import "./kit/nawana-ui.js";
+const talk = document.getElementById("talk-call");
+if (talk) talk.scene = async s => {
+  s.goals(["bike to work", "safer", "give it a try"]);
+  await s.sleep(500);
+  s.beat(1);
+  await s.say("Saw the news about the new bike lanes? Would you ever bike to work?");
+  s.beat(2);
+  await s.listen();
+  await s.sleep(900);
+  await s.user("Um, maybe… if it is more safe, I will try it.");
+  s.tick(1);
+  s.beat(3);
+  s.fix({ text: "Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.", note: "가정하는 말이라 were, I'd를 써요" });
+  await s.sleep(600);
+  await s.say("Same here. A lane with a real barrier would change everything for me.");
+  s.tick(2); s.done();
+  await s.sleep(2800);
+};
 </script>
 </body>
 </html>
