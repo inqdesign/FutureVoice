@@ -149,10 +149,6 @@ export class GeminiTranscriber {
    *  finals, the same ~1.4 s to the final, and a barge-in spoken the instant
    *  the gap ends transcribed whole, against streaming the zeros. */
   sendAudio(pcm: ArrayBuffer): void {
-    if (this.gate) {
-      for (const frame of this.gate.push(pcm).send) this.forward(frame)
-      return
-    }
     const ms = pcm.byteLength / 32
     if (isAllZero(pcm)) {
       this.zeroRunMs += ms
@@ -164,7 +160,8 @@ export class GeminiTranscriber {
       this.zeroRunMs = 0
       this.keptAliveAtMs = 0
     }
-    this.forward(pcm)
+    if (!this.gate) return this.forward(pcm)
+    for (const frame of this.gate.push(pcm)) this.forward(frame)
   }
 
   private forward(pcm: ArrayBuffer): void {
@@ -223,6 +220,7 @@ export class GeminiTranscriber {
       this.callbacks.onError(`transcribe-live ${why} (${this.rotationsAt.length} rotations in ${rotationWindowMs / 1000}s)`)
       return
     }
+    this.gate?.reset()
     this.callbacks.onRotating(why)
     this.rotate().catch((e) =>
       this.callbacks.onError(`transcribe-live reconnect failed after ${why}: ${String(e)}`))
@@ -283,10 +281,12 @@ export class GeminiTranscriber {
     if (!content) return
     const interim = content.interimInputTranscription?.text
     if (typeof interim === "string" && interim.length > 0) {
+      this.gate?.noteInterim()
       this.callbacks.onInterim(interim)
     }
     const final = content.inputTranscription?.text
     if (typeof final === "string" && final.trim().length > 0) {
+      this.gate?.noteFinal()
       this.callbacks.onUtterance(final.trim())
     }
   }

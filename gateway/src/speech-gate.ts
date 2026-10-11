@@ -2,106 +2,137 @@
 //
 // Google bills gemini-3.5-transcribe-live by audio streamed in. The phone
 // sends exact zeros while the fluent self is audible (dropped since
-// 2026-10-09), but a quiet room is never digital zero, so a learner's
-// thinking pause went upstream in full: 146.7 audio minutes against 85.0
-// minutes of learner speech, Oct 9–11 2026 — 42% of the bill was silence.
+// 2026-10-09 — see GeminiTranscriber's zero tail), but a quiet room is never
+// digital zero, so a learner's thinking pause went upstream in full: 146.7
+// audio minutes against 85.0 minutes of learner speech, Oct 9–11 2026.
 //
-// The gate is built to fail OPEN. It only closes on a frame that is clearly
-// quieter than the speech heard around it, so a café's babble (loud, steady)
-// keeps it open exactly as before, and the money saved comes from quiet rooms.
+// THE RULE: only Gemini decides that speech is over. The first version of
+// this gate (2026-10-11, same evening) judged speech by loudness on its own,
+// closed in the middle of a learner's drawn-out "uhhh…" and soft word endings,
+// and the next words reached Gemini as a NEW utterance that overwrote the
+// sentence on screen — reported from the first real call. So:
 //
-//   * Noise floor: tracks the quiet frames — drops at once to a quieter frame,
-//     rises slowly (`floorRiseDbPerSec`) so a talker can't drag it up.
-//   * Speech: a frame `speechOverFloorDb` above the floor and above
-//     `absoluteMinDb`. Zeros are never speech.
-//   * Hangover: after the last speech frame the gate stays open
-//     `hangoverMs` — the same 2 s the zero tail always forwarded, so Gemini's
-//     own end-of-speech detection sees the silence it always saw.
-//   * Pre-roll: while closed, the last `preRollMs` are held and sent the
-//     moment speech opens the gate, so the first syllable is never clipped.
-//   * Noisy room: a floor above `noisyFloorDb` keeps the gate open, full
-//     stop. Measured 2026-10-11 (test/probe-speech-gate.mjs): with café-level
-//     noise at the speaker's own level the gate read speech as noise and cut
-//     sentences off; a quiet-only gate gives that saving up and loses nothing.
-//   * Warm-up: open for the first `warmupMs` while the floor settles.
-//   * Keep-alive: while closed, one frame every `keepAliveMs` — with nothing
-//     at all the live socket is aborted (1008) after 60–90 s.
-
-export interface GateDecision {
-  /** Frames to forward now, oldest first (pre-roll + this frame, this frame, or none). */
-  send: ArrayBuffer[]
-}
+//   * The gate may close only BETWEEN utterances: after Gemini's final for
+//     the last one (`noteFinal`), with no interim since (`noteInterim` opens
+//     it for good until the next final), `settleMs` after that final, and
+//     after `quietMs` of frames no louder than the room.
+//   * It reopens on the first frame `reopenOverFloorDb` above the room — a
+//     deliberately low bar — and sends the `preRollMs` it was holding first,
+//     so the start of the next utterance arrives whole. Reopening on a door
+//     slam costs a few seconds of audio; reopening late would cost words.
+//   * A room louder than `noisyFloorDb` (a café) never closes at all: there
+//     the difference between a voice and the room is too small to trust.
+//   * While closed, one frame every `keepAliveMs` — with nothing at all the
+//     live socket is aborted (1008) after 60–90 s.
+//
+// Exact-zero frames are left to the transcriber's existing zero tail; this
+// gate only ever sees the frames that rule would forward.
 
 export class SpeechGate {
-  static readonly hangoverMs = 2000
-  static readonly preRollMs = 500
-  static readonly warmupMs = 1500
+  static readonly settleMs = 800
+  static readonly quietMs = 800
+  static readonly preRollMs = 1000
   static readonly keepAliveMs = 5000
-  static readonly speechOverFloorDb = 9
-  static readonly absoluteMinDb = -62
-  static readonly floorRiseDbPerSec = 1.5
+  static readonly reopenOverFloorDb = 4
   static readonly noisyFloorDb = -48
+  static readonly floorRiseDbPerSec = 1.0
 
+  /** Gemini has finalized the last utterance and heard nothing new since. */
+  private between = false
+  private sinceFinalMs = 0
+  private quietRunMs = 0
   private floorDb = Number.NaN
-  private elapsedMs = 0
-  private sinceSpeechMs = Number.POSITIVE_INFINITY
+  private closed = false
   private closedForMs = 0
   private keptAliveAtMs = 0
-  private preRoll: { frame: ArrayBuffer; ms: number }[] = []
+  private preRoll: ArrayBuffer[] = []
   private preRollMs = 0
   /** Audio seen and audio forwarded, in ms — their difference is the saving. */
   seenMs = 0
   sentMs = 0
 
-  push(frame: ArrayBuffer): GateDecision {
-    const d = this.decide(frame)
-    this.seenMs += frame.byteLength / 32
-    for (const f of d.send) this.sentMs += f.byteLength / 32
-    return d
+  /** Gemini wrote interim text: an utterance is under way. Never close now. */
+  noteInterim(): void {
+    this.between = false
+    this.open()
   }
 
-  private decide(frame: ArrayBuffer): GateDecision {
-    const ms = frame.byteLength / 32 // 16 kHz s16le mono
-    this.elapsedMs += ms
-    const db = levelDb(frame)
-    const zero = db === Number.NEGATIVE_INFINITY
+  /** Gemini finalized an utterance: from here the gate may close once the
+   *  room has been quiet for a moment. */
+  noteFinal(): void {
+    this.between = true
+    this.sinceFinalMs = 0
+    this.quietRunMs = 0
+  }
 
-    if (!zero) {
+  /** The upstream socket was replaced: forget what Gemini said; stay open
+   *  until it finalizes something on the new socket. */
+  reset(): void {
+    this.between = false
+    this.open()
+  }
+
+  /** Frames to forward now, oldest first. */
+  push(frame: ArrayBuffer): ArrayBuffer[] {
+    const out = this.decide(frame)
+    this.seenMs += frame.byteLength / 32
+    for (const f of out) this.sentMs += f.byteLength / 32
+    return out
+  }
+
+  private decide(frame: ArrayBuffer): ArrayBuffer[] {
+    const ms = frame.byteLength / 32 // 16 kHz s16le mono
+    const db = levelDb(frame)
+    const loud = !Number.isNaN(this.floorDb) && db > this.floorDb + SpeechGate.reopenOverFloorDb
+
+    // The room's level: drops at once to a quieter frame, rises slowly.
+    if (db !== Number.NEGATIVE_INFINITY) {
       if (Number.isNaN(this.floorDb) || db < this.floorDb) this.floorDb = db
       else this.floorDb = Math.min(db, this.floorDb + SpeechGate.floorRiseDbPerSec * ms / 1000)
     }
-    const speech = !zero && db > SpeechGate.absoluteMinDb
-      && db > this.floorDb + SpeechGate.speechOverFloorDb
-    if (speech) this.sinceSpeechMs = 0
-    else this.sinceSpeechMs += ms
-
     const noisy = !Number.isNaN(this.floorDb) && this.floorDb > SpeechGate.noisyFloorDb
-    const open = noisy || this.elapsedMs <= SpeechGate.warmupMs || this.sinceSpeechMs <= SpeechGate.hangoverMs
-    if (open) {
-      const send = this.preRoll.map((p) => p.frame)
-      send.push(frame)
-      this.preRoll = []
-      this.preRollMs = 0
-      this.closedForMs = 0
-      this.keptAliveAtMs = 0
-      return { send }
+
+    if (this.closed) {
+      if (loud || noisy || !this.between) {
+        const out = this.preRoll.concat([frame])
+        this.open()
+        return out
+      }
+      this.closedForMs += ms
+      this.preRoll.push(frame)
+      this.preRollMs += ms
+      while (this.preRoll.length > 1 && this.preRollMs - this.preRoll[0].byteLength / 32 >= SpeechGate.preRollMs) {
+        this.preRollMs -= this.preRoll.shift()!.byteLength / 32
+      }
+      if (this.closedForMs - this.keptAliveAtMs >= SpeechGate.keepAliveMs) {
+        this.keptAliveAtMs = this.closedForMs
+        this.preRoll.pop()
+        this.preRollMs -= ms
+        return [frame]
+      }
+      return []
     }
 
-    // Closed: hold the frame as pre-roll; forward one now and then.
-    this.closedForMs += ms
-    this.preRoll.push({ frame, ms })
-    this.preRollMs += ms
-    while (this.preRoll.length > 1 && this.preRollMs - this.preRoll[0].ms >= SpeechGate.preRollMs) {
-      this.preRollMs -= this.preRoll.shift()!.ms
+    // Open: forward, and decide whether this was the last frame for a while.
+    if (this.between) {
+      this.sinceFinalMs += ms
+      this.quietRunMs = loud ? 0 : this.quietRunMs + ms
+      if (!noisy && this.sinceFinalMs >= SpeechGate.settleMs && this.quietRunMs >= SpeechGate.quietMs) {
+        this.closed = true
+        this.closedForMs = 0
+        this.keptAliveAtMs = 0
+      }
     }
-    if (this.closedForMs - this.keptAliveAtMs >= SpeechGate.keepAliveMs) {
-      this.keptAliveAtMs = this.closedForMs
-      // The keep-alive frame leaves the pre-roll: it has been sent.
-      this.preRoll.pop()
-      this.preRollMs -= ms
-      return { send: [frame] }
-    }
-    return { send: [] }
+    return [frame]
+  }
+
+  private open(): void {
+    this.closed = false
+    this.preRoll = []
+    this.preRollMs = 0
+    this.closedForMs = 0
+    this.keptAliveAtMs = 0
+    this.quietRunMs = 0
   }
 }
 

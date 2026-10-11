@@ -52,7 +52,7 @@ function run(mode) {
         for (let i = 0; i < pcm.length; i += FRAME) {
           const frame = pcm.subarray(i, i + FRAME)
           const ab = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength)
-          const out = gate ? gate.push(ab).send : [ab]
+          const out = gate ? gate.push(ab) : [ab]
           for (const f of out) {
             ws.send(JSON.stringify({ realtimeInput: { audio: {
               data: Buffer.from(f).toString("base64"), mimeType: "audio/pcm;rate=16000" } } }))
@@ -65,15 +65,17 @@ function run(mode) {
         ws.close()
         return
       }
+      // The same two signals GeminiTranscriber feeds the gate in production.
       const sc = m.serverContent
-      if (sc?.inputTranscription?.text) current += sc.inputTranscription.text
-      if (sc?.turnComplete || sc?.inputTranscription?.finished) {
-        if (current.trim()) finals.push({ at: ((Date.now() - t0) / 1000).toFixed(1), text: current.trim() })
+      if (sc?.interimInputTranscription?.text) { gate?.noteInterim(); current = sc.interimInputTranscription.text }
+      if (sc?.inputTranscription?.text?.trim()) {
+        gate?.noteFinal()
+        finals.push({ at: ((Date.now() - t0) / 1000).toFixed(1), text: sc.inputTranscription.text.trim() })
         current = ""
       }
     }
     ws.onclose = () => {
-      if (current.trim()) finals.push({ at: "close", text: current.trim() })
+      if (current.trim()) finals.push({ at: "unfinished", text: current.trim() })
       resolve({ mode, finals, sentS: (sentMs / 1000).toFixed(1), totalS: (pcm.length / 32000).toFixed(1) })
     }
   })
