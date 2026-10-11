@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
@@ -160,7 +161,9 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
 
     private val client: BillingClient = BillingClient.newBuilder(appContext)
         .setListener(this)
-        .enablePendingPurchases()
+        // Billing 8 dropped the no-argument form; one-time products (the
+        // talk pack) are the only kind that can be pending.
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
 
     fun refresh() {
@@ -200,7 +203,8 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
                     .build()
             })
             .build()
-        client.queryProductDetailsAsync(params) { result, details ->
+        client.queryProductDetailsAsync(params) { result, found ->
+            val details = found.productDetailsList
             _settled.value = true
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync
             _offers.value = details.mapNotNull { d ->
@@ -381,9 +385,9 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
                     .setProductType(BillingClient.ProductType.INAPP)
                     .build()))
             .build()
-        client.queryProductDetailsAsync(params) { result, details ->
+        client.queryProductDetailsAsync(params) { result, found ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync
-            val d = details.firstOrNull() ?: return@queryProductDetailsAsync
+            val d = found.productDetailsList.firstOrNull() ?: return@queryProductDetailsAsync
             val price = d.oneTimePurchaseOfferDetails ?: return@queryProductDetailsAsync
             _pack.value = Pack(row.google_product_id, row.seconds, price.formattedPrice,
                 price.priceAmountMicros, price.priceCurrencyCode, d)
