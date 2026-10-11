@@ -103,7 +103,8 @@ import java.util.Date
  * against.
  */
 @Composable
-internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () -> Unit, onAgain: (() -> Unit)?) {
+internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () -> Unit, onAgain: (() -> Unit)?,
+                                onSeeBoard: (() -> Unit)? = null) {
     val context = LocalContext.current
     val store = remember { SpeechStore.shared(context) }
     val takes by store.takes.collectAsStateWithLifecycle()
@@ -111,6 +112,14 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
     val stored = takes.firstOrNull { it.id == takeId }
     val take = if (live != null && stored?.coaching == null && live.coaching != null) live else stored ?: live
     val script = take?.let { store.script(it.scriptId) }
+    val challenges = remember { com.roro.futurevoice.data.SpeechChallenges.shared(context) }
+    val entries by challenges.entries.collectAsStateWithLifecycle()
+    val standings by challenges.standings.collectAsStateWithLifecycle()
+    val moments by challenges.moments.collectAsStateWithLifecycle()
+    moments[takeId]?.let { moment ->
+        SpeechChallengeMomentSheet(moment, onSeeBoard = onSeeBoard ?: {},
+            onDismiss = { challenges.dismissMoment(takeId) })
+    }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         SheetHeader(
@@ -159,6 +168,10 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
                         Text(tip, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+            }
+
+            if (script.isChallenge) {
+                SpeechChallengeEntrySection(entries[take.id], standings[script.id])
             }
 
             Playback(take, take.id in pending)

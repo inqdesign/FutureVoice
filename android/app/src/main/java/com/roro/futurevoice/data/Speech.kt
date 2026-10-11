@@ -56,7 +56,13 @@ data class SpeechScript(
     @Serializable(with = IsoDateMillisSerializer::class) val createdAt: Long,
     /** Bundled with the app — the one script every account can practise. */
     val isBuiltIn: Boolean = false,
-)
+    /** A published challenge (`speech_challenges.id`): a script every learner
+     *  of the language reads, with a leaderboard. Never written into
+     *  `speech_scripts.json` — iOS `SpeechScript.challengeId`. */
+    val challengeId: String? = null,
+) {
+    val isChallenge: Boolean get() = challengeId != null
+}
 
 /** Every number on a Speech result, computed in code (`SpeechAnalyzer`). */
 @Serializable
@@ -302,7 +308,12 @@ class SpeechStore private constructor(private val context: Context) {
         _videoPending.value = if (pending) _videoPending.value + id else _videoPending.value - id
     }
 
-    fun script(id: String): SpeechScript? = _scripts.value.firstOrNull { it.id == id }
+    /** A challenge's takes live here like any other; its script lives in
+     *  [SpeechChallenges], which the founder can revise or retire. */
+    fun script(id: String): SpeechScript? =
+        // The challenge first: the bundled sample IS the first challenge (same
+        // id), and its takes must open as challenge takes.
+        SpeechChallenges.shared(context).script(id) ?: _scripts.value.firstOrNull { it.id == id }
     fun takes(scriptId: String): List<SpeechTake> = _takes.value.filter { it.scriptId == scriptId }
     fun take(id: String): SpeechTake? = _takes.value.firstOrNull { it.id == id }
     fun best(scriptId: String): Int? = takes(scriptId).maxOfOrNull { it.metrics.overall }

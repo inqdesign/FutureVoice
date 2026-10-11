@@ -142,7 +142,8 @@ internal fun SpeechPrompterScreen(
         BackHandler { close() }
         Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
             SpeechResultScreen(takeId = done.take.id, live = done.take, onBack = { close() },
-                onAgain = { session.reset() })
+                onAgain = { session.reset() },
+                onSeeBoard = if (session.script.value.isChallenge) ({ close() }) else null)
         }
         return
     }
@@ -295,7 +296,8 @@ private fun SpeechTakeLayout(
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
                             Color(0xFFBFBFBF), Color(0xFF8C6B59), Color(0xFF333333)))))
                     } else {
-                        MicPanel(session, recording, denied = cameraOn && cameraDenied)
+                        MicPanel(session, recording, denied = cameraOn && cameraDenied,
+                            challengeCameraOff = script.isChallenge && !cameraOn)
                     }
                 }
                 val onCamera = cameraShowing || (capturing && com.roro.futurevoice.capture.flags.SpeechCaptureFlags.fakeCamera)
@@ -581,7 +583,8 @@ private fun ChromeButton(icon: ImageVector, label: String, onCamera: Boolean, si
 /** The quiet panel where the camera would be: a mic that breathes with the
  *  voice (iOS `SpeechMicGlyph`). */
 @Composable
-private fun MicPanel(session: SpeechTakeSession, recording: Boolean, denied: Boolean) {
+private fun MicPanel(session: SpeechTakeSession, recording: Boolean, denied: Boolean,
+                     challengeCameraOff: Boolean = false) {
     var level by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(recording) {
         while (recording) { level = session.micLevel; delay(60) }
@@ -596,6 +599,10 @@ private fun MicPanel(session: SpeechTakeSession, recording: Boolean, denied: Boo
                 modifier = Modifier.size(40.dp).scale(1f + level * 0.35f))
             if (denied) {
                 Text(stringResource(R.string.camera_access_is_off_turn_it_on_in_settings_or_practise_with_527914),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
+            } else if (challengeCameraOff && !recording) {
+                Text(stringResource(R.string.the_board_only_takes_camera_takes_your_video_stays_on_your_p_49f52d),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
             }

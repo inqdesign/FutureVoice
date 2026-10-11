@@ -34,6 +34,20 @@ class SpeechAnalyzerTest {
         assertEquals(2, SpeechAnalyzer.countFillers("えっと音はえー波です", "音は波です", "ja"))
     }
 
+    @Test fun fillersTheScriptSaysAreKept() {
+        val script = "\"음\", \"어\" 같은 말을 얼마나 자주 하는지"
+        assertEquals("음 어 같은 말을 얼마나 자주 하는지",
+            SpeechAnalyzer.removingFillers("음 어 같은 말을 얼마나 자주 하는지", "ko", script))
+        assertEquals("음 어 같은 말을", SpeechAnalyzer.removingFillers("어 음 어 같은 말을", "ko", script))
+        assertEquals("音はえーです", SpeechAnalyzer.removingFillers("えー音はえーです", "ja", "音はえーです"))
+    }
+
+    @Test fun koreanMissesAreShownAsTheScriptsWords() {
+        val script = "엉켜 버린 적, 있으시죠? 지금 이 원고를 소리 내어 읽은 일 분이 바로 그 첫 연습입니다."
+        val m = SpeechAnalyzer.analyze(script, "엉켜 버린 적 있죠 지금 이 원고를 소리", "ko", null)
+        assertEquals(listOf("있으시죠", "내어 읽은 일 분이 바로 그 첫 연습입니다"), m.missed)
+    }
+
     @Test fun fillerInTheScriptIsNotTheReadersFault() {
         assertEquals(0, SpeechAnalyzer.countFillers("Er hat hm gesagt", "Er hat hm gesagt.", "de"))
     }

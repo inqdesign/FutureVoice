@@ -236,6 +236,10 @@ fun RootScreen() {
     }
     var showInvite by remember { mutableStateOf(false) }
     var showShadowBrowser by remember { mutableStateOf(false) }
+    /** A Speech challenge's board, pushed from the Speech tab. */
+    var speechChallengeId by remember { mutableStateOf<String?>(null) }
+    /** Every challenge, live and past — pushed from the Speech tab. */
+    var showSpeechChallenges by remember { mutableStateOf(false) }
     var showDueReview by remember { mutableStateOf(false) }
     var showCreditGuide by remember { mutableStateOf(false) }
     var showPlanPage by remember { mutableStateOf(false) }
@@ -800,6 +804,8 @@ fun RootScreen() {
             if (showInvite) add(RootRoute.Invite)
         }
         if (showShadowBrowser) add(RootRoute.ShadowBrowser)
+        speechChallengeId?.let { add(RootRoute.SpeechChallenge(it)) }
+        if (showSpeechChallenges) add(RootRoute.SpeechChallenges)
         if (!showMe) {
             if (showPublicIntro) add(RootRoute.PublicIntro)
             if (showPrivacy) add(RootRoute.Privacy)
@@ -824,6 +830,8 @@ fun RootScreen() {
                 RootRoute.PlanPage -> showPlanPage = false
                 RootRoute.Invite -> showInvite = false
                 RootRoute.ShadowBrowser -> showShadowBrowser = false
+                is RootRoute.SpeechChallenge -> speechChallengeId = null
+                RootRoute.SpeechChallenges -> showSpeechChallenges = false
                 RootRoute.PublicIntro -> {
                     showPublicIntro = false
                     if (introEditFromPreview && app.needsIntroDecision()) showIntroPreview = true
@@ -1081,6 +1089,20 @@ fun RootScreen() {
 
         RootRoute.Invite -> InviteScreen(onBack = { showInvite = false })
 
+        is RootRoute.SpeechChallenge -> com.roro.futurevoice.ui.speech.SpeechChallengeScreen(
+            challengeId = r.id,
+            native = state.nativeLanguage,
+            level = state.level,
+            suggestedName = state.persona?.displayName.orEmpty(),
+            onBack = { speechChallengeId = null },
+        )
+
+        RootRoute.SpeechChallenges -> com.roro.futurevoice.ui.speech.SpeechChallengeListScreen(
+            language = state.targetLanguage,
+            onOpen = { speechChallengeId = it.id },
+            onBack = { showSpeechChallenges = false },
+        )
+
         RootRoute.ShadowBrowser -> ShadowBrowserScreen(
             language = state.targetLanguage,
             onShadow = { turn ->
@@ -1223,6 +1245,8 @@ fun RootScreen() {
             onMeasuredLevel = app::applyMeasuredLevel,
             onShadowHand = { shadowHand = it; shadowAt = 0 },
             onShadowAll = { showShadowBrowser = true },
+            onOpenSpeechChallenge = { speechChallengeId = it.id },
+            onOpenAllSpeechChallenges = { showSpeechChallenges = true },
             // The dictionaries. Until now the library had no in-app entrance
             // at all — only the widget's deep link reached it.
             onOpenWordsAll = { library = LibraryKind.WORDS },
@@ -1384,6 +1408,8 @@ internal fun HomeScreen(
     onMeasuredLevel: (String) -> Unit = {},
     onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
     onShadowAll: () -> Unit = {},
+    onOpenSpeechChallenge: (com.roro.futurevoice.data.SpeechScript) -> Unit = {},
+    onOpenAllSpeechChallenges: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenSentencesAll: () -> Unit = {},
@@ -1663,6 +1689,8 @@ internal fun HomeScreen(
                         language = state.targetLanguage,
                         native = state.nativeLanguage,
                         level = state.level,
+                        onOpenChallenge = onOpenSpeechChallenge,
+                        onOpenAllChallenges = onOpenAllSpeechChallenges,
                     )
 
                     // Watch: simulate the situation BEFORE it happens. Scenarios
@@ -2548,6 +2576,8 @@ internal sealed interface RootRoute {
     data object PlanPage : RootRoute { override val key = "planPage" }
     data object Invite : RootRoute { override val key = "invite" }
     data object ShadowBrowser : RootRoute { override val key = "shadowBrowser" }
+    data class SpeechChallenge(val id: String) : RootRoute { override val key = "speechChallenge:$id" }
+    data object SpeechChallenges : RootRoute { override val key = "speechChallenges" }
     data object PublicIntro : RootRoute { override val key = "publicIntro" }
     data object Privacy : RootRoute { override val key = "privacy" }
     data object Me : RootRoute { override val key = "me" }
@@ -2580,6 +2610,9 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         // streak's Activity; the finished shelf.
         RootRoute.Sentences, is RootRoute.Library, RootRoute.ShadowBrowser,
         RootRoute.Assessment, RootRoute.Activity, is RootRoute.Finished -> from is RootRoute.Tabs
+        // The Speech tab's challenge rows push the board.
+        is RootRoute.SpeechChallenge -> from is RootRoute.Tabs || from is RootRoute.SpeechChallenges
+        RootRoute.SpeechChallenges -> from is RootRoute.Tabs
         // Find people's own-people rows push the person.
         is RootRoute.Person -> from is RootRoute.People
         // Inside the Me sheet: Usage, Privacy, the public intro; inside

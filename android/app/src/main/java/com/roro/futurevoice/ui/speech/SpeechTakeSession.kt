@@ -342,6 +342,11 @@ class SpeechTakeSession(
         store.save(take)
         // A saved take is what a Speech block in the routine asks for.
         ActivityEventLog.record(context, ActivityEventLog.Kind.SPEECH)
+        // A challenge's board takes only what the camera recorded; the score
+        // goes up, the video and the voice never do.
+        if (script.isChallenge) {
+            com.roro.futurevoice.data.SpeechChallenges.shared(context).enter(take, script, recordedOnCamera = fromCamera)
+        }
         val resultMs = System.currentTimeMillis() - stoppedAt
         // Flagged BEFORE the result shows, so it opens on "Preparing your
         // video…" rather than flashing the audio player first.
@@ -369,7 +374,7 @@ class SpeechTakeSession(
         val coachMs = System.currentTimeMillis() - coachStart
         val hasVideo = videoTask.await()
         Analytics.capture("speech_take", mapOf(
-            "built_in" to script.isBuiltIn, "genre" to script.genre.raw,
+            "built_in" to script.isBuiltIn, "challenge" to script.isChallenge, "genre" to script.genre.raw,
             "seconds" to duration.toInt(), "overall" to metrics.overall, "accuracy" to metrics.accuracy,
             "camera" to hasVideo, "follow" to _followVoice.value, "audio_grounded" to audioGrounded,
             "read_path" to path, "cursor_end" to _cursor.value, "words" to _track.value.words.size,

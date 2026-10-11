@@ -36,11 +36,11 @@ object SpeechAnalyzer {
 
     fun analyze(script: String, transcript: String, language: String, envelope: Envelope?): SpeechMetrics {
         val fillerCount = countFillers(transcript, script, language)
-        val spoken = removingFillers(transcript, language)
+        val spoken = removingFillers(transcript, language, script)
 
         // Accuracy: the shadow diff (CJK by syllable, digits, contractions).
         val diff = ShadowScore.analyze(script, spoken, language)
-        val missed = missedRuns(diff.steps, language)
+        val missed = missedRuns(diff.steps, script, language)
 
         val band = SpeechLibrary.rateBand(language)
         val units = SpeechLibrary.units(spoken, language)
@@ -106,14 +106,56 @@ object SpeechAnalyzer {
     fun countFillers(transcript: String, script: String, language: String): Int =
         maxOf(0, fillerHits(transcript, language) - fillerHits(script, language))
 
-    fun removingFillers(text: String, language: String): String {
+    /** The transcript without its filler sounds — except those the SCRIPT
+     *  itself says, kept where they sit as in the script (same word after or
+     *  before). iOS `removingFillers(_:language:keepingThoseIn:)`: the Korean
+     *  sample quotes 음 and 어, and a perfect read lost both. */
+    fun removingFillers(text: String, language: String, script: String = ""): String {
         val fillers = SpeechLibrary.fillers(language)
         if (LanguageCatalog.writesSpaces(language)) {
-            return text.split(Regex("\\s+")).filter { it.isNotEmpty() && normalizedToken(it) !in fillers }
-                .joinToString(" ")
+            val scriptTokens = script.split(Regex("\\s+")).filter { it.isNotEmpty() }.map(::normalizedToken)
+            val allowance = mutableMapOf<String, Int>()
+            val after = mutableSetOf<String>()
+            val before = mutableSetOf<String>()
+            scriptTokens.forEachIndexed { i, t ->
+                if (t !in fillers) return@forEachIndexed
+                allowance[t] = (allowance[t] ?: 0) + 1
+                if (i + 1 < scriptTokens.size) after += t + "|" + scriptTokens[i + 1]
+                if (i > 0) before += scriptTokens[i - 1] + "|" + t
+            }
+            val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+            val normal = tokens.map(::normalizedToken)
+            val kept = mutableListOf<String>()
+            tokens.forEachIndexed { i, token ->
+                val t = normal[i]
+                if (t !in fillers) { kept += token; return@forEachIndexed }
+                val next = normal.getOrNull(i + 1).orEmpty()
+                val prev = normal.getOrNull(i - 1).orEmpty()
+                val left = allowance[t] ?: 0
+                if (left > 0 && ((t + "|" + next) in after || (prev + "|" + t) in before)) {
+                    allowance[t] = left - 1
+                    kept += token
+                }
+            }
+            return kept.joinToString(" ")
         }
         var out = text
-        for (f in fillers.sortedByDescending { it.length }) out = out.replace(f, "")
+        for (f in fillers.sortedByDescending { it.length }) {
+            val scriptParts = script.split(f)
+            var allowance = scriptParts.size - 1
+            val after = (0 until allowance).mapNotNull { scriptParts[it + 1].firstOrNull() }.toSet()
+            val before = (0 until allowance).mapNotNull { scriptParts[it].lastOrNull() }.toSet()
+            val parts = out.split(f)
+            if (parts.size < 2) continue
+            val rebuilt = StringBuilder(parts[0])
+            for (part in parts.drop(1)) {
+                val fits = (part.firstOrNull()?.let { it in after } ?: false) ||
+                    (rebuilt.lastOrNull()?.let { it in before } ?: false)
+                if (allowance > 0 && fits) { rebuilt.append(f); allowance-- }
+                rebuilt.append(part)
+            }
+            out = rebuilt.toString()
+        }
         return out
     }
 
@@ -141,6 +183,47 @@ object SpeechAnalyzer {
     }
 
     /** Runs of script tokens skipped or changed, in script order, at most 12. */
+    fun missedRuns(steps: List<ShadowScore.DiffStep>, script: String, language: String): List<String> {
+        if (LanguageCatalog.tokenStyle(language) == LanguageCatalog.TokenStyle.SYLLABLE &&
+            LanguageCatalog.writesSpaces(language)) {
+            missedWords(steps, script)?.let { return it }
+        }
+        return missedRuns(steps, language)
+    }
+
+    /** Korean is compared by syllable, but a run of missed syllables is no
+     *  place to look in the script ("으시" is a piece of 있으시죠). The missed
+     *  syllables are walked back onto the script's words and a word with any
+     *  missing is shown whole — iOS `missedWords`. Null when they can't be
+     *  lined up (a digit spelled out for the diff). */
+    fun missedWords(steps: List<ShadowScore.DiffStep>, script: String): List<String>? {
+        val words = script.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val chars = mutableListOf<Pair<Char, Int>>()
+        words.forEachIndexed { i, w -> w.lowercase().forEach { if (it.isLetterOrDigit()) chars += it to i } }
+        var cursor = 0
+        val missed = sortedSetOf<Int>()
+        for (step in steps) {
+            if (step.op == ShadowScore.DiffOp.INS) continue
+            val t = step.target ?: return null
+            if (t.length != 1) return null
+            var j = cursor
+            while (j < chars.size && chars[j].first != t[0]) j++
+            if (j >= chars.size || j - cursor > 2) return null
+            if (step.op != ShadowScore.DiffOp.MATCH) missed += chars[j].second
+            cursor = j + 1
+        }
+        val runs = mutableListOf<String>()
+        val current = mutableListOf<String>()
+        var last: Int? = null
+        for (i in missed) {
+            if (last != null && i != last + 1 && current.isNotEmpty()) { runs += current.joinToString(" "); current.clear() }
+            current += words[i].trim { !it.isLetterOrDigit() }
+            last = i
+        }
+        if (current.isNotEmpty()) runs += current.joinToString(" ")
+        return runs.filter { it.isNotEmpty() }.take(12)
+    }
+
     fun missedRuns(steps: List<ShadowScore.DiffStep>, language: String): List<String> {
         val joiner = if (LanguageCatalog.tokenStyle(language) == LanguageCatalog.TokenStyle.WORD) " " else ""
         val runs = mutableListOf<String>()

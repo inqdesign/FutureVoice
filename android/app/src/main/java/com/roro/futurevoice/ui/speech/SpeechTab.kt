@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.AccountBox
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -154,9 +155,18 @@ internal fun SpeechHeaderAction() {
  *  practise it (iOS `2ec50658`). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
+internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
+                           onOpenChallenge: (SpeechScript) -> Unit = {},
+                           onOpenAllChallenges: () -> Unit = {}) {
     val context = LocalContext.current
     val store = remember { SpeechStore.shared(context) }
+    val challenges = remember { com.roro.futurevoice.data.SpeechChallenges.shared(context) }
+    val challengeScripts by challenges.scripts.collectAsStateWithLifecycle()
+    val standings by challenges.standings.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var publishing by remember { mutableStateOf<SpeechScript?>(null) }
+    var publishError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(language) { challenges.refresh(language) }
     val scripts by store.scripts.collectAsStateWithLifecycle()
     val takes by store.takes.collectAsStateWithLifecycle()
     var practicing by remember { mutableStateOf<SpeechScript?>(null) }
@@ -167,15 +177,42 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
     val canWrite = SpeechGate.cachedCanWrite
 
     Column {
+        if (challengeScripts.isNotEmpty()) {
+            GroupedSectionHeader(stringResource(R.string.challenges))
+            // The newest three on the tab; everything else, past ones
+            // included, one tap away (iOS `challengesOnTab`).
+            val live = challengeScripts.filter { standings[it.id]?.retiredAt == null }
+            val hasMore = live.size > CHALLENGES_ON_TAB || live.size < challengeScripts.size
+            GroupedCard {
+                live.take(CHALLENGES_ON_TAB).forEachIndexed { i, script ->
+                    if (i > 0) GroupedRowDivider()
+                    SpeechChallengeRow(script, standings[script.id], onClick = { onOpenChallenge(script) })
+                }
+                if (hasMore) {
+                    if (live.isNotEmpty()) GroupedRowDivider(inset = false)
+                    Row(Modifier.fillMaxWidth().clickable(onClick = onOpenAllChallenges)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.all_challenges), style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f))
+                        Text("${challengeScripts.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            GroupedFooter(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410))
+        }
         GroupedSectionHeader(stringResource(R.string.scripts))
         GroupedCard {
-            scripts.forEachIndexed { i, script ->
+            // A script that is also a challenge (the bundled sample is the
+            // first one) is listed once, up there.
+            scripts.filter { s -> challengeScripts.none { it.id == s.id } }.forEachIndexed { i, script ->
                 if (i > 0) GroupedRowDivider()
                 // iOS `.swipeActions(edge: .trailing)`: Delete (not the
                 // bundled sample) outermost, then Edit (own scripts, accent);
                 // a full swipe deletes.
                 val deleteLabel = stringResource(R.string.delete)
                 val editLabel = stringResource(R.string.edit)
+                val publishLabel = stringResource(R.string.publish_as_challenge)
                 val accent = MaterialTheme.colorScheme.primary
                 val actions = buildList {
                     if (!script.isBuiltIn) add(IosSwipeAction(Icons.Filled.Delete, deleteLabel, Color(0xFFFF3B30)) {
@@ -184,6 +221,13 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
                     if (script.genre == SpeechGenre.OWN) add(IosSwipeAction(Icons.Filled.Edit, editLabel, accent) {
                         editing = script
                     })
+                    // Admin accounts put one of their own scripts on every
+                    // learner's tab as a challenge (iOS: a leading swipe).
+                    if (BillingGate.account?.unlimited == true && !script.isBuiltIn) {
+                        add(IosSwipeAction(Icons.Outlined.EmojiEvents, publishLabel, Color(0xFFFF9500)) {
+                            publishing = script
+                        })
+                    }
                 }
                 IosSwipeActions(actions, background = AppSurfaces.card) {
                     Row(
@@ -231,6 +275,25 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
             onDismiss = { SpeechTabRequests.pending.value = null })
         null -> Unit
     }
+    publishing?.let { s ->
+        AlertDialog(onDismissRequest = { publishing = null },
+            title = { Text(stringResource(R.string.publish_as_a_challenge_every_learner_of_this_language_will_s_d54f65)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    publishing = null
+                    scope.launch {
+                        try { challenges.publish(s) } catch (e: Exception) { publishError = e.toString() }
+                    }
+                }) { Text(stringResource(R.string.publish)) }
+            },
+            dismissButton = { TextButton(onClick = { publishing = null }) { Text(stringResource(R.string.cancel)) } })
+    }
+    publishError?.let { msg ->
+        AlertDialog(onDismissRequest = { publishError = null },
+            confirmButton = { TextButton(onClick = { publishError = null }) { Text(stringResource(R.string.ok)) } },
+            title = { Text(stringResource(R.string.couldn_t_publish)) },
+            text = { Text(msg) })
+    }
     editing?.let { s ->
         SpeechOwnScriptSheet(existing = s, language = s.language, native = native,
             onSave = { store.add(it) }, onDismiss = { editing = null })
@@ -245,6 +308,8 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel) {
         }
     }
 }
+
+internal const val CHALLENGES_ON_TAB = 3
 
 // MARK: - Shared bits
 
@@ -616,7 +681,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     var editing by remember { mutableStateOf(false) }
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(R.string.script),
-            leading = if (!shown.isBuiltIn) ({
+            leading = if (!shown.isBuiltIn && !shown.isChallenge) ({
                 IosGlassTextButton(stringResource(R.string.edit), onClick = { editing = true })
             }) else null,
             trailing = { IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true) })

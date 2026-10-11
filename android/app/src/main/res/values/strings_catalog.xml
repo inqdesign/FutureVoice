@@ -128,9 +128,11 @@
     <string name="after_each_take">"After each take"</string>
     <string name="again">"Again"</string>
     <string name="age_confirmed">"Age confirmed"</string>
+    <string name="ahead_of_2_by_lld">"Ahead of #2 by %d"</string>
     <string name="ai_read_tap_to_apply">"AI read: %s — tap to apply"</string>
     <string name="ai_tech">"AI / tech"</string>
     <string name="all_caught_up">"All caught up"</string>
+    <string name="all_challenges">"All challenges"</string>
     <string name="all_levels">"All levels"</string>
     <string name="all_lld_minutes_of_talk_are_used_up">"All %d minutes of talk are used up."</string>
     <string name="all_lld_minutes_of_trial_talk_are_used_up">"All %d minutes of trial talk are used up."</string>
@@ -212,6 +214,7 @@
     <string name="back_tomorrow">"Back tomorrow"</string>
     <string name="basic_simple_everyday_exchanges">"Basic — simple, everyday exchanges"</string>
     <string name="becoming_you">"Becoming you"</string>
+    <string name="best">"Best"</string>
     <!-- "Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks." -->
     <string name="best_of_all_say_it_in_a_call_a_word_you_use_in_a_real_talk_c_6ea200">"Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks."</string>
     <string name="billing_period">"Billing period"</string>
@@ -282,6 +285,8 @@
     <string name="cards_you_put_off">"Cards you put off"</string>
     <string name="casual">"Casual"</string>
     <string name="category_name_e_g_landlord_gym">"Category name (e.g. Landlord, Gym)"</string>
+    <string name="challenge">"Challenge"</string>
+    <string name="challenges">"Challenges"</string>
     <string name="change_in_my_routine">"Change in my routine"</string>
     <string name="change_my_level">"Change my level"</string>
     <string name="change_or_cancel_your_plan">"Change or cancel your plan"</string>
@@ -373,6 +378,7 @@
     <string name="couldn_t_play_audio">"Couldn't play audio"</string>
     <string name="couldn_t_play_the_comparison">"Couldn't play the comparison"</string>
     <string name="couldn_t_play_the_two_takes_together">"Couldn't play the two takes together."</string>
+    <string name="couldn_t_publish">"Couldn't publish"</string>
     <string name="couldn_t_publish_check_your_connection_and_try_again">"Couldn't publish — check your connection and try again."</string>
     <!-- "Couldn't reach the server. Your minutes will be added the next time the app opens." -->
     <string name="couldn_t_reach_the_server_your_minutes_will_be_added_the_nex_82ad46">"Couldn't reach the server. Your minutes will be added the next time the app opens."</string>
@@ -527,6 +533,7 @@
     <string name="end">"End"</string>
     <string name="end_the_call">"End the call"</string>
     <string name="ended">"Ended"</string>
+    <string name="ended_challenges_keep_their_final_standings">"Ended challenges keep their final standings."</string>
     <string name="enough_to_keep_the_habit_going">"Enough to keep the habit going"</string>
     <string name="enter_invite_code">"Enter invite code"</string>
     <string name="enter_it_here_instead_lld_minutes_once">"Enter it here instead — %d minutes, once."</string>
@@ -574,6 +581,8 @@
     <string name="everyday_topics_in_simple_terms_routines_plans_basic_needs">"Everyday topics in simple terms — routines, plans, basic needs."</string>
     <!-- 'Everyday words plus the common idioms and phrasal verbs. Subordinate clauses and hedging.' -->
     <string name="everyday_words_plus_the_common_idioms_and_phrasal_verbs_subo_b2b74a">"Everyday words plus the common idioms and phrasal verbs. Subordinate clauses and hedging."</string>
+    <!-- 'Everyone reads the same script. Your best take goes on the board.' -->
+    <string name="everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410">"Everyone reads the same script. Your best take goes on the board."</string>
     <!-- 'Everything' -->
     <string name="everything_4a66d1">"Everything"</string>
     <!-- 'everything' -->
@@ -708,6 +717,7 @@
     <string name="getting_what_your_other_devices_did">"Getting what your other devices did…"</string>
     <string name="given">"Given %s"</string>
     <string name="glossary">"Glossary"</string>
+    <string name="go_again">"Go again"</string>
     <string name="go_through_it_before_it_happens">"Go through it before it happens"</string>
     <string name="go_to_review">"Go to Review"</string>
     <string name="goal">"Goal"</string>
@@ -920,6 +930,7 @@
     <string name="last_week_lld_lld">"Last week %1$d/%2$d"</string>
     <string name="later">"Later"</string>
     <string name="latest_assessment">"Latest assessment"</string>
+    <string name="leaderboard">"Leaderboard"</string>
     <string name="learn_it_in_review">"Learn it in Review"</string>
     <string name="learn_the_language_with_the_fluent_you">"Learn the language\nwith the fluent you"</string>
     <string name="learn_which_language">"Learn which language?"</string>
@@ -955,6 +966,7 @@
     <string name="listening_tap_to_finish">"Listening — tap to finish"</string>
     <string name="listening_tap_to_hang_up">"Listening — tap to hang up"</string>
     <string name="listening_to_your_take">"Listening to your take…"</string>
+    <string name="live">"Live"</string>
     <!-- '%lld' -->
     <string name="lld_16070a">"%d"</string>
     <!-- '×%lld' -->
@@ -992,6 +1004,8 @@
     <string name="lld_lines_f00a78">"%1$s · %2$d lines"</string>
     <string name="lld_lines_lld_corrected">"%1$d lines · %2$d corrected"</string>
     <string name="lld_lld">"%1$d/%2$d"</string>
+    <!-- '#%lld → #%lld' -->
+    <string name="lld_lld_ffbaf7">"#%1$d → #%2$d"</string>
     <string name="lld_lld_mastered">"%1$d/%2$d mastered"</string>
     <!-- '%lld / %lld min' -->
     <string name="lld_lld_min_52d99e">"%1$d / %2$d min"</string>
@@ -1032,6 +1046,8 @@
     <string name="lld_new_review_card_inflect_true_from_your_corrections">"^[%d new review card](inflect: true) from your corrections"</string>
     <string name="lld_of">"%1$d of %2$s"</string>
     <string name="lld_of_lld">"%1$d of %2$d"</string>
+    <!-- '#%lld of %lld' -->
+    <string name="lld_of_lld_8e05fc">"#%1$d of %2$d"</string>
     <string name="lld_of_lld_lines_read_lld_average">"%1$d of %2$d lines read · %3$d average"</string>
     <string name="lld_of_lld_mastered">"%1$d of %2$d mastered"</string>
     <string name="lld_of_lld_min_talked">"%1$d of %2$d min talked"</string>
@@ -1052,11 +1068,13 @@
     <string name="lld_sessions">"%1$d sessions · %2$s"</string>
     <string name="lld_shadowing_take_inflect_true">"^[%d shadowing take](inflect: true)"</string>
     <string name="lld_syllables_min">"%d syllables/min"</string>
+    <string name="lld_taking_part">"%d taking part"</string>
     <string name="lld_talks_tap_for_calendar">"%d talks · tap for calendar"</string>
     <string name="lld_thing_inflect_true_you_studied_said_out_loud">"^[%d thing](inflect: true) you studied, said out loud"</string>
     <string name="lld_this_session">"%1$d %2$s this session"</string>
     <string name="lld_this_week">"+%d this week"</string>
     <string name="lld_times">"%d times"</string>
+    <string name="lld_to_go_for_lld">"%1$d to go for #%2$d"</string>
     <string name="lld_to_send">"%d to send"</string>
     <string name="lld_total">"%d total"</string>
     <string name="lld_turns">"%d turns"</string>
@@ -1188,6 +1206,7 @@
     <string name="nailed_it_matched_the_line_almost_word_for_word_on_the_beat">"Nailed it — matched the line almost word for word, on the beat."</string>
     <string name="name">"Name"</string>
     <string name="name_interests_place">"Name, interests, place…"</string>
+    <string name="name_on_the_board">"Name on the board"</string>
     <!-- 'Names your clone here and on ElevenLabs. Leave it empty to go back to the default.' -->
     <string name="names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48">"Names your clone here and on ElevenLabs. Leave it empty to go back to the default."</string>
     <string name="narrow_it_down">"Narrow it down"</string>
@@ -1195,6 +1214,7 @@
     <!-- 'nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.' -->
     <string name="nawana_needs_the_microphone_and_speech_recognition_to_hear_y_121253">"nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."</string>
     <string name="new_">"New"</string>
+    <string name="new_best_lld_of_lld">"New best · #%1$d of %2$d"</string>
     <string name="new_block">"New block"</string>
     <string name="new_expressions_from_the_call">"New expressions from the call"</string>
     <string name="new_from_your_fluent_self">"New from your fluent self"</string>
@@ -1256,6 +1276,7 @@
     <string name="no_word_carried_too_much_of_the_load_this_week">"No word carried too much of the load this week."</string>
     <!-- 'Nobody public came up for that name. Check the spelling and look up again.' -->
     <string name="nobody_public_came_up_for_that_name_check_the_spelling_and_l_b58f4b">"Nobody public came up for that name. Check the spelling and look up again."</string>
+    <string name="nobody_s_on_this_board_yet_be_the_first">"Nobody's on this board yet. Be the first."</string>
     <string name="noise">"Noise"</string>
     <string name="none">"None"</string>
     <string name="normal">"Normal"</string>
@@ -1335,6 +1356,7 @@
     <string name="ok">"OK"</string>
     <string name="on_call_tap_to_stop">"On call · tap to stop"</string>
     <string name="on_icloud">"On · iCloud"</string>
+    <string name="on_the_board_at_lld_of_lld">"On the board at #%1$d of %2$d"</string>
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks."</string>
     <string name="on_the_street">"On the street"</string>
@@ -1360,6 +1382,8 @@
     <string name="one_time_no_expiry">"one time · no expiry"</string>
     <string name="online_shopping">"Online shopping"</string>
     <string name="only_on">"Only on %s"</string>
+    <!-- 'Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
+    <string name="only_takes_with_the_camera_on_go_on_the_board_and_your_best_d8b2bb">"Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone."</string>
     <!-- 'Only the call clock spends your talk minutes. Watching a scene never takes a second off them.' -->
     <string name="only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d">"Only the call clock spends your talk minutes. Watching a scene never takes a second off them."</string>
     <string name="open">"Open"</string>
@@ -1392,6 +1416,7 @@
     <string name="packing_lld_of_lld_files">"Packing %1$d of %2$d files…"</string>
     <string name="parenting">"parenting"</string>
     <string name="past_attempts">"Past attempts"</string>
+    <string name="past_challenges">"Past challenges"</string>
     <string name="past_dialogues">"Past dialogues"</string>
     <string name="past_tense_slipped_twice_once_the_story_moved_back_in_time">"Past tense slipped twice once the story moved back in time."</string>
     <string name="past_weeks">"Past weeks"</string>
@@ -1441,6 +1466,7 @@
     <string name="pick_how_your_fluent_self_looks_and_sounds">"Pick how your fluent self looks and sounds."</string>
     <string name="pick_up_where_you_left_off">"Pick up where you left off"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"Pick what to do there: talk, words, review and more."</string>
+    <string name="place">"Place"</string>
     <string name="plan">"Plan"</string>
     <string name="plan_on_the_timeline">"Plan on the timeline"</string>
     <string name="plan_tier_light">"Light"</string>
@@ -1490,11 +1516,15 @@
     <string name="provided_by_nawana_until">"Provided by nawana until %s"</string>
     <string name="public_figure">"Public figure"</string>
     <string name="publish">"Publish"</string>
+    <!-- 'Publish as a challenge? Every learner of this language will see it, with a leaderboard.' -->
+    <string name="publish_as_a_challenge_every_learner_of_this_language_will_s_d54f65">"Publish as a challenge? Every learner of this language will see it, with a leaderboard."</string>
+    <string name="publish_as_challenge">"Publish as challenge"</string>
     <string name="publish_your_intro_others_practice_with_you">"Publish your intro — others practice with \"you\""</string>
     <string name="pulling_examples_from_your_life">"Pulling examples from your life…"</string>
     <string name="purchase_could_not_be_verified">"Purchase could not be verified."</string>
     <string name="purchase_failed">"Purchase failed"</string>
     <string name="purchase_is_pending_approval">"Purchase is pending approval."</string>
+    <string name="putting_it_on_the_board">"Putting it on the board…"</string>
     <string name="quiet">"quiet"</string>
     <string name="quirks_preferences_anything_that_helps_me_sound_like_you">"Quirks, preferences, anything that helps me sound like you"</string>
     <string name="rather_just_fill_in_a_form">"Rather just fill in a form?"</string>
@@ -1521,6 +1551,7 @@
     <string name="read_the_full_report">"Read the full report"</string>
     <string name="read_the_meaning_write_the_word">"Read the meaning, write the word"</string>
     <string name="read_the_news_like_an_anchor">"Read the news like an anchor"</string>
+    <string name="read_the_script">"Read the script"</string>
     <string name="read_the_script_out_loud_like_a_presenter">"Read the script out loud, like a presenter."</string>
     <string name="read_this_aloud">"Read this aloud"</string>
     <string name="read_what_you_said">"Read what you said"</string>
@@ -1619,6 +1650,9 @@
     <string name="restored_lld_files_and_lld_settings_quit_the_app_completely_d71fd8">"Restored %1$d files and %2$d settings. Quit the app completely and reopen it."</string>
     <string name="restoring_lld_of_lld_files">"Restoring %1$d of %2$d files…"</string>
     <string name="resume">"Resume"</string>
+    <string name="retire">"Retire"</string>
+    <string name="retire_challenge">"Retire challenge"</string>
+    <string name="retire_this_challenge_it_leaves_everyone_s_speech_tab">"Retire this challenge? It leaves everyone's Speech tab."</string>
     <string name="retry">"Retry"</string>
     <!-- "Returning something expensive without the receipt, to a clerk who doesn't want to take it." -->
     <string name="returning_something_expensive_without_the_receipt_to_a_clerk_fccd8a">"Returning something expensive without the receipt, to a clerk who doesn't want to take it."</string>
@@ -1734,6 +1768,7 @@
     <string name="search_words">"Search words"</string>
     <string name="see_plans">"See plans"</string>
     <string name="see_result">"See result"</string>
+    <string name="see_the_leaderboard">"See the leaderboard"</string>
     <string name="see_the_results">"See the results"</string>
     <string name="see_where_it_went">"See where it went"</string>
     <string name="see_words">"See %s words"</string>
@@ -1784,8 +1819,10 @@
     <string name="show_again_in_3_days">"Show again in 3 days"</string>
     <string name="show_again_tomorrow">"Show again tomorrow"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"Show each guide again when I open its tab"</string>
+    <string name="show_my_photo">"Show my photo"</string>
     <string name="show_the_talk">"Show the talk"</string>
     <string name="showing_earlier_stories">"Showing earlier stories"</string>
+    <string name="shown_beside_your_score_on_every_challenge_board">"Shown beside your score on every challenge board."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Sign in to iCloud in Settings first, then try again."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"Sign in to iCloud in Settings to sync"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"Sign in to sync your practice between your iPhone and iPad."</string>
@@ -1919,6 +1956,7 @@
     <string name="take_down">"Take down"</string>
     <string name="take_lld">"Take %d"</string>
     <string name="take_not_found">"Take not found"</string>
+    <string name="take_the_challenge">"Take the challenge"</string>
     <string name="take_your_airpods_out_before_recording">"Take your AirPods out before recording"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"Take your intro out of the pool? Learners who already met your persona keep their own past talks."</string>
@@ -2020,11 +2058,15 @@
     <string name="the_avatar_will_play_this_role_you_practice_your_side">"The avatar will play this role. You practice your side."</string>
     <!-- 'The better the mic, the better the voice that comes out. A wired mic is best if you have one.' -->
     <string name="the_better_the_mic_the_better_the_voice_that_comes_out_a_wir_e9b3eb">"The better the mic, the better the voice that comes out. A wired mic is best if you have one."</string>
+    <string name="the_board_couldn_t_load_pull_to_try_again">"The board couldn't load. Pull to try again."</string>
+    <!-- 'The board only takes camera takes. Your video stays on your phone.' -->
+    <string name="the_board_only_takes_camera_takes_your_video_stays_on_your_p_49f52d">"The board only takes camera takes. Your video stays on your phone."</string>
     <string name="the_book_couldn_t_be_written_to_a_file_try_again">"The book couldn't be written to a file. Try again."</string>
     <string name="the_buttons_at_the_top">"The buttons at the top"</string>
     <!-- 'The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.' -->
     <string name="the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450">"The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call."</string>
     <string name="the_call_dropped">"The call dropped"</string>
+    <string name="the_camera_was_off_so_this_take_isn_t_on_the_board">"The camera was off, so this take isn't on the board."</string>
     <!-- 'The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.' -->
     <string name="the_conversation_its_score_review_cards_and_audio_are_remove_1fe16e">"The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead."</string>
     <!-- "The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now." -->
@@ -2100,6 +2142,7 @@
     <string name="the_test_is_made_from_your_week_s_talks_after_the_next_one_i_0a9c48">"The test is made from your week's talks. After the next one, it writes itself."</string>
     <!-- 'The three buttons in the header are about the whole week, not just today.' -->
     <string name="the_three_buttons_in_the_header_are_about_the_whole_week_not_651e49">"The three buttons in the header are about the whole week, not just today."</string>
+    <string name="the_top_score_of_lld_people">"The top score of %d people"</string>
     <string name="the_trial_s_scenes_are_used_up">"The trial's scenes are used up."</string>
     <string name="the_trial_s_talk_time_is_used_up">"The trial's talk time is used up."</string>
     <string name="the_week_before_lld_min">"The week before: %d min"</string>
@@ -2146,6 +2189,7 @@
     <string name="this_backup_file_is_damaged_or_incomplete_export_it_again_fr_14bf7c">"This backup file is damaged or incomplete. Export it again from the other install."</string>
     <string name="this_call_s_focus">"This call's focus"</string>
     <string name="this_call_s_grammar_focus">"This call's grammar focus"</string>
+    <string name="this_challenge_has_ended_these_are_the_final_standings">"This challenge has ended. These are the final standings."</string>
     <string name="this_conversation_isn_t_saved_yet">"This conversation isn't saved yet"</string>
     <!-- 'This day has its own plan, so this change is for this day only.' -->
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"This day has its own plan, so this change is for this day only."</string>
@@ -2161,6 +2205,7 @@
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions."</string>
     <string name="this_person_has_been_deleted">"This person has been deleted"</string>
     <string name="this_signs_you_out_your_answers_stay_on_this_device">"This signs you out. Your answers stay on this device."</string>
+    <string name="this_take_couldn_t_reach_the_board">"This take couldn't reach the board."</string>
     <string name="this_takes_a_few_seconds">"This takes a few seconds."</string>
     <string name="this_week">"This week"</string>
     <string name="this_week_in_progress_ready">"This week in progress · ready %s"</string>
@@ -2235,6 +2280,7 @@
     <string name="until_then_the_regular_price">"Until %s, then the regular price"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"Up and down changes the time, sideways changes the day."</string>
     <string name="up_to_date">"Up to date · %s"</string>
+    <string name="up_to_lld_of_lld">"Up to #%1$d of %2$d"</string>
     <string name="update">"Update"</string>
     <string name="update_to_keep_going">"Update to keep going"</string>
     <string name="upgrade_to_plus">"Upgrade to Plus"</string>
@@ -2534,6 +2580,7 @@
     <string name="you_picked">"You picked %s."</string>
     <!-- 'You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level.' -->
     <string name="you_practiced_with_suggestions_on_screen_calls_without_coach_f72398">"You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level."</string>
+    <string name="you_re_1">"You're #1"</string>
     <!-- "You're about to build your fluent self — another you that already speaks fluent %@. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk." -->
     <string name="you_re_about_to_build_your_fluent_self_another_you_that_alre_1eac72">"You're about to build your fluent self — another you that already speaks fluent %s. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk."</string>
     <!-- "You're already learning every language we support today. More are on the way." -->
@@ -2545,7 +2592,9 @@
     <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"You're in line, and there's room. You take a seat tonight."</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"You're in the pool — other %s learners can find and talk with your persona."</string>
+    <string name="you_re_lld">"You're #%d"</string>
     <string name="you_re_lld_of_lld_in_pick_up_where_you_left_off">"You're %1$d of %2$d in. Pick up where you left off."</string>
+    <string name="you_re_on_the_board">"You're on the board"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"You're on the %s — it converts unless you cancel."</string>
     <string name="you_re_on_the_it_ends_on">"You're on the %1$s — it ends on %2$s."</string>
     <string name="you_re_out_of_credits_so_your_future_self_can_t_reply">"You're out of credits, so your future self can't reply."</string>
@@ -2583,6 +2632,8 @@
     <!-- "You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free." -->
     <string name="you_ve_watched_today_s_scenes_new_ones_unlock_at_midnight_re_9d0b64">"You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free."</string>
     <string name="your">"Your %s"</string>
+    <string name="your_best_on_the_board_lld_lld">"Your best on the board: %1$d · #%2$d"</string>
+    <string name="your_best_stays_at_lld">"Your best stays at %d."</string>
     <string name="your_books">"Your books"</string>
     <string name="your_camera">"Your camera"</string>
     <!-- 'Your clone speaks with whatever accent the AI guesses. Pick one instead: same voice, your chosen accent. Takes about half a minute to prepare.' -->
@@ -2655,6 +2706,7 @@
     <string name="your_match">"Your match"</string>
     <string name="your_material">"Your material"</string>
     <string name="your_name">"Your name"</string>
+    <string name="your_name_on_the_board">"Your name on the board"</string>
     <string name="your_native_language">"Your native language?"</string>
     <string name="your_overall_level">"Your overall level"</string>
     <string name="your_own">"Your own"</string>
