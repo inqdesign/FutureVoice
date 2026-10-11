@@ -123,15 +123,21 @@ enum PlannerDay {
     }
 
     /// A day's totals from the logs that already count them: the talk meter
-    /// (the ring's minutes), the practice log's FINISHED counts — the same
-    /// numbers the daily goals are judged by, so postponing a card is not
-    /// doing it — and finished say-it-again runs, saved Speech takes and tests.
+    /// (the ring's minutes), the practice log's STUDIED counts, and finished
+    /// say-it-again runs, saved Speech takes and tests.
+    ///
+    /// Words, expressions and cards count every item the learner WORKED
+    /// THROUGH (`*Reps`) — "tomorrow" on a card is a card studied — not only
+    /// the ones they called known (`*Done`, 2026-10-11, founder: "a review
+    /// block should count what I studied"). Reading `*Done` made a review of
+    /// twenty cards, honestly sorted into "not yet", read as 0 of 20. The
+    /// daily goals (`GoalStore`) still judge by `*Done`; this is the routine.
     static func totals(on day: Date, events: [ActivityEventLog.Event], testFinished: Bool) -> Totals {
         let log = PracticeLog.shared.day(day) ?? PracticeLog.Day()
         return Totals(talkMinutes: Double(TalkTimeLog.seconds(on: day)) / 60,
-                      words: Double(log.wordDone),
-                      expressions: Double(log.expressionDone),
-                      cards: Double(log.drillDone),
+                      words: Double(log.wordReps),
+                      expressions: Double(log.expressionReps),
+                      cards: Double(log.drillReps),
                       shadow: Double(log.shadowDone),
                       sayItAgain: Double(events.filter { $0.kind == .sayItAgain }.count),
                       speech: Double(events.filter { $0.kind == .speech }.count),

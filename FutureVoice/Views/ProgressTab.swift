@@ -89,6 +89,10 @@ struct ProgressTab: View {
     /// Last 14 days of effort, oldest first — speaking minutes plus per-kind
     /// reps, so the charts can show both HOW MUCH and WHICH KIND.
     @State private var dailyEffort: [DayEffort] = []
+    /// This week and the one before, oldest first — the effort card's data
+    /// (`EffortHistory`, the same counts its detail page reads).
+    @State private var effortWeek: [EffortDay] = []
+    @State private var effortLastWeek: [EffortDay] = []
     @State private var weekReps = 0
     @State private var daysActiveThisWeek = 0
     @State private var avgShadowScore = 0
@@ -275,6 +279,7 @@ struct ProgressTab: View {
                     CardDivider(inset: 0)
                     buildingStatus
                 }
+                effortCard
                 explainerChartPanel("Growth",
                                     "Every assessment adds a point — the line is your level over time.") {
                     sampleLevelChart
@@ -586,17 +591,15 @@ struct ProgressTab: View {
                 }
             }
 
-            if dailyEffort.contains(where: { $0.talkMinutes > 0 }) {
-                studyTimePanel
-            }
+            // One card for the effort, the depth one tap away (founder,
+            // 2026-10-11: "time speaking" and "activity" were two thin
+            // panels that still couldn't say how much went into each kind).
+            // Their charts live on `EffortDetailView` now.
+            effortCard
 
             carryoverPanel
 
             materialPanel
-
-            if dailyEffort.contains(where: { $0.totalReps > 0 }) {
-                activityPanel
-            }
 
             consistencyPanel
 
@@ -756,39 +759,19 @@ struct ProgressTab: View {
         }
     }
 
-    // MARK: - Study time (metered talk minutes, per day)
+    // MARK: - Effort (the whole week, depth one tap away)
 
-    private var studyTimePanel: some View {
-        panel {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Time speaking").font(.headline)
-                Spacer()
-                let weekMin = Int(dailyEffort.suffix(7).reduce(0) { $0 + $1.talkMinutes })
-                Text("\(weekMin) min this week")
-                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Chart {
-                ForEach(dailyEffort) { d in
-                    BarMark(x: .value("Day", d.day, unit: .day),
-                            y: .value("Minutes", d.talkMinutes))
-                        .foregroundStyle(Color.accentColor)
-                        .cornerRadius(3)
+    /// Shown on the first-run page too: effort is real before any talk has
+    /// been scored, and it is the one thing a new learner can already move.
+    @ViewBuilder
+    private var effortCard: some View {
+        if effortWeek.contains(where: \.isActive) || effortLastWeek.contains(where: \.isActive) {
+            panel {
+                NavigationLink { EffortDetailView() } label: {
+                    EffortSummaryCard(week: effortWeek, lastWeek: effortLastWeek)
                 }
-                RuleMark(y: .value("Goal", Double(dailyGoalMinutes)))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
             }
-            .chartXAxis {
-                AxisMarks(values: .stride(by: .day, count: 3)) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.day(), centered: true)
-                }
-            }
-            .frame(height: 120)
-            Text(explain("Minutes you actually spoke, per day. The dashed line is your \(dailyGoalMinutes)-minute daily goal."))
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -888,85 +871,6 @@ struct ProgressTab: View {
             // that string gets translated.
             .accessibilityIdentifier("progress.materialPanel")
         }
-    }
-
-    // MARK: - Activity (effort made visible — moved from Practice)
-
-    /// One (day, kind) slice for the stacked mix chart. Fixed kind order —
-    /// Talk · Shadowing · Drills — so colors never reshuffle between days.
-    private struct MixEntry: Identifiable {
-        let day: Date
-        let kind: String
-        let count: Int
-        var id: String { "\(kind)\(day.timeIntervalSinceReferenceDate)" }
-    }
-
-    private var mixEntries: [MixEntry] {
-        dailyEffort.flatMap { d in
-            [MixEntry(day: d.day, kind: "Talk", count: d.talkTurns),
-             MixEntry(day: d.day, kind: "Shadowing", count: d.shadowReps),
-             MixEntry(day: d.day, kind: "Sentences", count: d.drillReps)]
-        }
-        .filter { $0.count > 0 }
-    }
-
-    private var activityPanel: some View {
-        panel {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Activity").font(.headline)
-                Spacer()
-                if let delta = shadowTrend?.delta {
-                    Label(delta >= 0 ? "shadow +\(delta)" : "shadow \(delta)",
-                          systemImage: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(delta >= 0 ? Color.green : Color.orange)
-                }
-            }
-            // Stacked by KIND, not just totals — a column that's always one
-            // color is the "I only ever do the comfortable thing" signal.
-            Chart(mixEntries) { e in
-                BarMark(x: .value("Day", e.day, unit: .day),
-                        y: .value("Reps", e.count))
-                    .foregroundStyle(by: .value("Kind", e.kind))
-                    .cornerRadius(2)
-            }
-            .chartForegroundStyleScale([
-                "Talk": Color(.systemBlue),
-                "Shadowing": Color(.systemGreen),
-                "Sentences": Color(.systemOrange),
-            ])
-            .chartLegend(position: .bottom, spacing: 8)
-            .chartXAxis {
-                AxisMarks(values: .stride(by: .day, count: 3)) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.day(), centered: true)
-                }
-            }
-            .frame(height: 130)
-            Text(explain("What each day was made of — talk turns, shadow takes, drill reviews."))
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            CardDivider(inset: 0)
-            HStack(spacing: 16) {
-                activityStat(value: "\(weekReps)", label: weekReps == 1 ? "rep this week" : "reps this week")
-                activityStat(value: "\(daysActiveThisWeek)", label: daysActiveThisWeek == 1 ? "day active" : "days active")
-                if avgShadowScore > 0 {
-                    activityStat(value: "\(avgShadowScore)", label: "avg shadow score")
-                }
-            }
-        }
-    }
-
-    private func activityStat(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value)
-                .font(.headline.weight(.bold))
-                .monospacedDigit()
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Per-axis CEFR estimates for the ring
@@ -1967,6 +1871,11 @@ struct ProgressTab: View {
         dueCount = result.dueCount
         carryover = result.carryover
         dailyEffort = result.dailyEffort
+        let effort = EffortHistory.days(14, now: now, sessions: SessionStore.shared.load(),
+                                        shadowAttempts: input.shadowAttempts,
+                                        drillCards: input.drillCards)
+        effortWeek = Array(effort.suffix(7))
+        effortLastWeek = Array(effort.prefix(7))
         weekReps = result.weekReps
         daysActiveThisWeek = result.daysActiveThisWeek
         shadowTrend = result.shadowTrend
