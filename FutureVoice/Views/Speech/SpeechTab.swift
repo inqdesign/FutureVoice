@@ -7,6 +7,9 @@ struct SpeechTab: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = SpeechStore.shared
     @ObservedObject private var gate = BillingGate.shared
+    @ObservedObject private var challenges = SpeechChallenges.shared
+    @State private var publishing: SpeechScript?
+    @State private var publishError: String?
     /// The script whose prompter is open. Tapping a script opens it straight
     /// away — picking one IS starting to practise it.
     @State private var practicing: SpeechScript?
@@ -22,12 +25,45 @@ struct SpeechTab: View {
     @State private var choosingKind = false
 
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
+    static let challengesOnTab = 3
 
     var body: some View {
         NavigationStack {
             List {
+                if !challenges.scripts.isEmpty {
+                    Section {
+                        // The newest three on the tab; everything else, past
+                        // ones included, one tap away — the tab is for
+                        // practising, not for an ever-growing list.
+                        ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
+                            NavigationLink {
+                                SpeechChallengeView(script: script)
+                                    .environmentObject(appState)
+                            } label: {
+                                SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
+                            }
+                        }
+                        if challenges.live.count > Self.challengesOnTab || !challenges.past.isEmpty {
+                            NavigationLink {
+                                SpeechChallengeListView()
+                                    .environmentObject(appState)
+                            } label: {
+                                LabeledContent("All challenges") {
+                                    Text("\(challenges.scripts.count)").monospacedDigit()
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Challenges")
+                    } footer: {
+                        Text("Everyone reads the same script. Your best take goes on the board.")
+                    }
+                }
+
                 Section {
-                    ForEach(store.scripts) { script in
+                    // A script that is also a challenge (the bundled sample
+                    // is the first one) is listed once, up there.
+                    ForEach(store.scripts.filter { challenges.script(id: $0.id) == nil }) { script in
                         Button {
                             practicing = script
                         } label: {
@@ -48,6 +84,16 @@ struct SpeechTab: View {
                                     Label("Edit", systemImage: "pencil")
                                 }
                                 .tint(.accentColor)
+                            }
+                        }
+                        .swipeActions(edge: .leading) {
+                            // Admin accounts put one of their own scripts on
+                            // every learner's tab as a challenge.
+                            if gate.account?.unlimited == true, !script.isBuiltIn {
+                                Button { publishing = script } label: {
+                                    Label("Publish as challenge", systemImage: "trophy")
+                                }
+                                .tint(.orange)
                             }
                         }
                     }
@@ -96,8 +142,28 @@ struct SpeechTab: View {
             if store.scripts.isEmpty { store.reload() }
             BillingGate.shared.warm()
         }
+        .task(id: appState.targetLanguage) {
+            await challenges.refresh(language: appState.targetLanguage)
+        }
         .onChange(of: appState.targetLanguage) { _, _ in
             store.reload()
+        }
+        .confirmationDialog("Publish as a challenge? Every learner of this language will see it, with a leaderboard.",
+                            isPresented: Binding(get: { publishing != nil },
+                                                 set: { if !$0 { publishing = nil } }),
+                            titleVisibility: .visible, presenting: publishing) { script in
+            Button("Publish") {
+                Task {
+                    do { try await challenges.publish(script) }
+                    catch { publishError = String(describing: error) }
+                }
+            }
+        }
+        .alert("Couldn't publish", isPresented: Binding(get: { publishError != nil },
+                                                        set: { if !$0 { publishError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(publishError ?? "")
         }
         .sheet(isPresented: $composing, onDismiss: openPending) {
             SpeechComposerSheet { script in
@@ -259,7 +325,7 @@ struct SpeechScriptSheet: View {
                 // The bundled sample is everyone's and stays as shipped;
                 // changing it would make it a script of your own, which is
                 // the Plus side of the tab.
-                if !script.isBuiltIn {
+                if !script.isBuiltIn && !script.isChallenge {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Edit") { editing = true }
                     }

@@ -10,6 +10,7 @@ struct ConversationHome: View {
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
     /// Today's promise is already kept — the header flame lights up.
     @State private var keptToday = false
     @State private var snapshot = PracticeStats.Snapshot(
@@ -180,7 +181,20 @@ struct ConversationHome: View {
             // Warm the free-talk opener pool + its audio while the user is
             // still on the launcher — the first "Let's talk" then greets
             // from cached audio instead of blocking on live calls.
-            .task { await prewarmFreeTalkOpenerAudio() }
+            //
+            // Only while the app is ACTIVE (2026-10-11). iOS also builds this
+            // view on launches nobody sees — an App Store auto-update, the
+            // daily call's Decline intent, a background sync — and the warm-up
+            // started there was suspended mid-request: the server answered
+            // (ledger row at 06:14), the app heard nothing until the next
+            // wake 16 minutes later and logged `freetalk_openers_failed`
+            // (-1001) for a pool that had been paid for. Keyed on the phase,
+            // so it also runs on every return to the app — free, since every
+            // step is cache-checked.
+            .task(id: scenePhase == .active) {
+                guard scenePhase == .active else { return }
+                await prewarmFreeTalkOpenerAudio()
+            }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
                 PaywallView(source: "talk_home")
             }

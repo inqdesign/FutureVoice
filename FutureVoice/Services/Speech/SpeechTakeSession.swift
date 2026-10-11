@@ -345,6 +345,11 @@ final class SpeechTakeSession: ObservableObject {
         SpeechStore.shared.save(take)
         // A saved take is what a Speech block in the routine asks for.
         ActivityEventLog.shared.record(.speech)
+        // A challenge's board takes only what the camera recorded; the score
+        // goes up, the video and the voice never do.
+        if script.isChallenge {
+            SpeechChallenges.shared.enter(take: take, script: script, recordedOnCamera: fromCamera)
+        }
         let resultMs = ms(stoppedAt)
         // Flagged BEFORE the result shows, so it opens on "Preparing your
         // video…" rather than flashing the audio player first.
@@ -379,6 +384,7 @@ final class SpeechTakeSession: ObservableObject {
         let hasVideo = await videoTask.value
         Analytics.capture("speech_take", [
             "built_in": script.isBuiltIn,
+            "challenge": script.isChallenge,
             "genre": script.genre.rawValue,
             "seconds": Int(duration),
             "overall": metrics.overall,

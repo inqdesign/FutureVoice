@@ -170,8 +170,9 @@ enum DebugCapture {
         let store = SpeechStore.shared
         store.reload()
         let lang = appState.targetLanguage
+        // Fixed ids: `add` replaces by id, so a second run doesn't stack copies.
         let written = SpeechScript(
-            id: UUID(), title: "Marie Curie, twice a Nobel winner", genre: .person, topic: "Marie Curie",
+            id: UUID(uuidString: "5EED0000-0000-4000-8000-0000000000C1")!, title: "Marie Curie, twice a Nobel winner", genre: .person, topic: "Marie Curie",
             body: "Marie Curie is the only person to win Nobel Prizes in two different sciences. Born in Warsaw in 1867, she moved to Paris to study, at a time when few universities admitted women.\n\nWith her husband Pierre, she discovered two new elements, polonium and radium. She coined the word radioactivity.\n\nHer notebooks are still radioactive today, and are kept in lead-lined boxes.",
             summary: "The scientist who discovered radium, and the only person with Nobels in two sciences.",
             keyTerms: [SpeechKeyTerm(term: "radioactivity", meaning: "Strahlung · 방사능"),
@@ -179,7 +180,7 @@ enum DebugCapture {
             sources: ["Nobel Prize Outreach", "Encyclopaedia Britannica"],
             language: lang, targetSeconds: 60, createdAt: Date().addingTimeInterval(-3600), isBuiltIn: false)
         let news = SpeechScript(
-            id: UUID(), title: "Why the sky is blue", genre: .explainer, topic: "",
+            id: UUID(uuidString: "5EED0000-0000-4000-8000-0000000000C2")!, title: "Why the sky is blue", genre: .explainer, topic: "",
             body: "Sunlight looks white, but it is a mix of every colour. Blue light has a short wavelength, so air molecules scatter it far more than red.",
             summary: "", keyTerms: [], sources: ["NASA"], language: lang, targetSeconds: 30,
             createdAt: Date().addingTimeInterval(-86400), isBuiltIn: false)
@@ -202,6 +203,93 @@ enum DebugCapture {
                        "You skipped “in a fraction of a millisecond” — say it as one breath.",
                        "Keep your volume up on the last word of each sentence."]))
         store.save(take)
+    }
+
+    /// Two published challenges with boards full of other learners, and one
+    /// take of the first on the board.
+    private static func seedSpeechChallenges(_ appState: AppState) -> SpeechScript {
+        let lang = appState.targetLanguage
+        let first = UUID(uuidString: "C4A11E00-0000-4000-8000-000000000001")!
+        let second = UUID(uuidString: "C4A11E00-0000-4000-8000-000000000002")!
+        let scripts = [
+            SpeechScript(
+                id: first, title: "How noise-cancelling headphones work", genre: .explainer, topic: "",
+                body: "Good evening. Tonight, a question most of us never stop to ask: how do noise-cancelling headphones actually work?\n\nA tiny microphone listens to the world outside. A chip builds the exact opposite of that sound wave, and the two cancel each other out, in a fraction of a millisecond.\n\nThat's why the hum of a plane disappears, but a voice right next to you still gets through.",
+                summary: "Why the hum of a plane vanishes but a voice still gets through.",
+                keyTerms: [SpeechKeyTerm(term: "sound wave", meaning: "음파")], sources: ["Bose", "Sony"],
+                language: lang, targetSeconds: 60, createdAt: Date().addingTimeInterval(-3 * 86400),
+                isBuiltIn: false, challengeId: first),
+            SpeechScript(
+                id: second, title: "The first iPhone, 2007", genre: .product, topic: "",
+                body: "On January 9th, 2007, Steve Jobs walked onto a stage in San Francisco and said he would introduce three products: a widescreen iPod, a phone, and an internet communicator. Then he said they were one device.",
+                summary: "The keynote that put three devices into one.", keyTerms: [], sources: ["Apple"],
+                language: lang, targetSeconds: 30, createdAt: Date().addingTimeInterval(-9 * 86400),
+                isBuiltIn: false, challengeId: second),
+        ]
+        let names = ["Minji", "Haruto", "Lena", "Joon", "Sofía", "Wei", "Camille", "Daniel", "Yuna", "Tomás"]
+        let scores = [96, 94, 93, 91, 90, 88, 87, 87, 85, 83]
+        let faces = Self.sampleFaces(names)
+        var board = zip(names, scores).enumerated().map { i, pair in
+            SpeechChallenges.BoardRow(rank: i == 7 ? 7 : i + 1, display_name: pair.0, score: pair.1, is_me: false,
+                                      avatar: faces[i].avatar)
+        }
+        board.append(SpeechChallenges.BoardRow(rank: 14, display_name: "Eunggyu", score: 81, is_me: true))
+        let second_board = Array(board.prefix(5)).map {
+            SpeechChallenges.BoardRow(rank: $0.rank, display_name: $0.display_name, score: $0.score - 3, is_me: false)
+        }
+        let metrics = SpeechMetrics(
+            accuracy: 92, rate: 150, rateLow: 120, rateHigh: 160, paceScore: 100,
+            pausesAtBreaks: 6, breaks: 7, hesitations: 1, pauseScore: 78,
+            fillers: 2, fillerScore: 88, steadiness: 70, missed: ["in a fraction of a millisecond"],
+            overall: 81)
+        let take = SpeechTake(
+            id: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!, scriptId: first,
+            createdAt: Date(), durationSeconds: 58, audioFilename: "missing.wav", videoFilename: nil,
+            transcript: "Good evening. Tonight, a question most of us never stop to ask.",
+            metrics: metrics,
+            coaching: SpeechCoaching(headline: "Steady and clear — your best read of this one yet.",
+                                     tips: ["Land the last sentence on a full stop."]))
+        SpeechStore.shared.reload()
+        SpeechStore.shared.save(take)
+        SpeechChallenges.displayName = "Eunggyu"
+        SpeechChallenges.shared.seedPreview(
+            language: lang, scripts: scripts,
+            standings: [first: .init(entrants: 41, topScore: 96, myBest: 81, myRank: 14, myAttempts: 5,
+                                     topThree: Self.sampleFaces(["Minji", "Haruto", "Lena"])),
+                        second: .init(entrants: 12, topScore: 93,
+                                      topThree: Self.sampleFaces(["Wei", "Sofía", "Joon"]))],
+            boards: [first: board, second: second_board],
+            entries: [take.id: .entered(rank: 14, previousRank: 19, entrants: 41, best: 81, improved: true)])
+        return scripts[0]
+    }
+
+    /// Top-three faces for the challenge captures: the first two with a
+    /// drawn photo stand-in, the third with none (its initial shows).
+    private static func sampleFaces(_ names: [String]) -> [SpeechChallenges.Face] {
+        let tints: [UIColor] = [.systemTeal, .systemOrange, .systemPink, .systemIndigo, .systemGreen]
+        return names.enumerated().map { i, name in
+            // Every third has no photo, so the initial is in the sample too.
+            guard i % 3 != 2 else { return .init(display_name: name, avatar: nil) }
+            let image = UIGraphicsImageRenderer(size: CGSize(width: 96, height: 96)).image { ctx in
+                tints[i % tints.count].setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 96, height: 96))
+                UIColor.white.withAlphaComponent(0.85).setFill()
+                ctx.cgContext.fillEllipse(in: CGRect(x: 30, y: 18, width: 36, height: 36))
+                ctx.cgContext.fillEllipse(in: CGRect(x: 14, y: 60, width: 68, height: 60))
+            }
+            return .init(display_name: name, avatar: image.jpegData(compressionQuality: 0.7)?.base64EncodedString())
+        }
+    }
+
+    private static func sampleBoard(withMe: Bool) -> [SpeechChallenges.BoardRow] {
+        let names = ["Minji", "Haruto", "Lena", "Joon", "Sofía", "Wei", "Camille", "Daniel", "Yuna", "Tomás"]
+        let scores = [96, 94, 93, 91, 90, 88, 87, 87, 85, 83]
+        let faces = sampleFaces(names)
+        var board = zip(names, scores).enumerated().map { i, pair in
+            SpeechChallenges.BoardRow(rank: i == 7 ? 7 : i + 1, display_name: pair.0, score: pair.1, is_me: false,
+                                      avatar: faces[i].avatar)
+        }
+        if withMe { board.append(.init(rank: 14, display_name: "Eunggyu", score: 81, is_me: true)) }
+        return board
     }
 
     private static func once(_ name: String, _ work: () -> Void) {
@@ -576,6 +664,96 @@ enum DebugCapture {
             // The Speech tab: the bundled script plus two written ones.
             once("speech") { seedSpeech(appState) }
             return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-challenges":
+            // The Speech tab with two published challenges on top.
+            once("speech") { seedSpeech(appState) }
+            _ = seedSpeechChallenges(appState)
+            return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-challenges-many":
+            // Eight live challenges: what the tab does when they pile up.
+            once("speech") { seedSpeech(appState) }
+            let first = seedSpeechChallenges(appState)
+            let titles = ["A minute on your hometown", "The history of coffee", "Why we dream",
+                          "How bees talk", "The world's oldest tree", "What a black hole is"]
+            var extra: [SpeechScript] = []
+            var standings = SpeechChallenges.shared.standings
+            for (i, title) in titles.enumerated() {
+                let id = UUID(uuidString: String(format: "C4A11E00-0000-4000-8000-0000000001%02d", i))!
+                extra.append(SpeechScript(id: id, title: title, genre: .explainer, topic: "",
+                                          body: first.body, summary: "", keyTerms: [], sources: [],
+                                          language: first.language, targetSeconds: 60,
+                                          createdAt: Date().addingTimeInterval(Double(i + 10) * -86400),
+                                          isBuiltIn: false, challengeId: id))
+                // The last two have ended.
+                standings[id] = .init(entrants: 30 - i * 4, topScore: 92,
+                                      topThree: Self.sampleFaces(["Lena", "Wei", "Ana"]),
+                                      retiredAt: i >= 4 ? Date().addingTimeInterval(Double(i) * -86400) : nil)
+            }
+            SpeechChallenges.shared.seedPreview(language: first.language,
+                                                scripts: SpeechChallenges.shared.scripts + extra,
+                                                standings: standings, boards: [first.id: []])
+            return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-challenges-all":
+            // The all-challenges page: live, then past.
+            _ = Self.view(for: "speech-challenges-many", appState: appState)
+            return AnyView(NavigationStack { SpeechChallengeListView() }.environmentObject(appState))
+        case "speech-challenge-board":
+            // The same board for someone not on it yet: the top three in view.
+            let script = seedSpeechChallenges(appState)
+            var standings = SpeechChallenges.shared.standings
+            standings[script.id]?.myBest = nil
+            standings[script.id]?.myRank = nil
+            SpeechChallenges.shared.seedPreview(language: script.language, scripts: SpeechChallenges.shared.scripts,
+                                                standings: standings,
+                                                boards: [script.id: Self.sampleBoard(withMe: false)])
+            return AnyView(NavigationStack { SpeechChallengeView(script: script) }
+                .environmentObject(appState))
+        case "speech-challenge":
+            // One challenge's board: the top ten, a gap, then you.
+            let script = seedSpeechChallenges(appState)
+            return AnyView(NavigationStack { SpeechChallengeView(script: script) }
+                .environmentObject(appState))
+        case "speech-challenge-result":
+            // A take that moved up the board.
+            _ = seedSpeechChallenges(appState)
+            return AnyView(NavigationStack {
+                SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
+            })
+        case "speech-rank-1", "speech-rank-2", "speech-rank-3", "speech-rank-up", "speech-rank-debut":
+            // The sheet a better take raises, over its result page.
+            _ = seedSpeechChallenges(appState)
+            typealias Row = SpeechChallenges.BoardRow
+            let moment: SpeechChallengeMoment
+            switch name {
+            case "speech-rank-1":
+                moment = .init(kind: .podium, rank: 1, previousRank: 4, entrants: 41, score: 97,
+                               neighbors: [Row(rank: 1, display_name: "Eunggyu", score: 97, is_me: true),
+                                           Row(rank: 2, display_name: "Minji", score: 96, is_me: false)])
+            case "speech-rank-2":
+                moment = .init(kind: .podium, rank: 2, previousRank: 9, entrants: 41, score: 95,
+                               neighbors: [Row(rank: 1, display_name: "Minji", score: 96, is_me: false),
+                                           Row(rank: 2, display_name: "Eunggyu", score: 95, is_me: true),
+                                           Row(rank: 3, display_name: "Haruto", score: 94, is_me: false)])
+            case "speech-rank-3":
+                moment = .init(kind: .podium, rank: 3, previousRank: 6, entrants: 41, score: 93,
+                               neighbors: [Row(rank: 2, display_name: "Haruto", score: 94, is_me: false),
+                                           Row(rank: 3, display_name: "Eunggyu", score: 93, is_me: true),
+                                           Row(rank: 4, display_name: "Lena", score: 91, is_me: false)])
+            case "speech-rank-up":
+                moment = .init(kind: .up, rank: 8, previousRank: 14, entrants: 41, score: 87,
+                               neighbors: [Row(rank: 7, display_name: "Camille", score: 88, is_me: false),
+                                           Row(rank: 8, display_name: "Eunggyu", score: 87, is_me: true),
+                                           Row(rank: 9, display_name: "Yuna", score: 85, is_me: false)])
+            default:
+                moment = .init(kind: .debut, rank: 14, previousRank: nil, entrants: 41, score: 81,
+                               neighbors: [Row(rank: 13, display_name: "Tomás", score: 82, is_me: false),
+                                           Row(rank: 14, display_name: "Eunggyu", score: 81, is_me: true),
+                                           Row(rank: 15, display_name: "Ana", score: 79, is_me: false)])
+            }
+            return AnyView(NavigationStack {
+                SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
+            }
+            .sheet(isPresented: .constant(true)) { SpeechChallengeMomentSheet(moment: moment) })
         case "speech-composer":
             return AnyView(SpeechComposerSheet { _ in }.environmentObject(appState))
         case "speech-prompter":
@@ -1305,6 +1483,42 @@ enum DebugCapture {
                 .environmentObject(appState))
         case "finished-empty":
             return AnyView(FinishedBooksSheet(books: []).environmentObject(appState))
+        case "effort", "effort-month", "progress-effort":
+            // Growth's effort card and the page behind it, over two weeks of
+            // seeded practice. TOP UP, never add: the logs persist across
+            // capture launches and `once` is in-memory.
+            once("effort") {
+                let cal = Calendar.current
+                let talk = [12, 0, 18, 9, 22, 6, 14, 8, 0, 11, 5, 16, 0, 7]
+                let words = [8, 0, 12, 5, 14, 3, 10, 4, 0, 6, 2, 9, 0, 3]
+                let exprs = [3, 0, 4, 2, 5, 1, 2, 1, 0, 2, 0, 3, 0, 1]
+                let cards = [15, 0, 20, 8, 12, 6, 18, 5, 0, 10, 4, 12, 0, 6]
+                let shadow = [2, 0, 4, 1, 3, 0, 2, 1, 0, 1, 0, 2, 0, 0]
+                for back in 0..<14 {
+                    let day = cal.date(byAdding: .day, value: -back, to: Date())!
+                    let want = talk[back] * 60 - TalkTimeLog.seconds(on: day)
+                    if want > 0 { TalkTimeLog.add(seconds: want, language: appState.targetLanguage, now: day) }
+                    let log = PracticeLog.shared.day(day) ?? PracticeLog.Day()
+                    for _ in log.wordReps..<max(log.wordReps, words[back]) { PracticeLog.shared.record(.word, on: day) }
+                    for _ in log.expressionReps..<max(log.expressionReps, exprs[back]) { PracticeLog.shared.record(.expression, on: day) }
+                    for _ in log.drillReps..<max(log.drillReps, cards[back]) { PracticeLog.shared.record(.drill, on: day) }
+                    for _ in log.shadowReps..<max(log.shadowReps, shadow[back]) { PracticeLog.shared.record(.shadow, finished: true, on: day) }
+                    if back % 3 == 0, log.sceneReps == 0 { PracticeLog.shared.record(.scene, on: day) }
+                }
+                // Foreground time: the talk plus the review around it.
+                var usage = (UserDefaults.standard.dictionary(forKey: "futurevoice.foregroundSecondsByDay") as? [String: Int]) ?? [:]
+                let other = [9, 2, 14, 6, 11, 4, 12, 5, 1, 7, 3, 8, 0, 4]
+                for back in 0..<14 {
+                    let day = cal.date(byAdding: .day, value: -back, to: Date())!
+                    usage[AppUsageLog.dayKey(day)] = (talk[back] + other[back]) * 60
+                }
+                UserDefaults.standard.set(usage, forKey: "futurevoice.foregroundSecondsByDay")
+            }
+            if name == "progress-effort" {
+                return AnyView(ProgressTab().environmentObject(appState))
+            }
+            if name == "effort-month" { UserDefaults.standard.set("month", forKey: "effortRange") }
+            return AnyView(NavigationStack { EffortDetailView().environmentObject(appState) })
         case "progress":
             once("progress") {
                 seedVocab(); seedSessions(scored: true)

@@ -2080,6 +2080,12 @@ struct SpeechScript: Codable, Identifiable, Hashable {
     var createdAt: Date
     /// Bundled with the app — the one script every account can practise.
     var isBuiltIn: Bool
+    /// A published challenge (`speech_challenges.id`): a script every learner
+    /// of the language reads, with a leaderboard. Nil = the learner's own or
+    /// the bundled one. Never written into `speech_scripts.json`.
+    var challengeId: UUID? = nil
+
+    var isChallenge: Bool { challengeId != nil }
 }
 
 struct SpeechKeyTerm: Codable, Hashable {

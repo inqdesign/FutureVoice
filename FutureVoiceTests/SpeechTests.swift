@@ -24,6 +24,26 @@ final class SpeechAnalyzerTests: XCTestCase {
         XCTAssertEqual(SpeechAnalyzer.countFillers(in: "えっと音はえー波です", script: "音は波です", language: "ja"), 2)
     }
 
+    func testFillersTheScriptSaysAreKept() {
+        // The Korean sample quotes 음 and 어 as words; a perfect read must
+        // not lose them (they were scored as skipped on every take).
+        let script = "\"음\", \"어\" 같은 말을 얼마나 자주 하는지"
+        XCTAssertEqual(SpeechAnalyzer.removingFillers("음 어 같은 말을 얼마나 자주 하는지", language: "ko", keepingThoseIn: script),
+                       "음 어 같은 말을 얼마나 자주 하는지")
+        // A filler beyond what the script has is still the reader's.
+        XCTAssertEqual(SpeechAnalyzer.removingFillers("어 음 어 같은 말을", language: "ko", keepingThoseIn: script),
+                       "음 어 같은 말을")
+        XCTAssertEqual(SpeechAnalyzer.removingFillers("えー音はえーです", language: "ja", keepingThoseIn: "音はえーです"),
+                       "音はえーです")
+    }
+
+    func testKoreanMissesAreShownAsTheScriptsWords() {
+        let script = "엉켜 버린 적, 있으시죠? 지금 이 원고를 소리 내어 읽은 일 분이 바로 그 첫 연습입니다."
+        let m = SpeechAnalyzer.analyze(script: script, transcript: "엉켜 버린 적 있죠 지금 이 원고를 소리",
+                                       language: "ko", envelope: nil)
+        XCTAssertEqual(m.missed, ["있으시죠", "내어 읽은 일 분이 바로 그 첫 연습입니다"])
+    }
+
     func testFillerInTheScriptIsNotTheReadersFault() {
         XCTAssertEqual(SpeechAnalyzer.countFillers(in: "Er hat hm gesagt", script: "Er hat hm gesagt.", language: "de"), 0)
     }

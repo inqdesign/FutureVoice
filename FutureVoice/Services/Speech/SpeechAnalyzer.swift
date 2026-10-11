@@ -31,12 +31,12 @@ enum SpeechAnalyzer {
     static func analyze(script: String, transcript: String, language: String,
                         envelope: Envelope?) -> SpeechMetrics {
         let fillerCount = countFillers(in: transcript, script: script, language: language)
-        let spoken = removingFillers(transcript, language: language)
+        let spoken = removingFillers(transcript, language: language, keepingThoseIn: script)
 
         // Accuracy: the shadow diff, which already handles CJK by syllable,
         // digits and contractions.
         let diff = ShadowEngine.analyze(target: script, learner: spoken, language: language)
-        let missed = missedRuns(diff.steps, language: language)
+        let missed = missedRuns(diff.steps, script: script, language: language)
 
         // Pace.
         let band = SpeechLibrary.rateBand(language)
@@ -122,16 +122,59 @@ enum SpeechAnalyzer {
         max(0, fillerHits(in: transcript, language: language) - fillerHits(in: script, language: language))
     }
 
-    static func removingFillers(_ text: String, language: String) -> String {
+    /// The transcript without its filler sounds — except as many of each as
+    /// the SCRIPT itself contains. The Korean sample says `"음", "어" 같은
+    /// 말`; stripping every 음 and 어 from a perfect read scored those two
+    /// words as skipped on every take (reported 2026-10-11).
+    static func removingFillers(_ text: String, language: String, keepingThoseIn script: String = "") -> String {
         let fillers = SpeechLibrary.fillers(language)
         if LanguageCatalog.writesSpaces(language) {
-            return text.split(whereSeparator: { $0.isWhitespace })
-                .filter { !fillers.contains(normalizedToken(String($0))) }
-                .joined(separator: " ")
+            // A filler is kept only where it sits as it does in the script:
+            // the same word after it, or before it. Counting alone kept the
+            // reader's own "어" in front and dropped the script's.
+            let scriptTokens = script.split(whereSeparator: { $0.isWhitespace }).map { normalizedToken(String($0)) }
+            var allowance: [String: Int] = [:]
+            var after = Set<String>(), before = Set<String>()
+            for (i, t) in scriptTokens.enumerated() where fillers.contains(t) {
+                allowance[t, default: 0] += 1
+                if i + 1 < scriptTokens.count { after.insert(t + "|" + scriptTokens[i + 1]) }
+                if i > 0 { before.insert(scriptTokens[i - 1] + "|" + t) }
+            }
+            let tokens = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+            let normal = tokens.map(normalizedToken)
+            var kept: [String] = []
+            for (i, token) in tokens.enumerated() {
+                let t = normal[i]
+                guard fillers.contains(t) else { kept.append(token); continue }
+                let next = i + 1 < normal.count ? normal[i + 1] : ""
+                let prev = i > 0 ? normal[i - 1] : ""
+                if let left = allowance[t], left > 0,
+                   after.contains(t + "|" + next) || before.contains(prev + "|" + t) {
+                    allowance[t] = left - 1
+                    kept.append(token)
+                }
+            }
+            return kept.joined(separator: " ")
         }
+        // No spaces: the same rule by neighbouring character.
         var out = text
         for f in fillers.sorted(by: { $0.count > $1.count }) {
-            out = out.replacingOccurrences(of: f, with: "")
+            let scriptParts = script.components(separatedBy: f)
+            var allowance = scriptParts.count - 1
+            var after = Set<Character>(), before = Set<Character>()
+            for i in 0..<allowance {
+                if let c = scriptParts[i + 1].first { after.insert(c) }
+                if let c = scriptParts[i].last { before.insert(c) }
+            }
+            var parts = out.components(separatedBy: f)
+            guard parts.count > 1 else { continue }
+            var rebuilt = parts.removeFirst()
+            for part in parts {
+                let fits = (part.first.map(after.contains) ?? false) || (rebuilt.last.map(before.contains) ?? false)
+                if allowance > 0, fits { rebuilt += f; allowance -= 1 }
+                rebuilt += part
+            }
+            out = rebuilt
         }
         return out
     }
@@ -158,6 +201,51 @@ enum SpeechAnalyzer {
 
     /// Runs of script tokens the reader skipped or changed, joined back into
     /// readable pieces, in script order, at most 12.
+    static func missedRuns(_ steps: [ShadowEngine.DiffStep], script: String, language: String) -> [String] {
+        if LanguageCatalog.tokenStyle(language) == .syllable, LanguageCatalog.writesSpaces(language),
+           let words = missedWords(steps, script: script) {
+            return words
+        }
+        return missedRuns(steps, language: language)
+    }
+
+    /// Korean is compared syllable by syllable, but a run of missed
+    /// syllables is no place to look in the script: "으시" is a piece of
+    /// 있으시죠 and a whole sentence came out with its spaces gone. So the
+    /// missed syllables are walked back onto the script's own words, and a
+    /// word with any of them missing is shown whole, in script order,
+    /// neighbours joined with a space. Nil when the syllables can't be lined
+    /// up with the script (a digit spelled out for the diff) — the raw runs
+    /// are shown then.
+    static func missedWords(_ steps: [ShadowEngine.DiffStep], script: String) -> [String]? {
+        let words = script.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        var chars: [(Character, Int)] = []
+        for (i, word) in words.enumerated() {
+            for ch in word.lowercased() where ch.isLetter || ch.isNumber { chars.append((ch, i)) }
+        }
+        var cursor = 0
+        var missed = Set<Int>()
+        for step in steps where step.op != .ins {
+            guard let t = step.target, let ch = t.first, t.count == 1 else { return nil }
+            var j = cursor
+            while j < chars.count, chars[j].0 != ch { j += 1 }
+            guard j < chars.count, j - cursor <= 2 else { return nil }
+            if step.op != .match { missed.insert(chars[j].1) }
+            cursor = j + 1
+        }
+        let trim = CharacterSet.punctuationCharacters.union(.symbols).union(.whitespaces)
+        var runs: [String] = []
+        var current: [String] = []
+        var last: Int?
+        for i in missed.sorted() {
+            if let last, i != last + 1, !current.isEmpty { runs.append(current.joined(separator: " ")); current = [] }
+            current.append(words[i].trimmingCharacters(in: trim))
+            last = i
+        }
+        if !current.isEmpty { runs.append(current.joined(separator: " ")) }
+        return Array(runs.filter { !$0.isEmpty }.prefix(12))
+    }
+
     static func missedRuns(_ steps: [ShadowEngine.DiffStep], language: String) -> [String] {
         let joiner = LanguageCatalog.tokenStyle(language) == .word ? " " : ""
         var runs: [String] = []

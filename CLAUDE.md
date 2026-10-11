@@ -644,8 +644,10 @@ its own branch so the founder picks the build it ships in.
 - **Only a talk is promised in minutes** (founder: "why is everything but
   Talk in minutes?"). Every other block is a COUNT the app keeps — words /
   expressions judged, sentence cards, shadow lines, say-it-again runs, a
-  test — read from `PracticeLog`'s FINISHED counts (the daily goals' own
-  numbers), and filled in plan order (`PlannerDay.progress`). The stored
+  test — read from `PracticeLog`'s STUDIED counts (`*Reps`: every card worked
+  through, "tomorrow" included — 2026-10-11, founder: counting only "I
+  know" read an honest review of twenty cards as 0 of 20; the daily goals
+  still judge by `*Done`), and filled in plan order (`PlannerDay.progress`). The stored
   key is still `minutes`; `unitsVersion` nil marks a plan saved in minutes,
   converted on load to each kind's default count (`convertingToCounts`).
 - **Speech is a routine block too** (2026-10-05): one finished take of any
@@ -1061,6 +1063,60 @@ interruption. `-capture daycard` renders it on a sample day.
   Instagram's tall frame, which Threads takes as is — a 9:16 story was the
   first cut and read as a poster, not a card) and square (1080×1080) are the
   same view at two sizes.
+
+## Speech challenges — one script, one leaderboard (2026-10-10)
+
+The founder publishes scripts every learner of a target language reads; each
+has its own board. A learner's own scripts stay private and have no board.
+`SpeechChallenges.swift` (service + cache), `SpeechChallengeViews.swift`,
+`20261010150000_speech_challenges.sql`.
+
+- **Per language, no level brackets** (founder: "레벨과 상관없어, 그냥 하는
+  거야"). Don't add bands — a bowling alley's board, everybody on it.
+- **Only a CAMERA take is entered, and nothing but a name and a score leaves
+  the phone.** Never the video, never the audio. The camera is the cheap guard
+  against a speaker playing someone else's voice; `SpeechTakeSession` passes
+  `fromCamera` to `SpeechChallenges.enter`.
+- **The best take stands**, attempts are counted. The score is
+  `SpeechAnalyzer`'s (code); the server re-checks that `overall` is the
+  documented weighting of its five parts (±1) — keep the SQL in step if the
+  weights ever move.
+- **A challenge IS a `SpeechScript`** whose `id` is the challenge id
+  (`challengeId` set), so the prompter, takes and result page need nothing
+  new; `SpeechStore.script(id:)` falls back to the challenge list (cached per
+  language in `speech_challenges.json`). It is never written into
+  `speech_scripts.json` and can't be edited.
+- **Nothing goes on a public board until the learner has seen the name**:
+  the first "Take the challenge" opens the name sheet (prefilled with the
+  persona's name). One name per learner, on every board.
+- Entries are read only through security-definer RPCs that return a name and
+  a score, never a user id (the table has RLS and no policies). Board = top 10
+  + the caller's own row.
+- **The first challenge IS the bundled sample** (seeded by the migration, one
+  per language, live since 2026-10-10): its id is `SpeechLibrary.builtInId`,
+  so takes already on phones belong to it; `SpeechStore.script(id:)` returns
+  the challenge first and the tab hides the sample from Scripts.
+- **The list row shows the board's top three faces** (`top_three` from
+  `speech_challenge_list`). A face is a ~96 px JPEG as base64 in
+  `speech_challenge_profiles` — never Supabase Storage — sent only when the
+  learner left "Show my photo" on in the name sheet, where the photo is shown
+  beside the switch; otherwise their initial.
+- **The tab shows the newest three live challenges**, then "All challenges"
+  (`SpeechChallengeListView`: Live · Past). **A retired challenge is PAST,
+  not gone** (`20261011101500`): `retired_at` is set, the list still returns
+  it, its board stays readable and frozen with the learner's final place, and
+  only entering is refused.
+- **The board's top three are drawn large** (`SpeechPodiumRow`): face with a
+  medal-coloured `#1`/`#2`/`#3` tag at its top-right, bigger name and score;
+  from 4th down, compact rows with a small face.
+- **Earlier takes count**: once the name is confirmed, the best earlier CAMERA
+  take on the phone (video still kept) is entered if it beats the board
+  (`importLocalBests`) — its transcript is re-scored against today's script
+  and must agree with its stored accuracy, so a take of an older text under
+  the same id never goes up.
+- **Publishing is the admin flag** (`user_credits.unlimited`): a leading swipe
+  on one of your own scripts → "Publish as challenge"; the board's ⋯ has
+  "Retire challenge". Free for everyone to take, like the bundled script.
 
 ## Say it again (다시 말하기) — the whole talk, done again the right way (2026-09-27)
 

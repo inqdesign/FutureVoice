@@ -65,7 +65,13 @@ final class SpeechStore: ObservableObject {
         if pending { videoPending.insert(id) } else { videoPending.remove(id) }
     }
 
-    func script(id: UUID) -> SpeechScript? { scripts.first { $0.id == id } }
+    /// A challenge's takes live here like any other; its script lives in
+    /// `SpeechChallenges`, which the founder can revise or retire.
+    func script(id: UUID) -> SpeechScript? {
+        // The challenge first: the bundled sample IS the first challenge
+        // (same id), and its takes must open as challenge takes.
+        SpeechChallenges.shared.script(id: id) ?? scripts.first { $0.id == id }
+    }
 
     func takes(for scriptId: UUID) -> [SpeechTake] { takes.filter { $0.scriptId == scriptId } }
 

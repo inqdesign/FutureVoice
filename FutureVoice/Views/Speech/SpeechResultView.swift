@@ -9,8 +9,12 @@ struct SpeechResultView: View {
     /// The take as the prompter just made it — shown while the store catches
     /// up, and updated when the coach's notes land.
     var live: SpeechTake?
+    /// Back to the challenge's board (the prompter closes) — from the sheet a
+    /// better challenge take raises.
+    var onSeeBoard: (() -> Void)? = nil
 
     @ObservedObject private var store = SpeechStore.shared
+    @ObservedObject private var challenges = SpeechChallenges.shared
     @StateObject private var audio = AudioPlayer()
     @State private var player: AVPlayer?
     /// The video's own width ÷ height, read from the file, so the player is
@@ -81,6 +85,11 @@ struct SpeechResultView: View {
                 Text(script.title)
             }
 
+            if script.isChallenge {
+                SpeechChallengeEntrySection(entry: challenges.entries[take.id],
+                                            standing: challenges.standings[script.id])
+            }
+
             playbackSection(take)
 
             Section("Measured") {
@@ -130,6 +139,10 @@ struct SpeechResultView: View {
         .onDisappear {
             player?.pause()
             audio.stop()
+        }
+        .sheet(item: Binding(get: { challenges.moments[take.id] },
+                             set: { if $0 == nil { challenges.dismissMoment(for: take.id) } })) { moment in
+            SpeechChallengeMomentSheet(moment: moment, onSeeBoard: onSeeBoard ?? {})
         }
         .confirmationDialog("Delete the video? Your voice and score stay.",
                             isPresented: $confirmDeleteVideo, titleVisibility: .visible) {

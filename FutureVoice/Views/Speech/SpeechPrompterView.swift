@@ -37,7 +37,8 @@ struct SpeechPrompterView: View {
         Group {
             if case .done(let take) = session.phase {
                 NavigationStack {
-                    SpeechResultView(takeId: take.id, live: take)
+                    SpeechResultView(takeId: take.id, live: take,
+                                     onSeeBoard: session.script.isChallenge ? { close() } : nil)
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Done") { close() }
@@ -394,6 +395,12 @@ struct SpeechPrompterView: View {
                                symbol: session.camera.denied && session.cameraOn ? "video.slash" : "mic.fill")
                 if session.camera.denied && session.cameraOn {
                     Text("Camera access is off. Turn it on in Settings, or practise with the mic only.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                } else if session.script.isChallenge && !session.cameraOn && !isRecording {
+                    Text("The board only takes camera takes. Your video stays on your phone.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
