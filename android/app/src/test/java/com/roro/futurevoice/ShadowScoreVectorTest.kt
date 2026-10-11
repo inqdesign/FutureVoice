@@ -21,6 +21,12 @@ class ShadowScoreVectorTest {
             val target = case["target"]!!.jsonPrimitive.content
             val learner = case["learner"]!!.jsonPrimitive.content
             val language = case["language"]!!.jsonPrimitive.content
+            // Japanese is scored by SEGMENTER words, and segmentation is the
+            // platform's own (BreakIterator vs CFStringTokenizer, unreachable
+            // on a JVM — see JapaneseMorphVectorTest). The two cut some lines
+            // differently (でも vs で|も), so a ja score can differ by a few
+            // points across platforms; checked on a device, not here.
+            if (language.startsWith("ja")) continue
             val a = ShadowScore.analyze(target, learner, language)
             val label = "$target / $learner"
             assertEquals(label, case["score"]!!.jsonPrimitive.int, a.score)

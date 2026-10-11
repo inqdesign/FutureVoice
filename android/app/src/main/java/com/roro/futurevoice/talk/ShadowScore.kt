@@ -43,8 +43,8 @@ object ShadowScore {
             else { t -> t }
         val (matches, steps) = align(targetTokens, learnerTokens, key)
         val denom = maxOf(targetTokens.size, learnerTokens.size)
-        val raw = if (language.startsWith("ko"))
-            koreanWordRatio(target, steps, targetTokens.size, learnerTokens.size)
+        val raw = if (style == LanguageCatalog.TokenStyle.SYLLABLE)
+            wordCreditRatio(target, language, steps, targetTokens.size, learnerTokens.size)
         else if (denom > 0) matches.toDouble() / denom else 0.0
         // sqrt curve: single-word slips don't crater a good attempt.
         val score = (sqrt(raw) * 100).let { Math.round(it) }.toInt().coerceIn(0, 100)
@@ -87,16 +87,21 @@ object ShadowScore {
         steps.filter { it.op != DiffOp.INS }.map { it.op }
 
     /**
-     * Korean is ALIGNED by syllable (the recognizer spaces it its own way) but
-     * SCORED by the target's eojeol: a word counts only when every syllable in
-     * it matched — by syllable a wrong particle read 96 (iOS
-     * ShadowEngine.koreanWordRatio). Extra speech converts to words at the
-     * line's own syllables per word, so the denominator is max(target, learner).
+     * Korean and Japanese are ALIGNED by character but SCORED by the target's
+     * words (Korean eojeol, Japanese segmenter words): a word counts only when
+     * every character in it matched — by character a wrong particle read 96
+     * (iOS ShadowEngine.wordCreditRatio). Extra speech converts to words at the
+     * line's own characters per word, so the denominator is max(target,
+     * learner). Chinese has no segmenter here and stays character-scored.
      */
-    private fun koreanWordRatio(target: String, steps: List<DiffStep>,
+    private fun wordCreditRatio(target: String, language: String, steps: List<DiffStep>,
                                 targetSyllables: Int, learnerSyllables: Int): Double {
-        val words = target.split(Regex("\\s+")).filter { it.isNotEmpty() }
-        val spans = tokenSpans(words, "ko").filter { !it.isEmpty() }
+        val words = when {
+            language.startsWith("ko") -> target.split(Regex("\\s+")).filter { it.isNotEmpty() }
+            language.startsWith("ja") -> com.roro.futurevoice.data.JapaneseMorph.segments(target)
+            else -> emptyList()
+        }
+        val spans = tokenSpans(words, language).filter { !it.isEmpty() }
         val ops = targetOps(steps)
         if (spans.isEmpty() || targetSyllables == 0 || ops.size != targetSyllables) {
             val denom = maxOf(targetSyllables, learnerSyllables)
