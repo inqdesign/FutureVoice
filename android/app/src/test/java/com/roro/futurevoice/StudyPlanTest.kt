@@ -280,4 +280,21 @@ class StudyPlanTest {
         assertFalse(short.kept)
         assertNull(short.keptAt)
     }
+
+    /** Every block started keeps the day (iOS 2026-10-11). */
+    @Test
+    fun everyBlockStartedKeepsTheDay() {
+        assertTrue(PromiseLedger.Entry(planned = 2, done = 1, touched = 2).kept)
+        assertFalse(PromiseLedger.Entry(planned = 2, done = 1, touched = 1).kept)
+        assertFalse(PromiseLedger.Entry(planned = 2, done = 1).kept)
+    }
+
+    /** Old missed days are revived only under the same plan, never downgraded. */
+    @Test
+    fun oldMissedDayIsRevivedOnlyUnderTheSamePlan() {
+        val old = PromiseLedger.Entry(planned = 3, done = 2)
+        assertTrue(PromiseJudge.rejudged(old, PromiseLedger.Entry(3, 2, touched = 3), 1L).kept)
+        assertFalse(PromiseJudge.rejudged(old, PromiseLedger.Entry(4, 4, touched = 4), 1L).kept)
+        assertTrue(PromiseJudge.rejudged(PromiseLedger.Entry(2, 2), PromiseLedger.Entry(2, 0, touched = 0), 1L).kept)
+    }
 }

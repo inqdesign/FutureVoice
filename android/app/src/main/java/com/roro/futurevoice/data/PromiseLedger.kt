@@ -30,11 +30,23 @@ object PromiseLedger {
          * turned a finished day grey). Optional, so older entries decode.
          */
         val keptAt: Long? = null,
+        /**
+         * Blocks with ANY progress that day. A day is kept when every block
+         * was at least started (iOS 2026-10-11, founder: a whole day of study
+         * broke the streak because one word block ended at 9 of 10). [done]
+         * still counts finished blocks. Null on older entries; reads as [done].
+         */
+        val touched: Int? = null,
+        /** The keep rule the entry was judged by; null = finish-every-block. */
+        val rule: Int? = null,
     ) {
         /** Nothing was planned that day: a rest day. */
         val isRest: Boolean get() = planned == 0 && keptAt == null
-        val kept: Boolean get() = keptAt != null || (planned > 0 && done >= planned)
+        val kept: Boolean get() = keptAt != null || (planned > 0 && (touched ?: done) >= planned)
     }
+
+    /** The rule [PromiseJudge] writes today: every block started. */
+    const val CURRENT_RULE = 2
 
     private val serializer = MapSerializer(String.serializer(), Entry.serializer())
     private var cache: Map<String, Entry>? = null
@@ -84,7 +96,20 @@ object PromiseJudge {
             log = PracticeLog.day(c, start),
             events = ActivityEventLog.events(c, start, end),
             testFinished = StudyPlan.dayKey(start) in testDays)
-        return PromiseLedger.Entry(occ.size, PlannerDay.done(occ, totals).size, true)
+        val progress = PlannerDay.progress(occ, totals).values
+        return PromiseLedger.Entry(occ.size, progress.count { it >= 1.0 }, true,
+            touched = progress.count { it > 0.0 }, rule = PromiseLedger.CURRENT_RULE)
+    }
+
+    /**
+     * A day settled under the old finish-every-block rule, judged again by
+     * today's. Only ever UPGRADES, and only when the plan still gives the
+     * day the number of blocks it had — otherwise the old verdict stands.
+     */
+    fun rejudged(old: PromiseLedger.Entry, fresh: PromiseLedger.Entry, now: Long): PromiseLedger.Entry {
+        val out = old.copy(rule = PromiseLedger.CURRENT_RULE)
+        return if (!old.kept && old.planned > 0 && fresh.planned == old.planned && fresh.kept)
+            out.copy(touched = fresh.touched, keptAt = now) else out
     }
 
     /** Days a weekly test was finished, in the active language. */
@@ -107,6 +132,8 @@ object PromiseJudge {
             val old = PromiseLedger.entry(c, day)
             if (old?.settled != true) {
                 PromiseLedger.set(c, day, carryingKept(result(c, day, plan, tests), old, now))
+            } else if ((old.rule ?: 1) < PromiseLedger.CURRENT_RULE) {
+                PromiseLedger.set(c, day, rejudged(old, result(c, day, plan, tests), now))
             }
             day = StudyPlan.addDays(day, 1)
         }
@@ -127,8 +154,8 @@ object PromiseJudge {
  * How one day stands for the Home streak (iOS `PracticeStats.standing`).
  * The RULE is the learner's own: with no promise made, a day counts when they
  * studied at all; from the day the routine became a promise
- * (`StudyPlan.streakSince`), a day counts only when everything planned for it
- * was done, and a day with nothing planned is a rest day. Each promise day is
+ * (`StudyPlan.streakSince`), a day counts only when every block planned for
+ * it was at least started, and a day with nothing planned is a rest day. Each promise day is
  * judged by the plan it had ([PromiseLedger]), so raising the bar never
  * rewrites the past.
  */
