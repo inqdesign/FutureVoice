@@ -1,7 +1,8 @@
 New
-• Even when this month's voices are used up, you can finish signing up. Your recording is saved and meanwhile you pick one of the preset voices to practice with; on the day voices can be made again, it switches to your own voice by itself.
+• Challenges in the Speech tab: everyone reads the same script and competes for the top score. Only takes recorded with the camera on count, and the leaderboard shows just your name and score.
+• Tap “Your effort” on the Progress tab to see what you practised, and how much, over a week or a month.
 
 Fixed
-• Calls now connect when you use nawana on a Mac.
-• With subtitles off, the "thinking" line no longer shows during a call.
-• When a voice can't be made right now, you're told when it can, instead of seeing an error.
+• In a call, replies now appear one sentence at a time, together with the voice.
+• Shadowing and Speech scores are more accurate: Korean is compared by word group, Japanese by word, and anything you skipped is shown as it's written in the script.
+• In My routine, review blocks now fill up with every card and word you studied.

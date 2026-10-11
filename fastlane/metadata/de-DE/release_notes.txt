@@ -1,7 +1,8 @@
 Neu
-• Auch wenn die Stimmen für diesen Monat aufgebraucht sind, kannst du die Anmeldung abschließen. Deine Aufnahme wird gespeichert, und bis dahin übst du mit einer der Standardstimmen, die du dir aussuchst. Sobald wieder Stimmen erstellt werden können, wechselt sie von selbst zu deiner eigenen.
+• Challenges im Tab „Rede“: Alle lesen denselben Text und treten um die beste Punktzahl an. Es zählen nur Aufnahmen mit eingeschalteter Kamera, und in der Rangliste stehen nur dein Name und deine Punktzahl.
+• Unter „Dein Einsatz“ im Tab „Fortschritt“ siehst du genau, was du in einer Woche oder einem Monat geübt hast – und wie viel.
 
 Behoben
-• Anrufe verbinden sich jetzt auch, wenn du nawana auf einem Mac nutzt.
-• Sind die Untertitel aus, erscheint im Anruf auch die „denkt nach“-Zeile nicht mehr.
-• Kann gerade keine Stimme erstellt werden, siehst du statt eines Fehlers, ab wann es wieder geht.
+• Im Gespräch erscheinen Antworten jetzt Satz für Satz, zusammen mit der Stimme.
+• Shadowing und Rede werden genauer bewertet: Koreanisch nach Wortgruppen, Japanisch nach Wörtern, und Ausgelassenes wird so angezeigt, wie es im Text steht.
+• In „Meine Routine“ füllen sich Wiederholungsblöcke jetzt mit jeder Karte und jedem Wort, das du gelernt hast.

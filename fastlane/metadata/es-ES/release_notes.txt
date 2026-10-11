@@ -1,7 +1,8 @@
 Novedades
-• Aunque se hayan agotado las voces de este mes, puedes terminar de registrarte. Tu grabación se guarda y mientras tanto eliges una de las voces predeterminadas para practicar; el día en que se puedan crear voces otra vez, cambia sola a tu propia voz.
+• Retos en la pestaña Discurso: todos leen el mismo guion y compiten por la mejor puntuación. Solo cuentan los intentos con la cámara encendida, y en la clasificación solo aparecen tu nombre y tu puntuación.
+• Toca «Tu esfuerzo» en la pestaña Progreso para ver qué practicaste y cuánto en una semana o un mes.
 
 Correcciones
-• Las llamadas ya conectan cuando usas nawana en un Mac.
-• Con los subtítulos desactivados, ya no aparece la línea de «pensando» durante la llamada.
-• Cuando no se puede crear una voz en ese momento, te decimos desde cuándo se podrá, en lugar de mostrar un error.
+• En las llamadas, las respuestas aparecen frase por frase, junto con la voz.
+• La puntuación de shadowing y de Discurso es más precisa: el coreano se compara por grupos de palabras y el japonés por palabras, y lo que te saltaste se muestra tal como está en el guion.
+• En Mi rutina, los bloques de repaso se llenan con cada tarjeta y palabra que estudiaste.
