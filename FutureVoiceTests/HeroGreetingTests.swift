@@ -25,13 +25,9 @@ final class HeroGreetingTests: XCTestCase {
     func testFirstRunOutranksEverything() {
         let i = input {
             $0.sessionCount = 0
-            $0.hasMissedCall = true
+            $0.todaySpokenSeconds = 3600
         }
         XCTAssertEqual(HeroGreeting.kind(for: i), .firstRun)
-    }
-
-    func testMissedCallOutranksTheQuestion() {
-        XCTAssertEqual(HeroGreeting.kind(for: input { $0.hasMissedCall = true }), .missedCall)
     }
 
     func testComebackNeedsARealGapAndNothingSpokenToday() {

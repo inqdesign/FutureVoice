@@ -7,7 +7,7 @@ import Foundation
 /// in that order:
 ///
 /// 1. **A state line, only when today is actually different** — first run, a
-///    call that rang out, a comeback after a gap, the goal already met. These
+///    comeback after a gap, the goal already met. These
 ///    are the moments where a fixed greeting reads as a screen that isn't
 ///    paying attention.
 /// 2. **Otherwise a short opening question**, drawn from a small pool per
@@ -45,8 +45,6 @@ enum HeroGreeting {
 
     struct Input {
         var now: Date = Date()
-        /// A daily call rang out and its voicemail is still unheard.
-        var hasMissedCall: Bool = false
         /// Ended sessions, all-time. Zero = the learner has never talked.
         var sessionCount: Int = 0
         var lastSessionEndedAt: Date?
@@ -71,13 +69,7 @@ enum HeroGreeting {
         let lastEnded = sessions.compactMap(\.endedAt).max()
         let goal = UserDefaults.standard.object(forKey: goalMinutesKey) as? Int
 
-        var missed = false
-        if DailyCallStore.shared.isEnabled, let plan = DailyCallStore.shared.load() {
-            missed = plan.hasUnheardVoicemail
-        }
-
         return Input(now: now,
-                     hasMissedCall: missed,
                      sessionCount: sessions.count,
                      lastSessionEndedAt: lastEnded,
                      todaySpokenSeconds: todaySeconds,
@@ -103,7 +95,9 @@ enum HeroGreeting {
 
     enum Kind: Equatable {
         case firstRun
-        case missedCall
+        // No missed-call line (2026-10-11): "I left you a message" pointed at
+        // nothing — the missed-call row left the home on 2026-09-02 and since
+        // 2026-10-08 no voicemail audio exists before the learner picks up.
         /// Back after `comebackGapDays`+ away with nothing spoken today.
         case comeback
         case goalMet
@@ -116,7 +110,6 @@ enum HeroGreeting {
 
     static func kind(for input: Input) -> Kind {
         if input.sessionCount == 0 { return .firstRun }
-        if input.hasMissedCall { return .missedCall }
         if isComeback(input) { return .comeback }
         if goalMet(input) { return .goalMet }
         return .question
@@ -146,11 +139,6 @@ enum HeroGreeting {
             return pick([
                 material("Ready for your first talk?"),
                 material("Shall we start small?"),
-            ], input)
-        case .missedCall:
-            return pick([
-                material("I called earlier."),
-                material("I left you a message."),
             ], input)
         case .comeback:
             return pick([
