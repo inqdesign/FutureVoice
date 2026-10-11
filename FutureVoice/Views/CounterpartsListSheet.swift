@@ -317,19 +317,11 @@ struct VoicePresetPickerView: View {
         playingId = nil
         error = nil
 
-        let text = Self.previewLine(for: appState.targetLanguage)
         loadingId = preset.id
         defer { loadingId = nil }
         do {
-            let data: Data
-            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: preset.id,
-                                                        allowLineage: false) {
-                data = cached
-            } else {
-                data = try await ElevenLabsClient.shared.synthesize(
-                    voiceId: preset.id, text: text, purpose: "voice_preview")
-                _ = PhraseAudioStore.shared.save(data, text: text, voiceId: preset.id)
-            }
+            let data = try await Self.previewAudio(voiceId: preset.id,
+                                                   language: appState.targetLanguage)
             playingId = preset.id
             try player.play(data, source: "voice_preview") {
                 playingId = nil
@@ -348,6 +340,29 @@ struct VoicePresetPickerView: View {
     /// after 반가워요 gave NO pause at all — the question ran straight on. The
     /// tag is spoken as silence (~0.5 s), never read out; this line is audio
     /// only, never drawn as text.
+    /// The preview clip for a preset voice in a target language. The clips
+    /// SHIP with the app (`Resources/VoicePreviews`, made once by
+    /// `scripts/bundle-voice-previews.sh`): the line and the voice are the
+    /// same for everyone, so synthesizing them per learner paid ElevenLabs
+    /// for the same few seconds over and over. A clip the bundle lacks (a new
+    /// voice, a new language) falls back to the phone's cache, then to one
+    /// live synthesis kept in that cache.
+    static func previewAudio(voiceId: String, language: String) async throws -> Data {
+        let lang = language.split(separator: "-").first.map(String.init) ?? language
+        if let url = Bundle.main.url(forResource: "preview-\(lang)-\(voiceId)", withExtension: "mp3"),
+           let data = try? Data(contentsOf: url) {
+            return data
+        }
+        let text = previewLine(for: language)
+        if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId, allowLineage: false) {
+            return cached
+        }
+        let data = try await ElevenLabsClient.shared.synthesize(
+            voiceId: voiceId, text: text, purpose: "voice_preview")
+        _ = PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId)
+        return data
+    }
+
     static func previewLine(for languageCode: String) -> String {
         switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
         case "es": return "¡Hola! Qué alegría verte. <break time=\"0.5s\" /> ¿Empezamos?"

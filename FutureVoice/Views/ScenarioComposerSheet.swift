@@ -1472,20 +1472,12 @@ struct PartnerPickerSheet: View {
         player.stop()
         playingRowId = nil
 
-        let text = VoicePresetPickerView.previewLine(for: appState.targetLanguage)
         let voiceId = p.voicePresetId
         loadingVoiceId = voiceId
         defer { loadingVoiceId = nil }
         do {
-            let data: Data
-            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId,
-                                                        allowLineage: false) {
-                data = cached
-            } else {
-                data = try await ElevenLabsClient.shared.synthesize(
-                    voiceId: voiceId, text: text, purpose: "voice_preview")
-                _ = PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId)
-            }
+            let data = try await VoicePresetPickerView.previewAudio(
+                voiceId: voiceId, language: appState.targetLanguage)
             playingRowId = p.id
             try player.play(data, source: "voice_preview") {
                 playingRowId = nil

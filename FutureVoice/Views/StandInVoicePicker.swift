@@ -89,19 +89,11 @@ struct StandInVoicePicker: View {
         player.stop()
         playingId = nil
         error = nil
-        let text = VoicePresetPickerView.previewLine(for: appState.targetLanguage)
         loadingId = preset.id
         defer { loadingId = nil }
         do {
-            let data: Data
-            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: preset.id,
-                                                        allowLineage: false) {
-                data = cached
-            } else {
-                data = try await ElevenLabsClient.shared.synthesize(
-                    voiceId: preset.id, text: text, purpose: "voice_preview")
-                _ = PhraseAudioStore.shared.save(data, text: text, voiceId: preset.id)
-            }
+            let data = try await VoicePresetPickerView.previewAudio(
+                voiceId: preset.id, language: appState.targetLanguage)
             playingId = preset.id
             try player.play(data, source: "voice_preview") {
                 playingId = nil
