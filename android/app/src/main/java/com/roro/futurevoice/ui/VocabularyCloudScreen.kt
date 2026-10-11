@@ -47,6 +47,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -222,9 +228,10 @@ fun VocabularyCloudScreen(
             )
             NotebookPeek(
                 word = peekWord ?: marks.studyingOrder.firstOrNull(),
-                studyingCount = marks.studyingOrder.size,
+                studyingOrder = marks.studyingOrder,
                 language = language,
                 onOpen = { openWord = it },
+                onStep = { peekWord = it },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -262,22 +269,32 @@ fun VocabularyCloudScreen(
  * opens the full card — dragging a sheet is the slowest way to ask for more.
  * Docked rather than a modal sheet, because a modal one would take the cloud's
  * pan away (iOS lets the background through; Compose's sheet does not).
+ *
+ * Drawn as iOS 26 draws a sheet at a partial detent: floating off the screen
+ * edges with every corner rounded, the grabber on top, and the card's
+ * toolbar — Keep / I know on the left, the title in the display face, the
+ * notebook's ↑ ↓ on the right — above the word.
  */
 @Composable
 private fun NotebookPeek(
     word: String?,
-    studyingCount: Int,
+    studyingOrder: List<String>,
     language: String,
     onOpen: (String) -> Unit,
+    onStep: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val vocab = remember { com.roro.futurevoice.data.VocabStore.shared(context) }
     val lore = remember { com.roro.futurevoice.net.WordLore(com.roro.futurevoice.data.AuthRepository()) }
     val nativeLanguage = remember {
         context.getSharedPreferences("futurevoice", 0).getString("futurevoice.nativeLanguage", null) ?: "en"
     }
     var entry by remember { mutableStateOf<com.roro.futurevoice.net.WordLore.Entry?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var kept by remember { mutableStateOf(false) }
+    var known by remember { mutableStateOf(false) }
     LaunchedEffect(word, language) {
         // `loading` FIRST: clearing the entry before it flashes "no entry".
         loading = true
@@ -285,24 +302,84 @@ private fun NotebookPeek(
         entry = word?.let { runCatching { lore.entry(it, nativeLanguage, language) }.getOrNull() }
         loading = false
     }
+    LaunchedEffect(word, language, studyingOrder) {
+        if (word == null) return@LaunchedEffect
+        val bookmarked = vocab.isStudying(word, language)
+        kept = bookmarked
+        // Same rule as the card: a used word counts as known unless it is
+        // bookmarked — the bookmark wins.
+        val state = vocab.state(word.lowercase(), language)
+        known = state == "known" || (state != null && !bookmarked)
+    }
+    val title = stringResource(R.string.my_words_lld, studyingOrder.size)
+    val navIndex = word?.let { studyingOrder.indexOf(it) }?.takeIf { it >= 0 }
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(36.dp)
     androidx.compose.material3.Surface(
-        modifier = modifier.fillMaxWidth().height(220.dp)
-            .then(if (word != null) Modifier.clickable { onOpen(word) } else Modifier),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
+        modifier = modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)
+            .fillMaxWidth().height(220.dp)
+            .then(if (word != null) Modifier.clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null,
+            ) { onOpen(word) } else Modifier),
+        shape = shape,
+        color = if (dark) Color(0xFF1C1C1E) else Color(0xFFFBFBFB),
+        shadowElevation = 12.dp,
     ) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 22.dp)) {
-            Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.size(width = 36.dp, height = 5.dp).background(
-                    MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape))
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                    androidx.compose.foundation.shape.CircleShape))
             }
-            Text(stringResource(R.string.my_words_lld, studyingCount),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            // The card's toolbar, as iOS draws it at the peek.
+            Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center) {
+                Text(title,
+                    style = com.roro.futurevoice.ui.brand.DisplayFace.style(title,
+                        androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)),
+                    color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                if (word != null) {
+                    ToolbarPill(Modifier.align(Alignment.CenterStart)) {
+                        PillIcon(if (kept) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            if (kept) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant, true) {
+                            val next = !kept
+                            kept = next
+                            scope.launch {
+                                if (next) vocab.addStudying(word, language)
+                                else vocab.removeStudying(word, language)
+                                com.roro.futurevoice.data.StoreEvents.bump()
+                            }
+                        }
+                        PillIcon(if (known) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
+                            if (known) Color(0xFF34C759)
+                            else MaterialTheme.colorScheme.onSurfaceVariant, true) {
+                            val next = !known
+                            known = next
+                            if (next) kept = false
+                            scope.launch {
+                                // As the card: retiring it clears the bookmark too.
+                                if (next) {
+                                    vocab.markKnown(word.lowercase(), language)
+                                    vocab.removeStudying(word, language)
+                                } else vocab.unmark(word.lowercase(), language)
+                                com.roro.futurevoice.data.StoreEvents.bump()
+                            }
+                        }
+                    }
+                }
+                if (navIndex != null) {
+                    ToolbarPill(Modifier.align(Alignment.CenterEnd)) {
+                        PillIcon(Icons.Filled.KeyboardArrowUp, MaterialTheme.colorScheme.primary,
+                            navIndex > 0) { onStep(studyingOrder[navIndex - 1]) }
+                        PillIcon(Icons.Filled.KeyboardArrowDown, MaterialTheme.colorScheme.primary,
+                            navIndex + 1 < studyingOrder.size) { onStep(studyingOrder[navIndex + 1]) }
+                    }
+                }
+            }
             if (word == null) {
-                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+                Column(Modifier.fillMaxSize().padding(horizontal = 22.dp),
+                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(stringResource(R.string.tap_a_word_in_the_cloud_to_start_your_notebook),
                         style = MaterialTheme.typography.bodyMedium,
@@ -311,35 +388,66 @@ private fun NotebookPeek(
                 }
                 return@Column
             }
-            Spacer(Modifier.height(8.dp))
-            Text(word, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                color = MaterialTheme.colorScheme.onSurface)
-            val sub = listOfNotNull(CoreVocabulary.reading(word, language),
-                entry?.pos?.takeIf { it.isNotBlank() }).joinToString(" · ")
-            if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            Spacer(Modifier.height(10.dp))
-            val first = entry?.senses?.firstOrNull()
-            when {
-                first != null -> {
-                    Text(first.meaning, style = MaterialTheme.typography.bodyLarge, maxLines = 2,
-                        color = MaterialTheme.colorScheme.onSurface)
-                    // More than one sense: say so, rather than letting the peek
-                    // read as the whole truth.
-                    val extra = (entry?.senses?.size ?: 1) - 1
-                    if (extra > 0) Text(
-                        if (extra == 1) stringResource(R.string.s_1_more_meaning)
-                        else stringResource(R.string.lld_more_meanings, extra),
-                        style = MaterialTheme.typography.bodySmall,
+            Column(Modifier.fillMaxSize().padding(horizontal = 22.dp).padding(top = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(word, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurface)
+                        val sub = listOfNotNull(CoreVocabulary.reading(word, language),
+                            entry?.pos?.takeIf { it.isNotBlank() }).joinToString(" · ")
+                        if (sub.isNotEmpty()) Text(sub, fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
+                    WordPronounceButton(word)
+                }
+                val first = entry?.senses?.firstOrNull()
+                when {
+                    first != null -> Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(first.meaning, fontSize = 17.sp, maxLines = 2,
+                            color = MaterialTheme.colorScheme.onSurface)
+                        // More than one sense: say so, rather than letting the peek
+                        // read as the whole truth.
+                        val extra = (entry?.senses?.size ?: 1) - 1
+                        if (extra > 0) Text(
+                            if (extra == 1) stringResource(R.string.s_1_more_meaning)
+                            else stringResource(R.string.lld_more_meanings, extra),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    loading -> androidx.compose.material3.CircularProgressIndicator(
+                        Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else -> Text(stringResource(R.string.no_dictionary_entry_yet_tap_to_open_the_card),
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                loading -> androidx.compose.material3.CircularProgressIndicator(
-                    Modifier.size(20.dp), strokeWidth = 2.dp)
-                else -> Text(stringResource(R.string.no_dictionary_entry_yet_tap_to_open_the_card),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+}
+
+/** iOS 26's toolbar group: two glyphs sharing one light capsule. */
+@Composable
+private fun ToolbarPill(modifier: Modifier, content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        modifier.height(44.dp)
+            .background(com.roro.futurevoice.ui.brand.iosFill(), androidx.compose.foundation.shape.CircleShape)
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+@Composable
+private fun PillIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(44.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp),
+            tint = if (enabled) tint else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))
     }
 }
 

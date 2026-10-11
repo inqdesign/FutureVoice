@@ -61,6 +61,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.luminance
 import com.roro.futurevoice.R
 import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.core.InstallSalt
@@ -257,6 +264,9 @@ fun WordCardSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        // iOS's `.large` detent stops under the status bar with the page
+        // behind it peeking above — a sheet, not a new screen.
+        modifier = Modifier.statusBarsPadding().padding(top = 10.dp),
     ) {
       // The card is the page (iOS's `.large` detent): it fills the sheet,
       // the entry scrolls and the action bar stays pinned at the foot.
@@ -264,12 +274,16 @@ fun WordCardSheet(
         // Where you are in the list you came from. A dealt hand titles by
         // POSITION — that list isn't the notebook, so its count would be a
         // lie there; browsing the notebook keeps the count.
+        val title = notebookTitle ?: stringResource(R.string.lld_of_lld, index + 1, terms.size)
+        // iOS draws it as the sheet's inline nav title, which wears the
+        // pixel display face (`RootView.roundedNavFont`).
         Text(
-            notebookTitle ?: stringResource(R.string.lld_of_lld, index + 1, terms.size),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            title,
+            style = com.roro.futurevoice.ui.brand.DisplayFace.style(title,
+                androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)),
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp))
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 14.dp))
         Column(
             // Bounded, so the pinned bar below always has room. A bottom
             // sheet measures its content with an UNBOUNDED height, where a
@@ -277,12 +291,13 @@ fun WordCardSheet(
             Modifier.fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                .padding(horizontal = 22.dp).padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(26.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(term, style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(term, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface)
                     // A kanji headword has to print its reading, or the card
                     // teaches a word nobody can say out loud. Several where
                     // the word has several (からい・つらい).
@@ -296,22 +311,13 @@ fun WordCardSheet(
                         entry?.pos?.takeIf { it.isNotBlank() }, band,
                     ).joinToString(" · ")
                     if (caption.isNotEmpty()) {
-                        Text(caption, style = MaterialTheme.typography.bodyMedium,
+                        Text(caption, fontSize = 15.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 // Hearing it is the point of a cloned voice; without one there
                 // is nothing to play, so the button is absent rather than dead.
-                if (voiceId != null) {
-                    IconButton(onClick = { speak() }, enabled = !speaking) {
-                        if (speaking) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = stringResource(R.string.play))
-                        }
-                    }
-                }
+                if (voiceId != null) PronounceCircle(speaking) { speak() }
             }
 
             CardSection(stringResource(R.string.meaning)) {
@@ -386,11 +392,13 @@ fun WordCardSheet(
         // The action bar is PINNED, as on iOS: the verdicts are why the card
         // was opened, and a long entry must never scroll them out of reach.
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                .padding(top = 6.dp, bottom = 20.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp)
+                .padding(top = 10.dp, bottom = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // iOS `CardActionButton`: a glass capsule, ink when off, the
+            // verdict's colour when on.
             VerdictButton(
                 label = stringResource(R.string.keep),
                 icon = if (kept) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
@@ -403,19 +411,11 @@ fun WordCardSheet(
                 modifier = Modifier.weight(1f), onClick = { toggleKnown() })
             // Saying it is the point of keeping it — the same screen the book
             // pages open, one line long.
-            IconButton(onClick = { onShadow(term) }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Filled.GraphicEq, contentDescription = stringResource(R.string.shadow))
-            }
-            IconButton(onClick = { index -= 1 }, enabled = index > 0,
-                modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Filled.KeyboardArrowUp,
-                    contentDescription = stringResource(R.string.previous_item))
-            }
-            IconButton(onClick = { index += 1 }, enabled = index + 1 < terms.size,
-                modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Filled.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.next_item))
-            }
+            StepButton(Icons.Filled.GraphicEq, stringResource(R.string.shadow), true) { onShadow(term) }
+            StepButton(Icons.Filled.KeyboardArrowUp, stringResource(R.string.previous_item),
+                index > 0) { index -= 1 }
+            StepButton(Icons.Filled.KeyboardArrowDown, stringResource(R.string.next_item),
+                index + 1 < terms.size) { index += 1 }
         }
       }
     }
@@ -472,9 +472,60 @@ private fun snippet(needle: String, transcript: String, window: Int = 90): Strin
 
 @Composable
 private fun CardSection(title: String, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
-        GroupedSectionHeader(title)
+    // iOS `WordCard.section`: a small bold caption, uppercased and tracked,
+    // in the tertiary label grey, flush with the text below it.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            letterSpacing = 0.6.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
         content()
+    }
+}
+
+/** iOS `pronounceButton`: a 46 pt accent-tinted circle with the speaker glyph. */
+@Composable
+internal fun PronounceCircle(speaking: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(46.dp)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape)
+            .clip(CircleShape)
+            .clickable(enabled = !speaking, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (speaking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+        else Icon(Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = stringResource(R.string.play),
+            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+    }
+}
+
+/** The glass capsule iOS 26 draws for `.buttonStyle(.glass)` (`CardButtons`). */
+@Composable
+internal fun Modifier.glassCapsule(): Modifier {
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    return this
+        .shadow(if (dark) 0.dp else 10.dp, CircleShape,
+            ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.14f))
+        .background(if (dark) Color(0xFF2C2C2E) else Color.White, CircleShape)
+        .border(0.5.dp, Color.Black.copy(alpha = if (dark) 0f else 0.06f), CircleShape)
+        .clip(CircleShape)
+}
+
+/** iOS `CardStepButton`: the icon-only sibling, sized to the glyph. */
+@Composable
+private fun StepButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier.height(48.dp).width(46.dp).glassCapsule()
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.3f))
     }
 }
 
@@ -679,21 +730,61 @@ private fun VerdictButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (on) onColor.copy(alpha = 0.16f)
-            else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (on) onColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
+    val tint = if (on) onColor else MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier.height(48.dp).glassCapsule().clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = tint)
         // One line. The verdict's name is the only thing that says which
         // button this is, so it never wraps and never gets cut — at a large
         // font it shrinks instead ("알아요" drew as "알아으" clipped at 1.3).
         androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
-        com.roro.futurevoice.ui.brand.FitButtonLabel(label, MaterialTheme.typography.labelLarge)
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides tint) {
+            com.roro.futurevoice.ui.brand.FitButtonLabel(label,
+                MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+        }
+    }
+}
+
+/**
+ * The pronounce circle on its own, for a surface that isn't the card (the
+ * cloud's notebook peek — iOS shows the same button at the resting height).
+ * Absent without a cloned voice, as on the card. Cache first: a word is
+ * never billed twice.
+ */
+@Composable
+internal fun WordPronounceButton(term: String) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val mp3 = remember { Mp3Player(context.cacheDir, source = "library") }
+    var voiceId by remember { mutableStateOf(cachedVoiceId) }
+    var speaking by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) { onDispose { mp3.stop() } }
+    LaunchedEffect(Unit) {
+        if (voiceId != null) return@LaunchedEffect
+        val uid = AuthRepository().userId ?: return@LaunchedEffect
+        voiceId = runCatching { VoiceCloneRepository().activeVoiceId(uid) }
+            .getOrNull()?.also { cachedVoiceId = it }
+    }
+    val id = voiceId ?: return
+    PronounceCircle(speaking) {
+        speaking = true
+        scope.launch {
+            runCatching {
+                val audio = com.roro.futurevoice.data.cachedSynthesis(
+                    context, voiceId = id, text = term,
+                    idempotencyKey = InstallSalt.ttsKey(term, id, timestamps = false),
+                    purpose = "library")
+                mp3.play(audio)
+            }.onFailure { e ->
+                if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
+                    com.roro.futurevoice.data.BillingGate.showPaywall.value = true
+            }
+            speaking = false
+        }
     }
 }
