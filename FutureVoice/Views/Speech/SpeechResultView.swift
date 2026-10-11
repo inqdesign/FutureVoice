@@ -39,15 +39,22 @@ struct SpeechResultView: View {
         return List {
             Section {
                 HStack(spacing: 18) {
-                    Gauge(value: Double(m.overall), in: 0...100) {
-                        EmptyView()
-                    } currentValueLabel: {
+                    // Drawn, not a Gauge: `.accessoryCircularCapacity` is a
+                    // lock-screen style, and on a device it carries the
+                    // widget's drop shadow (the 1.3× scale made it heavier).
+                    let tint = SpeechScoreColor.color(m.overall)
+                    ZStack {
+                        Circle().stroke(tint.opacity(0.25), lineWidth: 7)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(max(0, min(100, m.overall))) / 100)
+                            .stroke(tint, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
                         Text("\(m.overall)").font(.title2.monospacedDigit().weight(.bold))
                     }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(SpeechScoreColor.color(m.overall))
-                    .scaleEffect(1.3)
+                    .padding(4)
                     .frame(width: 80, height: 80)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("\(m.overall)"))
 
                     VStack(alignment: .leading, spacing: 6) {
                         if let coaching = take.coaching {
