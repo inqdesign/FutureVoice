@@ -1153,7 +1153,11 @@ struct ScenarioComposerSheet: View {
     private func refreshOptions(force: Bool = false) async {
         guard canDrillDeeper else { options = []; return }
         let labels = path.map(\.label)
-        let key = (person?.id.uuidString ?? "-") + "|" + labels.joined(separator: "›")
+        // The ideas are MATERIAL — written in the target language — while the
+        // path labels are app-language chrome, so the language has to be in
+        // the key or a switch serves the other language's ideas.
+        let key = appState.targetLanguage + "|" + (person?.id.uuidString ?? "-")
+            + "|" + labels.joined(separator: "›")
         if !force, let cached = ScenarioIdeaCache.shared.topics(for: key) {
             options = cached
             return
@@ -1163,7 +1167,10 @@ struct ScenarioComposerSheet: View {
         // for them bought nothing and cost the learner the whole pause right
         // after their first tap. Persona-tilted specifics still come from the
         // model one level down, and "More" (force) asks it here too.
+        // The seeds are written in English, so they only stand in for an
+        // English target; every other language asks the model.
         if !force, person == nil, labels.count == 1,
+           appState.targetLanguage == "en",
            let seed = TopicEngine.seedSubAreas(for: labels[0]) {
             options = seed
             // Warm the connection now — the NEXT tap is a real model call.
