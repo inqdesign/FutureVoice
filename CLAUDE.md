@@ -600,8 +600,16 @@ its own branch so the founder picks the build it ships in.
   `StudyPlan.streakSince` nil → a day counts when they studied at all
   (`PracticeStats.activeDays`, the old rule, where everyone starts — the
   seeded plan never sets it); set → from that day a day counts only when
-  every block planned for it was done, and a day with nothing planned is a
-  REST day that neither counts nor breaks. **The routine IS the promise,
+  every block planned for it was at least STARTED, and a day with nothing
+  planned is a REST day that neither counts nor breaks. **Started, not
+  finished** (2026-10-11, founder: a whole day of talks, say-it-again and
+  shadowing broke the streak because a word block ended at 9 of 10 — and
+  the ring read 90% while the verdict read "missed"): `Entry.touched`
+  counts blocks with any progress and decides `kept`; `done` still counts
+  finished blocks and drives the day's ring and the circles. Days settled
+  under the old rule (`Entry.rule` nil) are judged again once, UPWARD only,
+  and only when today's plan gives the day the same number of blocks it
+  had (`PromiseJudge.rejudged`). **The routine IS the promise,
   from onboarding** (founder: "the routine is already set — X minutes a day,
   chosen in onboarding"): `StudyPlan.seeded` writes talk X minutes every day
   (`dailyGoalMinutes`) with `streakSince` = that day — at the daily call's

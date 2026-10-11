@@ -348,4 +348,41 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertFalse(short.kept)
         XCTAssertNil(short.keptAt)
     }
+
+    /// A day is kept when every block was STARTED (2026-10-11: a whole day of
+    /// study broke the streak because a word block ended at 9 of 10).
+    @MainActor
+    func testEveryBlockStartedKeepsTheDay() {
+        let day = Date()
+        let talk = StudyPlan.Occurrence(kind: .talk, start: day, amount: 10, source: .template(UUID()), remind: false)
+        let words = StudyPlan.Occurrence(kind: .words, start: day.addingTimeInterval(3600), amount: 10,
+                                         source: .template(UUID()), remind: false)
+        var totals = PlannerDay.Totals()
+        totals.talkMinutes = 12
+        totals.words = 9
+        let p = PlannerDay.progress(planned: [talk, words], totals: totals)
+        let e = PromiseLedger.Entry(planned: 2, done: p.values.filter { $0 >= 1 }.count,
+                                    touched: p.values.filter { $0 > 0 }.count)
+        XCTAssertEqual(e.done, 1)
+        XCTAssertTrue(e.kept)
+        // A block never touched still misses the day.
+        XCTAssertFalse(PromiseLedger.Entry(planned: 2, done: 1, touched: 1).kept)
+    }
+
+    /// Days settled under the old rule are judged again, upward only.
+    @MainActor
+    func testOldMissedDayIsRevivedOnlyUnderTheSamePlan() {
+        let now = Date()
+        let old = PromiseLedger.Entry(planned: 3, done: 2)
+        let revived = PromiseJudge.rejudged(old, fresh: .init(planned: 3, done: 2, touched: 3), now: now)
+        XCTAssertTrue(revived.kept)
+        XCTAssertEqual(revived.rule, PromiseLedger.currentRule)
+        // The plan has changed since: the old verdict stands.
+        let other = PromiseJudge.rejudged(old, fresh: .init(planned: 4, done: 4, touched: 4), now: now)
+        XCTAssertFalse(other.kept)
+        XCTAssertEqual(other.rule, PromiseLedger.currentRule)
+        // Never downgrades.
+        let kept = PromiseLedger.Entry(planned: 2, done: 2)
+        XCTAssertTrue(PromiseJudge.rejudged(kept, fresh: .init(planned: 2, done: 0, touched: 0), now: now).kept)
+    }
 }

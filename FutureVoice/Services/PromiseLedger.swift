@@ -1,7 +1,7 @@
 import Foundation
 
-/// What each day of a PROMISE looked like: how many blocks were planned and
-/// how many were done. Kept per day and FROZEN once the day is over, because
+/// What each day of a PROMISE looked like: how many blocks were planned, how
+/// many were done, and how many were STARTED. Kept per day and FROZEN once the day is over, because
 /// a day is judged by the plan it had — raise the bar on Thursday and Monday
 /// stays kept. Today's entry is provisional and rewritten as the day moves.
 ///
@@ -23,11 +23,22 @@ final class PromiseLedger: @unchecked Sendable {
         /// (2026-10-07 — a 5-minute talk added at night turned a finished
         /// day grey). Optional, so entries on disk from before decode.
         var keptAt: Date? = nil
+        /// Blocks with ANY progress that day. A day is kept when every block
+        /// was at least started (2026-10-11, founder: a whole day of study
+        /// broke the streak because one word block ended at 9 of 10). `done`
+        /// still counts finished blocks — it is what the day's ring shows.
+        /// nil on entries written before the rule; they read as `done`.
+        var touched: Int? = nil
+        /// The keep rule the entry was judged by; nil = finish-every-block.
+        var rule: Int? = nil
         /// Nothing was planned that day: a rest day — it neither counts nor
         /// breaks the streak.
         var isRest: Bool { planned == 0 && keptAt == nil }
-        var kept: Bool { keptAt != nil || (planned > 0 && done >= planned) }
+        var kept: Bool { keptAt != nil || (planned > 0 && (touched ?? done) >= planned) }
     }
+
+    /// The rule `PromiseJudge` writes today: every block started.
+    static let currentRule = 2
 
     private let lock = NSLock()
     private var entries: [String: Entry]
@@ -89,9 +100,29 @@ enum PromiseJudge {
         let tested = WeeklyTestStore.shared.load().compactMap(\.finishedAt)
             .contains { cal.isDate($0, inSameDayAs: start) }
         _ = talks
-        let done = PlannerDay.done(planned: occ,
-                                   totals: PlannerDay.totals(on: start, events: events, testFinished: tested))
-        return .init(planned: occ.count, done: done.count, settled: true)
+        let progress = PlannerDay.progress(planned: occ,
+                                           totals: PlannerDay.totals(on: start, events: events, testFinished: tested))
+        return .init(planned: occ.count,
+                     done: progress.values.filter { $0 >= 1 }.count,
+                     settled: true,
+                     touched: progress.values.filter { $0 > 0 }.count,
+                     rule: PromiseLedger.currentRule)
+    }
+
+    /// A day settled under the old finish-every-block rule, judged again by
+    /// today's. Only ever UPGRADES: a day that was kept stays kept, and a
+    /// missed day is revived only when the plan still gives it the same
+    /// number of blocks it had — otherwise it is today's plan judging a day
+    /// that had another, and the old verdict stands.
+    static func rejudged(_ old: PromiseLedger.Entry, fresh: PromiseLedger.Entry,
+                         now: Date) -> PromiseLedger.Entry {
+        var out = old
+        out.rule = PromiseLedger.currentRule
+        if !old.kept, old.planned > 0, fresh.planned == old.planned, fresh.kept {
+            out.touched = fresh.touched
+            out.keptAt = now
+        }
+        return out
     }
 
     /// Settle every promise day not yet frozen (up to yesterday) and rewrite
@@ -107,6 +138,9 @@ enum PromiseJudge {
             let old = ledger.entry(day, calendar: cal)
             if old?.settled != true {
                 ledger.set(carryingKept(result(for: day, plan: plan, calendar: cal), from: old, now: now),
+                           for: day, calendar: cal)
+            } else if let old, (old.rule ?? 1) < PromiseLedger.currentRule {
+                ledger.set(rejudged(old, fresh: result(for: day, plan: plan, calendar: cal), now: now),
                            for: day, calendar: cal)
             }
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
