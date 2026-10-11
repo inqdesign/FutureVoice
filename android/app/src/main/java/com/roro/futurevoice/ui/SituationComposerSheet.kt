@@ -352,13 +352,18 @@ internal fun ScenarioComposer(
     suspend fun refreshOptions(force: Boolean = false) {
         val labels = path.map { it.label }
         if (labels.isEmpty() || labels.size >= MAX_DEPTH) { options = emptyList(); return }
-        val key = ScenarioIdeaCache.key(person?.id, labels)
+        // The ideas are MATERIAL (target language); the labels are app-language
+        // chrome — the language has to be in the key or a switch serves the
+        // other language's ideas.
+        val key = targetLanguage + "|" + ScenarioIdeaCache.key(person?.id, labels)
         if (!force) ScenarioIdeaCache.topics(context, key)?.let { options = it; return }
         // Level 1 of a preset category: shipped seeds, zero round-trip. The
         // sub-areas of "Cafe" are the same for everyone, and waiting on the
         // model for them costs the learner the pause right after their first
         // tap. "More" (force) asks the model here too.
-        if (!force && person == null && labels.size == 1) {
+        // The seeds are written in English, so they only stand in for an
+        // English target; every other language asks the model.
+        if (!force && person == null && labels.size == 1 && targetLanguage == "en") {
             PathIdeasContent.seedSubAreas(labels[0])?.let { seed ->
                 options = seed.map { SuggestedTopic(title = it.title, blurb = it.blurb) }
                 return
