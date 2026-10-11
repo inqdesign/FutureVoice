@@ -541,7 +541,8 @@ nav.sec .logo { color: #F5F2EB; }
 .cycle-toggle { margin-top: 40px; display: inline-flex; box-shadow: inset 0 0 0 1px var(--line); }
 .cycle-toggle .ct { border: 0; cursor: pointer; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em; padding: 12px 24px; }
 .cycle-toggle .ct.on { background: var(--ink); color: var(--paper); }
-.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; padding: 0 var(--pad); position: relative; z-index: 1; }
+.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0 var(--pad); position: relative; z-index: 1; }
+.plan.monthly-only { opacity: 0.55; }
 .plan { padding: 50px var(--cell) 66px; display: flex; flex-direction: column; align-items: flex-start; }
 .plan .p-name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
 .plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
@@ -566,7 +567,7 @@ nav.sec .logo { color: #F5F2EB; }
 .p-fine { margin-top: 40px; font-size: 13.5px; color: var(--faint); max-width: 46em; padding-bottom: 60px; line-height: 1.6; }
 .p-error { margin-top: 16px; font-size: 14px; color: #B4372C; display: none; }
 .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 100; background: var(--ink); color: var(--paper); padding: 15px 22px; font-size: 14.5px; max-width: 90vw; }
-@media (max-width: 700px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
+@media (max-width: 960px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
 
 /* ── faq: hairline accordion on the grid ──────────────────── */
 .faq-sec { padding-top: 130px; }
@@ -718,6 +719,19 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
 .m-line b .w { color: var(--faint); transition: color 0.42s ease; }
 .m-line b .w.on { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .m-line b .w { color: var(--ink); } }
+
+/* sign-in chooser: a centred sheet, not a line of fine print far below the button */
+.signin-pop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px;
+  background: rgba(10,14,28,.42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.signin-pop[hidden] { display: none; }
+.sp-card { width: min(380px, 100%); background: #fff; color: #141310; border-radius: 22px; padding: 26px 22px 18px;
+  box-shadow: 0 30px 80px rgba(8,22,60,.3); text-align: center; }
+.sp-card h3 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.sp-card p { margin: 8px 0 20px; font-size: 14.5px; color: #55555A; line-height: 1.5; }
+.sp-btn { display: flex; width: 100%; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+.sp-btn svg { width: 16px; height: 16px; }
+.sp-g { background: #fff; color: #141310; box-shadow: inset 0 0 0 1px rgba(20,19,16,.18); }
+.sp-x { margin-top: 12px; background: none; border: 0; font: inherit; font-size: 14px; color: #8E8E93; cursor: pointer; padding: 6px 12px; }
 </style>
 <!-- PostHog web analytics -->
 <script>
@@ -783,7 +797,7 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
       <div class="n-ctas rv" style="--d:0.18s">
         <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
       </div>
-      <span class="n-note rv" style="--d:0.24s"><b>iOS 17+</b> · Seven days free</span>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17+</b> · First 20 minutes free</span>
     </div>
     <div class="s-pin">
       <div class="s-caps">
@@ -1001,8 +1015,8 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
 <section class="sec plain pricing-wrap" id="pricing">
   <div class="inner pricing-sec">
     <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Pricing</div>
-    <h2 class="rv" style="--d:0.08s">Pick the subscription<br />that fits your situation.</h2>
-    <p class="pr-sub rv" style="--d:0.11s">Either way, the first seven days are free.</p>
+    <h2 class="rv" style="--d:0.08s">Choose how much<br />you want to talk each month.</h2>
+    <p class="pr-sub rv" style="--d:0.11s">Your first 20 minutes are free, no subscription needed.</p>
     <div class="cycle-toggle rv" style="--d:0.14s">
       <button class="ct on" data-cycle="monthly" type="button">Monthly</button>
       <button class="ct" data-cycle="annual" type="button">Annual</button>
@@ -1012,10 +1026,10 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
     <div class="plan">
       <div><span class="p-name">Light</span></div>
       <div class="p-price" data-price="light">—</div>
-      <p class="p-note">A steady habit, building the routine.</p>
+      <p class="p-note">A steady habit, one routine at a time.</p>
       <dl class="p-specs">
         <div><dt>Talk</dt><dd data-talk="light">—</dd></div>
-        <div class="p-sub"><dt></dt><dd>About 5 min a day</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="light">—</dd></div>
         <div><dt>Watch scenes</dt><dd data-scenes="light">—</dd></div>
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
@@ -1024,24 +1038,48 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
       <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
-      <div><span class="p-name">Plus</span><span class="p-badge">Popular</span></div>
+      <div><span class="p-name">Plus</span><span class="p-badge">Most chosen</span></div>
       <div class="p-price" data-price="plus">—</div>
-      <p class="p-note">As much as you want, no meter.</p>
+      <p class="p-note">Every day, for as long as you like.</p>
       <dl class="p-specs">
-        <div><dt>Talk</dt><dd>Unlimited</dd></div>
+        <div><dt>Talk</dt><dd data-talk="plus">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="plus">—</dd></div>
         <div><dt>Watch scenes</dt><dd data-scenes="plus">—</dd></div>
+        <div><dt>Speech</dt><dd>Included</dd></div>
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
       <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
+    <!-- Max is monthly only, like the app's ladder; under Annual its button
+         still buys the monthly plan (the card says so). -->
+    <div class="plan" data-plan="max">
+      <div><span class="p-name">Max</span></div>
+      <div class="p-price" data-price="max">—</div>
+      <p class="p-note">For the months with a lot to prepare.</p>
+      <dl class="p-specs">
+        <div><dt>Talk</dt><dd data-talk="max">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="max">—</dd></div>
+        <div><dt>Watch scenes</dt><dd data-scenes="max">—</dd></div>
+        <div><dt>Speech</dt><dd>Included</dd></div>
+        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
+        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="max" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
   </div>
   <div class="inner">
     <p class="p-error" id="pricing-error"></p>
-    <p class="p-fine" id="signin-choice" hidden>Sign in with the account you use in the app: <a href="#" data-signin="apple">Continue with Apple</a> · <a href="#" data-signin="google">Continue with Google</a></p>
+    <div class="signin-pop" id="signin-choice" hidden><div class="sp-card" role="dialog" aria-modal="true" aria-labelledby="sp-title">
+      <h3 id="sp-title">Sign in with your app account</h3><p>Your subscription links straight to the account you use in the app.</p>
+      <a class="btn btn-black sp-btn" href="#" data-signin="apple"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg>Continue with Apple</a>
+      <a class="btn sp-btn sp-g" href="#" data-signin="google">Continue with Google</a>
+      <button class="sp-x" type="button" data-signin-close>Close</button>
+    </div></div>
     <p class="p-fine" id="manage-sub" hidden>Already subscribed on the web? <a href="#" id="manage-link">Manage your subscription</a></p>
-    <p class="p-fine">Plus puts no cap on talk time. Speaking takes real effort, so there is no reason to make you ration it. Watch scenes play on a single tap, so they are counted per scene. The two pools are separate, and watching never takes a minute off your talking. Seven days free, cancel anytime.</p>
+    <p class="p-fine">Talk time only runs while the conversation is moving. Pauses are free. Watch scenes play on a single tap, so they are counted per scene, and the two allowances are separate: watching never uses talk time. In a month you run short, you can add minutes in the app, and you can cancel anytime.</p>
   </div>
 </section>
 
@@ -1071,7 +1109,7 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
     </details>
     <details>
       <summary><span class="ix">02</span>Can I try it for free?</summary>
-      <p class="a"><span>Yes, there is a seven-day free trial. The voice clone and your first greeting are free even before that, and you can cancel anytime.</span></p>
+      <p class="a"><span>Yes. Your first 20 minutes of talking are free, no subscription needed, and making your voice is free too.</span></p>
     </details>
     <details>
       <summary><span class="ix">03</span>What does a subscription buy?</summary>
@@ -1619,12 +1657,10 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
 // (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
 const BILLING = {
-  // OFF since 2026-10-10. The Stripe side is still live (web/README.md § Web
-  // billing), but this page IS reachable at its .next URL and its plan copy
-  // predates the 2026-09-26 bounded plans (it promised an uncapped Plus, 60
-  // Light scenes, a trial and annual plans). Turn it back on only once the
-  // pricing section matches subscription_plans again.
-  enabled: false,
+  // ON again 2026-10-11: the Stripe prices were re-cut to the App Store's live prices
+  // (light/plus/max, no trial) and subscription_plans.stripe_price_id points at them
+  // (20261011100000). Keep this page's PLANS, the Stripe prices and App Store Connect in step.
+  enabled: true,
   supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
 }
@@ -1647,22 +1683,28 @@ const BILLING = {
 // figures are the ONE thing on this page that must match the database — the
 // app's paywall reads `monthly_scenes` live, so a stale number here is a
 // promise the app then breaks.
+// Allowances are MONTHLY POOLS, bounded on every tier since 2026-09-26 (Light 150 min +
+// 10 scenes, Plus 600 + 30, Max 1,200 + 30). They must match subscription_plans and App
+// Store Connect; the prices are the App Store's live USA prices (read 2026-10-11) and the
+// Stripe prices carry the same figures.
 const PLANS = {
   light: {
-    talk: "150 min / mo", scenes: "60 / mo",
-    monthly: { id: "light_monthly", price: "$9.99",  per: "/ mo" },
-    annual:  { id: "light_annual",  price: "$79.99", per: "/ yr" },
+    talk: "150 min / mo", perDay: "About 5 min a day", scenes: "10 / mo",
+    monthly: { id: "light_monthly", price: "$9.99",   per: "/ mo" },
+    annual:  { id: "light_annual",  price: "$99.99",  per: "/ yr · 2 months free" },
   },
   plus: {
-    // `talk` is NOT rendered for Plus — its row is hardcoded "Unlimited"
-    // (server-side since `20260821120000_plus_talk_unlimited`). Kept only as
-    // the descriptive `monthly_seconds` figure; do not print it.
-    talk: null, scenes: "120 / mo",
-    monthly: { id: "plus_monthly",  price: "$19.99",  per: "/ mo" },
-    annual:  { id: "plus_annual",   price: "$143.99", per: "/ yr" },
+    talk: "600 min / mo", perDay: "About 20 min a day", scenes: "30 / mo",
+    monthly: { id: "plus_monthly",  price: "$24.99",  per: "/ mo" },
+    annual:  { id: "plus_annual",   price: "$249.99", per: "/ yr · 2 months free" },
+  },
+  max: {
+    // Monthly only (the app's ladder greys it out under Annual).
+    talk: "1,200 min / mo", perDay: "About 40 min a day", scenes: "30 / mo",
+    monthly: { id: "max_monthly",   price: "$49.99",  per: "/ mo" },
   },
 }
-const TIERS = ["light", "plus"]
+const TIERS = ["light", "plus", "max"]
 
 // Prices render ALWAYS — they are the section, and they need no backend.
 ;(function renderPricing() {
@@ -1670,8 +1712,11 @@ const TIERS = ["light", "plus"]
   function paint() {
     for (const tier of TIERS) {
       const t = PLANS[tier], p = t[cycle]
-      document.querySelector(`[data-price="${tier}"]`).innerHTML =
-        p.price + ' <span>' + p.per + "</span>"
+      const priceEl = document.querySelector(`[data-price="${tier}"]`)
+      priceEl.innerHTML = p ? p.price + ' <span>' + p.per + "</span>" : "<span>Monthly only</span>"
+      priceEl.closest(".plan").classList.toggle("monthly-only", !p)
+      const dayEl = document.querySelector(`[data-perday="${tier}"]`)
+      if (dayEl) dayEl.textContent = t.perDay
       // Plus has no talk figure to print (its row is hardcoded "no limit"),
       // so the hook is absent by design — an unguarded write threw here and
       // killed the rest of this module: the cycle toggle, the nav link, and
@@ -1767,6 +1812,10 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   // the same Supabase user with no email matching.
   let pendingAuth = null
   const signinRow = document.getElementById("signin-choice")
+  document.body.appendChild(signinRow)   // out of the section's stacking context: always on top
+  const closeSignin = () => { signinRow.hidden = true; pendingAuth = null }
+  signinRow.addEventListener("click", (ev) => { if (ev.target === signinRow || ev.target.closest("[data-signin-close]")) closeSignin() })
+  addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !signinRow.hidden) closeSignin() })
   document.querySelectorAll("[data-signin]").forEach((a) => {
     a.addEventListener("click", (ev) => {
       ev.preventDefault()
@@ -1828,7 +1877,10 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   // The cycle lives on the renderer above (window.__cycle), so the toggle and
   // the checkout can never disagree about which SKU is on screen.
   document.querySelectorAll(".p-buy[data-tier]").forEach((btn) => {
-    btn.addEventListener("click", () => buy(PLANS[btn.dataset.tier][window.__cycle].id, btn))
+    btn.addEventListener("click", () => {
+      const t = PLANS[btn.dataset.tier]
+      buy((t[window.__cycle] || t.monthly).id, btn)   // a monthly-only tier buys monthly under Annual
+    })
   })
 
   // Returning from the Apple sign-in redirect with ?plan= → continue to
