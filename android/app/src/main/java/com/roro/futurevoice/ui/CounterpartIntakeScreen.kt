@@ -274,7 +274,13 @@ fun CounterpartIntakeScreen(
                         ChipGrid(RelationshipKind.entries.map { it.label }, setOfNotNull(kind?.label)) { tag ->
                             kind = RelationshipKind.entries.first { it.label == tag }
                         }
-                        InlineField(kindDetail, { kindDetail = it }, stringResource(R.string.intake_more_precisely))
+                        // Typing here with no chip picked used to do nothing — Next
+                        // waits for a chip. Writing the relationship IS answering,
+                        // so it lights Other, which the learner can still change.
+                        InlineField(kindDetail, {
+                            kindDetail = it
+                            if (kind == null && it.isNotBlank()) kind = RelationshipKind.OTHER
+                        }, stringResource(R.string.intake_more_precisely))
                     }
                     if (kind == RelationshipKind.PUBLIC_FIGURE) {
                         Text(stringResource(R.string.rel_public_figure_we_find_you_confirm),
