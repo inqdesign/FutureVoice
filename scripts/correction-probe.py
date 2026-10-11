@@ -79,7 +79,7 @@ scene_prompt += os.environ.get("EXTRA", "")
 if "--show" in sys.argv: print(scene_prompt if "--scene" in sys.argv else prompt); sys.exit()
 
 key = dict(l.split("=", 1) for l in open(os.path.join(ROOT, "gateway/.dev.vars")) if "=" in l)["GEMINI_API_KEY"].strip().strip('"')
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={key}"
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/{os.environ.get('MODEL', 'gemini-3.6-flash')}:generateContent?key={key}"
 
 def content(case):
     """What the app sends (`requestRealtimeSuggestion`): the line said TO them

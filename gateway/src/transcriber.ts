@@ -14,6 +14,8 @@
 //     arriving ~0.6–1.4 s into the silence after speech. This is the
 //     endpoint signal — no client-side VAD exists on this path at all.
 
+import { SpeechGate } from "./speech-gate"
+
 const LIVE_HOST = "https://generativelanguage.googleapis.com"
 const LIVE_PATH = "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 
@@ -59,7 +61,10 @@ export class GeminiTranscriber {
   constructor(private apiKey: string,
               private model: string,
               private language: string,
-              private callbacks: TranscriberCallbacks) {}
+              private callbacks: TranscriberCallbacks,
+              /** Holds back quiet-room frames too (`TRANSCRIBE_GATE`); without
+               *  it only the phone's exact-zero echo mute is dropped. */
+              readonly gate: SpeechGate | null = null) {}
 
   async connect(): Promise<void> {
     const resp = await fetch(`${LIVE_HOST}${LIVE_PATH}?key=${this.apiKey}`, {
@@ -144,6 +149,10 @@ export class GeminiTranscriber {
    *  finals, the same ~1.4 s to the final, and a barge-in spoken the instant
    *  the gap ends transcribed whole, against streaming the zeros. */
   sendAudio(pcm: ArrayBuffer): void {
+    if (this.gate) {
+      for (const frame of this.gate.push(pcm).send) this.forward(frame)
+      return
+    }
     const ms = pcm.byteLength / 32
     if (isAllZero(pcm)) {
       this.zeroRunMs += ms
@@ -155,6 +164,10 @@ export class GeminiTranscriber {
       this.zeroRunMs = 0
       this.keptAliveAtMs = 0
     }
+    this.forward(pcm)
+  }
+
+  private forward(pcm: ArrayBuffer): void {
     const data = base64Encode(pcm)
     if (!this.setupDone || !this.ws) {
       this.buffer(data)

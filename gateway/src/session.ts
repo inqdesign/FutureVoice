@@ -18,6 +18,7 @@
 // events but not yet charged — billing lands in Phase 3 (see README).
 
 import { GeminiTranscriber, languageName } from "./transcriber"
+import { SpeechGate } from "./speech-gate"
 import { rereadUtterance } from "./reread"
 import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
@@ -866,6 +867,7 @@ export class CallSession implements DurableObject {
         // itself survives.
         onError: (message) => this.fail("transcriber", message),
       },
+      gateQuietFrames(this.env.TRANSCRIBE_GATE, this.userId) ? new SpeechGate() : null,
     )
 
     // The transcriber's handshake is NOT awaited before the greeting. It is
@@ -1786,8 +1788,21 @@ export class CallSession implements DurableObject {
         output_tokens: Math.round(seconds * 25 * 0.034),
         output_estimated: true,
         audio_seconds: Math.round(seconds),
+        ...(t.gate ? { gate: true, gate_seen_seconds: Math.round(t.gate.seenMs / 1000),
+                       gate_sent_seconds: Math.round(t.gate.sentMs / 1000) } : {}),
       }))
     }
     if (writes.length > 0) this.state.waitUntil(Promise.all(writes))
   }
+}
+
+/** `TRANSCRIBE_GATE` (2026-10-11): unset/"off" = only the echo-mute zeros are
+ *  dropped, as before; "all" = every call holds back quiet-room frames too;
+ *  otherwise a comma-separated list of user ids, so it can ride one account's
+ *  calls on a real phone before it rides everyone's. */
+function gateQuietFrames(setting: string | undefined, userId: string | null): boolean {
+  const v = (setting ?? "").trim().toLowerCase()
+  if (!v || v === "off") return false
+  if (v === "all") return true
+  return userId !== null && v.split(",").map((x) => x.trim()).includes(userId.toLowerCase())
 }

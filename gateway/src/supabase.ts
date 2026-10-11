@@ -13,6 +13,8 @@ export interface Env {
   ELEVENLABS_API_KEY: string
   /** Half-cascade Live model ("models/..."); see README before changing. */
   GEMINI_LIVE_MODEL?: string
+  /** off (default) · all · comma-separated user ids — see session.ts gateQuietFrames. */
+  TRANSCRIBE_GATE?: string
   /** Model that re-reads an utterance the live transcriber wrote in the
    *  wrong script (see reread.ts). Default gemini-3.1-flash-lite. */
   GEMINI_REREAD_MODEL?: string
