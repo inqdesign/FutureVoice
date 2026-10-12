@@ -3,6 +3,7 @@ New
 • In Me → Accent, choose "Original" to go back to your voice with no accent.
 
 Fixed
+• Fixed Sign in with Apple doing nothing on the welcome screen.
 • The limit of one voice change every 30 days is gone.
 • Fixed the app closing when you opened the Me tab.
 • The voice recording script is a little shorter.
