@@ -315,8 +315,10 @@ struct WatchTab: View {
                                      case .person(let c), .pooled(let c):
                                          // A tap is for who they are; the middle of the
                                          // screen is for what to talk about.
-                                         if PeopleSky.dockEnabled && !creating {
-                                             openSkyCard(c)
+                                         if PeopleSky.dockEnabled {
+                                             // While writing, a tap on someone
+                                             // leaves the box for THEIR card.
+                                             if creating { leaveBoxForCard(c) } else { openSkyCard(c) }
                                          } else {
                                              personCard = c
                                          }
@@ -335,6 +337,14 @@ struct WatchTab: View {
                                  backToMeBottom: creating ? 250 : 104,
                                  softenOthers: PeopleSky.dockEnabled && creating)
                         .frame(height: max(geo.size.height, 200))
+                        // A tap on the empty map while writing goes back a step:
+                        // to the card of the person the box was with.
+                        // The people are buttons and win their own taps; this
+                        // only hears the map between them.
+                        .onTapGesture {
+                            guard PeopleSky.dockEnabled, creating else { return }
+                            if let p = dockPerson { leaveBoxForCard(p) } else { creating = false }
+                        }
                         // The map fades into the page at the bottom instead of
                         // being cut off where the box and the tab bar sit.
                         // The whole screen is the canvas: the map runs under the
@@ -509,6 +519,16 @@ struct WatchTab: View {
         let id = c.id.uuidString
         DispatchQueue.main.async { skyScrollTarget = id }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { centre(on: id, force: true) }
+    }
+
+    /// Out of the box and back to a person's card, in one motion — the step
+    /// before "Make a situation", never the old full sheet.
+    private func leaveBoxForCard(_ c: Counterpart) {
+        withAnimation(.smooth(duration: 0.35)) {
+            creating = false
+            dockFill = ""
+        }
+        openSkyCard(c)
     }
 
     /// The card's "Make a situation": the card goes down as the box comes
