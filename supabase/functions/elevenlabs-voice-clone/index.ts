@@ -88,7 +88,10 @@ Deno.serve(async (req) => {
   // One change per 30 days after the first voice (_shared/voice-changes.ts).
   // A parked voice coming back is a rebuild of what we took, not a change.
   let changeKind: VoiceChangeKind = "first"
-  if (!isFirstClone) {
+  // A clone made on Cartesia spends no ElevenLabs allowance and no slot, so
+  // the 30-day change limit doesn't apply to it (and it isn't counted).
+  const cloningOnCartesia = cartesia.clonesOnCartesia(user.id)
+  if (!isFirstClone && !cloningOnCartesia) {
     const { data: parked } = await billingClient().from("voice_clones")
       .select("id").eq("user_id", user.id).not("parked_at", "is", null).limit(1)
     changeKind = parked && parked.length > 0 ? "revival" : "change"
@@ -221,7 +224,7 @@ Deno.serve(async (req) => {
     .select("id")
     .maybeSingle()
   if (insErr) console.error("voice_clones insert failed", insErr)
-  await recordVoiceChange(user.id, changeKind)
+  if (!onCartesia || changeKind === "first") await recordVoiceChange(user.id, changeKind)
   // Its own update, so a database without the column (deploy order) loses
   // only the default accent, never the clone.
   // A Cartesia clone speaks every language it is told to; there is no remix
