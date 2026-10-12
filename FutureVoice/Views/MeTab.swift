@@ -43,6 +43,7 @@ struct MeTab: View {
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
     @State private var confirmingVoiceReset = false
+    @State private var rerecording = false
     @State private var confirmingVoiceRegenerate = false
     @State private var confirmingSignOut = false
     @State private var confirmingAccountDelete = false
@@ -366,10 +367,17 @@ struct MeTab: View {
                     onRerecord: { confirmingVoiceReset = true })
                     .environmentObject(appState)
             }
+            .fullScreenCover(isPresented: $rerecording) {
+                VoiceCloneOnboardingView(fromSettings: true) { rerecording = false }
+                    .environmentObject(appState)
+                    .environmentObject(auth)
+            }
             .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
                 Button("Cancel", role: .cancel) {}
                 Button("Start over", role: .destructive) {
-                    appState.resetVoiceClone()   // RootView swaps to onboarding
+                    // The recording screen on its own, never the onboarding:
+                    // the voice they have stays until a new one is made.
+                    rerecording = true
                 }
             } message: {
                 // Ledger data showed users re-cloning many times without

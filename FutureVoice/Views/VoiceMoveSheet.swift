@@ -25,6 +25,8 @@ struct VoiceMoveSheet: View {
     /// remix keeps none upstream): only a new recording can move the voice.
     @State private var needsRecording = false
     @State private var confirmingRerecord = false
+    @State private var rerecording = false
+    @EnvironmentObject private var auth: AuthService
 
     private enum Phase { case ready, working, done }
 
@@ -119,12 +121,20 @@ struct VoiceMoveSheet: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Start over", role: .destructive) {
                     Analytics.capture("voice_move_rerecord")
-                    dismiss()
-                    appState.resetVoiceClone()   // RootView swaps to the recording
+                    // The recording screen on its own, never the onboarding.
+                    rerecording = true
                 }
             } message: {
                 Text(explain("Your current voice is deleted and you'll record a new one."))
             }
+        }
+        .fullScreenCover(isPresented: $rerecording) {
+            VoiceCloneOnboardingView(fromSettings: true) {
+                rerecording = false
+                if VoiceMove.isCartesia(appState.voiceCloneId ?? "") { phase = .done }
+            }
+            .environmentObject(appState)
+            .environmentObject(auth)
         }
         .onAppear {
             VoiceMove.markShown()

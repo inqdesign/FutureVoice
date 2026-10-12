@@ -60,7 +60,21 @@ struct VoiceCloneOnboardingView: View {
     /// the recording at all.
     @State private var screenHeight: CGFloat = 800
 
-    init() {
+    /// Re-recording from Settings or the voice-move sheet, by someone whose
+    /// onboarding is long over (2026-10-13, founder: "Record again" dropped
+    /// them into the whole onboarding with no way out). Starts on the quiet
+    /// spot, never meets or signs up, and closes itself: Cancel keeps the
+    /// voice they have, a new clone replaces it and closes.
+    private let fromSettings: Bool
+    private let onClose: (() -> Void)?
+
+    init(fromSettings: Bool = false, onClose: (() -> Void)? = nil) {
+        self.fromSettings = fromSettings
+        self.onClose = onClose
+        if fromSettings {
+            _status = State(initialValue: .spot)
+            _isReRecordingClone = State(initialValue: true)
+        }
         #if DEBUG
         // Screenshot helper (same pattern as WelcomeView's `-welcomePage`):
         // `-cloneStatus account` opens directly on the sign-up step.
@@ -260,7 +274,11 @@ struct VoiceCloneOnboardingView: View {
         // A re-record from a voice that still exists can be called off before
         // the take goes up: the old voice is only staged for deletion.
         .overlay(alignment: .topTrailing) {
-            if appState.canCancelVoiceReset, status.rawValue <= Status.reviewing.rawValue {
+            if fromSettings, status.rawValue <= Status.reviewing.rawValue, status != .recording {
+                Button("Cancel") { cancelReRecord() }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+            } else if appState.canCancelVoiceReset, status.rawValue <= Status.reviewing.rawValue {
                 Button("Cancel") { appState.cancelVoiceReset() }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -1321,14 +1339,18 @@ struct VoiceCloneOnboardingView: View {
                 wizardBar(next: chrome("Next"), backTo: stepAfterIntro) { handleMicPermission() }
 
             case .spot:
-                wizardBar(next: chrome("Next"), backTo: .mic) { status = .script }
+                if fromSettings {
+                    wizardBar(next: chrome("Next"), onBack: { cancelReRecord() }) { status = .script }
+                } else {
+                    wizardBar(next: chrome("Next"), backTo: .mic) { status = .script }
+                }
 
             case .script:
                 // Re-recording from the meet act: Back means "never mind,
                 // keep the voice I have", not "walk the wizard backwards".
                 if isReRecordingClone {
                     wizardBar(next: chrome("Record my voice"), nextIcon: "mic.fill",
-                              onBack: { cancelReRecord() }) {
+                              onBack: { fromSettings ? (status = .spot) : cancelReRecord() }) {
                         startRecording()
                     }
                 } else {
@@ -1679,7 +1701,7 @@ struct VoiceCloneOnboardingView: View {
     private func performClone() {
         guard let url = recordedSampleURL else { return }
         status = .uploading
-        appState.holdVoiceOnboarding = true
+        if !fromSettings { appState.holdVoiceOnboarding = true }
         // Keep the original so the clone can be regenerated later without
         // recording again (Settings → Voice).
         VoiceSampleStore.shared.save(from: url)
@@ -1688,6 +1710,12 @@ struct VoiceCloneOnboardingView: View {
                 try await appState.regenerateVoiceClone(fromSampleAt: url,
                                                         scriptLanguage: scriptLanguageCode)
                 UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
+                if fromSettings {
+                    // The new voice is live; the old one is staged for deletion.
+                    HapticEngine.success()
+                    onClose?()
+                    return
+                }
                 // Before the greeting, so the first words are already in the
                 // accent the voice will keep.
                 await appState.applyDefaultAccent()
@@ -1906,6 +1934,7 @@ struct VoiceCloneOnboardingView: View {
         elapsedSeconds = 0
         error = nil
         isReRecordingClone = false
+        if fromSettings { onClose?(); return }
         status = .meet
     }
 
