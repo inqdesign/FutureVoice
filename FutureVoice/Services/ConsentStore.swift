@@ -170,5 +170,5 @@ final class ConsentStore: ObservableObject {
 
     /// Where a learner writes to if the age screen was answered wrongly, or to
     /// ask for their consent record.
-    static let contactEmail = "hello.dearroroapp@gmail.com"
+    static let contactEmail = "hello@nawana.app"
 }
