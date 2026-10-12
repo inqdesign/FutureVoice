@@ -79,6 +79,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.net.VoiceCloneClient
+import com.roro.futurevoice.talk.CloneScriptStore
 import com.roro.futurevoice.talk.VoiceCloneScript
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -211,7 +212,7 @@ fun CloneFlowScreen(
     var agreed by remember { mutableStateOf(false) }
     var readInNative by remember { mutableStateOf(true) }
     val nativeScript = remember(nativeLanguage) {
-        VoiceCloneScript.handAuthored(nativeLanguage)
+        CloneScriptStore.handAuthored(nativeLanguage)
             // Same language on both sides means there is nothing to choose.
             ?.takeIf { !LanguageCatalog.sameLanguage(nativeLanguage, targetLanguage) }
     }
