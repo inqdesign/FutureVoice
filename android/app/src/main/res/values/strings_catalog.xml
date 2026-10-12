@@ -1292,6 +1292,7 @@
     <string name="not_in_today_s_routine">"Not in today's routine"</string>
     <string name="not_me_record_again">"Not me — record again"</string>
     <string name="not_now">"Not now"</string>
+    <string name="not_published">"Not published"</string>
     <string name="not_rated">"Not rated"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
     <string name="not_read_yet_it_s_read_the_first_time_you_watch_this_scene">"Not read yet — it's read the first time you watch this scene."</string>
@@ -1408,6 +1409,7 @@
     <string name="or_describe_who_custom">"Or describe who (custom)…"</string>
     <string name="or_write_your_own">"Or write your own"</string>
     <string name="other_free_activity">"Other free activity"</string>
+    <string name="other_learners_can_t_find_you_yet">"Other learners can't find you yet."</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"Other %s learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
@@ -1519,10 +1521,13 @@
     <string name="provided_by_nawana_until">"Provided by nawana until %s"</string>
     <string name="public_figure">"Public figure"</string>
     <string name="publish">"Publish"</string>
+    <!-- 'Publish a short introduction and other learners can practise talking with you.' -->
+    <string name="publish_a_short_introduction_and_other_learners_can_practise_862528">"Publish a short introduction and other learners can practise talking with you."</string>
     <!-- 'Publish as a challenge? Every learner of this language will see it, with a leaderboard.' -->
     <string name="publish_as_a_challenge_every_learner_of_this_language_will_s_d54f65">"Publish as a challenge? Every learner of this language will see it, with a leaderboard."</string>
     <string name="publish_as_challenge">"Publish as challenge"</string>
     <string name="publish_your_intro_others_practice_with_you">"Publish your intro — others practice with \"you\""</string>
+    <string name="published">"Published"</string>
     <string name="pulling_examples_from_your_life">"Pulling examples from your life…"</string>
     <string name="purchase_could_not_be_verified">"Purchase could not be verified."</string>
     <string name="purchase_failed">"Purchase failed"</string>

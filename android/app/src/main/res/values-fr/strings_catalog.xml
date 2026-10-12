@@ -1286,6 +1286,7 @@
     <string name="not_in_today_s_routine">"Pas dans la routine du jour"</string>
     <string name="not_me_record_again">"Non, je réenregistre"</string>
     <string name="not_now">"Pas maintenant"</string>
+    <string name="not_published">"Non publié"</string>
     <string name="not_rated">"Pas noté"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
     <string name="not_read_yet_it_s_read_the_first_time_you_watch_this_scene">"Pas encore lu : lu la première fois que tu regardes cette scène."</string>
@@ -1402,6 +1403,7 @@
     <string name="or_describe_who_custom">"Ou décris l’autre personne toi-même…"</string>
     <string name="or_write_your_own">"Écris-le toi-même"</string>
     <string name="other_free_activity">"Autre activité gratuite"</string>
+    <string name="other_learners_can_t_find_you_yet">"Les autres apprenants ne te voient pas encore."</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"D’autres apprenants de %s pourraient s’entraîner avec une IA qui joue ce texte, avec une voix standard, jamais la tienne. Leurs conversations ne te parviennent jamais. Les phrases verrouillées de tes appels ne sont jamais incluses."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
@@ -1513,10 +1515,13 @@
     <string name="provided_by_nawana_until">"Offert par nawana · jusqu’au %s"</string>
     <string name="public_figure">"Personnalité"</string>
     <string name="publish">"Publier"</string>
+    <!-- 'Publish a short introduction and other learners can practise talking with you.' -->
+    <string name="publish_a_short_introduction_and_other_learners_can_practise_862528">"Publie une courte présentation et les autres apprenants pourront s’entraîner à parler avec toi."</string>
     <!-- 'Publish as a challenge? Every learner of this language will see it, with a leaderboard.' -->
     <string name="publish_as_a_challenge_every_learner_of_this_language_will_s_d54f65">"Publier comme défi ? Tous ceux qui apprennent cette langue le verront, avec un classement."</string>
     <string name="publish_as_challenge">"Publier comme défi"</string>
     <string name="publish_your_intro_others_practice_with_you">"Publie ta présentation — d’autres s’entraînent avec « toi »"</string>
+    <string name="published">"Publié"</string>
     <string name="pulling_examples_from_your_life">"On tire des exemples de ton quotidien…"</string>
     <string name="purchase_could_not_be_verified">"Impossible de vérifier l’achat."</string>
     <string name="purchase_failed">"Le paiement n’a pas abouti"</string>

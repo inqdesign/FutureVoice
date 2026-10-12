@@ -1290,6 +1290,7 @@
     <string name="not_in_today_s_routine">"오늘 루틴에 없음"</string>
     <string name="not_me_record_again">"아니에요, 다시 녹음할래요"</string>
     <string name="not_now">"지금은 안 할래요"</string>
+    <string name="not_published">"공개 안 함"</string>
     <string name="not_rated">"별점 없음"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
     <string name="not_read_yet_it_s_read_the_first_time_you_watch_this_scene">"아직 안 읽었어요. 이 장면을 처음 볼 때 읽어요."</string>
@@ -1406,6 +1407,7 @@
     <string name="or_describe_who_custom">"또는 상대를 직접 설명…"</string>
     <string name="or_write_your_own">"직접 적기"</string>
     <string name="other_free_activity">"그 밖의 무료 활동"</string>
+    <string name="other_learners_can_t_find_you_yet">"아직 다른 학습자에게 보이지 않아요."</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"다른 %s 학습자가 이 소개를 연기하는 AI와 연습할 수 있어요. 목소리는 기본 음성이고, 내 목소리는 절대 쓰이지 않아요. 그 사람들의 대화는 나에게 오지 않아요. 통화에서 잠근 줄은 절대 들어가지 않아요."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
@@ -1517,10 +1519,13 @@
     <string name="provided_by_nawana_until">"나와나가 제공 · %s까지"</string>
     <string name="public_figure">"유명인"</string>
     <string name="publish">"공개하기"</string>
+    <!-- 'Publish a short introduction and other learners can practise talking with you.' -->
+    <string name="publish_a_short_introduction_and_other_learners_can_practise_862528">"짧은 자기소개를 공개하면 다른 학습자들이 나와 대화 연습을 할 수 있어요."</string>
     <!-- 'Publish as a challenge? Every learner of this language will see it, with a leaderboard.' -->
     <string name="publish_as_a_challenge_every_learner_of_this_language_will_s_d54f65">"챌린지로 공개할까요? 이 언어를 배우는 모든 사람에게 순위와 함께 보여요."</string>
     <string name="publish_as_challenge">"챌린지로 공개"</string>
     <string name="publish_your_intro_others_practice_with_you">"소개를 올리면 다른 사람이 \"나\"와 연습해요"</string>
+    <string name="published">"공개 중"</string>
     <string name="pulling_examples_from_your_life">"내 일상에서 예문을 가져오는 중…"</string>
     <string name="purchase_could_not_be_verified">"결제를 확인하지 못했어요."</string>
     <string name="purchase_failed">"결제하지 못했어요"</string>

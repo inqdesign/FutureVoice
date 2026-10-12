@@ -1289,6 +1289,7 @@
     <string name="not_in_today_s_routine">"不在今天的作息里"</string>
     <string name="not_me_record_again">"不是我，重新录音"</string>
     <string name="not_now">"现在不要"</string>
+    <string name="not_published">"未公开"</string>
     <string name="not_rated">"未评分"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
     <string name="not_read_yet_it_s_read_the_first_time_you_watch_this_scene">"还没读。第一次看这个场景时会读。"</string>
@@ -1405,6 +1406,7 @@
     <string name="or_describe_who_custom">"或自己描述对方…"</string>
     <string name="or_write_your_own">"自己写"</string>
     <string name="other_free_activity">"其他免费活动"</string>
+    <string name="other_learners_can_t_find_you_yet">"其他学习者还找不到你。"</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"其他%s学习者可以和扮演这段介绍的 AI 练习，用的是内置语音，绝不会用你的声音。他们的对话不会传到你这里。你在通话中锁住的内容绝不会被放进去。"</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
@@ -1516,10 +1518,13 @@
     <string name="provided_by_nawana_until">"由nawana提供 · 到%s为止"</string>
     <string name="public_figure">"名人"</string>
     <string name="publish">"公开"</string>
+    <!-- 'Publish a short introduction and other learners can practise talking with you.' -->
+    <string name="publish_a_short_introduction_and_other_learners_can_practise_862528">"公开一段简短的自我介绍，其他学习者就能跟你练习对话。"</string>
     <!-- 'Publish as a challenge? Every learner of this language will see it, with a leaderboard.' -->
     <string name="publish_as_a_challenge_every_learner_of_this_language_will_s_d54f65">"要发布成挑战吗？所有学这门语言的人都会看到，附排行榜。"</string>
     <string name="publish_as_challenge">"发布为挑战"</string>
     <string name="publish_your_intro_others_practice_with_you">"公开自我介绍，别人就能跟「你」练习"</string>
+    <string name="published">"已公开"</string>
     <string name="pulling_examples_from_your_life">"正在从你的日常找例句…"</string>
     <string name="purchase_could_not_be_verified">"无法验证这笔购买。"</string>
     <string name="purchase_failed">"购买失败"</string>

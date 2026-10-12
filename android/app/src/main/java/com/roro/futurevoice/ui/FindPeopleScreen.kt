@@ -58,6 +58,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -270,13 +275,50 @@ fun FindPeopleScreen(
         ) {
             if (loading && pool.isNotEmpty()) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             val me = mine
-            if (!searching && me != null) {
+            if (!searching) {
                 // You, as the pool has you — the same row everyone else
-                // gets, so this can't drift from what a stranger sees.
+                // gets, so this can't drift from what a stranger sees. Not
+                // published is a state too and says so (iOS `mineSection`):
+                // the section used to vanish, leaving no way to publish.
                 item {
-                    FormSection(stringResource(R.string.you),
-                        footer = stringResource(R.string.this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599)) {
-                        PoolRow(me, badges, emptySet(), onClick = { editingIntro = true })
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.you).uppercase(), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (me != null) {
+                            Icon(Icons.Filled.CheckCircle, null, tint = Color(0xFF34C759), modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.published), style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFF34C759))
+                        } else {
+                            Icon(Icons.Filled.VisibilityOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.not_published), style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    FormSection(null,
+                        footer = if (me != null) stringResource(R.string.this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599)
+                            else stringResource(R.string.publish_a_short_introduction_and_other_learners_can_practise_862528)) {
+                        if (me != null) {
+                            PoolRow(me, badges, emptySet(), onClick = { editingIntro = true })
+                        } else {
+                            Row(Modifier.fillMaxWidth().clickable { editingIntro = true }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ProfileAvatar(persona?.displayName.orEmpty(), 40.dp)
+                                Column(Modifier.weight(1f)) {
+                                    Text(persona?.displayName.orEmpty(), style = MaterialTheme.typography.bodyLarge)
+                                    Text(stringResource(R.string.other_learners_can_t_find_you_yet),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }
