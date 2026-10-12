@@ -2167,6 +2167,8 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"你實際說過的單字、用語和句子，裝訂成一本書。翻一翻、跟讀，然後一直帶著。"</string>
     <string name="their_name_as_you_call_them">"對方的名字（照你的叫法）"</string>
+    <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
+    <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"這是隨自我介紹選定的專屬聲音，不是任何人的真實錄音。"</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
     <string name="their_role_comes_from_the_situation_you_describe_here_you_pi_35598a">"角色由你描述的情境決定，這裡選的是由誰來演。"</string>
     <!-- 'Theme' -->

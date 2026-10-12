@@ -2164,6 +2164,8 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"Die Wörter, die Wendungen, die Sätze, die du wirklich gesagt hast, gebunden in ein Buch zum Blättern, Nachsprechen und Behalten."</string>
     <string name="their_name_as_you_call_them">"Ihr Name — so, wie du sie nennst"</string>
+    <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
+    <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"Die eigene Stimme, mit der Vorstellung ausgewählt. Keine Aufnahme einer echten Person."</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
     <string name="their_role_comes_from_the_situation_you_describe_here_you_pi_35598a">"Die Rolle ergibt sich aus der beschriebenen Situation. Hier wählst du, wer sie spielt."</string>
     <!-- 'Theme' -->

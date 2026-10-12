@@ -2168,6 +2168,8 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"내가 실제로 말한 단어와 표현, 문장이 한 권으로 묶여요. 넘겨 보고, 따라 말하고, 계속 가져가요."</string>
     <string name="their_name_as_you_call_them">"상대 이름 — 내가 부르는 대로"</string>
+    <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
+    <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"그 사람이 자기소개와 함께 고른 목소리예요. 누군가의 실제 녹음은 아니에요."</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
     <string name="their_role_comes_from_the_situation_you_describe_here_you_pi_35598a">"역할은 적은 상황이 정하고, 여기서는 그 역할을 맡을 사람을 골라요."</string>
     <!-- 'Theme' -->

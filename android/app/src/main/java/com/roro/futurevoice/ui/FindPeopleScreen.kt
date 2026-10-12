@@ -171,7 +171,19 @@ fun FindPeopleScreen(
         // Alongside the pool, never in front of it.
         val mineRow = scope.async { runCatching { client.fetchMine(language) }.getOrNull() }
         runCatching { client.fetchPool(language) }
-            .onSuccess { pool = it }
+            .onSuccess { rows ->
+                pool = rows
+                // Every character speaks in its OWN voice (iOS
+                // `syncOwnVoices`): a met stranger the learner once re-voiced
+                // goes back to the voice its author picked.
+                val byId = rows.associateBy { it.id }
+                for (c in ownStore.load()) {
+                    val row = c.remoteId?.let { byId[it] } ?: continue
+                    val v = row.voice_preset_id
+                    if (StockPerson.catalog.none { it.voiceId == v } || c.voicePresetId == v) continue
+                    ownStore.save(c.copy(voicePresetId = v))
+                }
+            }
             .onFailure { loadFailed = pool.isEmpty() }
         loading = false
         mine = mineRow.await()
@@ -540,8 +552,9 @@ private fun FindPersonCard(
             .filter { it.counterpartId == person.id && it.endedAt != null }
             .sortedByDescending { it.startedAt }
     }
-    val voiceId = saved?.voicePresetId?.takeIf { it.isNotBlank() }
-        ?: person.voice_preset_id.takeIf { id -> StockPerson.catalog.any { it.voiceId == id } }
+    // Their own voice — the row's, never the learner's pick (iOS 2026-10-12).
+    val voiceId = person.voice_preset_id.takeIf { id -> StockPerson.catalog.any { it.voiceId == id } }
+        ?: saved?.voicePresetId?.takeIf { it.isNotBlank() }
         ?: StockPerson.catalog.first().voiceId
 
     /** Meeting them persists the person, so sessions can link to a stable
@@ -654,25 +667,20 @@ private fun FindPersonCard(
                 }
             }
 
+            // Every character has its own voice — shown, not chosen.
             GroupedSectionHeader(stringResource(R.string.voice))
             GroupedCard {
-                StockPerson.catalog.forEachIndexed { i, v ->
-                    if (i > 0) GroupedRowDivider(inset = false)
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .selectable(selected = voiceId == v.voiceId,
-                                onClick = { persist(v.voiceId) })
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        RadioButton(selected = voiceId == v.voiceId, onClick = null)
-                        Text(v.identityIn(language), style = MaterialTheme.typography.bodyMedium)
-                    }
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.voice), style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f))
+                    Text(StockPerson.catalog.firstOrNull { it.voiceId == voiceId }?.identityIn(language).orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             GroupedFooter(stringResource(
-                R.string.not_their_real_voice_an_ai_speaks_their_words_in_a_voice_you_e838ec))
+                R.string.their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731))
 
             if (talks.isNotEmpty()) {
                 GroupedSectionHeader(stringResource(R.string.your_talks_together))
