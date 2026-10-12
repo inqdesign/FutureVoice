@@ -119,11 +119,20 @@ export function lineLanguage(text: string, target: string | null | undefined): s
   return SUPPORTED.has(t) ? t : "en"
 }
 
-/** ElevenLabs' speed knob (0.7–1.2, 1 = as recorded) maps onto Cartesia's
- *  (0.6–1.5, 1 = normal) one to one inside the range we use. */
+/** The app's speed rungs (ElevenLabs' scale: Slow 0.85 · Relaxed 0.9 ·
+ *  Normal 1.0) onto Cartesia's. Measured 2026-10-12 on the same lines:
+ *  Cartesia at 1.0 speaks 15–35% slower than ElevenLabs at 1.0, and its knob
+ *  is weak — 1.0 → 1.5 is only 6–12% faster. So the rungs are stretched over
+ *  Cartesia's whole upper range: Slow → 1.0, Relaxed → ~1.17, Normal → 1.5
+ *  (where English matches ElevenLabs' Relaxed pace; Japanese stays ~20%
+ *  slower). Absent = ElevenLabs' default, 1.0. */
+export function cartesiaSpeed(speed: number | undefined): number {
+  const s = typeof speed === "number" && speed >= 0.6 && speed <= 1.5 ? speed : 1.0
+  return Math.max(0.6, Math.min(1.5, 1.0 + (s - 0.85) / 0.15 * 0.5))
+}
+
 function speedConfig(speed: number | undefined): Record<string, unknown> {
-  return typeof speed === "number" && speed >= 0.6 && speed <= 1.5
-    ? { generation_config: { speed } } : {}
+  return { generation_config: { speed: cartesiaSpeed(speed) } }
 }
 
 /** The voice and accent fields of a request for one line. */
