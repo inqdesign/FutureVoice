@@ -152,8 +152,8 @@ struct FindPeopleSheet: View {
 
     /// You, as the pool has you — the same row shape everyone else gets, so
     /// what is on screen here can't drift from what a stranger is shown.
-    /// Tapping it lands in the editor, where the paragraph itself lives
-    /// alongside Update and Take down.
+    /// Tapping it lands on your profile page (`MyProfileView`), where the
+    /// profile the paragraph is written from sits above it.
     ///
     /// Not published (never, or taken down) is a state too, and says so:
     /// until 2026-10-12 the section vanished then, so the page had no way to
@@ -164,11 +164,11 @@ struct FindPeopleSheet: View {
                 // Publishing or taking down from there changes this row,
                 // so re-read it on the way back rather than leaving a
                 // stale face on the page that just edited it.
-                PublicIntroView(onDecided: { Task { await loadMine() } })
+                MyProfileView(onPublicChange: { Task { await loadMine() } })
                     .environmentObject(appState)
             } label: {
                 if let mine {
-                    poolRow(mine)
+                    poolRow(mine, isMine: true)
                 } else {
                     HStack(spacing: 12) {
                         ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 40)
@@ -339,9 +339,16 @@ struct FindPeopleSheet: View {
     /// One pool row's face. Shared by the strangers and by the learner's own
     /// row above them: "how you appear" has to be the appearance itself, not
     /// a second rendering of it.
-    private func poolRow(_ p: PublicPersonaService.PublicPersona) -> some View {
+    private func poolRow(_ p: PublicPersonaService.PublicPersona, isMine: Bool = false) -> some View {
         HStack(spacing: 12) {
-            PersonBubble(name: p.display_name, size: 44)
+            // Your own row wears your own face, the one the Watch map and the
+            // profile page show; a name bubble there read as a photo gone
+            // missing on this one page.
+            if isMine {
+                ProfileAvatar(initials: p.display_name, size: 44)
+            } else {
+                PersonBubble(name: p.display_name, size: 44)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(p.display_name).font(.body.weight(.medium))

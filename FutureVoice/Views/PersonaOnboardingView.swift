@@ -232,7 +232,7 @@ struct PersonaOnboardingView: View {
             } header: {
                 Text("What strangers can see")
             } footer: {
-                Text(explain("The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people."))
+                Text(explain("The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page."))
             }
         }
     }

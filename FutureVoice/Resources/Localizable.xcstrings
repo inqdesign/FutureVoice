@@ -71850,7 +71850,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "个人文件"
+            "value" : "个人资料"
           }
         },
         "zh-Hant" : {
@@ -97212,48 +97212,48 @@
         }
       }
     },
-    "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." : {
+    "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Vorstellung, die das Handy anderer Lernender bei „Leute finden“ in deinem Namen spricht. Ändern oder entfernen kannst du sie unter Ich → Leute finden."
+            "value" : "Die Vorstellung, die das Handy anderer Lernender bei „Leute finden“ in deinem Namen spricht. Veröffentlichen oder entfernen kannst du sie in deinem Profil."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La presentación que el teléfono de otra persona dice como tú en Buscar personas. Cámbiala o retírala en Mi perfil → Buscar personas."
+            "value" : "La presentación que el teléfono de otra persona dice como tú en Buscar personas. Publícala o retírala desde tu perfil."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La présentation que le téléphone d’une autre personne dit à ta place dans Trouver des gens. Modifie-la ou retire-la dans Mon profil → Trouver des gens."
+            "value" : "La présentation que le téléphone d’une autre personne dit à ta place dans Trouver des gens. Publie-la ou retire-la depuis ton profil."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "人を探す で、ほかの学習者のスマホが自分として話す自己紹介です。マイページ → 人を探す で直したり取り下げたりできます。"
+            "value" : "人を探す で、ほかの学習者のスマホが自分として話す自己紹介です。プロフィールで公開したり取り下げたりできます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사람 찾기에서 다른 학습자의 폰이 '나'로 말하는 소개예요. 나 → 사람 찾기에서 고치거나 내릴 수 있어요."
+            "value" : "사람 찾기에서 다른 학습자의 폰이 '나'로 말하는 소개예요. 프로필에서 공개하거나 내릴 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在「找人」里，其他学习者的手机会以你的身份说这段自我介绍。到「我的 → 找人」可以修改或撤下。"
+            "value" : "在「找人」里，其他学习者的手机会以你的身份说这段自我介绍。到个人资料可以公开或撤下。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在「找人」裡，其他學習者的手機會以你的身分說這段自我介紹。到「我的 → 找人」可以修改或撤下。"
+            "value" : "在「找人」裡，其他學習者的手機會以你的身分說這段自我介紹。到個人檔案可以公開或撤下。"
           }
         }
       }

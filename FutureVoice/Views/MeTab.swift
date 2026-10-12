@@ -40,7 +40,6 @@ struct MeTab: View {
     /// Nil while loading or when the learner hasn't qualified — the row still
     /// shows, because a club nobody can see is a club nobody joins.
     @State private var coreMembership: CoreClubService.Membership?
-    @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
     @State private var confirmingVoiceReset = false
@@ -81,8 +80,8 @@ struct MeTab: View {
                 // (the old "Apple ID" row here did nothing, and the editor was
                 // buried under "Learning").
                 Section {
-                    Button {
-                        showingPersonaEdit = true
+                    NavigationLink {
+                        MyProfileView().environmentObject(appState)
                     } label: {
                         profileHeader
                     }
@@ -169,13 +168,6 @@ struct MeTab: View {
                         row(icon: "speaker.wave.2",
                             title: explain("Sound & mic"),
                             subtitle: soundSummary)
-                    }
-                    NavigationLink {
-                        PublicIntroView().environmentObject(appState)
-                    } label: {
-                        row(icon: "person.2.wave.2",
-                            title: explain("Find people"),
-                            subtitle: explain("Publish your intro — others practice with \"you\""))
                     }
                 }
 
@@ -351,10 +343,6 @@ struct MeTab: View {
             }) {
                 // Trial pitch only while the free credits last.
                 PaywallView(source: "me")
-            }
-            .sheet(isPresented: $showingPersonaEdit) {
-                PersonaOnboardingView(initialPersona: appState.persona)
-                    .environmentObject(appState)
             }
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageSheet().environmentObject(appState)

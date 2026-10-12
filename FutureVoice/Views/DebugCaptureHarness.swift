@@ -641,6 +641,11 @@ enum DebugCapture {
             // published: work · town · situations · the unlocked lines only.
             once("sample-persona") { seedSamplePersona(appState) }
             return AnyView(PublicIntroPreviewSheet().environmentObject(appState))
+        case "my-profile":
+            // The one "me" page: profile on top, what strangers see below.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(NavigationStack { MyProfileView(showsDone: true) }
+                .environmentObject(appState))
         case "profile-name":
             // Me → Profile, first step: the avatar sits in the SAME card as
             // the name field (2026-09-25) — it used to float on the grouped

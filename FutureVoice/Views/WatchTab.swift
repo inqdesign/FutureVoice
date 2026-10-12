@@ -186,8 +186,10 @@ struct WatchTab: View {
                 }
             }
             .sheet(isPresented: $showingProfile) {
-                PersonaOnboardingView(initialPersona: appState.persona)
-                    .environmentObject(appState)
+                NavigationStack {
+                    MyProfileView(showsDone: true)
+                        .environmentObject(appState)
+                }
             }
             .sheet(item: $composer) { cfg in
                 // The ONE unified composer — same as Talk's "+", but its action
