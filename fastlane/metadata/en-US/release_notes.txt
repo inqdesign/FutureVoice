@@ -1,9 +1,15 @@
 New
-• Your voice moves to a new voice engine: more natural, more like you, and faster replies. You'll see a note when you open the app — pick an accent and rebuild your voice from your recording in one tap.
+• Your voice moves to a new voice engine: more natural, more like you, and faster replies. You'll see a note when you open the app. Pick an accent and rebuild your voice from your recording in one tap.
+• The Watch tab is now a map of people. You're in the middle, and the people closest to you sit nearest. Tap someone to set up a situation with them.
+• Challenges in the Speech tab: everyone reads the same script and competes for the top score. Only takes recorded with the camera on count, and the leaderboard shows just your name and score.
+• Tap “Your effort” on the Progress tab to see what you practised, and how much, over a week or a month.
 • In Me → Accent, choose "Original" to go back to your voice with no accent.
 
 Fixed
-• Fixed Sign in with Apple doing nothing on the welcome screen.
+• Sign in with Apple did nothing on the welcome screen. It works again.
+• In a call, replies now appear one sentence at a time, together with the voice.
+• Shadowing and Speech scores are more accurate: Korean is compared by word group, Japanese by word, and anything you skipped is shown as it's written in the script.
+• In My routine, a day counts once you've started every block, and review blocks fill up with every card and word you studied.
 • The limit of one voice change every 30 days is gone.
 • Fixed the app closing when you opened the Me tab.
 • The voice recording script is a little shorter.
