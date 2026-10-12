@@ -370,6 +370,20 @@ export function wavBytes(pcm: Uint8Array, sampleRate: number): Uint8Array {
   return out
 }
 
+/** Float channels (an MP3 decoded on the server) → a 16-bit mono WAV File,
+ *  so it goes through the same levelling as a phone take. */
+export function wavFileFromFloat(channels: Float32Array[], sampleRate: number, name = "sample.wav"): File {
+  const n = channels[0]?.length ?? 0
+  const pcm = new Int16Array(n)
+  for (let i = 0; i < n; i++) {
+    let v = 0
+    for (const ch of channels) v += ch[i]
+    v /= Math.max(1, channels.length)
+    pcm[i] = Math.max(-32768, Math.min(32767, Math.round(v * 32767)))
+  }
+  return new File([wavBytes(new Uint8Array(pcm.buffer), sampleRate).buffer as ArrayBuffer], name, { type: "audio/wav" })
+}
+
 /** A 16-bit PCM WAV with its speech brought to ~-20 dBFS RMS (boost only,
  *  ≤30 dB), peaks held under full scale by a soft knee above 0.7. Anything
  *  that isn't a plain 16-bit PCM WAV is returned as null (sent unchanged). */

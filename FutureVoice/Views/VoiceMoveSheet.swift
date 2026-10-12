@@ -21,6 +21,10 @@ struct VoiceMoveSheet: View {
     @State private var accentId: String?
     @State private var phase: Phase = .ready
     @State private var error: String?
+    /// Neither this phone nor the server holds the recording (an accent
+    /// remix keeps none upstream): only a new recording can move the voice.
+    @State private var needsRecording = false
+    @State private var confirmingRerecord = false
 
     private enum Phase { case ready, working, done }
 
@@ -77,7 +81,13 @@ struct VoiceMoveSheet: View {
                             Label(explain("Hear it"), systemImage: "play.fill")
                         }
                         Button(explain("Done")) { dismiss() }
-                    } else if hasRecording {
+                    } else if needsRecording {
+                        Text(explain("Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine."))
+                            .foregroundStyle(.secondary)
+                        Button { confirmingRerecord = true } label: {
+                            Text(explain("Record again")).fontWeight(.semibold)
+                        }
+                    } else {
                         Button { move() } label: {
                             HStack {
                                 Text(explain("Rebuild with my voice"))
@@ -87,9 +97,6 @@ struct VoiceMoveSheet: View {
                             }
                         }
                         .disabled(phase == .working)
-                    } else {
-                        Text(explain("There's no recording on this device. Record your voice again in Me → Voice to move it."))
-                            .foregroundStyle(.secondary)
                     }
                 } footer: {
                     if let error { Text(error).foregroundStyle(.red) }
@@ -108,6 +115,16 @@ struct VoiceMoveSheet: View {
                 }
             }
             .interactiveDismissDisabled(phase == .working)
+            .alert("Re-record your voice?", isPresented: $confirmingRerecord) {
+                Button("Cancel", role: .cancel) {}
+                Button("Start over", role: .destructive) {
+                    Analytics.capture("voice_move_rerecord")
+                    dismiss()
+                    appState.resetVoiceClone()   // RootView swaps to the recording
+                }
+            } message: {
+                Text(explain("Your current voice is deleted and you'll record a new one."))
+            }
         }
         .onAppear {
             VoiceMove.markShown()
@@ -142,16 +159,29 @@ struct VoiceMoveSheet: View {
     }
 
     private func move() {
-        guard let url = VoiceSampleStore.shared.url, phase != .working else { return }
+        guard phase != .working else { return }
         phase = .working
         error = nil
         let accent = options.first { $0.id == accentId }
-        Analytics.capture("voice_move_started", ["accent": accent?.id ?? "original"])
+        Analytics.capture("voice_move_started", ["accent": accent?.id ?? "original",
+                                                 "from": hasRecording ? "device" : "server"])
         Task {
             do {
-                // The server clones on Cartesia (CLONE_PROVIDER) and the old
-                // voice is staged for deletion like any rebuild.
-                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                if let url = VoiceSampleStore.shared.url, hasRecording {
+                    // The server clones on Cartesia (CLONE_PROVIDER) and the
+                    // old voice is staged for deletion like any rebuild.
+                    try await appState.regenerateVoiceClone(fromSampleAt: url)
+                } else {
+                    // No recording here: the server rebuilds from the copy the
+                    // old voice was made from — or says there is none.
+                    guard let moved = try await ElevenLabsClient.shared.moveVoiceFromServer() else {
+                        Analytics.capture("voice_move_no_original")
+                        needsRecording = true
+                        phase = .ready
+                        return
+                    }
+                    await appState.adoptMovedVoice(moved)
+                }
                 if let accent, let newId = appState.voiceCloneId,
                    let cartesiaAccent = VoiceMove.cartesiaAccent(accent.id) {
                     // On Cartesia an accent is a setting on the same voice, so

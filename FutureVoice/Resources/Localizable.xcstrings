@@ -128817,22 +128817,6 @@
         }
       }
     },
-    "There's no recording on this device. Record your voice again in Me → Voice to move it." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "There's no recording on this device. Record your voice again in Me → Voice to move it."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 기기에 녹음이 없어요. 옮기려면 나 → 목소리에서 다시 녹음해 주세요."
-          }
-        }
-      }
-    },
     "So you can practice with a voice that sounds more natural and more like you, we're moving your voice to a new voice engine. Replies get faster too." : {
       "localizations" : {
         "en" : {
@@ -128861,6 +128845,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "더 알아보기"
+          }
+        }
+      }
+    },
+    "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 목소리는 원본 녹음이 남아 있지 않아요. 1분쯤 다시 녹음하면 새 엔진으로 옮겨져요."
+          }
+        }
+      }
+    },
+    "Your current voice is deleted and you'll record a new one." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your current voice is deleted and you'll record a new one."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 목소리는 지워지고, 새로 녹음하게 돼요."
           }
         }
       }

@@ -116,6 +116,29 @@ final class ElevenLabsClient {
         try Self.validate(response: response, data: data)
     }
 
+    /// Moves the learner's voice to the new engine from the SERVER's copy of
+    /// their recording (`voice-move`, 2026-10-12) — for a phone with no saved
+    /// recording. Returns the new voice id, or nil when no original exists
+    /// upstream (an accent remix keeps none), in which case only a new
+    /// recording can move it.
+    func moveVoiceFromServer() async throws -> String? {
+        let url = functionsBaseURL.appendingPathComponent("voice-move")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        request.timeoutInterval = 90
+        let (data, response) = try await session.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 409,
+           String(data: data, encoding: .utf8)?.contains("no_original") == true {
+            return nil
+        }
+        try Self.validate(response: response, data: data)
+        struct Resp: Decodable { let voice_id: String }
+        return try JSONDecoder().decode(Resp.self, from: data).voice_id
+    }
+
     /// Renames an EXISTING clone upstream. The name is otherwise fixed at
     /// creation time, so without this a rename would only show up after the
     /// user's next re-record. Free — no credits are charged.

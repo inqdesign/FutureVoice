@@ -1605,6 +1605,22 @@ final class AppState: ObservableObject {
         await refreshVoiceChangeStatus()
     }
 
+    /// Adopt a voice the server rebuilt from its own copy of the recording
+    /// (`voice-move`) — the tail of `regenerateVoiceClone`, minus the upload:
+    /// the old voice is staged for deletion and the new one is un-accented.
+    func adoptMovedVoice(_ newId: String) async {
+        guard newId != voiceCloneId else { return }
+        if let old = voiceCloneId, !voiceIsStandIn {
+            if VoiceParking.isParked(old) { setParkedVoice(nil) } else { pendingDeleteVoiceId = old }
+        }
+        voiceCloneId = newId
+        voiceAccentId = nil
+        Analytics.capture("voice_moved_from_server")
+        await cleanupPreviousVoiceClone()
+        warmFreeTalkOpeners()
+        await refreshVoiceChangeStatus()
+    }
+
     /// Fire-and-forget: make the next free talk open instantly on the
     /// CURRENT voice — opener pool text + audio, bundled fallback line
     /// included (see FreeTalkOpeners.warmFirstCall). Called from every point
