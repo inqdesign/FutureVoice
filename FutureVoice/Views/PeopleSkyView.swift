@@ -31,12 +31,14 @@ enum PeopleSky {
     }
 
     /// The situation dock over the map: chips + box, a chip picks the person
-    /// and they speak a line. DEBUG only until the founder has seen it.
+    /// and they speak a line. On for everyone from 1.1.8 (2026-10-13,
+    /// founder: the next build carries every update); the Developer toggle
+    /// still switches it off in a debug build.
     static var dockEnabled: Bool {
         #if DEBUG
         return UserDefaults.standard.object(forKey: "futurevoice.dev.situationDock") as? Bool ?? true
         #else
-        return false
+        return true
         #endif
     }
 
