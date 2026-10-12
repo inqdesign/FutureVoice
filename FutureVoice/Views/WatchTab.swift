@@ -64,6 +64,10 @@ struct WatchTab: View {
     @State private var dockPerson: Counterpart?
     /// The box was opened from a person's card: no category chips.
     @State private var dockNoChips = false
+    /// The person whose card floats over the map (a tap on them).
+    @State private var skyCard: Counterpart?
+    @State private var skyCardPaywall = false
+    @StateObject private var previewPlayer = AudioPlayer()
     @State private var dockBubble: String?
     @State private var dockFill = ""
     /// "New situation" was tapped: the tab bar steps aside for the box, the
@@ -311,7 +315,11 @@ struct WatchTab: View {
                                      case .person(let c), .pooled(let c):
                                          // A tap is for who they are; the middle of the
                                          // screen is for what to talk about.
-                                         personCard = c
+                                         if PeopleSky.dockEnabled && !creating {
+                                             openSkyCard(c)
+                                         } else {
+                                             personCard = c
+                                         }
                                      case .role(let cat): composer = ComposerConfig(mode: .browse, category: cat)
                                      }
                                  },
@@ -369,7 +377,29 @@ struct WatchTab: View {
                 // Writing your own situation is its own button, not a tap on
                 // "me": tapping a person opens that person, so tapping me
                 // opens me (the profile).
-                if !creating {
+                if !creating, PeopleSky.dockEnabled, let card = skyCard {
+                    SkyPersonCard(person: appState.counterparts.first { $0.id == card.id } ?? card,
+                                  onClose: { skyCard = nil },
+                                  onMore: { skyCard = nil; personCard = card },
+                                  onCompose: { composeFromCard(card) },
+                                  onWatch: {
+                                      BillingGate.startScene(orShow: $skyCardPaywall) {
+                                          let p = savedFromCard(card)
+                                          skyCard = nil
+                                          watchScene = WatchTarget(scenario: freeTalkScenario(with: p), fresh: true)
+                                      }
+                                  },
+                                  onTalk: {
+                                      BillingGate.start(orShow: $skyCardPaywall) {
+                                          let p = savedFromCard(card)
+                                          skyCard = nil
+                                          callPerson = p
+                                      }
+                                  })
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if !creating {
                 Button {
                     if PeopleSky.dockEnabled {
                         // Whoever is in the middle is who it's with — the box
@@ -387,6 +417,9 @@ struct WatchTab: View {
                 .padding(16)
                 }
             }
+            .animation(.smooth(duration: 0.3), value: skyCard?.id)
+            .sheet(isPresented: $skyCardPaywall) { PaywallView(source: "watch_person_card") }
+            .onDisappear { previewPlayer.stop() }
             .task(id: appState.targetLanguage) { await loadSkyPool() }
             .task {
                 // A pool that never answers must not leave the tab blank.
@@ -401,7 +434,7 @@ struct WatchTab: View {
             }
             #endif
             .onChange(of: creation.creating) { _, on in
-                if !on { dockNoChips = false }
+                if !on { dockNoChips = false } else { skyCard = nil }
             }
             .onChange(of: dockPerson?.id) { _, id in
                 // Picked in the box (its person chip, or a category chip):
@@ -446,6 +479,7 @@ struct WatchTab: View {
         if !force, id == skyCentred?.id.uuidString { return }
         bubbleTask?.cancel()
         dockBubble = nil
+        previewPlayer.stop()
         let person = id.flatMap { id in
             appState.counterparts.first { $0.id.uuidString == id } ?? skyPool.first { $0.id.uuidString == id }
         }
@@ -456,6 +490,35 @@ struct WatchTab: View {
             guard !Task.isCancelled else { return }
             await sayGreeting(for: person)
         }
+    }
+
+    /// A tap on someone: their card floats up over the bottom of the map and
+    /// they come to the middle, above it, where their greeting rises.
+    private func openSkyCard(_ c: Counterpart) {
+        skyCard = c
+        panningUntil = Date().addingTimeInterval(0.7)
+        skyScrollTarget = nil
+        let id = c.id.uuidString
+        DispatchQueue.main.async { skyScrollTarget = id }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { centre(on: id, force: true) }
+    }
+
+    /// The card's "Make a situation": the card goes down as the box comes
+    /// up, in one motion, with them already the person it's with.
+    private func composeFromCard(_ c: Counterpart) {
+        withAnimation(.smooth(duration: 0.35)) {
+            skyCard = nil
+            dockNoChips = true
+            creating = true
+            dockPerson = c
+        }
+    }
+
+    /// Meeting someone from the pool files them, like the full card does.
+    private func savedFromCard(_ c: Counterpart) -> Counterpart {
+        if let on = appState.counterparts.first(where: { $0.id == c.id }) { return on }
+        appState.saveCounterpart(c)
+        return appState.counterparts.first(where: { $0.id == c.id }) ?? c
     }
 
     /// Tapping their greeting answers it: the box opens with them as the
@@ -500,6 +563,21 @@ struct WatchTab: View {
         let haptic = UIImpactFeedbackGenerator(style: .medium)
         haptic.prepare()
         haptic.impactOccurred()
+        playVoicePreview(for: person)
+    }
+
+    /// Their voice says hello as their bubble rises: the preset's preview
+    /// clip, which ships with the app, so scrolling past people spends
+    /// nothing. A voice the bundle lacks stays silent rather than paying for
+    /// a synthesis nobody asked for.
+    private func playVoicePreview(for person: Counterpart) {
+        previewPlayer.stop()
+        let voice = person.voicePresetId
+        guard !voice.isEmpty else { return }
+        let lang = appState.targetLanguage.split(separator: "-").first.map(String.init) ?? appState.targetLanguage
+        guard let url = Bundle.main.url(forResource: "preview-\(lang)-\(voice)", withExtension: "mp3"),
+              let data = try? Data(contentsOf: url) else { return }
+        try? previewPlayer.play(data, source: "voice_preview") {}
     }
 
     /// Who a common situation is with, read off what the learner wrote about
@@ -594,6 +672,13 @@ struct WatchTab: View {
             if Task.isCancelled || error is CancellationError { return }
         }
         DispatchQueue.main.async { skyReady = true }
+        #if DEBUG
+        // `-skyCard 1` captures a person's floating card.
+        if UserDefaults.standard.bool(forKey: "skyCard"), skyCard == nil,
+           let first = appState.counterparts.first(where: { $0.remoteId == nil }) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { openSkyCard(first) }
+        }
+        #endif
     }
 
     private func countTalks() {
@@ -1171,5 +1256,75 @@ struct GlassFloatingButton: ViewModifier {
                 .controlSize(.large)
                 .background(Capsule().fill(.regularMaterial))
         }
+    }
+}
+
+
+/// A person, as a card floating over the bottom of the map: who they are in
+/// a line or three, and what you can do with them. Less than half the
+/// screen, so the map — and them in its middle — stays in view; the full
+/// page (voice, topics, talks together) is one tap further.
+struct SkyPersonCard: View {
+    let person: Counterpart
+    let onClose: () -> Void
+    let onMore: () -> Void
+    let onCompose: () -> Void
+    let onWatch: () -> Void
+    let onTalk: () -> Void
+
+    private var about: String {
+        if person.personaKind == "user" { return person.commonTopics }
+        return person.intro.isEmpty ? person.background : person.intro
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                PersonBubble(name: person.name, photoId: person.id, size: 48)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(person.name).font(.headline)
+                    let cap = PartnerPickerSheet.caption(for: person)
+                    if !cap.isEmpty {
+                        Text(cap).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                Button(action: onMore) {
+                    Image(systemName: "info.circle")
+                        .font(.title3)
+                }
+                .accessibilityLabel(Text("More"))
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel(Text("Close"))
+            }
+            if !about.isEmpty {
+                Text(about)
+                    .font(.subheadline)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button(action: onCompose) {
+                Label("Make a situation", systemImage: "square.and.pencil")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            HStack(spacing: 10) {
+                Button(action: onWatch) {
+                    Label("Watch", systemImage: "play.fill").frame(maxWidth: .infinity)
+                }
+                Button(action: onTalk) {
+                    Label("Talk", systemImage: "phone.fill").frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.bordered)
+        }
+        .controlSize(.large)
+        .padding(16)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 18, y: 6)
     }
 }
