@@ -432,7 +432,7 @@ struct PeopleSkyMap: View {
                                     Button(action: onTapBubble) { SkyBubble(text: bubble) }
                                         .buttonStyle(.plain)
                                         .fixedSize()
-                                        .offset(y: -40)
+                                        .offset(y: -64)
                                         .alignmentGuide(.top) { $0[.bottom] }
                                         .transition(.asymmetric(
                                             insertion: .offset(y: 14).combined(with: .opacity),
@@ -631,13 +631,13 @@ struct SkyBubble: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(text)
-                .font(.subheadline.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .frame(maxWidth: 240)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .lineLimit(3)
+                .frame(maxWidth: 200)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 7)
+                .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
             Triangle()
                 .fill(Color(.systemBackground))
                 .frame(width: 16, height: 8)
