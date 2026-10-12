@@ -237,6 +237,19 @@ async function cartesiaAccent(
     const { uuid, accent } = cartesia.parseVoice(body.generated_voice_id)
     const row = await owns(uuid)
     if (!row) return errorResponse(403, "voice not owned by caller")
+    // A take belongs to the voice it was made from. The app keeps takes per
+    // RECORDING, so after a rebuild it still offers takes of the voice the
+    // rebuild deleted — saving one pointed the learner at a voice that no
+    // longer exists, and every line came back "voice not found" (2026-10-12).
+    // Only a take of the CURRENT voice is saved; anything else is refused,
+    // and every build answers a failed save by dropping that accent's cached
+    // takes, so the next pick makes fresh ones from the live voice.
+    const { data: active } = await supabase.from("voice_clones").select("elevenlabs_voice_id")
+      .eq("user_id", userId).eq("is_active", true).limit(1)
+    const current = (active ?? [])[0]?.elevenlabs_voice_id as string | undefined
+    if (!current || cartesia.parseVoice(current).uuid !== uuid) {
+      return errorResponse(409, "stale accent take — pick the accent again")
+    }
     const id = accent ? `${uuid}:${accent}` : uuid
     await supabase.from("voice_clones").update({ is_active: false })
       .eq("user_id", userId).eq("is_active", true)
