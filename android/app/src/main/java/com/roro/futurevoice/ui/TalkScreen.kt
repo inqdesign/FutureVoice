@@ -800,8 +800,13 @@ fun TalkScreen(
                     // The reply has begun but has no words yet: the thinking
                     // line keeps its place (same key) until the bubble that
                     // replaces it has text to be drawn with (iOS 8b3b45f2).
-                    if ((state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) ||
-                        replyHasNoWordsYet) {
+                    // Subtitles off means NO words in the feed: the pill
+                    // already scans while the reply is written, and this line
+                    // flashing for a second and going read as a glitch
+                    // (iOS c8675f6c, reported 2026-10-09).
+                    if (showsTranscript &&
+                        ((state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) ||
+                            replyHasNoWordsYet)) {
                         item(key = "partial-thinking") {
                             Row(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null, fadeOutSpec = null),
                                 verticalAlignment = Alignment.CenterVertically,
