@@ -115,10 +115,21 @@ enum TopicEngine {
         persona: UserPersona?,
         counterpart: Counterpart,
         targetLanguage: String,
-        count: Int = 5
+        count: Int = 5,
+        /// Standing facts the learner has said about their own life — the
+        /// whole notebook for someone close, only what strangers may hear
+        /// otherwise. What makes an idea THIS pair's rather than anyone's.
+        learnerFacts: [String] = [],
+        /// false: a failed call throws instead of handing back the generic
+        /// catch-up lines — for callers that would SAVE the result.
+        allowFallback: Bool = true
     ) async throws -> [SuggestedTopic] {
         let system = counterpartSystemPrompt(targetLanguage: targetLanguage, count: count)
-        let userMsg = counterpartUserMessage(persona: persona, counterpart: counterpart)
+        var userMsg = counterpartUserMessage(persona: persona, counterpart: counterpart)
+        if !learnerFacts.isEmpty {
+            userMsg += "\n\nWhat the USER has said about their own life (context only, never quote it back):\n"
+                + learnerFacts.prefix(12).map { "- \($0)" }.joined(separator: "\n")
+        }
         do {
             let payload: Payload = try await GeminiClient.shared.sendJSON(
                 system: system,
@@ -128,8 +139,17 @@ enum TopicEngine {
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
         } catch {
+            guard allowFallback else { throw error }
             return counterpartFallback(counterpart: counterpart, targetLanguage: targetLanguage)
         }
+    }
+
+    /// The generic catch-up lines a failed call hands back. Saved onto a
+    /// person once by mistake, they came back as that person's "ideas" for
+    /// ever; a reader treats a list like this as no ideas at all.
+    static func isFallback(_ topics: [SuggestedTopic], for counterpart: Counterpart, targetLanguage: String) -> Bool {
+        let generic = Set(counterpartFallback(counterpart: counterpart, targetLanguage: targetLanguage).map(\.title))
+        return !topics.isEmpty && topics.allSatisfy { generic.contains($0.title) }
     }
 
     private static func counterpartSystemPrompt(targetLanguage: String, count: Int) -> String {

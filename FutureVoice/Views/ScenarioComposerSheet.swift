@@ -639,14 +639,19 @@ struct ScenarioComposerSheet: View {
     private func ensurePersonIdeas() async {
         guard usesBox, let p = person, !loadingPersonIdeas else { return }
         let live = appState.counterparts.first { $0.id == p.id } ?? p
-        guard live.savedScenarios(in: appState.targetLanguage).isEmpty,
+        let saved = live.savedScenarios(in: appState.targetLanguage)
+        guard saved.isEmpty || TopicEngine.isFallback(saved, for: live, targetLanguage: appState.targetLanguage),
               personIdeas.isEmpty else { return }
         loadingPersonIdeas = true
         defer { loadingPersonIdeas = false }
         guard let fresh = try? await TopicEngine.suggestForCounterpart(
             persona: appState.persona,
             counterpart: live,
-            targetLanguage: appState.targetLanguage), !fresh.isEmpty else { return }
+            targetLanguage: appState.targetLanguage,
+            learnerFacts: live.knowsLearnersLife
+                ? (appState.persona?.currentNotes().map(\.text) ?? [])
+                : (appState.persona?.strangerLines ?? []),
+            allowFallback: false), !fresh.isEmpty else { return }
         personIdeas = fresh
         // Persist only for someone already on file. A stranger becomes a
         // real row when a scenario is built with them, not when the sheet

@@ -2502,6 +2502,35 @@ enum DebugCapture {
                 c.personaKind = "user"
                 c.intro = name == "Emma" ? "I'm a nurse in London." : "Developer in Berlin."
             }
+            // What a learner would have written about them, and the ideas the
+            // map's bubbles show — a capture has no session to generate them.
+            let sample: [String: (String, [String])] = [
+                "Jisu": ("Together five years; planning a trip to Lisbon in spring.",
+                         ["Splitting the Lisbon bookings over dinner", "Telling Jisu about the review I'm dreading"]),
+                "Mom": ("Lives in Busan, worries I don't eat enough.",
+                        ["Video call about coming home for Chuseok", "Explaining my new job to Mom, no jargon"]),
+                "Minho": ("Climbing buddy since uni; just moved to Berlin too.",
+                          ["Minho wants to try the new climbing gym", "Catching Minho up on the flat hunt"]),
+                "Harin": ("Getting married in June; I'm giving a speech.",
+                          ["Asking Harin what she wants in the wedding speech"]),
+                "Kim": ("My team lead; Q4 planning is next week.",
+                        ["Pitching my Q4 roadmap to Kim before the all-hands", "Asking Kim for Friday off"]),
+                "Sarah": ("Shares the client account with me.",
+                          ["Splitting the client deck with Sarah before Monday"]),
+                "Mr. Becker": ("Landlord; slow to fix things.",
+                               ["Telling Mr. Becker the heating's been off a week"]),
+                "Tom": ("Next door; his dog barks at night.",
+                        ["Bringing up the barking with Tom, kindly"]),
+                "Mia": ("Thursday yoga class teacher.",
+                        ["Asking Mia how to go easy on my sore back"]),
+                "Emma": ("", ["Asking Emma what night shifts in London are like"]),
+                "Lukas": ("", ["Comparing tech jobs in Berlin and Seoul with Lukas"]),
+            ]
+            if let (bg, ideas) = sample[name] {
+                c.background = bg
+                c.setSavedScenarios(ideas.map { SuggestedTopic(title: $0, blurb: "") },
+                                    in: appState.targetLanguage)
+            }
             appState.saveCounterpart(c)
         }
     }

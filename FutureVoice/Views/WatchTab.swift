@@ -444,11 +444,19 @@ struct WatchTab: View {
     /// per language when there are none yet, and kept on the person.
     private func sayIdea(for person: Counterpart) async {
         let lang = appState.targetLanguage
-        var ideas = (appState.counterparts.first { $0.id == person.id } ?? person).savedScenarios(in: lang)
+        let live = appState.counterparts.first { $0.id == person.id } ?? person
+        var ideas = live.savedScenarios(in: lang)
+        if TopicEngine.isFallback(ideas, for: live, targetLanguage: lang) { ideas = [] }
         if ideas.isEmpty { ideas = strangerIdeas[person.id] ?? [] }
         if ideas.isEmpty {
+            // Close people know the learner's life; everyone else hears only
+            // what the learner lets strangers hear.
+            let facts = live.knowsLearnersLife
+                ? (appState.persona?.currentNotes().map(\.text) ?? [])
+                : (appState.persona?.strangerLines ?? [])
             guard let fresh = try? await TopicEngine.suggestForCounterpart(
-                persona: appState.persona, counterpart: person, targetLanguage: lang), !fresh.isEmpty
+                persona: appState.persona, counterpart: live, targetLanguage: lang,
+                learnerFacts: facts, allowFallback: false), !fresh.isEmpty
             else { return }
             ideas = fresh
             if var owned = appState.counterparts.first(where: { $0.id == person.id }) {
@@ -461,9 +469,10 @@ struct WatchTab: View {
         guard skyCentred?.id == person.id else { return }
         let turn = dockIdeaTurn[person.id, default: 0]
         dockIdeaTurn[person.id] = turn + 1
+        // The title: a concrete moment of THIS pair, short enough for a bubble.
         let idea = ideas[turn % ideas.count]
-        let blurb = idea.blurb.trimmingCharacters(in: .whitespacesAndNewlines)
-        dockBubble = blurb.isEmpty ? idea.title : blurb
+        let title = idea.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        dockBubble = title.isEmpty ? idea.blurb : title
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
     }
 
