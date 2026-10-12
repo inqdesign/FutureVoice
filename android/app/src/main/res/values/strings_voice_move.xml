@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_move_title">Your voice is moving to a new engine</string>
+    <string name="voice_move_body">So you can practice with a voice that sounds more natural and more like you, we\'re moving your voice to a new voice engine. Replies get faster too.</string>
+    <string name="voice_move_loss">When it moves, your current voice is deleted and a new one is made from the recording saved on this device. Audio that was already made keeps playing.</string>
+    <string name="voice_move_learn_more">Learn more</string>
+    <string name="voice_move_cta">Rebuild with my voice</string>
+    <string name="voice_move_done_title">Your new voice is ready</string>
+    <string name="voice_move_done_body">From now on your fluent self speaks with your new voice.</string>
+    <string name="voice_move_no_recording">There\'s no recording on this device. Record your voice again in Me → Voice to move it.</string>
+</resources>

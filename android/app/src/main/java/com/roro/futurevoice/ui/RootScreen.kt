@@ -516,6 +516,23 @@ fun RootScreen() {
         }
         checkWelcome = false
     }
+    // The ElevenLabs → Cartesia voice move (iOS `offerVoiceMove`): a beat
+    // after the app is up, never over the welcome, once a day until moved.
+    var showVoiceMove by remember { mutableStateOf(false) }
+    LaunchedEffect(state.voiceId, state.signedIn) {
+        delay(2500)
+        if (welcomeMinutes == null && VoiceMove.isDue(context, state.voiceId, state.signedIn)) showVoiceMove = true
+    }
+    if (showVoiceMove) {
+        VoiceMoveSheet(
+            targetLanguage = state.targetLanguage,
+            currentAccentId = state.voiceAccentId,
+            onRebuilt = { app.adoptRemixedVoice(it, "") },
+            onAccentApplied = app::adoptRemixedVoice,
+            currentVoiceId = { app.state.value.voiceId },
+            onDismiss = { showVoiceMove = false },
+        )
+    }
     welcomeMinutes?.let { minutes ->
         FreeTalkWelcomeSheet(
             minutes = minutes,
