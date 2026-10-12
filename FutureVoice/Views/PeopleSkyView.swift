@@ -589,22 +589,36 @@ private struct CentreFocus: ViewModifier {
     let positions: [String: CGPoint]
     let candidates: [String]
     let onChange: (String?) -> Void
+    /// The last visible rect. Kept so the middle is found again when the
+    /// PEOPLE change (the pool lands after the first layout) and not only
+    /// when the map is dragged — opening the tab used to find nobody until
+    /// the first drag.
+    @State private var rect: CGRect = .zero
 
     func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
-            content.onScrollGeometryChange(for: CGRect.self) { $0.visibleRect } action: { _, rect in
-                let focus = CGPoint(x: rect.midX, y: rect.minY + rect.height * focusLine)
-                var best: (String, CGFloat)?
-                for id in candidates {
-                    guard let p = positions[id] else { continue }
-                    let d = hypot(p.x - focus.x, p.y - focus.y)
-                    if d < 90, d < (best?.1 ?? .infinity) { best = (id, d) }
+            content
+                .onScrollGeometryChange(for: CGRect.self) { $0.visibleRect } action: { _, new in
+                    rect = new
+                    find()
                 }
-                onChange(best?.0)
-            }
+                .onChange(of: candidates) { _, _ in find() }
+                .onAppear { DispatchQueue.main.async { find() } }
         } else {
             content
         }
+    }
+
+    private func find() {
+        guard rect.width > 0 else { return }
+        let focus = CGPoint(x: rect.midX, y: rect.minY + rect.height * focusLine)
+        var best: (String, CGFloat)?
+        for id in candidates {
+            guard let p = positions[id] else { continue }
+            let d = hypot(p.x - focus.x, p.y - focus.y)
+            if d < 130, d < (best?.1 ?? .infinity) { best = (id, d) }
+        }
+        onChange(best?.0)
     }
 }
 
