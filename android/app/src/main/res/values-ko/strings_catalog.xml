@@ -253,6 +253,7 @@
     <string name="busy_today">"오늘 바빠?"</string>
     <string name="buy_lld_minutes">"%d분 구매"</string>
     <string name="by_level">"레벨별"</string>
+    <string name="cafe">"카페"</string>
     <string name="call">"전화"</string>
     <string name="call_me_every_day">"매일 전화해 주세요"</string>
     <string name="call_paused_tap_to_pick_it_back_up">"통화 잠시 멈춤 · 탭하면 이어서 해요"</string>
@@ -339,6 +340,7 @@
     <string name="comfortable_lld_lld">"적정 범위 %1$d–%2$d"</string>
     <string name="common_situations">"흔한 상황"</string>
     <string name="comparing">"비교하는 중…"</string>
+    <string name="composer_customsituation">"직접 쓴 상황"</string>
     <string name="congratulations">"축하해요!"</string>
     <string name="connecting">"연결 중…"</string>
     <string name="consent">"동의"</string>
@@ -752,6 +754,7 @@
     <string name="have_a_conversation_or_watch_a_scene_then_come_back_to_shado_9066e7">"대화를 하거나 상황연습을 보고 나면, 유창해진 내가 한 말을 골라 따라 말할 수 있어요."</string>
     <string name="have_an_invite_code">"초대 코드가 있나요?"</string>
     <string name="headline">"헤드라인"</string>
+    <string name="health">"건강"</string>
     <string name="hear_it">"들어보기"</string>
     <string name="hear_it_again">"다시 듣기"</string>
     <string name="hear_it_in_the_app_write_it_here">"앱에서 듣고 여기에 쓰기"</string>
@@ -1456,6 +1459,7 @@
     <string name="people_you_ve_met">"만난 사람들"</string>
     <string name="people_your_own_cast">"사람: 나만의 대화 상대"</string>
     <string name="person">"인물"</string>
+    <string name="phone">"전화"</string>
     <string name="phone_mic">"폰 마이크"</string>
     <string name="photo">"사진"</string>
     <string name="photo_library">"사진 보관함"</string>
@@ -1769,6 +1773,7 @@
     <string name="scenes_refill_on">"상황연습은 %s에 새로 채워져요."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
     <string name="scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2">"이미 본 상황연습은 다시 봐도 그 수가 줄지 않아요."</string>
+    <string name="school">"학교"</string>
     <!-- "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" -->
     <string name="school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65">"학교, 학원, 유튜브, 책, 앱...\n참 열심히 했는데... 그치?"</string>
     <string name="science">"과학"</string>
@@ -1840,6 +1845,7 @@
     <string name="share_card">"카드 공유"</string>
     <string name="share_invite">"초대 공유"</string>
     <string name="shared_context_memories_inside_jokes">"함께 아는 맥락, 추억, 우리끼리 농담"</string>
+    <string name="shopping">"쇼핑"</string>
     <string name="show_again_in_3_days">"3일 뒤에 다시 보기"</string>
     <string name="show_again_tomorrow">"내일 다시 보기"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"탭을 열 때 가이드 다시 보기"</string>
@@ -1873,6 +1879,7 @@
     <string name="slower">"느리게"</string>
     <string name="small">"작게"</string>
     <string name="so_much_you_want_to_say_all_of_it_still_in_your_head">"하고 싶은 말은\n머릿속에 가득한데"</string>
+    <string name="social">"모임"</string>
     <!-- "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." -->
     <string name="some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca">"평소와 다른 사용이 있어 확인하고 있어요. 메일을 보내 주시면 바로 정리해 드릴게요. 저장한 건 그대로고, 복습도 계속 할 수 있어요."</string>
     <string name="some_words_are_traps_you_don_t_have_to_use_them_all">"함정 단어도 있어요. 모든 단어를 다 쓰지 않아도 돼요."</string>
@@ -2384,6 +2391,11 @@
     <string name="watch_scenes">"상황연습"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"상황연습은 그 상황을 유창해진 내가 내 목소리로 해내는 장면으로 보여줘요. 어떻게 말을 꺼내고, 뭘 묻고, 어떤 표현을 쓰는지 아이디어를 얻은 다음, 연습해서 내 것으로 만들어요."</string>
+    <string name="watch_sky_backtome">"나에게"</string>
+    <string name="watch_sky_lens_known">"아는 사람"</string>
+    <string name="watch_sky_lens_mine">"내 사람"</string>
+    <string name="watch_sky_ring_close">"가까운 사람"</string>
+    <string name="watch_sky_ring_known">"주변 사람"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"장면을 보면서 내가 생각 못 했던 말과 방법을 찾아요."</string>
     <string name="watch_the_scene_first">"장면을 먼저 보세요."</string>
@@ -2555,6 +2567,7 @@
     <string name="words_you_use_by_level">"내가 쓴 단어, 레벨별"</string>
     <string name="words_you_used_first">"내가 처음 쓴 단어"</string>
     <string name="words_you_ve_used_out_loud_or_marked_as_known">"직접 말해봤거나 아는 것으로 표시한 단어예요."</string>
+    <string name="work">"일"</string>
     <string name="work_meetings">"회사 회의"</string>
     <string name="workbook">"워크북"</string>
     <string name="workbook_answers">"정답"</string>

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.ui.draw.clip
@@ -174,22 +175,7 @@ fun FindPeopleScreen(
         runCatching { client.fetchPool(language) }
             .onSuccess { rows ->
                 pool = rows
-                // Every character speaks in its OWN voice (iOS
-                // `syncOwnVoices`): a met stranger the learner once re-voiced
-                // goes back to the voice its author picked (and takes the
-                // row's greeting when theirs is empty).
-                val byId = rows.associateBy { it.id }
-                for (c in ownStore.load()) {
-                    val row = c.remoteId?.let { byId[it] } ?: continue
-                    val v = row.voice_preset_id
-                    if (StockPerson.catalog.none { it.voiceId == v } && !VoicePreset.isLibraryVoice(v)) continue
-                    var fixed = c.copy(voicePresetId = v)
-                    val g = row.greeting.orEmpty()
-                    if (g.isNotEmpty() && fixed.greeting(row.language).isEmpty()) fixed = fixed.withGreeting(g, row.language)
-                    if (fixed.voicePresetId == c.voicePresetId &&
-                        fixed.greeting(row.language) == c.greeting(row.language)) continue
-                    ownStore.save(fixed)
-                }
+                syncOwnVoices(ownStore, rows)
             }
             .onFailure { loadFailed = pool.isEmpty() }
         loading = false
@@ -534,7 +520,7 @@ fun FindPeopleScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FindPersonCard(
+internal fun FindPersonCard(
     person: PublicPersonaClient.PublicPersona,
     language: String,
     seated: Boolean,
@@ -544,6 +530,11 @@ private fun FindPersonCard(
     onWatch: (() -> Counterpart) -> Unit,
     onPersonSaved: () -> Unit,
     onBack: () -> Unit,
+    /** Build a situation with this person (iOS `onCompose`): every person
+     *  gets it from Watch. null hides the row. */
+    onCompose: ((Counterpart) -> Unit)? = null,
+    /** iOS shows the bookmark only for someone from the pool (`remoteId`). */
+    showsBookmark: Boolean = true,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -592,7 +583,7 @@ private fun FindPersonCard(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onToggleBookmark) {
+                    if (showsBookmark) IconButton(onClick = onToggleBookmark) {
                         Icon(
                             if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                             contentDescription = stringResource(R.string.bookmark),
@@ -689,6 +680,24 @@ private fun FindPersonCard(
             }
             GroupedFooter(stringResource(
                 R.string.their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731))
+
+            if (onCompose != null) {
+                GroupedSectionSpacer()
+                GroupedCard {
+                    Row(Modifier.fillMaxWidth()
+                        .clickable { onCompose(saved ?: person.asCounterpart(metLabel)) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.EditNote, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Text(stringResource(R.string.make_a_situation), style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                GroupedFooter(stringResource(
+                    R.string.something_specific_coming_up_with_them_a_talk_you_re_dreadin_18800f))
+            }
 
             if (talks.isNotEmpty()) {
                 GroupedSectionHeader(stringResource(R.string.your_talks_together))
@@ -897,6 +906,30 @@ private enum class PoolGroup(val raw: String, val label: Int, val footer: Int) {
     }
 }
 
+/**
+ * Every character speaks in its OWN voice (iOS `syncOwnVoices`): a met
+ * stranger the learner once re-voiced goes back to the voice its author
+ * picked (and takes the row's greeting when theirs is empty). True when a
+ * row on file changed.
+ */
+internal suspend fun syncOwnVoices(ownStore: CounterpartStore, rows: List<PublicPersonaClient.PublicPersona>): Boolean {
+    val byId = rows.associateBy { it.id }
+    var changed = false
+    for (c in ownStore.load()) {
+        val row = c.remoteId?.let { byId[it] } ?: continue
+        val v = row.voice_preset_id
+        if (StockPerson.catalog.none { it.voiceId == v } && !VoicePreset.isLibraryVoice(v)) continue
+        var fixed = c.copy(voicePresetId = v)
+        val g = row.greeting.orEmpty()
+        if (g.isNotEmpty() && fixed.greeting(row.language).isEmpty()) fixed = fixed.withGreeting(g, row.language)
+        if (fixed.voicePresetId == c.voicePresetId &&
+            fixed.greeting(row.language) == c.greeting(row.language)) continue
+        ownStore.save(fixed)
+        changed = true
+    }
+    return changed
+}
+
 // MARK: - Bookmarks (local only)
 
 /** Bookmarking someone has zero effect on them — no notification, no shared
@@ -904,11 +937,11 @@ private enum class PoolGroup(val raw: String, val label: Int, val footer: Int) {
  *  leave the phone. Same key as iOS. */
 private const val BOOKMARKS_KEY = "futurevoice.personaBookmarks"
 
-private fun bookmarkedIds(context: android.content.Context): Set<String> =
+internal fun bookmarkedIds(context: android.content.Context): Set<String> =
     context.getSharedPreferences("futurevoice", 0)
         .getStringSet(BOOKMARKS_KEY, emptySet())?.toSet() ?: emptySet()
 
-private fun toggleBookmark(context: android.content.Context, remoteId: String): Set<String> {
+internal fun toggleBookmark(context: android.content.Context, remoteId: String): Set<String> {
     val next = bookmarkedIds(context).toMutableSet()
     if (!next.add(remoteId)) next.remove(remoteId)
     context.getSharedPreferences("futurevoice", 0).edit()
@@ -923,7 +956,7 @@ private fun toggleBookmark(context: android.content.Context, remoteId: String): 
  * just works. The local id IS the remote one, so minting is idempotent and a
  * re-tap can't file a twin.
  */
-private fun PublicPersonaClient.PublicPersona.asCounterpart(metLabel: String) = Counterpart(
+internal fun PublicPersonaClient.PublicPersona.asCounterpart(metLabel: String) = Counterpart(
     id = id,
     name = display_name,
     relationship = metLabel,
@@ -941,7 +974,7 @@ private fun PublicPersonaClient.PublicPersona.asCounterpart(metLabel: String) = 
 )
 
 /** The reverse, for a met person the pool no longer carries. */
-private fun Counterpart.asPublicPersona(language: String) = PublicPersonaClient.PublicPersona(
+internal fun Counterpart.asPublicPersona(language: String) = PublicPersonaClient.PublicPersona(
     id = remoteId ?: id,
     // Ownership is what decides the tab, and a met row remembers its kind.
     owner_user_id = if ((personaKind ?: "user") == "user") (remoteId ?: id) else null,

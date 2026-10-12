@@ -1,6 +1,22 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.graphicsLayer
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,14 +32,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,12 +50,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,26 +77,35 @@ internal object WatchComposeRequest {
 }
 
 /**
- * Watch — simulate a specific situation BEFORE it happens (iOS `WatchTab`,
- * as of 1.1.1). Three ways in, all landing in the situation composer:
+ * The Watch header's half of the map (iOS `WatchTab` toolbar): the lens and
+ * the saved-situations sheet are chosen up there and drawn down here.
+ */
+internal object WatchSky {
+    val lens = kotlinx.coroutines.flow.MutableStateFlow(PeopleSky.Lens.ALL)
+    val showingSaved = kotlinx.coroutines.flow.MutableStateFlow(false)
+}
+
+/**
+ * Watch — simulate a specific situation BEFORE it happens (iOS `WatchTab`).
+ * Since 1.1.8 (iOS fe83c0f1) the tab IS the people map ([PeopleSkyMap]): a
+ * saved situation is almost never played again, but the people in a
+ * learner's life come back. A tap on someone opens their card; "New
+ * situation" opens the writing door; every situation made before the map
+ * lives in the header's list sheet.
  *
- *  1. the People row — a person opens the WRITING door scoped to them
- *     (`b476527`: you don't browse for the talk you're dreading with a
- *     particular person, you describe it);
- *  2. **Your own situation** — the box: one line, with the posting's link or
- *     a CV attached (`ScenarioBrief`); no person needed;
- *  3. **Common situations** — the category chain, tap-tap-tap, no field.
- *
- * Both doors mint the same `Scenario`, and minting it PLAYS it. A saved
- * scenario is a reusable TEMPLATE: tapping its card writes a fresh take.
- * No caption under any section (`cf4d360`, user decision): each had grown
- * into a paragraph restating what the screen already shows.
+ * Minting a scenario PLAYS it. A saved scenario is a reusable TEMPLATE:
+ * tapping its card opens it in edit mode, whose CTA writes a fresh take.
  */
 @Composable
 internal fun WatchTabBody(
     language: String,
     enabled: Boolean,
     onWatch: (String) -> Unit,
+    meName: String = "",
+    /** The learner in the middle — their profile. */
+    onOpenProfile: () -> Unit = {},
+    /** Someone on the map — their card, with the pool row when they came from it. */
+    onOpenPerson: (Counterpart, com.roro.futurevoice.net.PublicPersonaClient.PublicPersona?) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -99,12 +115,20 @@ internal fun WatchTabBody(
     var composing by remember { mutableStateOf<ComposerMode?>(null) }
     /** The person a composed scene is scoped to, if any. */
     var withPerson by remember { mutableStateOf<Counterpart?>(null) }
+    /** Everyone on file — own people and strangers met. */
     var people by remember { mutableStateOf<List<Counterpart>>(emptyList()) }
-    var managingPeople by remember { mutableStateOf(false) }
     /** The saved scenario open in the composer's EDIT mode, if any. */
     var editingScenario by remember { mutableStateOf<Scenario?>(null) }
     /** The line the writing door opens with — an idea picked on a person's page. */
     var situationPrefill by remember { mutableStateOf("") }
+    val lens by WatchSky.lens.collectAsStateWithLifecycle()
+    val showingSaved by WatchSky.showingSaved.collectAsStateWithLifecycle()
+    /** Find-people strangers, for the map's outer ring. */
+    var poolRows by remember { mutableStateOf<List<com.roro.futurevoice.net.PublicPersonaClient.PublicPersona>>(emptyList()) }
+    /** Talks per person (sessions aren't published). */
+    var talksByPerson by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    /** The map is drawn once the pool is in, so nobody shifts when it lands. */
+    var skyReady by remember { mutableStateOf(false) }
     val composeRequest by WatchComposeRequest.pending.collectAsStateWithLifecycle()
     LaunchedEffect(composeRequest) {
         val (person, line) = composeRequest ?: return@LaunchedEffect
@@ -115,91 +139,81 @@ internal fun WatchTabBody(
     val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         scenarios = store.load(language)
-        // Own people only. A stranger met in Find people has `remoteId` set
-        // and lives in that sheet's "People you've met".
-        people = CounterpartStore.shared(context).load().filter { it.remoteId == null }
+        people = CounterpartStore.shared(context).load()
+        talksByPerson = com.roro.futurevoice.data.SessionStore.shared(context).load(language)
+            .mapNotNull { it.counterpartId }.groupingBy { it }.eachCount()
+    }
+    // The map is shown once the pool is IN (or truly failed).
+    LaunchedEffect(language) {
+        val rows = com.roro.futurevoice.capture.flags.WatchCaptureFlags.samplePool
+            ?: runCatching {
+                com.roro.futurevoice.net.PublicPersonaClient(com.roro.futurevoice.data.AuthRepository())
+                    .fetchPool(language)
+            }.getOrNull()
+        if (rows != null) {
+            poolRows = rows
+            val ownStore = CounterpartStore.shared(context)
+            if (syncOwnVoices(ownStore, rows)) people = ownStore.load()
+        }
+        skyReady = true
+    }
+    LaunchedEffect(Unit) {
+        // A pool that never answers must not leave the tab blank.
+        kotlinx.coroutines.delay(2500)
+        skyReady = true
     }
     val live = scenarios
         .filter { it.archivedAt == null && it.isMeeting != true && it.isTopic != true }
         .sortedByDescending { it.lastUsedAt ?: it.createdAt }
 
-    Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
-        // MARK: People — making a person is pinned to the LEFT, outside the
-        // scroller: as the last bubble it slid off the row the moment the
-        // learner had a few people.
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            WatchSectionHeader(stringResource(R.string.people))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
-                PersonRowBubble(name = stringResource(R.string.create), person = null,
-                    onClick = { managingPeople = true })
-                // Runs past the page's 20 dp gutter to the right edge, the
-                // gutter moved inside as content padding: inside the gutter
-                // the row was cut off short of the edge (as Review's was).
-                LazyRow(
-                    modifier = Modifier.layout { measurable, constraints ->
-                        val extra = 20.dp.roundToPx()
-                        val p = measurable.measure(constraints.copy(
-                            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra
-                            else constraints.maxWidth))
-                        layout(if (constraints.hasBoundedWidth) constraints.maxWidth else p.width, p.height) {
-                            p.place(0, 0)
-                        }
-                    },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(people, key = { it.id }) { person ->
-                        PersonRowBubble(name = person.name, person = person, onClick = {
-                            withPerson = person; composing = ComposerMode.CUSTOM
-                        })
-                    }
-                }
-            }
-        }
+    val metLabel = stringResource(R.string.met_on_nawana)
+    val nodes = remember(people, poolRows, scenarios, talksByPerson) {
+        skyNodes(people, poolRows, scenarios, talksByPerson, metLabel)
+    }
 
-        // MARK: New situation — two doors, side by side, as equals.
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            WatchSectionHeader(stringResource(R.string.new_situation))
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DoorButton(
-                    title = stringResource(R.string.your_own_situation),
-                    subtitle = stringResource(R.string.one_line_plus_your_material),
-                    icon = Icons.Filled.EditNote, prominent = true,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) { withPerson = null; composing = ComposerMode.CUSTOM }
-                DoorButton(
-                    title = stringResource(R.string.common_situations),
-                    subtitle = stringResource(R.string.pick_from_categories),
-                    icon = Icons.Filled.GridView, prominent = false,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) { withPerson = null; composing = ComposerMode.BROWSE }
-            }
+    Box(Modifier.fillMaxSize()) {
+        val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        // Level with the floating tab bar's top, plus iOS's 16 pt.
+        val floatBottom = navBottom + 76.dp + 16.dp
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (skyReady) 1f else 0f }) {
+            PeopleSkyMap(
+                nodes = nodes,
+                meName = meName,
+                lens = lens,
+                onTap = { n ->
+                    // A tap is for who they are: their card.
+                    val row = n.person.remoteId?.let { rid -> poolRows.firstOrNull { it.id == rid } }
+                    onOpenPerson(people.firstOrNull { it.id == n.person.id } ?: n.person, row)
+                },
+                onTapMe = onOpenProfile,
+                backToMeBottom = floatBottom,
+            )
         }
-
-        if (live.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                WatchSectionHeader(stringResource(R.string.your_scenarios))
-                live.chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        pair.forEach { sc ->
-                            WatchScenarioCard(sc,
-                                Modifier.weight(1f).fillMaxHeight(),
-                                person = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id } },
-                                // A saved card opens the composer in EDIT mode
-                                // (iOS `ComposerConfig(editing:)`): review or
-                                // tweak it, delete it, or Watch a fresh take.
-                                onClick = { editingScenario = sc })
-                        }
-                        if (pair.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
+        // Writing your own situation is its own button, not a tap on "me":
+        // tapping a person opens that person, so tapping me opens me.
+        com.roro.futurevoice.ui.brand.IosGlassButton(
+            onClick = { withPerson = null; situationPrefill = ""; composing = ComposerMode.CUSTOM },
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = floatBottom).height(50.dp),
+        ) {
+            Icon(Icons.Filled.EditNote, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.new_situation), style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
         }
     }
 
-    if (managingPeople) {
-        PeopleSheet(onDismiss = { managingPeople = false })
+    if (showingSaved) {
+        SavedScenariosSheet(
+            scenarios = live,
+            people = people,
+            onDismiss = { WatchSky.showingSaved.value = false },
+            // Two sheets can't be up at once: the list goes first.
+            onOpen = { sc ->
+                WatchSky.showingSaved.value = false
+                scope.launch { kotlinx.coroutines.delay(450); editingScenario = sc }
+            },
+        )
     }
 
     composing?.let { mode ->
@@ -236,85 +250,174 @@ internal fun WatchTabBody(
     }
 }
 
-/** Big and QUIET: it names the group without competing with its cards. */
-@Composable
-private fun WatchSectionHeader(title: String) {
-    Text(title, style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
 /**
- * One way in. TOP-aligned: the two doors can be different heights (one
- * subtitle wraps), and centring floated one icon down while its neighbour's
- * sat at the top.
+ * The Watch header (iOS `WatchTab` toolbar): the lens — an occasional choice,
+ * so a menu rather than a row the map gives up space to, its icon filled
+ * while the map is narrowed — the saved situations, and the ONE people page.
+ * iOS groups the three in one glass capsule.
  */
 @Composable
-private fun DoorButton(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    prominent: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier.heightIn(min = 72.dp)
-            .clip(ContinuousShape(18.dp))
-            .background(if (prominent) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-            else AppSurfaces.card)
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(icon, contentDescription = null,
-            tint = if (prominent) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun WatchHeaderActions(onOpenPeople: () -> Unit) {
+    val lens by WatchSky.lens.collectAsStateWithLifecycle()
+    var menu by remember { mutableStateOf(false) }
+    val accent = MaterialTheme.colorScheme.primary
+    val lensLabel = with(PeopleSky) { lens.title() }
+    val options = PeopleSky.Lens.entries.map { it to with(PeopleSky) { it.title() } }
+    Box(Modifier.padding(end = 12.dp)) {
+        GlassCapsule {
+            Box {
+                androidx.compose.material3.IconButton(onClick = { menu = true },
+                    modifier = Modifier.size(40.dp).semantics { contentDescription = lensLabel }) {
+                    // line.3.horizontal.decrease.circle(.fill)
+                    val narrowed = lens != PeopleSky.Lens.ALL
+                    Box(Modifier.size(22.dp).clip(CircleShape)
+                        .then(if (narrowed) Modifier.background(accent)
+                            else Modifier.border(1.5.dp, accent, CircleShape)),
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null,
+                            tint = if (narrowed) Color.White else accent, modifier = Modifier.size(14.dp))
+                    }
+                }
+                com.roro.futurevoice.ui.brand.IosPickerMenu(
+                    expanded = menu, onDismissRequest = { menu = false },
+                    options = options, selected = lens,
+                    onPick = { WatchSky.lens.value = it })
+            }
+            androidx.compose.material3.IconButton(onClick = { WatchSky.showingSaved.value = true },
+                modifier = Modifier.size(40.dp)) {
+                // Every situation made before the map still has a home.
+                Icon(Icons.Outlined.Layers, contentDescription = stringResource(R.string.your_scenarios),
+                    tint = accent, modifier = Modifier.size(22.dp))
+            }
+            androidx.compose.material3.IconButton(onClick = onOpenPeople, modifier = Modifier.size(40.dp)) {
+                // iOS draws `person.2` as an OUTLINE here.
+                Icon(Icons.Outlined.People, contentDescription = stringResource(R.string.people),
+                    tint = accent, modifier = Modifier.size(24.dp))
+            }
         }
     }
 }
 
 /**
- * One face in the stories row — the person's photo, or their initials. The
- * ACTION bubble (`person == null`) is a dashed outline instead: an empty
- * slot asking to be filled, not a person.
+ * Everyone on the map (iOS `skyNodes`): every person on file, then the pool's
+ * strangers not met yet. Seats are dealt in this order, so it must not follow
+ * the store's — saving a person reorders it, and the whole map would
+ * reshuffle under the learner's finger.
  */
+private fun skyNodes(
+    people: List<Counterpart>,
+    pool: List<com.roro.futurevoice.net.PublicPersonaClient.PublicPersona>,
+    scenarios: List<Scenario>,
+    talks: Map<String, Int>,
+    metLabel: String,
+): List<PeopleSky.Node> {
+    val practiced = talks.toMutableMap()
+    val kept = mutableSetOf<String>()
+    for (s in scenarios) {
+        val id = s.counterpartId ?: continue
+        practiced[id] = (practiced[id] ?: 0) + 1
+        val meeting = s.isMeeting == true || s.category == "Meeting"
+        if (!meeting && s.isTopic != true) kept += id
+    }
+    val jobs = pool.associate { it.id to it.occupation }
+    val nodes = people.map { c ->
+        val job = c.remoteId?.let { jobs[it] }
+        PeopleSky.Node(
+            id = c.id, name = c.name, person = c, pooled = false,
+            ring = PeopleSky.ring(c), isMine = c.remoteId == null,
+            practiced = practiced[c.id] ?: 0, hasKept = c.id in kept,
+            symbol = PeopleSky.symbol(c, job), eyebrow = PeopleSky.eyebrow(c, job),
+        )
+    }.toMutableList()
+    val metRemote = people.mapNotNull { it.remoteId }.toSet()
+    for (row in pool) {
+        if (row.id in metRemote) continue
+        val c = row.asCounterpart(metLabel)
+        nodes += PeopleSky.Node(
+            id = c.id, name = c.name, person = c, pooled = true, ring = 2,
+            isMine = false, practiced = 0, hasKept = false,
+            symbol = PeopleSky.symbol(c, row.occupation), eyebrow = PeopleSky.eyebrow(c, row.occupation),
+        )
+    }
+    return nodes.sortedBy { it.id }
+}
+
+/**
+ * Every situation made before the map (iOS `savedScenariosPage`): category
+ * tabs on top — only the categories the saved situations carry, most used
+ * first — and the cards below.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun PersonRowBubble(name: String, person: Counterpart?, onClick: () -> Unit) {
-    Column(
-        Modifier.width(72.dp).clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (person == null) {
-            val outline = MaterialTheme.colorScheme.outline
-            Box(
-                Modifier.size(64.dp).drawBehind {
-                    drawCircle(
-                        color = outline,
-                        radius = size.minDimension / 2f - 1.dp.toPx(),
-                        style = Stroke(width = 1.5.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()))),
-                    )
-                },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            PersonBubble(person.name, person.id, size = 64.dp)
+private fun SavedScenariosSheet(
+    scenarios: List<Scenario>,
+    people: List<Counterpart>,
+    onDismiss: () -> Unit,
+    onOpen: (Scenario) -> Unit,
+) {
+    var category by remember { mutableStateOf<String?>(null) }
+    val categories = remember(scenarios) {
+        val count = mutableMapOf<String, Int>()
+        val icon = mutableMapOf<String, String?>()
+        for (s in scenarios) {
+            val c = s.category?.trim()?.takeIf { it.isNotEmpty() } ?: continue
+            count[c] = (count[c] ?: 0) + 1
+            if (icon[c] == null) icon[c] = s.categoryIcon
         }
-        Text(name, style = MaterialTheme.typography.labelMedium,
-            color = if (person == null) MaterialTheme.colorScheme.onSurfaceVariant
-            else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        count.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .map { it.key to icon[it.key] }
+    }
+    val shown = category?.let { c -> scenarios.filter { it.category == c } } ?: scenarios
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = null,
+        containerColor = AppSurfaces.ground,
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            SheetHeader(
+                title = stringResource(R.string.your_scenarios),
+                leading = {
+                    com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.done),
+                        onClick = onDismiss)
+                },
+                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp),
+            )
+            if (categories.size > 1) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SoftChip(stringResource(R.string.all), selected = category == null) { category = null }
+                    categories.forEach { (name, icon) ->
+                        SoftChip(categoryTitle(name), icon = icon, selected = category == name) { category = name }
+                    }
+                }
+            }
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                shown.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        pair.forEach { sc ->
+                            WatchScenarioCard(sc,
+                                Modifier.weight(1f).fillMaxHeight(),
+                                person = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id } },
+                                // Settings sheet first, not straight to
+                                // generation: check, tweak or delete, then
+                                // Watch a fresh take from there.
+                                onClick = { onOpen(sc) })
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                Spacer(Modifier.height(24.dp).windowInsetsPadding(WindowInsets.navigationBars))
+            }
+        }
     }
 }
 

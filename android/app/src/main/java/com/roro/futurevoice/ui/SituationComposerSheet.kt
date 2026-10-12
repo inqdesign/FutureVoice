@@ -31,6 +31,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,7 +145,13 @@ enum class ComposerHost { TALK, WATCH }
 enum class ComposerMode { BROWSE, CUSTOM }
 
 /** One step of the composer's drill-down. */
-private data class Crumb(val label: String, val icon: String?)
+private data class Crumb(
+    val label: String,
+    val icon: String?,
+    /** The sentence this step writes into the box (iOS `Crumb.scenario`) —
+     *  empty for a category, a chip's blurb for a narrowing pick. */
+    val scenario: String = "",
+)
 
 /** Category + 2 narrowing picks. Past this the scenario is specific enough. */
 private const val MAX_DEPTH = 3
@@ -218,6 +229,10 @@ internal fun ScenarioComposer(
      *  actually built with them. */
     var personIdeas by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
     var boxFocused by remember { mutableStateOf(false) }
+    /** The box's text is the learner's own (iOS `customMode`): typed, or a
+     *  reel line picked. The chips above the box give way to one mark. */
+    var customMode by remember { mutableStateOf(false) }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     LaunchedEffect(Unit) {
         // Editing: the person the saved scenario was built with. A legacy
@@ -391,6 +406,20 @@ internal fun ScenarioComposer(
             if (path.map { it.label } == labels) options = result
         }.onFailure { optionsError = context.getString(R.string.composer_ideaserr) }
         loadingOptions = false
+    }
+
+    // MARK: The box's category chips (iOS 7dbd60b4) — the same chain the
+    // browse door walks, one row above the box.
+    /** Move to a new path: the deepest step's sentence goes into the box,
+     *  then that level's options load (iOS `navigate(to:)`). */
+    fun navigate(newPath: List<Crumb>) {
+        path = newPath
+        customMode = false   // browsing chips, not free-typing
+        newPath.lastOrNull()?.scenario?.takeIf { it.isNotEmpty() }?.let {
+            draft = it          // this write isn't the learner typing
+            focusManager.clearFocus()
+        }
+        scope.launch { refreshOptions() }
     }
 
     fun commit() {
@@ -591,9 +620,75 @@ internal fun ScenarioComposer(
                     // Examples roll through the empty middle — the answer to
                     // "what do I even put here". They go the moment there IS
                     // something to write.
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        if (draft.isBlank() && !boxFocused && reelLines.isNotEmpty()) {
-                            SituationReel(reelLines, onPick = { draft = it })
+                    Box(Modifier.weight(1f).fillMaxWidth()
+                        // The empty middle closes the keyboard when tapped.
+                        .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null) { focusManager.clearFocus() },
+                        contentAlignment = Alignment.Center) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = draft.isBlank() && !boxFocused && reelLines.isNotEmpty() && path.isEmpty(),
+                            enter = androidx.compose.animation.fadeIn(tween(250)),
+                            exit = androidx.compose.animation.fadeOut(tween(250)),
+                        ) {
+                            SituationReel(reelLines, onPick = { draft = it; customMode = true })
+                        }
+                    }
+                    // The common situations, as chips right above the box: a
+                    // tap goes one step deeper in the same row (Cafe →
+                    // Ordering → …), and the last step writes its sentence
+                    // into the box, where it can still be changed. Once the
+                    // learner types, the row gives way to one mark saying
+                    // this one is theirs.
+                    androidx.compose.animation.Crossfade(
+                        targetState = customMode && draft.isNotBlank(),
+                        animationSpec = tween(250),
+                        modifier = Modifier.padding(bottom = 10.dp),
+                        label = "chips",
+                    ) { custom ->
+                        if (custom) {
+                            Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Filled.EditNote, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp))
+                                Text(stringResource(R.string.composer_customsituation),
+                                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (path.isEmpty()) {
+                                    PathIdeasContent.categories.forEach { c ->
+                                        SoftChip(categoryTitle(c.title), icon = c.icon) {
+                                            navigate(listOf(Crumb(c.title, c.icon)))
+                                        }
+                                    }
+                                } else {
+                                    SoftChip(categoryTitle(path.last().label), back = true, selected = true) {
+                                        val back = path.dropLast(1)
+                                        if (back.isEmpty()) { path = emptyList(); options = emptyList() }
+                                        else navigate(back)
+                                    }
+                                    if (loadingOptions) {
+                                        CircularProgressIndicator(Modifier.padding(horizontal = 8.dp).size(16.dp),
+                                            strokeWidth = 2.dp)
+                                    } else if (path.size < MAX_DEPTH) {
+                                        options.forEach { o ->
+                                            SoftChip(o.title) {
+                                                summary = o.title   // the chip's short label is the tidy card title
+                                                navigate(path + Crumb(o.title, null, o.blurb.ifBlank { o.title }))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     Column(
@@ -620,7 +715,17 @@ internal fun ScenarioComposer(
                         }
                         SpeakOrTypeField(
                             text = draft,
-                            onText = { draft = it },
+                            onText = {
+                                draft = it
+                                // A keystroke makes it the learner's own
+                                // situation: the chips give way to a "Custom
+                                // situation" mark, and a chip's category is
+                                // dropped — the CTA files what was actually
+                                // written. Emptied, the chips come back.
+                                customMode = it.isNotBlank()
+                                if (path.isNotEmpty()) { path = emptyList(); options = emptyList() }
+                                summary = ""
+                            },
                             usedVoice = usedVoice,
                             onUsedVoice = { usedVoice = it },
                             placeholder = stringResource(R.string.what_situation_should_we_build_the_more_detail_the_better),
@@ -1179,6 +1284,59 @@ private fun PartnerAvatar(p: Counterpart?) {
             PersonBubble(p.name, p.id, size = 40.dp)
         }
     }
+}
+
+/**
+ * A quiet chip (iOS `SoftChipStyle`): the page's card colour and plain text,
+ * so a row of choices reads as an offer, not as something that must be
+ * picked. Only [selected] (where you are — a breadcrumb, the chosen tab)
+ * wears the accent.
+ */
+@Composable
+internal fun SoftChip(
+    label: String,
+    icon: String? = null,
+    selected: Boolean = false,
+    /** A back chip: a chevron where the icon goes. */
+    back: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val ink = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    Row(
+        Modifier.graphicsLayer { alpha = if (pressed) 0.6f else 1f }
+            .clip(CircleShape)
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else AppSurfaces.card)
+            .clickable(interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (back) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = ink,
+                modifier = Modifier.size(18.dp))
+        } else if (icon != null) {
+            Icon(Symbols.icon(icon), contentDescription = null, tint = ink, modifier = Modifier.size(17.dp))
+        }
+        Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
+            fontWeight = FontWeight.Medium, color = ink, maxLines = 1)
+    }
+}
+
+/** A preset category's name in the app language (iOS `explain(c.title)`);
+ *  any other category — the learner's, the model's — as written. */
+@Composable
+internal fun categoryTitle(title: String): String = when (title) {
+    "Cafe" -> stringResource(R.string.cafe)
+    "Travel" -> stringResource(R.string.travel_22fb76)
+    "Work" -> stringResource(R.string.work)
+    "Health" -> stringResource(R.string.health)
+    "Shopping" -> stringResource(R.string.shopping)
+    "Social" -> stringResource(R.string.social)
+    "School" -> stringResource(R.string.school)
+    "Phone" -> stringResource(R.string.phone)
+    else -> title
 }
 
 @Composable

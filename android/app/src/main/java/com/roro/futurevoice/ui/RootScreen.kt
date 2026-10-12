@@ -416,6 +416,10 @@ fun RootScreen() {
     }
     var editProfile by remember { mutableStateOf(false) }
     var editProfileStep by remember { mutableStateOf(0) }
+    /** Someone tapped on the Watch map, and their pool row if they came from it. */
+    var watchPerson by remember {
+        mutableStateOf<Pair<com.roro.futurevoice.data.Counterpart, com.roro.futurevoice.net.PublicPersonaClient.PublicPersona?>?>(null)
+    }
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
@@ -845,6 +849,7 @@ fun RootScreen() {
         studyDeckKind?.let { add(RootRoute.StudyDeck(it)) }
         personDetailId?.let { add(RootRoute.Person(it)) }
         if (showPeople) add(RootRoute.People)
+        watchPerson?.let { add(RootRoute.WatchPerson(it.first.id)) }
         finishedBooks?.let { add(RootRoute.Finished(it)) }
         // Settings is a SHEET over the tabs (iOS `.sheet` from the Talk
         // header), and what it pushes lives inside it — see [meSheetStack].
@@ -876,6 +881,7 @@ fun RootScreen() {
                 RootRoute.Activity -> showActivity = false
                 RootRoute.Effort -> showEffort = false
                 is RootRoute.Person -> personDetailId = null
+                is RootRoute.WatchPerson -> watchPerson = null
                 is RootRoute.Finished -> finishedBooks = null
                 RootRoute.CreditGuide -> showCreditGuide = false
                 RootRoute.PlanPage -> showPlanPage = false
@@ -1124,6 +1130,58 @@ fun RootScreen() {
             },
         )
 
+        // A person on the Watch map: their card, as iOS's Watch tab presents
+        // `FindPersonCard` — your own people and strangers alike.
+        is RootRoute.WatchPerson -> {
+            val held = watchPerson
+            if (held != null) {
+                val (c, row) = held
+                val persona = row ?: if (c.remoteId != null) c.asPublicPersona(state.targetLanguage)
+                    else c.asPublicPersona(state.targetLanguage).copy(owner_user_id = null,
+                        kind = c.personaKind ?: "character")
+                var bookmarks by remember { mutableStateOf(bookmarkedIds(context)) }
+                FindPersonCard(
+                    person = persona,
+                    language = state.targetLanguage,
+                    seated = false,
+                    bookmarked = bookmarks.contains(persona.id),
+                    onToggleBookmark = { bookmarks = toggleBookmark(context, persona.id) },
+                    onTalk = { p, meet ->
+                        val own = c.takeIf { it.remoteId == null }
+                        callCast = if (own != null) com.roro.futurevoice.talk.ConversationEngine.Cast.of(own)
+                        else com.roro.futurevoice.talk.ConversationEngine.Cast(
+                            name = p.display_name, intro = p.intro, location = p.location,
+                            occupation = p.occupation, interests = p.interests,
+                            conversationStyle = p.conversation_style,
+                            commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
+                        callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
+                        callCounterpartId = p.id
+                        gate {
+                            meet()
+                            callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                            watchPerson = null; inCall = true
+                        }
+                    },
+                    onWatch = { meet -> gateScene {
+                        val person = meet()
+                        gateScope.launch {
+                            com.roro.futurevoice.data.CounterpartStore.shared(context).save(person)
+                            val sc = meetingScenario(context, person, state.targetLanguage)
+                            watchPerson = null; watchReplay = false; watchScenarioId = sc.id
+                        }
+                    } },
+                    onPersonSaved = { com.roro.futurevoice.data.StoreEvents.bump() },
+                    onBack = { watchPerson = null },
+                    // "Make a situation" is the WRITING door, with them.
+                    onCompose = { person ->
+                        watchPerson = null
+                        WatchComposeRequest.pending.value = person to ""
+                    },
+                    showsBookmark = c.remoteId != null,
+                )
+            }
+        }
+
         RootRoute.People -> FindPeopleScreen(
             language = state.targetLanguage,
             persona = state.persona,
@@ -1320,6 +1378,8 @@ fun RootScreen() {
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
+            onOpenProfile = { editProfileStep = 0; editProfile = true },
+            onOpenWatchPerson = { c, row -> watchPerson = c to row },
             onOpenFinished = { finishedBooks = it },
             onOpenActivity = { showActivity = true },
             onOpenEffort = { showEffort = true },
@@ -1492,6 +1552,10 @@ internal fun HomeScreen(
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
+    /** The learner in the middle of the Watch map — their profile. */
+    onOpenProfile: () -> Unit = {},
+    /** Someone on the Watch map — their card (iOS `FindPersonCard` sheet). */
+    onOpenWatchPerson: (com.roro.futurevoice.data.Counterpart, com.roro.futurevoice.net.PublicPersonaClient.PublicPersona?) -> Unit = { _, _ -> },
     /** Practice's header seal → the finished-books page, with the books it counted. */
     onOpenFinished: (List<FinishedBook>) -> Unit = {},
     onOpenActivity: () -> Unit = {},
@@ -1687,14 +1751,7 @@ internal fun HomeScreen(
                         // icon and a capsule for icon + count.
                         // The people page opens from the WATCH header, as on iOS.
                         if (tab == HomeTab.WATCH) {
-                            com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onOpenPeople,
-                                circle = true, modifier = Modifier.padding(end = 12.dp)) {
-                                // iOS draws `person.2` as an OUTLINE here.
-                                Icon(Icons.Outlined.People,
-                                    contentDescription = stringResource(R.string.people),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp))
-                            }
+                            WatchHeaderActions(onOpenPeople = onOpenPeople)
                         }
                         // The week's things — put off, the week, the tests — as
                         // icons with a dot (iOS `weekToolbar`, 2026-10-03). The
@@ -1732,12 +1789,17 @@ internal fun HomeScreen(
             // Review and Progress are chip-tab PAGERS: each page scrolls
             // itself under a pinned chip bar (iOS), so the tab itself doesn't.
             val paged = t == HomeTab.PRACTICE || t == HomeTab.PROGRESS
+            // Watch is the people map: the whole screen is its canvas, under
+            // the header and the floating bar alike (iOS ignores both safe
+            // areas there), and it pans itself.
+            val canvas = t == HomeTab.WATCH
             Column(
-                Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
+                Modifier.then(if (canvas) Modifier else Modifier.padding(top = padding.calculateTopPadding()))
+                    .fillMaxSize()
                     // A hidden tab stays composed but is neither measured nor
                     // placed: nothing drawn, no touches.
                     .then(if (t == tab) Modifier else Modifier.layout { _, _ -> layout(0, 0) {} })
-                    .then(if (paged) Modifier
+                    .then(if (paged || canvas) Modifier
                         else Modifier.verticalScroll(pageScroll).padding(horizontal = 20.dp)),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
@@ -1799,6 +1861,9 @@ internal fun HomeScreen(
                         language = state.targetLanguage,
                         enabled = state.voiceId != null,
                         onWatch = onWatch,
+                        meName = state.persona?.displayName.orEmpty(),
+                        onOpenProfile = onOpenProfile,
+                        onOpenPerson = onOpenWatchPerson,
                     )
 
                     HomeTab.PRACTICE -> PracticeBody(
@@ -1837,7 +1902,7 @@ internal fun HomeScreen(
                     )
                 }
                 // Room to scroll the last item up past the floating bar.
-                if (!paged) Spacer(Modifier.height(IosTabBarClearance)
+                if (!paged && !canvas) Spacer(Modifier.height(IosTabBarClearance)
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars))
             }
 
@@ -2674,6 +2739,7 @@ internal sealed interface RootRoute {
     data class StudyDeck(val kind: StudyScheduleStore.Kind) : RootRoute { override val key = "studyDeck:$kind" }
     data class Person(val id: String) : RootRoute { override val key = "person:$id" }
     data object People : RootRoute { override val key = "people" }
+    data class WatchPerson(val id: String) : RootRoute { override val key = "watchPerson:$id" }
     data class Finished(val books: List<FinishedBook>) : RootRoute { override val key = "finished" }
     data object CreditGuide : RootRoute { override val key = "creditGuide" }
     data object PlanPage : RootRoute { override val key = "planPage" }

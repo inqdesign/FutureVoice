@@ -257,6 +257,7 @@
     <string name="busy_today">"Busy today?"</string>
     <string name="buy_lld_minutes">"Buy %d minutes"</string>
     <string name="by_level">"By level"</string>
+    <string name="cafe">"Cafe"</string>
     <string name="calendar_and_routine">"Calendar and routine"</string>
     <string name="call">"Call"</string>
     <string name="call_me_every_day">"Call me every day"</string>
@@ -345,6 +346,7 @@
     <string name="comfortable_lld_lld">"Comfortable: %1$d–%2$d"</string>
     <string name="common_situations">"Common situations"</string>
     <string name="comparing">"Comparing…"</string>
+    <string name="composer_customsituation">"Custom situation"</string>
     <string name="congratulations">"Congratulations!"</string>
     <string name="connecting">"Connecting…"</string>
     <string name="consent">"Consent"</string>
@@ -761,6 +763,7 @@
     <string name="have_a_conversation_or_watch_a_scene_then_come_back_to_shado_9066e7">"Have a conversation or watch a scene, then come back to shadow any line your fluent self said."</string>
     <string name="have_an_invite_code">"Have an invite code?"</string>
     <string name="headline">"Headline"</string>
+    <string name="health">"Health"</string>
     <string name="hear_it">"Hear it"</string>
     <string name="hear_it_again">"Hear it again"</string>
     <string name="hear_it_in_the_app_write_it_here">"Hear it in the app, write it here"</string>
@@ -1479,6 +1482,7 @@
     <string name="people_you_ve_met">"People you've met"</string>
     <string name="people_your_own_cast">"People: your own cast"</string>
     <string name="person">"Person"</string>
+    <string name="phone">"Phone"</string>
     <string name="phone_mic">"Phone mic"</string>
     <string name="photo">"Photo"</string>
     <string name="photo_library">"Photo library"</string>
@@ -1799,6 +1803,7 @@
     <string name="scenes_refill_on">"Scenes refill on %s."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
     <string name="scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2">"Scenes you've already watched replay free forever and never use a new one."</string>
+    <string name="school">"School"</string>
     <!-- "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" -->
     <string name="school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65">"School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?"</string>
     <string name="science">"science"</string>
@@ -1871,6 +1876,7 @@
     <string name="share_card">"Share card"</string>
     <string name="share_invite">"Share invite"</string>
     <string name="shared_context_memories_inside_jokes">"Shared context, memories, inside jokes"</string>
+    <string name="shopping">"Shopping"</string>
     <string name="show_again_in_3_days">"Show again in 3 days"</string>
     <string name="show_again_tomorrow">"Show again tomorrow"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"Show each guide again when I open its tab"</string>
@@ -1904,6 +1910,7 @@
     <string name="slower">"Slower"</string>
     <string name="small">"Small"</string>
     <string name="so_much_you_want_to_say_all_of_it_still_in_your_head">"So much you want to say,\nall of it still in your head."</string>
+    <string name="social">"Social"</string>
     <!-- "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." -->
     <string name="some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca">"Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works."</string>
     <string name="some_words_are_traps_you_don_t_have_to_use_them_all">"Some words are traps — you don't have to use them all."</string>
@@ -2424,6 +2431,11 @@
     <string name="watch_scenes">"Watch scenes"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours."</string>
+    <string name="watch_sky_backtome">"Back to me"</string>
+    <string name="watch_sky_lens_known">"People I know"</string>
+    <string name="watch_sky_lens_mine">"My people"</string>
+    <string name="watch_sky_ring_close">"Close to me"</string>
+    <string name="watch_sky_ring_known">"People around me"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"Watch the scene and notice the moves you'd never have thought of."</string>
     <string name="watch_the_scene_first">"Watch the scene first."</string>
@@ -2598,6 +2610,7 @@
     <string name="words_you_use_by_level">"Words you use, by level"</string>
     <string name="words_you_used_first">"Words you used first"</string>
     <string name="words_you_ve_used_out_loud_or_marked_as_known">"Words you've used out loud or marked as known."</string>
+    <string name="work">"Work"</string>
     <string name="work_meetings">"Work meetings"</string>
     <string name="workbook">"Workbook"</string>
     <string name="workbook_answers">"Answers"</string>

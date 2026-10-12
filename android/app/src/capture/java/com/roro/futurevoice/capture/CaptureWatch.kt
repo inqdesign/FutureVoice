@@ -144,6 +144,8 @@ object CaptureWatch {
         "watchtab" to { c ->
             CaptureTalk.TabShot(c, com.roro.futurevoice.ui.HomeTab.WATCH) {
                 CaptureSeed.seedScenarios(c)
+                // The map's outer ring: the sample stranger pool, offline.
+                WatchCaptureFlags.samplePool = CaptureSeed.samplePublicPersonas
             }
         },
         // The mirrored Find-people intro, seen before anything is published:
