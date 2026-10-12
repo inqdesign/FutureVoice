@@ -342,8 +342,14 @@ struct WatchTab: View {
                         // The people are buttons and win their own taps; this
                         // only hears the map between them.
                         .onTapGesture {
-                            guard PeopleSky.dockEnabled, creating else { return }
-                            if let p = dockPerson { leaveBoxForCard(p) } else { creating = false }
+                            guard PeopleSky.dockEnabled else { return }
+                            if creating {
+                                if let p = dockPerson { leaveBoxForCard(p) } else { creating = false }
+                            } else if skyCard != nil {
+                                // The card is a step on top of the map: a tap on
+                                // the map puts it away.
+                                skyCard = nil
+                            }
                         }
                         // The map fades into the page at the bottom instead of
                         // being cut off where the box and the tab bar sit.
@@ -1305,6 +1311,10 @@ struct SkyPersonCard: View {
     let onWatch: () -> Void
     let onTalk: () -> Void
 
+    /// How far the card is being pulled down; past `dismissPull` it goes.
+    @State private var pull: CGFloat = 0
+    private let dismissPull: CGFloat = 90
+
     @State private var expanded: Bool = {
         #if DEBUG
         UserDefaults.standard.bool(forKey: "skyCardOpen")
@@ -1330,6 +1340,12 @@ struct SkyPersonCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // A sheet's grabber: it says the card can be pulled away.
+            Capsule()
+                .fill(Color(.tertiaryLabel))
+                .frame(width: 36, height: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.top, -6)
             HStack(alignment: .center, spacing: 12) {
                 PersonBubble(name: person.name, photoId: person.id, size: 44)
                 VStack(alignment: .leading, spacing: 1) {
@@ -1378,9 +1394,23 @@ struct SkyPersonCard: View {
             .font(.body.weight(.semibold))
             .controlSize(.large)
         }
-        .padding(16)
-        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 18, y: 6)
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 24, y: 2)
+        .offset(y: pull)
+        .gesture(
+            DragGesture(minimumDistance: 8)
+                .onChanged { v in pull = max(0, v.translation.height) }
+                .onEnded { v in
+                    if v.translation.height > dismissPull || v.predictedEndTranslation.height > dismissPull * 2 {
+                        onClose()
+                    } else {
+                        withAnimation(.smooth(duration: 0.25)) { pull = 0 }
+                    }
+                }
+        )
         .animation(.smooth(duration: 0.3), value: expanded)
     }
 
