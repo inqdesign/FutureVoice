@@ -354,6 +354,10 @@ struct WatchTab: View {
             .scrollDisabled(true)
         }
         .ignoresSafeArea(.container, edges: [.top, .bottom])
+        // The keyboard rising for the box must not shrink the map: a shorter
+        // map re-centres, someone else lands in the middle and speaks, and
+        // it reads as them being picked.
+        .ignoresSafeArea(.keyboard)
             .overlay(alignment: .bottom) {
                 if PeopleSky.dockEnabled && creating {
                     // The "Your situation" box itself — chips, attach, the
