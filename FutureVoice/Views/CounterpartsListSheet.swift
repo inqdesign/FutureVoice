@@ -17,6 +17,7 @@ struct CounterpartFormView: View {
     @State private var pendingPhoto: UIImage?
     @State private var removePhoto = false
     @State private var refreshingFacts = false
+    @State private var writingGreeting = false
     @State private var refreshError: String?
 
     init(initial: Counterpart?, photo: UIImage? = nil) {
@@ -145,6 +146,36 @@ struct CounterpartFormView: View {
                          : explain("Calls and scenes speak this way."))
                 }
 
+                Section {
+                    TextField("What they say when you meet them", text: Binding(
+                        get: { draft.greeting(in: appState.targetLanguage) },
+                        set: { draft.setGreeting($0, in: appState.targetLanguage) }),
+                              axis: .vertical)
+                        .lineLimit(1...3)
+                    Button {
+                        writingGreeting = true
+                        Task {
+                            if let line = try? await GreetingEngine.write(
+                                for: draft, persona: appState.persona,
+                                targetLanguage: appState.targetLanguage) {
+                                draft.setGreeting(line, in: appState.targetLanguage)
+                            }
+                            writingGreeting = false
+                        }
+                    } label: {
+                        if writingGreeting {
+                            HStack(spacing: 8) { ProgressView(); Text("Writing…") }
+                        } else {
+                            Label("Write one for me", systemImage: "sparkles")
+                        }
+                    }
+                    .disabled(writingGreeting || !draft.isMinimallyComplete)
+                } header: {
+                    Text("Greeting")
+                } footer: {
+                    Text("Shown over their face on the Watch map. Left empty, one is written for you.")
+                }
+
                 Section("Voice") {
                     NavigationLink {
                         VoicePresetPickerView(selection: $draft.voicePresetId)
@@ -176,6 +207,10 @@ struct CounterpartFormView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         appState.saveCounterpart(draft)
+                        if draft.greeting(in: appState.targetLanguage).isEmpty {
+                            let id = draft.id, state = appState
+                            Task { await GreetingEngine.ensure(for: id, appState: state) }
+                        }
                         if let pendingPhoto {
                             CounterpartPhotoStore.shared.save(pendingPhoto, for: draft.id)
                         } else if removePhoto {

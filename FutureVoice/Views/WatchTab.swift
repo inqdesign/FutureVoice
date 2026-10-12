@@ -64,7 +64,6 @@ struct WatchTab: View {
     @State private var dockPerson: Counterpart?
     @State private var dockBubble: String?
     @State private var dockFill = ""
-    @State private var dockIdeaTurn: [UUID: Int] = [:]
     /// "New situation" was tapped: the tab bar steps aside for the box, the
     /// header gets Cancel, the map stays.
     /// Lives outside the view: hiding the tab bar rebuilds this tab's view,
@@ -82,8 +81,8 @@ struct WatchTab: View {
     /// "in the middle", so their bubbles stay down until it lands.
     @State private var panningUntil: Date = .distantPast
     @State private var bubbleTask: Task<Void, Never>?
-    /// Ideas for strangers, this visit only (people on file keep theirs).
-    @State private var strangerIdeas: [UUID: [SuggestedTopic]] = [:]
+    /// Greetings written this visit for strangers (people on file keep theirs).
+    @State private var strangerGreetings: [UUID: String] = [:]
     /// The map is drawn once the pool is in, so nobody shifts when it lands.
     @State private var skyReady = false
 
@@ -315,7 +314,15 @@ struct WatchTab: View {
                                  onCenterChange: { id in centre(on: id) },
                                  backToMeBottom: creating ? 250 : 16)
                         .frame(height: max(geo.size.height, 200))
-                        .opacity(skyReady || !PeopleSky.dockEnabled ? 1 : 0)
+                        // The map fades into the page at the bottom instead of
+                        // being cut off where the box and the tab bar sit.
+                        .mask {
+                            LinearGradient(stops: [.init(color: .black, location: 0),
+                                                   .init(color: .black, location: 0.6),
+                                                   .init(color: .clear, location: 0.93)],
+                                           startPoint: .top, endPoint: .bottom)
+                        }
+                        .opacity(skyReady ? 1 : 0)
                         .animation(.easeOut(duration: 0.3), value: skyReady)
                 }
             }
@@ -417,63 +424,45 @@ struct WatchTab: View {
         bubbleTask = Task {
             try? await Task.sleep(for: .milliseconds(450))
             guard !Task.isCancelled else { return }
-            await sayIdea(for: person)
+            await sayGreeting(for: person)
         }
     }
 
-    /// The bubble is a suggestion: tapped, it goes into the box — opening the
-    /// box first when the learner was only looking around.
+    /// Tapping their greeting answers it: the box opens with them as the
+    /// person the situation is with.
     private func tapBubble() {
-        guard let line = dockBubble else { return }
-        let person = skyCentred
+        guard let person = skyCentred else { return }
         if creating {
-            if let person { dockPerson = person }
-            dockFill = line
+            dockPerson = person
         } else {
             creating = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                if let person { dockPerson = person }
-                dockFill = line
-            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dockPerson = person }
         }
     }
 
-    /// The picked person's bubble: one of their own situation ideas — the
-    /// pool the person card and the box's reel show, written for this
-    /// relationship — taking turns on every pick. Fetched once per person
-    /// per language when there are none yet, and kept on the person.
-    private func sayIdea(for person: Counterpart) async {
+    /// Their greeting, over their face: the line written for them (in the
+    /// person form, or at publish for someone from the pool), else one written
+    /// now — kept on a person on file, remembered this visit for a stranger.
+    private func sayGreeting(for person: Counterpart) async {
         let lang = appState.targetLanguage
-        let live = appState.counterparts.first { $0.id == person.id } ?? person
-        var ideas = live.savedScenarios(in: lang)
-        if TopicEngine.isFallback(ideas, for: live, targetLanguage: lang) { ideas = [] }
-        if ideas.isEmpty { ideas = strangerIdeas[person.id] ?? [] }
-        if ideas.isEmpty {
-            // Close people know the learner's life; everyone else hears only
-            // what the learner lets strangers hear.
-            let facts = live.knowsLearnersLife
-                ? (appState.persona?.currentNotes().map(\.text) ?? [])
-                : (appState.persona?.strangerLines ?? [])
-            guard let fresh = try? await TopicEngine.suggestForCounterpart(
-                persona: appState.persona, counterpart: live, targetLanguage: lang,
-                learnerFacts: facts, allowFallback: false), !fresh.isEmpty
-            else { return }
-            ideas = fresh
-            if var owned = appState.counterparts.first(where: { $0.id == person.id }) {
-                owned.setSavedScenarios(fresh, in: lang)
-                appState.saveCounterpart(owned)
-            } else {
-                strangerIdeas[person.id] = fresh
+        var line = (appState.counterparts.first { $0.id == person.id } ?? person).greeting(in: lang)
+        if line.isEmpty { line = strangerGreetings[person.id] ?? "" }
+        if line.isEmpty {
+            if appState.counterparts.contains(where: { $0.id == person.id }) {
+                await GreetingEngine.ensure(for: person.id, appState: appState)
+                line = appState.counterparts.first { $0.id == person.id }?.greeting(in: lang) ?? ""
+            } else if let fresh = try? await GreetingEngine.write(
+                for: person, persona: appState.persona, targetLanguage: lang) {
+                strangerGreetings[person.id] = fresh
+                line = fresh
             }
         }
-        guard skyCentred?.id == person.id else { return }
-        let turn = dockIdeaTurn[person.id, default: 0]
-        dockIdeaTurn[person.id] = turn + 1
-        // The title: a concrete moment of THIS pair, short enough for a bubble.
-        let idea = ideas[turn % ideas.count]
-        let title = idea.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        dockBubble = title.isEmpty ? idea.blurb : title
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        guard !line.isEmpty, skyCentred?.id == person.id else { return }
+        dockBubble = line
+        // Felt as they speak: one firm tap as the bubble rises.
+        let haptic = UIImpactFeedbackGenerator(style: .medium)
+        haptic.prepare()
+        haptic.impactOccurred()
     }
 
     /// Who a common situation is with, read off what the learner wrote about
@@ -552,7 +541,10 @@ struct WatchTab: View {
     }
 
     private func loadSkyPool() async {
-        defer { skyReady = true }
+        // Shown in a LATER transaction than the pool lands in: the fade-in's
+        // animation otherwise carried every seat from the half-built map to
+        // the full one, and people flew across the screen on opening.
+        defer { DispatchQueue.main.async { skyReady = true } }
         guard let pool = try? await PublicPersonaService.fetchPool(language: appState.targetLanguage)
         else { return }
         skyPool = pool.map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }

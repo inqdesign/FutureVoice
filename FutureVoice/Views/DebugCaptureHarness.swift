@@ -2526,6 +2526,20 @@ enum DebugCapture {
                 "Emma": ("", ["Asking Emma what night shifts in London are like"]),
                 "Lukas": ("", ["Comparing tech jobs in Berlin and Seoul with Lukas"]),
             ]
+            let greetings: [String: String] = [
+                "Jisu": "Hey you — did you look at those Lisbon flats yet?",
+                "Mom": "Did you eat today? You look tired, sweetheart.",
+                "Minho": "Climbing Saturday? The new gym finally opened.",
+                "Harin": "There you are! I need a favour — speech stuff.",
+                "Kim": "Got a minute? I'd like to hear your Q4 plan.",
+                "Sarah": "Morning! Coffee first, then the client deck?",
+                "Mr. Becker": "Ah, hello. The heating? Yes, yes, I know.",
+                "Tom": "Hi neighbour! Sorry if Bruno was loud again.",
+                "Mia": "Welcome back! How's that back feeling today?",
+                "Emma": "Hiya! Just off a night shift, so be gentle.",
+                "Lukas": "Hey! You're the one moving to Berlin, right?",
+            ]
+            if let g = greetings[name] { c.setGreeting(g, in: appState.targetLanguage) }
             if let (bg, ideas) = sample[name] {
                 c.background = bg
                 c.setSavedScenarios(ideas.map { SuggestedTopic(title: $0, blurb: "") },

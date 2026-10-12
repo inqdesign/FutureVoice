@@ -21,6 +21,8 @@ struct PublicIntroView: View {
     @State private var occupation = ""
     @State private var interests = ""
     @State private var voicePresetId = VoicePreset.catalog.first!.id
+    @State private var greeting = ""
+    @State private var writingGreeting = false
 
     @State private var isLoading = true
     @State private var isSaving = false
@@ -68,6 +70,37 @@ struct PublicIntroView: View {
                 Text("Introduction")
             } footer: {
                 Text(explain("Write it in \(languageName) — it's what \"you\" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you'd actually talk about for an hour."))
+            }
+
+            Section {
+                TextField("What you say when someone meets you", text: $greeting, axis: .vertical)
+                    .lineLimit(1...3)
+                Button {
+                    writingGreeting = true
+                    Task {
+                        var me = Counterpart(name: displayName, relationship: "", background: "",
+                                             conversationStyle: "", voicePresetId: voicePresetId)
+                        me.remoteId = "self"
+                        me.intro = trimmedIntro
+                        me.location = location
+                        if let line = try? await GreetingEngine.write(
+                            for: me, persona: nil, targetLanguage: appState.targetLanguage) {
+                            greeting = line
+                        }
+                        writingGreeting = false
+                    }
+                } label: {
+                    if writingGreeting {
+                        HStack(spacing: 8) { ProgressView(); Text("Writing…") }
+                    } else {
+                        Label("Write one for me", systemImage: "sparkles")
+                    }
+                }
+                .disabled(writingGreeting || trimmedIntro.isEmpty)
+            } header: {
+                Text("Greeting")
+            } footer: {
+                Text(explain("Other learners see it over your face on their Watch map. Write it in \(languageName); left empty, one is written from your introduction."))
             }
 
             Section("Details") {
@@ -141,6 +174,7 @@ struct PublicIntroView: View {
             occupation = mine.occupation
             interests = mine.interests
             voicePresetId = mine.voice_preset_id
+            greeting = mine.greeting ?? ""
         } else {
             // Draft seeds from the profile the user already gave onboarding.
             // The intro starts as the same paragraph the mirror would publish
@@ -168,7 +202,8 @@ struct PublicIntroView: View {
                 occupation: occupation.trimmingCharacters(in: .whitespaces),
                 interests: interests.trimmingCharacters(in: .whitespaces),
                 voicePresetId: voicePresetId,
-                language: appState.targetLanguage)
+                language: appState.targetLanguage,
+                greeting: greeting)
             // From here on the user curates their own row — the launch-time
             // auto-sync from the onboarding profile must never overwrite it.
             UserDefaults.standard.set(true, forKey: PublicPersonaService.manualIntroKey)

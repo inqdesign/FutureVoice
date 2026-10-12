@@ -42347,6 +42347,52 @@
         }
       }
     },
+    "Greeting" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begrüßung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saludo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salutation"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あいさつ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인사말"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "招呼语"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "招呼語"
+          }
+        }
+      }
+    },
     "Grounded in your profile — name, city, work, family, interests." : {
       "localizations" : {
         "de" : {
@@ -66910,6 +66956,52 @@
         }
       }
     },
+    "Other learners see it over your face on their Watch map. Write it in %@; left empty, one is written from your introduction." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Lernende sehen sie auf ihrer Ansehen-Karte über deinem Gesicht. Schreib sie auf %@; leer gelassen, wird sie aus deiner Vorstellung geschrieben."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otros estudiantes lo ven sobre tu cara en su mapa de Escenas. Escríbelo en %@; si lo dejas vacío, lo escribimos a partir de tu presentación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les autres apprenants le voient au-dessus de ton visage sur leur carte Scènes. Écris-le en %@ ; laissé vide, il est écrit à partir de ta présentation."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他の学習者のシーン練習マップで、自分の顔の上に表示されます。%@で書いてください。空欄なら自己紹介をもとに自動で書きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 학습자의 상황연습 지도에서 내 얼굴 위에 떠요. %@로 써 주세요. 비워 두면 자기소개를 보고 알아서 써 둬요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会显示在其他学习者的情境练习地图上、你的头像上方。请用%@写；留空的话会根据你的自我介绍自动写。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "會顯示在其他學習者的情境練習地圖上、你的頭像上方。請用%@寫；留空的話會根據你的自我介紹自動寫。"
+          }
+        }
+      }
+    },
     "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." : {
       "localizations" : {
         "de" : {
@@ -85264,6 +85356,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在每個挑戰的排行榜上，都會顯示在分數旁邊。"
+          }
+        }
+      }
+    },
+    "Shown over their face on the Watch map. Left empty, one is written for you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steht auf der Ansehen-Karte über dem Gesicht. Leer gelassen, wird sie für dich geschrieben."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aparece sobre su cara en el mapa de Escenas. Si lo dejas vacío, lo escribimos por ti."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affiché au-dessus de son visage sur la carte Scènes. Laissé vide, il est écrit pour toi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーン練習のマップで顔の上に表示されます。空欄なら自動で書きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황연습 지도에서 얼굴 위에 떠요. 비워 두면 알아서 써 둬요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会显示在情境练习地图上的头像上方。留空的话会自动帮你写。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "會顯示在情境練習地圖上的頭像上方。留空的話會自動幫你寫。"
           }
         }
       }
@@ -110307,6 +110445,52 @@
         }
       }
     },
+    "What they say when you meet them" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ihre ersten Worte, wenn ihr euch trefft"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que te dice al verte"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ses premiers mots quand vous vous croisez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会ったときのひと言"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "만나면 건네는 첫마디"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "见面时说的第一句话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "見面時說的第一句話"
+          }
+        }
+      }
+    },
     "What they will ask" : {
       "localizations" : {
         "de" : {
@@ -111220,6 +111404,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同一句話，對誰說就不一樣。請假這件事，跟主管說和跟同事說是完全不同的對話，隨便一個陌生人練不出這種差別。有了具體的人，每個情境聽起來都像真的。"
+          }
+        }
+      }
+    },
+    "What you say when someone meets you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du sagst, wenn dich jemand trifft"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que dices cuando alguien te conoce"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce que tu dis quand on te croise"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "誰かに会ったときのひと言"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "누가 나를 만나면 건네는 첫마디"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "别人遇到你时，你说的第一句话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別人遇到你時，你說的第一句話"
           }
         }
       }
@@ -116275,6 +116505,52 @@
         }
       }
     },
+    "Write one for me" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für mich schreiben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escríbelo por mí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écris-le pour moi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動で書く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동으로 쓰기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "帮我写"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "幫我寫"
+          }
+        }
+      }
+    },
     "Write one with AI" : {
       "localizations" : {
         "de" : {
@@ -116962,6 +117238,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在撰寫講稿…"
+          }
+        }
+      }
+    },
+    "Writing…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird geschrieben…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribiendo…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écriture…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "쓰는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在写…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在寫…"
           }
         }
       }

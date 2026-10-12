@@ -405,22 +405,6 @@ struct PeopleSkyMap: View {
                     }
                     Color.clear.frame(width: 1, height: 1).position(x: c, y: c).id("centre")
 
-                    // A line from me to whoever is connected right now: the one
-                    // in the middle (quiet) and the one the situation is with
-                    // (accent). A line to everyone read as clutter.
-                    Canvas { ctx, _ in
-                        let me = CGPoint(x: c, y: c + 8)
-                        if let id = bubbleId, id != focusedId, let p = pos[id] {
-                            var path = Path(); path.move(to: me); path.addLine(to: p)
-                            ctx.stroke(path, with: .color(.secondary.opacity(0.35)), lineWidth: 1.5)
-                        }
-                        if let id = focusedId, let p = pos[id] {
-                            var path = Path(); path.move(to: me); path.addLine(to: p)
-                            ctx.stroke(path, with: .color(.accentColor.opacity(0.7)), lineWidth: 2)
-                        }
-                    }
-                    .frame(width: side, height: side)
-                    .allowsHitTesting(false)
 
                     ForEach(nodes) { n in
                         let on = n.shows(in: lens)

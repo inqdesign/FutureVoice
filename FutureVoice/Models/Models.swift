@@ -1119,6 +1119,20 @@ struct Counterpart: Codable, Identifiable, Hashable {
     /// where they belong — the practice target was fixed to English then.
     var scenariosByLanguage: [String: [SuggestedTopic]] = [:]
 
+    /// What they say when you come across them — the line over their face on
+    /// the Watch map. Material, so per target language; written by hand in
+    /// the person form or by `GreetingEngine` when there is none.
+    var greetingByLanguage: [String: String] = [:]
+
+    func greeting(in language: String) -> String {
+        greetingByLanguage[language]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    mutating func setGreeting(_ text: String, in language: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        greetingByLanguage[language] = clean.isEmpty ? nil : clean
+    }
+
     func savedScenarios(in language: String) -> [SuggestedTopic] {
         scenariosByLanguage[language] ?? []
     }
@@ -1190,7 +1204,7 @@ extension Counterpart {
         case remoteId, intro, personaKind
         case isPublicFigure, publicIdentity, factsRefreshedAt
         case relationshipKind, myRegister, theirRegister, iCallThem, theyCallMe, knowsMyLife
-        case scenariosByLanguage, createdAt, updatedAt
+        case scenariosByLanguage, greetingByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
     }
@@ -1226,6 +1240,7 @@ extension Counterpart {
         iCallThem = try c.decodeIfPresent(String.self, forKey: .iCallThem) ?? ""
         theyCallMe = try c.decodeIfPresent(String.self, forKey: .theyCallMe) ?? ""
         knowsMyLife = try c.decodeIfPresent(Bool.self, forKey: .knowsMyLife)
+        greetingByLanguage = (try? c.decodeIfPresent([String: String].self, forKey: .greetingByLanguage)) ?? [:]
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -1274,6 +1289,7 @@ extension Counterpart {
         try c.encode(iCallThem, forKey: .iCallThem)
         try c.encode(theyCallMe, forKey: .theyCallMe)
         try c.encodeIfPresent(knowsMyLife, forKey: .knowsMyLife)
+        if !greetingByLanguage.isEmpty { try c.encode(greetingByLanguage, forKey: .greetingByLanguage) }
         try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)

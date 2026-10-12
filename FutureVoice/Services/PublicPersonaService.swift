@@ -23,6 +23,9 @@ enum PublicPersonaService {
         let language: String
         let voice_preset_id: String
         let kind: String?
+        /// What they say when a learner comes across them on the map — written
+        /// at publish (by the author, or for them). Empty on rows from before.
+        let greeting: String?
 
         /// What the sheet groups this row under. A published learner is a
         /// "user" whatever the column says — ownership is the fact, `kind`
@@ -51,7 +54,7 @@ enum PublicPersonaService {
     }
 
     private static let columns =
-        "id,owner_user_id,display_name,intro,location,occupation,interests,conversation_style,language,voice_preset_id,kind"
+        "id,owner_user_id,display_name,intro,location,occupation,interests,conversation_style,language,voice_preset_id,kind,greeting"
 
     /// The whole active pool for one target language. The pool is curated-
     /// catalog sized (tens, not thousands), so one fetch + local shuffle/
@@ -104,6 +107,7 @@ enum PublicPersonaService {
         c.commonTopics = p.interests
         c.remoteId = p.id
         c.intro = p.intro
+        if let g = p.greeting, !g.isEmpty { c.setGreeting(g, in: p.language) }
         c.personaKind = p.group.rawValue
         return c
     }
@@ -174,8 +178,22 @@ enum PublicPersonaService {
     /// conversational substance AND as writing practice for the author.
     static func publishMine(displayName: String, intro: String,
                             location: String, occupation: String, interests: String,
-                            voicePresetId: String, language: String) async throws {
+                            voicePresetId: String, language: String,
+                            greeting: String? = nil) async throws {
         guard let uid = await myUserId() else { return }
+        let existing = try await fetchMine(language: language)
+        // The greeting is made at publish: the author's own words when given,
+        // else the one already on the row, else one written from the intro.
+        var line = greeting?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if line.isEmpty { line = existing?.greeting ?? "" }
+        if line.isEmpty {
+            var me = Counterpart(name: displayName, relationship: "", background: "",
+                                 conversationStyle: "", voicePresetId: voicePresetId)
+            me.remoteId = "self"
+            me.intro = intro
+            me.location = location
+            line = (try? await GreetingEngine.write(for: me, persona: nil, targetLanguage: language)) ?? ""
+        }
         struct Row: Encodable {
             let owner_user_id: String
             let display_name: String
@@ -186,13 +204,14 @@ enum PublicPersonaService {
             let language: String
             let voice_preset_id: String
             let is_active: Bool
+            let greeting: String
         }
         let row = Row(owner_user_id: uid,
                       display_name: displayName, intro: intro,
                       location: location, occupation: occupation, interests: interests,
                       language: language, voice_preset_id: voicePresetId,
-                      is_active: true)
-        if let existing = try await fetchMine(language: language) {
+                      is_active: true, greeting: line)
+        if let existing {
             try await SupabaseProvider.shared
                 .from("public_personas")
                 .update(row)
