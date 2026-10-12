@@ -316,10 +316,14 @@ struct WatchTab: View {
                         .frame(height: max(geo.size.height, 200))
                         // The map fades into the page at the bottom instead of
                         // being cut off where the box and the tab bar sit.
+                        // The whole screen is the canvas: the map runs under the
+                        // title and the tab bar and fades into the page at both
+                        // ends instead of being cut off under the header.
                         .mask {
-                            LinearGradient(stops: [.init(color: .black, location: 0),
-                                                   .init(color: .black, location: 0.6),
-                                                   .init(color: .clear, location: 0.93)],
+                            LinearGradient(stops: [.init(color: .clear, location: 0),
+                                                   .init(color: .black, location: 0.2),
+                                                   .init(color: .black, location: 0.62),
+                                                   .init(color: .clear, location: 0.94)],
                                            startPoint: .top, endPoint: .bottom)
                         }
                         .opacity(skyReady ? 1 : 0)
@@ -328,7 +332,7 @@ struct WatchTab: View {
             }
             .scrollDisabled(true)
         }
-        .ignoresSafeArea(.container, edges: .bottom)
+        .ignoresSafeArea(.container, edges: [.top, .bottom])
             .overlay(alignment: .bottom) {
                 if PeopleSky.dockEnabled && creating {
                     // The "Your situation" box itself — chips, attach, the

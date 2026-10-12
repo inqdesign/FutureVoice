@@ -410,7 +410,10 @@ struct PeopleSkyMap: View {
                         let on = n.shows(in: lens)
                         let focused = n.id == focusedId
                         node(n)
-                            .modifier(DepthOfField())
+                            // Sharp at the same height the bubble is triggered
+                            // at, and the one speaking is never faded.
+                            .modifier(DepthOfField(focusLine: Self.focusLine,
+                                                   sharp: n.id == bubbleId || n.id == focusedId))
                             .overlay(alignment: .top) {
                                 if n.id == (bubbleId ?? focusedId), let bubble {
                                     Button(action: onTapBubble) { SkyBubble(text: bubble) }
@@ -550,7 +553,7 @@ struct PeopleSkyMap: View {
                     case .person, .pooled:
                         // An opaque disc under the tinted bubble, so the rings
                         // and their names behind never show through a face.
-                        SkyFace(node: n)
+                        SkyFace(node: n, lit: n.id == bubbleId || n.id == focusedId)
                             .overlay {
                                 if n.id == focusedId {
                                     Circle().strokeBorder(Color.accentColor, lineWidth: 3)
@@ -684,13 +687,16 @@ private struct TrackDistanceFromCentre: ViewModifier {
 /// icon of who they are on their own colour.
 private struct SkyFace: View {
     let node: PeopleSky.Node
+    /// In the middle and speaking (or picked): drawn in their colour even if
+    /// not met yet — the quiet grey is for faces passing by.
+    var lit: Bool = false
     @ObservedObject private var photos = CounterpartPhotoStore.shared
 
     var body: some View {
         Group {
             if let id = node.photoId, let img = photos.image(for: id) {
                 Image(uiImage: img).resizable().scaledToFill()
-            } else if node.isUnmet {
+            } else if node.isUnmet && !lit {
                 // someone not met yet is drawn quietly, so the learner's own
                 // people are the colour on the map
                 Color(.tertiarySystemFill)
@@ -715,12 +721,18 @@ private struct SkyFace: View {
 /// face forward as it reaches the centre. Read from the node's place in the
 /// scroll view's visible area, so it follows every drag with no state.
 private struct DepthOfField: ViewModifier {
+    /// The height (share of the screen) that counts as the middle — the same
+    /// line the bubble is triggered at, or the one speaking looked faded.
+    var focusLine: CGFloat = 0.5
+    /// Never faded: the person in the middle, speaking, or picked.
+    var sharp: Bool = false
+
     func body(content: Content) -> some View {
         content.visualEffect { effect, proxy in
             let frame = proxy.frame(in: .scrollView)
             let size = proxy.bounds(of: .scrollView)?.size ?? .zero
             let dx = frame.midX - size.width / 2
-            let dy = frame.midY - size.height / 2
+            let dy = frame.midY - size.height * focusLine
             // 0 at the centre, 1 around the screen's edge
             let reach = max(min(size.width, size.height) * 0.62, 1)
             let t = min(hypot(dx, dy * 0.8) / reach, 1.6)
@@ -728,7 +740,7 @@ private struct DepthOfField: ViewModifier {
             // only: a shrink by distance made everyone around the middle
             // squirm while the map was dragged (2026-10-12).
             return effect
-                .opacity(max(0.3, min(1, 1.45 - 0.75 * t)))
+                .opacity(sharp ? 1 : max(0.3, min(1, 1.45 - 0.75 * t)))
         }
     }
 }
