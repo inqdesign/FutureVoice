@@ -1588,6 +1588,26 @@ enum DebugCapture {
                                durationMs: 4200, timestamp: Date(), suggestion: nil),
                     targetLanguage: "ja")
             })
+        case "shadow-library":
+            // Review → Shadowing tile: every fluent-self line, under the
+            // "To study" / "Practiced" picker a learner names in support mail.
+            // One take on file, or the picker stays hidden.
+            once("shadow-library") {
+                seedSessions(scored: true)
+                if appState.shadowAttempts.isEmpty,
+                   let line = SessionStore.shared.load().first?.turns.first(where: { $0.role == .fluentSelf }) {
+                    appState.saveShadowAttempt(ShadowAttempt(
+                        turnId: line.id, targetText: line.transcript,
+                        learnerTranscript: line.transcript, recordingFilename: nil,
+                        matchScore: 82, rhythmScore: nil,
+                        pronunciation: "", pacing: "", fix: ""))
+                }
+            }
+            return AnyView(NavigationStack {
+                ShadowBrowserView()
+                    .navigationTitle("Shadowing")
+                    .navigationBarTitleDisplayMode(.inline)
+            }.environmentObject(appState))
         case "shadow":
             once("shadow") { captureShadow = true }
             return AnyView(NavigationStack {
