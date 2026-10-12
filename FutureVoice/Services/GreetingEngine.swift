@@ -58,7 +58,9 @@ enum GreetingEngine {
         let text = try await GeminiClient.shared.send(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: lines.joined(separator: "\n"))],
-            model: .flashLite31, maxTokens: 120, purpose: "greeting")
+            // Thinking spends from the same ceiling: at 120 the model thought ~110
+            // tokens and the line was cut to 4-6 ("Let's talk about nawana").
+            model: .flashLite31, maxTokens: 600, purpose: "greeting")
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”«»「」"))
         guard !clean.isEmpty else { throw CancellationError() }
