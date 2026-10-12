@@ -1123,6 +1123,18 @@ struct Counterpart: Codable, Identifiable, Hashable {
     /// the Watch map. Material, so per target language; written by hand in
     /// the person form or by `GreetingEngine` when there is none.
     var greetingByLanguage: [String: String] = [:]
+    /// How each greeting was made: the `GreetingEngine.promptVersion` that
+    /// wrote it, or -1 when the learner wrote it. Absent = written by an
+    /// earlier prompt (every greeting before this field was the app's), so
+    /// it is written again; the learner's own line is never replaced.
+    var greetingVersionByLanguage: [String: Int] = [:]
+
+    /// True when this language's greeting should be (re)written by the app.
+    func greetingNeedsWriting(in language: String, current: Int) -> Bool {
+        if greeting(in: language).isEmpty { return true }
+        let v = greetingVersionByLanguage[language] ?? 0
+        return v != -1 && v < current
+    }
 
     func greeting(in language: String) -> String {
         greetingByLanguage[language]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -1204,7 +1216,7 @@ extension Counterpart {
         case remoteId, intro, personaKind
         case isPublicFigure, publicIdentity, factsRefreshedAt
         case relationshipKind, myRegister, theirRegister, iCallThem, theyCallMe, knowsMyLife
-        case scenariosByLanguage, greetingByLanguage, createdAt, updatedAt
+        case scenariosByLanguage, greetingByLanguage, greetingVersionByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
     }
@@ -1241,6 +1253,7 @@ extension Counterpart {
         theyCallMe = try c.decodeIfPresent(String.self, forKey: .theyCallMe) ?? ""
         knowsMyLife = try c.decodeIfPresent(Bool.self, forKey: .knowsMyLife)
         greetingByLanguage = (try? c.decodeIfPresent([String: String].self, forKey: .greetingByLanguage)) ?? [:]
+        greetingVersionByLanguage = (try? c.decodeIfPresent([String: Int].self, forKey: .greetingVersionByLanguage)) ?? [:]
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -1290,6 +1303,9 @@ extension Counterpart {
         try c.encode(theyCallMe, forKey: .theyCallMe)
         try c.encodeIfPresent(knowsMyLife, forKey: .knowsMyLife)
         if !greetingByLanguage.isEmpty { try c.encode(greetingByLanguage, forKey: .greetingByLanguage) }
+        if !greetingVersionByLanguage.isEmpty {
+            try c.encode(greetingVersionByLanguage, forKey: .greetingVersionByLanguage)
+        }
         try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)

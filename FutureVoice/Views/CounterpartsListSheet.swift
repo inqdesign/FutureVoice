@@ -149,7 +149,11 @@ struct CounterpartFormView: View {
                 Section {
                     TextField("What they say when you meet them", text: Binding(
                         get: { draft.greeting(in: appState.targetLanguage) },
-                        set: { draft.setGreeting($0, in: appState.targetLanguage) }),
+                        set: {
+                            draft.setGreeting($0, in: appState.targetLanguage)
+                            // Typed by the learner: never rewritten by the app.
+                            draft.greetingVersionByLanguage[appState.targetLanguage] = -1
+                        }),
                               axis: .vertical)
                         .lineLimit(1...3)
                     Button {
@@ -159,6 +163,7 @@ struct CounterpartFormView: View {
                                 for: draft, persona: appState.persona,
                                 targetLanguage: appState.targetLanguage) {
                                 draft.setGreeting(line, in: appState.targetLanguage)
+                                draft.greetingVersionByLanguage[appState.targetLanguage] = GreetingEngine.promptVersion
                             }
                             writingGreeting = false
                         }
@@ -207,7 +212,8 @@ struct CounterpartFormView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         appState.saveCounterpart(draft)
-                        if draft.greeting(in: appState.targetLanguage).isEmpty {
+                        if draft.greetingNeedsWriting(in: appState.targetLanguage,
+                                                      current: GreetingEngine.promptVersion) {
                             let id = draft.id, state = appState
                             Task { await GreetingEngine.ensure(for: id, appState: state) }
                         }

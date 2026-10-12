@@ -450,6 +450,13 @@ struct WatchTab: View {
     /// now — kept on a person on file, remembered this visit for a stranger.
     private func sayGreeting(for person: Counterpart) async {
         let lang = appState.targetLanguage
+        let onFile = appState.counterparts.first { $0.id == person.id }
+        // A person on file whose line came from an older prompt is written
+        // again before it is shown (the learner's own line never is).
+        if let onFile, onFile.greetingNeedsWriting(in: lang, current: GreetingEngine.promptVersion),
+           !onFile.greeting(in: lang).isEmpty {
+            await GreetingEngine.ensure(for: person.id, appState: appState)
+        }
         var line = (appState.counterparts.first { $0.id == person.id } ?? person).greeting(in: lang)
         if line.isEmpty { line = strangerGreetings[person.id] ?? "" }
         if line.isEmpty {

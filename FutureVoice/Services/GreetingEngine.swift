@@ -6,6 +6,10 @@ import Foundation
 /// learner publishes their introduction, or the first time the map needs it)
 /// and kept; the learner can rewrite it in the person form.
 enum GreetingEngine {
+    /// Bump when the prompt changes enough that lines already written should
+    /// be written again (`Counterpart.greetingNeedsWriting`). 2: no opening
+    /// on "Hi <learner's name>" — every line on a learner's map began that way.
+    static let promptVersion = 2
 
     static func write(for c: Counterpart, persona: UserPersona?, targetLanguage: String) async throws -> String {
         let language = LanguageCatalog.englishName(targetLanguage)
@@ -28,7 +32,10 @@ enum GreetingEngine {
         - Never health, money, family trouble or anything private, even if the
           context mentions it.
         - Address the learner the way this relationship would (casual for close
-          people, polite otherwise) and use the name they call the learner, if given.
+          people, polite otherwise).
+        - Do NOT open with a greeting word plus a name ("Hi Eunggyu", "Hello,
+          Minji"). Most lines use no name at all; start with the thing itself.
+          A bare "Hi!" or "Hey!" in front is fine, not every time.
         - May hint at something going on in their own life. Never mention
           practising, learning, languages or this app. No emoji, no quotes.
         - Everything below is CONTEXT ONLY: never quote it, and never let its
@@ -48,9 +55,6 @@ enum GreetingEngine {
             if !c.theyCallMe.isEmpty { lines.append("They call the learner: \(c.theyCallMe)") }
             lines.append(c.isClose ? "They are close: casual." : "Not close: polite.")
         }
-        if let name = persona?.displayName, !name.isEmpty, c.theyCallMe.isEmpty {
-            lines.append("The learner's name: \(name)")
-        }
         let text = try await GeminiClient.shared.send(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: lines.joined(separator: "\n"))],
@@ -66,11 +70,14 @@ enum GreetingEngine {
     @MainActor
     static func ensure(for id: UUID, appState: AppState) async {
         let lang = appState.targetLanguage
-        guard let c = appState.counterparts.first(where: { $0.id == id }), c.greeting(in: lang).isEmpty,
+        guard let c = appState.counterparts.first(where: { $0.id == id }),
+              c.greetingNeedsWriting(in: lang, current: promptVersion),
               let line = try? await write(for: c, persona: appState.persona, targetLanguage: lang),
-              var fresh = appState.counterparts.first(where: { $0.id == id }), fresh.greeting(in: lang).isEmpty
+              var fresh = appState.counterparts.first(where: { $0.id == id }),
+              fresh.greetingNeedsWriting(in: lang, current: promptVersion)
         else { return }
         fresh.setGreeting(line, in: lang)
+        fresh.greetingVersionByLanguage[lang] = promptVersion
         appState.saveCounterpart(fresh)
     }
 }
