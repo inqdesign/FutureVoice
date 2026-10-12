@@ -131,6 +131,7 @@
     <string name="ahead_of_2_by_lld">"Ahead of #2 by %d"</string>
     <string name="ai_read_tap_to_apply">"AI read: %s — tap to apply"</string>
     <string name="ai_tech">"AI / tech"</string>
+    <string name="all_activity">"All activity"</string>
     <string name="all_caught_up">"All caught up"</string>
     <string name="all_challenges">"All challenges"</string>
     <string name="all_levels">"All levels"</string>
@@ -206,6 +207,8 @@
     <string name="automatic">"Automatic"</string>
     <string name="available_with_or_without_a_plan">"Available with or without a plan"</string>
     <string name="average_lld">"average %d"</string>
+    <string name="average_of_your_last_10_takes">"average of your last 10 takes"</string>
+    <string name="avg_a_day">"avg %s a day"</string>
     <string name="back">"Back"</string>
     <string name="back_from_earlier">"Back from earlier"</string>
     <string name="back_in_3_days">"Back in 3 days"</string>
@@ -252,6 +255,7 @@
     <string name="busy_today">"Busy today?"</string>
     <string name="buy_lld_minutes">"Buy %d minutes"</string>
     <string name="by_level">"By level"</string>
+    <string name="calendar_and_routine">"Calendar and routine"</string>
     <string name="call">"Call"</string>
     <string name="call_me_every_day">"Call me every day"</string>
     <string name="call_paused_tap_to_pick_it_back_up">"Call paused — tap to pick it back up"</string>
@@ -281,6 +285,7 @@
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"Capped at ≈%s by the words you use — your next talk will be read for the structures you build."</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known."</string>
+    <string name="cards_done">"Cards done"</string>
     <string name="cards_done_now_say_it_out_loud">"Cards done — now say it out loud"</string>
     <string name="cards_you_put_off">"Cards you put off"</string>
     <string name="casual">"Casual"</string>
@@ -410,6 +415,7 @@
     <string name="daily_goals">"Daily goals"</string>
     <string name="daily_small_talk">"Daily small talk"</string>
     <string name="dark">"Dark"</string>
+    <string name="dashed_line_your_daily_average_best_day">"Dashed line: your daily average. Best day: %1$s, %2$s."</string>
     <string name="day">"Day"</string>
     <string name="day_1">"Day 1"</string>
     <string name="day_14">"Day 14"</string>
@@ -576,6 +582,8 @@
     <string name="every_talk_becomes_your_own_textbook">"Every talk becomes\nyour own textbook"</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you."</string>
+    <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
+    <string name="every_word_expression_and_card_you_studied_shadow_take_run_a_66737b">"Every word, expression and card you studied, shadow take, run and scene — one block each."</string>
     <!-- 'Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know.' -->
     <string name="every_word_you_say_in_a_talk_is_collected_and_graded_by_cefr_81f280">"Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know."</string>
     <string name="everyday">"Everyday"</string>
@@ -1032,8 +1040,10 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"%1$d min of talk · ^[%2$d talk](inflect: true)"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"%1$d min of talk over %2$d days. See how it went, then take the test."</string>
+    <string name="lld_min_other_practice">"%d min other practice"</string>
     <string name="lld_min_talked">"%d min talked"</string>
     <string name="lld_min_talked_this_month">"%d min talked this month"</string>
+    <string name="lld_min_talking">"%d min talking"</string>
     <string name="lld_min_this_week">"%d min this week"</string>
     <string name="lld_min_used_lld_min_left">"%1$d min used · %2$d min left"</string>
     <string name="lld_minutes_a_month">"%d minutes a month"</string>
@@ -1048,6 +1058,7 @@
     <string name="lld_new_phrase_inflect_true_from_your_fluent_self">"^[%d new phrase](inflect: true) from your fluent self"</string>
     <string name="lld_new_review_card_inflect_true_from_your_corrections">"^[%d new review card](inflect: true) from your corrections"</string>
     <string name="lld_of">"%1$d of %2$s"</string>
+    <string name="lld_of_7_days_active">"%d of 7 days active"</string>
     <string name="lld_of_lld">"%1$d of %2$d"</string>
     <!-- '#%lld of %lld' -->
     <string name="lld_of_lld_8e05fc">"#%1$d of %2$d"</string>
@@ -1059,6 +1070,7 @@
     <string name="lld_of_lld_seats_taken">"%1$d of %2$d seats taken."</string>
     <string name="lld_of_your_turns_lld_min">"%1$d of your turns · %2$d min"</string>
     <string name="lld_out_of_5">"%d out of 5"</string>
+    <string name="lld_runs">"%d runs"</string>
     <string name="lld_scene_inflect_true_watched">"^[%d scene](inflect: true) watched"</string>
     <string name="lld_scenes">"%d scenes"</string>
     <!-- '+ %lld scenes' -->
@@ -1071,6 +1083,7 @@
     <string name="lld_sessions">"%1$d sessions · %2$s"</string>
     <string name="lld_shadowing_take_inflect_true">"^[%d shadowing take](inflect: true)"</string>
     <string name="lld_syllables_min">"%d syllables/min"</string>
+    <string name="lld_takes">"%d takes"</string>
     <string name="lld_taking_part">"%d taking part"</string>
     <string name="lld_talks_tap_for_calendar">"%d talks · tap for calendar"</string>
     <string name="lld_thing_inflect_true_you_studied_said_out_loud">"^[%d thing](inflect: true) you studied, said out loud"</string>
@@ -1158,6 +1171,9 @@
     <!-- 'min' -->
     <string name="min_b6c935">"min"</string>
     <string name="min_mo">"%s min/mo"</string>
+    <string name="min_other_practice">"min other practice"</string>
+    <string name="min_studied">"min studied"</string>
+    <string name="min_talking">"min talking"</string>
     <string name="min_vs">"%1$s min vs %2$s"</string>
     <string name="mine">"Mine"</string>
     <string name="minutes">"Minutes"</string>
@@ -1168,6 +1184,8 @@
     <string name="minutes_of_speaking_per_day">"Minutes of speaking per day"</string>
     <!-- 'Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.' -->
     <string name="minutes_you_actually_spoke_per_day_the_dashed_line_is_your_l_b779b3">"Minutes you actually spoke, per day. The dashed line is your %d-minute daily goal."</string>
+    <!-- 'Minutes you actually talked, per day. The dashed line is your %lld-minute daily goal.' -->
+    <string name="minutes_you_actually_talked_per_day_the_dashed_line_is_your_7e3d9a">"Minutes you actually talked, per day. The dashed line is your %d-minute daily goal."</string>
     <string name="misheard">"Misheard"</string>
     <string name="misheard_exclude_from_scoring">"Misheard — exclude from scoring"</string>
     <string name="miss_a_day_and_the_count_starts_again_at_zero">"Miss a day and the count starts again at zero."</string>
@@ -1243,6 +1261,7 @@
     <string name="next_lld">"Next %d"</string>
     <string name="next_one">"Next one %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"Next report in %1$dd · %2$d more minutes of practice."</string>
+    <string name="next_shadowing">"Next: shadowing"</string>
     <string name="next_week_s_arrives">"Next week's arrives %s"</string>
     <string name="next_word">"Next word"</string>
     <string name="nice">"Nice"</string>
@@ -1342,6 +1361,7 @@
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first_the_0fc601">"Nothing to study yet — have a talk or watch a scene first; the words it surfaces get dealt here."</string>
     <string name="nothing_was_scored_this_time_the_mic_heard_no_speech">"Nothing was scored this time — the mic heard no speech."</string>
     <string name="nothing_yet">"Nothing yet"</string>
+    <string name="nothing_yet_in_this_period">"Nothing yet in this period."</string>
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"Nothing you hide is lost — your talk's book keeps every correction."</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"Notice how it's done, not just what's said."</string>
@@ -1417,6 +1437,7 @@
     <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"Other learners see it over your face on their Watch map. Write it in %s; left empty, one is written from your introduction."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs."</string>
+    <string name="other_practice">"Other practice"</string>
     <string name="overall">"Overall"</string>
     <string name="overview">"Overview"</string>
     <string name="pace">"Pace"</string>
@@ -1696,15 +1717,21 @@
     <string name="run_again">"Run again"</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100 seats · 30 days in a row to enter"</string>
     <string name="s_1_book_finished">"1 book finished"</string>
+    <string name="s_1_card">"1 card"</string>
+    <string name="s_1_expression">"1 expression"</string>
     <string name="s_1_min">"~1 min"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1 minute. Vary your pitch a little."</string>
     <string name="s_1_more_meaning">"+1 more meaning"</string>
+    <string name="s_1_run">"1 run"</string>
     <string name="s_1_scene">"1 scene"</string>
+    <string name="s_1_take">"1 take"</string>
+    <string name="s_1_word">"1 word"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"1 word, phrase or line is waiting."</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs."</string>
     <string name="s_3_days">"3 days"</string>
     <string name="said_lld">"Said %d×"</string>
+    <string name="same_as_before">"same as before"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
     <string name="same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d">"Same bands as “How this is assessed” — tap a skill for its measured numbers."</string>
     <string name="same_voice_new_language">"Same voice, new language"</string>
@@ -1752,6 +1779,7 @@
     <string name="scenarios">"Scenarios"</string>
     <string name="scene">"Scene"</string>
     <string name="scene_partner_voice">"Scene partner voice: %s"</string>
+    <string name="scenes">"Scenes"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"Scenes refill at the start of each billing period."</string>
     <string name="scenes_refill_on">"Scenes refill on %s."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
@@ -1818,6 +1846,7 @@
     <!-- "Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking." -->
     <string name="shadow_your_fluent_self_s_lines_in_your_own_voice_slow_it_do_fafe50">"Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking."</string>
     <string name="shadowing">"Shadowing"</string>
+    <string name="shadowing_score">"Shadowing score"</string>
     <!-- 'Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does.' -->
     <string name="shadowing_scores_and_review_reps_measure_practice_not_level_3e15b4">"Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does."</string>
     <string name="shadowing_words_replays_drills">"Shadowing · words · replays · drills"</string>
@@ -1974,10 +2003,13 @@
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"Take your intro out of the pool? Learners who already met your persona keep their own past talks."</string>
     <string name="takes">"Takes"</string>
+    <string name="takes_this_week">"takes this week"</string>
     <string name="talk">"Talk"</string>
     <string name="talk_as_much_as_you_want">"Talk as much as you want"</string>
     <string name="talk_at_length_most_days">"Talk at length, most days"</string>
     <string name="talk_book">"Talk book"</string>
+    <!-- 'talk' -->
+    <string name="talk_e55e91">"talk"</string>
     <string name="talk_for_about_10_minutes">"Talk for about 10 minutes"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Talk %1$d minutes a day, %2$d days in a row."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
@@ -1996,6 +2028,8 @@
     <string name="talking_needs_a_plan">"Talking needs a plan"</string>
     <string name="talking_to_your_future_self">"Talking to your future self"</string>
     <string name="talks">"Talks"</string>
+    <!-- 'talks' -->
+    <string name="talks_b1cc1f">"talks"</string>
     <string name="talks_get_more_real_when_i_know_your_life">"Talks get more real when I know your life."</string>
     <string name="talks_to_you">"%s talks to you"</string>
     <!-- 'Tap a language to practice it. Its level calibrates every conversation. The daily goal drives the ring on Home; explanations come back in your app language.' -->
@@ -2230,6 +2264,8 @@
     <string name="time_for_your_expressions">"Time for your expressions"</string>
     <string name="time_for_your_speech">"Time for your speech"</string>
     <string name="time_for_your_words">"Time for your words"</string>
+    <!-- 'Time in the app, every day you opened it — talking, and everything around it: words, cards, shadowing, scenes.' -->
+    <string name="time_in_the_app_every_day_you_opened_it_talking_and_everythi_c65ddc">"Time in the app, every day you opened it — talking, and everything around it: words, cards, shadowing, scenes."</string>
     <string name="time_speaking">"Time speaking"</string>
     <!-- 'Time to meet the you who speaks perfect %@ — in your own voice. One minute of reading is all it takes.' -->
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"Time to meet the you who speaks perfect %s — in your own voice. One minute of reading is all it takes."</string>
@@ -2346,6 +2382,8 @@
     <string name="voiced_by_0ed8e5">"voiced by %s"</string>
     <!-- '%@ · voiced by %@' -->
     <string name="voiced_by_2de8fa">"%1$s · voiced by %2$s"</string>
+    <string name="vs_last_week">"vs last week"</string>
+    <string name="vs_previous_30_days">"vs previous 30 days"</string>
     <string name="waiting_for_the_first_sync">"Waiting for the first sync"</string>
     <string name="warm_and_chatty">"Warm and chatty"</string>
     <string name="watch">"Watch"</string>
@@ -2377,6 +2415,8 @@
     <!-- "We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out." -->
     <string name="we_ve_paused_talking_on_this_account_while_we_check_some_unu_7e9d82">"We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out."</string>
     <string name="week">"week"</string>
+    <!-- 'Week' -->
+    <string name="week_f82be6">"Week"</string>
     <string name="weekdays">"Weekdays"</string>
     <string name="weekends">"Weekends"</string>
     <string name="weekly">"Weekly"</string>
@@ -2388,6 +2428,7 @@
     <string name="what_are_you_into">"What are you into?"</string>
     <string name="what_did_you_do_today">"What did you do today?"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"What do you want to be able to do in %s?"</string>
+    <string name="what_each_day_was_made_of">"What each day was made of"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"What each day was made of — talk turns, shadow takes, drill reviews."</string>
     <string name="what_each_tab_is_for_and_how_to_use_it">"What each tab is for, and how to use it"</string>

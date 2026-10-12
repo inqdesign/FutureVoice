@@ -130,6 +130,9 @@ fun ActivityScreen(
     onStartTalk: () -> Unit = {},
     /** A review line: the review deck. */
     onOpenReview: () -> Unit = {},
+    /** The Review block: one mixed sitting of words, expressions, sentence
+     *  cards and shadow lines (iOS `DueReviewView.routineDeck`). */
+    onOpenRoutineReview: () -> Unit = onOpenReview,
     /** The weekly test line. */
     onOpenTest: () -> Unit = {},
     /** Capture: open on this view, or straight in the editor. */
@@ -203,6 +206,7 @@ fun ActivityScreen(
             // The root closes this page and opens the Speech tab.
             StudyPlan.Kind.SPEECH -> com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = true
             StudyPlan.Kind.TEST -> onOpenTest()
+            StudyPlan.Kind.REVIEW -> onOpenRoutineReview()
             else -> onOpenReview()
         }
     }

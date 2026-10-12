@@ -112,18 +112,24 @@ object PlannerDay {
 
     /**
      * A day's totals from the logs that already count them: the talk meter
-     * (the ring's seconds), the practice log's FINISHED counts — the numbers
-     * the daily goals are judged by, so postponing a card is not doing it —
-     * and finished say-it-again runs, saved Speech takes and tests.
+     * (the ring's seconds), the practice log's STUDIED counts, and finished
+     * say-it-again runs, saved Speech takes and tests.
+     *
+     * Words, expressions and cards count every item the learner WORKED
+     * THROUGH (`*Reps`) — "tomorrow" on a card is a card studied — not only
+     * the ones they called known (`*Done`, iOS ce099149, founder: "a review
+     * block should count what I studied"). Reading `*Done` made a review of
+     * twenty cards, honestly sorted into "not yet", read as 0 of 20. The
+     * daily goals ([GoalStore]) still judge by `*Done`; this is the routine.
      */
     fun totals(talkSeconds: Int, log: PracticeLog.Day?, events: List<ActivityEventLog.Event>,
                testFinished: Boolean): Totals {
         val d = log ?: PracticeLog.Day()
         return Totals(
             talkMinutes = talkSeconds / 60.0,
-            words = d.wordDone.toDouble(),
-            expressions = d.expressionDone.toDouble(),
-            cards = d.drillDone.toDouble(),
+            words = d.wordReps.toDouble(),
+            expressions = d.expressionReps.toDouble(),
+            cards = d.drillReps.toDouble(),
             shadow = d.shadowDone.toDouble(),
             sayItAgain = events.count { it.kind == ActivityEventLog.Kind.SAY_IT_AGAIN }.toDouble(),
             speech = events.count { it.kind == ActivityEventLog.Kind.SPEECH }.toDouble(),

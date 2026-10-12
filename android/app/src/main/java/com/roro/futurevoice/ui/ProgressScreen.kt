@@ -33,7 +33,6 @@ import com.roro.futurevoice.ui.brand.Symbols
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.WorkspacePremium
 import com.roro.futurevoice.data.TalkCurriculum
-import com.roro.futurevoice.data.ShadowAttemptStore
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MenuBook
@@ -95,10 +94,8 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.GoalStore
-import com.roro.futurevoice.data.PracticeLog
 import com.roro.futurevoice.ui.brand.BookCard
 import com.roro.futurevoice.ui.brand.Books
-import com.roro.futurevoice.ui.brand.EffortCharts
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -127,9 +124,6 @@ enum class Dim(val labelRes: Int) {
 /** Two weeks: long enough to show a habit, short enough to read at a glance. */
 private const val EFFORT_DAYS = 14
 
-/** Day-of-month, the only part of a date a fourteen-bar strip has room for. */
-private fun dayLabel(at: Long): String =
-    java.text.SimpleDateFormat("d", java.util.Locale.US).format(java.util.Date(at))
 /**
  * Progress — measured, never guessed. Every number here is computed in code
  * from the talks themselves (`ProgressMath`); the only thing an LLM writes on
@@ -149,6 +143,8 @@ private fun dayLabel(at: Long): String =
 @Composable
 fun ProgressBody(language: String, nativeLanguage: String,
                  onOpenAssessment: () -> Unit, onOpenActivity: () -> Unit,
+                 /** The effort card's page (iOS `EffortDetailView`). */
+                 onOpenEffort: () -> Unit = {},
                  goalMinutes: Int = 10,
                  /** A measured CEFR level from a fresh assessment. */
                  onMeasuredLevel: (String) -> Unit = {},
@@ -165,8 +161,10 @@ fun ProgressBody(language: String, nativeLanguage: String,
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var todaySeconds by remember { mutableStateOf(0) }
-    var minutesByDay by remember { mutableStateOf<List<Pair<Long, Int>>>(emptyList()) }
-    var effortByDay by remember { mutableStateOf<List<Pair<String, PracticeLog.Day>>>(emptyList()) }
+    /** This week and the one before, oldest first — the effort card's data
+     *  ([EffortHistory], the same counts its detail page reads). */
+    var effortWeek by remember { mutableStateOf<List<com.roro.futurevoice.data.EffortDay>>(emptyList()) }
+    var effortLastWeek by remember { mutableStateOf<List<com.roro.futurevoice.data.EffortDay>>(emptyList()) }
     var report by remember { mutableStateOf<WeeklyReport?>(null) }
     /** The newest report that actually CARRIES a level — reports written
      *  before the pooled read existed have none, and the latest report is
@@ -178,7 +176,6 @@ fun ProgressBody(language: String, nativeLanguage: String,
     var carryoverWeek by remember { mutableStateOf(0) }
     var material by remember { mutableStateOf(0 to 0) }
     var streak by remember { mutableStateOf(0) }
-    var avgShadowScore by remember { mutableStateOf(0) }
     // False until the first pass has landed. Every number below starts at
     // zero, and a zero is a CLAIM here ("nothing measured, 0/15 min") — so
     // the pages must not be drawn from it before the archive has been read.
@@ -189,8 +186,11 @@ fun ProgressBody(language: String, nativeLanguage: String,
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
         todaySeconds = TalkTimeLog.secondsToday(context)
-        minutesByDay = TalkTimeLog.recentSeconds(context, EFFORT_DAYS)
-        effortByDay = PracticeLog.recent(context, EFFORT_DAYS)
+        val effort = withContext(Dispatchers.IO) {
+            com.roro.futurevoice.data.EffortHistory.days(context, EFFORT_DAYS, language)
+        }
+        effortWeek = effort.takeLast(7)
+        effortLastWeek = effort.take(7)
         val reports = WeeklyReportStore.shared(context).load(language)
         report = reports.firstOrNull()
         levelReport = reports.firstOrNull { it.cefrLevel != null }
@@ -216,10 +216,6 @@ fun ProgressBody(language: String, nativeLanguage: String,
         streak = TalkTimeLog.streakDays(context)
         val bands = VocabStore.shared(context).usedWordsByLevel(language)
         val expressions = VocabStore.shared(context).expressionEntries(language).size
-        val attempts = ShadowAttemptStore.shared(context).load(language)
-        avgShadowScore = attempts.filterNot { it.isPartial }
-            .sortedByDescending { it.createdAt }.take(10)
-            .map { it.overallScore }.takeIf { it.isNotEmpty() }?.average()?.toInt() ?: 0
         // The walk is several passes over every ended talk plus a scorecard
         // recomputation each — off the main thread, or the tab opens on the
         // still-empty state and a learner with a year of talks reads zeroes.
@@ -401,27 +397,14 @@ fun ProgressBody(language: String, nativeLanguage: String,
             }
         }
 
-        // What the last two weeks actually were. Both strips are drawn only
-        // when there is something in them: an empty chart is a reproach, and
-        // a new learner has done nothing wrong.
-        if (minutesByDay.any { it.second > 0 }) {
-            ProgressPanel {
-                PanelHeader(stringResource(R.string.time_speaking)) {
-                    Text(stringResource(R.string.lld_min_this_week,
-                        minutesByDay.takeLast(7).sumOf { it.second } / 60),
-                        style = PT.caption.copy(fontWeight = FontWeight.SemiBold), color = secondary)
-                }
-                EffortCharts.Bars(
-                    days = minutesByDay.map { (at, secs) ->
-                        EffortCharts.DayBar(dayLabel(at),
-                            listOf(MaterialTheme.colorScheme.primary to secs / 60f))
-                    },
-                    goal = goalMinutes.toFloat(),
-                )
-                Text(stringResource(
-                    R.string.minutes_you_actually_spoke_per_day_the_dashed_line_is_your_l_b779b3,
-                    goalMinutes),
-                    style = PT.caption, color = secondary)
+        // One card for the effort, the depth one tap away (iOS ce099149,
+        // founder 2026-10-11: "time speaking" and "activity" were two thin
+        // panels that still couldn't say how much went into each kind).
+        // Their charts live on the effort page now. Drawn only when there is
+        // something in it: an empty chart is a reproach.
+        if (effortWeek.any { it.isActive } || effortLastWeek.any { it.isActive }) {
+            ProgressPanel(onClick = onOpenEffort) {
+                EffortSummaryCard(week = effortWeek, lastWeek = effortLastWeek)
             }
         }
 
@@ -451,47 +434,6 @@ fun ProgressBody(language: String, nativeLanguage: String,
                     material.second),
                 progress = material.first / material.second.toFloat(),
             )
-        }
-
-        if (effortByDay.any { it.second.total > 0 }) {
-            val shadow = Color(0xFF34C759)
-            val sentences = Color(0xFFFF9500)
-            val notebook = Color(0xFF007AFF)
-            ProgressPanel {
-                Text(stringResource(R.string.activity), style = PT.headline)
-                // Stacked by KIND, not just totals — a strip that is always one
-                // colour is the "I only ever do the comfortable thing" signal,
-                // and that is the whole reason to draw it by kind.
-                EffortCharts.Bars(
-                    days = effortByDay.map { (key, d) ->
-                        EffortCharts.DayBar(key.takeLast(2), listOf(
-                            shadow to d.shadowReps.toFloat(),
-                            sentences to d.drillReps.toFloat(),
-                            notebook to (d.wordReps + d.expressionReps).toFloat(),
-                        ))
-                    },
-                    height = 130.dp,
-                )
-                EffortCharts.Legend(listOf(
-                    stringResource(R.string.shadowing) to shadow,
-                    stringResource(R.string.sentences) to sentences,
-                    stringResource(R.string.notebook) to notebook,
-                ))
-                PanelDivider()
-                // Reps stay what they have always meant here — REVIEW work.
-                // Talk time is counted in minutes, in its own strip above.
-                val week = effortByDay.takeLast(7)
-                val reps = week.sumOf { it.second.total }
-                val daysActive = week.count { it.second.total > 0 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Stat(stringResource(R.string.reps_this_week), "$reps", Modifier.weight(1f))
-                    Stat(stringResource(R.string.days_active), "$daysActive", Modifier.weight(1f))
-                    if (avgShadowScore > 0) {
-                        Stat(stringResource(R.string.avg_shadow_score), "$avgShadowScore",
-                            Modifier.weight(1f))
-                    }
-                }
-            }
         }
 
         // The ONLY way into the activity calendar from this tab. A streak is
@@ -591,6 +533,8 @@ internal object PT {
     val body = s(17, 22)
     val headline = s(17, 22, FontWeight.SemiBold)
     val title3 = s(20, 25)
+    /** `.largeTitle.weight(.bold)` — the effort card's headline number. */
+    val largeTitle = s(34, 41, FontWeight.Bold)
 
     /** `.geistPixel(n)` — the display face at a fixed size, tight leading. */
     fun pixel(size: Int) = TextStyle(fontSize = size.sp, lineHeight = (size * 1.1f).sp,

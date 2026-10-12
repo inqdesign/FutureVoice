@@ -241,6 +241,13 @@ fun RootScreen() {
     /** Every challenge, live and past — pushed from the Speech tab. */
     var showSpeechChallenges by remember { mutableStateOf(false) }
     var showDueReview by remember { mutableStateOf(false) }
+    /** Progress's effort page (iOS `EffortDetailView`, pushed from the card). */
+    var showEffort by remember { mutableStateOf(false) }
+    /** The routine's Review block, dealt: its cards, then its shadow lines
+     *  (iOS `DueReviewView(hand:shadowPicks:)`). */
+    var routineReview by remember {
+        mutableStateOf<Pair<List<StudyDeckItem>, List<com.roro.futurevoice.data.ShadowPicks.Pick>>?>(null)
+    }
     var showCreditGuide by remember { mutableStateOf(false) }
     var showPlanPage by remember { mutableStateOf(false) }
     // Keep the learner's pool row in step with the profile — but only a row
@@ -807,7 +814,10 @@ fun RootScreen() {
         if (showAssessment) add(RootRoute.Assessment)
         if (sayAgainPending) add(RootRoute.SayAgainPick)
         if (routineEditorOpen) add(RootRoute.RoutineEditor)
+        if (routineReview != null) add(RootRoute.RoutineReview)
         if (showActivity) add(RootRoute.Activity)
+        // Under Activity: its "Calendar and routine" link opens the routine on top.
+        if (showEffort) add(RootRoute.Effort)
         if (showDueReview) add(RootRoute.DueReview)
         studyDeckKind?.let { add(RootRoute.StudyDeck(it)) }
         personDetailId?.let { add(RootRoute.Person(it)) }
@@ -841,6 +851,7 @@ fun RootScreen() {
                 is RootRoute.Library -> library = null
                 RootRoute.Assessment -> showAssessment = false
                 RootRoute.Activity -> showActivity = false
+                RootRoute.Effort -> showEffort = false
                 is RootRoute.Person -> personDetailId = null
                 is RootRoute.Finished -> finishedBooks = null
                 RootRoute.CreditGuide -> showCreditGuide = false
@@ -1005,6 +1016,14 @@ fun RootScreen() {
         // (the Review tab's Today card — iOS `e1b3501`).
         RootRoute.RoutineEditor -> WeeklyPlanEditor(onClose = { RoutineNav.editorOpen.value = false })
 
+        RootRoute.Effort -> EffortDetailScreen(
+            language = state.targetLanguage,
+            goalMinutes = context.getSharedPreferences("futurevoice", 0)
+                .getInt("futurevoice.dailyGoalMinutes", 10),
+            onOpenActivity = { showActivity = true },
+            onBack = { showEffort = false },
+        )
+
         RootRoute.Activity -> ActivityScreen(
             language = state.targetLanguage,
             onOpenTalk = { detailSessionId = it },
@@ -1012,6 +1031,19 @@ fun RootScreen() {
             // Every routine line is a door to that kind of practice.
             onStartTalk = { showActivity = false; DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk },
             onOpenReview = { showActivity = false; showDueReview = true },
+            onOpenRoutineReview = {
+                gateScope.launch {
+                    val deck = routineDeck(context,
+                        goal = com.roro.futurevoice.data.GoalStore.target(context,
+                            com.roro.futurevoice.data.StudyPlan.Kind.REVIEW)
+                            ?: com.roro.futurevoice.data.StudyPlan.Kind.REVIEW.defaultAmount,
+                        language = state.targetLanguage, level = state.level)
+                    // No cards but lines to say: straight to the lines.
+                    if (deck.first.isEmpty() && deck.second.isNotEmpty()) {
+                        shadowHand = deck.second; shadowAt = 0
+                    } else routineReview = deck
+                }
+            },
             onOpenTest = { showActivity = false; tab = HomeTab.PRACTICE },
         )
 
@@ -1025,6 +1057,28 @@ fun RootScreen() {
             focus = focusStudyItem,
             onBack = { showDueReview = false; focusStudyItem = null },
         )
+
+        // A sheet over the routine page, as iOS presents it.
+        RootRoute.RoutineReview -> {
+            val deck = routineReview ?: (emptyList<StudyDeckItem>() to emptyList())
+            StudyDeckHost(
+                kind = null,
+                language = state.targetLanguage,
+                nativeLanguage = state.nativeLanguage,
+                level = state.level,
+                hand = deck.first,
+                handTitle = stringResource(R.string.review),
+                emptyTitle = stringResource(R.string.all_caught_up),
+                emptyMessage = stringResource(
+                    R.string.words_expressions_and_sentences_from_your_talks_show_up_here_9e17d7),
+                nextStep = if (deck.second.isEmpty()) null else StudyDeckNextStep(
+                    title = stringResource(R.string.next_shadowing),
+                    icon = Icons.Filled.GraphicEq,
+                    action = { shadowHand = deck.second; shadowAt = 0; routineReview = null },
+                ),
+                onBack = { routineReview = null },
+            )
+        }
 
         is RootRoute.StudyDeck -> StudyDeckHost(
             kind = r.kind,
@@ -1242,6 +1296,7 @@ fun RootScreen() {
             onOpenPeople = { showPeople = true },
             onOpenFinished = { finishedBooks = it },
             onOpenActivity = { showActivity = true },
+            onOpenEffort = { showEffort = true },
             onOpenAssessment = { showAssessment = true },
             tab = tab,
             onTabChange = {
@@ -1414,6 +1469,8 @@ internal fun HomeScreen(
     /** Practice's header seal → the finished-books page, with the books it counted. */
     onOpenFinished: (List<FinishedBook>) -> Unit = {},
     onOpenActivity: () -> Unit = {},
+    /** Progress's effort card → its page (iOS `EffortDetailView`). */
+    onOpenEffort: () -> Unit = {},
     onOpenAssessment: () -> Unit = {},
     /** Hoisted by the root — see the comment on its declaration there. */
     tab: HomeTab,
@@ -1744,6 +1801,7 @@ internal fun HomeScreen(
                         nativeLanguage = state.nativeLanguage,
                         onOpenAssessment = onOpenAssessment,
                         onOpenActivity = onOpenActivity,
+                        onOpenEffort = onOpenEffort,
                         goalMinutes = LocalContext.current
                             .getSharedPreferences("futurevoice", 0)
                             .getInt("futurevoice.dailyGoalMinutes", 10),
@@ -2584,7 +2642,9 @@ internal sealed interface RootRoute {
     data object SayAgainPick : RootRoute { override val key = "sayAgainPick" }
     data object RoutineEditor : RootRoute { override val key = "routineEditor" }
     data object Activity : RootRoute { override val key = "activity" }
+    data object Effort : RootRoute { override val key = "effort" }
     data object DueReview : RootRoute { override val key = "dueReview" }
+    data object RoutineReview : RootRoute { override val key = "routineReview" }
     data class StudyDeck(val kind: StudyScheduleStore.Kind) : RootRoute { override val key = "studyDeck:$kind" }
     data class Person(val id: String) : RootRoute { override val key = "person:$id" }
     data object People : RootRoute { override val key = "people" }
@@ -2612,7 +2672,8 @@ internal sealed interface RootRoute {
 internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Boolean {
     val pageUnder = from !is RootRoute.Gate && from !is RootRoute.Call && from !is RootRoute.ShadowHand &&
         from !is RootRoute.ShadowLine && from !is RootRoute.EditProfile && from !is RootRoute.SayAgainPick &&
-        from !is RootRoute.RoutineEditor && from !is RootRoute.DueReview && from !is RootRoute.StudyDeck
+        from !is RootRoute.RoutineEditor && from !is RootRoute.DueReview && from !is RootRoute.StudyDeck &&
+        from !is RootRoute.RoutineReview
     if (!pageUnder) return false
     return when (to) {
         // Books: `navigationDestination` from a shelf card, Activity, a
@@ -2626,7 +2687,9 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         // Practice's library tiles; Progress's latest assessment; the
         // streak's Activity; the finished shelf.
         RootRoute.Sentences, is RootRoute.Library, RootRoute.ShadowBrowser,
-        RootRoute.Assessment, RootRoute.Activity, is RootRoute.Finished -> from is RootRoute.Tabs
+        RootRoute.Assessment, is RootRoute.Finished, RootRoute.Effort -> from is RootRoute.Tabs
+        // The streak's Activity, and the effort page's "Calendar and routine".
+        RootRoute.Activity -> from is RootRoute.Tabs || from is RootRoute.Effort
         // The Speech tab's challenge rows push the board.
         is RootRoute.SpeechChallenge -> from is RootRoute.Tabs || from is RootRoute.SpeechChallenges
         RootRoute.SpeechChallenges -> from is RootRoute.Tabs
