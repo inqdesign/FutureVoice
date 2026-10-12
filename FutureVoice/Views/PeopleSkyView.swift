@@ -724,10 +724,11 @@ private struct DepthOfField: ViewModifier {
             // 0 at the centre, 1 around the screen's edge
             let reach = max(min(size.width, size.height) * 0.62, 1)
             let t = min(hypot(dx, dy * 0.8) / reach, 1.6)
+            // Sharp across the middle of the screen, fading past it. Fade
+            // only: a shrink by distance made everyone around the middle
+            // squirm while the map was dragged (2026-10-12).
             return effect
-                // sharp across the middle of the screen, fading past it
                 .opacity(max(0.3, min(1, 1.45 - 0.75 * t)))
-                .scaleEffect(1 - 0.12 * max(0, t - 0.7))
         }
     }
 }
