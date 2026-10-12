@@ -438,6 +438,9 @@ struct FindPeopleSheet: View {
                 pool: pool, counterparts: appState.counterparts) {
                 appState.reloadCounterparts()
             }
+            if PublicPersonaService.syncOwnVoices(pool: pool, counterparts: appState.counterparts) {
+                appState.reloadCounterparts()
+            }
         } catch {
             loadFailed = pool.isEmpty
         }
@@ -494,20 +497,6 @@ struct FindPersonCard: View {
     /// a voice changed a second ago is the voice that speaks.
     private var effectivePerson: Counterpart { currentPerson }
 
-    /// The voice this stranger speaks in — the learner's pick, never the
-    /// stranger's real voice (there isn't one to have). Picking one saves the
-    /// person on the spot, so the pick sticks (`asCounterpart` returns the
-    /// saved row over the pool's).
-    private var voiceSelection: Binding<String> {
-        Binding(get: { currentPerson.voicePresetId },
-                set: { picked in
-                    var c = currentPerson
-                    guard picked != c.voicePresetId else { return }
-                    c.voicePresetId = picked
-                    appState.saveCounterpart(c)
-                })
-    }
-
     private var currentVoiceName: String {
         VoicePreset.catalog.first(where: { $0.id == currentPerson.voicePresetId })?.displayName ?? ""
     }
@@ -552,19 +541,16 @@ struct FindPersonCard: View {
                 }
             }
 
+            // Every character has its own voice — its author's pick, or the
+            // one a written character was made with. Shown, not chosen.
             Section {
-                NavigationLink {
-                    VoicePresetPickerView(selection: voiceSelection)
-                        .environmentObject(appState)
-                } label: {
-                    HStack {
-                        Label("Voice", systemImage: "waveform")
-                        Spacer()
-                        Text(currentVoiceName).foregroundStyle(.secondary)
-                    }
+                HStack {
+                    Label("Voice", systemImage: "waveform")
+                    Spacer()
+                    Text(currentVoiceName).foregroundStyle(.secondary)
                 }
             } footer: {
-                Text(explain("Not their real voice — an AI speaks their words in a voice you pick."))
+                Text("Their own voice, chosen with their introduction. Not a recording of anyone.")
             }
 
             if let onCompose {

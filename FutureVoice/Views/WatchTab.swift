@@ -564,6 +564,9 @@ struct WatchTab: View {
         // their real seats.
         do {
             let pool = try await PublicPersonaService.fetchPool(language: appState.targetLanguage)
+            if PublicPersonaService.syncOwnVoices(pool: pool, counterparts: appState.counterparts) {
+                appState.reloadCounterparts()
+            }
             skyPool = pool.map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
             skyJobs = Dictionary(pool.map { ($0.id, $0.occupation) }, uniquingKeysWith: { a, _ in a })
         } catch {

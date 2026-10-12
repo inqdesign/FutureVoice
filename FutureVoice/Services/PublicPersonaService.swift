@@ -137,6 +137,32 @@ enum PublicPersonaService {
         return healed
     }
 
+    /// Every character speaks in ITS OWN voice — the one its author picked at
+    /// publish, or the one a curated character was made with (2026-10-12,
+    /// founder). Until then the learner could pick a stranger's voice and the
+    /// saved row kept it over the pool's; this puts a met stranger back on
+    /// the row's voice (and takes the row's greeting when theirs is empty).
+    /// Returns whether anything was saved.
+    @MainActor
+    static func syncOwnVoices(pool: [PublicPersona], counterparts: [Counterpart]) -> Bool {
+        let rows = Dictionary(pool.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var changed = false
+        for c in counterparts {
+            guard let rid = c.remoteId, let p = rows[rid],
+                  VoicePreset.catalog.contains(where: { $0.id == p.voice_preset_id }) else { continue }
+            var fixed = c
+            if fixed.voicePresetId != p.voice_preset_id { fixed.voicePresetId = p.voice_preset_id }
+            if let g = p.greeting, !g.isEmpty, fixed.greeting(in: p.language).isEmpty {
+                fixed.setGreeting(g, in: p.language)
+            }
+            guard fixed.voicePresetId != c.voicePresetId
+                    || fixed.greeting(in: p.language) != c.greeting(in: p.language) else { continue }
+            CounterpartStore.shared.save(fixed)
+            changed = true
+        }
+        return changed
+    }
+
     /// The local `Counterpart.id` for a remote persona, derived from its
     /// remote id so it is the SAME every time — minting one is idempotent.
     ///

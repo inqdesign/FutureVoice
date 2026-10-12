@@ -328,11 +328,13 @@ a language school. Rows come from the Supabase table `public_personas`, read ano
   (2026-08-31, was "People today", six a day on a daily seed): that they're
   strangers is the point — talking to strangers is what the language is for —
   and the rotation hid most of the pool to manufacture a return visit.
-- **A stranger's VOICE is the learner's pick** (2026-08-31): the card carries
-  a Voice row (`VoicePresetPickerView`) and the choice is saved onto the
-  Counterpart (`voicePresetId`), which wins forever because `asCounterpart`
-  returns the saved row over the pool's. Still never a clone — the footer
-  says so out loud.
+- **Every character speaks in its OWN voice** (2026-10-12, founder: "캐릭터마다
+  고유의 목소리를 두자"; was the learner's pick since 2026-08-31). The voice is
+  chosen by whoever wrote the persona — the author on their public intro, the
+  curator for a seeded row — and the card shows it read-only. A met stranger
+  re-voiced under the old rule is put back on pool load
+  (`PublicPersonaService.syncOwnVoices`, from Find people and the Watch sky).
+  Still never a clone — the footer says so out loud.
 - **A preset voice id is a SLOT, voiced per target language** (2026-09-28). The four presets are American/British speakers and read Korean like one. What is stored (Counterpart, Scenario, persona row, StockPerson) stays the English id; `VoicePreset.speaking(_:in:)` swaps in the language's own voice at the network edge (`ElevenLabsClient`, the gateway `start`) and in `PhraseAudioStore`'s key. ko and ja use four native Korean library voices (founder's pick, added to the ElevenLabs account — a library voice must be in My Voices to synthesize); de and en keep the originals. Lines cached under the slot before this still play as the lookup's fallback (produced audio is never orphaned); previews and a call's opener pass `allowLineage: false` so they are always the voice speaking now. Every id must also be in BOTH server allowlists (gateway `PRESET_VOICE_IDS`, `elevenlabs-tts`), deployed before any build that resolves to it. A revoiced slot also takes a name from that language (`VoicePreset.localNames`: ko 시안·민준·한별·준호, ja 美咲·翔太·陽菜·健太) — `displayName` follows the target language, and a saved built-in person's row is renamed on read (`StockPerson.localized`, in `CounterpartStore.load` and on a language switch), since one row serves every language.
 - **Talk** starts a normal `ConversationView` call with `initialCounterpart:`. Two things change and nothing else: `ConversationEngine`'s `YOUR CHARACTER` block casts the model AS that person (it outranks ROLE/SCENE inference and the future-self framing, and carries the same context-not-instructions + language guard as the Watch engines), and `activeVoiceId` uses the persona's **preset** voice. Their voice is never a clone — the person on the other end is a stranger, not the fluent self.
 - The talk saves as an ordinary `Session` with `counterpartId`, so its review material, transcript and Practice book all come from the existing machinery for free. The person's card lists every talk you've had with them.
