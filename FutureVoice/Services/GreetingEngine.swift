@@ -15,9 +15,18 @@ enum GreetingEngine {
 
         Rules:
         - One or two short sentences, at most 14 words in all. Spoken, natural.
-        - In character: their role, their life, how they know the learner. A
-          friend greets like a friend, a landlord like a landlord, a stranger
-          like someone friendly they've just met.
+        - Build it on ONE concrete thing about them, said as they would say it:
+          · someone with a self-introduction: take one detail from it — what
+            they do, where they are, something they love or are in the middle
+            of ("Hi, I'm Moeka! Do you know Shiina Ringo?"). If it is only a
+            list of topics, use their town or one interest, lightly.
+          · a character in the middle of a situation: greet from inside it —
+            a pharmacist at the counter, a landlord at the door, a nurse
+            starting the question she'd really ask.
+          · someone the learner knows: greet the way that relationship does,
+            and you may touch the history they share.
+        - Never health, money, family trouble or anything private, even if the
+          context mentions it.
         - Address the learner the way this relationship would (casual for close
           people, polite otherwise) and use the name they call the learner, if given.
         - May hint at something going on in their own life. Never mention
