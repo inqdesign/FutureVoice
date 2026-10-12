@@ -43,9 +43,14 @@ export const ACCENT_LANGUAGE: Record<string, string> = {
   "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
 }
 
-/** A voice's own accent, required before others can be added. */
+/** A voice's own accent, required before others can be added — deliberately
+ *  one the app never OFFERS. Cartesia treats the base as "already this
+ *  accent", so a pick equal to it changes nothing: with "general-american" as
+ *  the base, choosing American played the recording as it was (2026-10-12,
+ *  first device test). With an off-menu base every pick is a real accent.
+ *  ja/ko have one accent each and no picker. */
 const BASE_ACCENT: Record<string, string> = {
-  en: "general-american", de: "standard-german", ja: "standard-japanese", ko: "korean",
+  en: "new-zealand", de: "austrian-german", ja: "standard-japanese", ko: "korean",
 }
 
 /** The app's accent picks arrive as ElevenLabs remix PROMPTS
@@ -67,15 +72,19 @@ export function accentFromDescription(description: string): string | null {
 export async function ensureAccent(uuid: string, accent: string): Promise<{ ok: boolean; detail?: string }> {
   const r = await fetch(`${HOST}/voices/${uuid}`, { headers: headers(false) })
   if (!r.ok) return { ok: false, detail: `get voice ${r.status}` }
-  const v = await r.json() as { language?: string; accents?: { accent: string }[] | null }
+  const v = await r.json() as { language?: string; accents?: { accent: string; is_native?: boolean }[] | null }
   let have = (v.accents ?? []).map((a) => a.accent)
-  if (have.length === 0) {
-    const base = BASE_ACCENT[(v.language ?? "en").split("-")[0]] ?? "general-american"
+  const base = BASE_ACCENT[(v.language ?? "en").split("-")[0]] ?? "new-zealand"
+  const native = (v.accents ?? []).find((a) => a.is_native)?.accent
+  // No base yet, or the base IS the accent asked for (voices made before the
+  // off-menu base): set the off-menu base. The old base stays on the voice as
+  // an added accent, so it is now a real change.
+  if (have.length === 0 || (native === accent && base !== accent)) {
     const p = await fetch(`${HOST}/voices/${uuid}`, {
       method: "PATCH", headers: headers(), body: JSON.stringify({ accent: base }),
     })
     if (!p.ok) return { ok: false, detail: `set base ${p.status} ${(await p.text()).slice(0, 200)}` }
-    have = [base]
+    if (!have.includes(base)) have = [base, ...have]
   }
   if (have.includes(accent)) return { ok: true }
   const a = await fetch(`${HOST}/voices/${uuid}/accents`, {

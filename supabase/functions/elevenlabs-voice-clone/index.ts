@@ -126,7 +126,10 @@ Deno.serve(async (req) => {
   if (!isFree) {
     const rec = await recordFreeUsage({
       supabase, userId: user.id, action, purpose: "voice_clone",
-      dailyCap: 5, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+      // Cartesia keeps clones without a limit and charges nothing for one,
+      // so its cap is only a runaway guard; 5 was ElevenLabs' slot economy,
+      // and it left a learner trying accents on a spinner (2026-10-12).
+      dailyCap: onCartesia ? 30 : 5, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
       metadata: { reclone: true },
     })
     if (!rec.ok) {
