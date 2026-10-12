@@ -722,10 +722,14 @@ class TalkViewModel(context: Context) : ViewModel() {
                     coachStale = it.coachStale || it.coachHint != null || it.coachReply != null)
             }
         }
-        realtime.onReplyEnded = { ctx ->
+        realtime.onReplyEnded = { ctx, full ->
             realtimeReplyTurns[ctx]?.let { id ->
                 viewModelScope.launch {
-                    val text = _state.value.turns.firstOrNull { it.id == id }?.transcript.orEmpty()
+                    // The whole line: the bubble may still be revealing its
+                    // last sentences while the voice drains (iOS 1c25820d).
+                    val text = full.ifEmpty {
+                        _state.value.turns.firstOrNull { it.id == id }?.transcript.orEmpty()
+                    }
                     advanceCoach(text, id)
                 }
             }

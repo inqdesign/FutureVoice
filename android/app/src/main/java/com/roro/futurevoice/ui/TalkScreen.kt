@@ -492,10 +492,25 @@ fun TalkScreen(
     // in place in the same frame — and everything else still eases.
     val streamingReply = state.turns.lastOrNull()?.takeIf { it.role == TurnRole.FLUENT_SELF }
     val contentSize = Triple(state.turns.size, state.partial.length + state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
-        (if (it === streamingReply) 0 else it.transcript.length) +
-            (it.suggestion?.alternative?.length ?: 0) + (it.suggestion?.reason?.length ?: 0)
+        if (it === streamingReply) 0 else it.transcript.length
     }
     LaunchedEffect(contentSize) {
+        if (state.turns.isNotEmpty() && followBottom) {
+            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+            listState.animateScrollToItem(last, Int.MAX_VALUE)
+        }
+    }
+    // A correction card grows the LEARNER's bubble, mid-list, often while the
+    // reply below it is still being revealed — on its own 0.25 s height
+    // animation. Scrolling inside it aimed at a layout still moving and
+    // corrected again once it stopped: the whole list swayed on every card.
+    // So the card's settle pass waits the animation out (iOS 1c25820d).
+    val suggestionsSize = state.turns.sumOf {
+        (it.suggestion?.alternative?.length ?: 0) + (it.suggestion?.reason?.length ?: 0)
+    }
+    LaunchedEffect(suggestionsSize) {
+        if (suggestionsSize == 0) return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
         if (state.turns.isNotEmpty() && followBottom) {
             val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
             listState.animateScrollToItem(last, Int.MAX_VALUE)

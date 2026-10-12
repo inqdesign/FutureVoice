@@ -15,6 +15,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -81,6 +83,10 @@ class RealtimeTalkClient(private val context: Context) {
         const val MIC_RATE = 16_000
         /** What the gateway announces if it says nothing else. */
         private const val DEFAULT_REPLY_RATE = 22_050
+        /** A line whose voice never comes is shown anyway after this long. */
+        private const val REVEAL_VOICE_WAIT_MS = 3_000L
+        /** The default speech-speed rung, for a client with no context yet. */
+        private const val DEFAULT_SPEECH_SPEED = 0.9
         /** iOS `cutInWindow`: the gateway's own `cutoffWindowMs`, measured
          *  from the same moment give or take the model's first token. */
         const val CUT_IN_WINDOW_MS = 2_500L
@@ -170,9 +176,10 @@ class RealtimeTalkClient(private val context: Context) {
      *  Say-it-again (iOS keeps every line's audio in `TurnAudioStore`). */
     @Volatile var onReplyAudio: ((context: String, pcm: ByteArray, sampleRate: Int) -> Unit)? = null
     @Volatile var onReplyBegan: ((context: String) -> Unit)? = null
-    /** A fluent-self line finished (`audio_end`) — coach mode reads the
-     *  question it asked (iOS `onReplyFinished`). */
-    @Volatile var onReplyEnded: ((context: String) -> Unit)? = null
+    /** A fluent-self line finished (`audio_end`) with its whole text — coach
+     *  mode reads the question it asked (iOS `onReplyFinished`). The bubble
+     *  may still be revealing its last sentences at this point. */
+    @Volatile var onReplyEnded: ((context: String, text: String) -> Unit)? = null
     /** Reply text as it is written. A delta prefixed with NUL is the
      *  authoritative full text, sent when the reply closes. */
     @Volatile var onReplyDelta: ((context: String, delta: String) -> Unit)? = null
@@ -237,6 +244,30 @@ class RealtimeTalkClient(private val context: Context) {
     /** Audio for the reply in flight, kept so a Replay has the closing line
      *  even when End lands mid-playback and `audio_end` never arrives. */
     private val replyPCM = ByteArrayOutputStream()
+    /** The whole text of the line in flight, as written so far. */
+    private val replyText = StringBuilder()
+    @Volatile private var serverAudioEnded = false
+
+    /**
+     * The line's text is held until its voice is AUDIBLE, then revealed a
+     * sentence at a time as it is spoken ([ReplyReveal], iOS 1c25820d). It
+     * outlives `audio_end`: that means every byte was SENT, and a long line
+     * is still draining through the player when it lands.
+     */
+    private class Reveal(val context: String) {
+        var text = ""
+        /** `reply` arrived (or the line was handed over): tail included. */
+        var isFinal = false
+        var audibleAt: Long? = null
+        var firstTextAt: Long? = null
+        var lastChunkAt: Long? = null
+        /** Seconds of audio once all of it is in. */
+        var totalSeconds: Double? = null
+        var shown = ""
+    }
+    private val revealLock = Any()
+    private var reveal: Reveal? = null
+    private var revealJob: Job? = null
     private val userPCM = ByteArrayOutputStream()
     /** The last committed turn's audio: a turn the gateway re-opens
      *  (`continues`) is handed over as ONE take (iOS `lastTurnPCM`). */
@@ -321,7 +352,24 @@ class RealtimeTalkClient(private val context: Context) {
                 // Binary frames are reply PCM at the announced rate.
                 val chunk = bytes.toByteArray()
                 replyPCM.write(chunk)
-                scope.launch(audioThread) { player?.write(chunk) }
+                val ctx = replyContext
+                synchronized(revealLock) {
+                    reveal?.takeIf { it.context == ctx }?.lastChunkAt = System.currentTimeMillis()
+                }
+                scope.launch(audioThread) {
+                    val p = player ?: return@launch
+                    p.write(chunk)
+                    // The first buffer in the player: the voice is audible,
+                    // and the line's first sentence goes up with it.
+                    var step = false
+                    synchronized(revealLock) {
+                        val r = reveal
+                        if (r != null && r.context == ctx && r.audibleAt == null) {
+                            r.audibleAt = System.currentTimeMillis(); step = true
+                        }
+                    }
+                    if (step) stepReveal()
+                }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -412,6 +460,8 @@ class RealtimeTalkClient(private val context: Context) {
         "warnings" to warningsThisCall.toString())
 
     private fun teardown() {
+        // The rest will never be heard; the line keeps all its words.
+        finishReveal()
         stopMic()
         scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
         runCatching { socket?.close(1000, null) }; socket = null
@@ -460,6 +510,9 @@ class RealtimeTalkClient(private val context: Context) {
                 replyBeganAt = System.currentTimeMillis()
                 replyRate = msg["sampleRate"]?.jsonPrimitive?.content?.toIntOrNull() ?: DEFAULT_REPLY_RATE
                 replyPCM.reset()
+                replyText.setLength(0)
+                serverAudioEnded = false
+                finishReveal()
                 val rate = replyRate
                 scope.launch(audioThread) {
                     // The rate can change between replies; a player is bound
@@ -471,14 +524,32 @@ class RealtimeTalkClient(private val context: Context) {
                 }
                 ctx?.let { onReplyBegan?.invoke(it) }
                 state = State.SPEAKING
+                ctx?.let { beginReveal(it) }
             }
             "reply_delta" -> {
                 val ctx = replyContext ?: return
-                onReplyDelta?.invoke(ctx, msg["text"]?.jsonPrimitive?.content.orEmpty())
+                replyText.append(msg["text"]?.jsonPrimitive?.content.orEmpty())
+                synchronized(revealLock) {
+                    reveal?.takeIf { it.context == ctx }?.let { r ->
+                        r.text = replyText.toString()
+                        if (r.firstTextAt == null) r.firstTextAt = System.currentTimeMillis()
+                    }
+                }
+                stepReveal()
             }
             "reply" -> {
                 val ctx = replyContext ?: return
-                msg["text"]?.jsonPrimitive?.content?.let { onReplyDelta?.invoke(ctx, " $it") }
+                // The authoritative text, in case deltas were coalesced.
+                val full = msg["text"]?.jsonPrimitive?.content ?: return
+                replyText.setLength(0); replyText.append(full)
+                synchronized(revealLock) {
+                    reveal?.takeIf { it.context == ctx }?.let { r ->
+                        r.text = full
+                        r.isFinal = true
+                        if (r.firstTextAt == null) r.firstTextAt = System.currentTimeMillis()
+                    }
+                }
+                stepReveal()
             }
             "audio_end" -> {
                 // The line is complete: hand its audio over NOW. The next
@@ -486,11 +557,22 @@ class RealtimeTalkClient(private val context: Context) {
                 // the one in flight at hang-up used to be lost.
                 val ctx = replyContext
                 val bytes = replyPCM.toByteArray()
+                val text = replyText.toString()
+                serverAudioEnded = true
+                synchronized(revealLock) {
+                    reveal?.takeIf { it.context == ctx }?.let { r ->
+                        r.text = text
+                        r.isFinal = true
+                        r.totalSeconds = bytes.size / 2.0 / replyRate
+                        if (r.audibleAt == null) r.audibleAt = System.currentTimeMillis()
+                    }
+                }
                 if (ctx != null && bytes.isNotEmpty()) {
                     replyPCM.reset()
                     onReplyAudio?.invoke(ctx, bytes, replyRate)
                 }
-                ctx?.let { onReplyEnded?.invoke(it) }
+                ctx?.let { onReplyEnded?.invoke(it, text) }
+                if (text.isEmpty()) finishReveal() else stepReveal()
                 // Let the track drain what it holds, then hand the mic back.
                 scope.launch(audioThread) {
                     runCatching { player?.drain() }
@@ -507,6 +589,8 @@ class RealtimeTalkClient(private val context: Context) {
                     replyContext = null
                     replyBeganAt = null
                     replyPCM.reset()
+                    replyText.setLength(0)
+                    synchronized(revealLock) { reveal = null; revealJob?.cancel(); revealJob = null }
                     state = State.HEARING
                     return
                 }
@@ -517,6 +601,8 @@ class RealtimeTalkClient(private val context: Context) {
                     replyContext?.let { onReplyCutIn?.invoke(it) }
                 }
                 replyContext?.let { onInterrupted?.invoke(it) }
+                // The rest will never be heard; the line keeps all its words.
+                finishReveal()
                 state = State.HEARING
             }
             "stats", "rotating" -> Unit   // the gateway reconnects upstream itself
@@ -696,6 +782,70 @@ class RealtimeTalkClient(private val context: Context) {
     }
 
     /** A temp WAV the view model moves into its own store — one copy. */
+    // ------------------------------------------------------------------
+    // Reveal (iOS `beginReveal` / `finishReveal` / `stepReveal`)
+
+    private fun beginReveal(context: String) {
+        finishReveal()
+        synchronized(revealLock) {
+            reveal = Reveal(context)
+            revealJob = scope.launch {
+                // Ten times a second: the next sentence goes up when its
+                // audio should be starting.
+                while (isActive) {
+                    delay(100)
+                    stepReveal()
+                }
+            }
+        }
+    }
+
+    /** Show whatever is left of the line now and stop. */
+    private fun finishReveal() {
+        val r = synchronized(revealLock) {
+            revealJob?.cancel(); revealJob = null
+            val r = reveal ?: return
+            reveal = null
+            r
+        }
+        if (r.text.isNotEmpty() && r.shown != r.text) onReplyDelta?.invoke(r.context, "\u0000" + r.text)
+    }
+
+    private fun stepReveal() {
+        var done = false
+        synchronized(revealLock) {
+            val r = reveal ?: return
+            if (r.text.isEmpty()) return
+            val now = System.currentTimeMillis()
+            if (r.audibleAt == null) {
+                // No voice yet. Text that has waited this long for one is
+                // shown anyway — a refused TTS line still has its words.
+                val first = r.firstTextAt ?: return
+                if (now - first < REVEAL_VOICE_WAIT_MS) return
+                r.audibleAt = now
+            }
+            val elapsed = (now - (r.audibleAt ?: now)) / 1000.0
+            // The line's own pace once all of its audio is in; a default before.
+            val seconds = r.totalSeconds ?: run {
+                val quiet = r.lastChunkAt?.let { now - it > 500 } == true
+                if (r.context == replyContext && (serverAudioEnded || quiet))
+                    replyPCM.size() / 2.0 / replyRate else null
+            }
+            val weight = ReplyReveal.weight(r.text)
+            val cps = if (r.isFinal && seconds != null && seconds > 0.5 && weight > 0) weight / seconds
+                else ReplyReveal.defaultCharactersPerSecond(r.text,
+                    com.roro.futurevoice.data.SpeechSpeed.currentMultiplier() ?: DEFAULT_SPEECH_SPEED)
+            val shown = ReplyReveal.visible(r.text, r.isFinal, elapsed, cps)
+            if (shown.length > r.shown.length) {
+                r.shown = shown
+                onReplyDelta?.invoke(r.context, "\u0000" + shown)
+            }
+            // Everything is up: the authoritative text, then done.
+            done = r.isFinal && shown == r.text.trim()
+        }
+        if (done) finishReveal()
+    }
+
     private fun saveWav(pcm: ByteArray, rate: Int): File? = runCatching {
         val f = File.createTempFile("turn-", ".wav", context.cacheDir)
         val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
