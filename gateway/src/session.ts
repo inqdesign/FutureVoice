@@ -22,7 +22,8 @@ import { SpeechGate } from "./speech-gate"
 import { rereadUtterance } from "./reread"
 import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
-import { ElevenTTS } from "./eleven-tts"
+import { ElevenTTS, type ElevenTTSCallbacks } from "./eleven-tts"
+import { CartesiaTTS, isCartesiaVoice } from "./cartesia-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
 import { verifyUser, ownsVoice, speakAsVoice, recordGeminiUsage, type Env } from "./supabase"
 import { TalkBilling, type WallCode } from "./billing"
@@ -50,7 +51,8 @@ export class CallSession implements DurableObject {
   private client: WebSocket | null = null
   private transcriber: GeminiTranscriber | null = null
   private replyEngine: ReplyEngine | null = null
-  private eleven: ElevenTTS | null = null
+  /** The call's voice: ElevenLabs, or Cartesia for a Cartesia clone (same interface). */
+  private eleven: ElevenTTS | CartesiaTTS | null = null
   private started = false
   /** The voice upstream speaks with — the app's own, or its default-accent
    *  remix (`speakAsVoice`). */
@@ -738,20 +740,8 @@ export class CallSession implements DurableObject {
       this.warn("reply_fallback", detail)
     }
 
-    this.eleven = new ElevenTTS(
-      {
-        apiKey: this.env.ELEVENLABS_API_KEY,
-        voiceId: this.upstreamVoiceId ?? msg.voiceId,
-        modelId: CONVERSATION_MODEL,
-        outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
-        speed: clampSpeed(msg.speed),
-        // Korean replies are pinned to Korean (2026-10-05): a learner of
-        // Korean speaks through a clone recorded in another language, and the
-        // pinned take was preferred by ear over the unpinned one
-        // (scripts/tts-korean-probe.sh). Every other language is unchanged.
-        languageCode: this.language.toLowerCase().split("-")[0] === "ko" ? "ko" : undefined,
-      },
-      {
+    const voiceId = this.upstreamVoiceId ?? msg.voiceId
+    const voiceCallbacks: ElevenTTSCallbacks = {
         onAudio: (contextId, pcm) => {
           this.lastSpokeAt = Date.now()
           // Only the ACTIVE context reaches the speaker — a context closed by
@@ -788,8 +778,28 @@ export class CallSession implements DurableObject {
           const context = this.activeContext
           if (context !== null) this.endLine(context)
         },
-      },
-    )
+      }
+    this.eleven = isCartesiaVoice(voiceId) && this.env.CARTESIA_API_KEY
+      ? new CartesiaTTS({
+          apiKey: this.env.CARTESIA_API_KEY,
+          voiceId,
+          outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
+          language: this.language,
+          speed: clampSpeed(msg.speed),
+        }, voiceCallbacks)
+      : new ElevenTTS(
+      {
+        apiKey: this.env.ELEVENLABS_API_KEY,
+        voiceId,
+        modelId: CONVERSATION_MODEL,
+        outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
+        speed: clampSpeed(msg.speed),
+        // Korean replies are pinned to Korean (2026-10-05): a learner of
+        // Korean speaks through a clone recorded in another language, and the
+        // pinned take was preferred by ear over the unpinned one
+        // (scripts/tts-korean-probe.sh). Every other language is unchanged.
+        languageCode: this.language.toLowerCase().split("-")[0] === "ko" ? "ko" : undefined,
+      }, voiceCallbacks)
 
     this.transcriber = new GeminiTranscriber(
       this.env.GEMINI_API_KEY,

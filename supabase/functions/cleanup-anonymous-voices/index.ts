@@ -20,6 +20,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { timingSafeEqual } from "../_shared/auth.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 /// How long an unclaimed anonymous user is left alone, in MINUTES. Short on
 /// purpose: an abandoned clone holds a paid ElevenLabs voice slot, and the
@@ -76,10 +77,13 @@ Deno.serve(async (req) => {
     if (elevenKey) {
       for (const clone of clones ?? []) {
         if (!clone.elevenlabs_voice_id) continue
-        const res = await fetch(
-          `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
-          { method: "DELETE", headers: { "xi-api-key": elevenKey } },
-        )
+        const res = cartesia.isCartesiaVoice(clone.elevenlabs_voice_id)
+          ? await cartesia.deleteVoice(clone.elevenlabs_voice_id)
+              .then((r) => new Response(r.detail ?? null, { status: r.ok ? 200 : r.status }))
+          : await fetch(
+              `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
+              { method: "DELETE", headers: { "xi-api-key": elevenKey } },
+            )
         // Already gone (a re-record during onboarding replaces one). ElevenLabs
         // answers a DELETE on a missing voice with 400 `voice_does_not_exist`,
         // NOT 404 — observed 2026-09-23, when two abandoned sessions from 09-15

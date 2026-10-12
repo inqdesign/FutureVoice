@@ -22,6 +22,7 @@ import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
 
 import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
 import { changesLeft, defaultRemixOpen, recordVoiceChange, changeLimitResponse } from "../_shared/voice-changes.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 const SOURCE_FN = "elevenlabs-voice-remix"
 
@@ -52,6 +53,15 @@ Deno.serve(async (req) => {
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_description) return errorResponse(400, "voice_description required")
+  // A Cartesia clone is not remixed: it speaks each language it is told to,
+  // in that language's own accent (_shared/cartesia.ts). Refused at once, so
+  // the app's default-accent step falls through to the plain clone — which is
+  // what it already does for any failed remix — instead of waiting on takes.
+  if (cartesia.isCartesiaVoice(body.voice_id)) {
+    return new Response(JSON.stringify({ error: "accent_not_needed", provider: "cartesia" }), {
+      status: 409, headers: { "Content-Type": "application/json", ...cors() },
+    })
+  }
   // A saved remix is a new voice (_shared/voice-quota.ts). Refused at the
   // previews too, so nobody waits half a minute for takes that can't be kept.
   if (await reservedForNewLearners(apiKey)) return reservedResponse(cors())

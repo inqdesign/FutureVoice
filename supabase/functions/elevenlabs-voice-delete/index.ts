@@ -8,6 +8,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { priceFor, charge, serviceRoleClient } from "../_shared/credits.ts"
 import { deleteSpeakAs } from "../_shared/default-accent.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 const SOURCE_FN = "elevenlabs-voice-delete"
 
@@ -53,10 +54,16 @@ Deno.serve(async (req) => {
   // the only place it can go with its source.
   await deleteSpeakAs(serviceRoleClient(), apiKey, user.id, body.voice_id)
 
-  const upstream = await fetch(`https://api.elevenlabs.io/v1/voices/${body.voice_id}`, {
-    method: "DELETE",
-    headers: { "xi-api-key": apiKey },
-  })
+  if (cartesia.isCartesiaVoice(body.voice_id)) {
+    const gone = await cartesia.deleteVoice(body.voice_id)
+    if (!gone.ok) return errorResponse(gone.status, "cartesia upstream error", gone.detail ?? "")
+  }
+  const upstream = cartesia.isCartesiaVoice(body.voice_id)
+    ? new Response(null, { status: 200 })
+    : await fetch(`https://api.elevenlabs.io/v1/voices/${body.voice_id}`, {
+        method: "DELETE",
+        headers: { "xi-api-key": apiKey },
+      })
   if (!upstream.ok) {
     const detail = await upstream.text()
     // Already gone is the outcome the caller asked for. ElevenLabs answers a

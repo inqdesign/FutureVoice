@@ -13,6 +13,7 @@ import { changesLeft, recordVoiceChange, changeLimitResponse, type VoiceChangeKi
 import {
   recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
 } from "../_shared/credits.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 const SOURCE_FN = "elevenlabs-voice-clone"
 
@@ -72,12 +73,17 @@ Deno.serve(async (req) => {
 
   // The month's last voice creations are kept for learners making their
   // FIRST voice (_shared/voice-quota.ts). A re-record waits for the reset.
-  if (!isFirstClone && await reservedForNewLearners(apiKey)) {
-    return reservedResponse(cors())
+  // Where this clone is made (_shared/cartesia.ts). Cartesia keeps clones
+  // without a limit, so ElevenLabs' monthly voice allowance doesn't apply.
+  const onCartesia = cartesia.clonesOnCartesia(user.id)
+  if (!onCartesia) {
+    if (!isFirstClone && await reservedForNewLearners(apiKey)) {
+      return reservedResponse(cors())
+    }
+    // Nothing left at all: say so with the reset date instead of letting the
+    // upload fail upstream with a raw error (2026-10-10).
+    if (await quotaSpent(apiKey)) return spentResponse(cors())
   }
-  // Nothing left at all: say so with the reset date instead of letting the
-  // upload fail upstream with a raw error (2026-10-10).
-  if (await quotaSpent(apiKey)) return spentResponse(cors())
 
   // One change per 30 days after the first voice (_shared/voice-changes.ts).
   // A parked voice coming back is a rebuild of what we took, not a change.
@@ -150,20 +156,34 @@ Deno.serve(async (req) => {
   // say which user a voice in the library belongs to.
   const voiceName = ((incoming.get("name") as string | null) ?? "").trim() || null
 
-  const upstream = await fetch("https://api.elevenlabs.io/v1/voices/add", {
-    method: "POST",
-    headers: { "xi-api-key": apiKey },
-    body: outgoing,
-  })
+  let json: { voice_id: string }
+  if (onCartesia) {
+    // One clip — the take the phone recorded (the app sends one file). Its
+    // language is the learner's target: the read-aloud script is written in it.
+    const clip = incoming.getAll("files").find((v): v is File => v instanceof File)
+    if (!clip) return errorResponse(400, "no recording in files")
+    const { data: profile } = await billingClient().from("profiles")
+      .select("target_language").eq("id", user.id).maybeSingle()
+    const language = cartesia.lineLanguage("", (profile as { target_language?: string } | null)?.target_language)
+    const made = await cartesia.cloneVoice(clip, voiceName ?? `Future ${user.id.slice(0, 8)}`, language)
+    if (!made.ok) return errorResponse(made.status >= 400 ? made.status : 502, "cartesia upstream error", made.detail)
+    json = { voice_id: made.voiceId }
+  } else {
+    const upstream = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+      method: "POST",
+      headers: { "xi-api-key": apiKey },
+      body: outgoing,
+    })
 
-  if (!upstream.ok) {
-    const detail = await upstream.text()
-    // The allowance may have run out between the check above and the upload.
-    if (await quotaSpent(apiKey, true)) return spentResponse(cors())
-    return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
+    if (!upstream.ok) {
+      const detail = await upstream.text()
+      // The allowance may have run out between the check above and the upload.
+      if (await quotaSpent(apiKey, true)) return spentResponse(cors())
+      return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
+    }
+
+    json = await upstream.json() as { voice_id: string }
   }
-
-  const json = await upstream.json() as { voice_id: string }
 
   // Free clone: stamp a 0-credit ledger row NOW (post-success) — the first
   // one anchors the grace window, the rest keep usage analytics honest about
@@ -204,7 +224,9 @@ Deno.serve(async (req) => {
   await recordVoiceChange(user.id, changeKind)
   // Its own update, so a database without the column (deploy order) loses
   // only the default accent, never the clone.
-  if (cloneRow?.id && !accentByApp) {
+  // A Cartesia clone speaks every language it is told to; there is no remix
+  // for the server to make (_shared/cartesia.ts).
+  if (cloneRow?.id && !accentByApp && !onCartesia) {
     const { error: flagErr } = await supabase.from("voice_clones")
       .update({ accent_by_server: true }).eq("id", cloneRow.id)
     if (flagErr) console.error("accent_by_server flag failed", flagErr.message)

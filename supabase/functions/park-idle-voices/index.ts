@@ -23,6 +23,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { timingSafeEqual } from "../_shared/auth.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 /// Founder's call, 2026-09-28. The SQL floors it at 7 whatever is passed.
 const IDLE_DAYS = 7
@@ -69,8 +70,18 @@ Deno.serve(async (req) => {
     console.error("park-idle-voices: lookup failed", error)
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
-  const all = ((candidates ?? []) as Candidate[])
+  const listed = ((candidates ?? []) as Candidate[])
     .filter((r) => !onlyRule || r.rule === onlyRule)
+  // Parking exists to give back ElevenLabs' 160 voice slots. A Cartesia clone
+  // holds no slot (_shared/cartesia.ts), so its owner is never warned and
+  // never parked: there is nothing to free, and parking would only make them
+  // re-record for nothing.
+  const { data: active } = await admin.from("voice_clones")
+    .select("user_id, elevenlabs_voice_id").eq("is_active", true)
+    .in("user_id", listed.map((r) => r.user_id))
+  const onCartesia = new Set(((active ?? []) as { user_id: string; elevenlabs_voice_id: string | null }[])
+    .filter((c) => cartesia.isCartesiaVoice(c.elevenlabs_voice_id)).map((c) => c.user_id))
+  const all = listed.filter((r) => !onCartesia.has(r.user_id))
 
   const { data: noticeRows } = await admin
     .from("voice_park_notices")

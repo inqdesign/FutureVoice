@@ -16,6 +16,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -40,10 +41,13 @@ Deno.serve(async (req) => {
   if (elevenKey) {
     for (const clone of clones ?? []) {
       if (!clone.elevenlabs_voice_id) continue
-      const res = await fetch(
-        `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
-        { method: "DELETE", headers: { "xi-api-key": elevenKey } },
-      )
+      const res = cartesia.isCartesiaVoice(clone.elevenlabs_voice_id)
+        ? await cartesia.deleteVoice(clone.elevenlabs_voice_id)
+            .then((r) => new Response(r.detail ?? null, { status: r.ok ? 200 : r.status }))
+        : await fetch(
+            `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
+            { method: "DELETE", headers: { "xi-api-key": elevenKey } },
+          )
       // 404 = already gone (e.g. deleted after a re-record) — that's fine.
       if (!res.ok && res.status !== 404) {
         console.error("account-delete: voice delete failed",

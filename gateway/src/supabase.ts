@@ -15,6 +15,8 @@ export interface Env {
   GEMINI_LIVE_MODEL?: string
   /** off (default) · all · comma-separated user ids — see session.ts gateQuietFrames. */
   TRANSCRIBE_GATE?: string
+  /** Cartesia key — a Cartesia clone's call voice (cartesia-tts.ts). */
+  CARTESIA_API_KEY?: string
   /** Model that re-reads an utterance the live transcriber wrote in the
    *  wrong script (see reread.ts). Default gemini-3.1-flash-lite. */
   GEMINI_REREAD_MODEL?: string

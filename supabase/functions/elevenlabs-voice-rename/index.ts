@@ -11,6 +11,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 
 const MAX_NAME_LENGTH = 100
 
@@ -49,10 +50,13 @@ Deno.serve(async (req) => {
   const form = new FormData()
   form.append("name", name)
 
-  const upstream = await fetch(
-    `https://api.elevenlabs.io/v1/voices/${body.voice_id}/edit`,
-    { method: "POST", headers: { "xi-api-key": apiKey }, body: form },
-  )
+  const upstream = cartesia.isCartesiaVoice(body.voice_id)
+    ? await cartesia.renameVoice(body.voice_id, name)
+        .then((r) => new Response(r.detail ?? null, { status: r.ok ? 200 : r.status }))
+    : await fetch(
+        `https://api.elevenlabs.io/v1/voices/${body.voice_id}/edit`,
+        { method: "POST", headers: { "xi-api-key": apiKey }, body: form },
+      )
   if (!upstream.ok) {
     const detail = await upstream.text()
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))

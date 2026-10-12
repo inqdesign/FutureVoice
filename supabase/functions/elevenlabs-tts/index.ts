@@ -19,6 +19,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { calmExclamations, restoreCharacters } from "../_shared/calm-exclamations.ts"
 import { speakAs, guessAccentLanguage, BUSY } from "../_shared/default-accent.ts"
+import * as cartesia from "../_shared/cartesia.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
          beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
          dailyCapResponse, sceneCapResponse, rateLimitedResponse,
@@ -207,7 +208,10 @@ Deno.serve(async (req) => {
   // first such line — see _shared/default-accent.ts); everything else is
   // the voice asked for. Started beside the ownership check (it reads only
   // this user's own rows), awaited before the upstream fetch. Never fails.
-  const speakAsPromise: Promise<string> = PRESET_VOICE_IDS.has(body.voice_id)
+  // A Cartesia clone has no remix to speak through — its accent is the
+  // language it is told (see the Cartesia branch below).
+  const onCartesia = cartesia.isCartesiaVoice(body.voice_id)
+  const speakAsPromise: Promise<string> = PRESET_VOICE_IDS.has(body.voice_id) || onCartesia
     ? Promise.resolve(body.voice_id)
     : speakAs({
         admin: billingClient(), apiKey: Deno.env.get("ELEVENLABS_API_KEY") ?? "",
@@ -362,6 +366,24 @@ Deno.serve(async (req) => {
     }
     return errorResponse(503, "voice is being prepared, retry shortly")
   }
+  if (onCartesia) {
+    return await speakOnCartesia({
+      voiceId: body.voice_id, text: spokenText, originalText: body.text,
+      language: body.language_code ?? cartesia.lineLanguage(body.text, await targetLanguageOf(user.id)),
+      speed: body.speed, timestamped, streaming, streamFormats: body.stream_formats,
+      onFail: async (status: number) => {
+        if (ch.ok && ch.charged > 0) {
+          await refund({
+            supabase, userId: user.id, amount: ch.charged,
+            action, sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+            metadata: { reason: "upstream_error", status, provider: "cartesia" },
+          })
+        }
+      },
+      balanceAfter: ch.balanceAfter,
+    })
+  }
+
   const fetchOptions: RequestInit = {
     method: "POST",
     headers: {
@@ -480,3 +502,70 @@ Deno.serve(async (req) => {
 
   return new Response(upstream.body, { status: 200, headers })
 })
+
+// The learner's target language, remembered per edge instance — it names the
+// language of every Cartesia line that isn't in Hangul or kana. A miss reads
+// `profiles` once; a failure falls back to English (lineLanguage).
+// Ten minutes, so a learner who switches language is heard in the new one soon.
+const targetLanguages = new Map<string, { lang: string | null; at: number }>()
+async function targetLanguageOf(userId: string): Promise<string | null> {
+  const hit = targetLanguages.get(userId)
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.lang
+  const { data } = await billingClient().from("profiles")
+    .select("target_language").eq("id", userId).maybeSingle()
+  const lang = (data as { target_language?: string | null } | null)?.target_language ?? null
+  targetLanguages.set(userId, { lang, at: Date.now() })
+  return lang
+}
+
+/** A Cartesia clone's line, answered in the exact shape the ElevenLabs path
+ *  answers — streamed PCM with `X-Audio-Format`, an MP3, or the
+ *  `/with-timestamps` JSON — so no app build can tell the difference. */
+async function speakOnCartesia(o: {
+  voiceId: string; text: string; originalText: string; language: string
+  speed?: number; timestamped: boolean; streaming: boolean; streamFormats?: string[]
+  onFail: (status: number) => Promise<void>; balanceAfter: number
+}): Promise<Response> {
+  const line = { voiceId: o.voiceId, text: o.text, language: o.language, speed: o.speed }
+  const headers = new Headers(cors())
+  headers.set("X-Credits-Balance", String(o.balanceAfter))
+  headers.set("X-Voice-Provider", "cartesia")
+
+  if (o.timestamped) {
+    const r = await cartesia.synthesizeWithTimestamps(line)
+    if (!r.ok) {
+      await o.onFail(r.status)
+      return errorResponse(r.status >= 400 ? r.status : 502, "cartesia upstream error", r.detail)
+    }
+    // The alignment spells the text the app SENT (its "!" included).
+    if (o.text !== o.originalText) {
+      const a = r.json.alignment as { characters: string[] } | undefined
+      if (a) restoreCharacters(a.characters, o.originalText, o.text)
+    }
+    headers.set("Content-Type", "application/json")
+    return new Response(JSON.stringify(r.json), { status: 200, headers })
+  }
+
+  if (o.streaming) {
+    // The best rate the client offers; every PCM rate it can ask for is one
+    // Cartesia makes. No ladder offered = an old build expecting pcm_22050.
+    const offered = (o.streamFormats ?? []).filter((f) => /^pcm_(16000|22050|24000|44100)$/.test(f))
+    const format = offered[0] ?? "pcm_22050"
+    const r = await cartesia.synthesizePcmStream(line, Number(format.slice(4)))
+    if (!r.ok || !r.body) {
+      await o.onFail(r.status)
+      return errorResponse(r.status >= 400 ? r.status : 502, "cartesia upstream error", (await r.text()).slice(0, 500))
+    }
+    headers.set("Content-Type", "application/octet-stream")
+    headers.set("X-Audio-Format", format)
+    return new Response(r.body, { status: 200, headers })
+  }
+
+  const r = await cartesia.synthesizeMp3(line)
+  if (!r.ok || !r.body) {
+    await o.onFail(r.status)
+    return errorResponse(r.status >= 400 ? r.status : 502, "cartesia upstream error", (await r.text()).slice(0, 500))
+  }
+  headers.set("Content-Type", "audio/mpeg")
+  return new Response(r.body, { status: 200, headers })
+}
