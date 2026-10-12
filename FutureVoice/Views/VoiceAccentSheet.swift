@@ -28,7 +28,6 @@ struct VoiceAccentSheet: View {
     /// Rebuilding the un-accented voice from the saved recording.
     @State private var removing = false
     @State private var confirmingRemove = false
-    @State private var confirmingApply = false
     @State private var playingId: String?
     @State private var error: String?
     /// The live voice was rebuilt from the recording on the way to a new
@@ -115,16 +114,7 @@ struct VoiceAccentSheet: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Remove", role: .destructive) { removeAccent() }
             } message: {
-                Text(explain("Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing.")
-                     + "\n\n" + VoiceChangeStatus.usesItLine)
-            }
-            // Saving a take is the learner's one change for 30 days, so it is
-            // asked, not done on the tap (2026-10-09).
-            .alert("Use this voice?", isPresented: $confirmingApply) {
-                Button("Cancel", role: .cancel) {}
-                Button("Use this voice") { apply() }
-            } message: {
-                Text(VoiceChangeStatus.usesItLine)
+                Text(explain("Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing."))
             }
             .task { await appState.refreshVoiceChangeStatus() }
             .alert("Couldn't remix your voice", isPresented: Binding(
@@ -234,7 +224,7 @@ struct VoiceAccentSheet: View {
 
     private var applySection: some View {
         Section {
-            Button { confirmingApply = true } label: {
+            Button { apply() } label: {
                 HStack {
                     Text("Use this voice")
                     if saving {

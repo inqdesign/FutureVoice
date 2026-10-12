@@ -291,8 +291,6 @@ struct VoiceRevivalView: View {
                                 titleVisibility: .visible) {
                 Button("Remove", role: .destructive) { removeAccent() }
                 Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(VoiceChangeStatus.usesItLine)
             }
         }
     }

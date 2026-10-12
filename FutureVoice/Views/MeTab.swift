@@ -817,11 +817,11 @@ struct MeTab: View {
     /// supabase/functions/_shared/credits.ts — keep them in sync.
     private static var recloneWarning: String {
         explain("Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing.")
-            + "\n\n" + VoiceChangeStatus.usesItLine
     }
 
-    private var voiceSection: some View {
-        Section("Voice") {
+    /// Name, accent and the stand-in / restore rows of the Voice section.
+    private var voiceRowsTop: AnyView {
+        AnyView(Group {
             Button {
                 voiceNameDraft = appState.voiceDisplayName
                 renamingVoice = true
@@ -867,6 +867,12 @@ struct MeTab: View {
                         subtitle: explain("Same voice, the accent you choose"))
                 }
             }
+        })
+    }
+
+    /// Speed, rebuild and re-record rows of the Voice section.
+    private var voiceRowsBottom: AnyView {
+        AnyView(Group {
             // Under Accent because it is the same kind of question — the voice
             // stays the learner's, only how it speaks changes. It is a
             // SYNTHESIS setting, not playback: the words are spoken slowly
@@ -926,6 +932,18 @@ struct MeTab: View {
                 }
                 .disabled(regeneratingVoice || !appState.canChangeVoice)
             }
+        })
+    }
+
+    private var voiceSection: some View {
+        Section("Voice") {
+            // Two type-erased halves (2026-10-12): the section as one
+            // SwiftUI type grew deep enough that a Debug build overflowed the
+            // main thread's stack instantiating its metadata — tapping Me
+            // crashed (SIGSEGV in swift_getTypeByMangledName under
+            // MeTab.voiceSection).
+            voiceRowsTop
+            voiceRowsBottom
         }
         .task { await appState.refreshVoiceChangeStatus() }
         .alert("Rebuild your voice?", isPresented: $confirmingVoiceRegenerate) {

@@ -158,8 +158,7 @@ struct VoiceComparisonSheet: View {
             .disabled(!appState.canChangeVoice)
         } footer: {
             if appState.canChangeVoice {
-                Text(explain("The voice you have now is only replaced if you keep the new one.")
-                     + " " + VoiceChangeStatus.usesItLine)
+                Text(explain("The voice you have now is only replaced if you keep the new one."))
             } else {
                 Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
             }

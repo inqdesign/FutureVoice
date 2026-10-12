@@ -1037,8 +1037,7 @@ struct VoiceCloneOnboardingView: View {
         } message: {
             // Free, and said out loud — a user who suspects a retake costs
             // them credits will settle for a voice that isn't theirs.
-            Text(explain("You'll read the script once more, about a minute. This voice is replaced only if you keep the new one.")
-                 + "\n\n" + VoiceChangeStatus.usesItLine)
+            Text(explain("You'll read the script once more, about a minute. This voice is replaced only if you keep the new one."))
         }
     }
 
@@ -1147,8 +1146,6 @@ struct VoiceCloneOnboardingView: View {
                                 titleVisibility: .visible) {
                 Button("Remove", role: .destructive) { removeAccentFromMeet() }
                 Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(VoiceChangeStatus.usesItLine)
             }
         }
     }
