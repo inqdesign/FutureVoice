@@ -112,9 +112,19 @@ struct VoiceMoveSheet: View {
         .onAppear {
             VoiceMove.markShown()
             Analytics.capture("voice_move_shown", ["has_recording": hasRecording])
-            // Keep the accent they have; none yet → the language's default.
-            accentId = appState.voiceAccentId
-                ?? VoiceAccentCatalog.defaultAccent(for: appState.targetLanguage)?.id
+            // The accent they have; else the one picked in setup (since
+            // 2026-10-08 — "as I recorded it" means Original); else the
+            // language's default (American / Standard German).
+            if let live = appState.voiceAccentId {
+                accentId = live
+            } else if appState.preferredAccentId == SetupFlowView.noAccent {
+                accentId = nil
+            } else if let picked = appState.preferredAccentId,
+                      options.contains(where: { $0.id == picked }) {
+                accentId = picked
+            } else {
+                accentId = VoiceAccentCatalog.defaultAccent(for: appState.targetLanguage)?.id
+            }
         }
     }
 
