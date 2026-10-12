@@ -78,7 +78,6 @@ import com.roro.futurevoice.data.cast
 import com.roro.futurevoice.data.knowsLearnersLife
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.StockPerson
-import com.roro.futurevoice.talk.captionIn
 import com.roro.futurevoice.talk.nameIn
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.ContinuousShape
@@ -473,14 +472,11 @@ internal fun VoicePresetPicker(
     fun preview(id: String) {
         if (playingId == id) { player.stop(); playingId = null; return }
         player.stop(); playingId = null; error = false
-        val text = voicePreviewLine(targetLanguage)
         scope.launch {
             loadingId = id
+            // The bundled clip first (iOS `bd87569`), then cache, then synthesis.
             val audio = runCatching {
-                // The voice speaking NOW — never a take an older voice of
-                // this slot made before it got a native one (iOS `b49e91b`).
-                com.roro.futurevoice.data.cachedSynthesis(context, voiceId = id, text = text,
-                    purpose = "voice_preview", allowLineage = false)
+                com.roro.futurevoice.talk.VoicePreset.previewAudio(context, id, targetLanguage)
             }.getOrNull()
             loadingId = null
             if (audio == null) { error = true; return@launch }
@@ -531,7 +527,7 @@ internal fun VoicePresetPicker(
                     }
                     Column(Modifier.weight(1f)) {
                         Text(v.nameIn(targetLanguage), style = MaterialTheme.typography.bodyLarge)
-                        Text(v.captionIn(targetLanguage),
+                        Text(com.roro.futurevoice.talk.VoicePreset.caption(context, v.voiceId, targetLanguage),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -543,23 +539,6 @@ internal fun VoicePresetPicker(
             }
         }
     }
-}
-
-/** One neutral greeting per target language — phrasings that avoid
- *  speaker-gender agreement so any voice can say them (iOS `previewLine`).
- *  The `<break>` is ElevenLabs' pause tag: measured on the Korean line, the
- *  period after 반가워요 gave NO pause at all. It is spoken as silence, never
- *  read out; this line is audio only, never drawn as text. */
-private fun voicePreviewLine(code: String): String = when (code.substringBefore("-")) {
-    "es" -> "¡Hola! Qué alegría verte. <break time=\"0.5s\" /> ¿Empezamos?"
-    "de" -> "Hallo! Schön, dich zu sehen. <break time=\"0.5s\" /> Sollen wir anfangen?"
-    "fr" -> "Bonjour ! Ça me fait plaisir de te voir. <break time=\"0.5s\" /> On commence ?"
-    "it" -> "Ciao! Che bello vederti. <break time=\"0.5s\" /> Iniziamo?"
-    "pt" -> "Oi! Que bom te ver. <break time=\"0.5s\" /> Vamos começar?"
-    "ja" -> "こんにちは！会えてうれしいです。<break time=\"0.5s\" />始めましょうか？"
-    "ko" -> "안녕하세요! 만나서 반가워요. <break time=\"0.5s\" /> 시작해 볼까요?"
-    "zh" -> "你好！很高兴见到你。<break time=\"0.5s\" />我们开始吧？"
-    else -> "Hi! It's good to see you. <break time=\"0.5s\" /> Shall we get started?"
 }
 
 // MARK: - The photo control

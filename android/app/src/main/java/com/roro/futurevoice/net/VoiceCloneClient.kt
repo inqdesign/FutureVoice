@@ -69,6 +69,9 @@ class VoiceCloneClient(private val auth: AuthRepository) {
                 // Upstream 400 carrying voice_limit_reached is OUR capacity
                 // problem — callers show a human message, not the JSON.
                 if (text.contains("voice_limit_reached")) throw VoiceLimitReached()
+                // The account's monthly voice allowance (iOS `VoiceQuota`,
+                // 2026-10-10): carries when it resets.
+                com.roro.futurevoice.data.VoiceQuotaFull.from(text)?.let { throw it }
                 if (resp.code == 402) throw EdgeError.wall(text)
                 throw EdgeError.Http(resp.code, text.take(512))
             }

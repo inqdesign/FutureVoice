@@ -686,6 +686,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"Schaff Platz unter Einstellungen → dein Name → iCloud, dann geht die Synchronisierung dort weiter, wo sie aufgehört hat."</string>
     <string name="friends_joined">"Beigetretene Freunde"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"Von A1 bis C2, gemessen an dem, was du gesagt hast."</string>
+    <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"Ab jetzt spricht dein fließendes Ich mit deiner eigenen Stimme."</string>
     <string name="from_scenarios">"Aus Situationen"</string>
     <string name="from_talks">"Aus Gesprächen"</string>
     <string name="from_your_coach">"Von deinem Coach"</string>
@@ -1105,11 +1106,15 @@
     <string name="looking_through_your_practice">"Sehe deine Übungsdaten durch …"</string>
     <string name="looking_through_your_practice_data">"Deine Übungsdaten werden durchgesehen …"</string>
     <string name="loop">"Schleife %1$s–%2$s"</string>
+    <!-- 'Made from the recording on this phone. A stand-in voice speaks until then.' -->
+    <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"Aus der Aufnahme auf diesem Handy. Bis dahin spricht eine Ersatzstimme."</string>
     <string name="made_from_this_week_s_talks">"Aus den Gesprächen dieser Woche"</string>
     <string name="make_a_situation">"Situation bauen"</string>
     <string name="make_it_yours">"Mach es zu deinem"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Ich mache ein paar Aufnahmen, das dauert etwa eine halbe Minute. Lass diesen Bildschirm offen."</string>
     <string name="making_it_yours">"Damit es deins wird"</string>
+    <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
+    <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"Gerade gibt es beim Erstellen von Stimmen ein kurzes Problem. Deine Aufnahme ist gespeichert: Öffne die App danach, und dein fließendes Ich spricht mit deiner Stimme. Bis dahin such dir unten eine Stimme aus und übe mit ihr."</string>
     <string name="making_your_test">"Dein Test wird erstellt…"</string>
     <string name="manage_in_the_app_store">"Im App Store verwalten"</string>
     <string name="manage_subscription">"Abo verwalten"</string>
@@ -1226,6 +1231,10 @@
     <string name="new_talk_lld_10_min">"Neues Gespräch %d/10 Min."</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="new_talks_and_recordings_aren_t_backed_up_to_icloud_right_no_82615e">"Neue Gespräche und Aufnahmen werden gerade nicht in iCloud gesichert und liegen nur auf diesem Gerät. Wenn du die App hier löschst, sind sie mit ihr weg."</string>
+    <!-- 'New voices can be made again from %@. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_from_the_voice_you_have_keeps_w_412ed4">"Neue Stimmen kannst du ab %s wieder erstellen. Bis dahin funktioniert deine jetzige Stimme wie gewohnt."</string>
+    <!-- 'New voices can be made again in a few days. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_in_a_few_days_the_voice_you_hav_81c7eb">"Neue Stimmen kannst du in ein paar Tagen wieder erstellen. Bis dahin funktioniert deine jetzige Stimme wie gewohnt."</string>
     <string name="news">"News"</string>
     <string name="news_topic">"Nachrichtenthema"</string>
     <string name="next">"Weiter"</string>
@@ -1468,6 +1477,7 @@
     <string name="pick_how_your_fluent_self_looks_and_sounds">"Wähle, wie dein fließendes Ich aussieht und klingt."</string>
     <string name="pick_up_where_you_left_off">"Mach da weiter, wo du aufgehört hast"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"Wähl, was du dann machst: sprechen, Wörter, wiederholen und mehr."</string>
+    <string name="pick_who_you_practice_with">"Wähle, mit wem du übst"</string>
     <string name="place">"Platz"</string>
     <string name="plan">"Tarif"</string>
     <string name="plan_on_the_timeline">"Plane auf der Zeitachse"</string>
@@ -1716,6 +1726,7 @@
     <string name="save_to_expressions">"Zu Wendungen sichern"</string>
     <string name="save_to_photos">"In Fotos sichern"</string>
     <string name="save_to_sentences">"Zu Sätzen sichern"</string>
+    <string name="save_your_recording_to_your_account">"Speichere deine Aufnahme in deinem Konto."</string>
     <string name="saved">"Gesichert"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Hier gesichert, aber ElevenLabs hat den neuen Namen nicht angenommen: %s Er wird beim nächsten Klonen deiner Stimme übernommen."</string>
@@ -1830,6 +1841,8 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"Steht in jeder Rangliste neben deiner Punktzahl."</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"Steht auf der Ansehen-Karte über dem Gesicht. Leer gelassen, wird sie für dich geschrieben."</string>
+    <!-- "Sign in, and your voice lands in this account the day it's made." -->
+    <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"Melde dich an, dann landet deine Stimme an dem Tag in diesem Konto, an dem sie fertig ist."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Melde dich zuerst in den Einstellungen bei iCloud an und versuche es dann noch einmal."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"Melde dich in den Einstellungen bei iCloud an, um zu synchronisieren"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"Melde dich an, um deine Übungsdaten zwischen iPhone und iPad zu synchronisieren."</string>
@@ -2336,10 +2349,20 @@
     <string name="voice_name_0e3b82">"Name der Stimme"</string>
     <!-- 'Voice name: %@' -->
     <string name="voice_name_f1c3a3">"Name der Stimme: %s"</string>
+    <string name="voice_saved">"Stimme gespeichert"</string>
+    <string name="voice_until_then">"Stimme bis dahin: %s"</string>
     <!-- 'voiced by %@' -->
     <string name="voiced_by_0ed8e5">"Stimme: %s"</string>
     <!-- '%@ · voiced by %@' -->
     <string name="voiced_by_2de8fa">"%1$s · Stimme: %2$s"</string>
+    <string name="voicepreset_american">"amerikanisch"</string>
+    <string name="voicepreset_british">"britisch"</string>
+    <string name="voicepreset_emma">"klar, freundlich"</string>
+    <string name="voicepreset_female">"weiblich"</string>
+    <string name="voicepreset_james">"warm, entspannt"</string>
+    <string name="voicepreset_male">"männlich"</string>
+    <string name="voicepreset_mark">"natürlich, im Gesprächston"</string>
+    <string name="voicepreset_paige">"lebendig, natürlich"</string>
     <string name="waiting_for_the_first_sync">"Warte auf die erste Synchronisierung"</string>
     <string name="warm_and_chatty">"Herzlich und gesprächig"</string>
     <string name="watch">"Ansehen"</string>
@@ -2659,6 +2682,7 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"Dein Gespräch ist gespeichert. Öffne es unter Wiederholen, um das Lernmaterial erneut zu erzeugen."</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"Korrekturen, Notizen und Wortbedeutungen kommen in dieser Sprache. Die Bildschirme der App bleiben auf Englisch."</string>
+    <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"Deine jetzige Stimme wird gelöscht und du nimmst eine neue auf."</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"Dein täglicher Anruf ist aus, also klingelt es nicht. Schalte ihn unter Ich → Täglicher Anruf ein."</string>
     <string name="your_daily_call_rings_at_this_time">"Dein täglicher Anruf klingelt um diese Zeit."</string>
@@ -2722,6 +2746,8 @@
     <string name="your_name">"Dein Name"</string>
     <string name="your_name_on_the_board">"Dein Name in der Rangliste"</string>
     <string name="your_native_language">"Deine Muttersprache?"</string>
+    <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
+    <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"Für diese Stimme gibt es keine Originalaufnahme mehr. Nimm etwa eine Minute auf, dann zieht deine Stimme auf die neue Engine um."</string>
     <string name="your_overall_level">"Dein Gesamtniveau"</string>
     <string name="your_own">"Selbst erstellen"</string>
     <string name="your_own_review_book">"Dein eigenes Übungsbuch"</string>
@@ -2802,6 +2828,7 @@
     <string name="your_voice_in_safe_hands">"Deine Stimme in sicheren Händen"</string>
     <string name="your_voice_is_back">"Deine Stimme ist zurück"</string>
     <string name="your_voice_is_handled_with_care">"Mit deiner Stimme gehen wir sorgsam um."</string>
+    <string name="your_voice_is_ready">"Deine Stimme ist fertig"</string>
     <string name="your_voice_is_ready_sign_in_to_keep_it">"Deine Stimme ist fertig. Melde dich an, um sie zu behalten."</string>
     <string name="your_voice_isn_t_ready_yet">"Deine Stimme ist noch nicht fertig."</string>
     <!-- "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." -->
@@ -2814,6 +2841,8 @@
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"Dein Stimmmodell wird hier und bei ElevenLabs gelöscht – das lässt sich nicht rückgängig machen. Vor deinem nächsten Gespräch wirst du um eine neue Aufnahme gebeten."</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"Deine Stimmaufnahme kommt mit, damit ein neues Handy deine Stimme ohne neue Aufnahme erstellt."</string>
+    <string name="your_voice_will_be_ready_in_a_few_days">"Deine Stimme ist in ein paar Tagen fertig."</string>
+    <string name="your_voice_will_be_ready_on">"Deine Stimme ist am %s fertig."</string>
     <string name="your_week">"Deine Woche"</string>
     <string name="your_week_at_the_top">"Deine Woche, ganz oben"</string>
     <string name="your_week_is_ready">"Deine Woche im Rückblick"</string>

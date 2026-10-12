@@ -19,29 +19,29 @@ import org.junit.Test
 class VoicePresetSlotTest {
 
     @Test fun koreanAndJapaneseResolveEverySlot() {
-        for (lang in listOf("ko", "ja")) {
+        for (lang in listOf("en", "de", "ko", "ja")) {
             val spoken = StockPerson.catalog.map { VoicePreset.speaking(it.voiceId, lang) }
             assertEquals(lang, StockPerson.catalog.size, spoken.toSet().size)
             StockPerson.catalog.zip(spoken).forEach { (slot, voice) ->
                 assertNotEquals("$lang ${slot.name}", slot.voiceId, voice)
             }
         }
-        // Japanese speaks in the founder's Korean picks.
-        assertEquals(
+        // Since iOS `e9fcb2d` Japanese has its own native voices.
+        assertNotEquals(
             StockPerson.catalog.map { VoicePreset.speaking(it.voiceId, "ko") },
             StockPerson.catalog.map { VoicePreset.speaking(it.voiceId, "ja") })
     }
 
     @Test fun koreanVoicesAreTheIosIds() {
         val c = StockPerson.catalog
-        assertEquals("5n5gqmaQi9Ewevrz7bOS", VoicePreset.speaking(c[0].voiceId, "ko"))
-        assertEquals("L4az9Gb378GIycFl2nAB", VoicePreset.speaking(c[1].voiceId, "ko"))
-        assertEquals("8jHHF8rMqMlg8if2mOUe", VoicePreset.speaking(c[2].voiceId, "ko"))
-        assertEquals("AKF7f2y1L8ktV5vxXILw", VoicePreset.speaking(c[3].voiceId, "ko"))
+        assertEquals("cac92886-4b7c-4bc1-a524-e0f79c0381be", VoicePreset.speaking(c[0].voiceId, "ko"))
+        assertEquals("537a82ae-4926-4bfb-9aec-aff0b80a12a5", VoicePreset.speaking(c[1].voiceId, "ko"))
+        assertEquals("cd6c48a9-774b-4397-98b4-9948c0a790f0", VoicePreset.speaking(c[2].voiceId, "ko"))
+        assertEquals("f7755efb-1848-4321-aa22-5e5be5d32486", VoicePreset.speaking(c[3].voiceId, "ko"))
     }
 
-    @Test fun englishAndGermanKeepTheOriginals() {
-        for (lang in listOf("en", "de", "es", "fr")) {
+    @Test fun languagesWithoutNativeVoicesKeepTheOriginals() {
+        for (lang in listOf("es", "fr")) {
             for (slot in StockPerson.catalog) {
                 assertEquals(slot.voiceId, VoicePreset.speaking(slot.voiceId, lang))
             }
@@ -51,14 +51,15 @@ class VoicePresetSlotTest {
     @Test fun nonPresetVoicesPassThrough() {
         assertEquals("someClone123", VoicePreset.speaking("someClone123", "ko"))
         // A voice that is already the Korean one is not re-mapped.
-        assertEquals("5n5gqmaQi9Ewevrz7bOS", VoicePreset.speaking("5n5gqmaQi9Ewevrz7bOS", "ko"))
+        assertEquals("cac92886-4b7c-4bc1-a524-e0f79c0381be", VoicePreset.speaking("cac92886-4b7c-4bc1-a524-e0f79c0381be", "ko"))
     }
 
     @Test fun builtinPersonIsNamedPerLanguage() {
         val names = StockPerson.catalog.map { it.nameIn("ko") }
         assertEquals(listOf("시안", "민준", "한별", "준호"), names)
         assertEquals(listOf("美咲", "翔太", "陽菜", "健太"), StockPerson.catalog.map { it.nameIn("ja") })
-        assertEquals(listOf("Paige", "Mark", "Emma", "James"), StockPerson.catalog.map { it.nameIn("de") })
+        assertEquals(listOf("Lea", "Jonas", "Karin", "Nico"), StockPerson.catalog.map { it.nameIn("de") })
+        assertEquals(listOf("Paige", "Mark", "Emma", "James"), StockPerson.catalog.map { it.nameIn("en") })
     }
 
     @Test fun stockIdentityDropsNationalityOnlyWhereRevoiced() {

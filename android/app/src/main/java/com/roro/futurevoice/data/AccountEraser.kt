@@ -32,6 +32,10 @@ object AccountEraser {
      * withdrawal on an error the learner cannot act on.
      */
     suspend fun deleteVoice(voiceId: String): Boolean = withContext(Dispatchers.IO) {
+        // Never a shared preset (a stand-in while the month's voices are
+        // spent, iOS `cleanupPreviousVoiceClone`): deleting it would silence
+        // it for every learner whose scenes and strangers speak with it.
+        if (com.roro.futurevoice.talk.VoicePreset.isPreset(voiceId)) return@withContext true
         val req = Request.Builder()
             .url(Config.functionUrl("elevenlabs-voice-delete"))
             .header("Authorization", "Bearer ${AuthRepository().accessToken()}")

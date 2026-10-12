@@ -377,6 +377,7 @@
     <string name="couldn_t_open_that_file">"無法開啟這個檔案。"</string>
     <string name="couldn_t_play_audio">"無法播放音訊"</string>
     <string name="couldn_t_play_the_comparison">"無法播放比較"</string>
+    <string name="couldn_t_play_the_sample_check_your_connection">"無法播放範例，請確認網路連線。"</string>
     <string name="couldn_t_play_the_two_takes_together">"無法同時播放兩段錄音。"</string>
     <string name="couldn_t_publish">"無法發布"</string>
     <string name="couldn_t_publish_check_your_connection_and_try_again">"無法發布，請確認網路連線後再試一次。"</string>
@@ -689,6 +690,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"到「設定」→ 你的名字 → iCloud 釋出空間，同步就會從中斷的地方繼續。"</string>
     <string name="friends_joined">"加入的朋友"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"從 A1 到 C2，根據你說過的話來評估。"</string>
+    <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"從現在起，流利的自己會用你自己的聲音說話。"</string>
     <string name="from_scenarios">"來自情境"</string>
     <string name="from_talks">"來自對話"</string>
     <string name="from_your_coach">"教練的話"</string>
@@ -1108,11 +1110,15 @@
     <string name="looking_through_your_practice">"正在檢視練習記錄…"</string>
     <string name="looking_through_your_practice_data">"正在查看你的練習資料…"</string>
     <string name="loop">"循環 %1$s–%2$s"</string>
+    <!-- 'Made from the recording on this phone. A stand-in voice speaks until then.' -->
+    <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"會用這支手機裡的錄音來製作。在那之前，先由臨時聲音說話。"</string>
     <string name="made_from_this_week_s_talks">"用這週的對話做成"</string>
     <string name="make_a_situation">"建立情境"</string>
     <string name="make_it_yours">"變成自己的"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在唸幾個版本，大約需要30秒。請不要關閉這個畫面。"</string>
     <string name="making_it_yours">"變成自己的"</string>
+    <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
+    <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"目前建立聲音暫時出了點問題。錄音已經存好了，那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"</string>
     <string name="making_your_test">"正在準備測驗…"</string>
     <string name="manage_in_the_app_store">"在App Store管理"</string>
     <string name="manage_subscription">"管理訂閱"</string>
@@ -1229,6 +1235,10 @@
     <string name="new_talk_lld_10_min">"新通話 %d/10分鐘"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="new_talks_and_recordings_aren_t_backed_up_to_icloud_right_no_82615e">"目前新的對話和錄音無法備份到 iCloud，只存在這台裝置上。如果在這台裝置上刪除 App，它們也會一起刪除。"</string>
+    <!-- 'New voices can be made again from %@. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_from_the_voice_you_have_keeps_w_412ed4">"%s 起就能再建立新的聲音。在那之前，你現在的聲音照常可以使用。"</string>
+    <!-- 'New voices can be made again in a few days. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_in_a_few_days_the_voice_you_hav_81c7eb">"幾天後就能再建立新的聲音。在那之前，你現在的聲音照常可以使用。"</string>
     <string name="news">"新聞"</string>
     <string name="news_topic">"新聞主題"</string>
     <string name="next">"下一步"</string>
@@ -1471,6 +1481,7 @@
     <string name="pick_how_your_fluent_self_looks_and_sounds">"挑一下流利的你長什麼樣、說話多快。"</string>
     <string name="pick_up_where_you_left_off">"從上次的地方繼續"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"選擇那個時段要做的事：對話、單字、複習等。"</string>
+    <string name="pick_who_you_practice_with">"選擇要跟誰練習"</string>
     <string name="place">"名次"</string>
     <string name="plan">"方案"</string>
     <string name="plan_on_the_timeline">"在時間軸上規劃"</string>
@@ -1719,6 +1730,7 @@
     <string name="save_to_expressions">"存到用語"</string>
     <string name="save_to_photos">"儲存到照片"</string>
     <string name="save_to_sentences">"存到句子"</string>
+    <string name="save_your_recording_to_your_account">"把錄音存到你的帳號。"</string>
     <string name="saved">"已儲存"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"已存在這台裝置上，但 ElevenLabs 沒有接受新名字：%s 下次重新複製聲音時會套用。"</string>
@@ -1833,6 +1845,8 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"在每個挑戰的排行榜上，都會顯示在分數旁邊。"</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"會顯示在情境練習地圖上的頭像上方。留空的話會自動幫你寫。"</string>
+    <!-- "Sign in, and your voice lands in this account the day it's made." -->
+    <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"登入後，聲音完成的那天就會直接進到這個帳號。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"請先在「設定」登入 iCloud，再試一次。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"要同步，請在「設定」登入 iCloud"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"登入後就能在 iPhone 和 iPad 之間同步練習記錄。"</string>
@@ -2339,10 +2353,20 @@
     <string name="voice_name_0e3b82">"聲音名稱"</string>
     <!-- 'Voice name: %@' -->
     <string name="voice_name_f1c3a3">"聲音名稱：%s"</string>
+    <string name="voice_saved">"聲音已儲存"</string>
+    <string name="voice_until_then">"在那之前的聲音：%s"</string>
     <!-- 'voiced by %@' -->
     <string name="voiced_by_0ed8e5">"聲音：%s"</string>
     <!-- '%@ · voiced by %@' -->
     <string name="voiced_by_2de8fa">"%1$s · 聲音：%2$s"</string>
+    <string name="voicepreset_american">"美式口音"</string>
+    <string name="voicepreset_british">"英式口音"</string>
+    <string name="voicepreset_emma">"清晰、友善"</string>
+    <string name="voicepreset_female">"女聲"</string>
+    <string name="voicepreset_james">"溫暖、隨和"</string>
+    <string name="voicepreset_male">"男聲"</string>
+    <string name="voicepreset_mark">"自然、像聊天"</string>
+    <string name="voicepreset_paige">"親切、自然"</string>
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>
     <string name="warm_and_chatty">"溫暖又愛聊"</string>
     <string name="watch">"情境練習"</string>
@@ -2662,6 +2686,7 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"對話已儲存。到「複習」打開它，就能重新產生複習教材。"</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"糾正、筆記和單字意思會用這個語言顯示。App 本身的畫面仍是英文。"</string>
+    <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"現在的聲音會被刪除，你要重新錄一次。"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"每日來電已關閉，所以不會響。可以在「我的」→「每日來電」開啟。"</string>
     <string name="your_daily_call_rings_at_this_time">"每日來電會在這個時間打來。"</string>
@@ -2725,6 +2750,8 @@
     <string name="your_name">"我的名字"</string>
     <string name="your_name_on_the_board">"排行榜上的名字"</string>
     <string name="your_native_language">"平常用的語言？"</string>
+    <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
+    <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"這個聲音沒有留下原始錄音。重新錄大約一分鐘，就會搬到新引擎。"</string>
     <string name="your_overall_level">"整體程度"</string>
     <string name="your_own">"自己建立"</string>
     <string name="your_own_review_book">"專屬的複習本"</string>
@@ -2805,6 +2832,7 @@
     <string name="your_voice_in_safe_hands">"聲音，安心託付"</string>
     <string name="your_voice_is_back">"你的聲音回來了"</string>
     <string name="your_voice_is_handled_with_care">"聲音會被謹慎處理。"</string>
+    <string name="your_voice_is_ready">"你的聲音準備好了"</string>
     <string name="your_voice_is_ready_sign_in_to_keep_it">"聲音準備好了。登入就能保留它。"</string>
     <string name="your_voice_isn_t_ready_yet">"聲音還沒準備好。"</string>
     <!-- "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." -->
@@ -2817,6 +2845,8 @@
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"語音模型會從 App 和 ElevenLabs 兩邊刪除，無法復原。下一通電話前會請你重新錄一個。"</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"聲音錄音也會一起保存，換新手機也不用重錄就能做出你的聲音。"</string>
+    <string name="your_voice_will_be_ready_in_a_few_days">"你的聲音會在幾天後準備好。"</string>
+    <string name="your_voice_will_be_ready_on">"你的聲音會在 %s 準備好。"</string>
     <string name="your_week">"一週回顧"</string>
     <string name="your_week_at_the_top">"上方的一週"</string>
     <string name="your_week_is_ready">"你的一週回顧來了"</string>

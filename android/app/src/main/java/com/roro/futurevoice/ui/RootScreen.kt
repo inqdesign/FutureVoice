@@ -521,7 +521,8 @@ fun RootScreen() {
     var showVoiceMove by remember { mutableStateOf(false) }
     LaunchedEffect(state.voiceId, state.signedIn) {
         delay(2500)
-        if (welcomeMinutes == null && VoiceMove.isDue(context, state.voiceId, state.signedIn)) showVoiceMove = true
+        if (welcomeMinutes == null &&
+            VoiceMove.isDue(context, state.voiceId, state.signedIn, state.voiceIsStandIn)) showVoiceMove = true
     }
     if (showVoiceMove) {
         VoiceMoveSheet(
@@ -530,7 +531,24 @@ fun RootScreen() {
             onRebuilt = { app.adoptRemixedVoice(it, "") },
             onAccentApplied = app::adoptRemixedVoice,
             currentVoiceId = { app.state.value.voiceId },
+            onMoved = app::adoptMovedVoice,
+            // RootScreen swaps to the recording (iOS `resetVoiceClone`).
+            onRerecord = { showVoiceMove = false; recloning = true },
             onDismiss = { showVoiceMove = false },
+        )
+    }
+    // The voice queued at signup (the month's voices were spent) was just
+    // built from their recording — said once, here.
+    if (state.queuedVoiceArrived) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = app::clearQueuedVoiceArrived,
+            title = { Text(stringResource(R.string.your_voice_is_ready)) },
+            text = { Text(stringResource(R.string.from_now_on_your_fluent_self_speaks_in_your_own_voice)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = app::clearQueuedVoiceArrived) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
         )
     }
     welcomeMinutes?.let { minutes ->
@@ -750,6 +768,11 @@ fun RootScreen() {
             signInError = state.error,
             redeemedInvite = state.redeemedInvite,
             debugStage = debugCloneStage,
+            voiceIsStandIn = state.voiceIsStandIn,
+            voiceQueuedUntil = state.voiceQueuedUntil,
+            onQueued = app::adoptStandInVoice,
+            standInVoiceId = if (state.voiceIsStandIn) state.voiceId else null,
+            onChooseStandIn = app::chooseStandInVoice,
         )
         // The week's rhythm before the day's: when the week is looked back on
         // and tested, then (next screen) when the daily call rings. Gated on
@@ -1176,6 +1199,9 @@ fun RootScreen() {
             voiceAccentId = state.voiceAccentId,
             onAccentApplied = app::adoptRemixedVoice,
             onApplyDefaultAccent = app::applyDefaultAccent,
+            voiceIsStandIn = state.voiceIsStandIn,
+            voiceQueuedUntil = state.voiceQueuedUntil,
+            onChooseStandIn = app::chooseStandInVoice,
             onEditProfile = { editProfileStep = 0; editProfile = true },
             onEditNotes = { editProfileStep = 1; editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },

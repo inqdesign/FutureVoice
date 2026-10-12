@@ -61,6 +61,20 @@ data class AppState(
     val voiceId: String? = null,
     /** The accent the live clone was remixed with, if any. */
     val voiceAccentId: String? = null,
+    /**
+     * The voice is a STAND-IN preset while the learner's own waits for the
+     * account's monthly voice allowance to reset (iOS `voiceIsStandIn`,
+     * 2026-10-10). The recording is kept, a preset speaks meanwhile, and
+     * [AppViewModel.makeQueuedVoiceIfReady] builds the real clone once
+     * [voiceQueuedUntil] has passed. [voiceId] holds the preset meanwhile,
+     * because null means "no voice" everywhere and routes into onboarding.
+     */
+    val voiceIsStandIn: Boolean = false,
+    /** When the server said voices can be made again (epoch ms); null = it
+     *  didn't say, so the next foreground tries. */
+    val voiceQueuedUntil: Long? = null,
+    /** Set when the queued voice lands; the tab root says so once. */
+    val queuedVoiceArrived: Boolean = false,
     /** Set when a MEASURED assessment raised the level; the sheet clears it. */
     val levelUp: Pair<CefrLevel, CefrLevel>? = null,
     val targetLanguage: String = "en",
@@ -93,6 +107,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 null) ?: prefs.getString(LEVEL_KEY, null)),
         enrolledLanguages = LanguageScope.enrolled(appContext),
         voiceAccentId = prefs.getString(ACCENT_KEY, null),
+        voiceIsStandIn = prefs.getBoolean(STAND_IN_KEY, false),
+        voiceQueuedUntil = prefs.getLong(QUEUED_UNTIL_KEY, 0L).takeIf { it > 0 },
     ))
     val state: StateFlow<AppState> = _state.asStateFlow()
 
@@ -164,7 +180,11 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         // Foreground / purchase asks to re-read the parked state (see
         // `VoiceParking`); the throttle lives in `refreshParkedVoice`.
         viewModelScope.launch {
-            com.roro.futurevoice.data.VoiceParking.recheck.collect { force -> refreshParkedVoice(force) }
+            com.roro.futurevoice.data.VoiceParking.recheck.collect { force ->
+                refreshParkedVoice(force)
+                // Every foreground (iOS `makeQueuedVoiceIfReady` on `.active`).
+                makeQueuedVoiceIfReady()
+            }
         }
         // A parked mark belongs to ONE voice: once the app holds another (a
         // re-record here or on another device), the mark is stale.
@@ -491,6 +511,29 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     /**
+     * Adopt a voice the server rebuilt from its own copy of the recording
+     * (`voice-move`, iOS `adoptMovedVoice`, `f1aa915`) — the tail of a
+     * rebuild, minus the upload: the old voice is deleted and the new one is
+     * un-accented.
+     */
+    fun adoptMovedVoice(newId: String) {
+        val st = _state.value
+        val old = st.voiceId
+        if (newId == old) return
+        prefs.edit().remove(ACCENT_KEY).apply()
+        com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(newId)
+        _state.update { it.copy(voiceId = newId, voiceAccentId = null) }
+        com.roro.futurevoice.core.Analytics.capture("voice_moved_from_server")
+        warmFreeTalkOpeners()
+        refreshVoiceChangeStatus()
+        if (old != null && !st.voiceIsStandIn) viewModelScope.launch {
+            // A parked voice is already gone upstream. Nothing to delete.
+            if (com.roro.futurevoice.data.VoiceParking.isParked(old)) com.roro.futurevoice.data.VoiceParking.set(null)
+            else runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
+        }
+    }
+
+    /**
      * Remix a clone straight off the recording into the target language's
      * default accent (iOS `AppState.applyDefaultAccent`, 2026-10-08). Runs
      * after every rebuild that isn't the learner asking for the plain voice:
@@ -500,6 +543,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      */
     suspend fun applyDefaultAccent() {
         val st = _state.value
+        if (st.voiceIsStandIn) return
         if (!st.voiceAccentId.isNullOrEmpty()) return
         val voiceId = st.voiceId ?: return
         val (newId, accent) = remixIntoDefaultAccent(appContext, voiceId, st.targetLanguage) ?: return
@@ -508,6 +552,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     /** A clone just landed on this device — the server row already exists. */
     fun onVoiceCloned(voiceId: String) {
+        // A stand-in preset is already the voice ([adoptStandInVoice], and
+        // whichever one was picked since): the clone flow handing back its
+        // stale copy must not undo the pick — nor replace the account's own
+        // voice when the sign-up adopted one.
+        if (com.roro.futurevoice.talk.VoicePreset.isPreset(voiceId)) {
+            warmFreeTalkOpeners()
+            return
+        }
+        if (_state.value.voiceIsStandIn) endStandIn()
         // A fresh recording replaces whatever was parked or dropped.
         com.roro.futurevoice.data.VoiceParking.set(null)
         com.roro.futurevoice.data.VoiceParking.markDropped(null)
@@ -518,6 +571,93 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         // this a no-op and the meet act's "Start talking" bakes instead.
         warmFreeTalkOpeners()
         refreshVoiceChangeStatus()
+    }
+
+    // MARK: - Queued voice (the monthly voice allowance is spent)
+
+    /**
+     * The clone was refused because the account's monthly voice allowance is
+     * spent (iOS `adoptStandInVoice`). Keep going on a stand-in; the
+     * recording is already saved.
+     */
+    fun adoptStandInVoice(until: Long?) {
+        prefs.edit()
+            .putBoolean(STAND_IN_KEY, true)
+            .putLong(QUEUED_UNTIL_KEY, until ?: 0L)
+            .putString(STAND_IN_ID_KEY, STAND_IN_PRESET_ID)
+            .remove(ACCENT_KEY)
+            .apply()
+        _state.update {
+            it.copy(voiceIsStandIn = true, voiceQueuedUntil = until,
+                voiceAccentId = null, voiceId = STAND_IN_PRESET_ID)
+        }
+        com.roro.futurevoice.core.Analytics.capture("voice_clone_queued", mapOf(
+            "until" to (until?.let { java.time.Instant.ofEpochMilli(it).toString() } ?: "unknown")))
+    }
+
+    /** The learner picked which preset speaks while their voice is queued. */
+    fun chooseStandInVoice(presetId: String) {
+        if (!_state.value.voiceIsStandIn || !com.roro.futurevoice.talk.VoicePreset.isPreset(presetId)) return
+        prefs.edit().putString(STAND_IN_ID_KEY, presetId).apply()
+        _state.update { it.copy(voiceId = presetId) }
+    }
+
+    private fun endStandIn() {
+        prefs.edit().remove(STAND_IN_KEY).remove(QUEUED_UNTIL_KEY).remove(STAND_IN_ID_KEY).apply()
+        _state.update { it.copy(voiceIsStandIn = false, voiceQueuedUntil = null) }
+    }
+
+    private fun setQueuedUntil(until: Long) {
+        prefs.edit().putLong(QUEUED_UNTIL_KEY, until).apply()
+        _state.update { it.copy(voiceQueuedUntil = until) }
+    }
+
+    fun clearQueuedVoiceArrived() = _state.update { it.copy(queuedVoiceArrived = false) }
+
+    private var makingQueuedVoice = false
+
+    /**
+     * Build the queued voice once the allowance is back (iOS
+     * `makeQueuedVoiceIfReady`). Runs at launch and on every foreground; a
+     * no-op unless a voice is queued, its date has passed and the recording
+     * is on this phone. Refused again (the reset moved, or the month filled
+     * up again) → wait for the new date.
+     */
+    fun makeQueuedVoiceIfReady() {
+        val st = _state.value
+        if (!st.voiceIsStandIn || makingQueuedVoice || st.holdVoiceOnboarding) return
+        if (auth.userId == null) return
+        val sample = VoiceComparison.sampleFile(appContext.filesDir)
+        if (!sample.exists() || sample.length() == 0L) return
+        st.voiceQueuedUntil?.let { if (it > System.currentTimeMillis()) return }
+        makingQueuedVoice = true
+        viewModelScope.launch {
+            try {
+                val newId = com.roro.futurevoice.net.VoiceCloneClient(auth).cloneVoice(
+                    name = com.roro.futurevoice.data.VoiceName.display(appContext,
+                        PersonaStore.shared(appContext).load()?.displayName),
+                    sample = sample,
+                    removeBackgroundNoise = false,
+                )
+                endStandIn()
+                com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(newId)
+                prefs.edit().remove(ACCENT_KEY).apply()
+                _state.update { it.copy(voiceId = newId, voiceAccentId = null) }
+                applyDefaultAccent()
+                warmFreeTalkOpeners()
+                com.roro.futurevoice.data.VoiceChanges.refresh()
+                _state.update { it.copy(queuedVoiceArrived = true) }
+                com.roro.futurevoice.core.Analytics.capture("voice_clone_queue_made")
+            } catch (e: com.roro.futurevoice.data.VoiceQuotaFull) {
+                setQueuedUntil(e.until ?: (System.currentTimeMillis() + 6 * 3_600_000L))
+            } catch (e: Exception) {
+                // Offline, or anything else: try again in an hour, not on
+                // every foreground.
+                setQueuedUntil(System.currentTimeMillis() + 3_600_000L)
+            } finally {
+                makingQueuedVoice = false
+            }
+        }
     }
 
     /**
@@ -737,12 +877,21 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 .getOrNull()
             // A parked voice dropped for want of a recording keeps an active
             // row; restoring it would skip the re-record it was dropped for.
-            val voiceId = com.roro.futurevoice.data.VoiceParking.restoredVoiceId(
+            val restored = com.roro.futurevoice.data.VoiceParking.restoredVoiceId(
                 serverVoiceId, com.roro.futurevoice.data.VoiceParking.droppedId())
+            // A stand-in has no row by construction — its voice is queued. A
+            // row that DOES exist was made on another device (or the queue ran
+            // there): it is theirs, and the stand-in ends.
+            val standIn = _state.value.voiceIsStandIn
+            if (standIn && restored != null) endStandIn()
+            val voiceId = restored ?: if (standIn)
+                prefs.getString(STAND_IN_ID_KEY, null) ?: STAND_IN_PRESET_ID else null
             // The lineage is what keeps already-synthesized audio reachable
             // after a re-clone — without it a new voice id misses on every
-            // cached line and the whole library re-bills itself.
-            com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(voiceId)
+            // cached line and the whole library re-bills itself. A stand-in
+            // preset is nobody's own voice.
+            if (restored != null)
+                com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(voiceId)
             // A session exists now, which is the first moment the onboarding
             // choices have anywhere to go.
             mirrorSetup()
@@ -768,6 +917,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             }
             // Sign-in: was this voice parked while the app was away?
             refreshParkedVoice(force = true)
+            makeQueuedVoiceIfReady()
         }
     }
 
@@ -778,6 +928,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         const val NATIVE_KEY = "futurevoice.nativeLanguage"
         /** Same key name as iOS's defaults key. */
         const val ACCENT_KEY = "futurevoice.voiceAccentId"
+        /** Same key names as iOS's defaults keys. */
+        const val STAND_IN_KEY = "futurevoice.voiceIsStandIn"
+        const val QUEUED_UNTIL_KEY = "futurevoice.voiceQueuedUntil"
+        /** iOS keeps the stand-in in `voiceCloneId`'s own defaults key; this
+         *  app restores the voice id from the server, which has no row for it. */
+        const val STAND_IN_ID_KEY = "futurevoice.standInVoiceId"
+        /** The preset that speaks while the learner's own voice is queued
+         *  (iOS `standInPresetId` = `VoicePreset.catalog[0]`). */
+        val STAND_IN_PRESET_ID = com.roro.futurevoice.talk.StockPerson.catalog[0].voiceId
         const val LEVEL_KEY = "futurevoice.proficiency"
         const val GOAL_KEY = "futurevoice.dailyGoalMinutes"
     }
