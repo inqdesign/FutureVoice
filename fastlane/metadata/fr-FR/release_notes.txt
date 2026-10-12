@@ -1,8 +1,18 @@
 Nouveautés
-• Des défis dans l’onglet Discours : tout le monde lit le même texte et vise le meilleur score. Seules les prises faites caméra allumée comptent, et le classement n’affiche que ton nom et ton score.
-• Touche « Tes efforts » dans l’onglet Progression pour voir ce que tu as pratiqué, et combien, sur une semaine ou un mois.
+• Ta voix passe sur un nouveau moteur vocal : plus naturelle, plus proche de toi, avec des réponses plus rapides. Un message s’affiche à l’ouverture de l’app. Choisis un accent et recrée ta voix à partir de ton enregistrement en un geste.
+• L’onglet Scènes devient une carte de tes proches. Tu es au centre, et les gens les plus proches de toi sont tout près. Touche quelqu’un pour créer une situation avec cette personne.
+• Dans Trouver des gens, chacun parle désormais avec sa propre voix, avec l’accent de son pays. Les voix par défaut sont celles de locuteurs natifs de la langue que tu apprends.
+• Sur ton profil dans Trouver des gens, choisis la voix qui te joue parmi des voix de ton pays. Ta présentation peut être réécrite à partir de ce que tu as raconté récemment, avec une salutation assortie.
+• Des défis dans l’onglet Discours : tout le monde lit le même texte et vise le meilleur score. Seules les prises faites caméra allumée comptent, et le classement n’affiche que ton nom et ton score.
+• Touche « Tes efforts » dans l’onglet Progression pour voir ce que tu as pratiqué, et combien, sur une semaine ou un mois.
+• Dans Mon profil → Accent, choisis « Original » pour retrouver ta voix sans accent.
 
 Corrections
+• « Se connecter avec Apple » ne faisait rien sur l’écran d’accueil. Ça fonctionne de nouveau.
+• Les salutations écrites automatiquement s’arrêtaient en plein milieu. Elles sont complètes maintenant.
 • Pendant un appel, les réponses s’affichent phrase par phrase, en même temps que la voix.
-• La notation du shadowing et des discours est plus juste : le coréen est comparé par groupe de mots, le japonais par mot, et ce que tu as sauté s’affiche tel qu’il est écrit dans le texte.
-• Dans Ma routine, les blocs de révision se remplissent avec chaque carte et chaque mot étudié.
+• La notation du shadowing et des discours est plus juste : le coréen est comparé par groupe de mots, le japonais par mot, et ce que tu as sauté s’affiche tel qu’il est écrit dans le texte.
+• Dans Ma routine, une journée compte dès que tu as commencé chaque bloc, et les blocs de révision se remplissent avec chaque carte et chaque mot étudié.
+• La limite d’un changement de voix tous les 30 jours a disparu.
+• L’app ne se ferme plus quand tu ouvres l’onglet Mon profil.
+• Le texte à lire pour enregistrer ta voix est un peu plus court.

@@ -1,12 +1,15 @@
 New
 • Your voice moves to a new voice engine: more natural, more like you, and faster replies. You'll see a note when you open the app. Pick an accent and rebuild your voice from your recording in one tap.
 • The Watch tab is now a map of people. You're in the middle, and the people closest to you sit nearest. Tap someone to set up a situation with them.
+• Everyone in Find people now speaks in a voice of their own, with the accent of where they're from. The default voices are native speakers of the language you're learning.
+• On your Find people profile, pick the voice that plays you from voices of your own country. Rewrite your introduction from what you've told your fluent self lately, and get a greeting to match.
 • Challenges in the Speech tab: everyone reads the same script and competes for the top score. Only takes recorded with the camera on count, and the leaderboard shows just your name and score.
 • Tap “Your effort” on the Progress tab to see what you practised, and how much, over a week or a month.
 • In Me → Accent, choose "Original" to go back to your voice with no accent.
 
 Fixed
 • Sign in with Apple did nothing on the welcome screen. It works again.
+• Automatic greetings were cut off halfway. They're whole now.
 • In a call, replies now appear one sentence at a time, together with the voice.
 • Shadowing and Speech scores are more accurate: Korean is compared by word group, Japanese by word, and anything you skipped is shown as it's written in the script.
 • In My routine, a day counts once you've started every block, and review blocks fill up with every card and word you studied.

@@ -129475,6 +129475,42 @@
     },
     "Your voice is moving to a new engine" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme zieht auf eine neue Engine um"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声を新しいエンジンに移します"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的聲音要搬到新引擎了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的声音要搬到新引擎了"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix passe sur un nouveau moteur"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz se muda a un nuevo motor"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129491,6 +129527,42 @@
     },
     "When it moves, your current voice is deleted and a new one is made from the recording saved on this device. Audio that was already made keeps playing." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Umzug wird deine jetzige Stimme gelöscht und aus der Aufnahme auf diesem Gerät neu erstellt. Bereits erstellte Audios spielen weiter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移すと今の声は削除され、この端末に保存された録音から新しく作ります。すでに作られた音声はそのまま聞けます。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搬過去時，現在的聲音會被刪除，再用這台裝置上存的錄音重新製作。已經做好的音訊照樣能播。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搬过去时，现在的声音会被删除，再用这台设备上保存的录音重新制作。已经做好的音频照样能播放。"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Au passage, ta voix actuelle est supprimée et une nouvelle est créée à partir de l’enregistrement gardé sur cet appareil. Les audios déjà créés restent lisibles."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al mudarla, tu voz actual se borra y se crea una nueva con la grabación guardada en este dispositivo. El audio que ya existe se sigue escuchando."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129507,6 +129579,42 @@
     },
     "Rebuild with my voice" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit meiner Stimme neu erstellen"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の声で作り直す"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用我的聲音重新製作"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用我的声音重新制作"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recréer avec ma voix"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rehacer con mi voz"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129523,6 +129631,42 @@
     },
     "Your new voice is ready" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine neue Stimme ist bereit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい声ができました"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的聲音準備好了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的声音准备好了"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta nouvelle voix est prête"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu nueva voz está lista"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129539,6 +129683,42 @@
     },
     "From now on your fluent self speaks with your new voice." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab jetzt spricht dein fließendes Ich mit deiner neuen Stimme."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これからは流暢な自分が新しい声で話します。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從現在起，流利的你會用新的聲音說話。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从现在起，流利的你会用新的声音说话。"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désormais, ton moi fluide parle avec ta nouvelle voix."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A partir de ahora, tu yo fluido habla con tu nueva voz."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129555,6 +129735,42 @@
     },
     "So you can practice with a voice that sounds more natural and more like you, we're moving your voice to a new voice engine. Replies get faster too." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit du mit einer Stimme üben kannst, die natürlicher und mehr nach dir klingt, ziehen wir sie auf eine neue Sprach-Engine um. Antworten kommen dann auch schneller."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もっと自然で、もっと自分らしい声で練習できるように、声を新しい音声エンジンに移します。返事も速くなります。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為了讓你用更自然、更像自己的聲音練習，我們要把你的聲音搬到新的語音引擎。回覆也會變快。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为了让你用更自然、更像自己的声音练习，我们要把你的声音搬到新的语音引擎。回复也会更快。"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour que tu t’entraînes avec une voix plus naturelle et plus proche de la tienne, on passe ta voix sur un nouveau moteur vocal. Les réponses arrivent aussi plus vite."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para que practiques con una voz más natural y más parecida a la tuya, pasamos tu voz a un nuevo motor de voz. Las respuestas también llegan más rápido."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129571,6 +129787,42 @@
     },
     "Learn more" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr erfahren"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳しく見る"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "了解更多"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "了解更多"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En savoir plus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más información"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129587,6 +129839,42 @@
     },
     "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diese Stimme gibt es keine Originalaufnahme mehr. Nimm etwa eine Minute auf, dann zieht deine Stimme auf die neue Engine um."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この声は元の録音が残っていません。1分ほど録音し直すと、新しいエンジンに移ります。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個聲音沒有留下原始錄音。重新錄大約一分鐘，就會搬到新引擎。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个声音没有留下原始录音。重新录大约一分钟，就会搬到新引擎。"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’enregistrement d’origine de cette voix n’a pas été gardé. Enregistre environ une minute et ta voix passe sur le nouveau moteur."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se guardó la grabación original de esta voz. Graba un minuto más o menos y tu voz pasará al nuevo motor."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129603,6 +129891,42 @@
     },
     "Your current voice is deleted and you'll record a new one." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine jetzige Stimme wird gelöscht und du nimmst eine neue auf."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今の声は削除され、新しく録音します。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在的聲音會被刪除，你要重新錄一次。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在的声音会被删除，你要重新录一次。"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix actuelle est supprimée et tu en enregistres une nouvelle."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz actual se borra y grabarás una nueva."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129619,6 +129943,42 @@
     },
     "Your voice" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Profilstimme"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロフィールの声"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個人檔案的聲音"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个人资料的声音"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voix du profil"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voz del perfil"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129629,6 +129989,42 @@
     },
     "Woman" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "女性"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "女性"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "女性"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Femme"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mujer"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129639,6 +130035,42 @@
     },
     "Man" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mann"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "男性"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "男性"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "男性"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homme"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hombre"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129649,6 +130081,42 @@
     },
     "Their own" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine eigene Stimme"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この人だけの声"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "專屬的聲音"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "专属的声音"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sa propre voix"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Su propia voz"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129659,6 +130127,42 @@
     },
     "Write it again from what I've told you lately" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu schreiben aus dem, was ich zuletzt erzählt habe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近話したことから書き直す"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用最近聊過的內容重寫"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用最近聊过的内容重写"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réécrire à partir de ce que j’ai raconté récemment"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reescribir con lo que conté hace poco"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129669,6 +130173,42 @@
     },
     "A voice from where you're from, speaking %@. Never your own voice." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Stimme aus deinem Herkunftsland, die %@ spricht. Nie deine eigene Stimme."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出身国の声が%@で話します。あなた自身の声は使いません。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由你家鄉的聲音說%@。絕不會用你自己的聲音。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由你家乡的声音说%@。绝不会用你自己的声音。"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une voix de ton pays d’origine, qui parle %@. Jamais ta propre voix."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una voz de tu país de origen, hablando %@. Nunca tu propia voz."
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",

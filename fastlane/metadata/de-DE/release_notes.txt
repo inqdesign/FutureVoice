@@ -1,8 +1,18 @@
 Neu
+• Deine Stimme zieht auf eine neue Sprach-Engine um: natürlicher, mehr nach dir und mit schnelleren Antworten. Beim Öffnen der App siehst du einen Hinweis. Wähl einen Akzent und erstell deine Stimme mit einem Tippen aus deiner Aufnahme neu.
+• Der Tab „Ansehen“ ist jetzt eine Karte deiner Leute. Du bist in der Mitte, wer dir nahesteht, ist ganz nah. Tipp auf jemanden und bau eine Situation mit dieser Person.
+• Alle in „Leute finden“ sprechen jetzt mit einer eigenen Stimme, mit dem Akzent ihres Herkunftslands. Die Standardstimmen sind Muttersprachler der Sprache, die du lernst.
+• In deinem Profil unter „Leute finden“ wählst du die Stimme, die dich spielt, aus Stimmen deines Landes. Deine Vorstellung kannst du aus dem neu schreiben lassen, was du zuletzt erzählt hast, und bekommst eine passende Begrüßung dazu.
 • Challenges im Tab „Rede“: Alle lesen denselben Text und treten um die beste Punktzahl an. Es zählen nur Aufnahmen mit eingeschalteter Kamera, und in der Rangliste stehen nur dein Name und deine Punktzahl.
-• Unter „Dein Einsatz“ im Tab „Fortschritt“ siehst du genau, was du in einer Woche oder einem Monat geübt hast – und wie viel.
+• Unter „Dein Einsatz“ im Tab „Fortschritt“ siehst du genau, was du in einer Woche oder einem Monat geübt hast und wie viel.
+• Unter Ich → Akzent bringt dich „Original“ zu deiner Stimme ohne Akzent zurück.
 
 Behoben
+• „Mit Apple anmelden“ hat auf dem Startbildschirm nichts getan. Es funktioniert wieder.
+• Automatische Begrüßungen brachen mittendrin ab. Jetzt sind sie vollständig.
 • Im Gespräch erscheinen Antworten jetzt Satz für Satz, zusammen mit der Stimme.
 • Shadowing und Rede werden genauer bewertet: Koreanisch nach Wortgruppen, Japanisch nach Wörtern, und Ausgelassenes wird so angezeigt, wie es im Text steht.
-• In „Meine Routine“ füllen sich Wiederholungsblöcke jetzt mit jeder Karte und jedem Wort, das du gelernt hast.
+• In „Meine Routine“ zählt ein Tag, sobald du jeden Block angefangen hast, und Wiederholungsblöcke füllen sich mit jeder Karte und jedem Wort, das du gelernt hast.
+• Die Grenze von einem Stimmwechsel alle 30 Tage ist weg.
+• Die App schließt sich nicht mehr, wenn du den Tab „Ich“ öffnest.
+• Der Text für die Stimmaufnahme ist etwas kürzer.
