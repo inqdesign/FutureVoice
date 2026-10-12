@@ -69,6 +69,9 @@ struct WatchTab: View {
     @State private var skyCardPaywall = false
     @StateObject private var previewPlayer = AudioPlayer()
     @State private var keyboardUp = false
+    /// Panned away from me: "Back to me" shows (drawn here, over the fade).
+    @State private var skyAway = false
+    @State private var backToMeTick = 0
     @State private var dockBubble: String?
     @State private var dockFill = ""
     /// "New situation" was tapped: the tab bar steps aside for the box, the
@@ -345,8 +348,9 @@ struct WatchTab: View {
                                  onCenterChange: { id in centre(on: id) },
                                  // The map runs under the tab bar: sit level with
                                  // "New situation", or above the box.
-                                 backToMeBottom: creating ? 250 : 104,
-                                 softenOthers: PeopleSky.dockEnabled && creating)
+                                 softenOthers: PeopleSky.dockEnabled && creating,
+                                 away: $skyAway,
+                                 backToMeRequest: backToMeTick)
                         .frame(height: max(geo.size.height, 200))
                         // A tap on the empty map while writing goes back a step:
                         // to the card of the person the box was with.
@@ -449,6 +453,25 @@ struct WatchTab: View {
                 .padding(16)
                 }
             }
+            .overlay(alignment: .bottomTrailing) {
+                // Back to me, in the tab's own layer: inside the map it sat
+                // in the faded bottom edge and showed at a third of its
+                // strength. Level with "New situation"; above the box while
+                // writing; out of the way of a person's card.
+                if skyAway, skyCard == nil {
+                    Button { backToMeTick += 1 } label: {
+                        Image(systemName: "scope")
+                            .font(.title3.weight(.semibold))
+                            .frame(width: 48, height: 48)
+                    }
+                    .modifier(GlassFloatingButton())
+                    .accessibilityLabel(Text(explain(key: "watch.sky.backToMe", default: "Back to me")))
+                    .padding(.trailing, 16)
+                    .padding(.bottom, PeopleSky.dockEnabled && creating ? 216 : 16)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.smooth(duration: 0.3), value: skyAway)
             .animation(.smooth(duration: 0.3), value: skyCard?.id)
             .sheet(isPresented: $skyCardPaywall) { PaywallView(source: "watch_person_card") }
             .onDisappear { previewPlayer.stop() }
@@ -484,6 +507,8 @@ struct WatchTab: View {
                 countTalks()
                 #if DEBUG
                 if UserDefaults.standard.bool(forKey: "openSaved") { showingSavedScenarios = true }
+                // `-skyAway 1` captures the "Back to me" button without a pan.
+                if UserDefaults.standard.bool(forKey: "skyAway") { skyAway = true }
                 // `-dockChip Work` captures creation mode with a chip picked
                 // (once the pool is in); `-dockCreate 1` just opens it.
 

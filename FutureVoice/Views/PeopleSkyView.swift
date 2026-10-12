@@ -368,6 +368,12 @@ struct PeopleSkyMap: View {
     /// Writing a situation: everyone but the one it's with (and me) goes
     /// soft, so the eye rests on that person.
     var softenOthers: Bool = false
+    /// When the host draws "Back to me" itself (above the map's fade), it
+    /// reads whether we are away from here and asks to come back by bumping
+    /// `backToMeRequest`. Drawn inside the map, the button sat in the faded
+    /// bottom edge and showed at a third of its strength.
+    var away: Binding<Bool>? = nil
+    var backToMeRequest: Int = 0
 
     @State private var centred: String?
 
@@ -476,6 +482,10 @@ struct PeopleSkyMap: View {
             .contentMargins(.vertical, PeopleSky.dockEnabled ? 280 : 120, for: .scrollContent)
             .contentMargins(.horizontal, PeopleSky.dockEnabled ? 170 : 24, for: .scrollContent)
             .modifier(TrackDistanceFromCentre(side: side, away: $awayFromMe))
+            .onChange(of: awayFromMe) { _, now in away?.wrappedValue = now }
+            .onChange(of: backToMeRequest) { _, _ in
+                withAnimation(.smooth) { proxy.scrollTo("centre", anchor: .center) }
+            }
             .onChange(of: lens) { _, _ in
                 withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo("centre", anchor: .center) }
             }
@@ -501,7 +511,7 @@ struct PeopleSkyMap: View {
             .overlay(alignment: .bottomTrailing) {
                 // Back to me: an icon is enough, on the right, clear of the
                 // centred "New situation" button.
-                if awayFromMe {
+                if awayFromMe, away == nil {
                     Button {
                         withAnimation(.smooth) { proxy.scrollTo("centre", anchor: .center) }
                     } label: {
