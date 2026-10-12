@@ -738,6 +738,7 @@
     <string name="grammatical_control">"Grammatical control"</string>
     <string name="great_keep_it_as_it_is_or_adjust_below">"Great — keep it as it is, or adjust below."</string>
     <string name="green_you_did_it_all">"Green: you did it all"</string>
+    <string name="greeting">"Greeting"</string>
     <!-- 'Grounded in your profile — name, city, work, family, interests.' -->
     <string name="grounded_in_your_profile_name_city_work_family_interests">"Grounded in your profile — name, city, work, family, interests."</string>
     <string name="growth">"Growth"</string>
@@ -1412,6 +1413,8 @@
     <string name="other_learners_can_t_find_you_yet">"Other learners can't find you yet."</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"Other %s learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included."</string>
+    <!-- 'Other learners see it over your face on their Watch map. Write it in %@; left empty, one is written from your introduction.' -->
+    <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"Other learners see it over your face on their Watch map. Write it in %s; left empty, one is written from your introduction."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs."</string>
     <string name="overall">"Overall"</string>
@@ -1831,6 +1834,8 @@
     <string name="show_the_talk">"Show the talk"</string>
     <string name="showing_earlier_stories">"Showing earlier stories"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"Shown beside your score on every challenge board."</string>
+    <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
+    <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"Shown over their face on the Watch map. Left empty, one is written for you."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Sign in to iCloud in Settings first, then try again."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"Sign in to iCloud in Settings to sync"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"Sign in to sync your practice between your iPhone and iPad."</string>
@@ -2409,6 +2414,7 @@
     <string name="what_they_call_you_optional">"What they call you (optional)"</string>
     <string name="what_they_d_hear">"What they'd hear"</string>
     <string name="what_they_ll_ask">"What they'll ask"</string>
+    <string name="what_they_say_when_you_meet_them">"What they say when you meet them"</string>
     <string name="what_they_will_ask">"What they will ask"</string>
     <string name="what_this_is_about">"What this is about"</string>
     <string name="what_to_have_ready">"What to have ready"</string>
@@ -2429,6 +2435,7 @@
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"What you pick becomes your goal — practice aims at it."</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing."</string>
+    <string name="what_you_say_when_someone_meets_you">"What you say when someone meets you"</string>
     <string name="what_you_usually_talk_about">"What you usually talk about"</string>
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"What your clone is called, here and on ElevenLabs"</string>
     <string name="what_your_fluent_self_knows_about_you">"What your fluent self knows about you"</string>
@@ -2535,6 +2542,7 @@
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
     <string name="write_it_in_it_s_what_you_will_talk_from_and_writing_it_is_p_9c08cb">"Write it in %s — it's what \"you\" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you'd actually talk about for an hour."</string>
     <string name="write_it_the_way_you_d_say_it_now">"Write it the way you'd say it now"</string>
+    <string name="write_one_for_me">"Write one for me"</string>
     <string name="write_one_with_ai">"Write one with AI"</string>
     <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Write scripts on any topic, or add your own, with Plus."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
@@ -2542,6 +2550,7 @@
     <string name="write_with_ai">"Write with AI"</string>
     <string name="write_your_first_script">"Write your first script"</string>
     <string name="write_your_own_situation">"Write your own situation"</string>
+    <string name="writing">"Writing…"</string>
     <string name="writing_down_what_you_said">"Writing down what you said…"</string>
     <string name="writing_feedback">"Writing feedback…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->

@@ -736,6 +736,7 @@
     <string name="grammatical_control">"文法の正確さ"</string>
     <string name="great_keep_it_as_it_is_or_adjust_below">"よかったです！このままでも、下で変えてもOKです。"</string>
     <string name="green_you_did_it_all">"緑：全部やった日"</string>
+    <string name="greeting">"あいさつ"</string>
     <!-- 'Grounded in your profile — name, city, work, family, interests.' -->
     <string name="grounded_in_your_profile_name_city_work_family_interests">"プロフィール（名前・都市・仕事・家族・興味）をもとに作られます。"</string>
     <string name="growth">"成長"</string>
@@ -1409,6 +1410,8 @@
     <string name="other_learners_can_t_find_you_yet">"まだ他の学習者には表示されていません。"</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"ほかの%s学習者が、この紹介文を演じるAIと練習できます。声は標準ボイスで、自分の声は使われません。相手の会話がこちらに届くことはありません。トークでロックした行は含まれません。"</string>
+    <!-- 'Other learners see it over your face on their Watch map. Write it in %@; left empty, one is written from your introduction.' -->
+    <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"他の学習者のシーン練習マップで、自分の顔の上に表示されます。%sで書いてください。空欄なら自己紹介をもとに自動で書きます。"</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"自己紹介を公開している他の学習者です。話しても相手に通知は届きません。その人の自己紹介をAIが標準の声で話すもので、本人の声は使われません。"</string>
     <string name="overall">"全体"</string>
@@ -1828,6 +1831,8 @@
     <string name="show_the_talk">"その通話を見る"</string>
     <string name="showing_earlier_stories">"以前の記事を表示しています"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"どのチャレンジのランキングでも、点数の横に表示されます。"</string>
+    <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
+    <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"シーン練習のマップで顔の上に表示されます。空欄なら自動で書きます。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"先に「設定」でiCloudにサインインしてから、もう一度お試しください。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"同期するには「設定」でiCloudにサインインしてください"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"サインインすると、iPhoneとiPadの間で練習データを同期できます。"</string>
@@ -2406,6 +2411,7 @@
     <string name="what_they_call_you_optional">"自分の呼ばれ方（任意）"</string>
     <string name="what_they_d_hear">"相手に聞こえる内容"</string>
     <string name="what_they_ll_ask">"相手が聞いてくること"</string>
+    <string name="what_they_say_when_you_meet_them">"会ったときのひと言"</string>
     <string name="what_they_will_ask">"相手が聞いてくること"</string>
     <string name="what_this_is_about">"何についてか"</string>
     <string name="what_to_have_ready">"自分が用意しておくこと"</string>
@@ -2426,6 +2432,7 @@
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"ここで選んだものが目標になり、練習もそれに合わせます。"</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"同じことでも、誰に言うかで変わります。休みの相談も、上司と同僚とではまったく違う会話です。誰でもない相手では、その違いは練習できません。具体的な人がいれば、その人とのシーンが本物のように聞こえます。"</string>
+    <string name="what_you_say_when_someone_meets_you">"誰かに会ったときのひと言"</string>
     <string name="what_you_usually_talk_about">"よく話すこと"</string>
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"こことElevenLabsでこの声を呼ぶ名前"</string>
     <string name="what_your_fluent_self_knows_about_you">"流暢な自分が知っていること"</string>
@@ -2532,6 +2539,7 @@
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
     <string name="write_it_in_it_s_what_you_will_talk_from_and_writing_it_is_p_9c08cb">"%sで書いてみてください。「自分」はこの紹介をもとに話しますし、書くこと自体が練習になります。きれいな文より具体的な中身を。仕事、住んでいる町、1時間でも話せるあの話題。"</string>
     <string name="write_it_the_way_you_d_say_it_now">"今ならどう言うか書く"</string>
+    <string name="write_one_for_me">"自動で書く"</string>
     <string name="write_one_with_ai">"AIに原稿を書いてもらう"</string>
     <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Plus なら、好きなテーマで原稿を書いてもらったり、自分の原稿を追加したりできます。"</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
@@ -2539,6 +2547,7 @@
     <string name="write_with_ai">"AIで書く"</string>
     <string name="write_your_first_script">"最初の原稿を作ってみましょう"</string>
     <string name="write_your_own_situation">"自分の状況を書く"</string>
+    <string name="writing">"書いています…"</string>
     <string name="writing_down_what_you_said">"いま話した内容を書き起こし中…"</string>
     <string name="writing_feedback">"フィードバックを書いています…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->

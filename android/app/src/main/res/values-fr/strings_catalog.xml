@@ -733,6 +733,7 @@
     <string name="grammatical_control">"Précision grammaticale"</string>
     <string name="great_keep_it_as_it_is_or_adjust_below">"Super ! Garde tout tel quel, ou ajuste en dessous."</string>
     <string name="green_you_did_it_all">"Vert : tout est fait"</string>
+    <string name="greeting">"Salutation"</string>
     <!-- 'Grounded in your profile — name, city, work, family, interests.' -->
     <string name="grounded_in_your_profile_name_city_work_family_interests">"Construit à partir de ton profil : prénom, ville, travail, famille, centres d’intérêt."</string>
     <string name="growth">"Progression"</string>
@@ -1406,6 +1407,8 @@
     <string name="other_learners_can_t_find_you_yet">"Les autres apprenants ne te voient pas encore."</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"D’autres apprenants de %s pourraient s’entraîner avec une IA qui joue ce texte, avec une voix standard, jamais la tienne. Leurs conversations ne te parviennent jamais. Les phrases verrouillées de tes appels ne sont jamais incluses."</string>
+    <!-- 'Other learners see it over your face on their Watch map. Write it in %@; left empty, one is written from your introduction.' -->
+    <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"Les autres apprenants le voient au-dessus de ton visage sur leur carte Scènes. Écris-le en %s ; laissé vide, il est écrit à partir de ta présentation."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"D’autres personnes qui apprennent et ont publié une présentation. Leur parler ne leur envoie aucune notification — c’est une IA qui lit leur présentation avec une voix standard, jamais la leur."</string>
     <string name="overall">"Global"</string>
@@ -1825,6 +1828,8 @@
     <string name="show_the_talk">"Voir la conversation"</string>
     <string name="showing_earlier_stories">"On affiche des articles plus anciens"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"Il apparaît à côté de ton score dans tous les classements."</string>
+    <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
+    <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"Affiché au-dessus de son visage sur la carte Scènes. Laissé vide, il est écrit pour toi."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Connecte-toi d’abord à iCloud dans Réglages, puis réessaie."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"Connecte-toi à iCloud dans Réglages pour synchroniser"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"Connecte-toi pour synchroniser ta pratique entre ton iPhone et ton iPad."</string>
@@ -2403,6 +2408,7 @@
     <string name="what_they_call_you_optional">"Comment on t’appelle (facultatif)"</string>
     <string name="what_they_d_hear">"Ce qu’ils entendraient"</string>
     <string name="what_they_ll_ask">"Ce qu’ils vont demander"</string>
+    <string name="what_they_say_when_you_meet_them">"Ses premiers mots quand vous vous croisez"</string>
     <string name="what_they_will_ask">"Ce qu’ils vont demander"</string>
     <string name="what_this_is_about">"De quoi il s’agit"</string>
     <string name="what_to_have_ready">"Ce qu’il faut avoir prêt"</string>
@@ -2423,6 +2429,7 @@
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"Ce que tu choisis devient ton objectif — la pratique visera ça."</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"Ce que tu dis dépend de à qui tu le dis. Demander un jour de congé, ce n’est pas la même conversation avec ton chef qu’avec un collègue, et un inconnu quelconque ne peut pas te montrer cette différence. Avec une personne précise, chaque scène sonne vrai."</string>
+    <string name="what_you_say_when_someone_meets_you">"Ce que tu dis quand on te croise"</string>
     <string name="what_you_usually_talk_about">"Ce dont tu parles avec elle d’habitude"</string>
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"Le nom de ton clone, ici et sur ElevenLabs"</string>
     <string name="what_your_fluent_self_knows_about_you">"Ce que ton moi fluide sait de toi"</string>
@@ -2529,6 +2536,7 @@
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
     <string name="write_it_in_it_s_what_you_will_talk_from_and_writing_it_is_p_9c08cb">"Écris-le en %s — c’est de là que « toi » parlera, et l’écrire est déjà un entraînement. Le concret vaut mieux que le léché : ton métier, ton quartier, ce dont tu parlerais une heure sans t’arrêter."</string>
     <string name="write_it_the_way_you_d_say_it_now">"Écris-le comme tu le dirais maintenant"</string>
+    <string name="write_one_for_me">"Écris-le pour moi"</string>
     <string name="write_one_with_ai">"Faire écrire un texte par l’IA"</string>
     <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Avec Plus, fais écrire des textes sur n’importe quel sujet ou ajoute les tiens."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
@@ -2536,6 +2544,7 @@
     <string name="write_with_ai">"Écrire avec l’IA"</string>
     <string name="write_your_first_script">"Crée ton premier texte"</string>
     <string name="write_your_own_situation">"Écris ta propre situation"</string>
+    <string name="writing">"Écriture…"</string>
     <string name="writing_down_what_you_said">"Transcription de ce que tu viens de dire…"</string>
     <string name="writing_feedback">"Rédaction du retour…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->

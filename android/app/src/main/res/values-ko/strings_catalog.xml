@@ -737,6 +737,7 @@
     <string name="grammatical_control">"문법 정확도"</string>
     <string name="great_keep_it_as_it_is_or_adjust_below">"좋아요! 그대로 두거나, 아래에서 바꿔 보세요."</string>
     <string name="green_you_did_it_all">"초록: 다 한 날"</string>
+    <string name="greeting">"인사말"</string>
     <!-- 'Grounded in your profile — name, city, work, family, interests.' -->
     <string name="grounded_in_your_profile_name_city_work_family_interests">"내 프로필(이름·도시·일·가족·관심사)을 바탕으로 만들어져요."</string>
     <string name="growth">"성장"</string>
@@ -1410,6 +1411,8 @@
     <string name="other_learners_can_t_find_you_yet">"아직 다른 학습자에게 보이지 않아요."</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"다른 %s 학습자가 이 소개를 연기하는 AI와 연습할 수 있어요. 목소리는 기본 음성이고, 내 목소리는 절대 쓰이지 않아요. 그 사람들의 대화는 나에게 오지 않아요. 통화에서 잠근 줄은 절대 들어가지 않아요."</string>
+    <!-- 'Other learners see it over your face on their Watch map. Write it in %@; left empty, one is written from your introduction.' -->
+    <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"다른 학습자의 상황연습 지도에서 내 얼굴 위에 떠요. %s로 써 주세요. 비워 두면 자기소개를 보고 알아서 써 둬요."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"소개를 공개한 다른 학습자들이에요. 대화해도 상대에게 알림이 가지 않아요 — 그 사람의 소개를 AI가 기본 목소리로 말하는 것이고, 본인 목소리는 쓰이지 않아요."</string>
     <string name="overall">"전체"</string>
@@ -1829,6 +1832,8 @@
     <string name="show_the_talk">"그 통화 보기"</string>
     <string name="showing_earlier_stories">"지난 기사를 보여드리고 있어요"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"모든 챌린지 순위에서 점수 옆에 보여요."</string>
+    <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
+    <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"상황연습 지도에서 얼굴 위에 떠요. 비워 두면 알아서 써 둬요."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"먼저 설정에서 iCloud에 로그인한 뒤 다시 해 주세요."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"동기화하려면 설정에서 iCloud에 로그인하세요"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"로그인하면 아이폰과 아이패드 사이에서 연습 기록을 맞출 수 있어요."</string>
@@ -2407,6 +2412,7 @@
     <string name="what_they_call_you_optional">"나를 부르는 호칭 (선택)"</string>
     <string name="what_they_d_hear">"다른 사람에게 들리는 나"</string>
     <string name="what_they_ll_ask">"그쪽이 물어볼 것"</string>
+    <string name="what_they_say_when_you_meet_them">"만나면 건네는 첫마디"</string>
     <string name="what_they_will_ask">"그쪽이 물어볼 것"</string>
     <string name="what_this_is_about">"무엇에 관한 건지"</string>
     <string name="what_to_have_ready">"내 쪽에서 준비할 것"</string>
@@ -2427,6 +2433,7 @@
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"여기서 고른 게 목표가 되고, 연습도 거기에 맞춰요."</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"같은 말이라도 누구에게 하느냐에 따라 달라져요. 휴가 얘기도 상사에게 할 때와 동료에게 할 때는 전혀 다른 대화고, 아무나인 상대로는 그 차이를 연습할 수 없어요. 구체적인 사람이 있으면 그 사람과의 장면이 실제처럼 들려요."</string>
+    <string name="what_you_say_when_someone_meets_you">"누가 나를 만나면 건네는 첫마디"</string>
     <string name="what_you_usually_talk_about">"주로 나누는 이야기"</string>
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"여기와 ElevenLabs에서 이 목소리를 부르는 이름"</string>
     <string name="what_your_fluent_self_knows_about_you">"유창해진 내가 아는 내 이야기"</string>
@@ -2533,6 +2540,7 @@
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
     <string name="write_it_in_it_s_what_you_will_talk_from_and_writing_it_is_p_9c08cb">"%s로 써 보세요 — \"나\"가 이 소개를 바탕으로 말하고, 쓰는 것 자체가 연습이에요. 매끈한 문장보다 구체적인 내용이 좋아요: 하는 일, 사는 동네, 한 시간이고 떠들 수 있는 그 이야기."</string>
     <string name="write_it_the_way_you_d_say_it_now">"지금이라면 어떻게 말할지 쓰기"</string>
+    <string name="write_one_for_me">"자동으로 쓰기"</string>
     <string name="write_one_with_ai">"AI에게 맡기기"</string>
     <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Plus에서는 어떤 주제든 원고를 만들거나 내 원고를 넣을 수 있어요."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
@@ -2540,6 +2548,7 @@
     <string name="write_with_ai">"AI로 쓰기"</string>
     <string name="write_your_first_script">"첫 원고를 만들어 보세요"</string>
     <string name="write_your_own_situation">"내 상황 직접 쓰기"</string>
+    <string name="writing">"쓰는 중…"</string>
     <string name="writing_down_what_you_said">"방금 말한 내용을 받아쓰는 중…"</string>
     <string name="writing_feedback">"피드백 쓰는 중…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->

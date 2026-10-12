@@ -736,6 +736,7 @@
     <string name="grammatical_control">"文法準確度"</string>
     <string name="great_keep_it_as_it_is_or_adjust_below">"太好了！維持原樣，或在下方調整。"</string>
     <string name="green_you_did_it_all">"綠色：全部完成的日子"</string>
+    <string name="greeting">"招呼語"</string>
     <!-- 'Grounded in your profile — name, city, work, family, interests.' -->
     <string name="grounded_in_your_profile_name_city_work_family_interests">"依你的個人檔案（名字、城市、工作、家人、興趣）建立。"</string>
     <string name="growth">"成長"</string>
@@ -1409,6 +1410,8 @@
     <string name="other_learners_can_t_find_you_yet">"其他學習者還找不到你。"</string>
     <!-- 'Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included.' -->
     <string name="other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4">"其他%s學習者可以和扮演這段介紹的 AI 練習，用的是內建語音，絕不會用你的聲音。他們的對話不會傳到你這裡。你在通話中鎖住的內容絕不會被放進去。"</string>
+    <!-- 'Other learners see it over your face on their Watch map. Write it in %@; left empty, one is written from your introduction.' -->
+    <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"會顯示在其他學習者的情境練習地圖上、你的頭像上方。請用%s寫；留空的話會根據你的自我介紹自動寫。"</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"這些是公開了自我介紹的其他學習者。跟他們對話不會通知對方。是AI用預設聲音唸出那個人的自我介紹，不會用到本人的聲音。"</string>
     <string name="overall">"整體"</string>
@@ -1828,6 +1831,8 @@
     <string name="show_the_talk">"看那次通話"</string>
     <string name="showing_earlier_stories">"目前顯示的是先前的新聞"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"在每個挑戰的排行榜上，都會顯示在分數旁邊。"</string>
+    <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
+    <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"會顯示在情境練習地圖上的頭像上方。留空的話會自動幫你寫。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"請先在「設定」登入 iCloud，再試一次。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"要同步，請在「設定」登入 iCloud"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"登入後就能在 iPhone 和 iPad 之間同步練習記錄。"</string>
@@ -2406,6 +2411,7 @@
     <string name="what_they_call_you_optional">"對方怎麼稱呼你（選填）"</string>
     <string name="what_they_d_hear">"他們會聽到的內容"</string>
     <string name="what_they_ll_ask">"對方會問的"</string>
+    <string name="what_they_say_when_you_meet_them">"見面時說的第一句話"</string>
     <string name="what_they_will_ask">"對方會問的"</string>
     <string name="what_this_is_about">"這是關於什麼"</string>
     <string name="what_to_have_ready">"我這邊要準備的"</string>
@@ -2426,6 +2432,7 @@
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"這裡選的會成為你的目標，練習也會朝著它走。"</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"同一句話，對誰說就不一樣。請假這件事，跟主管說和跟同事說是完全不同的對話，隨便一個陌生人練不出這種差別。有了具體的人，每個情境聽起來都像真的。"</string>
+    <string name="what_you_say_when_someone_meets_you">"別人遇到你時，你說的第一句話"</string>
     <string name="what_you_usually_talk_about">"平常聊些什麼"</string>
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"這個聲音在這裡和ElevenLabs上的名稱"</string>
     <string name="what_your_fluent_self_knows_about_you">"流利的自己對你的了解"</string>
@@ -2532,6 +2539,7 @@
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
     <string name="write_it_in_it_s_what_you_will_talk_from_and_writing_it_is_p_9c08cb">"用%s寫。「你」會以這段介紹為底來聊，寫本身也是練習。具體比漂亮重要：做什麼工作、住哪裡、能聊上一小時的那件事。"</string>
     <string name="write_it_the_way_you_d_say_it_now">"寫下你現在會怎麼說"</string>
+    <string name="write_one_for_me">"幫我寫"</string>
     <string name="write_one_with_ai">"讓 AI 幫你寫講稿"</string>
     <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"訂閱 Plus 就能請 AI 寫任何主題的講稿，也能加入自己的講稿。"</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
@@ -2539,6 +2547,7 @@
     <string name="write_with_ai">"用 AI 撰寫"</string>
     <string name="write_your_first_script">"寫下你的第一篇講稿"</string>
     <string name="write_your_own_situation">"自己寫情境"</string>
+    <string name="writing">"正在寫…"</string>
     <string name="writing_down_what_you_said">"正在記下剛才說的內容…"</string>
     <string name="writing_feedback">"正在寫回饋…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
