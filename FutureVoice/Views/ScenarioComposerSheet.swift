@@ -65,9 +65,9 @@ struct ScenarioComposerSheet: View {
     /// box was opened FOR someone (a person's "Make a situation"): that door
     /// is for describing the thing coming up with them, not browsing.
     var showsCategoryChips: Bool = true
-    /// Open already listening (a person's "Make a situation": the next thing
-    /// to do is say what's coming up). Tap stop to type instead.
-    var dictateOnAppear: Bool = false
+    /// Open with the field focused and the keyboard up (a person's "Make a
+    /// situation": the next thing to do is write).
+    var focusOnAppear: Bool = false
     let onCommit: (Scenario) -> Void
 
     @EnvironmentObject private var appState: AppState
@@ -202,6 +202,12 @@ struct ScenarioComposerSheet: View {
     var body: some View {
         if embedded {
             common(embeddedBox)
+                .task {
+                    guard focusOnAppear else { return }
+                    // After the box's rise, or the focus is lost mid-move.
+                    try? await Task.sleep(for: .milliseconds(350))
+                    situationFocused = true
+                }
         } else {
             NavigationStack {
                 common(sheetBody)
@@ -518,8 +524,7 @@ struct ScenarioComposerSheet: View {
                                         }
                                     }
                                  ),
-                                 trailingControls: embedded ? AnyView(inlineCTA) : nil,
-                                 dictateOnAppear: dictateOnAppear)
+                                 trailingControls: embedded ? AnyView(inlineCTA) : nil)
             }
             // WITHOUT this the box is only as wide as its content wants to
             // be, and every control in the row has an intrinsic width that
