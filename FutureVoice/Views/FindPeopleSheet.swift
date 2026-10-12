@@ -154,22 +154,51 @@ struct FindPeopleSheet: View {
     /// what is on screen here can't drift from what a stranger is shown.
     /// Tapping it lands in the editor, where the paragraph itself lives
     /// alongside Update and Take down.
+    ///
+    /// Not published (never, or taken down) is a state too, and says so:
+    /// until 2026-10-12 the section vanished then, so the page had no way to
+    /// publish and no way to tell whether you were in the pool at all.
     @ViewBuilder private var mineSection: some View {
-        if let mine {
-            Section {
-                NavigationLink {
-                    // Publishing or taking down from there changes this row,
-                    // so re-read it on the way back rather than leaving a
-                    // stale face on the page that just edited it.
-                    PublicIntroView(onDecided: { Task { await loadMine() } })
-                        .environmentObject(appState)
-                } label: {
+        Section {
+            NavigationLink {
+                // Publishing or taking down from there changes this row,
+                // so re-read it on the way back rather than leaving a
+                // stale face on the page that just edited it.
+                PublicIntroView(onDecided: { Task { await loadMine() } })
+                    .environmentObject(appState)
+            } label: {
+                if let mine {
                     poolRow(mine)
+                } else {
+                    HStack(spacing: 12) {
+                        ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 40)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(appState.persona?.displayName ?? "")
+                                .font(.body)
+                            Text("Other learners can't find you yet.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
-            } header: {
+            }
+        } header: {
+            HStack {
                 Text("You")
-            } footer: {
+                Spacer()
+                if mine != nil {
+                    Label("Published", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Label("Not published", systemImage: "eye.slash")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } footer: {
+            if mine != nil {
                 Text(explain("This is how other learners find you. Tap to change it or take it down."))
+            } else {
+                Text("Publish a short introduction and other learners can practise talking with you.")
             }
         }
     }

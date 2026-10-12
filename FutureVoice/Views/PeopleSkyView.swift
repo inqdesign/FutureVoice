@@ -276,15 +276,17 @@ enum PeopleSky {
         }
         // People made before the relationship chip: read the learner's own words.
         let r = c.relationship.lowercased()
+        // Family words are checked LAST: "친구 엄마" / "a friend's mom" names
+        // someone met through a friend, and drew a house when "엄마" won.
         let byWords: [([String], String)] = [
             (["wife", "husband", "partner", "girlfriend", "boyfriend", "아내", "남편", "애인", "여자친구", "남자친구"], "heart.fill"),
-            (["mom", "dad", "mother", "father", "sister", "brother", "엄마", "아빠", "어머니", "아버지", "누나", "언니", "형", "오빠", "동생", "family", "가족"], "house.fill"),
             (["friend", "친구"], "person.2.fill"),
             (["manager", "boss", "colleague", "coworker", "team", "상사", "팀장", "동료", "부장", "과장"], "briefcase.fill"),
             (["landlord", "집주인"], "key.fill"),
             (["neighbor", "neighbour", "이웃"], "door.left.hand.open"),
             (["teacher", "coach", "선생님", "강사"], "graduationcap.fill"),
             (["kita", "parent", "학부모"], "figure.and.child.holdhands"),
+            (["mom", "dad", "mother", "father", "sister", "brother", "엄마", "아빠", "어머니", "아버지", "누나", "언니", "형", "오빠", "동생", "family", "가족"], "house.fill"),
         ]
         return byWords.first { $0.0.contains(where: r.contains) }?.1
             ?? jobSymbol(c.relationship) ?? "person.fill"

@@ -62189,6 +62189,52 @@
         }
       }
     },
+    "Not published" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht veröffentlicht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin publicar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non publié"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개 안 함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未公开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未公開"
+          }
+        }
+      }
+    },
     "Not rated" : {
       "localizations" : {
         "de" : {
@@ -66814,6 +66860,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "其他免費活動"
+          }
+        }
+      }
+    },
+    "Other learners can't find you yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Lernende sehen dich noch nicht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otros estudiantes todavía no pueden encontrarte."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les autres apprenants ne te voient pas encore."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ他の学習者には表示されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 다른 학습자에게 보이지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他学习者还找不到你。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他學習者還找不到你。"
           }
         }
       }
@@ -72140,6 +72232,52 @@
         }
       }
     },
+    "Publish a short introduction and other learners can practise talking with you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veröffentliche eine kurze Vorstellung, dann können andere Lernende mit dir das Sprechen üben."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publica una breve presentación y otros estudiantes podrán practicar contigo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publie une courte présentation et les autres apprenants pourront s’entraîner à parler avec toi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "短い自己紹介を公開すると、他の学習者が自分と会話の練習をできるようになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "짧은 자기소개를 공개하면 다른 학습자들이 나와 대화 연습을 할 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公开一段简短的自我介绍，其他学习者就能跟你练习对话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開一段簡短的自我介紹，其他學習者就能跟你練習對話。"
+          }
+        }
+      }
+    },
     "Publish as a challenge? Every learner of this language will see it, with a leaderboard." : {
       "localizations" : {
         "de" : {
@@ -72274,6 +72412,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "公開自我介紹，別人就能跟「你」練習"
+          }
+        }
+      }
+    },
+    "Published" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veröffentlicht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publicado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publié"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已公开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已公開"
           }
         }
       }
