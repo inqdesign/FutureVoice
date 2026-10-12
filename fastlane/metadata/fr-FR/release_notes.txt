@@ -4,6 +4,7 @@ Nouveautés
 • Dans Trouver des gens, chacun parle désormais avec sa propre voix, avec l’accent de son pays. Les voix par défaut sont celles de locuteurs natifs de la langue que tu apprends.
 • Sur ton profil dans Trouver des gens, choisis la voix qui te joue parmi des voix de ton pays. Ta présentation peut être réécrite à partir de ce que tu as raconté récemment, avec une salutation assortie.
 • Des défis dans l’onglet Discours : tout le monde lit le même texte et vise le meilleur score. Seules les prises faites caméra allumée comptent, et le classement n’affiche que ton nom et ton score.
+• Choisis pourquoi tu apprends (un examen, le travail, les voyages…) : les sujets de l’onglet Parler suivent, et une routine t’est proposée.
 • Touche « Tes efforts » dans l’onglet Progression pour voir ce que tu as pratiqué, et combien, sur une semaine ou un mois.
 • Dans Mon profil → Accent, choisis « Original » pour retrouver ta voix sans accent.
 

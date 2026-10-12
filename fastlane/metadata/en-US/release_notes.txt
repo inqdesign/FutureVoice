@@ -4,6 +4,7 @@ New
 • Everyone in Find people now speaks in a voice of their own, with the accent of where they're from. The default voices are native speakers of the language you're learning.
 • On your Find people profile, pick the voice that plays you from voices of your own country. Rewrite your introduction from what you've told your fluent self lately, and get a greeting to match.
 • Challenges in the Speech tab: everyone reads the same script and competes for the top score. Only takes recorded with the camera on count, and the leaderboard shows just your name and score.
+• Choose why you're learning (an exam, work, travel and more) and the Talk tab's topics follow it, with a routine suggested for you.
 • Tap “Your effort” on the Progress tab to see what you practised, and how much, over a week or a month.
 • In Me → Accent, choose "Original" to go back to your voice with no accent.
 

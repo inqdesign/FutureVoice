@@ -4,6 +4,7 @@ Novedades
 • En Buscar personas, cada quien habla ahora con su propia voz, con el acento de su país. Las voces predeterminadas son de hablantes nativos del idioma que aprendes.
 • En tu perfil de Buscar personas, elige la voz que te representa entre voces de tu país. Puedes reescribir tu presentación con lo que le contaste hace poco a tu yo fluido, y el saludo se escribe a juego.
 • Retos en la pestaña Discurso: todos leen el mismo guion y compiten por la mejor puntuación. Solo cuentan los intentos con la cámara encendida, y en la clasificación solo aparecen tu nombre y tu puntuación.
+• Elige para qué aprendes (un examen, el trabajo, un viaje y más) y los temas de la pestaña Hablar se adaptan, con una rutina sugerida para ti.
 • Toca “Tu esfuerzo” en la pestaña Progreso para ver qué practicaste y cuánto en una semana o un mes.
 • En Mi perfil → Acento, elige “Original” para volver a tu voz sin acento.
 
