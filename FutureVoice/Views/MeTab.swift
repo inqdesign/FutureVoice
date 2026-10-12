@@ -42,7 +42,6 @@ struct MeTab: View {
     @State private var coreMembership: CoreClubService.Membership?
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
-    @State private var confirmingVoiceReset = false
     @State private var rerecording = false
     @State private var confirmingVoiceRegenerate = false
     @State private var confirmingSignOut = false
@@ -368,7 +367,7 @@ struct MeTab: View {
                         // Close this sheet first: the confirm lives on the
                         // Voice page, which can't present over it.
                         comparingVoice = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { confirmingVoiceReset = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { rerecording = true }
                     })
                     .environmentObject(appState)
             }
@@ -798,7 +797,7 @@ struct MeTab: View {
     /// The "5 credits" figure mirrors priceFor("voice_clone") in
     /// supabase/functions/_shared/credits.ts — keep them in sync.
     private static var recloneWarning: String {
-        explain("Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing.")
+        explain("Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing.")
     }
 
     /// Name, accent and the stand-in / restore rows of the Voice section.
@@ -810,7 +809,7 @@ struct MeTab: View {
             } label: {
                 row(icon: "textformat",
                     title: explain("Voice name: \(appState.voiceDisplayName)"),
-                    subtitle: explain("What your clone is called, here and on ElevenLabs"))
+                    subtitle: explain("What your voice is called in the app"))
             }
             NavigationLink {
                 VoicePresetPickerView(selection: $defaultSceneVoiceId)
@@ -887,7 +886,9 @@ struct MeTab: View {
             // (2026-10-09). With none left they say when, instead of leading
             // to a minute of reading and a refusal.
             Button(role: .destructive) {
-                confirmingVoiceReset = true
+                // Straight to the recording screen: its Cancel keeps the voice
+                // they have, so there is nothing to confirm (2026-10-13).
+                rerecording = true
             } label: {
                 row(icon: "mic.badge.plus",
                     title: explain("Re-record voice"),
@@ -942,7 +943,7 @@ struct MeTab: View {
             Button("Cancel", role: .cancel) {}
             Button("Save") { renameVoice() }
         } message: {
-            Text(explain("Names your clone here and on ElevenLabs. Leave it empty to go back to the default."))
+            Text(explain("The name your voice goes by in the app. Leave it empty to go back to the default."))
         }
         .alert("Renamed on this device only", isPresented: Binding(
             get: { voiceRenameWarning != nil },
@@ -974,7 +975,7 @@ struct MeTab: View {
             do {
                 try await appState.renameVoice(to: next)
             } catch {
-                voiceRenameWarning = explain("Saved here, but ElevenLabs didn't accept the new name: \(error.localizedDescription) It'll be applied the next time your voice is cloned.")
+                voiceRenameWarning = explain("Saved here, but the voice service didn't take the new name yet: \(error.localizedDescription) It'll be applied the next time your voice is made.")
             }
         }
     }
@@ -1083,23 +1084,6 @@ struct MeTab: View {
                 VoiceCloneOnboardingView(fromSettings: true) { rerecording = false }
                     .environmentObject(appState)
                     .environmentObject(auth)
-            }
-            .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
-                Button("Cancel", role: .cancel) {}
-                Button("Start over", role: .destructive) {
-                    // The recording screen on its own, never the onboarding:
-                    // the voice they have stays until a new one is made.
-                    // After the alert has gone: a cover asked for while the
-                    // alert is still closing is dropped, and the button reads
-                    // as doing nothing (2026-10-13).
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { rerecording = true }
-                }
-            } message: {
-                // Ledger data showed users re-cloning many times without
-                // realizing each one bills and destroys the previous voice —
-                // all three consequences must be on the confirm, both here
-                // and on "Regenerate from saved recording".
-                Text(Self.recloneWarning)
             }
     }
 
@@ -1242,7 +1226,7 @@ struct MeTab: View {
                     }
                     .disabled(withdrawingConsent)
                 } footer: {
-                    Text(explain("This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely."))
+                    Text(explain("This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely."))
                 }
             }
 
@@ -1269,7 +1253,7 @@ struct MeTab: View {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { withdrawVoiceConsent() }
         } message: {
-            Text(explain("Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call."))
+            Text(explain("Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call."))
         }
     }
 

@@ -11,8 +11,8 @@ import SwiftUI
 /// the server clones it on Cartesia — and applies the accent onto the new
 /// voice ("<uuid>:<accent>", supabase/functions/_shared/cartesia.ts).
 ///
-/// Shown at most once a day, only while the live voice is an ElevenLabs one
-/// (`VoiceMove.isDue`); "Later" just closes it.
+/// Shown on every open while the live voice is an ElevenLabs one
+/// (`VoiceMove.isDue`), with no Later: the move is required (2026-10-13).
 struct VoiceMoveSheet: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -24,7 +24,6 @@ struct VoiceMoveSheet: View {
     /// Neither this phone nor the server holds the recording (an accent
     /// remix keeps none upstream): only a new recording can move the voice.
     @State private var needsRecording = false
-    @State private var confirmingRerecord = false
     @State private var rerecording = false
     @EnvironmentObject private var auth: AuthService
 
@@ -86,7 +85,7 @@ struct VoiceMoveSheet: View {
                     } else if needsRecording {
                         Text(explain("Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine."))
                             .foregroundStyle(.secondary)
-                        Button { confirmingRerecord = true } label: {
+                        Button { rerecording = true } label: {
                             Text(explain("Record again")).fontWeight(.semibold)
                         }
                     } else {
@@ -105,29 +104,9 @@ struct VoiceMoveSheet: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if phase != .done {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(explain("Later")) {
-                            Analytics.capture("voice_move_later")
-                            dismiss()
-                        }
-                        .disabled(phase == .working)
-                    }
-                }
-            }
-            .interactiveDismissDisabled(phase == .working)
-            .alert("Re-record your voice?", isPresented: $confirmingRerecord) {
-                Button("Cancel", role: .cancel) {}
-                Button("Start over", role: .destructive) {
-                    Analytics.capture("voice_move_rerecord")
-                    // The recording screen on its own, never the onboarding —
-                    // opened once the alert has gone, or it is dropped.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { rerecording = true }
-                }
-            } message: {
-                Text(explain("Your current voice is deleted and you'll record a new one."))
-            }
+            // Not optional (2026-10-13, founder): every voice moves, so the
+            // sheet has no Later and can't be swiped away until it is done.
+            .interactiveDismissDisabled(phase != .done)
         }
         .fullScreenCover(isPresented: $rerecording) {
             VoiceCloneOnboardingView(fromSettings: true) {
@@ -238,8 +217,7 @@ enum VoiceMove {
     static func isDue(_ appState: AppState, signedIn: Bool) -> Bool {
         guard signedIn, let id = appState.voiceCloneId, !appState.voiceIsStandIn,
               !VoiceParking.isParked(id), !isCartesia(id) else { return false }
-        if let last = UserDefaults.standard.object(forKey: shownKey) as? Date,
-           Calendar.current.isDateInToday(last) { return false }
+        // Every open until the voice has moved: the move is not optional.
         return true
     }
 
