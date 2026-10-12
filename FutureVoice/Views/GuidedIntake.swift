@@ -212,6 +212,9 @@ struct SpeakOrTypeField: View {
     /// so the dozen existing call sites keep working untouched.
     var leadingControls: AnyView? = nil
     var trailingControls: AnyView? = nil
+    /// Start listening the moment the field appears — for a host whose next
+    /// step is plainly "say it" (a person's "Make a situation").
+    var dictateOnAppear: Bool = false
 
     @StateObject private var live = LiveTranscriber()
     @FocusState private var internalFocus: Bool
@@ -320,6 +323,13 @@ struct SpeakOrTypeField: View {
         }
         .onDisappear {
             if isRecording { commitRecordingNow() }
+        }
+        .task {
+            guard dictateOnAppear, !isRecording else { return }
+            // After the host's own entrance, so the mic opens on a settled
+            // screen rather than mid-animation.
+            try? await Task.sleep(for: .milliseconds(400))
+            if !isRecording { await toggleMic() }
         }
     }
 
