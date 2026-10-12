@@ -365,6 +365,9 @@ struct PeopleSkyMap: View {
     var onCenterChange: ((String?) -> Void)? = nil
     /// How high "Back to me" sits — above the box while one is open.
     var backToMeBottom: CGFloat = 16
+    /// Writing a situation: everyone but the one it's with (and me) goes
+    /// soft, so the eye rests on that person.
+    var softenOthers: Bool = false
 
     @State private var centred: String?
 
@@ -413,7 +416,9 @@ struct PeopleSkyMap: View {
                             // Sharp at the same height the bubble is triggered
                             // at, and the one speaking is never faded.
                             .modifier(DepthOfField(focusLine: Self.focusLine,
-                                                   sharp: n.id == bubbleId || n.id == focusedId))
+                                                   sharp: softenOthers ? n.id == focusedId
+                                                                       : (n.id == bubbleId || n.id == focusedId),
+                                                   soften: softenOthers))
                             .overlay(alignment: .top) {
                                 if n.id == (bubbleId ?? focusedId), let bubble {
                                     // Pinned by its TIP: a 1-pt anchor sits where the
@@ -739,9 +744,15 @@ private struct DepthOfField: ViewModifier {
     var focusLine: CGFloat = 0.5
     /// Never faded: the person in the middle, speaking, or picked.
     var sharp: Bool = false
+    /// Blurred and dimmed unless sharp — the creating mode's focus.
+    var soften: Bool = false
 
     func body(content: Content) -> some View {
-        content.visualEffect { effect, proxy in
+        content
+            .blur(radius: soften && !sharp ? 6 : 0)
+            .opacity(soften && !sharp ? 0.55 : 1)
+            .animation(.smooth(duration: 0.35), value: soften && !sharp)
+            .visualEffect { effect, proxy in
             let frame = proxy.frame(in: .scrollView)
             let size = proxy.bounds(of: .scrollView)?.size ?? .zero
             let dx = frame.midX - size.width / 2

@@ -332,7 +332,8 @@ struct WatchTab: View {
                                  onCenterChange: { id in centre(on: id) },
                                  // The map runs under the tab bar: sit level with
                                  // "New situation", or above the box.
-                                 backToMeBottom: creating ? 250 : 104)
+                                 backToMeBottom: creating ? 250 : 104,
+                                 softenOthers: PeopleSky.dockEnabled && creating)
                         .frame(height: max(geo.size.height, 200))
                         // The map fades into the page at the bottom instead of
                         // being cut off where the box and the tab bar sit.
