@@ -158,6 +158,20 @@ fun VoiceAccentSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // "Original" is an option again (iOS 2026-10-12): the voice as
+                // recorded, selected whenever no accent is applied; with one
+                // applied, a tap asks and rebuilds from the saved recording —
+                // the old "Remove accent" button, which sat alone at the end.
+                FilterChip(
+                    selected = appliedAccentId.isNullOrEmpty() && accent == null,
+                    enabled = !generating && !saving && !removing &&
+                        (appliedAccentId.isNullOrEmpty() || (canRemoveAccent && canChange)),
+                    onClick = { if (!appliedAccentId.isNullOrEmpty()) confirmingRemove = true },
+                    label = {
+                        if (removing) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                        else Text(stringResource(R.string.accent_original))
+                    },
+                )
                 options.forEach { o ->
                     FilterChip(
                         selected = accent?.id == o.id,
@@ -266,23 +280,6 @@ fun VoiceAccentSheet(
                     enabled = !saving,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.try_again)) }
-            }
-
-            // The way back — LAST, its own section, so it reads as an action
-            // and not a fourth option (iOS `removeAccentSection`).
-            if (canRemoveAccent) {
-                HorizontalDivider()
-                OutlinedButton(
-                    onClick = { confirmingRemove = true },
-                    enabled = !generating && !saving && !removing && canChange,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (removing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(R.string.remove_accent), color = MaterialTheme.colorScheme.error)
-                }
-                Text(stringResource(R.string.back_to_the_voice_your_recording_makes_on_its_own),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             error?.let {
