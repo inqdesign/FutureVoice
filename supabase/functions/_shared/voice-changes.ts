@@ -17,11 +17,11 @@ export type VoiceChangeKind = "first" | "default" | "revival" | "change"
  *  slow network, never a second free voice. */
 const DEFAULT_WINDOW_MS = 2 * 60 * 60 * 1000
 
-export async function changesLeft(userId: string): Promise<{ left: number; nextAt: string | null } | null> {
-  const { data, error } = await billingClient().rpc("voice_change_status", { p_user_id: userId })
-  if (error || !data) return null
-  const d = data as { left?: number; next_at?: string | null }
-  return { left: d.left ?? 1, nextAt: d.next_at ?? null }
+/** The 30-day change limit was removed 2026-10-12 (founder decision; new
+ *  clones live on Cartesia, which has no voice limit). Kept as a function so
+ *  every caller still compiles and reads "a change is available". */
+export async function changesLeft(_userId: string): Promise<{ left: number; nextAt: string | null } | null> {
+  return { left: 1, nextAt: null }
 }
 
 /** True right after a clone whose default remix hasn't been saved yet. */
