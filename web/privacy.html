@@ -40,7 +40,7 @@
   <a class="lang" href="/privacy-ko.html">한국어</a>
   <a class="top" href="/">← nawana</a>
   <h1>Privacy Policy</h1>
-  <p class="meta">nawana · Dear RoRo, Munich, Germany · Effective August 14, 2026</p>
+  <p class="meta">nawana · Dear RoRo, Munich, Germany · Effective August 14, 2026 · Updated October 12, 2026</p>
 
   <p>nawana is a language-learning app that clones your voice — once, with your explicit consent — so you can practice speaking with a fluent version of yourself. Your voice is the most personal data there is, and this policy explains exactly what we do and don't do with it.</p>
 
@@ -57,7 +57,7 @@
   <table>
     <tr><th>Data</th><th>Why</th><th>Where it lives</th></tr>
     <tr><td>Apple ID sign-in (user identifier, email)</td><td>Your account, subscription entitlement, invite credits</td><td>Our backend (Supabase)</td></tr>
-    <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by ElevenLabs; a copy is kept on our backend for quality checks, and the app keeps a reference to your voice</td></tr>
+    <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by Cartesia (voices made before October 12, 2026: ElevenLabs, until you move to the new voice); a copy is kept on our backend for quality checks, and the app keeps a reference to your voice</td></tr>
     <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Recognised on-device first; the recording of that turn is also sent for a more accurate transcription, processed per request and not retained. The resulting text stays on your iPhone</td></tr>
     <tr><td>Subscription and credit balance</td><td>Powering conversations, voice generation, and shadowing</td><td>Apple (purchase) + our backend (balance)</td></tr>
     <tr><td>Approximate location — the city your IP address points to</td><td>Seeing where nawana is used, so we know which regions and time zones to support</td><td>PostHog, on EU servers, looked up from the IP address that sends the usage events above</td></tr>
@@ -81,14 +81,15 @@
     <li>Your clone reproduces <strong>only your own voice</strong>. nawana cannot be used to clone anyone else.</li>
     <li>The model is used for exactly one purpose: speaking your practice lines back in your own voice. It is never sold, shared, or used to train any model.</li>
     <li>Re-record anytime — creating a new clone permanently deletes the previous one.</li>
-    <li>Withdraw your consent at any time in the app (Settings → Privacy → Withdraw consent &amp; delete my voice). Withdrawal deletes the model here and at ElevenLabs. You can also delete your entire account.</li>
+    <li>Withdraw your consent at any time in the app (Settings → Privacy → Withdraw consent &amp; delete my voice). Withdrawal deletes the model here and at the voice provider (Cartesia or ElevenLabs). You can also delete your entire account.</li>
   </ul>
 
-  <h2>Who processes data on our behalf</h2>
+  <h2 id="processors">Who processes data on our behalf</h2>
   <p>The app never talks to AI providers directly — every request routes through our own backend, so no provider API keys ever live on your phone.</p>
   <ul>
     <li><strong>Supabase</strong> — authentication, subscriptions, and secure relay of AI requests.</li>
-    <li><strong>ElevenLabs</strong> — voice cloning and speech synthesis of your fluent lines.</li>
+    <li><strong>Cartesia</strong> — voice cloning and speech synthesis of your fluent lines (since October 12, 2026).</li>
+    <li><strong>ElevenLabs</strong> — voice cloning and speech synthesis for voices made before October 12, 2026, until you move to the new voice; and the preset voices of the other people in a conversation.</li>
     <li><strong>Google (Gemini)</strong> — conversation replies, fluent rewrites, session analysis, and transcribing what you just said. The recording of a single spoken turn is sent for that transcription and is not retained after the request; nothing is used to train Google's models.</li>
     <li><strong>Apple</strong> — Sign in with Apple, subscriptions, and on-device speech recognition.</li>
     <li><strong>PostHog</strong> — product usage events, hosted in the EU. No advertising identifiers, no session replay, no automatic screen tracking.</li>
