@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-# Casting of Cartesia stock voices onto the curated Find-people personas
-# (2026-10-12). Reads voices_<lang>.json (GET /voices?language=) and
-# personas.json from $VOICES_DIR, renders one sample per person into OUT
-# and writes casting.json, which the migration 20261012140000 was built from.
+# Casting of Cartesia library voices onto the curated Find-people personas
+# (2026-10-12): nationality first, then gender, age, manner. Reads
+# voices_all.json (GET /voices, all pages) and personas.json from $VOICES_DIR,
+# renders one sample per person and writes casting.json, which migration
+# 20261012140000 was built from.
 import json, os, re, urllib.request
 D=os.environ.get('VOICES_DIR','.')+'/'
-OUT='/Users/eunggyuelee/Desktop/beta audio/people-voices'
+OUT='/Users/eunggyuelee/Desktop/beta audio/people-voices-by-country'
 K=open(os.path.expanduser('~/keys/cartesia.txt')).read().strip()
 pool={}
-for l in ['en','de','ko','ja']:
-    for x in json.load(open(D+f'voices_{l}.json'))['data']:
-        pool.setdefault((x['name'].strip(), x.get('country')), x['id'])
+for x in json.load(open(D+'voices_all.json')):
+    pool.setdefault((x['name'].strip(), x.get('country')), x['id'])
 # (language, display_name, occupation prefix) -> (voice name, country, why)
 CAST={
  ('ko','간호사 수진'):('Hyerin','KR','따뜻하고 차분한 간호사'),
@@ -19,7 +19,7 @@ CAST={
  ('ko','영숙 아주머니'):('Jihyun','KR','느긋한 아래층 아주머니'),
  ('ko','지현 선배'):('Soojin','KR','편하게 말하는 회사 선배'),
  ('ko','박 사장님'):('Jaewon','KR','차분한 중년 공인중개사'),
- ('ko','타오'):('Ryeowook','KR','여유 있는 대학원 준비생'),
+ ('ko','타오'):('Minh','VN','베트남'),
  ('ko','현우|클라이밍'):('Minho','KR','편한 동호회 친구'),
  ('ko','미선'):('Yuna','KR','밝은 집배원'),
  ('ko','보라'):('Minji','KR','또렷한 수의테크니션'),
@@ -33,49 +33,49 @@ CAST={
  ('ko','태오'):('Ryeowook','KR','웹툰 어시스턴트'),
  ('ko','현우|낚싯배'):('Junho','KR','낚싯배 선장'),
  ('de','Britta'):('Sabine','DE','bestimmte Teamleiterin'),
- ('de','Emine'):('Karin','DE','freundliche Berlinerin'),
+ ('de','Emine'):('Aylin','TR','türkisch'),
  ('de','Frau Weber'):('Klara','DE','sanfte Erzieherin'),
  ('de','Herr Klein'):('Oskar','DE','gesetzter Vermieter'),
  ('de','Jonas|Nachbar'):('Nico','DE','lockerer Nachbar'),
- ('de','Marek'):('Thomas','DE','ernsthafter Elektriker'),
- ('de','Nguyen'):('Leander','DE','warmer Pflegeazubi'),
- ('de','Sofia'):('Jennifer','DE','zugewandte Ärztin'),
+ ('de','Marek'):('Marcin','PL','polnisch'),
+ ('de','Nguyen'):('Minh','VN','vietnamesisch'),
+ ('de','Sofia'):('Francesca','IT','italienisch'),
  ('de','Andrej'):('Andreas','DE','Nachtportier'),
- ('de','Ayşe'):('Rena','DE','energische Sanitäterin'),
+ ('de','Ayşe'):('Leyla','TR','türkisch'),
  ('de','Bruno'):('Klaus','DE','pensionierter Lokführer'),
  ('de','Hanne'):('Lorelei','DE','ruhige Hebamme'),
  ('de','Jonas|Orgelbauer'):('Jonas','DE','Orgelbauer'),
  ('de','Katja'):('Alina','DE','Fernfahrerin'),
  ('de','Lena'):('Lena','DE','Meeresbiologin'),
- ('de','Mehmet'):('Christian','DE','Späti-Besitzer'),
+ ('de','Mehmet'):('Aykut','TR','türkisch'),
  ('de','Resi'):('Leni','DE','Hüttenwirtin'),
  ('de','Svenja'):('Emi','DE','Kranführerin'),
  ('de','Timo'):('Lukas','DE','Fahrradkurier'),
  ('en','Amir'):('Walid','SA','Syrian pharmacist, warm'),
- ('en','Diego'):('Ricardo',None,'Latin American barista'),
- ('en','Frank'):('Austin','US','steady landlord'),
- ('en','Marta'):('Jo','US','data analyst, casual'),
- ('en','Michelle'):('Ariana','US','kind teacher'),
+ ('en','Diego'):('Mateo','MX','Latin American'),
+ ('en','Frank'):('Max','CA','Canadian'),
+ ('en','Marta'):('Ewa\t- Efficient Envoy','PL','Polish'),
+ ('en','Michelle'):('Harlow','CA','Canadian'),
  ('en','Priya|Nurse'):('Sindhu','IN','British-Indian nurse'),
  ('en','Ravi'):('Rahul','IN','Bengaluru team lead'),
  ('en','Sarah'):('Evie','GB','Manchester recruiter'),
  ('en','Yuki'):('Ayako','JP','Japanese, new in Seattle'),
- ('en','Aoife'):('Julia','GB','Kerry farmer & DJ'),
- ('en','Bea'):('Connie','US','game tester'),
+ ('en','Aoife'):('Siobhan','IE','Irish'),
+ ('en','Bea'):('Kasia','PL','Polish'),
  ('en','Dae-ho'):('Minho','KR','Korean delivery driver'),
  ('en','Hiroshi'):('Kenji','JP','Japanese inspector'),
- ('en','Ingrid'):('Tamsin','NZ','glaciologist'),
+ ('en','Ingrid'):('Kari','NO','Norwegian'),
  ('en','Kwame'):('Tristan','ZA','Accra collective founder'),
- ('en','Lucia'):('Gabriela','US','medical interpreter'),
- ('en','Marcus'):('Griffin','GB','retired tugboat captain'),
+ ('en','Lucia'):('Daniela','MX','Hispanic'),
+ ('en','Marcus'):('Stijn','NL','Dutch'),
  ('en','Maya'):('Bronte','AU','surf hostel owner'),
- ('en','Nadia'):('Daniela',None,'air traffic controller'),
+ ('en','Nadia'):('Maryam','SA','Moroccan, Arabic'),
  ('en','Owen'):('Toby','GB','Welsh organ builder'),
  ('en','Priya|Structural'):('Divya','IN','engineer in Kerala'),
- ('en','Rafael'):('Ricardo',None,'Mexico City driver'),
- ('en','Samir'):('Sagar','IN','ship cook'),
- ('en','Sofia'):('Mariana','CO','pastry chef'),
- ('en','Tomás'):('Carlo','IT','paramedic'),
+ ('en','Rafael'):('Rodrigo','MX','Mexican'),
+ ('en','Samir'):('Zander','ZA','Cape Town'),
+ ('en','Sofia'):('Liv','IT','Italian'),
+ ('en','Tomás'):('Pablo','MX','Argentinian, Latin'),
 }
 people=json.load(open(D+'personas.json'))
 def key(p):
@@ -83,7 +83,7 @@ def key(p):
         if l!=p['language']: continue
         name,_,occ=k.partition('|')
         if p['display_name']==name and (not occ or (p['occupation'] or '').startswith(occ)): return (l,k)
-os.makedirs(OUT, exist_ok=True)
+os.makedirs(OUT, exist_ok=False)
 done=set(); rows=[]
 for p in people:
     k=key(p)

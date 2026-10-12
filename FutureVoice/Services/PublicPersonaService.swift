@@ -101,6 +101,7 @@ enum PublicPersonaService {
             background: p.intro,
             conversationStyle: p.conversation_style,
             voicePresetId: VoicePreset.catalog.contains(where: { $0.id == p.voice_preset_id })
+                || VoicePreset.isLibraryVoice(p.voice_preset_id)
                 ? p.voice_preset_id : VoicePreset.catalog.first!.id
         )
         c.location = p.location
@@ -149,7 +150,8 @@ enum PublicPersonaService {
         var changed = false
         for c in counterparts {
             guard let rid = c.remoteId, let p = rows[rid],
-                  VoicePreset.catalog.contains(where: { $0.id == p.voice_preset_id }) else { continue }
+                  VoicePreset.catalog.contains(where: { $0.id == p.voice_preset_id })
+                    || VoicePreset.isLibraryVoice(p.voice_preset_id) else { continue }
             var fixed = c
             if fixed.voicePresetId != p.voice_preset_id { fixed.voicePresetId = p.voice_preset_id }
             if let g = p.greeting, !g.isEmpty, fixed.greeting(in: p.language).isEmpty {
@@ -319,15 +321,28 @@ enum PublicPersonaService {
         await publishMirror(p, language: language)
     }
 
-    /// Publish the composed profile as the user's row. The voice is a stable
-    /// per-user pick so "you" doesn't change voices between launches — the
-    /// user id hashed into the preset catalog.
+    /// The voice the learner picked for their public profile (`ProfileVoiceRows`).
+    static let chosenVoiceKey = "futurevoice.publicIntro.voice"
+
+    /// Publish the composed profile as the user's row. The voice is the one
+    /// the learner picked; else the one already on their row, so "you" never
+    /// changes voices between launches (the old pick hashed the user id with
+    /// `hashValue`, which Swift seeds per launch — it changed every time).
     @discardableResult
     static func publishMirror(_ p: UserPersona, language: String) async -> Bool {
         let intro = await composeIntro(p, language: language)
         guard intro.count >= minIntroLength else { return false }
         guard let uid = try? await SupabaseProvider.shared.auth.session.user.id else { return false }
-        let voice = VoicePreset.catalog[abs(uid.uuidString.hashValue) % VoicePreset.catalog.count]
+        let voiceId: String
+        if let picked = UserDefaults.standard.string(forKey: chosenVoiceKey) {
+            voiceId = picked
+        } else if let current = try? await fetchMine(language: language)?.voice_preset_id {
+            voiceId = current
+        } else {
+            let presets = VoicePreset.catalog
+            let n = uid.uuidString.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7fffffff }
+            voiceId = presets[n % presets.count].id
+        }
         do {
             try await publishMine(
                 displayName: p.displayName,
@@ -335,7 +350,7 @@ enum PublicPersonaService {
                 location: [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", "),
                 occupation: p.occupation,
                 interests: p.interests.joined(separator: ", "),
-                voicePresetId: voice.id,
+                voicePresetId: voiceId,
                 language: language)
             return true
         } catch {
@@ -382,8 +397,8 @@ enum PublicPersonaService {
     }
 
     /// The written paragraph, asking the model once per change of inputs.
-    static func composeIntro(_ p: UserPersona, language: String) async -> String {
-        await PublicIntroComposer.compose(p, language: language)
+    static func composeIntro(_ p: UserPersona, language: String, fresh: Bool = false) async -> String {
+        await PublicIntroComposer.compose(p, language: language, fresh: fresh)
     }
 
     // MARK: - Bookmarks (local only)

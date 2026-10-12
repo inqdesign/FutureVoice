@@ -65,7 +65,7 @@ enum PublicIntroComposer {
 
     /// Bump when the prompt changes in a way that should rewrite every
     /// cached paragraph.
-    static let promptVersion = "1"
+    static let promptVersion = "2"
     /// Newest remembered lines that ride into the prompt. A portrait of a
     /// person doesn't need forty facts, and the oldest are the least true.
     static let maxFacts = 14
@@ -93,8 +93,19 @@ enum PublicIntroComposer {
     /// The written paragraph, asking the model once when the cache doesn't
     /// hold one for these inputs. Falls back — silently — to `fallback` when
     /// the call fails, so every caller gets a string.
-    static func compose(_ p: UserPersona, language: String) async -> String {
+    /// `fresh` asks again even when the cache holds a paragraph for these
+    /// inputs — the profile page's "write it again" (2026-10-12): the same
+    /// notes can be told better, and a learner who finds it flat should not
+    /// have to change a fact to get another try.
+    static func compose(_ p: UserPersona, language: String, fresh: Bool = false) async -> String {
         let s = sources(p, language: language)
+        if fresh {
+            guard !s.isEmpty, let intro = try? await write(s, attempt: UUID().uuidString) else {
+                return cached(for: s) ?? fallback(s)
+            }
+            save(intro, for: s)
+            return intro
+        }
         if let hit = cached(for: s) { return hit }
         if s.isEmpty { return "" }
         if let running = inflight[s.key] { return await running.value }
@@ -130,14 +141,14 @@ enum PublicIntroComposer {
 
     private struct Payload: Decodable { let intro: String }
 
-    private static func write(_ s: Sources) async throws -> String {
+    private static func write(_ s: Sources, attempt: String = "") async throws -> String {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: prompt(s),
             messages: [GeminiClient.Message(role: .user, content: "Write the introduction.")],
             model: .flashLite31,
             maxTokens: 800,
             purpose: "public-intro",
-            idempotencyKey: "public-intro:\(s.key)")
+            idempotencyKey: "public-intro:\(s.key)\(attempt.isEmpty ? "" : ":" + attempt)")
         let intro = payload.intro.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !intro.isEmpty else { throw GeminiError.jsonNotFound(raw: "empty intro") }
         return intro
@@ -174,6 +185,13 @@ enum PublicIntroComposer {
         - Who they are, as a portrait: what they do, where they've ended up, \
           what they're into — merged ("I make apps on my own", "I've been in \
           Munich a long time"), never one sentence per note.
+        - Let their CHARACTER come through, not a CV: what they care about, \
+          what they'd have an opinion on, what lights them up, said the way \
+          they'd say it — a little warmth or humour where the notes allow it. \
+          Name their actual interests ("Korean barbecue", "bouldering"), not \
+          categories ("food", "sports"). A stranger should finish it knowing \
+          what to ask them first. Generic lines that fit anyone ("I like \
+          meeting new people", "I enjoy learning") are not allowed.
         - What they can talk about from experience: the AREAS their notes point \
           to, named as subjects ("I could talk for an hour about raising kids \
           abroad", "I've been through a career change"), never the events \

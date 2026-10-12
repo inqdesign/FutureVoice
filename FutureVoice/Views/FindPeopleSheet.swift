@@ -498,7 +498,7 @@ struct FindPersonCard: View {
     private var effectivePerson: Counterpart { currentPerson }
 
     private var currentVoiceName: String {
-        VoicePreset.catalog.first(where: { $0.id == currentPerson.voicePresetId })?.displayName ?? ""
+        VoicePreset.known(id: currentPerson.voicePresetId)?.displayName ?? explain("Their own")
     }
 
     private var pastTalks: [Session] {

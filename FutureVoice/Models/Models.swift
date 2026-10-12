@@ -1346,6 +1346,21 @@ struct VoicePreset: Hashable, Identifiable {
                     description: "Warm, easygoing"),
     ]
 
+    /// A Cartesia library voice (a UUID): a Find-people person's own voice
+    /// or a learner's public-profile voice (2026-10-12). It speaks as itself
+    /// in every language, has no preset name, and the servers allow it
+    /// because Cartesia publishes it to everyone (`isStockVoice`).
+    static func isLibraryVoice(_ id: String?) -> Bool {
+        guard let id else { return false }
+        return id.range(of: #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"#,
+                        options: .regularExpression) != nil
+    }
+
+    /// The preset this id names, or nil for anything else (a library voice).
+    static func known(id: String?) -> VoicePreset? {
+        catalog.first(where: { $0.id == id })
+    }
+
     static func by(id: String) -> VoicePreset {
         catalog.first(where: { $0.id == id }) ?? catalog[0]
     }

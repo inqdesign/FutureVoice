@@ -27,11 +27,18 @@ struct WatchSetupSheet: View {
                             .foregroundStyle(.tint)
                         VStack(alignment: .leading) {
                             Text(counterpart.name).font(.body.weight(.semibold))
-                            Text(counterpart.relationship.isEmpty
-                                 ? "voiced by \(VoicePreset.by(id: counterpart.voicePresetId).displayName)"
-                                 : "\(counterpart.relationship) · voiced by \(VoicePreset.by(id: counterpart.voicePresetId).displayName)")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                            // A library voice is the person's own: no preset name to credit.
+                            if let preset = VoicePreset.known(id: counterpart.voicePresetId) {
+                                Text(counterpart.relationship.isEmpty
+                                     ? "voiced by \(preset.displayName)"
+                                     : "\(counterpart.relationship) · voiced by \(preset.displayName)")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            } else if !counterpart.relationship.isEmpty {
+                                Text(counterpart.relationship)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 } header: {

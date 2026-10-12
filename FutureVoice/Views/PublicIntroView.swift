@@ -20,9 +20,11 @@ struct PublicIntroView: View {
     @State private var location = ""
     @State private var occupation = ""
     @State private var interests = ""
-    @State private var voicePresetId = VoicePreset.catalog.first!.id
+    @State private var voicePresetId = UserDefaults.standard.string(forKey: PublicPersonaService.chosenVoiceKey)
+        ?? VoicePreset.catalog.first!.id
     @State private var greeting = ""
     @State private var writingGreeting = false
+    @State private var rewritingIntro = false
 
     @State private var isLoading = true
     @State private var isSaving = false
@@ -59,6 +61,16 @@ struct PublicIntroView: View {
             Section {
                 TextEditor(text: $intro)
                     .frame(minHeight: 140)
+                Button {
+                    Task { await rewriteIntro() }
+                } label: {
+                    if rewritingIntro {
+                        HStack(spacing: 8) { ProgressView(); Text("Writing…") }
+                    } else {
+                        Label("Write it again from what I've told you lately", systemImage: "sparkles")
+                    }
+                }
+                .disabled(rewritingIntro || writingGreeting || appState.persona == nil)
                 HStack {
                     Spacer()
                     Text("\(trimmedIntro.count) / \(Self.minIntroLength)")
@@ -76,19 +88,7 @@ struct PublicIntroView: View {
                 TextField("What you say when someone meets you", text: $greeting, axis: .vertical)
                     .lineLimit(1...3)
                 Button {
-                    writingGreeting = true
-                    Task {
-                        var me = Counterpart(name: displayName, relationship: "", background: "",
-                                             conversationStyle: "", voicePresetId: voicePresetId)
-                        me.remoteId = "self"
-                        me.intro = trimmedIntro
-                        me.location = location
-                        if let line = try? await GreetingEngine.write(
-                            for: me, persona: nil, targetLanguage: appState.targetLanguage) {
-                            greeting = line
-                        }
-                        writingGreeting = false
-                    }
+                    Task { await writeGreeting() }
                 } label: {
                     if writingGreeting {
                         HStack(spacing: 8) { ProgressView(); Text("Writing…") }
@@ -110,11 +110,11 @@ struct PublicIntroView: View {
             }
 
             Section {
-                Picker("Voice", selection: $voicePresetId) {
-                    ForEach(VoicePreset.catalog) { v in
-                        Text("\(v.displayName) — \(v.caption(in: appState.targetLanguage))").tag(v.id)
-                    }
-                }
+                ProfileVoiceRows(selection: Binding(
+                    get: { voicePresetId },
+                    set: { if let v = $0 { voicePresetId = v } }))
+            } header: {
+                Text("Your voice")
             } footer: {
                 Text(explain("A stock voice that plays \"you\" — your cloned voice is never used, and nobody's talks with your persona are ever shown to you or anyone else."))
             }
@@ -164,6 +164,32 @@ struct PublicIntroView: View {
         }
     }
 
+    /// A new paragraph from the newest remembered lines, then a greeting
+    /// written from it. Both land in the fields, still the learner's to edit;
+    /// nothing is published until they press Publish / Update.
+    private func rewriteIntro() async {
+        guard let p = appState.persona else { return }
+        rewritingIntro = true
+        let fresh = await PublicPersonaService.composeIntro(p, language: appState.targetLanguage, fresh: true)
+        if !fresh.isEmpty { intro = fresh }
+        rewritingIntro = false
+        await writeGreeting()
+    }
+
+    private func writeGreeting() async {
+        writingGreeting = true
+        defer { writingGreeting = false }
+        var me = Counterpart(name: displayName, relationship: "", background: "",
+                             conversationStyle: "", voicePresetId: voicePresetId)
+        me.remoteId = "self"
+        me.intro = trimmedIntro
+        me.location = location
+        if let line = try? await GreetingEngine.write(
+            for: me, persona: nil, targetLanguage: appState.targetLanguage) {
+            greeting = line
+        }
+    }
+
     private func load() async {
         defer { isLoading = false }
         if let mine = try? await PublicPersonaService.fetchMine(language: appState.targetLanguage) {
@@ -204,6 +230,9 @@ struct PublicIntroView: View {
                 voicePresetId: voicePresetId,
                 language: appState.targetLanguage,
                 greeting: greeting)
+            if VoicePreset.isLibraryVoice(voicePresetId) {
+                UserDefaults.standard.set(voicePresetId, forKey: PublicPersonaService.chosenVoiceKey)
+            }
             // From here on the user curates their own row — the launch-time
             // auto-sync from the onboarding profile must never overwrite it.
             UserDefaults.standard.set(true, forKey: PublicPersonaService.manualIntroKey)

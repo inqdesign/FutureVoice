@@ -104,6 +104,28 @@ export function clonesOnCartesia(userId: string): boolean {
   return v.split(",").map((s) => s.trim()).includes(userId.toLowerCase())
 }
 
+/** Cartesia's own library voices — the voices the Find-people people and a
+ *  learner's public profile speak with (2026-10-12) — may be used by anyone.
+ *  A clone is ours (`is_owner`), so this can never open another learner's
+ *  voice: only a voice Cartesia publishes to everyone passes. Answers are
+ *  cached per isolate; a voice's ownership never changes. */
+const stockAnswers = new Map<string, boolean>()
+export async function isStockVoice(voiceId: string): Promise<boolean> {
+  if (!isCartesiaVoice(voiceId) || voiceId.includes(":")) return false
+  const cached = stockAnswers.get(voiceId)
+  if (cached !== undefined) return cached
+  try {
+    const r = await fetch(`${HOST}/voices/${voiceId}`, { headers: headers(false) })
+    if (!r.ok) return false
+    const v = await r.json() as { is_owner?: boolean; is_public?: boolean }
+    const stock = v.is_owner === false
+    stockAnswers.set(voiceId, stock)
+    return stock
+  } catch {
+    return false
+  }
+}
+
 function headers(json = true): Record<string, string> {
   const key = Deno.env.get("CARTESIA_API_KEY") ?? ""
   return {

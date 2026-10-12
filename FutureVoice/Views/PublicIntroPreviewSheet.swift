@@ -21,6 +21,8 @@ struct PublicIntroPreviewSheet: View {
     @State private var failed = false
     /// Nil until the composer has written (or fetched) the paragraph.
     @State private var intro: String?
+    /// The profile's voice — chosen here before the first publish.
+    @State private var voiceId: String? = UserDefaults.standard.string(forKey: PublicPersonaService.chosenVoiceKey)
 
     private var persona: UserPersona { appState.persona ?? .empty }
     private var languageName: String { LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage) }
@@ -50,6 +52,14 @@ struct PublicIntroPreviewSheet: View {
                 }
 
                 Section {
+                    ProfileVoiceRows(selection: $voiceId)
+                } header: {
+                    Text("Your voice")
+                } footer: {
+                    Text(explain("A voice from where you're from, speaking \(languageName). Never your own voice."))
+                }
+
+                Section {
                     Button {
                         Task { await publish() }
                     } label: {
@@ -60,7 +70,7 @@ struct PublicIntroPreviewSheet: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(isPublishing || intro == nil)
+                    .disabled(isPublishing || intro == nil || voiceId == nil)
                     .listRowSeparator(.hidden)
 
                     NavigationLink {
@@ -98,6 +108,7 @@ struct PublicIntroPreviewSheet: View {
     private func publish() async {
         isPublishing = true
         failed = false
+        if let voiceId { UserDefaults.standard.set(voiceId, forKey: PublicPersonaService.chosenVoiceKey) }
         let ok = await PublicPersonaService.publishMirror(persona, language: appState.targetLanguage)
         isPublishing = false
         guard ok else { failed = true; return }

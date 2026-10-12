@@ -103,9 +103,11 @@ struct CounterpartDetailView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Text("voiced by \(VoicePreset.by(id: c.voicePresetId).displayName)")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                if let preset = VoicePreset.known(id: c.voicePresetId) {
+                    Text("voiced by \(preset.displayName)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
         .padding(.vertical, 4)

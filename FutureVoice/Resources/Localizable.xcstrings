@@ -129570,6 +129570,66 @@
           }
         }
       }
+    },
+    "Your voice" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "프로필 목소리"
+          }
+        }
+      }
+    },
+    "Woman" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여성"
+          }
+        }
+      }
+    },
+    "Man" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "남성"
+          }
+        }
+      }
+    },
+    "Their own" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 사람만의 목소리"
+          }
+        }
+      }
+    },
+    "Write it again from what I've told you lately" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근에 들려준 이야기로 다시 쓰기"
+          }
+        }
+      }
+    },
+    "A voice from where you're from, speaking %@. Never your own voice." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 온 나라의 목소리가 %@로 말해요. 내 목소리는 쓰지 않아요."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

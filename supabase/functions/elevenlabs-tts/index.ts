@@ -180,6 +180,8 @@ Deno.serve(async (req) => {
     (PRESET_VOICE_IDS.has(body.voice_id) || verifiedVoiceOwners.has(ownerKey))
       ? Promise.resolve(null)
       : (async () => {
+          // A Cartesia library voice (a Find-people person, a public profile).
+          if (await cartesia.isStockVoice(body.voice_id!)) return null
           const { data: owned, error: ownErr } = await billingClient()
             .from("voice_clones")
             .select("id, parked_at")

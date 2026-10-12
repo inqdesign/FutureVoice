@@ -33,6 +33,28 @@ const VOICE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?
 export function isCartesiaVoice(voiceId: string | null | undefined): boolean {
   return !!voiceId && VOICE.test(voiceId)
 }
+/** Cartesia's own library voices (a Find-people person, a public profile)
+ *  may be used by anyone; a clone is ours (`is_owner`), so this never opens
+ *  another learner's voice. Mirror of supabase/functions/_shared/cartesia.ts. */
+const stockAnswers = new Map<string, boolean>()
+export async function isStockVoice(apiKey: string | undefined, voiceId: string): Promise<boolean> {
+  if (!apiKey || !isCartesiaVoice(voiceId) || voiceId.includes(":")) return false
+  const cached = stockAnswers.get(voiceId)
+  if (cached !== undefined) return cached
+  try {
+    const r = await fetch(`https://api.cartesia.ai/voices/${voiceId}`, {
+      headers: { "X-API-Key": apiKey, "Cartesia-Version": VERSION },
+    })
+    if (!r.ok) return false
+    const v = await r.json() as { is_owner?: boolean }
+    const stock = v.is_owner === false
+    stockAnswers.set(voiceId, stock)
+    return stock
+  } catch {
+    return false
+  }
+}
+
 /** Each accent's language — an accent is applied only to a line in it. */
 const ACCENT_LANGUAGE: Record<string, string> = {
   "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",

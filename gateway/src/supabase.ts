@@ -1,6 +1,7 @@
 // Session-scoped Supabase glue: verify the caller once, check voice
 // ownership once. This is the whole point of the gateway vs the per-turn
 // edge functions — these round trips happen ONCE per call, not per line.
+import { isCartesiaVoice, isStockVoice } from "./cartesia-tts"
 
 export interface Env {
   CALL_SESSION: DurableObjectNamespace
@@ -63,6 +64,7 @@ export async function verifyUser(env: Env, token: string): Promise<string | null
  *  as a forbidden voice, so the app shows its paywall. */
 export async function ownsVoice(env: Env, userId: string, voiceId: string): Promise<"ok" | "forbidden" | "parked"> {
   if (PRESET_VOICE_IDS.has(voiceId)) return "ok"
+  if (await isStockVoice(env.CARTESIA_API_KEY, voiceId)) return "ok"
   const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
     `?user_id=eq.${encodeURIComponent(userId)}` +
     `&elevenlabs_voice_id=eq.${encodeURIComponent(voiceId)}` +
@@ -88,7 +90,7 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
  *  on purpose: a database without the columns answers with an error, and
  *  that must be "the plain voice", never a refused call. */
 export async function speakAsVoice(env: Env, userId: string, voiceId: string, language: string): Promise<string> {
-  if (PRESET_VOICE_IDS.has(voiceId)) return voiceId
+  if (PRESET_VOICE_IDS.has(voiceId) || isCartesiaVoice(voiceId)) return voiceId
   try {
     const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
       `?user_id=eq.${encodeURIComponent(userId)}` +
