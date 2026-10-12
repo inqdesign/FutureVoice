@@ -1,6 +1,6 @@
 New
 • Your voice moves to a new voice engine: more natural, more like you, and faster replies. You'll see a note when you open the app. Pick an accent and rebuild your voice from your recording in one tap.
-• The Watch tab is now a map of people. You're in the middle, and the people closest to you sit nearest. Tap someone to set up a situation with them.
+• The Watch tab is now a map of people. You're in the middle, and the people closest to you sit nearest. Bring someone to the middle and they greet you in their own voice; start a scene or a call right from their card. Your profile and the introduction others see now live on one page.
 • Everyone in Find people now speaks in a voice of their own, with the accent of where they're from. The default voices are native speakers of the language you're learning.
 • On your Find people profile, pick the voice that plays you from voices of your own country. Rewrite your introduction from what you've told your fluent self lately, and get a greeting to match.
 • Challenges in the Speech tab: everyone reads the same script and competes for the top score. Only takes recorded with the camera on count, and the leaderboard shows just your name and score.
