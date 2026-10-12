@@ -179,7 +179,8 @@ export class CartesiaTTS {
       context_id: sentenceId,
       continue: false,
       output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: this.sampleRate },
-      generation_config: { speed: cartesiaSpeed(this.config.speed) },
+      // Neutral, as every other Cartesia line (supabase/functions/_shared/cartesia.ts EMOTION).
+      generation_config: { speed: cartesiaSpeed(this.config.speed), emotion: "neutral" },
     }
   }
 

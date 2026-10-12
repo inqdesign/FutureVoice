@@ -140,8 +140,13 @@ export function cartesiaSpeed(speed: number | undefined): number {
   return Math.max(0.6, Math.min(1.5, 1.0 + (s - 0.85) / 0.15 * 0.5))
 }
 
+/** Every line is generated with `emotion: "neutral"` — preferred by ear on
+ *  Cartesia's playground (founder, 2026-10-12): without it the model reads
+ *  emotion into each line, and the voice sounded less like the speaker. */
+export const EMOTION = "neutral"
+
 function speedConfig(speed: number | undefined): Record<string, unknown> {
-  return { generation_config: { speed: cartesiaSpeed(speed) } }
+  return { generation_config: { speed: cartesiaSpeed(speed), emotion: EMOTION } }
 }
 
 /** The voice and accent fields of a request for one line. */
