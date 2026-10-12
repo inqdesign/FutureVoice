@@ -58,10 +58,13 @@ struct WatchTab: View {
     @State private var showingProfile = false
 
     private var usesPeopleSky: Bool {
+        // On in debug and TestFlight builds, off on the App Store until the
+        // founder ships it (2026-10-12). The Me → Developer toggle still
+        // switches a debug build back to the old screen.
         #if DEBUG
         return peopleSkyFlag
         #else
-        return false
+        return AppUpdateService.isTestFlight
         #endif
     }
 

@@ -99,6 +99,9 @@ struct RootTabView: View {
 
     var body: some View {
         tabRoot
+        // The voice id is restored from the server after launch, often after
+        // the onAppear check has already run and found nothing to move.
+        .onChange(of: appState.voiceCloneId) { _, _ in offerVoiceMove() }
         // A Speech block's reminder or routine line: the Speech tab.
         .onAppear { consumeSpeechTap() }
         .onChange(of: callInbox.pendingSpeech) { _, _ in consumeSpeechTap() }
