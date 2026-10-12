@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Newspaper
+import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -201,11 +202,19 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
             }
             GroupedFooter(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410))
         }
-        GroupedSectionHeader(stringResource(R.string.scripts))
+        // A script that is also a challenge (the bundled sample is the first
+        // one) is listed once, up there — so this is THEIR scripts, and it
+        // starts empty. Empty, it says what goes here and offers both ways
+        // to make one (iOS `SpeechScriptsEmptyState`).
+        val ownScripts = scripts.filter { s -> challengeScripts.none { it.id == s.id } }
+        GroupedSectionHeader(stringResource(R.string.my_scripts))
         GroupedCard {
-            // A script that is also a challenge (the bundled sample is the
-            // first one) is listed once, up there.
-            scripts.filter { s -> challengeScripts.none { it.id == s.id } }.forEachIndexed { i, script ->
+            if (ownScripts.isEmpty()) {
+                SpeechScriptsEmptyState(
+                    onWrite = { startNewScript(scope, SpeechTabRequests.Kind.WRITE) },
+                    onOwn = { startNewScript(scope, SpeechTabRequests.Kind.OWN) })
+            }
+            ownScripts.forEachIndexed { i, script ->
                 if (i > 0) GroupedRowDivider()
                 // iOS `.swipeActions(edge: .trailing)`: Delete (not the
                 // bundled sample) outermost, then Edit (own scripts, accent);
@@ -310,6 +319,49 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
 }
 
 internal const val CHALLENGES_ON_TAB = 3
+
+/** The empty state's buttons, on the header's rule: a yes from cache, a no
+ *  only after a fresh fetch, the Plus sheet otherwise. */
+private fun startNewScript(scope: kotlinx.coroutines.CoroutineScope, kind: SpeechTabRequests.Kind) {
+    if (SpeechGate.cachedCanWrite) { SpeechTabRequests.pending.value = kind; return }
+    scope.launch {
+        SpeechTabRequests.pending.value =
+            if (SpeechGate.allowsSpeechScripts(AuthRepository())) kind else SpeechTabRequests.Kind.UPSELL
+    }
+}
+
+/** "My scripts" before there are any: what the section is for, and the two
+ *  ways to fill it — iOS `SpeechScriptsEmptyState`. */
+@Composable
+private fun SpeechScriptsEmptyState(onWrite: () -> Unit, onOwn: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(Icons.Outlined.NoteAdd, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.write_your_first_script), style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            IosButton(onClick = onWrite, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.write_with_ai), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+            IosButton(onClick = onOwn, modifier = Modifier.weight(1f),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    contentColor = MaterialTheme.colorScheme.primary)) {
+                Icon(Icons.Outlined.EditNote, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.add_my_own_script), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
+    }
+}
 
 // MARK: - Shared bits
 

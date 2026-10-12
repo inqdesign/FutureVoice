@@ -301,6 +301,8 @@
     <string name="check_the_answers_at_the_back">"뒤쪽 정답 확인하기"</string>
     <string name="choose">"직접"</string>
     <string name="choose_a_photo">"사진 고르기"</string>
+    <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
+    <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"주제를 고르면 AI가 내 수준에 맞춰 써 줘요. 가지고 있는 글을 붙여 넣어도 돼요."</string>
     <string name="choose_your_plan">"요금제 선택"</string>
     <string name="city">"도시"</string>
     <string name="city_country">"도시, 나라"</string>
@@ -1198,6 +1200,7 @@
     <string name="my_recording">"내가 녹음한 목소리"</string>
     <string name="my_routine">"나의 루틴"</string>
     <string name="my_script">"내 원고"</string>
+    <string name="my_scripts">"내 원고"</string>
     <string name="my_words_lld">"내 단어 · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"완벽해요. 거의 한 단어도 안 틀렸어요."</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -2530,6 +2533,7 @@
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"동의한 날짜를 비롯해 보관 중인 내 정보를 확인하거나 고치고 싶으면 문의해 주세요."</string>
     <string name="write_with_ai">"AI로 쓰기"</string>
+    <string name="write_your_first_script">"첫 원고를 만들어 보세요"</string>
     <string name="write_your_own_situation">"내 상황 직접 쓰기"</string>
     <string name="writing_down_what_you_said">"방금 말한 내용을 받아쓰는 중…"</string>
     <string name="writing_feedback">"피드백 쓰는 중…"</string>

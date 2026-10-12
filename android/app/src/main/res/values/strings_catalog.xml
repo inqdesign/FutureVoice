@@ -302,6 +302,8 @@
     <string name="check_the_answers_at_the_back">"Check the answers at the back"</string>
     <string name="choose">"Choose"</string>
     <string name="choose_a_photo">"Choose a photo"</string>
+    <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
+    <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"Choose a topic and AI writes it for your level, or paste a text of your own."</string>
     <string name="choose_your_plan">"Choose your plan"</string>
     <string name="city">"City"</string>
     <string name="city_country">"City, country"</string>
@@ -1200,6 +1202,7 @@
     <string name="my_recording">"My recording"</string>
     <string name="my_routine">"My routine"</string>
     <string name="my_script">"My script"</string>
+    <string name="my_scripts">"My scripts"</string>
     <string name="my_words_lld">"My words · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"Nailed it — matched the line almost word for word."</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -2532,6 +2535,7 @@
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"Write to us to see or correct what we hold about you, including the date you gave consent."</string>
     <string name="write_with_ai">"Write with AI"</string>
+    <string name="write_your_first_script">"Write your first script"</string>
     <string name="write_your_own_situation">"Write your own situation"</string>
     <string name="writing_down_what_you_said">"Writing down what you said…"</string>
     <string name="writing_feedback">"Writing feedback…"</string>

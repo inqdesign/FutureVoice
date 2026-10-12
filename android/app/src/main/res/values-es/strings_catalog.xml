@@ -297,6 +297,8 @@
     <string name="check_the_answers_at_the_back">"Mira las respuestas al final"</string>
     <string name="choose">"Elegir"</string>
     <string name="choose_a_photo">"Elegir una foto"</string>
+    <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
+    <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"Elige un tema y la IA lo escribe a tu nivel, o pega un texto tuyo."</string>
     <string name="choose_your_plan">"Elige tu plan"</string>
     <string name="city">"Ciudad"</string>
     <string name="city_country">"Ciudad, país"</string>
@@ -1194,6 +1196,7 @@
     <string name="my_recording">"Mi grabación"</string>
     <string name="my_routine">"Mi rutina"</string>
     <string name="my_script">"Mi guion"</string>
+    <string name="my_scripts">"Mis guiones"</string>
     <string name="my_words_lld">"Mis palabras · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"Perfecto: casi palabra por palabra."</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -2526,6 +2529,7 @@
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"Escríbenos para ver o corregir lo que guardamos sobre ti, incluida la fecha en que diste tu consentimiento."</string>
     <string name="write_with_ai">"Escribir con IA"</string>
+    <string name="write_your_first_script">"Crea tu primer guion"</string>
     <string name="write_your_own_situation">"Escribe tu propia situación"</string>
     <string name="writing_down_what_you_said">"Transcribiendo lo que acabas de decir…"</string>
     <string name="writing_feedback">"Escribiendo los comentarios…"</string>

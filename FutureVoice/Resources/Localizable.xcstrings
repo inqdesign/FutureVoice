@@ -25279,6 +25279,52 @@
         }
       }
     },
+    "Choose a topic and AI writes it for your level, or paste a text of your own." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl ein Thema und die KI schreibt es für dein Niveau – oder füg einen eigenen Text ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige un tema y la IA lo escribe a tu nivel, o pega un texto tuyo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis un sujet et l’IA l’écrit à ton niveau, ou colle ton propre texte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テーマを選ぶと、AIがレベルに合わせて書きます。手元の文章を貼り付けてもかまいません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주제를 고르면 AI가 내 수준에 맞춰 써 줘요. 가지고 있는 글을 붙여 넣어도 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选个主题，AI 会按你的水平写好；也可以粘贴你自己的文字。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選個主題，AI 會照你的程度寫好；也可以貼上你自己的文字。"
+          }
+        }
+      }
+    },
     "Choose your accent" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -110940,6 +110986,52 @@
         }
       }
     },
+    "Write your first script" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstelle dein erstes Skript"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea tu primer guion"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crée ton premier texte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の原稿を作ってみましょう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 원고를 만들어 보세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写下你的第一篇讲稿"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寫下你的第一篇講稿"
+          }
+        }
+      }
+    },
     "Write your own situation" : {
       "localizations" : {
         "de" : {
@@ -124786,6 +124878,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mon texte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の原稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 원고"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的讲稿"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的講稿"
+          }
+        }
+      }
+    },
+    "My scripts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Skripte"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mis guiones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mes textes"
           }
         },
         "ja" : {

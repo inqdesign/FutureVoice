@@ -300,6 +300,8 @@
     <string name="check_the_answers_at_the_back">"巻末の答えを確かめる"</string>
     <string name="choose">"選ぶ"</string>
     <string name="choose_a_photo">"写真を選ぶ"</string>
+    <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
+    <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"テーマを選ぶと、AIがレベルに合わせて書きます。手元の文章を貼り付けてもかまいません。"</string>
     <string name="choose_your_plan">"プランを選ぶ"</string>
     <string name="city">"都市"</string>
     <string name="city_country">"都市、国"</string>
@@ -1197,6 +1199,7 @@
     <string name="my_recording">"録音した自分の声"</string>
     <string name="my_routine">"マイルーティン"</string>
     <string name="my_script">"自分の原稿"</string>
+    <string name="my_scripts">"自分の原稿"</string>
     <string name="my_words_lld">"自分の単語 · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"完璧。ほぼ一語一句そのまま言えました。"</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -2529,6 +2532,7 @@
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"同意した日付を含め、保管中の情報の確認や修正はお問い合わせください。"</string>
     <string name="write_with_ai">"AIで書く"</string>
+    <string name="write_your_first_script">"最初の原稿を作ってみましょう"</string>
     <string name="write_your_own_situation">"自分の状況を書く"</string>
     <string name="writing_down_what_you_said">"いま話した内容を書き起こし中…"</string>
     <string name="writing_feedback">"フィードバックを書いています…"</string>
