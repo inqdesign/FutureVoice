@@ -310,7 +310,9 @@ struct WatchTab: View {
                                  onTapBubble: tapBubble,
                                  scrollTarget: skyScrollTarget,
                                  onCenterChange: { id in centre(on: id) },
-                                 backToMeBottom: creating ? 250 : 16)
+                                 // The map runs under the tab bar: sit level with
+                                 // "New situation", or above the box.
+                                 backToMeBottom: creating ? 250 : 104)
                         .frame(height: max(geo.size.height, 200))
                         // The map fades into the page at the bottom instead of
                         // being cut off where the box and the tab bar sit.
@@ -1130,7 +1132,7 @@ struct PersonBubble: View {
 /// The floating "Your own situation" button wears the same glass as the tab
 /// bar and the header buttons around it — a solid blue pill with a shadow sat
 /// on the map like a sticker. Before iOS 26 it falls back to a material pill.
-private struct GlassFloatingButton: ViewModifier {
+struct GlassFloatingButton: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content

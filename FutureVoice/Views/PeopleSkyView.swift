@@ -484,19 +484,20 @@ struct PeopleSkyMap: View {
                                       centred = id
                                       onCenterChange?(id)
                                   }))
-            .overlay(alignment: .bottomLeading) {
+            .overlay(alignment: .bottomTrailing) {
+                // Back to me: an icon is enough, on the right, clear of the
+                // centred "New situation" button.
                 if awayFromMe {
                     Button {
                         withAnimation(.smooth) { proxy.scrollTo("centre", anchor: .center) }
                     } label: {
-                        Label(explain(key: "watch.sky.backToMe", default: "Back to me"),
-                              systemImage: "scope")
-                            .font(.subheadline.weight(.semibold))
+                        Image(systemName: "scope")
+                            .font(.title3.weight(.semibold))
+                            .frame(width: 48, height: 48)
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .background(Capsule().fill(Color(.secondarySystemGroupedBackground)))
-                    .padding(.horizontal, 16)
+                    .modifier(GlassFloatingButton())
+                    .accessibilityLabel(Text(explain(key: "watch.sky.backToMe", default: "Back to me")))
+                    .padding(.trailing, 16)
                     .padding(.bottom, backToMeBottom)
                     .transition(.opacity)
                 }
