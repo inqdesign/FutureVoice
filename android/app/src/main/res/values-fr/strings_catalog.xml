@@ -87,6 +87,8 @@
     <string name="a_talk_or_two_first">"D’abord une ou deux conversations"</string>
     <string name="a_talk_or_two_first_next">"D’abord une ou deux conversations · prochain %s"</string>
     <string name="a_ticket_agent">"le guichetier"</string>
+    <!-- "A voice from where you're from, speaking %@. Never your own voice." -->
+    <string name="a_voice_from_where_you_re_from_speaking_never_your_own_voice">"Une voix de ton pays d’origine, qui parle %s. Jamais ta propre voix."</string>
     <string name="a_year">"par an"</string>
     <string name="about_half_a_minute">"Environ 30 secondes."</string>
     <string name="about_lld_hr_a_day">"environ %d h par jour"</string>
@@ -1111,6 +1113,7 @@
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Je fais plusieurs prises. Ça prend environ 30 secondes, ne ferme pas cet écran."</string>
     <string name="making_it_yours">"Te l’approprier"</string>
     <string name="making_your_test">"Préparation de ton test…"</string>
+    <string name="man">"Homme"</string>
     <string name="manage_in_the_app_store">"Gérer dans l’App Store"</string>
     <string name="manage_subscription">"Gérer l’abonnement"</string>
     <string name="mark_as_known">"Marquer comme acquis"</string>
@@ -2164,6 +2167,7 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"Les mots, les expressions, les phrases que tu as vraiment dits — reliés en un carnet à feuilleter, à faire en shadowing et à garder."</string>
     <string name="their_name_as_you_call_them">"Son nom — comme tu l’appelles"</string>
+    <string name="their_own">"Sa propre voix"</string>
     <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
     <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"Sa propre voix, choisie avec sa présentation. Ce n’est l’enregistrement de personne."</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
@@ -2486,6 +2490,7 @@
     <string name="with_a_neighbor">"Avec un voisin"</string>
     <string name="with_room_in_the_margin">"Avec de la place dans la marge"</string>
     <string name="withdraw_consent_delete_my_voice">"Retirer mon consentement et supprimer ma voix"</string>
+    <string name="woman">"Femme"</string>
     <string name="word_notebook">"Carnet de vocabulaire"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"mot ou phrase acquis, sur les %d que tes appels et tes scènes ont produits"</string>
@@ -2533,6 +2538,7 @@
     <string name="write_down_what_you_hear">"Écris ce que tu entends"</string>
     <string name="write_every_word_phrase_and_sentence_you_remember">"Écris tous les mots, expressions et phrases dont tu te souviens"</string>
     <string name="write_it_again">"Réécrire"</string>
+    <string name="write_it_again_from_what_i_ve_told_you_lately">"Réécrire à partir de ce que j’ai raconté récemment"</string>
     <string name="write_it_as_a_correct_sentence">"Écris-la sous forme de phrase correcte."</string>
     <string name="write_it_in">"Écris-le en %s."</string>
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
@@ -2799,6 +2805,7 @@
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"Tu dis %d mots en moyenne par prise de parole — ajoute du détail : pas seulement ce qui s’est passé, aussi ce que tu as ressenti."</string>
     <string name="your_video">"Vidéo"</string>
+    <string name="your_voice">"Voix du profil"</string>
     <string name="your_voice_in_safe_hands">"Ta voix, entre de bonnes mains"</string>
     <string name="your_voice_is_back">"Ta voix est de retour"</string>
     <string name="your_voice_is_handled_with_care">"Ta voix est traitée avec soin."</string>

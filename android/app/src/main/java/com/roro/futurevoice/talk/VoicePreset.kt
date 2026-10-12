@@ -73,6 +73,21 @@ object VoicePreset {
     fun name(voiceId: String, englishName: String, language: String): String =
         localNames[key(language)]?.get(voiceId) ?: englishName
 
+    /**
+     * A Cartesia library voice (a UUID): a Find-people person's own voice or a
+     * learner's public-profile voice (iOS `VoicePreset.isLibraryVoice`,
+     * 2026-10-12). It speaks as itself in every language, has no preset name,
+     * and the servers allow it because Cartesia publishes it to everyone.
+     */
+    fun isLibraryVoice(id: String?): Boolean =
+        id != null && LIBRARY_VOICE.matches(id)
+    private val LIBRARY_VOICE =
+        Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+    /** The preset person this id names, or null for anything else (a library
+     *  voice) — iOS `VoicePreset.known(id:)`. */
+    fun known(id: String?): StockPerson? = StockPerson.catalog.firstOrNull { it.voiceId == id }
+
     /** Me → Voice → "Scene partner voice": who plays a Watch scene with no
      *  saved person (iOS `VoicePreset.sceneDefault`, same defaults key).
      *  Null until the learner picks — then the first person, as before. */

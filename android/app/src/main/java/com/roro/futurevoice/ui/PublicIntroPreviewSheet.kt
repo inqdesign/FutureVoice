@@ -86,6 +86,10 @@ fun PublicIntroPreviewSheet(
     val scope = rememberCoroutineScope()
     var publishing by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { PublicPersonaClient.prefs(context) }
+    /** The profile's voice — chosen here before the first publish. */
+    var voiceId by remember { mutableStateOf(prefs.getString(PublicPersonaClient.CHOSEN_VOICE_KEY, null)) }
     // A publish in flight can't be swiped away half-done.
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
@@ -136,10 +140,23 @@ fun PublicIntroPreviewSheet(
                 R.string.other_learners_could_practice_with_an_ai_playing_this_in_a_s_5732d4,
                 languageName))
 
+            GroupedSectionHeader(stringResource(R.string.your_voice))
+            GroupedCard {
+                ProfileVoiceRows(
+                    selection = voiceId,
+                    onSelect = { voiceId = it },
+                    nativeLanguage = nativeLanguage,
+                    targetLanguage = targetLanguage,
+                )
+            }
+            GroupedFooter(stringResource(
+                R.string.a_voice_from_where_you_re_from_speaking_never_your_own_voice, languageName))
+
             GroupedSectionSpacer()
             Button(
                 onClick = {
                     publishing = true; failed = false
+                    voiceId?.let { prefs.edit().putString(PublicPersonaClient.CHOSEN_VOICE_KEY, it).apply() }
                     scope.launch {
                         val ok = onPublish()
                         publishing = false
@@ -149,7 +166,7 @@ fun PublicIntroPreviewSheet(
                         } else failed = true
                     }
                 },
-                enabled = !publishing,
+                enabled = !publishing && composed != null && voiceId != null,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (publishing) {

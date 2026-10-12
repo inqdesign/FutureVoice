@@ -189,6 +189,30 @@ class GeminiClient(private val auth: AuthRepository) {
         }
     }
 
+    /** Buffered plain-text call (iOS `GeminiClient.send`) — one line back,
+     *  trimmed. Throws on an empty answer is the caller's choice. */
+    suspend fun sendText(
+        system: String,
+        messages: List<Message>,
+        model: Model = Model.FLASH_36,
+        maxTokens: Int = 1024,
+        temperature: Double = 0.4,
+        purpose: String? = null,
+        idempotencyKey: String? = null,
+    ): String = withContext(Dispatchers.IO) {
+        val request = buildRequest(
+            system, messages, model, maxTokens, temperature, searchGrounding = false,
+            purpose = purpose, idempotencyKey = idempotencyKey, jsonResponse = false, stream = false,
+        )
+        Edge.client.newCall(request).execute().use { response ->
+            val bytes = response.body.bytes()
+            validate(response.code, bytes)
+            val decoded = Edge.json.decodeFromString(ApiResponse.serializer(), String(bytes))
+            decoded.candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
+                ?.joinToString("").orEmpty().trim()
+        }
+    }
+
     /**
      * Streaming sibling of [sendJson], for the conversation turn.
      *

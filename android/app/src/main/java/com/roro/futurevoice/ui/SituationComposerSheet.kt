@@ -93,6 +93,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
+import com.roro.futurevoice.data.knowsLearnersLife
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.Counterpart
@@ -256,9 +257,21 @@ internal fun ScenarioComposer(
         val store = CounterpartStore.shared(context)
         val live = store.load().firstOrNull { it.id == p.id } ?: p
         val stored = live.scenariosByLanguage[targetLanguage].orEmpty()
-        if (stored.isNotEmpty()) { personIdeas = stored; return@LaunchedEffect }
+        // A failed generation's generic lines, saved once by mistake, are no
+        // ideas at all (iOS `TopicEngine.isFallback`).
+        if (stored.isNotEmpty() && !CounterpartIdeas.isFallback(stored, live, targetLanguage)) {
+            personIdeas = stored; return@LaunchedEffect
+        }
+        val learner = PersonaStore.shared(context).load()
         val fresh = runCatching {
-            CounterpartIdeas.suggest(PersonaStore.shared(context).load(), live, targetLanguage)
+            CounterpartIdeas.suggest(
+                learner, live, targetLanguage,
+                // Close people know the learner's life; everyone else hears
+                // only what the learner lets strangers hear.
+                learnerFacts = if (live.knowsLearnersLife) learner?.currentNotes()?.map { it.text }.orEmpty()
+                    else learner?.strangerLines.orEmpty(),
+                allowFallback = false,
+            )
         }.getOrNull().orEmpty()
         if (fresh.isEmpty()) return@LaunchedEffect
         personIdeas = fresh
@@ -1432,5 +1445,6 @@ private fun PublicPersonaClient.PublicPersona.asCounterpart(existing: List<Count
         voicePresetId = voice_preset_id,
         remoteId = id,
         personaKind = if (isRealUser) "user" else "character",
+        greetingByLanguage = greeting?.trim()?.takeIf { it.isNotEmpty() }?.let { mapOf(language to it) }.orEmpty(),
     )
 }

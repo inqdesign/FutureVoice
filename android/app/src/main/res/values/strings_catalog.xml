@@ -87,6 +87,8 @@
     <string name="a_talk_or_two_first">"A talk or two first"</string>
     <string name="a_talk_or_two_first_next">"A talk or two first · next %s"</string>
     <string name="a_ticket_agent">"a ticket agent"</string>
+    <!-- "A voice from where you're from, speaking %@. Never your own voice." -->
+    <string name="a_voice_from_where_you_re_from_speaking_never_your_own_voice">"A voice from where you're from, speaking %s. Never your own voice."</string>
     <string name="a_year">"a year"</string>
     <string name="about_half_a_minute">"About half a minute."</string>
     <string name="about_lld_hr_a_day">"about %d hr a day"</string>
@@ -1117,6 +1119,7 @@
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Making a few takes — about half a minute. Keep this open."</string>
     <string name="making_it_yours">"Making it yours"</string>
     <string name="making_your_test">"Making your test…"</string>
+    <string name="man">"Man"</string>
     <string name="manage_in_the_app_store">"Manage in the App Store"</string>
     <string name="manage_subscription">"Manage subscription"</string>
     <string name="mark_as_known">"Mark as known"</string>
@@ -2170,6 +2173,7 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep."</string>
     <string name="their_name_as_you_call_them">"Their name — as you call them"</string>
+    <string name="their_own">"Their own"</string>
     <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
     <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"Their own voice, chosen with their introduction. Not a recording of anyone."</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
@@ -2492,6 +2496,7 @@
     <string name="with_a_neighbor">"With a neighbor"</string>
     <string name="with_room_in_the_margin">"With room in the margin"</string>
     <string name="withdraw_consent_delete_my_voice">"Withdraw consent &amp; delete my voice"</string>
+    <string name="woman">"Woman"</string>
     <string name="word_notebook">"Word notebook"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"word or line mastered, out of %d your talks and watches have made"</string>
@@ -2539,6 +2544,7 @@
     <string name="write_down_what_you_hear">"Write down what you hear"</string>
     <string name="write_every_word_phrase_and_sentence_you_remember">"Write every word, phrase and sentence you remember"</string>
     <string name="write_it_again">"Write it again"</string>
+    <string name="write_it_again_from_what_i_ve_told_you_lately">"Write it again from what I've told you lately"</string>
     <string name="write_it_as_a_correct_sentence">"Write it as a correct sentence."</string>
     <string name="write_it_in">"Write it in %s."</string>
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
@@ -2805,6 +2811,7 @@
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"Your turns average %d words — add detail: how things felt, not just what happened."</string>
     <string name="your_video">"Your video"</string>
+    <string name="your_voice">"Your voice"</string>
     <string name="your_voice_in_safe_hands">"Your voice, in safe hands"</string>
     <string name="your_voice_is_back">"Your voice is back"</string>
     <string name="your_voice_is_handled_with_care">"Your voice is handled with care."</string>
