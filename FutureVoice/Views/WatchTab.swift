@@ -68,6 +68,7 @@ struct WatchTab: View {
     @State private var skyCard: Counterpart?
     @State private var skyCardPaywall = false
     @StateObject private var previewPlayer = AudioPlayer()
+    @State private var keyboardUp = false
     @State private var dockBubble: String?
     @State private var dockFill = ""
     /// "New situation" was tapped: the tab bar steps aside for the box, the
@@ -134,7 +135,7 @@ struct WatchTab: View {
             .toolbar {
                 if creating {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") { creating = false; dockFill = "" }
+                        Button("Cancel") { afterKeyboard { creating = false; dockFill = "" } }
                     }
                 }
                 if usesPeopleSky {
@@ -344,7 +345,7 @@ struct WatchTab: View {
                         .onTapGesture {
                             guard PeopleSky.dockEnabled else { return }
                             if creating {
-                                if let p = dockPerson { leaveBoxForCard(p) } else { creating = false }
+                                if let p = dockPerson { leaveBoxForCard(p) } else { afterKeyboard { creating = false } }
                             } else if skyCard != nil {
                                 // The card is a step on top of the map: a tap on
                                 // the map puts it away.
@@ -441,6 +442,8 @@ struct WatchTab: View {
             .animation(.smooth(duration: 0.3), value: skyCard?.id)
             .sheet(isPresented: $skyCardPaywall) { PaywallView(source: "watch_person_card") }
             .onDisappear { previewPlayer.stop() }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
             .task(id: appState.targetLanguage) { await loadSkyPool() }
             .task {
                 // A pool that never answers must not leave the tab blank.
@@ -530,11 +533,23 @@ struct WatchTab: View {
     /// Out of the box and back to a person's card, in one motion — the step
     /// before "Make a situation", never the old full sheet.
     private func leaveBoxForCard(_ c: Counterpart) {
-        withAnimation(.smooth(duration: 0.35)) {
-            creating = false
-            dockFill = ""
+        // One thing at a time: the keyboard goes down first, then the box
+        // gives way to the card. Together they read as a jumble.
+        afterKeyboard {
+            withAnimation(.smooth(duration: 0.35)) {
+                creating = false
+                dockFill = ""
+            }
+            openSkyCard(c)
         }
-        openSkyCard(c)
+    }
+
+    /// Put the keyboard away, then do the next thing once it is down.
+    private func afterKeyboard(_ then: @escaping () -> Void) {
+        guard keyboardUp else { then(); return }
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                        to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: then)
     }
 
     /// The card's "Make a situation": the card goes down as the box comes
