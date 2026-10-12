@@ -30,6 +30,14 @@ struct DailyCallOnboardingView: View {
         LearnerAddress.vocative(appState.persona?.displayName)
     }
 
+    /// The talk times of the week setup suggested, when it was saved — then
+    /// the routine already says when to ring, and picking one time here
+    /// would collapse its several calls into one.
+    private var routineTimes: [DailyCallStore.CallTime] {
+        guard UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey) else { return [] }
+        return StudyPlanStore.shared.plan.callTimes
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -72,11 +80,17 @@ struct DailyCallOnboardingView: View {
                 }
                 .padding(.horizontal, 8)
 
-                DatePicker("Calls at", selection: $time,
-                           displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .frame(maxHeight: 150)
+                if routineTimes.isEmpty {
+                    DatePicker("Calls at", selection: $time,
+                               displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .frame(maxHeight: 150)
+                } else {
+                    Text(explain("At your routine's talk times: \(routineTimes.sorted().map { String(format: "%02d:%02d", $0.hour, $0.minute) }.joined(separator: " · "))"))
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                }
 
                 if permissionDenied {
                     Text(explain("iOS is blocking the call. Turn on notifications for nawana in Settings, then switch it on again in Me."))
@@ -123,9 +137,11 @@ struct DailyCallOnboardingView: View {
                 permissionDenied = true
                 return
             }
-            let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
-            DailyCallStore.shared.hour = parts.hour ?? 8
-            DailyCallStore.shared.minute = parts.minute ?? 0
+            if routineTimes.isEmpty {
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
+                DailyCallStore.shared.hour = parts.hour ?? 8
+                DailyCallStore.shared.minute = parts.minute ?? 0
+            }
             DailyCallStore.shared.isEnabled = true
             Analytics.capture("daily_call_onboarding", [
                 "enabled": true, "hour": DailyCallStore.shared.hour

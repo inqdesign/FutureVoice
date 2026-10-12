@@ -46,10 +46,17 @@ struct StarterSituation: Identifiable, Hashable {
     /// saying" coach, which otherwise sees only the title and the role.
     var learnerSide: String? = nil
 
-    /// The starter a scenario was minted from, if any.
+    /// The starter a scenario was minted from, if any — from every chip's
+    /// set, since a purpose chip (`DiscoverChip`) mints the same way.
     static func of(_ scenario: Scenario?) -> StarterSituation? {
         guard let id = scenario?.starterId else { return nil }
-        return all.first { $0.id == id }
+        return catalog.first { $0.id == id }
+    }
+
+    /// Every starter on any chip, each once.
+    static var catalog: [StarterSituation] {
+        var seen = Set<String>()
+        return (all + interview + work + life + travel).filter { seen.insert($0.id).inserted }
     }
 
     /// The example first line, when the learner opens this one.
@@ -201,6 +208,168 @@ struct StarterSituation: Identifiable, Hashable {
                     "de": ["Oh, hallo! Wie geht's Ihnen?", "Hallo! Lange nicht gesehen."],
                 ]),
         ]
+    }
+
+    // MARK: - Purpose chips (`LearningPurpose`)
+
+    private static let interviewNote = """
+        You're interviewing the learner for a job they applied for, in an \
+        ordinary first-round interview. Ask the way a real interviewer does — \
+        one question at a time, a short follow-up on what they actually said, \
+        no lecture and no feedback on their answers. Stay friendly but \
+        professional, and use the polite form the whole call (German Sie, \
+        French vous, Spanish usted, Korean 존댓말, Japanese です・ます). \
+        Never score them or tell them how they did.
+        """
+
+    /// The Interview chip: the questions every first interview asks.
+    static var interview: [StarterSituation] {
+        [
+            StarterSituation(
+                id: "interview-about-you", icon: "person.crop.square",
+                title: explain("Tell me about yourself"),
+                role: explain("an interviewer"),
+                notes: interviewNote + " Open by asking them to introduce themselves, then follow their answer: their background, what they do now, what they're looking for.",
+                openers: [
+                    "en": ["Thanks for coming in. So, tell me a little about yourself.", "Nice to meet you. Why don't you start by telling me about yourself?"],
+                    "ko": ["와 주셔서 감사합니다. 먼저 간단히 자기소개 부탁드릴게요.", "반갑습니다. 자기소개부터 해 주시겠어요?"],
+                ]),
+            StarterSituation(
+                id: "interview-why-job", icon: "questionmark.bubble",
+                title: explain("Why do you want this job?"),
+                role: explain("an interviewer"),
+                notes: interviewNote + " This part of the interview is about motivation: why this role, why this company, why now, and where they see themselves.",
+                openers: [
+                    "en": ["So, what made you apply for this position?", "Tell me, why do you want to work here?"],
+                    "ko": ["이 자리에 지원하신 이유가 궁금해요.", "왜 저희 회사에서 일하고 싶으세요?"],
+                ]),
+            StarterSituation(
+                id: "interview-strengths", icon: "chart.bar",
+                title: explain("Strengths and weaknesses"),
+                role: explain("an interviewer"),
+                notes: interviewNote + " This part is about their strengths, a weakness and what they do about it, and a concrete example of each.",
+                openers: [
+                    "en": ["What would you say is your biggest strength?", "Let's talk about you. What are you really good at?"],
+                    "ko": ["본인의 가장 큰 강점은 뭐라고 생각하세요?", "스스로 생각하는 장점부터 들어 볼게요."],
+                ]),
+            StarterSituation(
+                id: "interview-experience", icon: "briefcase",
+                title: explain("A project you're proud of"),
+                role: explain("an interviewer"),
+                notes: interviewNote + " This part is about their experience: one project or situation from their work or studies, what they did, what went wrong, what they learned.",
+                openers: [
+                    "en": ["Can you walk me through a project you're proud of?", "Tell me about a time you solved a difficult problem at work."],
+                    "ko": ["자랑스러웠던 프로젝트 하나 소개해 주시겠어요?", "어려운 문제를 해결했던 경험이 있으면 말씀해 주세요."],
+                ]),
+            StarterSituation(
+                id: "interview-salary", icon: "banknote",
+                title: explain("Talking about salary"),
+                role: explain("a recruiter"),
+                notes: interviewNote + " You're the recruiter at the end of the process, talking about salary expectations, start date and benefits. Be realistic and a little firm, the way recruiters are.",
+                openers: [
+                    "en": ["Before we wrap up, what are your salary expectations?", "Let's talk about the offer. What range did you have in mind?"],
+                    "ko": ["마무리하기 전에, 희망 연봉은 어느 정도 생각하세요?", "처우 얘기를 좀 해 볼까요? 생각하신 범위가 있으세요?"],
+                ]),
+        ]
+    }
+
+    /// The Work chip: speaking moments of an ordinary working week.
+    static var work: [StarterSituation] {
+        [
+            StarterSituation(
+                id: "work-meeting", icon: "person.3.fill",
+                title: explain("Giving your view in a meeting"),
+                role: explain("a coworker"), showsRole: false,
+                notes: "You're the learner's coworker in a small team meeting, asking what they think about the plan on the table. " + openNote,
+                openers: [
+                    "en": ["So, what do you think? Does this plan work for your side?", "Before we decide — any thoughts from you?"],
+                    "ko": ["어떻게 생각하세요? 이 계획, 그쪽 입장에선 괜찮을까요?", "결정하기 전에, 의견 있으세요?"],
+                ]),
+            StarterSituation(
+                id: "work-update", icon: "chart.line.uptrend.xyaxis",
+                title: explain("Your project update"),
+                role: explain("your manager"),
+                notes: "You're the learner's manager in a weekly one-on-one, asking how their work is going. " + openNote,
+                openers: [
+                    "en": ["Hey, how's everything going on your side this week?", "So, where are we with your project?"],
+                    "ko": ["이번 주 일은 어떻게 돼 가요?", "맡은 프로젝트는 지금 어디까지 왔어요?"],
+                ]),
+            StarterSituation(
+                id: "work-client", icon: "phone.fill",
+                title: explain("A call with a client"),
+                role: explain("a client"),
+                notes: "You're a client calling the learner's company about something you need. Be polite, a bit busy, and expect clear answers. " + openNote,
+                openers: [
+                    "en": ["Hi, thanks for taking my call. Do you have a minute?", "Hello! I wanted to check in about our order."],
+                    "ko": ["안녕하세요, 통화 괜찮으세요?", "안녕하세요! 저희 주문 건 때문에 연락드렸어요."],
+                ]),
+            StarterSituation(
+                id: "work-small-talk", icon: "cup.and.saucer",
+                title: explain("Small talk with a coworker"),
+                role: explain("a coworker"), showsRole: false,
+                notes: "You're the learner's coworker, chatting by the coffee machine. " + openNote,
+                openers: [
+                    "en": ["Morning! Busy day?", "Hey! How was your weekend?"],
+                    "ko": ["좋은 아침이에요! 오늘 바빠요?", "주말 잘 보냈어요?"],
+                ]),
+        ]
+    }
+
+    /// The Life chip: living somewhere, not visiting it.
+    static var life: [StarterSituation] {
+        [
+            StarterSituation(
+                id: "life-landlord", icon: "key.fill",
+                title: explain("Calling your landlord"),
+                role: explain("your landlord"),
+                notes: "You're the learner's landlord, answering the phone. Something in the flat probably needs fixing. " + openNote,
+                openers: [
+                    "en": ["Hello? Oh, hi. What can I do for you?", "Hi there, is everything all right with the flat?"],
+                    "ko": ["여보세요? 아, 네. 무슨 일이세요?", "안녕하세요, 집에 무슨 문제 있으세요?"],
+                ]),
+            StarterSituation(
+                id: "life-town-hall", icon: "building.columns.fill",
+                title: explain("At the town hall"),
+                role: explain("a clerk"),
+                notes: "You're a clerk at the town hall's registration desk. You're busy but correct, and you ask for the documents you need. " + openNote,
+                openers: [
+                    "en": ["Next, please. How can I help you?", "Good morning. What do you need today?"],
+                    "ko": ["다음 분이요. 어떤 일로 오셨어요?", "안녕하세요. 무슨 업무 보러 오셨어요?"],
+                ]),
+            StarterSituation(
+                id: "life-teacher", icon: "figure.and.child.holdinghands",
+                title: explain("Your child's teacher"),
+                role: explain("a teacher"),
+                notes: "You're the teacher of the learner's child, at pick-up time or a short parent meeting. " + openNote,
+                openers: [
+                    "en": ["Oh, hello! Do you have a minute? I wanted to tell you about today.", "Hi! Thanks for coming in."],
+                    "ko": ["아, 안녕하세요! 잠깐 시간 괜찮으세요? 오늘 있었던 일 말씀드리려고요.", "안녕하세요! 와 주셔서 감사해요."],
+                ]),
+        ] + all.filter { ["doctor-appointment", "neighbor-small-talk"].contains($0.id) }
+    }
+
+    /// The Travel chip: being a visitor.
+    static var travel: [StarterSituation] {
+        [
+            StarterSituation(
+                id: "travel-airport", icon: "airplane",
+                title: explain("At the check-in desk"),
+                role: explain("an airline agent"),
+                notes: "You're an agent at an airline check-in desk. " + openNote,
+                openers: [
+                    "en": ["Hi! Where are you flying today?", "Good morning. Passport, please."],
+                    "ko": ["안녕하세요! 오늘 어디로 가세요?", "안녕하세요. 여권 부탁드릴게요."],
+                ]),
+            StarterSituation(
+                id: "travel-problem", icon: "exclamationmark.bubble",
+                title: explain("When something goes wrong"),
+                role: explain("a front desk clerk"),
+                notes: "You're at a hotel front desk. The learner comes to you because something went wrong — the room, a booking, lost luggage; let them say what. " + openNote,
+                openers: [
+                    "en": ["Hi, is everything all right?", "Hello! What can I do for you?"],
+                    "ko": ["안녕하세요, 무슨 문제 있으세요?", "안녕하세요! 뭘 도와드릴까요?"],
+                ]),
+        ] + all.filter { ["hotel-checkin", "train-ticket", "ask-directions", "order-restaurant"].contains($0.id) }
     }
 
     /// The scenario to launch: the one this starter already minted, brought
