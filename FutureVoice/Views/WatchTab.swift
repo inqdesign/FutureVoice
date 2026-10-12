@@ -1356,13 +1356,6 @@ struct SkyPersonCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Close"))
             }
 
             details
@@ -1400,6 +1393,9 @@ struct SkyPersonCard: View {
         .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 34, style: .continuous))
         .shadow(color: .black.opacity(0.08), radius: 24, y: 2)
         .offset(y: pull)
+        // No close button: it goes like a sheet — pulled down, or a tap on
+        // the map. VoiceOver's escape gesture does the same.
+        .accessibilityAction(.escape, onClose)
         .gesture(
             DragGesture(minimumDistance: 8)
                 .onChanged { v in pull = max(0, v.translation.height) }
