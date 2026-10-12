@@ -30,6 +30,16 @@ enum PeopleSky {
         #endif
     }
 
+    /// The situation dock over the map: chips + box, a chip picks the person
+    /// and they speak a line. DEBUG only until the founder has seen it.
+    static var dockEnabled: Bool {
+        #if DEBUG
+        return UserDefaults.standard.object(forKey: "futurevoice.dev.situationDock") as? Bool ?? true
+        #else
+        return false
+        #endif
+    }
+
     enum Lens: String, CaseIterable, Identifiable {
         case all, mine, known, strangers
         var id: String { rawValue }
@@ -337,6 +347,12 @@ struct PeopleSkyMap: View {
     @Binding var lens: PeopleSky.Lens
     var onTap: (PeopleSky.Node) -> Void
     var onTapMe: () -> Void
+    /// The person the situation dock has picked: ringed, a touch larger, and
+    /// the map pans to them.
+    var focusedId: String? = nil
+    /// What they say when they are picked — a line in a speech bubble over
+    /// their face, like meeting a character in a game.
+    var bubble: String? = nil
 
     @State private var awayFromMe = false
     /// The learner's own photo (the one on Home and in the profile).
@@ -377,13 +393,36 @@ struct PeopleSkyMap: View {
 
                     ForEach(nodes) { n in
                         let on = n.shows(in: lens)
+                        let focused = n.id == focusedId
                         node(n)
                             .modifier(DepthOfField())
-                            .scaleEffect(on ? 1 : 0.6)
+                            .overlay(alignment: .top) {
+                                if focused, let bubble {
+                                    SkyBubble(text: bubble)
+                                        .fixedSize()
+                                        .offset(y: -22)
+                                        .alignmentGuide(.top) { $0[.bottom] }
+                                        .transition(.asymmetric(
+                                            insertion: .offset(y: 14).combined(with: .opacity),
+                                            removal: .opacity))
+                                        .id(bubble)
+                                }
+                            }
+                            .scaleEffect(on ? (focused ? 1.12 : 1) : 0.6)
+                            .zIndex(focused ? 1 : 0)
                             .opacity(on ? 1 : 0)
                             .allowsHitTesting(on)
                             .accessibilityHidden(!on)
                             .position(pos[n.id] ?? CGPoint(x: c, y: c))
+                        // Placed by alignment guides, not `.position` (a positioned
+                        // view fills the whole map) or `.offset` (draws elsewhere,
+                        // laid out at the corner): scrolling to it needs its
+                        // real frame at the person.
+                        let p = pos[n.id] ?? CGPoint(x: c, y: c)
+                        Color.clear.frame(width: 1, height: 1)
+                            .alignmentGuide(.leading) { _ in -p.x }
+                            .alignmentGuide(.top) { _ in -p.y }
+                            .id("node-" + n.id)
                     }
                     me(size: g.me).position(x: c, y: c + 8)
                 }
@@ -395,11 +434,21 @@ struct PeopleSkyMap: View {
             // shadow. Margins let the edges be dragged clear of all of it, so
             // nobody on the map is ever out of reach of a tap.
             // Equal top and bottom, or the centre anchor puts "me" off-centre.
-            .contentMargins(.vertical, 120, for: .scrollContent)
-            .contentMargins(.horizontal, 24, for: .scrollContent)
+            // With the situation dock, a picked person must be able to come
+            // to the middle wherever they sit — edge or bottom — with room for
+            // their bubble, so the map can be dragged much further.
+            .contentMargins(.vertical, PeopleSky.dockEnabled ? 280 : 120, for: .scrollContent)
+            .contentMargins(.horizontal, PeopleSky.dockEnabled ? 170 : 24, for: .scrollContent)
             .modifier(TrackDistanceFromCentre(side: side, away: $awayFromMe))
             .onChange(of: lens) { _, _ in
                 withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo("centre", anchor: .center) }
+            }
+            .onChange(of: focusedId) { _, id in
+                guard let id else { return }
+                // A little above centre: the dock covers the bottom of the map.
+                withAnimation(.smooth(duration: 0.5)) {
+                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.38))
+                }
             }
             .overlay(alignment: .bottomLeading) {
                 if awayFromMe {
@@ -419,6 +468,8 @@ struct PeopleSkyMap: View {
             }
         }
         .animation(.smooth(duration: 0.5), value: lens)
+        .animation(.smooth(duration: 0.35), value: focusedId)
+        .animation(.smooth(duration: 0.35), value: bubble)
     }
 
     private func me(size: CGFloat) -> some View {
@@ -464,6 +515,12 @@ struct PeopleSkyMap: View {
                         // An opaque disc under the tinted bubble, so the rings
                         // and their names behind never show through a face.
                         SkyFace(node: n)
+                            .overlay {
+                                if n.id == focusedId {
+                                    Circle().strokeBorder(Color.accentColor, lineWidth: 3)
+                                        .padding(-4)
+                                }
+                            }
                     }
                     if n.hasKept {
                         Circle().fill(Color.accentColor)
@@ -489,6 +546,39 @@ struct PeopleSkyMap: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text([n.name, n.eyebrow].compactMap { $0 }.joined(separator: ", ")))
+    }
+}
+
+/// A picked person's line, over their face: a rounded bubble with a small tail.
+struct SkyBubble: View {
+    let text: String
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(text)
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 220)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            Triangle()
+                .fill(Color(.systemBackground))
+                .frame(width: 16, height: 8)
+        }
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.14), radius: 10, y: 4)
+    }
+
+    private struct Triangle: Shape {
+        func path(in r: CGRect) -> Path {
+            Path { p in
+                p.move(to: CGPoint(x: r.minX, y: r.minY))
+                p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
+                p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
+                p.closeSubpath()
+            }
+        }
     }
 }
 
