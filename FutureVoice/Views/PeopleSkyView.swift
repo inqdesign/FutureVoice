@@ -416,11 +416,17 @@ struct PeopleSkyMap: View {
                                                    sharp: n.id == bubbleId || n.id == focusedId))
                             .overlay(alignment: .top) {
                                 if n.id == (bubbleId ?? focusedId), let bubble {
-                                    Button(action: onTapBubble) { SkyBubble(text: bubble) }
-                                        .buttonStyle(.plain)
-                                        .fixedSize()
-                                        .offset(y: -64)
-                                        .alignmentGuide(.top) { $0[.bottom] }
+                                    // Pinned by its TIP: a 1-pt anchor sits where the
+                                    // tail points, and the bubble hangs off it by its
+                                    // bottom edge, so a longer line only grows upward.
+                                    Color.clear
+                                        .frame(width: 1, height: 1)
+                                        .overlay(alignment: .bottom) {
+                                            Button(action: onTapBubble) { SkyBubble(text: bubble) }
+                                                .buttonStyle(.plain)
+                                                .fixedSize()
+                                        }
+                                        .offset(y: -10)
                                         .transition(.asymmetric(
                                             insertion: .offset(y: 14).combined(with: .opacity),
                                             removal: .opacity))
