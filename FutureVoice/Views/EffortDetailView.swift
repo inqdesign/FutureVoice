@@ -47,7 +47,6 @@ struct EffortDetailView: View {
                 .pickerStyle(.segmented)
 
                 summary
-                tiles
                 trendPanel
                 if mix.count > 0 { mixPanel }
                 if avgShadowScore > 0 { shadowPanel }
@@ -143,37 +142,47 @@ struct EffortDetailView: View {
         return "\(first.formatted(f)) – \(last.formatted(f))"
     }
 
-    // MARK: - Tiles
+    // MARK: - Kinds (one row each, under the picked kind's chart)
 
-    private var tiles: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                  spacing: 12) {
-            ForEach(shown) { c in
-                Button { withAnimation(.snappy(duration: 0.25)) { selected = c } } label: { tile(c) }
+    /// Every kind as a thin row under the chart it drives — tiles two by two
+    /// pushed the chart below the screen, so a tap changed something nobody
+    /// could see.
+    private var kindRows: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(shown.enumerated()), id: \.element) { i, c in
+                if i > 0 { CardDivider(inset: 28) }
+                Button { withAnimation(.snappy(duration: 0.25)) { selected = c } } label: { kindRow(c) }
                     .buttonStyle(.plain)
             }
         }
     }
 
-    private func tile(_ c: EffortCategory) -> some View {
+    private func kindRow(_ c: EffortCategory) -> some View {
         let now = EffortHistory.total(c, in: current)
         let before = EffortHistory.total(c, in: previous)
         let isSelected = c == selected
-        return VStack(alignment: .leading, spacing: 6) {
-            Label(c.label, systemImage: c.symbol)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(c.color)
-                .labelStyle(.titleAndIcon)
-            Text(c.amountText(now))
-                .font(.title3.weight(.bold)).monospacedDigit()
+        return HStack(spacing: 10) {
+            Image(systemName: c.symbol)
+                .font(.subheadline).foregroundStyle(c.color)
+                .frame(width: 18)
+            Text(c.label)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
                 .foregroundStyle(.primary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
             delta(c, now: now, before: before)
+                .frame(minWidth: 40, alignment: .trailing)
+            Text(c.amountText(now))
+                .font(.subheadline.weight(.semibold)).monospacedDigit()
+                .foregroundStyle(.primary)
+                .frame(minWidth: 84, alignment: .trailing)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-        .overlay(RoundedRectangle(cornerRadius: 16)
-            .strokeBorder(isSelected ? c.color : .clear, lineWidth: 2))
+        .padding(.vertical, 10)
+        .padding(.horizontal, 8)
+        .background(RoundedRectangle(cornerRadius: 10)
+            .fill(isSelected ? c.color.opacity(0.12) : .clear))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -183,10 +192,10 @@ struct EffortDetailView: View {
     @ViewBuilder
     private func delta(_ c: EffortCategory, now: Double, before: Double) -> some View {
         if c.isTimed && range.days * 2 > EffortHistory.talkReachDays {
-            Text(" ").font(.caption2)
+            EmptyView()
         } else {
             let d = Int(now.rounded(.down)) - Int(before.rounded(.down))
-            let text = d == 0 ? explain("same as before") : (d > 0 ? "+\(d)" : "\(d)") + " " + range.previousLabel
+            let text = d == 0 ? explain("same as before") : (d > 0 ? "+\(d)" : "\(d)")
             Text(text)
                 .font(.caption2)
                 .foregroundStyle(d > 0 ? Color.green : .secondary)
@@ -226,7 +235,7 @@ struct EffortDetailView: View {
                 }
             }
             .chartXAxis { dayAxis }
-            .frame(height: 160)
+            .frame(height: 140)
             Group {
                 if selected == .talk {
                     Text(explain("Minutes you actually talked, per day. The dashed line is your \(dailyGoalMinutes)-minute daily goal."))
@@ -238,6 +247,13 @@ struct EffortDetailView: View {
             }
             .font(.caption).foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
+            CardDivider(inset: 0)
+            Text(range.previousLabel)
+                .font(.caption2).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 102)
+                .padding(.bottom, -8)
+            kindRows
         }
     }
 
