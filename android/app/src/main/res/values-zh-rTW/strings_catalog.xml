@@ -87,6 +87,8 @@
     <string name="a_talk_or_two_first">"先聊一兩次"</string>
     <string name="a_talk_or_two_first_next">"先聊一兩次 · 下次 %s"</string>
     <string name="a_ticket_agent">"售票員"</string>
+    <!-- "A voice from where you're from, speaking %@. Never your own voice." -->
+    <string name="a_voice_from_where_you_re_from_speaking_never_your_own_voice">"由你家鄉的聲音說%s。絕不會用你自己的聲音。"</string>
     <string name="a_year">"每年"</string>
     <string name="about_half_a_minute">"大約30秒。"</string>
     <string name="about_lld_hr_a_day">"約每天%d小時"</string>
@@ -1114,6 +1116,7 @@
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在唸幾個版本，大約需要30秒。請不要關閉這個畫面。"</string>
     <string name="making_it_yours">"變成自己的"</string>
     <string name="making_your_test">"正在準備測驗…"</string>
+    <string name="man">"男性"</string>
     <string name="manage_in_the_app_store">"在App Store管理"</string>
     <string name="manage_subscription">"管理訂閱"</string>
     <string name="mark_as_known">"標為我會了"</string>
@@ -2167,6 +2170,7 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"你實際說過的單字、用語和句子，裝訂成一本書。翻一翻、跟讀，然後一直帶著。"</string>
     <string name="their_name_as_you_call_them">"對方的名字（照你的叫法）"</string>
+    <string name="their_own">"專屬的聲音"</string>
     <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
     <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"這是隨自我介紹選定的專屬聲音，不是任何人的真實錄音。"</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
@@ -2489,6 +2493,7 @@
     <string name="with_a_neighbor">"和鄰居"</string>
     <string name="with_room_in_the_margin">"附留白可做筆記"</string>
     <string name="withdraw_consent_delete_my_voice">"撤回同意並刪除我的聲音"</string>
+    <string name="woman">"女性"</string>
     <string name="word_notebook">"單字本"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"在通話和情境練習累積的%d個當中已學會"</string>
@@ -2536,6 +2541,7 @@
     <string name="write_down_what_you_hear">"把聽到的寫下來"</string>
     <string name="write_every_word_phrase_and_sentence_you_remember">"寫下你記得的所有單字、用語和句子"</string>
     <string name="write_it_again">"重新撰寫"</string>
+    <string name="write_it_again_from_what_i_ve_told_you_lately">"用最近聊過的內容重寫"</string>
     <string name="write_it_as_a_correct_sentence">"拼出正確的句子。"</string>
     <string name="write_it_in">"用%s寫。"</string>
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
@@ -2802,6 +2808,7 @@
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"每次發言平均%d個字。除了發生了什麼，也說說當時的感覺。"</string>
     <string name="your_video">"影片"</string>
+    <string name="your_voice">"個人檔案的聲音"</string>
     <string name="your_voice_in_safe_hands">"聲音，安心託付"</string>
     <string name="your_voice_is_back">"你的聲音回來了"</string>
     <string name="your_voice_is_handled_with_care">"聲音會被謹慎處理。"</string>

@@ -425,7 +425,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         val s = _state.value
         val p = s.persona ?: return false
         val ok = viewModelScope.async {
-            com.roro.futurevoice.net.PublicPersonaClient(auth).publishMirror(p, s.targetLanguage)
+            com.roro.futurevoice.net.PublicPersonaClient(auth).publishMirror(p, s.targetLanguage,
+                com.roro.futurevoice.net.PublicPersonaClient.prefs(appContext))
         }.await()
         if (ok) {
             com.roro.futurevoice.net.PublicPersonaClient.prefs(appContext).edit()

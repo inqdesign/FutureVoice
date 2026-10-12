@@ -98,6 +98,16 @@ data class Counterpart(
     /** Situation ideas per target language — title + blurb, the blurb is the scene's seed. */
     val scenariosByLanguage: Map<String, List<com.roro.futurevoice.talk.SuggestedTopic>> = emptyMap(),
 
+    /** What they say when you come across them — the line over their face on
+     *  the Watch map (iOS `greetingByLanguage`). Material, so per target
+     *  language; written by hand in the person form or by [com.roro.futurevoice.talk.GreetingEngine]
+     *  when there is none. */
+    val greetingByLanguage: Map<String, String> = emptyMap(),
+    /** How each greeting was made: the [com.roro.futurevoice.talk.GreetingEngine.PROMPT_VERSION]
+     *  that wrote it, or -1 when the learner wrote it. Absent = written by an
+     *  earlier prompt, so it is written again; the learner's own line never is. */
+    val greetingVersionByLanguage: Map<String, Int> = emptyMap(),
+
     @Serializable(with = IsoDateMillisSerializer::class)
     val createdAt: Long = System.currentTimeMillis(),
     @Serializable(with = IsoDateMillisSerializer::class)
@@ -105,6 +115,22 @@ data class Counterpart(
 ) {
     val isMinimallyComplete: Boolean
         get() = name.isNotBlank() && relationship.isNotBlank()
+
+    fun greeting(language: String): String = greetingByLanguage[language]?.trim().orEmpty()
+
+    /** This person with [text] as their greeting in [language] (empty clears it). */
+    fun withGreeting(text: String, language: String): Counterpart {
+        val clean = text.trim()
+        return copy(greetingByLanguage = if (clean.isEmpty()) greetingByLanguage - language
+            else greetingByLanguage + (language to clean))
+    }
+
+    /** True when this language's greeting should be (re)written by the app. */
+    fun greetingNeedsWriting(language: String, current: Int): Boolean {
+        if (greeting(language).isEmpty()) return true
+        val v = greetingVersionByLanguage[language] ?: 0
+        return v != -1 && v < current
+    }
 
     /** How the row reads in a list: who they are to you, then where. */
     val caption: String

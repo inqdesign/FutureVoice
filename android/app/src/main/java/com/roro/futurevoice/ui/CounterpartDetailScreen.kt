@@ -134,9 +134,12 @@ fun CounterpartDetailScreen(
                     Column {
                         Text(c.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         if (c.relationship.isNotEmpty()) Text(c.relationship, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.voiced_by_0ed8e5, StockPerson.by(c.voicePresetId).nameIn(
-                            com.roro.futurevoice.talk.VoicePreset.activeLanguage())),
-                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        // A library voice is the person's own: no preset name to credit.
+                        com.roro.futurevoice.talk.VoicePreset.known(c.voicePresetId)?.let { preset ->
+                            Text(stringResource(R.string.voiced_by_0ed8e5, preset.nameIn(
+                                com.roro.futurevoice.talk.VoicePreset.activeLanguage())),
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        }
                     }
                 }
             }

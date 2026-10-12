@@ -87,6 +87,8 @@
     <string name="a_talk_or_two_first">"まずトークを1、2回"</string>
     <string name="a_talk_or_two_first_next">"まずトークを1、2回 · 次は%s"</string>
     <string name="a_ticket_agent">"窓口の駅員さん"</string>
+    <!-- "A voice from where you're from, speaking %@. Never your own voice." -->
+    <string name="a_voice_from_where_you_re_from_speaking_never_your_own_voice">"出身国の声が%sで話します。あなた自身の声は使いません。"</string>
     <string name="a_year">"年額"</string>
     <string name="about_half_a_minute">"30秒ほどかかります。"</string>
     <string name="about_lld_hr_a_day">"1日%d時間ほど"</string>
@@ -1114,6 +1116,7 @@
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"何度か読み上げています。30秒ほどかかるので、この画面を閉じずにお待ちください。"</string>
     <string name="making_it_yours">"自分のものにする"</string>
     <string name="making_your_test">"テストを作っています…"</string>
+    <string name="man">"男性"</string>
     <string name="manage_in_the_app_store">"App Storeで管理"</string>
     <string name="manage_subscription">"サブスクリプションの管理"</string>
     <string name="mark_as_known">"「知ってる」にする"</string>
@@ -2167,6 +2170,7 @@
     <!-- 'The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.' -->
     <string name="the_words_the_expressions_the_lines_you_actually_spoke_bound_584f33">"実際に話した単語と表現、文が一冊にまとまります。めくって、シャドーイングして、ずっと持っていけます。"</string>
     <string name="their_name_as_you_call_them">"相手の名前（自分の呼び方で）"</string>
+    <string name="their_own">"この人だけの声"</string>
     <!-- 'Their own voice, chosen with their introduction. Not a recording of anyone.' -->
     <string name="their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731">"自己紹介と一緒に選ばれた、その人の声です。誰かの実際の録音ではありません。"</string>
     <!-- 'Their role comes from the situation you describe — here you pick who plays it.' -->
@@ -2489,6 +2493,7 @@
     <string name="with_a_neighbor">"近所の人と"</string>
     <string name="with_room_in_the_margin">"余白にメモ欄つき"</string>
     <string name="withdraw_consent_delete_my_voice">"同意を撤回して声を削除"</string>
+    <string name="woman">"女性"</string>
     <string name="word_notebook">"単語帳"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"通話とシーン練習で生まれた%d個のうち覚えました"</string>
@@ -2536,6 +2541,7 @@
     <string name="write_down_what_you_hear">"聞こえたとおりに書く"</string>
     <string name="write_every_word_phrase_and_sentence_you_remember">"覚えている単語・表現・文を全部書く"</string>
     <string name="write_it_again">"書き直す"</string>
+    <string name="write_it_again_from_what_i_ve_told_you_lately">"最近話したことから書き直す"</string>
     <string name="write_it_as_a_correct_sentence">"正しい文に組み立てましょう。"</string>
     <string name="write_it_in">"%sで書きます。"</string>
     <!-- 'Write it in %@ — it\'s what "you" will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.' -->
@@ -2802,6 +2808,7 @@
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"1回に話す長さは平均%d語です。何があったかに加えて、どう感じたかも話してみてください。"</string>
     <string name="your_video">"動画"</string>
+    <string name="your_voice">"プロフィールの声"</string>
     <string name="your_voice_in_safe_hands">"声は安全に"</string>
     <string name="your_voice_is_back">"声が戻りました"</string>
     <string name="your_voice_is_handled_with_care">"声は大切に扱います。"</string>

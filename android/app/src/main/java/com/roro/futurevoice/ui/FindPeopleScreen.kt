@@ -78,6 +78,7 @@ import com.roro.futurevoice.net.CoreClubClient
 import com.roro.futurevoice.net.PublicPersonaClient
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.StockPerson
+import com.roro.futurevoice.talk.VoicePreset
 import com.roro.futurevoice.talk.identityIn
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.CoreSeal
@@ -175,13 +176,19 @@ fun FindPeopleScreen(
                 pool = rows
                 // Every character speaks in its OWN voice (iOS
                 // `syncOwnVoices`): a met stranger the learner once re-voiced
-                // goes back to the voice its author picked.
+                // goes back to the voice its author picked (and takes the
+                // row's greeting when theirs is empty).
                 val byId = rows.associateBy { it.id }
                 for (c in ownStore.load()) {
                     val row = c.remoteId?.let { byId[it] } ?: continue
                     val v = row.voice_preset_id
-                    if (StockPerson.catalog.none { it.voiceId == v } || c.voicePresetId == v) continue
-                    ownStore.save(c.copy(voicePresetId = v))
+                    if (StockPerson.catalog.none { it.voiceId == v } && !VoicePreset.isLibraryVoice(v)) continue
+                    var fixed = c.copy(voicePresetId = v)
+                    val g = row.greeting.orEmpty()
+                    if (g.isNotEmpty() && fixed.greeting(row.language).isEmpty()) fixed = fixed.withGreeting(g, row.language)
+                    if (fixed.voicePresetId == c.voicePresetId &&
+                        fixed.greeting(row.language) == c.greeting(row.language)) continue
+                    ownStore.save(fixed)
                 }
             }
             .onFailure { loadFailed = pool.isEmpty() }
@@ -553,7 +560,8 @@ private fun FindPersonCard(
             .sortedByDescending { it.startedAt }
     }
     // Their own voice — the row's, never the learner's pick (iOS 2026-10-12).
-    val voiceId = person.voice_preset_id.takeIf { id -> StockPerson.catalog.any { it.voiceId == id } }
+    val voiceId = person.voice_preset_id.takeIf { id ->
+        StockPerson.catalog.any { it.voiceId == id } || VoicePreset.isLibraryVoice(id) }
         ?: saved?.voicePresetId?.takeIf { it.isNotBlank() }
         ?: StockPerson.catalog.first().voiceId
 
@@ -674,7 +682,7 @@ private fun FindPersonCard(
                     verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.voice), style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f))
-                    Text(StockPerson.catalog.firstOrNull { it.voiceId == voiceId }?.identityIn(language).orEmpty(),
+                    Text(VoicePreset.known(voiceId)?.identityIn(language) ?: stringResource(R.string.their_own),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -923,11 +931,13 @@ private fun PublicPersonaClient.PublicPersona.asCounterpart(metLabel: String) = 
     background = intro,
     conversationStyle = conversation_style,
     commonTopics = interests,
-    voicePresetId = voice_preset_id.takeIf { v -> StockPerson.catalog.any { it.voiceId == v } }
+    voicePresetId = voice_preset_id.takeIf { v ->
+        StockPerson.catalog.any { it.voiceId == v } || VoicePreset.isLibraryVoice(v) }
         ?: StockPerson.catalog.first().voiceId,
     remoteId = id,
     intro = intro,
     personaKind = if (isRealUser) "user" else "character",
+    greetingByLanguage = greeting?.trim()?.takeIf { it.isNotEmpty() }?.let { mapOf(language to it) }.orEmpty(),
 )
 
 /** The reverse, for a met person the pool no longer carries. */

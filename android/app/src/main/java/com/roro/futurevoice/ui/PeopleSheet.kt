@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -211,6 +212,7 @@ internal fun PersonEditor(
     var lookupError by remember { mutableStateOf<String?>(null) }
     /** The voice list, pushed over the form like iOS's NavigationLink. */
     var pickingVoice by remember { mutableStateOf(false) }
+    var writingGreeting by remember { mutableStateOf(false) }
     // Once there is something to lose, Cancel is the ONLY way out: a small
     // vertical drag while reaching for a field used to take the whole form
     // with it (iOS `32f20a1`).
@@ -231,7 +233,7 @@ internal fun PersonEditor(
     fun save() {
         val saved = draft.copy(voicePresetId = draft.voicePresetId.ifBlank {
             StockPerson.catalog.first().voiceId
-        })
+        }).let { it.withGreeting(it.greeting(targetLanguage), targetLanguage) }
         val photo = pendingPhoto
         val drop = removePhoto
         scope.launch {
@@ -241,6 +243,8 @@ internal fun PersonEditor(
             }
         }
         onSave(saved)
+        // Left empty (or written by an older prompt): one is written for them.
+        com.roro.futurevoice.talk.GreetingEngine.ensureInBackground(context, saved, targetLanguage)
     }
 
     ModalBottomSheet(
@@ -422,6 +426,57 @@ internal fun PersonEditor(
                     }
                 }
             }
+            // What they say when you come across them (iOS `8ed963bb`) —
+            // material, so in the language being practised.
+            FormSection(
+                header = stringResource(R.string.greeting),
+                footer = stringResource(R.string.shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298),
+            ) {
+                FormTextRow(draft.greetingByLanguage[targetLanguage].orEmpty(), {
+                    // Kept as typed while editing (a controlled field that
+                    // trimmed on every keystroke could never take a space);
+                    // `greeting()` trims on read. Typed by the learner: never
+                    // rewritten by the app.
+                    draft = draft.copy(
+                        greetingByLanguage = if (it.isBlank()) draft.greetingByLanguage - targetLanguage
+                            else draft.greetingByLanguage + (targetLanguage to it),
+                        greetingVersionByLanguage = draft.greetingVersionByLanguage + (targetLanguage to -1))
+                }, stringResource(R.string.what_they_say_when_you_meet_them), maxLines = 3)
+                FormDivider()
+                val enabled = !writingGreeting && draft.isMinimallyComplete
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable(enabled = enabled) {
+                            writingGreeting = true
+                            scope.launch {
+                                runCatching {
+                                    com.roro.futurevoice.talk.GreetingEngine.write(draft, null, targetLanguage)
+                                }.onSuccess { line ->
+                                    val written = draft.withGreeting(line, targetLanguage)
+                                    draft = written.copy(greetingVersionByLanguage = written.greetingVersionByLanguage +
+                                        (targetLanguage to com.roro.futurevoice.talk.GreetingEngine.PROMPT_VERSION))
+                                }
+                                writingGreeting = false
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (writingGreeting) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.writing), style = MaterialTheme.typography.bodyLarge)
+                    } else {
+                        val tint = if (enabled) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = tint,
+                            modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(R.string.write_one_for_me), color = tint,
+                            style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
             // Never a clone — the person on the other end is someone else.
             FormSection(stringResource(R.string.voice)) {
                 Row(
@@ -550,7 +605,7 @@ internal fun VoicePresetPicker(
  *  The `<break>` is ElevenLabs' pause tag: measured on the Korean line, the
  *  period after 반가워요 gave NO pause at all. It is spoken as silence, never
  *  read out; this line is audio only, never drawn as text. */
-private fun voicePreviewLine(code: String): String = when (code.substringBefore("-")) {
+internal fun voicePreviewLine(code: String): String = when (code.substringBefore("-")) {
     "es" -> "¡Hola! Qué alegría verte. <break time=\"0.5s\" /> ¿Empezamos?"
     "de" -> "Hallo! Schön, dich zu sehen. <break time=\"0.5s\" /> Sollen wir anfangen?"
     "fr" -> "Bonjour ! Ça me fait plaisir de te voir. <break time=\"0.5s\" /> On commence ?"

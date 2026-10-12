@@ -1055,6 +1055,32 @@ struct Counterpart: Codable, Identifiable, Hashable {
     /// where they belong — the practice target was fixed to English then.
     var scenariosByLanguage: [String: [SuggestedTopic]] = [:]
 
+    /// What they say when you come across them — the line over their face on
+    /// the Watch map. Material, so per target language; written by hand in
+    /// the person form or by `GreetingEngine` when there is none.
+    var greetingByLanguage: [String: String] = [:]
+    /// How each greeting was made: the `GreetingEngine.promptVersion` that
+    /// wrote it, or -1 when the learner wrote it. Absent = written by an
+    /// earlier prompt (every greeting before this field was the app's), so
+    /// it is written again; the learner's own line is never replaced.
+    var greetingVersionByLanguage: [String: Int] = [:]
+
+    /// True when this language's greeting should be (re)written by the app.
+    func greetingNeedsWriting(in language: String, current: Int) -> Bool {
+        if greeting(in: language).isEmpty { return true }
+        let v = greetingVersionByLanguage[language] ?? 0
+        return v != -1 && v < current
+    }
+
+    func greeting(in language: String) -> String {
+        greetingByLanguage[language]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    mutating func setGreeting(_ text: String, in language: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        greetingByLanguage[language] = clean.isEmpty ? nil : clean
+    }
+
     func savedScenarios(in language: String) -> [SuggestedTopic] {
         scenariosByLanguage[language] ?? []
     }
@@ -1099,7 +1125,7 @@ extension Counterpart {
         case conversationStyle, commonTopics, voicePresetId, freeNotes
         case remoteId, intro, personaKind
         case isPublicFigure, publicIdentity, factsRefreshedAt
-        case scenariosByLanguage, createdAt, updatedAt
+        case scenariosByLanguage, greetingByLanguage, greetingVersionByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
     }
@@ -1127,6 +1153,8 @@ extension Counterpart {
         isPublicFigure = try c.decodeIfPresent(Bool.self, forKey: .isPublicFigure)
         publicIdentity = try c.decodeIfPresent(String.self, forKey: .publicIdentity)
         factsRefreshedAt = try c.decodeIfPresent(Date.self, forKey: .factsRefreshedAt)
+        greetingByLanguage = (try? c.decodeIfPresent([String: String].self, forKey: .greetingByLanguage)) ?? [:]
+        greetingVersionByLanguage = (try? c.decodeIfPresent([String: Int].self, forKey: .greetingVersionByLanguage)) ?? [:]
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -1164,6 +1192,10 @@ extension Counterpart {
         try c.encodeIfPresent(remoteId, forKey: .remoteId)
         try c.encode(intro, forKey: .intro)
         try c.encodeIfPresent(personaKind, forKey: .personaKind)
+        if !greetingByLanguage.isEmpty { try c.encode(greetingByLanguage, forKey: .greetingByLanguage) }
+        if !greetingVersionByLanguage.isEmpty {
+            try c.encode(greetingVersionByLanguage, forKey: .greetingVersionByLanguage)
+        }
         try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)
@@ -1201,6 +1233,21 @@ struct VoicePreset: Hashable, Identifiable {
                     displayName: "James", gender: "Male", accent: "British",
                     description: "Warm, easygoing"),
     ]
+
+    /// A Cartesia library voice (a UUID): a Find-people person's own voice
+    /// or a learner's public-profile voice (2026-10-12). It speaks as itself
+    /// in every language, has no preset name, and the servers allow it
+    /// because Cartesia publishes it to everyone (`isStockVoice`).
+    static func isLibraryVoice(_ id: String?) -> Bool {
+        guard let id else { return false }
+        return id.range(of: #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"#,
+                        options: .regularExpression) != nil
+    }
+
+    /// The preset this id names, or nil for anything else (a library voice).
+    static func known(id: String?) -> VoicePreset? {
+        catalog.first(where: { $0.id == id })
+    }
 
     static func by(id: String) -> VoicePreset {
         catalog.first(where: { $0.id == id }) ?? catalog[0]

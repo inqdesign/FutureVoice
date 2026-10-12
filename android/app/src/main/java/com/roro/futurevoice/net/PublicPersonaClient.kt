@@ -37,6 +37,9 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         val language: String = "en",
         val voice_preset_id: String = "",
         val kind: String? = null,
+        /** What they say when a learner comes across them on the map — written
+         *  at publish (by the author, or for them). Empty on rows from before. */
+        val greeting: String? = null,
     ) {
         /** A published learner is a USER whatever `kind` says — ownership is the fact. */
         val isRealUser: Boolean get() = owner_user_id != null
@@ -44,7 +47,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
 
     private val columns =
         "id,owner_user_id,display_name,intro,location,occupation,interests," +
-            "conversation_style,language,voice_preset_id,kind"
+            "conversation_style,language,voice_preset_id,kind,greeting"
 
     // MARK: - My own row
 
@@ -65,6 +68,10 @@ class PublicPersonaClient(private val auth: AuthRepository) {
          *  (`public_personas_intro_bounds`). A one-liner can't carry a
          *  conversation, and the same bar keeps thin rows out of the pool. */
         const val MIN_INTRO = 80
+
+        /** The voice the learner picked for their public profile
+         *  ([com.roro.futurevoice.ui.ProfileVoiceRows]) — iOS `chosenVoiceKey`. */
+        const val CHOSEN_VOICE_KEY = "futurevoice.publicIntro.voice"
 
         fun prefs(context: android.content.Context): android.content.SharedPreferences =
             context.getSharedPreferences("futurevoice", 0)
@@ -130,22 +137,32 @@ class PublicPersonaClient(private val auth: AuthRepository) {
             trimUnapprovedRow(p, language)
             return
         }
-        publishMirror(p, language)
+        publishMirror(p, language, prefs)
     }
 
     /**
-     * Publish the composed profile as the learner's row. The voice is a
-     * stable per-user pick so "you" doesn't change voices between launches.
-     * True when the row is up.
+     * Publish the composed profile as the learner's row. The voice is the one
+     * the learner picked ([CHOSEN_VOICE_KEY]); else the one already on their
+     * row, so "you" never changes voices between launches; else a stable
+     * per-user preset. True when the row is up.
      */
-    suspend fun publishMirror(p: com.roro.futurevoice.talk.UserPersona, language: String): Boolean {
+    suspend fun publishMirror(
+        p: com.roro.futurevoice.talk.UserPersona,
+        language: String,
+        prefs: android.content.SharedPreferences? = null,
+    ): Boolean {
         val intro = PublicIntroComposer.compose(p, language)
         // 80 because the DATABASE says 80: a lower client bar doesn't publish
         // thinner rows, it just fails the write on every launch.
         if (intro.length < MIN_INTRO) return false
         val uid = auth.userId ?: return false
-        val catalog = com.roro.futurevoice.talk.StockPerson.catalog
-        val voice = catalog[Math.floorMod(uid.hashCode(), catalog.size)]
+        val picked = prefs?.getString(CHOSEN_VOICE_KEY, null)
+        val voiceId = picked
+            ?: runCatching { fetchMine(language)?.voice_preset_id }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: run {
+                val catalog = com.roro.futurevoice.talk.StockPerson.catalog
+                catalog[Math.floorMod(uid.hashCode(), catalog.size)].voiceId
+            }
         return runCatching {
             publishMine(
                 displayName = p.displayName,
@@ -153,7 +170,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
                 location = listOf(p.city, p.country).filter { it.isNotBlank() }.joinToString(", "),
                 occupation = p.occupation,
                 interests = p.interests.joinToString(", "),
-                voicePresetId = voice.voiceId,
+                voicePresetId = voiceId,
                 language = language,
             )
         }.isSuccess
@@ -197,8 +214,22 @@ class PublicPersonaClient(private val auth: AuthRepository) {
     suspend fun publishMine(
         displayName: String, intro: String, location: String, occupation: String,
         interests: String, voicePresetId: String, language: String,
+        greeting: String? = null,
     ) = withContext(Dispatchers.IO) {
         val uid = auth.userId ?: return@withContext
+        val existing = fetchMine(language)
+        // The greeting is made at publish: the author's own words when given,
+        // else the one already on the row, else one written from the intro.
+        var line = greeting?.trim().orEmpty()
+        if (line.isEmpty()) line = existing?.greeting.orEmpty()
+        if (line.isEmpty()) {
+            val me = com.roro.futurevoice.data.Counterpart(
+                name = displayName, voicePresetId = voicePresetId,
+                remoteId = "self", intro = intro, location = location)
+            line = runCatching {
+                com.roro.futurevoice.talk.GreetingEngine.write(me, null, language)
+            }.getOrNull().orEmpty()
+        }
         val row = buildJsonObject {
             put("owner_user_id", uid)
             put("display_name", displayName)
@@ -209,8 +240,8 @@ class PublicPersonaClient(private val auth: AuthRepository) {
             put("language", language)
             put("voice_preset_id", voicePresetId)
             put("is_active", true)
+            put("greeting", line)
         }
-        val existing = fetchMine(language)
         val base = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas"
         val url = if (existing != null) "$base?id=eq.${existing.id}" else base
         val body = Edge.json.encodeToString(JsonObject.serializer(), row)
