@@ -1498,8 +1498,14 @@ struct SkyPersonCard: View {
             }
             .font(.footnote.weight(.semibold))
             .foregroundStyle(.secondary)
+            // A real tap target, with air above and a clear gap before the
+            // row of actions.
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .padding(.top, -2)
+        .padding(.bottom, 8)
     }
 
     private func section<C: View>(_ title: LocalizedStringKey, @ViewBuilder _ content: () -> C) -> some View {
