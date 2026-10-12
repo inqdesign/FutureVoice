@@ -62,6 +62,8 @@ struct WatchTab: View {
     /// ones the person card and the box's reel already show), tapped into
     /// the box.
     @State private var dockPerson: Counterpart?
+    /// The box was opened from a person's card: no category chips.
+    @State private var dockNoChips = false
     @State private var dockBubble: String?
     @State private var dockFill = ""
     /// "New situation" was tapped: the tab bar steps aside for the box, the
@@ -228,7 +230,15 @@ struct WatchTab: View {
                             // grid answers a different question — you don't
                             // browse for the talk you're dreading with a
                             // particular person, you describe it.
-                            composer = ComposerConfig(person: p, mode: .custom)
+                            if PeopleSky.dockEnabled {
+                                // The same box the "New situation" button opens,
+                                // with them as the person and no chips above it.
+                                dockNoChips = true
+                                creating = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dockPerson = p }
+                            } else {
+                                composer = ComposerConfig(person: p, mode: .custom)
+                            }
                         })
                         .environmentObject(appState)
                         .toolbar {
@@ -342,7 +352,8 @@ struct WatchTab: View {
                                           embedded: true,
                                           partnerSync: $dockPerson,
                                           situationSync: $dockFill,
-                                          onPickCategory: pickDockCategory) { scenario in
+                                          onPickCategory: pickDockCategory,
+                                          showsCategoryChips: !dockNoChips) { scenario in
                         appState.saveScenario(scenario)
                         watchScene = WatchTarget(scenario: scenario, fresh: false)
                     }
@@ -382,6 +393,9 @@ struct WatchTab: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { pickDockCategory(cat) }
             }
             #endif
+            .onChange(of: creation.creating) { _, on in
+                if !on { dockNoChips = false }
+            }
             .onChange(of: dockPerson?.id) { _, id in
                 // Picked in the box (its person chip, or a category chip):
                 // bring them to the middle. Picked BY the middle: already there.

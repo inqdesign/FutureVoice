@@ -61,6 +61,10 @@ struct ScenarioComposerSheet: View {
     var situationSync: Binding<String>? = nil
     /// A category chip was tapped — the host picks who it is with.
     var onPickCategory: ((Category) -> Void)? = nil
+    /// Whether the common-situation chips ride above the box. Off when the
+    /// box was opened FOR someone (a person's "Make a situation"): that door
+    /// is for describing the thing coming up with them, not browsing.
+    var showsCategoryChips: Bool = true
     let onCommit: (Scenario) -> Void
 
     @EnvironmentObject private var appState: AppState
@@ -461,12 +465,12 @@ struct ScenarioComposerSheet: View {
                         .padding(.horizontal, 16)
                         .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
                         .transition(.opacity)
-                } else {
+                } else if showsCategoryChips {
                     categoryChipRow
                         .transition(.opacity)
                 }
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, showsCategoryChips || customMode ? 10 : 0)
             VStack(alignment: .leading, spacing: 8) {
                 if !sources.isEmpty {
                     attachmentChips
