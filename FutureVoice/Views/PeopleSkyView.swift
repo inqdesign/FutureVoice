@@ -430,6 +430,9 @@ struct PeopleSkyMap: View {
                             .allowsHitTesting(on)
                             .accessibilityHidden(!on)
                             .position(pos[n.id] ?? CGPoint(x: c, y: c))
+                            // A seat never glides: whatever moves it (the pool
+                            // landing, a reshuffle) it is simply there.
+                            .animation(nil, value: pos[n.id])
                         // Placed by alignment guides, not `.position` (a positioned
                         // view fills the whole map) or `.offset` (draws elsewhere,
                         // laid out at the corner): scrolling to it needs its

@@ -366,6 +366,11 @@ struct WatchTab: View {
                 }
             }
             .task(id: appState.targetLanguage) { await loadSkyPool() }
+            .task {
+                // A pool that never answers must not leave the tab blank.
+                try? await Task.sleep(for: .seconds(2.5))
+                if !skyReady { skyReady = true }
+            }
             #if DEBUG
             .onChange(of: skyReady) { _, ready in
                 guard ready, let chip = UserDefaults.standard.string(forKey: "dockChip"),
@@ -541,14 +546,19 @@ struct WatchTab: View {
     }
 
     private func loadSkyPool() async {
-        // Shown in a LATER transaction than the pool lands in: the fade-in's
-        // animation otherwise carried every seat from the half-built map to
-        // the full one, and people flew across the screen on opening.
-        defer { DispatchQueue.main.async { skyReady = true } }
-        guard let pool = try? await PublicPersonaService.fetchPool(language: appState.targetLanguage)
-        else { return }
-        skyPool = pool.map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
-        skyJobs = Dictionary(pool.map { ($0.id, $0.occupation) }, uniquingKeysWith: { a, _ in a })
+        // The map is shown once the pool is IN (or truly failed) and in a
+        // later transaction than it lands in. A cancelled fetch — the tab's
+        // task restarts when the view appears twice — used to count as
+        // "ready": the half-built map faded in and everyone then slid to
+        // their real seats.
+        do {
+            let pool = try await PublicPersonaService.fetchPool(language: appState.targetLanguage)
+            skyPool = pool.map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
+            skyJobs = Dictionary(pool.map { ($0.id, $0.occupation) }, uniquingKeysWith: { a, _ in a })
+        } catch {
+            if Task.isCancelled || error is CancellationError { return }
+        }
+        DispatchQueue.main.async { skyReady = true }
     }
 
     private func countTalks() {
