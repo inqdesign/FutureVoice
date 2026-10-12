@@ -368,7 +368,8 @@ struct WatchTab: View {
                                           partnerSync: $dockPerson,
                                           situationSync: $dockFill,
                                           onPickCategory: pickDockCategory,
-                                          showsCategoryChips: !dockNoChips) { scenario in
+                                          showsCategoryChips: !dockNoChips,
+                                          focusOnAppear: dockNoChips) { scenario in
                         appState.saveScenario(scenario)
                         watchScene = WatchTarget(scenario: scenario, fresh: false)
                     }

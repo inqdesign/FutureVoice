@@ -65,6 +65,9 @@ struct ScenarioComposerSheet: View {
     /// box was opened FOR someone (a person's "Make a situation"): that door
     /// is for describing the thing coming up with them, not browsing.
     var showsCategoryChips: Bool = true
+    /// Open with the field focused and the keyboard up (a person's "Make a
+    /// situation": the next thing to do is write).
+    var focusOnAppear: Bool = false
     let onCommit: (Scenario) -> Void
 
     @EnvironmentObject private var appState: AppState
@@ -199,6 +202,12 @@ struct ScenarioComposerSheet: View {
     var body: some View {
         if embedded {
             common(embeddedBox)
+                .task {
+                    guard focusOnAppear else { return }
+                    // After the box's rise, or the focus is lost mid-move.
+                    try? await Task.sleep(for: .milliseconds(350))
+                    situationFocused = true
+                }
         } else {
             NavigationStack {
                 common(sheetBody)
