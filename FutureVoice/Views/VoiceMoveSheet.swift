@@ -121,8 +121,9 @@ struct VoiceMoveSheet: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Start over", role: .destructive) {
                     Analytics.capture("voice_move_rerecord")
-                    // The recording screen on its own, never the onboarding.
-                    rerecording = true
+                    // The recording screen on its own, never the onboarding —
+                    // opened once the alert has gone, or it is dropped.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { rerecording = true }
                 }
             } message: {
                 Text(explain("Your current voice is deleted and you'll record a new one."))

@@ -364,27 +364,13 @@ struct MeTab: View {
                         targetLanguage: appState.targetLanguage),
                     // Outside onboarding a re-record is the full destructive path,
                     // so hand it to the confirmation that already guards it.
-                    onRerecord: { confirmingVoiceReset = true })
+                    onRerecord: {
+                        // Close this sheet first: the confirm lives on the
+                        // Voice page, which can't present over it.
+                        comparingVoice = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { confirmingVoiceReset = true }
+                    })
                     .environmentObject(appState)
-            }
-            .fullScreenCover(isPresented: $rerecording) {
-                VoiceCloneOnboardingView(fromSettings: true) { rerecording = false }
-                    .environmentObject(appState)
-                    .environmentObject(auth)
-            }
-            .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
-                Button("Cancel", role: .cancel) {}
-                Button("Start over", role: .destructive) {
-                    // The recording screen on its own, never the onboarding:
-                    // the voice they have stays until a new one is made.
-                    rerecording = true
-                }
-            } message: {
-                // Ledger data showed users re-cloning many times without
-                // realizing each one bills and destroys the previous voice —
-                // all three consequences must be on the confirm, both here
-                // and on "Regenerate from saved recording".
-                Text(Self.recloneWarning)
             }
             .alert("Sign out?", isPresented: $confirmingSignOut) {
                 Button("Cancel", role: .cancel) {}
@@ -1090,6 +1076,31 @@ struct MeTab: View {
         List { voiceSection }
             .navigationTitle("Voice")
             .navigationBarTitleDisplayMode(.inline)
+            // On the page itself: it is PUSHED, and a confirm or cover
+            // attached to the Settings list behind it never came up — the
+            // button read as dead (2026-10-13).
+            .fullScreenCover(isPresented: $rerecording) {
+                VoiceCloneOnboardingView(fromSettings: true) { rerecording = false }
+                    .environmentObject(appState)
+                    .environmentObject(auth)
+            }
+            .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
+                Button("Cancel", role: .cancel) {}
+                Button("Start over", role: .destructive) {
+                    // The recording screen on its own, never the onboarding:
+                    // the voice they have stays until a new one is made.
+                    // After the alert has gone: a cover asked for while the
+                    // alert is still closing is dropped, and the button reads
+                    // as doing nothing (2026-10-13).
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { rerecording = true }
+                }
+            } message: {
+                // Ledger data showed users re-cloning many times without
+                // realizing each one bills and destroys the previous voice —
+                // all three consequences must be on the confirm, both here
+                // and on "Regenerate from saved recording".
+                Text(Self.recloneWarning)
+            }
     }
 
     /// Device audio, kept OFF the Voice page. Voice is about the clone —
