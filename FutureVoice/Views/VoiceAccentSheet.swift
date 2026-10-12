@@ -66,12 +66,6 @@ struct VoiceAccentSheet: View {
                     takesSection
                     applySection
                 }
-                // LAST, and in a section of its own. It used to sit first in
-                // the accent list, where a row reading "no accent" looked like
-                // a fourth option to pick rather than the way back — and the
-                // way back is the one thing on this screen that can't be
-                // undone by tapping something else.
-                if canRemoveAccent { removeAccentSection }
             }
             // Any exit — Cancel, a swipe, the parent going away — after a
             // rebuild that nothing was applied on top of: the live voice is
@@ -146,6 +140,13 @@ struct VoiceAccentSheet: View {
 
     private var accentSection: some View {
         Section {
+            // "Original" is an option in the list again (2026-10-12, founder
+            // decision), the same one the onboarding pills carry: the voice
+            // as recorded, checked whenever no accent is applied. Picking it
+            // asks first and rebuilds from the saved recording — the old
+            // "Remove accent" action, which sat alone at the bottom and only
+            // appeared once an accent was on.
+            originalRow
             ForEach(options) { option in
                 accentRow(option)
             }
@@ -160,24 +161,27 @@ struct VoiceAccentSheet: View {
         }
     }
 
-    /// The way back — its own section so it reads as an action, not an option.
-    /// The capability lives here rather than only in Me → Voice because "I
-    /// want the accent gone" is decided on this screen; making the learner
-    /// leave, hunt through settings and recognize "Regenerate from saved
-    /// recording" as the answer was the old, worse version of having it.
-    private var removeAccentSection: some View {
-        Section {
-            Button(role: .destructive) { confirmingRemove = true } label: {
-                HStack {
-                    Text(chrome("Remove accent"))
-                    Spacer()
-                    if removing { ProgressView() }
+    /// The voice as recorded. Checked when no accent is applied; with one
+    /// applied, a tap asks and then rebuilds from the saved recording.
+    private var originalRow: some View {
+        Button {
+            guard appState.voiceAccentId != nil else { return }
+            confirmingRemove = true
+        } label: {
+            HStack {
+                Text("accent.original")
+                    .foregroundStyle(.primary)
+                Spacer()
+                if removing {
+                    ProgressView()
+                } else if appState.voiceAccentId == nil && accent == nil {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
                 }
             }
-            .disabled(generating || saving || removing || !appState.canChangeVoice)
-        } footer: {
-            Text(explain("Back to the voice your recording makes on its own."))
         }
+        .disabled(generating || saving || removing
+                  || (appState.voiceAccentId != nil && (!canRemoveAccent || !appState.canChangeVoice)))
     }
 
     private func accentRow(_ option: VoiceAccent) -> some View {
