@@ -19,6 +19,11 @@ struct VoiceAccentSheet: View {
     /// at once, so the tap that picked the accent is the one that asked.
     var initialAccent: VoiceAccent? = nil
     var onApplied: (() -> Void)? = nil
+    /// Opened right after a re-record (2026-10-13, founder: the new voice
+    /// closed the screen before it could be heard). Heads the sheet with the
+    /// new voice to listen to, then the accent choice.
+    var justMade = false
+    @State private var playingVoice = false
 
     @State private var accent: VoiceAccent?
     @State private var previews: [ElevenLabsClient.RemixPreview] = []
@@ -60,6 +65,7 @@ struct VoiceAccentSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                hearSection
                 accentSection
                 if !previews.isEmpty {
                     takesSection
@@ -75,6 +81,7 @@ struct VoiceAccentSheet: View {
                 if rebuiltWithoutApply { onApplied?() }
             }
             .onAppear {
+                if justMade { hearVoice() }
                 // Show what's already live. `accent` doubles as "whose takes
                 // are on screen", but previews are empty here, so this only
                 // checkmarks the applied one.
@@ -125,6 +132,33 @@ struct VoiceAccentSheet: View {
             } message: {
                 Text(error ?? "")
             }
+        }
+    }
+
+    /// The voice as it is now, to listen to before picking anything.
+    private var hearSection: some View {
+        Section {
+            Button {
+                hearVoice()
+            } label: {
+                Label(playingVoice && player.isPlaying ? explain("Stop") : explain("Hear your voice"),
+                      systemImage: playingVoice && player.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+            }
+            .disabled(generating || saving || removing || appState.voiceCloneId == nil)
+        } header: {
+            if justMade { Text("Your new voice is ready") }
+        }
+    }
+
+    private func hearVoice() {
+        if playingVoice, player.isPlaying { player.stop(); playingVoice = false; return }
+        guard let voiceId = appState.voiceCloneId else { return }
+        let text = VoiceAccentCatalog.sampleText(for: appState.targetLanguage)
+        playingVoice = true
+        Task {
+            guard let data = try? await ElevenLabsClient.shared.synthesize(
+                voiceId: voiceId, text: text, purpose: "voice_comparison") else { playingVoice = false; return }
+            try? player.play(data, source: "voice_accent") { playingVoice = false }
         }
     }
 

@@ -43,6 +43,8 @@ struct MeTab: View {
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
     @State private var rerecording = false
+    @State private var voiceBeforeRerecord: String?
+    @State private var accentAfterRerecord = false
     @State private var confirmingVoiceRegenerate = false
     @State private var confirmingSignOut = false
     @State private var confirmingAccountDelete = false
@@ -350,8 +352,8 @@ struct MeTab: View {
             // List renders sections lazily, so a .sheet attached inside a
             // Section loses its presentation as soon as it appears — present
             // from the List like every other sheet here.
-            .sheet(isPresented: $pickingAccent) {
-                VoiceAccentSheet()
+            .sheet(isPresented: $pickingAccent, onDismiss: { accentAfterRerecord = false }) {
+                VoiceAccentSheet(justMade: accentAfterRerecord)
                     .environmentObject(appState)
             }
             // Same reason as the accent sheet: attached inside the voice
@@ -367,6 +369,7 @@ struct MeTab: View {
                         // Close this sheet first: the confirm lives on the
                         // Voice page, which can't present over it.
                         comparingVoice = false
+                        voiceBeforeRerecord = appState.voiceCloneId
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { rerecording = true }
                     })
                     .environmentObject(appState)
@@ -888,6 +891,7 @@ struct MeTab: View {
             Button(role: .destructive) {
                 // Straight to the recording screen: its Cancel keeps the voice
                 // they have, so there is nothing to confirm (2026-10-13).
+                voiceBeforeRerecord = appState.voiceCloneId
                 rerecording = true
             } label: {
                 row(icon: "mic.badge.plus",
@@ -1081,7 +1085,16 @@ struct MeTab: View {
             // attached to the Settings list behind it never came up — the
             // button read as dead (2026-10-13).
             .fullScreenCover(isPresented: $rerecording) {
-                VoiceCloneOnboardingView(fromSettings: true) { rerecording = false }
+                VoiceCloneOnboardingView(fromSettings: true) {
+                    rerecording = false
+                    // A new voice was made: hear it and pick the accent next.
+                    if appState.voiceCloneId != voiceBeforeRerecord {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            accentAfterRerecord = true
+                            pickingAccent = true
+                        }
+                    }
+                }
                     .environmentObject(appState)
                     .environmentObject(auth)
             }

@@ -111,7 +111,15 @@ struct VoiceMoveSheet: View {
         .fullScreenCover(isPresented: $rerecording) {
             VoiceCloneOnboardingView(fromSettings: true) {
                 rerecording = false
-                if VoiceMove.isCartesia(appState.voiceCloneId ?? "") { phase = .done }
+                // A new voice: give it the accent picked above, then let them hear it.
+                if VoiceMove.isCartesia(appState.voiceCloneId ?? "") {
+                    phase = .working
+                    Task {
+                        try? await applyPickedAccent()
+                        phase = .done
+                        playSample()
+                    }
+                }
             }
             .environmentObject(appState)
             .environmentObject(auth)
@@ -172,16 +180,7 @@ struct VoiceMoveSheet: View {
                     }
                     await appState.adoptMovedVoice(moved)
                 }
-                if let accent, let newId = appState.voiceCloneId,
-                   let cartesiaAccent = VoiceMove.cartesiaAccent(accent.id) {
-                    // On Cartesia an accent is a setting on the same voice, so
-                    // saving "<uuid>:<accent>" is the whole of applying it.
-                    let accented = try await ElevenLabsClient.shared.saveRemixedVoice(
-                        generatedVoiceId: "\(newId):\(cartesiaAccent)",
-                        name: appState.voiceDisplayName,
-                        voiceDescription: accent.prompt)
-                    await appState.adoptRemixedVoice(accented, accentId: accent.id, source: "move")
-                }
+                try await applyPickedAccent()
                 Analytics.capture("voice_move_done", ["accent": accent?.id ?? "original"])
                 HapticEngine.success()
                 phase = .done
@@ -193,6 +192,19 @@ struct VoiceMoveSheet: View {
                 phase = .ready
             }
         }
+    }
+
+    /// On Cartesia an accent is a setting on the same voice, so saving
+    /// "<uuid>:<accent>" is the whole of applying it.
+    private func applyPickedAccent() async throws {
+        guard let accent = options.first(where: { $0.id == accentId }),
+              let newId = appState.voiceCloneId,
+              let cartesiaAccent = VoiceMove.cartesiaAccent(accent.id) else { return }
+        let accented = try await ElevenLabsClient.shared.saveRemixedVoice(
+            generatedVoiceId: "\(newId):\(cartesiaAccent)",
+            name: appState.voiceDisplayName,
+            voiceDescription: accent.prompt)
+        await appState.adoptRemixedVoice(accented, accentId: accent.id, source: "move")
     }
 
     private func playSample() {
