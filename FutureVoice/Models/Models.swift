@@ -1383,20 +1383,44 @@ struct VoicePreset: Hashable, Identifiable {
     // here must also be in the two server allowlists (gateway/src/supabase.ts,
     // supabase/functions/elevenlabs-tts) or the server refuses it.
     private static let voicedBySlot: [String: [String: String]] = {
-        let korean = [
-            "NDTYOmYEjbDIVCKB35i3": "5n5gqmaQi9Ewevrz7bOS",  // Paige → Sian (F)
-            "UgBBYS2sOqTuMpoF3BR0": "L4az9Gb378GIycFl2nAB",  // Mark  → "KO - Calm, Friendly, Warm" (M)
-            "FF59babHL8N8gfTgtBMT": "8jHHF8rMqMlg8if2mOUe",  // Emma  → Han (F)
-            "L0Dsvb3SLTyegXwtm47J": "AKF7f2y1L8ktV5vxXILw",  // James → Joon (M)
+        // Every selectable target language speaks from Cartesia's library
+        // since 2026-10-12 (the ElevenLabs voices above are now only the
+        // SLOT ids stored on people and scenarios). Picked from the
+        // candidates in Desktop/beta audio/preset-candidates; English keeps
+        // the slots' American/British split.
+        let english = [
+            "NDTYOmYEjbDIVCKB35i3": "999df508-4de5-40a7-8bd3-8c12f678c284",  // Paige → Layla (F, US)
+            "UgBBYS2sOqTuMpoF3BR0": "c961b81c-a935-4c17-bfb3-ba2239de8c2f",  // Mark  → Kyle (M, US)
+            "FF59babHL8N8gfTgtBMT": "e5d4c33a-d8f6-46e8-a10f-b5afecc35648",  // Emma  → Evie (F, GB)
+            "L0Dsvb3SLTyegXwtm47J": "3d5ce2fb-e56c-42f0-9ed9-4662484063b4",  // James → Toby (M, GB)
         ]
-        return ["ko": korean, "ja": korean]
+        let german = [
+            "NDTYOmYEjbDIVCKB35i3": "1ade29fc-6b82-4607-9e70-361720139b12",  // Lea (F)
+            "UgBBYS2sOqTuMpoF3BR0": "dff81230-ff75-49a4-af44-f6b2f43500d8",  // Jonas (M)
+            "FF59babHL8N8gfTgtBMT": "3f4ade23-6eb4-4279-ab05-6a144947c4d5",  // Karin (F)
+            "L0Dsvb3SLTyegXwtm47J": "afa425cf-5489-4a09-8a3f-d3cb1f82150d",  // Nico (M)
+        ]
+        let korean = [
+            "NDTYOmYEjbDIVCKB35i3": "cac92886-4b7c-4bc1-a524-e0f79c0381be",  // 시안 ← Yuna (F)
+            "UgBBYS2sOqTuMpoF3BR0": "537a82ae-4926-4bfb-9aec-aff0b80a12a5",  // 민준 ← Minho (M)
+            "FF59babHL8N8gfTgtBMT": "cd6c48a9-774b-4397-98b4-9948c0a790f0",  // 한별 ← Soojin (F)
+            "L0Dsvb3SLTyegXwtm47J": "f7755efb-1848-4321-aa22-5e5be5d32486",  // 준호 ← Ryeowook (M)
+        ]
+        let japanese = [
+            "NDTYOmYEjbDIVCKB35i3": "c7eafe22-8b71-40cd-850b-c5a3bbd8f8d2",  // 美咲 ← Emi (F)
+            "UgBBYS2sOqTuMpoF3BR0": "b8e1169c-f16a-4064-a6e0-95054169e553",  // 翔太 ← Takashi (M)
+            "FF59babHL8N8gfTgtBMT": "7be83d14-4707-43ad-9774-e24eb38320f0",  // 陽菜 ← Rin (F)
+            "L0Dsvb3SLTyegXwtm47J": "6b92f628-be90-497c-8f4c-3b035002df71",  // 健太 ← Kenji (M)
+        ]
+        return ["en": english, "de": german, "ko": korean, "ja": japanese]
     }()
 
     /// The voice that speaks a stored voice id in `language`. Anything that
     /// isn't a preset slot — the learner's clone, a retired preset id —
     /// passes through untouched.
     static func speaking(_ voiceId: String, in language: String) -> String {
-        voicedBySlot[language]?[voiceId] ?? voiceId
+        let base = language.split(separator: "-").first.map(String.init) ?? language
+        return voicedBySlot[base]?[voiceId] ?? voiceId
     }
 
     /// Where a slot speaks in another language's own voice, it goes by a name
@@ -1406,6 +1430,8 @@ struct VoicePreset: Hashable, Identifiable {
     /// voices but takes Japanese names, because the scene is written in
     /// Japanese around them.
     private static let localNames: [String: [String: String]] = [
+        "de": ["NDTYOmYEjbDIVCKB35i3": "Lea", "UgBBYS2sOqTuMpoF3BR0": "Jonas",
+               "FF59babHL8N8gfTgtBMT": "Karin", "L0Dsvb3SLTyegXwtm47J": "Nico"],
         "ko": ["NDTYOmYEjbDIVCKB35i3": "시안", "UgBBYS2sOqTuMpoF3BR0": "민준",
                "FF59babHL8N8gfTgtBMT": "한별", "L0Dsvb3SLTyegXwtm47J": "준호"],
         "ja": ["NDTYOmYEjbDIVCKB35i3": "美咲", "UgBBYS2sOqTuMpoF3BR0": "翔太",
@@ -1431,7 +1457,7 @@ struct VoicePreset: Hashable, Identifiable {
     /// voice, while the name and the sample follow the language practised.
     /// `gender` / `accent` / `description` stay English — prompts read them.
     func caption(in language: String) -> String {
-        Self.speaking(id, in: language) == id
+        Self.speaking(id, in: language) == id || language.hasPrefix("en")
             ? "\(genderLabel) · \(accentLabel) · \(descriptionLabel)"
             : genderLabel
     }
@@ -1535,7 +1561,8 @@ struct StockPerson: Identifiable, Hashable {
     /// native voice (`VoicePreset.speaking`) that would cast an American
     /// speaking Korean, so the nationality is dropped and the rest stands.
     func identity(in language: String) -> String {
-        guard VoicePreset.speaking(voice.id, in: language) != voice.id else { return identity }
+        guard VoicePreset.speaking(voice.id, in: language) != voice.id,
+              !language.hasPrefix("en") else { return identity }
         let rest = identity.replacingOccurrences(
             of: #"(American|British), "#, with: "", options: .regularExpression)
         // …and the name is the one this language gives the slot.
