@@ -44,7 +44,7 @@ object ConsentStore {
      *  silently treated as current. */
     const val POLICY_VERSION = "2026-08-14"
 
-    const val CONTACT_EMAIL = "hello.dearroroapp@gmail.com"
+    const val CONTACT_EMAIL = "hello@nawana.app"
 
     private const val PREFS = "futurevoice"
     private const val AGE = "futurevoice.consent.ageConfirmedAt"
