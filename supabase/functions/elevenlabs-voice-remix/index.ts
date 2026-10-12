@@ -62,6 +62,21 @@ Deno.serve(async (req) => {
   if (cartesia.isCartesiaVoice(body.voice_id) || cartesia.isCartesiaVoice(body.generated_voice_id)) {
     return await cartesiaAccent(supabase, user.id, idemKey, body)
   }
+  // An ElevenLabs take saved onto a learner whose voice is on Cartesia now.
+  // The app keeps accent takes per RECORDING, so a rebuild from the same
+  // recording (now made on Cartesia) still offers the old ElevenLabs takes,
+  // and saving one would put the learner back on an ElevenLabs voice — seen
+  // on the first test, 2026-10-12. Refused: every build answers a failed save
+  // by dropping that accent's cached takes, so the next pick asks for fresh
+  // ones, which come from Cartesia.
+  if (body.generated_voice_id && cartesia.clonesOnCartesia(user.id)) {
+    const { data: active } = await supabase.from("voice_clones").select("elevenlabs_voice_id")
+      .eq("user_id", user.id).eq("is_active", true).limit(1)
+    const current = (active ?? [])[0]?.elevenlabs_voice_id as string | undefined
+    if (cartesia.isCartesiaVoice(current)) {
+      return errorResponse(409, "stale accent take — pick the accent again")
+    }
+  }
 
   // A saved remix is a new voice (_shared/voice-quota.ts). Refused at the
   // previews too, so nobody waits half a minute for takes that can't be kept.
