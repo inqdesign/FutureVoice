@@ -43,16 +43,20 @@ final class CloneScriptStore {
     /// Korean — hand-authored rather than generated, because it's the main
     /// market and this text is the single input to the whole product. Same
     /// six beats as the English one (intent · a remembered moment · a list
-    /// that stretches the sounds · four different intonation shapes · a
-    /// slower close · sign-off), sized to the same 75–85s read: Korean runs
-    /// ~4.5 syllables a second at a careful pace, so ~350 syllables.
-    /// Deliberately spreads 된소리/격음, 장·단모음 and varied 받침.
+    /// that stretches the sounds · different intonation shapes · a close ·
+    /// sign-off). Deliberately spreads 된소리/격음, 장·단모음 and varied 받침.
+    ///
+    /// Trimmed 2026-10-12 (founder): "솔직히 아직 잘 모르겠어요. 그래도 제
+    /// 생각은 이래요." and "조금만 더 천천히 읽어 볼게요." are out — the clone
+    /// is now made by Cartesia, which learns from at most 60 s of a take, so a
+    /// shorter read loses nothing. The recording itself is unchanged: the
+    /// learner keeps talking until they stop.
     static let korean = [
         "안녕하세요. 저와 똑같은 목소리로, 훨씬 더 유창하게 말하는 제가 생긴다니 조금 신기하네요. 저는 궁금한 게 많고, 참을성도 있는 편이에요. 지금보다 조금만 더 당당한 저였으면 좋겠어요.",
         "이번 주에 있었던 일을 하나 이야기해 볼게요. 날씨가 생각보다 쌀쌀해져서 옷깃을 여미고 걸었어요. 걷다가 문득, 눈에 보이는 것과 마음에 떠오르는 생각이 서로 다른 말이라는 걸 느꼈어요.",
         "이번엔 소리를 좀 늘려 볼게요. 월요일 아침, 수요일 오후, 금요일 밤. 셋, 열셋, 서른셋. 따뜻한 커피 한 잔, 시원한 물 한 컵, 그리고 창가 자리 하나 부탁드려요.",
-        "말투도 바꿔 볼게요. \"방금 그거 다시 한번 말해 줄래요?\" \"잠깐만요, 그건 좀 아닌 것 같은데요.\" \"솔직히 아직 잘 모르겠어요. 그래도 제 생각은 이래요.\" \"우와, 그거 진짜 좋다. 더 얘기해 줘요.\"",
-        "조금만 더 천천히 읽어 볼게요. 일 년 뒤에 이 언어로 말할 때는, 지금보다 훨씬 편했으면 좋겠어요. 완벽하지 않아도 괜찮아요. 번역하지 않고 그냥 말하는 것처럼요.",
+        "말투도 바꿔 볼게요. \"방금 그거 다시 한번 말해 줄래요?\" \"잠깐만요, 그건 좀 아닌 것 같은데요.\" \"우와, 그거 진짜 좋다. 더 얘기해 줘요.\"",
+        "일 년 뒤에 이 언어로 말할 때는, 지금보다 훨씬 편했으면 좋겠어요. 완벽하지 않아도 괜찮아요. 번역하지 않고 그냥 말하는 것처럼요.",
         "자, 이 정도면 충분한 것 같아요. 잘 됐다면, 다음에 들리는 목소리는 저와 아주 비슷하게 들릴 거예요. 곧 다시 이야기해요.",
     ]
 
