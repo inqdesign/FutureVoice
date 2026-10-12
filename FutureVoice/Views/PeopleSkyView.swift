@@ -347,14 +347,26 @@ struct PeopleSkyMap: View {
     @Binding var lens: PeopleSky.Lens
     var onTap: (PeopleSky.Node) -> Void
     var onTapMe: () -> Void
-    /// The person the situation dock has picked: ringed, a touch larger, and
-    /// the map pans to them.
+    /// Who the situation is with: ringed, a touch larger, their line to me
+    /// drawn in the accent. Only a pick changes it — never a scroll.
     var focusedId: String? = nil
-    /// What they say when they are picked — a line in a speech bubble over
-    /// their face, like meeting a character in a game.
+    /// Who is in the middle of the screen and says something.
+    var bubbleId: String? = nil
+    /// What they say while they are in the middle — one of their situation
+    /// ideas, rising over their face and gone once they leave the middle.
     var bubble: String? = nil
     /// The bubble is a suggestion: tapping it writes it into the box.
     var onTapBubble: () -> Void = {}
+    /// Pan to this person (a chip or the box's own person picker chose them).
+    /// Scrolling by hand never sets it, so the map never fights a finger.
+    var scrollTarget: String? = nil
+    /// Who is nearest the middle of the screen now (nil: nobody close).
+    /// Reported as the learner scrolls; iOS 18 and later.
+    var onCenterChange: ((String?) -> Void)? = nil
+    /// How high "Back to me" sits — above the box while one is open.
+    var backToMeBottom: CGFloat = 16
+
+    @State private var centred: String?
 
     @State private var awayFromMe = false
     /// The learner's own photo (the one on Home and in the profile).
@@ -393,13 +405,31 @@ struct PeopleSkyMap: View {
                     }
                     Color.clear.frame(width: 1, height: 1).position(x: c, y: c).id("centre")
 
+                    // A line from me to everyone on the map: who is who to me
+                    // reads at a glance, and a person never looks stranded.
+                    Canvas { ctx, _ in
+                        let me = CGPoint(x: c, y: c + 8)
+                        for n in nodes where n.shows(in: lens) && n.id != focusedId {
+                            guard let p = pos[n.id] else { continue }
+                            var path = Path(); path.move(to: me); path.addLine(to: p)
+                            ctx.stroke(path, with: .color(.secondary.opacity(n.isUnmet ? 0.10 : 0.22)),
+                                       lineWidth: 1)
+                        }
+                        if let id = focusedId, let p = pos[id] {
+                            var path = Path(); path.move(to: me); path.addLine(to: p)
+                            ctx.stroke(path, with: .color(.accentColor.opacity(0.7)), lineWidth: 2)
+                        }
+                    }
+                    .frame(width: side, height: side)
+                    .allowsHitTesting(false)
+
                     ForEach(nodes) { n in
                         let on = n.shows(in: lens)
                         let focused = n.id == focusedId
                         node(n)
                             .modifier(DepthOfField())
                             .overlay(alignment: .top) {
-                                if focused, let bubble {
+                                if n.id == (bubbleId ?? focusedId), let bubble {
                                     Button(action: onTapBubble) { SkyBubble(text: bubble) }
                                         .buttonStyle(.plain)
                                         .fixedSize()
@@ -412,7 +442,7 @@ struct PeopleSkyMap: View {
                                 }
                             }
                             .scaleEffect(on ? (focused ? 1.12 : 1) : 0.6)
-                            .zIndex(focused ? 1 : 0)
+                            .zIndex(focused || n.id == bubbleId ? 1 : 0)
                             .opacity(on ? 1 : 0)
                             .allowsHitTesting(on)
                             .accessibilityHidden(!on)
@@ -446,26 +476,25 @@ struct PeopleSkyMap: View {
             .onChange(of: lens) { _, _ in
                 withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo("centre", anchor: .center) }
             }
-            .onChange(of: focusedId) { _, id in
+            .onChange(of: scrollTarget) { _, id in
                 guard let id else { return }
                 // A little above centre: the box covers the bottom of the map.
                 withAnimation(.smooth(duration: 0.5)) {
-                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.42))
+                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: Self.focusLine))
                 }
             }
-            // The map re-centres itself when it grows (the pool arrives) and
-            // the bubble lands a moment after the pick: both times, go back
-            // to the person, or their line ends up off the screen.
-            .onChange(of: bubble) { _, _ in
-                guard let id = focusedId else { return }
-                withAnimation(.smooth(duration: 0.4)) {
-                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.42))
-                }
-            }
+            // The pool can land after a pick and grow the map; stay on them.
             .onChange(of: side) { _, _ in
-                guard let id = focusedId else { return }
-                proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.42))
+                guard let id = scrollTarget else { return }
+                proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: Self.focusLine))
             }
+            .modifier(CentreFocus(focusLine: Self.focusLine, positions: pos,
+                                  candidates: nodes.filter { $0.shows(in: lens) }.map(\.id),
+                                  onChange: { id in
+                                      guard id != centred else { return }
+                                      centred = id
+                                      onCenterChange?(id)
+                                  }))
             .overlay(alignment: .bottomLeading) {
                 if awayFromMe {
                     Button {
@@ -478,7 +507,8 @@ struct PeopleSkyMap: View {
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
                     .background(Capsule().fill(Color(.secondarySystemGroupedBackground)))
-                    .padding(16)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, backToMeBottom)
                     .transition(.opacity)
                 }
             }
@@ -487,6 +517,10 @@ struct PeopleSkyMap: View {
         .animation(.smooth(duration: 0.35), value: focusedId)
         .animation(.smooth(duration: 0.35), value: bubble)
     }
+
+    /// Where "the middle" is, as a share of the map's height: above the true
+    /// centre, because the box covers the bottom.
+    static let focusLine: CGFloat = 0.42
 
     private func me(size: CGFloat) -> some View {
         Button(action: onTapMe) {
@@ -562,6 +596,32 @@ struct PeopleSkyMap: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text([n.name, n.eyebrow].compactMap { $0 }.joined(separator: ", ")))
+    }
+}
+
+/// Reports who sits nearest the focus line as the map scrolls. The scroll
+/// geometry hook is iOS 18; on 17 nobody is ever "in the middle".
+private struct CentreFocus: ViewModifier {
+    let focusLine: CGFloat
+    let positions: [String: CGPoint]
+    let candidates: [String]
+    let onChange: (String?) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: CGRect.self) { $0.visibleRect } action: { _, rect in
+                let focus = CGPoint(x: rect.midX, y: rect.minY + rect.height * focusLine)
+                var best: (String, CGFloat)?
+                for id in candidates {
+                    guard let p = positions[id] else { continue }
+                    let d = hypot(p.x - focus.x, p.y - focus.y)
+                    if d < 90, d < (best?.1 ?? .infinity) { best = (id, d) }
+                }
+                onChange(best?.0)
+            }
+        } else {
+            content
+        }
     }
 }
 

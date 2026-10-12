@@ -6,6 +6,7 @@ import SwiftUI
 /// Practice (the review home: books + dictionaries), and Progress (measured
 /// CEFR + skills + activity).
 struct RootTabView: View {
+    @ObservedObject private var watchCreation = WatchCreation.shared
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     /// The ElevenLabs → Cartesia move (VoiceMoveSheet), once a day until done.
@@ -138,6 +139,9 @@ struct RootTabView: View {
                     .tag(Tab.speech)
 
                 WatchTab()
+                    // "New situation" hides the bar so the box can take its
+                    // place; applied here, outside the tab's own stack.
+                    .toolbar(watchCreation.creating ? .hidden : .visible, for: .tabBar)
                     .tabItem { Label("Watch", systemImage: "play.circle.fill") }
                     .tag(Tab.watch)
 

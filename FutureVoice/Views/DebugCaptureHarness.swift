@@ -292,6 +292,12 @@ enum DebugCapture {
         return board
     }
 
+    /// Watch's map opens straight in creation mode (`-dockCreate 1` or
+    /// `-dockChip <category>`). Always false outside DEBUG.
+    static var startsCreating: Bool {
+        UserDefaults.standard.bool(forKey: "dockCreate") || UserDefaults.standard.string(forKey: "dockChip") != nil
+    }
+
     private static func once(_ name: String, _ work: () -> Void) {
         guard !seeded.contains(name) else { return }
         seeded.insert(name)

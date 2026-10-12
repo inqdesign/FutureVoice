@@ -64,10 +64,28 @@ struct WatchTab: View {
     @State private var dockPerson: Counterpart?
     @State private var dockBubble: String?
     @State private var dockFill = ""
-    /// The box seeds its default partner on appear; that pick is not the
-    /// learner's and raises no bubble.
-    @State private var dockInteracted = false
     @State private var dockIdeaTurn: [UUID: Int] = [:]
+    /// "New situation" was tapped: the tab bar steps aside for the box, the
+    /// header gets Cancel, the map stays.
+    /// Lives outside the view: hiding the tab bar rebuilds this tab's view,
+    /// and a @State here came back false — the box vanished the moment it
+    /// opened (2026-10-12).
+    @ObservedObject private var creation = WatchCreation.shared
+    private var creating: Bool {
+        get { creation.creating }
+        nonmutating set { creation.creating = newValue }
+    }
+    /// Who is in the middle of the screen, and the pan a pick asks for.
+    @State private var skyCentred: Counterpart?
+    @State private var skyScrollTarget: String?
+    /// A pick is panning the map: the people it passes on the way are not
+    /// "in the middle", so their bubbles stay down until it lands.
+    @State private var panningUntil: Date = .distantPast
+    @State private var bubbleTask: Task<Void, Never>?
+    /// Ideas for strangers, this visit only (people on file keep theirs).
+    @State private var strangerIdeas: [UUID: [SuggestedTopic]] = [:]
+    /// The map is drawn once the pool is in, so nobody shifts when it lands.
+    @State private var skyReady = false
 
     private var usesPeopleSky: Bool {
         // On for everyone from 1.1.8 (2026-10-12, founder). The Me →
@@ -105,7 +123,16 @@ struct WatchTab: View {
             .navigationTitle("Watch")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                if usesPeopleSky {
+                if creating {
+                    // Trailing: with the title inline-large on the left, a
+                    // leading item folds into an overflow menu.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Cancel") { creating = false; dockFill = "" }
+                    }
+                }
+                // Creating owns the header: Cancel, and nothing beside it to
+                // push it into an overflow menu.
+                if usesPeopleSky && !creating {
                     // The lens is an occasional choice, so it lives in a menu
                     // rather than a row the map gives up space to. The icon
                     // fills while the map is narrowed, so it can't be missed.
@@ -130,6 +157,7 @@ struct WatchTab: View {
                         .accessibilityLabel(Text("Your scenarios"))
                     }
                 }
+                if !creating {
                 ToolbarItem(placement: .topBarTrailing) {
                     // ONE people page: your own people and the shared pool,
                     // merged — the header button answers "who can I talk to".
@@ -137,6 +165,7 @@ struct WatchTab: View {
                         Image(systemName: "person.2")
                     }
                     .accessibilityLabel("People")
+                }
                 }
             }
             .sheet(isPresented: $showingSavedScenarios) {
@@ -259,6 +288,9 @@ struct WatchTab: View {
         // ITS offset the large title would come up already collapsed. An
         // outer vertical ScrollView that never moves is the one the bar
         // tracks, so "Watch" sits large like every other tab.
+        // The map is the full screen height whether or not the tab bar is up
+        // (it ignores the bottom edge): when "New situation" hides the bar,
+        // a map that grew would re-centre and move everyone on it.
         GeometryReader { geo in
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
@@ -268,28 +300,30 @@ struct WatchTab: View {
                                  onTap: { n in
                                      switch n.kind {
                                      case .person(let c), .pooled(let c):
-                                         // With the dock, a tap PICKS them (they say hello);
-                                         // a second tap on the one picked opens their page.
-                                         if PeopleSky.dockEnabled, dockPerson?.id != c.id {
-                                             dockInteracted = true
-                                             dockPerson = c
-                                         } else {
-                                             personCard = c
-                                         }
+                                         // A tap is for who they are; the middle of the
+                                         // screen is for what to talk about.
+                                         personCard = c
                                      case .role(let cat): composer = ComposerConfig(mode: .browse, category: cat)
                                      }
                                  },
                                  onTapMe: { showingProfile = true },
-                                 focusedId: PeopleSky.dockEnabled ? dockPerson?.id.uuidString : nil,
+                                 focusedId: PeopleSky.dockEnabled && creating ? dockPerson?.id.uuidString : nil,
+                                 bubbleId: PeopleSky.dockEnabled ? skyCentred?.id.uuidString : nil,
                                  bubble: PeopleSky.dockEnabled ? dockBubble : nil,
-                                 onTapBubble: { if let line = dockBubble { dockFill = line } })
+                                 onTapBubble: tapBubble,
+                                 scrollTarget: skyScrollTarget,
+                                 onCenterChange: { id in centre(on: id) },
+                                 backToMeBottom: creating ? 250 : 16)
                         .frame(height: max(geo.size.height, 200))
+                        .opacity(skyReady || !PeopleSky.dockEnabled ? 1 : 0)
+                        .animation(.easeOut(duration: 0.3), value: skyReady)
                 }
             }
             .scrollDisabled(true)
         }
+        .ignoresSafeArea(.container, edges: .bottom)
             .overlay(alignment: .bottom) {
-                if PeopleSky.dockEnabled {
+                if PeopleSky.dockEnabled && creating {
                     // The "Your situation" box itself — chips, attach, the
                     // person, dictation — exactly as its sheet draws it.
                     ScenarioComposerSheet(person: nil, host: .watch, mode: .custom,
@@ -302,14 +336,19 @@ struct WatchTab: View {
                         watchScene = WatchTarget(scenario: scenario, fresh: false)
                     }
                     .environmentObject(appState)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
+            .animation(.smooth(duration: 0.3), value: creating)
+
             .overlay(alignment: .bottomTrailing) {
                 // Writing your own situation is its own button, not a tap on
                 // "me": tapping a person opens that person, so tapping me
                 // opens me (the profile).
-                if !PeopleSky.dockEnabled {
-                Button { composer = ComposerConfig(mode: .custom) } label: {
+                if !creating {
+                Button {
+                    if PeopleSky.dockEnabled { creating = true } else { composer = ComposerConfig(mode: .custom) }
+                } label: {
                     Label("New situation", systemImage: "square.and.pencil")
                         .font(.body.weight(.semibold))
                         .padding(.horizontal, 6)
@@ -320,23 +359,30 @@ struct WatchTab: View {
                 }
             }
             .task(id: appState.targetLanguage) { await loadSkyPool() }
-            .onChange(of: dockPerson?.id) { old, _ in
-                // The box's own seed (nothing picked yet, nothing touched)
-                // rings them quietly; every pick after that says hello.
-                guard PeopleSky.dockEnabled, let person = dockPerson,
-                      dockInteracted || old != nil else { dockBubble = nil; return }
-                dockBubble = nil
-                Task { await sayIdea(for: person) }
+            #if DEBUG
+            .onChange(of: skyReady) { _, ready in
+                guard ready, let chip = UserDefaults.standard.string(forKey: "dockChip"),
+                      let cat = ScenarioComposerSheet.presets.first(where: { $0.title == chip }) else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { pickDockCategory(cat) }
+            }
+            #endif
+            .onChange(of: dockPerson?.id) { _, id in
+                // Picked in the box (its person chip, or a category chip):
+                // bring them to the middle. Picked BY the middle: already there.
+                guard PeopleSky.dockEnabled, creating, let id else { return }
+                panningUntil = Date().addingTimeInterval(0.7)
+                skyScrollTarget = nil
+                DispatchQueue.main.async { skyScrollTarget = id.uuidString }
+                // Once there, they are the one in the middle.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { centre(on: id.uuidString, force: true) }
             }
             .onAppear {
                 countTalks()
                 #if DEBUG
                 if UserDefaults.standard.bool(forKey: "openSaved") { showingSavedScenarios = true }
-                // `-dockChip Work` captures the dock with a chip picked.
-                if let chip = UserDefaults.standard.string(forKey: "dockChip"),
-                   let cat = ScenarioComposerSheet.presets.first(where: { $0.title == chip }) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { pickDockCategory(cat) }
-                }
+                // `-dockChip Work` captures creation mode with a chip picked
+                // (once the pool is in); `-dockCreate 1` just opens it.
+
                 #endif
             }
     }
@@ -352,8 +398,44 @@ struct WatchTab: View {
             + skyPool.filter { p in !appState.counterparts.contains { $0.remoteId == p.remoteId } }
         guard let match = candidates.first(where: { Self.fits($0, cat, job: $0.remoteId.flatMap { skyJobs[$0] }) })
         else { return }
-        dockInteracted = true
         dockPerson = match
+    }
+
+    /// Someone came to the middle of the screen (or nobody is there now).
+    /// Their bubble rises once they have settled there; while creating they
+    /// also become who the situation is with.
+    private func centre(on id: String?, force: Bool = false) {
+        if !force, Date() < panningUntil { return }
+        if !force, id == skyCentred?.id.uuidString { return }
+        bubbleTask?.cancel()
+        dockBubble = nil
+        let person = id.flatMap { id in
+            appState.counterparts.first { $0.id.uuidString == id } ?? skyPool.first { $0.id.uuidString == id }
+        }
+        skyCentred = person
+        guard let person else { return }
+        bubbleTask = Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            await sayIdea(for: person)
+        }
+    }
+
+    /// The bubble is a suggestion: tapped, it goes into the box — opening the
+    /// box first when the learner was only looking around.
+    private func tapBubble() {
+        guard let line = dockBubble else { return }
+        let person = skyCentred
+        if creating {
+            if let person { dockPerson = person }
+            dockFill = line
+        } else {
+            creating = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                if let person { dockPerson = person }
+                dockFill = line
+            }
+        }
     }
 
     /// The picked person's bubble: one of their own situation ideas — the
@@ -363,6 +445,7 @@ struct WatchTab: View {
     private func sayIdea(for person: Counterpart) async {
         let lang = appState.targetLanguage
         var ideas = (appState.counterparts.first { $0.id == person.id } ?? person).savedScenarios(in: lang)
+        if ideas.isEmpty { ideas = strangerIdeas[person.id] ?? [] }
         if ideas.isEmpty {
             guard let fresh = try? await TopicEngine.suggestForCounterpart(
                 persona: appState.persona, counterpart: person, targetLanguage: lang), !fresh.isEmpty
@@ -371,9 +454,11 @@ struct WatchTab: View {
             if var owned = appState.counterparts.first(where: { $0.id == person.id }) {
                 owned.setSavedScenarios(fresh, in: lang)
                 appState.saveCounterpart(owned)
+            } else {
+                strangerIdeas[person.id] = fresh
             }
         }
-        guard dockPerson?.id == person.id else { return }
+        guard skyCentred?.id == person.id else { return }
         let turn = dockIdeaTurn[person.id, default: 0]
         dockIdeaTurn[person.id] = turn + 1
         let idea = ideas[turn % ideas.count]
@@ -430,7 +515,10 @@ struct WatchTab: View {
         }
         // The common situations (cafe, travel, work…) are chips in the
         // "Your own situation" sheet, not faces on the map: the map is people.
-        return nodes
+        // Seats are dealt in this order, so it must not follow the store's:
+        // saving a person (their ideas, a talk) reorders `counterparts`, and
+        // the whole map used to reshuffle under the learner's finger.
+        return nodes.sorted { $0.id < $1.id }
     }
 
     /// Over the name on the map: the relationship in the learner's own words
@@ -455,6 +543,7 @@ struct WatchTab: View {
     }
 
     private func loadSkyPool() async {
+        defer { skyReady = true }
         guard let pool = try? await PublicPersonaService.fetchPool(language: appState.targetLanguage)
         else { return }
         skyPool = pool.map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
@@ -972,6 +1061,20 @@ struct WatchTab: View {
 /// THE counterpart avatar — initials on a tinted circle. Every surface that
 /// shows a person (the stories row, the composer header, onboarding's People
 /// visual) renders through this one view so they can't drift apart.
+/// Whether the Watch tab is writing a new situation: the tab bar steps aside
+/// (`RootTabView`), the box shows under the map, Cancel is in the header.
+@MainActor
+final class WatchCreation: ObservableObject {
+    static let shared = WatchCreation()
+    @Published var creating: Bool = {
+        #if DEBUG
+        return DebugCapture.startsCreating
+        #else
+        return false
+        #endif
+    }()
+}
+
 struct PersonBubble: View {
     let name: String
     /// The person's id, for their photo (`CounterpartPhotoStore`). nil, or an
