@@ -159,6 +159,24 @@ struct VoiceCloneOnboardingView: View {
     /// accent transfer), so this is a choice, defaulted by self-rated level
     /// and switchable right on the script step. See `CloneScriptStore`.
     @State private var readInNative = false
+    /// Any other language with a hand-written script, picked from the menu
+    /// (2026-10-13, founder: with the app in English only English showed).
+    /// nil = the target/native choice above decides.
+    @State private var otherScriptLanguage: String?
+
+    /// Every script on offer: the target, the native, then every language
+    /// with a hand-written script — so nobody is stuck reading a language
+    /// they can't read aloud for a minute.
+    private var scriptLanguages: [String] {
+        var out = [appState.targetLanguage]
+        if nativeScript != nil { out.append(appState.nativeLanguage) }
+        for code in ["en", "ko", "ja", "de", "es", "fr", "it", "pt", "zh-Hant", "zh"]
+        where !out.contains(where: { LanguageCatalog.sameLanguage($0, code) })
+            && CloneScriptStore.handAuthored(code) != nil {
+            out.append(code)
+        }
+        return out
+    }
 
     /// The accent whose takes the picker sheet opens on (see `accentSection`).
     @State private var accentToPick: VoiceAccent?
@@ -806,7 +824,10 @@ struct VoiceCloneOnboardingView: View {
     /// The paragraphs on stage — the native script only when it exists AND
     /// the user picked it.
     private var activeScript: [String] {
-        (readInNative ? nativeScript : nil)
+        if let other = otherScriptLanguage, let script = CloneScriptStore.handAuthored(other) {
+            return script
+        }
+        return (readInNative ? nativeScript : nil)
             ?? VoiceCloneScript.paragraphs(for: appState.targetLanguage)
     }
 
@@ -817,14 +838,28 @@ struct VoiceCloneOnboardingView: View {
             // The language choice is made by LOOKING at the text — "can I
             // read this aloud for a minute without stumbling?" is answered by
             // the paragraphs below, not by a question on its own screen.
-            if nativeScript != nil {
-                Picker("Read in", selection: $readInNative) {
-                    Text(LanguageCatalog.endonym(appState.targetLanguage)).tag(false)
-                    Text(LanguageCatalog.endonym(appState.nativeLanguage)).tag(true)
+            Menu {
+                ForEach(scriptLanguages, id: \.self) { code in
+                    Button {
+                        selectScript(code)
+                    } label: {
+                        if LanguageCatalog.sameLanguage(code, scriptLanguageCode) {
+                            Label(LanguageCatalog.endonym(code), systemImage: "checkmark")
+                        } else {
+                            Text(LanguageCatalog.endonym(code))
+                        }
+                    }
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 28)
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Read in")
+                    Text(LanguageCatalog.endonym(scriptLanguageCode)).fontWeight(.semibold)
+                    Image(systemName: "chevron.up.chevron.down").font(.caption)
+                }
+                .font(.subheadline)
             }
+            .buttonStyle(.bordered)
+            .disabled(status == .recording)
 
             Text(nativeScript == nil
                  ? "Read it naturally. Mistakes are fine — just keep going."
@@ -1530,7 +1565,18 @@ struct VoiceCloneOnboardingView: View {
     /// What the take was read in — the funnel needs it to tell whether the
     /// native script actually cuts re-records.
     private var scriptLanguageCode: String {
-        readInNative && nativeScript != nil ? appState.nativeLanguage : appState.targetLanguage
+        if let other = otherScriptLanguage { return other }
+        return readInNative && nativeScript != nil ? appState.nativeLanguage : appState.targetLanguage
+    }
+
+    private func selectScript(_ code: String) {
+        if LanguageCatalog.sameLanguage(code, appState.targetLanguage) {
+            otherScriptLanguage = nil; readInNative = false
+        } else if nativeScript != nil, LanguageCatalog.sameLanguage(code, appState.nativeLanguage) {
+            otherScriptLanguage = nil; readInNative = true
+        } else {
+            otherScriptLanguage = code
+        }
     }
 
     // MARK: - Actions
