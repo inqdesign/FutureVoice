@@ -424,7 +424,10 @@ struct PeopleSkyMap: View {
                                         .overlay(alignment: .bottom) {
                                             Button(action: onTapBubble) { SkyBubble(text: bubble) }
                                                 .buttonStyle(.plain)
-                                                .fixedSize()
+                                                // 168 pt of text + 15 pt padding a side;
+                                                // a short line still hugs its words.
+                                                .frame(width: 198)
+                                                .fixedSize(horizontal: false, vertical: true)
                                         }
                                         .offset(y: -10)
                                         .transition(.asymmetric(
@@ -645,7 +648,10 @@ struct SkyBubble: View {
                 .font(.footnote.weight(.semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(4)
-                .frame(maxWidth: 168)
+                // Laid out at its WRAPPED height. A whole-view fixedSize sized
+                // it as one long line clamped to the width, so lines two to
+                // four spilled out above and below and the tip moved.
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 15)
                 .padding(.vertical, 11)
                 .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
