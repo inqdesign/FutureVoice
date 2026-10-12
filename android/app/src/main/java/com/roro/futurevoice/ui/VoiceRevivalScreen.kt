@@ -314,7 +314,6 @@ internal fun VoiceRevivalScreen(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { confirmingRemove = false },
             title = { Text(stringResource(R.string.remove_the_accent)) },
-            text = { Text(com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { confirmingRemove = false; removeAccent() }) {
                     Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)

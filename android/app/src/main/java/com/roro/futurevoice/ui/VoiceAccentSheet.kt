@@ -289,58 +289,47 @@ fun VoiceAccentSheet(
         }
     }
 
+    // No "use this voice?" step any more (iOS 2026-10-12): it existed only
+    // to say a save spent the month's one voice change, and that limit is gone.
     if (confirmingApply) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { confirmingApply = false },
-            title = { Text(stringResource(R.string.use_this_voice_q)) },
-            text = { Text(com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    confirmingApply = false
-                    val id = picked ?: return@TextButton
-                    val chosen = accent
-                    player.stop()
-                    saving = true; error = null
-                    scope.launch {
-                        runCatching {
-                            client.save(id,
-                                // iOS sends `voiceDisplayName` — the library entry says whose it is.
-                                com.roro.futurevoice.data.VoiceName.display(context,
-                                    com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
-                                chosen?.prompt.orEmpty())
-                        }.onSuccess { newId ->
-                            onApplied(newId, chosen?.id.orEmpty())
-                            onDismiss()
-                        }.onFailure { e ->
-                            if (e is com.roro.futurevoice.data.VoiceChangeLimit) {
-                                // Someone else's device used it first; say the date.
-                                com.roro.futurevoice.data.VoiceChanges.refresh()
-                                error = e.line(context)
-                            } else {
-                                // A remembered take can go stale upstream; the next
-                                // pick of this accent makes fresh ones instead of
-                                // failing again.
-                                chosen?.let { RemixTakeCache.drop(context, it.id) }
-                                error = context.getString(R.string.couldnt_apply_that_take_try_again)
-                            }
-                        }
-                        saving = false
+        LaunchedEffect(Unit) {
+            confirmingApply = false
+            val id = picked ?: return@LaunchedEffect
+            val chosen = accent
+            player.stop()
+            saving = true; error = null
+            scope.launch {
+                runCatching {
+                    client.save(id,
+                        // iOS sends `voiceDisplayName` — the library entry says whose it is.
+                        com.roro.futurevoice.data.VoiceName.display(context,
+                            com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+                        chosen?.prompt.orEmpty())
+                }.onSuccess { newId ->
+                    onApplied(newId, chosen?.id.orEmpty())
+                    onDismiss()
+                }.onFailure { e ->
+                    if (e is com.roro.futurevoice.data.VoiceChangeLimit) {
+                        // Someone else's device used it first; say the date.
+                        com.roro.futurevoice.data.VoiceChanges.refresh()
+                        error = e.line(context)
+                    } else {
+                        // A remembered take can go stale upstream; the next
+                        // pick of this accent makes fresh ones instead of
+                        // failing again.
+                        chosen?.let { RemixTakeCache.drop(context, it.id) }
+                        error = context.getString(R.string.couldnt_apply_that_take_try_again)
                     }
-                }) { Text(stringResource(R.string.use_this_voice)) }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { confirmingApply = false }) {
-                    Text(stringResource(R.string.cancel))
                 }
-            },
-        )
+                saving = false
+            }
+        }
     }
     if (confirmingRemove) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { confirmingRemove = false },
             title = { Text(stringResource(R.string.remove_the_accent)) },
-            text = { Text(stringResource(R.string.rebuilds_your_voice_from_your_saved_recording_which_takes_a_90f303) +
-                "\n\n" + com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
+            text = { Text(stringResource(R.string.rebuilds_your_voice_from_your_saved_recording_which_takes_a_90f303)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     confirmingRemove = false

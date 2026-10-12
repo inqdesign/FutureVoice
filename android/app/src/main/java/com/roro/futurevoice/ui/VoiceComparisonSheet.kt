@@ -186,8 +186,7 @@ fun VoiceComparisonSheet(voiceId: String, targetLanguage: String, onRerecord: ()
                 }
             }
             GroupedFooter(if (canChange)
-                stringResource(R.string.voice_replaced_only_if_kept) + " " +
-                    com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)
+                stringResource(R.string.voice_replaced_only_if_kept)
                 else com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt))
         }
     }

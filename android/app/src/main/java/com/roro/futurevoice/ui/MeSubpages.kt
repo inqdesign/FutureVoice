@@ -363,8 +363,7 @@ fun VoicePage(
             onDismissRequest = { confirmingRebuild = false },
             title = { Text(stringResource(R.string.rebuild_your_voice)) },
             text = { Text(stringResource(
-                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704) +
-                "\n\n" + com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
+                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     confirmingRebuild = false

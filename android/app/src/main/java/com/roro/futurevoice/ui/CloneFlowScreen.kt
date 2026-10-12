@@ -1235,7 +1235,6 @@ fun CloneFlowScreen(
         AlertDialog(
             onDismissRequest = { confirmingRemoveFromMeet = false },
             title = { Text(stringResource(R.string.remove_the_accent)) },
-            text = { Text(com.roro.futurevoice.data.VoiceChangeStatus.usesItLine(context)) },
             confirmButton = {
                 TextButton(onClick = { confirmingRemoveFromMeet = false; removeAccentFromMeet() }) {
                     Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
