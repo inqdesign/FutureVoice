@@ -239,6 +239,15 @@ struct VoiceCloneOnboardingView: View {
         }
         .background(Color(.systemBackground).ignoresSafeArea())
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { screenHeight = $0 }
+        // A re-record from a voice that still exists can be called off before
+        // the take goes up: the old voice is only staged for deletion.
+        .overlay(alignment: .topTrailing) {
+            if appState.canCancelVoiceReset, status.rawValue <= Status.reviewing.rawValue {
+                Button("Cancel") { appState.cancelVoiceReset() }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+            }
+        }
         // The account step's Back, as a header control — it used to share the
         // action bar with the Apple button, which forced the two sign-in
         // buttons into different widths.

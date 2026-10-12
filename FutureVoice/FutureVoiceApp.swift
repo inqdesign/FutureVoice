@@ -1471,9 +1471,29 @@ final class AppState: ObservableObject {
     /// Wipe the clone so the user re-records. Stashes the current id so it
     /// can be deleted from ElevenLabs once a new clone is in place.
     func resetVoiceClone() {
-        if !voiceIsStandIn { pendingDeleteVoiceId = voiceCloneId }
+        if !voiceIsStandIn {
+            pendingDeleteVoiceId = voiceCloneId
+            UserDefaults.standard.set(voiceAccentId, forKey: Self.resetAccentKey)
+        }
         voiceCloneId = nil
         voiceAccentId = nil
+    }
+
+    private static let resetAccentKey = "futurevoice.voiceReset.accent"
+
+    /// A re-record started from a voice that still exists (only STAGED for
+    /// deletion — it goes once the new clone lands). Until then the learner
+    /// can change their mind (2026-10-13: the recording screen had no way out).
+    var canCancelVoiceReset: Bool { voiceCloneId == nil && pendingDeleteVoiceId != nil }
+
+    /// Back to the voice they had, accent included, nothing deleted.
+    func cancelVoiceReset() {
+        guard let previous = pendingDeleteVoiceId else { return }
+        pendingDeleteVoiceId = nil
+        voiceAccentId = UserDefaults.standard.string(forKey: Self.resetAccentKey)
+        UserDefaults.standard.removeObject(forKey: Self.resetAccentKey)
+        voiceCloneId = previous
+        Analytics.capture("voice_reset_cancelled")
     }
 
     /// Post-account-deletion local wipe — the device should look factory-fresh
