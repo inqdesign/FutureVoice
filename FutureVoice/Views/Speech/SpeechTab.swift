@@ -27,6 +27,22 @@ struct SpeechTab: View {
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
     static let challengesOnTab = 3
 
+    private var ownScripts: [SpeechScript] {
+        store.scripts.filter { challenges.script(id: $0.id) == nil }
+    }
+
+    private enum NewKind { case write, own }
+
+    /// The empty state's two buttons, on the toolbar's rule: a yes from
+    /// cache, a no only after a fresh fetch, and the Plus sheet otherwise.
+    private func startNew(_ kind: NewKind) {
+        let open = { if kind == .write { composing = true } else { addingOwn = true } }
+        if canWrite { open(); return }
+        Task {
+            if await BillingGate.shared.allowsSpeechScripts() { open() } else { showingUpsell = true }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -62,8 +78,15 @@ struct SpeechTab: View {
 
                 Section {
                     // A script that is also a challenge (the bundled sample
-                    // is the first one) is listed once, up there.
-                    ForEach(store.scripts.filter { challenges.script(id: $0.id) == nil }) { script in
+                    // is the first one) is listed once, up there — so for
+                    // most learners this section is THEIR scripts, and it
+                    // starts empty. Empty, it says what goes here and offers
+                    // both ways to make one, rather than a bare header.
+                    if ownScripts.isEmpty {
+                        SpeechScriptsEmptyState(onWrite: { startNew(.write) },
+                                                onOwn: { startNew(.own) })
+                    }
+                    ForEach(ownScripts) { script in
                         Button {
                             practicing = script
                         } label: {
@@ -98,7 +121,7 @@ struct SpeechTab: View {
                         }
                     }
                 } header: {
-                    Text("Scripts")
+                    Text("My scripts")
                 } footer: {
                     if !canWrite {
                         Text("Write scripts on any topic, or add your own, with Plus.")
@@ -207,6 +230,48 @@ struct SpeechTab: View {
         guard let script = openAfterSheet else { return }
         openAfterSheet = nil
         practicing = script
+    }
+}
+
+/// "My scripts" before there are any: what the section is for, and the two
+/// ways to fill it.
+struct SpeechScriptsEmptyState: View {
+    var onWrite: () -> Void
+    var onOwn: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "doc.badge.plus")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Write your first script")
+                        .font(.body.weight(.semibold))
+                    Text("Choose a topic and AI writes it for your level, or paste a text of your own.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            HStack(spacing: 10) {
+                Button(action: onWrite) {
+                    Label("Write with AI", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                Button(action: onOwn) {
+                    Label("Add my own script", systemImage: "pencil.line")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .labelStyle(.titleAndIcon)
+            .font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        }
+        .padding(.vertical, 6)
     }
 }
 

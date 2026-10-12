@@ -669,6 +669,24 @@ enum DebugCapture {
             once("speech") { seedSpeech(appState) }
             _ = seedSpeechChallenges(appState)
             return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-empty":
+            // A learner who has written nothing yet: the bundled sample is the
+            // first challenge (as in production), so "My scripts" is empty.
+            let store = SpeechStore.shared
+            store.reload()
+            for script in store.scripts where !script.isBuiltIn { store.deleteScript(id: script.id) }
+            let first = seedSpeechChallenges(appState)
+            if var sample = SpeechLibrary.builtIn(for: appState.targetLanguage) {
+                sample.isBuiltIn = false
+                sample.challengeId = sample.id
+                var standings = SpeechChallenges.shared.standings
+                standings[sample.id] = .init(entrants: 23, topScore: 95,
+                                             topThree: Self.sampleFaces(["Joon", "Lena", "Wei"]))
+                SpeechChallenges.shared.seedPreview(language: first.language,
+                                                    scripts: [sample] + SpeechChallenges.shared.scripts,
+                                                    standings: standings, boards: [first.id: []])
+            }
+            return AnyView(SpeechTab().environmentObject(appState))
         case "speech-challenges-many":
             // Eight live challenges: what the tab does when they pile up.
             once("speech") { seedSpeech(appState) }
