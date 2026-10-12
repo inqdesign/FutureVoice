@@ -566,17 +566,22 @@ struct WatchTab: View {
         playVoicePreview(for: person)
     }
 
-    /// Their voice says hello as their bubble rises: the preset's preview
-    /// clip, which ships with the app, so scrolling past people spends
-    /// nothing. A voice the bundle lacks stays silent rather than paying for
-    /// a synthesis nobody asked for.
+    /// Their voice as their bubble rises. A person from the pool reads the
+    /// start of their own intro in their own voice — clips that ship with
+    /// the app (`Resources/PeopleVoices`, one per persona), so scrolling past
+    /// people spends nothing. Your own people fall back to their preset's
+    /// sample; a voice with no clip stays silent rather than paying for one.
     private func playVoicePreview(for person: Counterpart) {
         previewPlayer.stop()
-        let voice = person.voicePresetId
-        guard !voice.isEmpty else { return }
         let lang = appState.targetLanguage.split(separator: "-").first.map(String.init) ?? appState.targetLanguage
-        guard let url = Bundle.main.url(forResource: "preview-\(lang)-\(voice)", withExtension: "mp3"),
-              let data = try? Data(contentsOf: url) else { return }
+        var url: URL?
+        if let rid = person.remoteId, !rid.hasPrefix("builtin:") {
+            url = Bundle.main.url(forResource: "intro-\(rid.lowercased())", withExtension: "mp3")
+        }
+        if url == nil, !person.voicePresetId.isEmpty {
+            url = Bundle.main.url(forResource: "preview-\(lang)-\(person.voicePresetId)", withExtension: "mp3")
+        }
+        guard let url, let data = try? Data(contentsOf: url) else { return }
         try? previewPlayer.play(data, source: "voice_preview") {}
     }
 
