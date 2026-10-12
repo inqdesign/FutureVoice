@@ -4,20 +4,15 @@ import XCTest
 /// A preset id is a SLOT: stored as the English voice, spoken by the target
 /// language's own voice where one was picked (`VoicePreset.speaking`).
 final class VoicePresetSlotTests: XCTestCase {
-    func testKoreanAndJapaneseResolveEverySlot() {
-        for lang in ["ko", "ja"] {
+    /// Since 2026-10-12 every selectable target language speaks from
+    /// Cartesia's library, English included: the stored id is only the slot.
+    func testEveryLanguageResolvesEverySlot() {
+        for lang in ["en", "de", "ko", "ja"] {
             let spoken = VoicePreset.catalog.map { VoicePreset.speaking($0.id, in: lang) }
             XCTAssertEqual(Set(spoken).count, VoicePreset.catalog.count, lang)
             for (slot, voice) in zip(VoicePreset.catalog, spoken) {
-                XCTAssertNotEqual(slot.id, voice, "\(lang) \(slot.displayName)")
-            }
-        }
-    }
-
-    func testEnglishAndGermanKeepTheOriginals() {
-        for lang in ["en", "de"] {
-            for slot in VoicePreset.catalog {
-                XCTAssertEqual(VoicePreset.speaking(slot.id, in: lang), slot.id)
+                XCTAssertNotEqual(slot.id, voice, "\(lang) \(slot.englishName)")
+                XCTAssertTrue(VoicePreset.isLibraryVoice(voice), "\(lang) \(voice)")
             }
         }
     }
@@ -38,7 +33,7 @@ extension VoicePresetSlotTests {
     func testBuiltinPersonIsNamedPerLanguage() {
         let paige = StockPerson.catalog[0]
         XCTAssertEqual(paige.voice.name(in: "en"), "Paige")
-        XCTAssertEqual(paige.voice.name(in: "de"), "Paige")
+        XCTAssertEqual(paige.voice.name(in: "de"), "Lea")
         XCTAssertEqual(paige.voice.name(in: "ko"), "시안")
         XCTAssertTrue(paige.identity(in: "ko").hasPrefix("시안 — twenties"))
 
