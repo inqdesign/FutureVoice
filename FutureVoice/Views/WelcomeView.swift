@@ -253,13 +253,17 @@ struct WelcomeView: View {
             bottom
         }
         .contentShape(Rectangle())
-        // Tap anywhere to move on — the film is never a wall.
-        .onTapGesture {
+        // Tap anywhere to move on — the film is never a wall. Switched OFF
+        // on the closing frame (`including: .subviews`): a tap gesture on an
+        // ancestor swallows the touch of a wrapped UIKit control, so the
+        // Sign in with Apple button under it never opened Apple's sheet
+        // (2026-10-05 → 10-12, every returning learner on this screen).
+        .gesture(TapGesture().onEnded {
             guard !isClosing else { return }
             autoplay = true
             step()
             tick += 1
-        }
+        }, including: isClosing ? .subviews : .all)
         .task(id: isClosing) {
             guard isClosing else { doorOpen = false; return }
             // The orb opens into the button once the last line has landed;
