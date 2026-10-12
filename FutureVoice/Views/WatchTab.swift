@@ -1322,28 +1322,32 @@ struct SkyPersonCard: View {
 
             details
 
-            HStack(spacing: 8) {
+            // One row: the situation keeps its words (it is the card's
+            // point), Watch and Talk are their glyphs alone — a label in
+            // every language would not fit three across.
+            HStack(spacing: 10) {
                 Button(action: onCompose) {
                     Label("Make a situation", systemImage: "square.and.pencil")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 Button(action: onWatch) {
-                    Label("Watch", systemImage: "play.fill")
-                        .frame(maxWidth: .infinity)
+                    Image(systemName: "play.fill")
+                        .frame(width: 30)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel(Text("Watch"))
                 Button(action: onTalk) {
-                    Label("Talk", systemImage: "phone.fill")
-                        .frame(maxWidth: .infinity)
+                    Image(systemName: "phone.fill")
+                        .frame(width: 30)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel(Text("Talk"))
             }
-            .font(.subheadline.weight(.semibold))
-            .labelStyle(.titleAndIcon)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .controlSize(.regular)
+            .font(.body.weight(.semibold))
+            .controlSize(.large)
         }
         .padding(16)
         .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
