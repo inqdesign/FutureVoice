@@ -19,7 +19,6 @@
 // Audio of a later sentence that arrives early is held until the ones before
 // it are done, so the line always plays in order.
 
-import { calmExclamations } from "./calm-exclamations"
 import type { ElevenTTSCallbacks } from "./eleven-tts"
 
 const URL_WS = "wss://api.cartesia.ai/tts/websocket"
@@ -215,7 +214,9 @@ export class CartesiaTTS {
       const id = `${contextId}:${++this.seq}`
       line.sentences.push({ id, audio: [], done: false })
       this.sentenceLine.set(id, contextId)
-      this.ws?.send(JSON.stringify(this.request(id, calmExclamations(text).trim())))
+      // As written: Cartesia's "!" is +0.6–1.7 dB, not ElevenLabs' shout
+      // (measured 2026-10-12, en/de/ko/ja), so nothing is calmed here.
+      this.ws?.send(JSON.stringify(this.request(id, text.trim())))
     })
   }
 

@@ -370,7 +370,9 @@ Deno.serve(async (req) => {
   }
   if (onCartesia) {
     return await speakOnCartesia({
-      voiceId: body.voice_id, text: spokenText, originalText: body.text,
+      // Cartesia gets the line as written: its "!" is +0.6–1.7 dB, not
+      // ElevenLabs' shout (measured 2026-10-12, en/de/ko/ja).
+      voiceId: body.voice_id, text: body.text, originalText: body.text,
       language: body.language_code ?? cartesia.lineLanguage(body.text, await targetLanguageOf(user.id)),
       speed: body.speed, timestamped, streaming, streamFormats: body.stream_formats,
       onFail: async (status: number) => {
