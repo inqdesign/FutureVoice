@@ -7,6 +7,9 @@ import SwiftUI
 /// CEFR + skills + activity).
 struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var auth: AuthService
+    /// The ElevenLabs → Cartesia move (VoiceMoveSheet), once a day until done.
+    @State private var showingVoiceMove = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: Tab = {
         #if DEBUG
@@ -274,6 +277,10 @@ struct RootTabView: View {
                 .environmentObject(appState)
         }
         .onAppear { offerWeekRecap() }
+        .onAppear { offerVoiceMove() }
+        .sheet(isPresented: $showingVoiceMove) {
+            VoiceMoveSheet().fittingDetents([.large])
+        }
         #if DEBUG
         .task {
             // `-tabcycle 1`: walk the tabs by themselves for the hitch probe.
@@ -290,7 +297,7 @@ struct RootTabView: View {
         }
         #endif
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { offerWeekRecap() }
+            if phase == .active { offerWeekRecap(); offerVoiceMove() }
         }
         .onChange(of: callInbox.pendingWeekRecap) { _, _ in offerWeekRecap() }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
@@ -498,10 +505,21 @@ struct RootTabView: View {
     /// silently, so it waits its turn instead.
     private var anotherSheetUp: Bool {
         showingAgeCheck || showingPaywall || showingWelcome || showingIntroPreview
-            || weekRecap != nil || freeTalkCallId != nil
+            || showingVoiceMove || weekRecap != nil || freeTalkCallId != nil
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
+    }
+
+    /// The voice move (VoiceMoveSheet): a beat after the app is up, never
+    /// over another sheet or a call; at most once a day until they move.
+    private func offerVoiceMove() {
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !showingVoiceMove, !anotherSheetUp,
+                  VoiceMove.isDue(appState, signedIn: auth.isSignedIn) else { return }
+            showingVoiceMove = true
+        }
     }
 
     private static func introPage(_ tab: Tab) -> PageIntro.Page? {

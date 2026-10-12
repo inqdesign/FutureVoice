@@ -19971,9 +19971,7 @@
         }
       }
     },
-    "Busy day? What did you do this morning?" : {
-
-    },
+    "Busy day? What did you do this morning?" : {},
     "Busy today?" : {
       "localizations" : {
         "de" : {
@@ -45839,9 +45837,7 @@
         }
       }
     },
-    "I go to the office early yesterday, so I left at four." : {
-
-    },
+    "I go to the office early yesterday, so I left at four." : {},
     "I know" : {
       "localizations" : {
         "de" : {
@@ -128737,6 +128733,134 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "溫暖、隨和"
+          }
+        }
+      }
+    },
+    "Your voice is moving to a new engine" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your voice is moving to a new engine"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 새 엔진으로 옮겨요"
+          }
+        }
+      }
+    },
+    "When it moves, your current voice is deleted and a new one is made from the recording saved on this device. Audio that was already made keeps playing." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When it moves, your current voice is deleted and a new one is made from the recording saved on this device. Audio that was already made keeps playing."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "옮기면 지금 목소리는 지워지고, 이 기기에 저장된 녹음으로 새로 만들어요. 이미 만들어진 오디오는 그대로 들을 수 있어요."
+          }
+        }
+      }
+    },
+    "Rebuild with my voice" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rebuild with my voice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리로 다시 만들기"
+          }
+        }
+      }
+    },
+    "Your new voice is ready" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your new voice is ready"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 목소리가 준비됐어요"
+          }
+        }
+      }
+    },
+    "From now on your fluent self speaks with your new voice." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From now on your fluent self speaks with your new voice."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제부터 유창해진 내가 새 목소리로 말해요."
+          }
+        }
+      }
+    },
+    "There's no recording on this device. Record your voice again in Me → Voice to move it." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There's no recording on this device. Record your voice again in Me → Voice to move it."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기에 녹음이 없어요. 옮기려면 나 → 목소리에서 다시 녹음해 주세요."
+          }
+        }
+      }
+    },
+    "So you can practice with a voice that sounds more natural and more like you, we're moving your voice to a new voice engine. Replies get faster too." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So you can practice with a voice that sounds more natural and more like you, we're moving your voice to a new voice engine. Replies get faster too."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 자연스럽고 더 나 같은 목소리로 연습할 수 있도록, 목소리를 새 음성 엔진으로 옮겨요. 대답도 더 빨라져요."
+          }
+        }
+      }
+    },
+    "Learn more" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Learn more"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 알아보기"
           }
         }
       }
