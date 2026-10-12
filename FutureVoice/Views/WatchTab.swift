@@ -119,19 +119,19 @@ struct WatchTab: View {
                 if usesPeopleSky { peopleSkyPage } else { classicPage }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Watch")
-            .toolbarTitleDisplayMode(.inlineLarge)
+            // Writing a situation, the title steps aside for Cancel in its
+            // place (top left, like any compose screen); the options on the
+            // right stay. With the title showing, a leading item folds into
+            // an overflow menu, so the title goes while creating.
+            .navigationTitle(creating ? "" : "Watch")
+            .toolbarTitleDisplayMode(creating ? .inline : .inlineLarge)
             .toolbar {
                 if creating {
-                    // Trailing: with the title inline-large on the left, a
-                    // leading item folds into an overflow menu.
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Cancel") { creating = false; dockFill = "" }
                     }
                 }
-                // Creating owns the header: Cancel, and nothing beside it to
-                // push it into an overflow menu.
-                if usesPeopleSky && !creating {
+                if usesPeopleSky {
                     // The lens is an occasional choice, so it lives in a menu
                     // rather than a row the map gives up space to. The icon
                     // fills while the map is narrowed, so it can't be missed.
@@ -156,7 +156,6 @@ struct WatchTab: View {
                         .accessibilityLabel(Text("Your scenarios"))
                     }
                 }
-                if !creating {
                 ToolbarItem(placement: .topBarTrailing) {
                     // ONE people page: your own people and the shared pool,
                     // merged — the header button answers "who can I talk to".
@@ -164,7 +163,6 @@ struct WatchTab: View {
                         Image(systemName: "person.2")
                     }
                     .accessibilityLabel("People")
-                }
                 }
             }
             .sheet(isPresented: $showingSavedScenarios) {
@@ -352,7 +350,7 @@ struct WatchTab: View {
             }
             .animation(.smooth(duration: 0.3), value: creating)
 
-            .overlay(alignment: .bottomTrailing) {
+            .overlay(alignment: .bottom) {
                 // Writing your own situation is its own button, not a tap on
                 // "me": tapping a person opens that person, so tapping me
                 // opens me (the profile).
