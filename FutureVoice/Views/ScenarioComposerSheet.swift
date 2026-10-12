@@ -49,6 +49,18 @@ struct ScenarioComposerSheet: View {
     let ctaIcon: String
     /// Edit mode only — remove the scenario (and with it, its Practice book).
     var onDelete: (() -> Void)? = nil
+    /// Hosted IN the Watch tab under the people map rather than as a sheet
+    /// (2026-10-12): the box and its chips exactly as the sheet draws them,
+    /// with the map standing where the title and the rolling examples were.
+    var embedded: Bool = false
+    /// The other person, shared with the map: picking here rings them there,
+    /// and a tap on the map (or a chip's pick) picks them here.
+    var partnerSync: Binding<Counterpart?>? = nil
+    /// A line handed in from outside (a person's idea in their map bubble),
+    /// written into the box as if a reel line had been tapped.
+    var situationSync: Binding<String>? = nil
+    /// A category chip was tapped — the host picks who it is with.
+    var onPickCategory: ((Category) -> Void)? = nil
     let onCommit: (Scenario) -> Void
 
     @EnvironmentObject private var appState: AppState
@@ -181,7 +193,45 @@ struct ScenarioComposerSheet: View {
     private var showsOverview: Bool { editing != nil }
 
     var body: some View {
-        NavigationStack {
+        if embedded {
+            common(embeddedBox)
+        } else {
+            NavigationStack {
+                common(sheetBody)
+                    .navigationTitle(usesBox ? Text("Your situation")
+                                     : (editing == nil ? Text("New scenario") : Text("Edit scenario")))
+                    .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cancel") { dismiss() }
+                    }
+                    // The CTA lives in the HEADER on both doors. It sat inside
+                    // the box on the custom one until 2026-09-26, where its play
+                    // glyph never sat right beside a mic circle and its label
+                    // was one more thing making the row's width depend on the
+                    // language. One primary button, one place, both doors.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { commit() } label: {
+                            Label(ctaTitle, systemImage: ctaIcon).labelStyle(.titleAndIcon)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    // The box (custom door) closes the keyboard with a tap on the
+                    // empty space above it; a bar of its own floated a lone
+                    // "Done" between the box and the keys.
+                    if !usesBox {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") { situationFocused = false }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var sheetBody: some View {
             Group {
                 if usesBox {
                     customBox
@@ -207,9 +257,12 @@ struct ScenarioComposerSheet: View {
                     }
                 }
             }
-            .navigationTitle(usesBox ? Text("Your situation")
-                             : (editing == nil ? Text("New scenario") : Text("Edit scenario")))
-            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Everything the box does whichever way it is hosted: the pickers, the
+    /// attachment readers, the paywall, the seeding on appear.
+    private func common<V: View>(_ content: V) -> some View {
+        content
             // The plans, when the CTA can't be paid for. Presented from this
             // sheet, never from the host behind it: a sheet raised underneath
             // an open sheet doesn't appear, and the composer staying up means
@@ -280,32 +333,6 @@ struct ScenarioComposerSheet: View {
                 }
             }
             #endif
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                // The CTA lives in the HEADER on both doors. It sat inside
-                // the box on the custom one until 2026-09-26, where its play
-                // glyph never sat right beside a mic circle and its label
-                // was one more thing making the row's width depend on the
-                // language. One primary button, one place, both doors.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { commit() } label: {
-                        Label(ctaTitle, systemImage: ctaIcon).labelStyle(.titleAndIcon)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                // The box (custom door) closes the keyboard with a tap on the
-                // empty space above it; a bar of its own floated a lone
-                // "Done" between the box and the keys.
-                if !usesBox {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") { situationFocused = false }
-                    }
-                }
-            }
             // Attachments. The Files picker hands over a security-scoped
             // URL; `ScenarioAttachmentReader` reads it there and then, so
             // the file is never copied into the app.
@@ -350,7 +377,21 @@ struct ScenarioComposerSheet: View {
             } message: {
                 Text(attachError ?? "")
             }
-        }
+            .onChange(of: partner?.id) { _, _ in
+                if let sync = partnerSync, sync.wrappedValue?.id != partner?.id { sync.wrappedValue = partner }
+            }
+            .onChange(of: partnerSync?.wrappedValue?.id) { _, _ in
+                if let sync = partnerSync, sync.wrappedValue?.id != partner?.id, let p = sync.wrappedValue {
+                    partner = p
+                }
+            }
+            .onChange(of: situationSync?.wrappedValue) { _, line in
+                guard let line, !line.isEmpty else { return }
+                programmaticSituation = true
+                situation = line
+                customMode = true
+                situationSync?.wrappedValue = ""
+            }
     }
 
     // MARK: - The box (custom door)
@@ -400,39 +441,11 @@ struct ScenarioComposerSheet: View {
         }
     }
 
-    private var customBox: some View {
+    /// The chips and the box — the bottom of the custom door, and all of the
+    /// embedded one. One implementation, so the Watch tab's box can never
+    /// drift from the sheet's.
+    private var boxBottom: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 6) {
-                Text("Go through it before it happens")
-                    .font(.title3.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                Text(explain("The more you write, the closer the scene lands. Tap ＋ to bring the posting, the listing, your CV."))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 20)
-            // Examples roll through the empty middle — the answer to "what
-            // do I even put here", and a demonstration of how much detail is
-            // worth writing. They go away the moment there IS something to
-            // write, so they never compete with the learner's own line.
-            if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && !situationFocused && !reelLines.isEmpty && path.isEmpty {
-                SituationReel(lines: reelLines) { line in
-                    programmaticSituation = true
-                    situation = line
-                    customMode = true
-                }
-                .frame(maxHeight: .infinity)
-                .transition(.opacity)
-            } else {
-                // The empty middle closes the keyboard when tapped.
-                Color.clear
-                    .contentShape(Rectangle())
-                    .frame(maxHeight: .infinity)
-                    .onTapGesture { situationFocused = false }
-            }
             // The common situations, as chips right above the box: a tap
             // goes one step deeper in the same row (Cafe → Ordering → …),
             // and the last step writes its sentence into the box, where it
@@ -492,7 +505,8 @@ struct ScenarioComposerSheet: View {
                                             partnerChip
                                         }
                                     }
-                                 ))
+                                 ),
+                                 trailingControls: embedded ? AnyView(inlineCTA) : nil)
             }
             // WITHOUT this the box is only as wide as its content wants to
             // be, and every control in the row has an intrinsic width that
@@ -505,6 +519,74 @@ struct ScenarioComposerSheet: View {
                 .fill(Color(.secondarySystemGroupedBackground)))
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
+        }
+    }
+
+    /// The box as the Watch tab hosts it, under the people map.
+    private var embeddedBox: some View {
+        boxBottom
+            .animation(.easeInOut(duration: 0.2), value: situationFocused)
+            .onChange(of: situation) { _, text in
+                if programmaticSituation { programmaticSituation = false; return }
+                let empty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    customMode = !empty
+                    if !path.isEmpty { path = []; options = [] }
+                }
+                summary = ""
+            }
+    }
+
+    /// Hosted in the tab there is no header for the CTA, so it rides at the
+    /// end of the box's own row — and only once there is something to watch.
+    @ViewBuilder private var inlineCTA: some View {
+        if !situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Button { commit() } label: {
+                Image(systemName: ctaIcon)
+                    .font(.body.weight(.semibold))
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color.accentColor))
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(ctaTitle))
+        }
+    }
+
+    private var customBox: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 6) {
+                Text("Go through it before it happens")
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                Text(explain("The more you write, the closer the scene lands. Tap ＋ to bring the posting, the listing, your CV."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 32)
+            .padding(.top, 20)
+            // Examples roll through the empty middle — the answer to "what
+            // do I even put here", and a demonstration of how much detail is
+            // worth writing. They go away the moment there IS something to
+            // write, so they never compete with the learner's own line.
+            if situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !situationFocused && !reelLines.isEmpty && path.isEmpty {
+                SituationReel(lines: reelLines) { line in
+                    programmaticSituation = true
+                    situation = line
+                    customMode = true
+                }
+                .frame(maxHeight: .infinity)
+                .transition(.opacity)
+            } else {
+                // The empty middle closes the keyboard when tapped.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .frame(maxHeight: .infinity)
+                    .onTapGesture { situationFocused = false }
+            }
+            boxBottom
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
@@ -1176,6 +1258,7 @@ struct ScenarioComposerSheet: View {
     // MARK: - Navigation / drill
 
     private func pickCategory(_ c: Category) {
+        onPickCategory?(c)
         navigate(to: [Crumb(label: c.title, scenario: "", icon: c.icon)])
     }
 

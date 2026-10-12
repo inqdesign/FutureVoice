@@ -353,6 +353,8 @@ struct PeopleSkyMap: View {
     /// What they say when they are picked — a line in a speech bubble over
     /// their face, like meeting a character in a game.
     var bubble: String? = nil
+    /// The bubble is a suggestion: tapping it writes it into the box.
+    var onTapBubble: () -> Void = {}
 
     @State private var awayFromMe = false
     /// The learner's own photo (the one on Home and in the profile).
@@ -398,7 +400,8 @@ struct PeopleSkyMap: View {
                             .modifier(DepthOfField())
                             .overlay(alignment: .top) {
                                 if focused, let bubble {
-                                    SkyBubble(text: bubble)
+                                    Button(action: onTapBubble) { SkyBubble(text: bubble) }
+                                        .buttonStyle(.plain)
                                         .fixedSize()
                                         .offset(y: -22)
                                         .alignmentGuide(.top) { $0[.bottom] }
@@ -445,10 +448,23 @@ struct PeopleSkyMap: View {
             }
             .onChange(of: focusedId) { _, id in
                 guard let id else { return }
-                // A little above centre: the dock covers the bottom of the map.
+                // A little above centre: the box covers the bottom of the map.
                 withAnimation(.smooth(duration: 0.5)) {
-                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.38))
+                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.42))
                 }
+            }
+            // The map re-centres itself when it grows (the pool arrives) and
+            // the bubble lands a moment after the pick: both times, go back
+            // to the person, or their line ends up off the screen.
+            .onChange(of: bubble) { _, _ in
+                guard let id = focusedId else { return }
+                withAnimation(.smooth(duration: 0.4)) {
+                    proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.42))
+                }
+            }
+            .onChange(of: side) { _, _ in
+                guard let id = focusedId else { return }
+                proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: 0.42))
             }
             .overlay(alignment: .bottomLeading) {
                 if awayFromMe {
@@ -558,7 +574,8 @@ struct SkyBubble: View {
             Text(text)
                 .font(.subheadline.weight(.semibold))
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 220)
+                .lineLimit(4)
+                .frame(maxWidth: 240)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
                 .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))

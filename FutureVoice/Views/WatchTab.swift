@@ -56,13 +56,18 @@ struct WatchTab: View {
     /// The category tab picked over the saved situations; nil = all.
     @State private var savedCategory: String?
     @State private var showingProfile = false
-    /// The situation dock (DEBUG experiment, 2026-10-12): what the learner is
-    /// writing, the chip they picked, and the person the chip — or a tap on
-    /// the map — chose. The map rings that person and they speak a line.
-    @State private var dockText = ""
-    @State private var dockCategory: ScenarioComposerSheet.Category?
+    /// The situation box under the map (DEBUG experiment, 2026-10-12): the
+    /// person it is with — shared both ways with the box's own partner chip —
+    /// and what they say in their bubble: one of THEIR situation ideas (the
+    /// ones the person card and the box's reel already show), tapped into
+    /// the box.
     @State private var dockPerson: Counterpart?
     @State private var dockBubble: String?
+    @State private var dockFill = ""
+    /// The box seeds its default partner on appear; that pick is not the
+    /// learner's and raises no bubble.
+    @State private var dockInteracted = false
+    @State private var dockIdeaTurn: [UUID: Int] = [:]
 
     private var usesPeopleSky: Bool {
         // On for everyone from 1.1.8 (2026-10-12, founder). The Me →
@@ -266,7 +271,8 @@ struct WatchTab: View {
                                          // With the dock, a tap PICKS them (they say hello);
                                          // a second tap on the one picked opens their page.
                                          if PeopleSky.dockEnabled, dockPerson?.id != c.id {
-                                             pickDockPerson(c, line: material("What shall we talk about?"))
+                                             dockInteracted = true
+                                             dockPerson = c
                                          } else {
                                              personCard = c
                                          }
@@ -275,7 +281,8 @@ struct WatchTab: View {
                                  },
                                  onTapMe: { showingProfile = true },
                                  focusedId: PeopleSky.dockEnabled ? dockPerson?.id.uuidString : nil,
-                                 bubble: PeopleSky.dockEnabled ? dockBubble : nil)
+                                 bubble: PeopleSky.dockEnabled ? dockBubble : nil,
+                                 onTapBubble: { if let line = dockBubble { dockFill = line } })
                         .frame(height: max(geo.size.height, 200))
                 }
             }
@@ -283,16 +290,18 @@ struct WatchTab: View {
         }
             .overlay(alignment: .bottom) {
                 if PeopleSky.dockEnabled {
-                    SituationDock(text: $dockText, category: dockCategory, person: dockPerson,
-                                  onPickCategory: pickDockCategory,
-                                  onClearPerson: { dockPerson = nil; dockBubble = nil },
-                                  onWatch: {
-                                      let text = dockText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                      composer = ComposerConfig(person: dockPerson, mode: .custom,
-                                                                situation: text.isEmpty ? nil : text)
-                                  })
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 8)
+                    // The "Your situation" box itself — chips, attach, the
+                    // person, dictation — exactly as its sheet draws it.
+                    ScenarioComposerSheet(person: nil, host: .watch, mode: .custom,
+                                          ctaTitle: "Watch", ctaIcon: "play.fill",
+                                          embedded: true,
+                                          partnerSync: $dockPerson,
+                                          situationSync: $dockFill,
+                                          onPickCategory: pickDockCategory) { scenario in
+                        appState.saveScenario(scenario)
+                        watchScene = WatchTarget(scenario: scenario, fresh: false)
+                    }
+                    .environmentObject(appState)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -311,6 +320,14 @@ struct WatchTab: View {
                 }
             }
             .task(id: appState.targetLanguage) { await loadSkyPool() }
+            .onChange(of: dockPerson?.id) { old, _ in
+                // The box's own seed (nothing picked yet, nothing touched)
+                // rings them quietly; every pick after that says hello.
+                guard PeopleSky.dockEnabled, let person = dockPerson,
+                      dockInteracted || old != nil else { dockBubble = nil; return }
+                dockBubble = nil
+                Task { await sayIdea(for: person) }
+            }
             .onAppear {
                 countTalks()
                 #if DEBUG
@@ -326,32 +343,42 @@ struct WatchTab: View {
 
     // MARK: - The situation dock
 
-    /// A chip picks the person that situation is with — someone of the
-    /// learner's own first, then a stranger already met, then one from the
-    /// pool — and they say so. No match: nobody in particular (the scene
-    /// infers its own counterpart), and the bubble goes.
+    /// A chip in the box picks the person that situation is with — someone
+    /// of the learner's own first, then a stranger already met, then one from
+    /// the pool. No match leaves the box's person as it was.
     private func pickDockCategory(_ cat: ScenarioComposerSheet.Category) {
-        if dockCategory == cat {
-            dockCategory = nil
-            dockPerson = nil
-            dockBubble = nil
-            return
-        }
-        dockCategory = cat
         let candidates = appState.counterparts.filter { $0.remoteId == nil }
             + appState.counterparts.filter { $0.remoteId != nil }
             + skyPool.filter { p in !appState.counterparts.contains { $0.remoteId == p.remoteId } }
-        if let match = candidates.first(where: { Self.fits($0, cat, job: $0.remoteId.flatMap { skyJobs[$0] }) }) {
-            pickDockPerson(match, line: material("Want to practise this with me?"))
-        } else {
-            dockPerson = nil
-            dockBubble = nil
-        }
+        guard let match = candidates.first(where: { Self.fits($0, cat, job: $0.remoteId.flatMap { skyJobs[$0] }) })
+        else { return }
+        dockInteracted = true
+        dockPerson = match
     }
 
-    private func pickDockPerson(_ c: Counterpart, line: String) {
-        dockPerson = c
-        dockBubble = line
+    /// The picked person's bubble: one of their own situation ideas — the
+    /// pool the person card and the box's reel show, written for this
+    /// relationship — taking turns on every pick. Fetched once per person
+    /// per language when there are none yet, and kept on the person.
+    private func sayIdea(for person: Counterpart) async {
+        let lang = appState.targetLanguage
+        var ideas = (appState.counterparts.first { $0.id == person.id } ?? person).savedScenarios(in: lang)
+        if ideas.isEmpty {
+            guard let fresh = try? await TopicEngine.suggestForCounterpart(
+                persona: appState.persona, counterpart: person, targetLanguage: lang), !fresh.isEmpty
+            else { return }
+            ideas = fresh
+            if var owned = appState.counterparts.first(where: { $0.id == person.id }) {
+                owned.setSavedScenarios(fresh, in: lang)
+                appState.saveCounterpart(owned)
+            }
+        }
+        guard dockPerson?.id == person.id else { return }
+        let turn = dockIdeaTurn[person.id, default: 0]
+        dockIdeaTurn[person.id] = turn + 1
+        let idea = ideas[turn % ideas.count]
+        let blurb = idea.blurb.trimmingCharacters(in: .whitespacesAndNewlines)
+        dockBubble = blurb.isEmpty ? idea.title : blurb
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
     }
 
@@ -945,73 +972,6 @@ struct WatchTab: View {
 /// THE counterpart avatar — initials on a tinted circle. Every surface that
 /// shows a person (the stories row, the composer header, onboarding's People
 /// visual) renders through this one view so they can't drift apart.
-/// The bottom of the Watch map (DEBUG experiment): the common situations as
-/// chips, the box to write your own, and who it's with — picked by a chip or
-/// a tap on the map, cleared with its ×.
-struct SituationDock: View {
-    @Binding var text: String
-    let category: ScenarioComposerSheet.Category?
-    let person: Counterpart?
-    var onPickCategory: (ScenarioComposerSheet.Category) -> Void
-    var onClearPerson: () -> Void
-    var onWatch: () -> Void
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(ScenarioComposerSheet.presets) { c in
-                        let on = category == c
-                        Button { onPickCategory(c) } label: {
-                            Label(explain(String.LocalizationValue(c.title)), systemImage: c.icon)
-                                .font(.subheadline.weight(.medium))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .foregroundStyle(on ? Color.white : Color.primary)
-                                .background(on ? Color.accentColor : Color(.tertiarySystemFill), in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 2)
-            }
-            HStack(alignment: .center, spacing: 10) {
-                if let person {
-                    Button(action: onClearPerson) {
-                        HStack(spacing: 6) {
-                            PersonBubble(name: person.name, photoId: person.id, size: 26)
-                            Text(person.name)
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                            Image(systemName: "xmark")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.leading, 4)
-                        .padding(.trailing, 10)
-                        .padding(.vertical, 4)
-                        .background(Color(.tertiarySystemFill), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .fixedSize()
-                }
-                TextField("What's coming up?", text: $text, axis: .vertical)
-                    .lineLimit(1...3)
-                    .focused($focused)
-                Button(action: onWatch) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
-                }
-                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty && category == nil && person == nil)
-            }
-        }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.10), radius: 12, y: 4)
-    }
-}
-
 struct PersonBubble: View {
     let name: String
     /// The person's id, for their photo (`CounterpartPhotoStore`). nil, or an
