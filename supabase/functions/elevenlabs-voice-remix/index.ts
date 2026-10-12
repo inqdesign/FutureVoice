@@ -23,6 +23,7 @@ import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
 import { reservedForNewLearners, reservedResponse } from "../_shared/voice-quota.ts"
 import { changesLeft, defaultRemixOpen, recordVoiceChange, changeLimitResponse } from "../_shared/voice-changes.ts"
 import * as cartesia from "../_shared/cartesia.ts"
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 const SOURCE_FN = "elevenlabs-voice-remix"
 
@@ -53,15 +54,15 @@ Deno.serve(async (req) => {
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_description) return errorResponse(400, "voice_description required")
-  // A Cartesia clone is not remixed: it speaks each language it is told to,
-  // in that language's own accent (_shared/cartesia.ts). Refused at once, so
-  // the app's default-accent step falls through to the plain clone — which is
-  // what it already does for any failed remix — instead of waiting on takes.
-  if (cartesia.isCartesiaVoice(body.voice_id)) {
-    return new Response(JSON.stringify({ error: "accent_not_needed", provider: "cartesia" }), {
-      status: 409, headers: { "Content-Type": "application/json", ...cors() },
-    })
+  // A Cartesia clone is not remixed: one voice speaks every accent it has
+  // been given (_shared/cartesia.ts). The same two calls are answered in the
+  // shape every app build already reads — takes, then a saved id — so the
+  // accent pills work without an update. No ElevenLabs voice allowance or
+  // 30-day change limit applies: nothing new is created.
+  if (cartesia.isCartesiaVoice(body.voice_id) || cartesia.isCartesiaVoice(body.generated_voice_id)) {
+    return await cartesiaAccent(supabase, user.id, idemKey, body)
   }
+
   // A saved remix is a new voice (_shared/voice-quota.ts). Refused at the
   // previews too, so nobody waits half a minute for takes that can't be kept.
   if (await reservedForNewLearners(apiKey)) return reservedResponse(cors())
@@ -197,3 +198,67 @@ Deno.serve(async (req) => {
     headers: { "Content-Type": "application/json", ...cors() },
   })
 })
+
+/** Accent takes and accent saves for a Cartesia voice.
+ *  TAKES: the line spoken by the same voice in the asked accent, returned as
+ *  one preview whose id is "<uuid>:<accent>".
+ *  SAVE: that id becomes the learner's voice id — a new voice_clones row,
+ *  like a saved ElevenLabs remix, but the same Cartesia voice underneath. */
+async function cartesiaAccent(
+  supabase: SupabaseClient, userId: string, idemKey: string,
+  body: { voice_id?: string; voice_description?: string; text?: string; generated_voice_id?: string; voice_name?: string },
+): Promise<Response> {
+  const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
+    status, headers: { "Content-Type": "application/json", ...cors() },
+  })
+  // Owns the Cartesia voice under any of its accent ids.
+  const owns = async (uuid: string) => {
+    const { data } = await supabase.from("voice_clones").select("id, name")
+      .eq("user_id", userId).like("elevenlabs_voice_id", `${uuid}%`).limit(1)
+    return (data ?? [])[0] as { id: string; name: string | null } | undefined
+  }
+
+  if (body.generated_voice_id) {
+    const { uuid, accent } = cartesia.parseVoice(body.generated_voice_id)
+    const row = await owns(uuid)
+    if (!row) return errorResponse(403, "voice not owned by caller")
+    const id = accent ? `${uuid}:${accent}` : uuid
+    await supabase.from("voice_clones").update({ is_active: false })
+      .eq("user_id", userId).eq("is_active", true)
+    const { error } = await supabase.from("voice_clones").insert({
+      user_id: userId, elevenlabs_voice_id: id, is_active: true,
+      name: (body.voice_name ?? "").trim() || row.name,
+    })
+    if (error) console.error("voice_clones insert failed", error)
+    return json({ voice_id: id })
+  }
+
+  if (!body.voice_id || !body.text) return errorResponse(400, "voice_id and text required")
+  const { uuid } = cartesia.parseVoice(body.voice_id)
+  if (!(await owns(uuid))) return errorResponse(403, "voice not owned by caller")
+  const accent = cartesia.accentFromDescription(body.voice_description ?? "")
+  if (!accent) return errorResponse(400, "accent not recognised")
+
+  const free = await recordFreeUsage({
+    supabase, userId, action: "voice_remix", purpose: "accent_previews",
+    dailyCap: 24, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+    metadata: { voice_id: body.voice_id, accent, provider: "cartesia" },
+  })
+  if (!free.ok) {
+    if (free.reason === "rate_limited") return rateLimitedResponse(cors())
+    return errorResponse(500, "usage record failed", free.detail)
+  }
+
+  const ready = await cartesia.ensureAccent(uuid, accent)
+  if (!ready.ok) return errorResponse(502, "cartesia accent failed", ready.detail ?? "")
+  const take = await cartesia.synthesizeMp3({
+    voiceId: `${uuid}:${accent}`, text: body.text, language: cartesia.ACCENT_LANGUAGE[accent] ?? "en",
+  })
+  if (!take.ok) return errorResponse(take.status, "cartesia upstream error", (await take.text()).slice(0, 500))
+  const audio = new Uint8Array(await take.arrayBuffer())
+  let bin = ""
+  for (let i = 0; i < audio.length; i += 0x8000) bin += String.fromCharCode(...audio.subarray(i, i + 0x8000))
+  return json({ previews: [{
+    generated_voice_id: `${uuid}:${accent}`, audio_base_64: btoa(bin), media_type: "audio/mpeg",
+  }] })
+}

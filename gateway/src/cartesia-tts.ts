@@ -26,10 +26,17 @@ const URL_WS = "wss://api.cartesia.ai/tts/websocket"
 const VERSION = "2026-08-14"
 const MODEL = "sonic-3.6"
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-/** Cartesia clone ids are UUIDs; ElevenLabs ids are 20 alphanumerics. */
+/** Cartesia clone ids are UUIDs, optionally carrying an accent
+ *  ("<uuid>:british" — see supabase/functions/_shared/cartesia.ts);
+ *  ElevenLabs ids are 20 alphanumerics. */
+const VOICE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::([a-z-]+))?$/i
 export function isCartesiaVoice(voiceId: string | null | undefined): boolean {
-  return !!voiceId && UUID.test(voiceId)
+  return !!voiceId && VOICE.test(voiceId)
+}
+/** Each accent's language — an accent is applied only to a line in it. */
+const ACCENT_LANGUAGE: Record<string, string> = {
+  "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",
+  "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
 }
 
 /** Languages Cartesia is told a line is in — it reads a line in whatever
@@ -160,11 +167,15 @@ export class CartesiaTTS {
   }
 
   private request(sentenceId: string, transcript: string): Record<string, unknown> {
+    const m = VOICE.exec(this.config.voiceId)
+    const uuid = m ? m[1] : this.config.voiceId
+    const accent = m?.[2]?.toLowerCase()
     return {
       model_id: MODEL,
       transcript,
-      voice: { mode: "id", id: this.config.voiceId },
+      voice: { mode: "id", id: uuid },
       language: this.language,
+      ...(accent && ACCENT_LANGUAGE[accent] === this.language ? { accent } : {}),
       context_id: sentenceId,
       continue: false,
       output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: this.sampleRate },

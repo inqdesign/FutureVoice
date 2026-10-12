@@ -18,10 +18,71 @@ const HOST = "https://api.cartesia.ai"
 export const CARTESIA_VERSION = "2026-08-14"
 export const CARTESIA_MODEL = "sonic-3.6"
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// `<uuid>` or `<uuid>:<accent>` — the accent rides IN the id (2026-10-12).
+// Picking an accent must hand the app a NEW voice id: every build ignores a
+// "saved" accent whose id equals the live voice (AppState.adoptRemixedVoice
+// returns early), so the pick would never stick. One Cartesia voice speaks
+// every accent it has been given, so "<uuid>:british" is the same voice told
+// to speak British — the server and gateway read the accent straight off the
+// id, and deleting an old id never deletes a voice another id still uses.
+const VOICE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::([a-z-]+))?$/i
 
 export function isCartesiaVoice(voiceId: string | null | undefined): boolean {
-  return !!voiceId && UUID.test(voiceId)
+  return !!voiceId && VOICE.test(voiceId)
+}
+
+/** The Cartesia voice and the accent an id carries. */
+export function parseVoice(voiceId: string): { uuid: string; accent: string | null } {
+  const m = VOICE.exec(voiceId)
+  return m ? { uuid: m[1].toLowerCase(), accent: m[2] ? m[2].toLowerCase() : null } : { uuid: voiceId, accent: null }
+}
+
+/** Each accent's language — an accent is applied only to a line in it. */
+export const ACCENT_LANGUAGE: Record<string, string> = {
+  "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",
+  "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
+}
+
+/** A voice's own accent, required before others can be added. */
+const BASE_ACCENT: Record<string, string> = {
+  en: "general-american", de: "standard-german", ja: "standard-japanese", ko: "korean",
+}
+
+/** The app's accent picks arrive as ElevenLabs remix PROMPTS
+ *  (VoiceAccentCatalog) — read the accent out of the wording. */
+export function accentFromDescription(description: string): string | null {
+  const d = description.toLowerCase()
+  if (d.includes("general american") || d.includes("american english")) return "general-american"
+  if (d.includes("british")) return "british"
+  if (d.includes("australian")) return "australian"
+  if (d.includes("standard german") || d.includes("hochdeutsch")) return "standard-german"
+  if (d.includes("japanese")) return "standard-japanese"
+  if (d.includes("korean")) return "korean"
+  return null
+}
+
+/** Make sure the voice can speak `accent`: a voice with no accent of its own
+ *  gets its language's base first (Cartesia requires one), then the accent
+ *  is added if missing (~225 credits, once per voice per accent). */
+export async function ensureAccent(uuid: string, accent: string): Promise<{ ok: boolean; detail?: string }> {
+  const r = await fetch(`${HOST}/voices/${uuid}`, { headers: headers(false) })
+  if (!r.ok) return { ok: false, detail: `get voice ${r.status}` }
+  const v = await r.json() as { language?: string; accents?: { accent: string }[] | null }
+  let have = (v.accents ?? []).map((a) => a.accent)
+  if (have.length === 0) {
+    const base = BASE_ACCENT[(v.language ?? "en").split("-")[0]] ?? "general-american"
+    const p = await fetch(`${HOST}/voices/${uuid}`, {
+      method: "PATCH", headers: headers(), body: JSON.stringify({ accent: base }),
+    })
+    if (!p.ok) return { ok: false, detail: `set base ${p.status} ${(await p.text()).slice(0, 200)}` }
+    have = [base]
+  }
+  if (have.includes(accent)) return { ok: true }
+  const a = await fetch(`${HOST}/voices/${uuid}/accents`, {
+    method: "PATCH", headers: headers(), body: JSON.stringify({ accents: [accent] }),
+  })
+  if (!a.ok) return { ok: false, detail: `add accent ${a.status} ${(await a.text()).slice(0, 200)}` }
+  return { ok: true }
 }
 
 /** Who clones on Cartesia: `CLONE_PROVIDER` = "elevenlabs" (default, nobody),
@@ -65,6 +126,16 @@ function speedConfig(speed: number | undefined): Record<string, unknown> {
     ? { generation_config: { speed } } : {}
 }
 
+/** The voice and accent fields of a request for one line. */
+function voiceFields(voiceId: string, language: string): Record<string, unknown> {
+  const { uuid, accent } = parseVoice(voiceId)
+  return {
+    voice: { mode: "id", id: uuid },
+    language,
+    ...(accent && ACCENT_LANGUAGE[accent] === language ? { accent } : {}),
+  }
+}
+
 export interface CartesiaLine {
   voiceId: string
   text: string
@@ -80,8 +151,7 @@ export function synthesizeMp3(line: CartesiaLine): Promise<Response> {
     body: JSON.stringify({
       model_id: CARTESIA_MODEL,
       transcript: line.text,
-      voice: { mode: "id", id: line.voiceId },
-      language: line.language,
+      ...voiceFields(line.voiceId, line.language),
       output_format: { container: "mp3", sample_rate: 44100, bit_rate: 128000 },
       ...speedConfig(line.speed),
     }),
@@ -97,8 +167,7 @@ export function synthesizePcmStream(line: CartesiaLine, sampleRate: number): Pro
     body: JSON.stringify({
       model_id: CARTESIA_MODEL,
       transcript: line.text,
-      voice: { mode: "id", id: line.voiceId },
-      language: line.language,
+      ...voiceFields(line.voiceId, line.language),
       output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: sampleRate },
       ...speedConfig(line.speed),
     }),
@@ -122,8 +191,7 @@ export async function synthesizeWithTimestamps(line: CartesiaLine): Promise<
     body: JSON.stringify({
       model_id: CARTESIA_MODEL,
       transcript: line.text,
-      voice: { mode: "id", id: line.voiceId },
-      language: line.language,
+      ...voiceFields(line.voiceId, line.language),
       add_timestamps: true,
       output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: sampleRate },
       ...speedConfig(line.speed),
@@ -221,14 +289,14 @@ export async function cloneVoice(
 
 /** Delete a clone. A voice that is already gone counts as deleted. */
 export async function deleteVoice(voiceId: string): Promise<{ ok: boolean; status: number; detail?: string }> {
-  const r = await fetch(`${HOST}/voices/${voiceId}`, { method: "DELETE", headers: headers(false) })
+  const r = await fetch(`${HOST}/voices/${parseVoice(voiceId).uuid}`, { method: "DELETE", headers: headers(false) })
   if (r.ok || r.status === 404) return { ok: true, status: r.status }
   return { ok: false, status: r.status, detail: (await r.text()).slice(0, 300) }
 }
 
 /** Rename a clone. */
 export async function renameVoice(voiceId: string, name: string): Promise<{ ok: boolean; status: number; detail?: string }> {
-  const r = await fetch(`${HOST}/voices/${voiceId}`, {
+  const r = await fetch(`${HOST}/voices/${parseVoice(voiceId).uuid}`, {
     method: "PATCH", headers: headers(), body: JSON.stringify({ name: name.slice(0, 100) }),
   })
   if (r.ok) return { ok: true, status: r.status }

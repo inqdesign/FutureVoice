@@ -55,8 +55,17 @@ Deno.serve(async (req) => {
   await deleteSpeakAs(serviceRoleClient(), apiKey, user.id, body.voice_id)
 
   if (cartesia.isCartesiaVoice(body.voice_id)) {
-    const gone = await cartesia.deleteVoice(body.voice_id)
-    if (!gone.ok) return errorResponse(gone.status, "cartesia upstream error", gone.detail ?? "")
+    // An accent pick hands the app a new id for the SAME Cartesia voice
+    // ("<uuid>:<accent>", _shared/cartesia.ts), and the app then deletes the
+    // old id. The voice itself goes only when no other id of it is live.
+    const { uuid } = cartesia.parseVoice(body.voice_id)
+    const { data: siblings } = await supabase.from("voice_clones").select("elevenlabs_voice_id")
+      .eq("user_id", user.id).eq("is_active", true).like("elevenlabs_voice_id", `${uuid}%`)
+    const stillUsed = (siblings ?? []).some((r) => r.elevenlabs_voice_id !== body.voice_id)
+    if (!stillUsed) {
+      const gone = await cartesia.deleteVoice(body.voice_id)
+      if (!gone.ok) return errorResponse(gone.status, "cartesia upstream error", gone.detail ?? "")
+    }
   }
   const upstream = cartesia.isCartesiaVoice(body.voice_id)
     ? new Response(null, { status: 200 })
