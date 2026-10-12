@@ -317,9 +317,17 @@ struct WatchTab: View {
                                          // A tap is for who they are; the middle of the
                                          // screen is for what to talk about.
                                          if PeopleSky.dockEnabled {
-                                             // While writing, a tap on someone
-                                             // leaves the box for THEIR card.
-                                             if creating { leaveBoxForCard(c) } else { openSkyCard(c) }
+                                             // With the box or a card up, a tap on
+                                             // the map is only "put it away" — even
+                                             // one that lands on someone. Picking a
+                                             // person happens from the bare map.
+                                             if creating {
+                                                 if let p = dockPerson { leaveBoxForCard(p) } else { afterKeyboard { creating = false } }
+                                             } else if skyCard != nil {
+                                                 skyCard = nil
+                                             } else {
+                                                 openSkyCard(c)
+                                             }
                                          } else {
                                              personCard = c
                                          }
