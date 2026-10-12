@@ -300,7 +300,13 @@ export async function cloneVoice(
   clip: File, name: string, language: string,
 ): Promise<{ ok: true; voiceId: string } | { ok: false; status: number; detail: string }> {
   const form = new FormData()
-  form.append("clip", clip, clip.name || "sample.wav")
+  // Cartesia's clone speaks at the LOUDNESS of its recording — measured
+  // 2026-10-12: a -37.8 LUFS take gave a -36.4 LUFS voice, the same take
+  // levelled to -20 gave -19.8. Phone takes are quiet, and the un-accented
+  // voice came out so soft the app's own levelling couldn't lift the first
+  // greeting. So the take is levelled here before it goes up.
+  const levelled = await levelledWav(clip)
+  form.append("clip", levelled ?? clip, clip.name || "sample.wav")
   form.append("name", name.slice(0, 100) || "voice")
   form.append("language", SUPPORTED.has(language) ? language : "en")
   const r = await fetch(`${HOST}/voices/clone`, { method: "POST", headers: headers(false), body: form })
@@ -362,4 +368,55 @@ export function wavBytes(pcm: Uint8Array, sampleRate: number): Uint8Array {
   ascii(36, "data"); v.setUint32(40, pcm.length, true)
   out.set(pcm, 44)
   return out
+}
+
+/** A 16-bit PCM WAV with its speech brought to ~-20 dBFS RMS (boost only,
+ *  ≤30 dB), peaks held under full scale by a soft knee above 0.7. Anything
+ *  that isn't a plain 16-bit PCM WAV is returned as null (sent unchanged). */
+export async function levelledWav(file: File): Promise<File | null> {
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer())
+    const v = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+    const tag = (o: number) => String.fromCharCode(buf[o], buf[o + 1], buf[o + 2], buf[o + 3])
+    if (buf.length < 44 || tag(0) !== "RIFF" || tag(8) !== "WAVE") return null
+    let o = 12, fmtOk = false, rate = 0, dataOff = -1, dataLen = 0, channels = 1
+    while (o + 8 <= buf.length) {
+      const id = tag(o), len = v.getUint32(o + 4, true)
+      if (id === "fmt ") {
+        fmtOk = v.getUint16(o + 8, true) === 1 && v.getUint16(o + 22, true) === 16
+        channels = v.getUint16(o + 10, true)
+        rate = v.getUint32(o + 12, true)
+      } else if (id === "data") { dataOff = o + 8; dataLen = Math.min(len, buf.length - o - 8); break }
+      o += 8 + len + (len % 2)
+    }
+    if (!fmtOk || dataOff < 0 || rate <= 0) return null
+    const n = Math.floor(dataLen / 2)
+    const samples = new Int16Array(buf.buffer.slice(buf.byteOffset + dataOff, buf.byteOffset + dataOff + n * 2))
+    // Speech RMS: 20 ms blocks within 30 dB of the loudest block.
+    const block = Math.max(1, Math.floor(rate * channels * 0.02))
+    const rms: number[] = []
+    for (let i = 0; i + block <= samples.length; i += block) {
+      let sum = 0
+      for (let k = i; k < i + block; k++) sum += (samples[k] / 32768) ** 2
+      rms.push(Math.sqrt(sum / block))
+    }
+    const loudest = Math.max(...rms, 1e-9)
+    const voiced = rms.filter((r) => r > loudest * 0.0316 && r > 1e-4)
+    if (voiced.length === 0) return null
+    const speech = Math.sqrt(voiced.reduce((a, r) => a + r * r, 0) / voiced.length)
+    const gain = Math.min(Math.max(10 ** (-20 / 20) / speech, 1), 10 ** (30 / 20))
+    if (gain < 1.12) return null   // already within 1 dB of the target
+    const knee = 0.7, room = 0.985 - knee
+    for (let i = 0; i < samples.length; i++) {
+      let y = (samples[i] / 32768) * gain
+      const a = Math.abs(y)
+      if (a > knee) y = Math.sign(y) * (knee + room * Math.tanh((a - knee) / room))
+      samples[i] = Math.round(y * 32767)
+    }
+    const out = new Uint8Array(buf)
+    out.set(new Uint8Array(samples.buffer), dataOff)
+    return new File([out], file.name || "sample.wav", { type: "audio/wav" })
+  } catch {
+    return null
+  }
 }
