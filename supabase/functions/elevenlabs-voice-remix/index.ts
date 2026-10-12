@@ -69,12 +69,12 @@ Deno.serve(async (req) => {
   // on the first test, 2026-10-12. Refused: every build answers a failed save
   // by dropping that accent's cached takes, so the next pick asks for fresh
   // ones, which come from Cartesia.
-  if (body.generated_voice_id && cartesia.clonesOnCartesia(user.id)) {
+  if (body.generated_voice_id) {
     const { data: active } = await supabase.from("voice_clones").select("elevenlabs_voice_id")
       .eq("user_id", user.id).eq("is_active", true).limit(1)
     const current = (active ?? [])[0]?.elevenlabs_voice_id as string | undefined
     if (cartesia.isCartesiaVoice(current)) {
-      return errorResponse(409, "stale accent take — pick the accent again")
+      return await cartesiaAccent(supabase, user.id, idemKey, body)
     }
   }
 
@@ -234,28 +234,35 @@ async function cartesiaAccent(
   }
 
   if (body.generated_voice_id) {
-    const { uuid, accent } = cartesia.parseVoice(body.generated_voice_id)
-    const row = await owns(uuid)
-    if (!row) return errorResponse(403, "voice not owned by caller")
-    // A take belongs to the voice it was made from. The app keeps takes per
-    // RECORDING, so after a rebuild it still offers takes of the voice the
-    // rebuild deleted — saving one pointed the learner at a voice that no
-    // longer exists, and every line came back "voice not found" (2026-10-12).
-    // Only a take of the CURRENT voice is saved; anything else is refused,
-    // and every build answers a failed save by dropping that accent's cached
-    // takes, so the next pick makes fresh ones from the live voice.
-    const { data: active } = await supabase.from("voice_clones").select("elevenlabs_voice_id")
+    // On Cartesia a take is only a sample of an ACCENT — what is saved is
+    // "the learner's voice + this accent". So the take's own voice is ignored
+    // and the accent goes onto the voice that is live NOW. The app keeps takes
+    // per recording and offers ones made from a voice a rebuild has since
+    // deleted; saving such a take as-is pointed the learner at a voice that no
+    // longer exists (silent calls), and refusing it showed "couldn't remix"
+    // (both 2026-10-12). The accent is read off the take id, or else the
+    // description (an ElevenLabs take carries no accent in its id).
+    const fromTake = cartesia.isCartesiaVoice(body.generated_voice_id)
+      ? cartesia.parseVoice(body.generated_voice_id).accent : null
+    const accent = fromTake ?? cartesia.accentFromDescription(body.voice_description ?? "")
+    const { data: active } = await supabase.from("voice_clones").select("elevenlabs_voice_id, name")
       .eq("user_id", userId).eq("is_active", true).limit(1)
-    const current = (active ?? [])[0]?.elevenlabs_voice_id as string | undefined
-    if (!current || cartesia.parseVoice(current).uuid !== uuid) {
-      return errorResponse(409, "stale accent take — pick the accent again")
+    const current = (active ?? [])[0] as { elevenlabs_voice_id: string; name: string | null } | undefined
+    if (!current || !cartesia.isCartesiaVoice(current.elevenlabs_voice_id)) {
+      return errorResponse(409, "no Cartesia voice to apply the accent to")
+    }
+    const { uuid } = cartesia.parseVoice(current.elevenlabs_voice_id)
+    if (accent) {
+      const ready = await cartesia.ensureAccent(uuid, accent)
+      if (!ready.ok) return errorResponse(502, "cartesia accent failed", ready.detail ?? "")
     }
     const id = accent ? `${uuid}:${accent}` : uuid
+    if (id === current.elevenlabs_voice_id) return json({ voice_id: id })
     await supabase.from("voice_clones").update({ is_active: false })
       .eq("user_id", userId).eq("is_active", true)
     const { error } = await supabase.from("voice_clones").insert({
       user_id: userId, elevenlabs_voice_id: id, is_active: true,
-      name: (body.voice_name ?? "").trim() || row.name,
+      name: (body.voice_name ?? "").trim() || current.name,
     })
     if (error) console.error("voice_clones insert failed", error)
     return json({ voice_id: id })
