@@ -480,7 +480,10 @@ struct WatchTab: View {
     /// also become who the situation is with.
     private func centre(on id: String?, force: Bool = false) {
         if !force, Date() < panningUntil { return }
-        if !force, id == skyCentred?.id.uuidString { return }
+        // Already the one in the middle: their greeting and voice stand.
+        // Tapping them again, or opening the box with them, must not say it
+        // all a second time.
+        if id == skyCentred?.id.uuidString { return }
         bubbleTask?.cancel()
         dockBubble = nil
         previewPlayer.stop()
