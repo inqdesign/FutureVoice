@@ -380,6 +380,7 @@
     <string name="couldn_t_open_that_file">"그 파일을 열지 못했어요."</string>
     <string name="couldn_t_play_audio">"오디오를 재생하지 못했어요"</string>
     <string name="couldn_t_play_the_comparison">"비교해 들을 수 없어요"</string>
+    <string name="couldn_t_play_the_sample_check_your_connection">"샘플을 재생하지 못했어요. 연결을 확인해 주세요."</string>
     <string name="couldn_t_play_the_two_takes_together">"두 녹음을 함께 재생하지 못했어요."</string>
     <string name="couldn_t_publish">"공개하지 못했어요"</string>
     <string name="couldn_t_publish_check_your_connection_and_try_again">"공개하지 못했어요 — 연결을 확인하고 다시 시도해 주세요."</string>
@@ -692,6 +693,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"설정 → 내 이름 → iCloud에서 공간을 비우면 멈춘 곳부터 다시 올라가요."</string>
     <string name="friends_joined">"가입한 친구"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"A1부터 C2까지, 내가 한 말로 재요."</string>
+    <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"이제부터 유창해진 내가 내 목소리로 말해요."</string>
     <string name="from_scenarios">"상황에서"</string>
     <string name="from_talks">"대화에서"</string>
     <string name="from_your_coach">"코치의 한마디"</string>
@@ -1111,11 +1113,15 @@
     <string name="looking_through_your_practice">"연습 기록을 살펴보는 중…"</string>
     <string name="looking_through_your_practice_data">"연습 데이터를 살펴보는 중…"</string>
     <string name="loop">"구간 %1$s–%2$s 반복"</string>
+    <!-- 'Made from the recording on this phone. A stand-in voice speaks until then.' -->
+    <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"이 폰에 있는 녹음으로 만들어요. 그때까지는 임시 목소리가 말해요."</string>
     <string name="made_from_this_week_s_talks">"이번 주 대화로 만들었어요"</string>
     <string name="make_a_situation">"상황 만들기"</string>
     <string name="make_it_yours">"내 것으로 만들기"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"여러 번 읽어보는 중이에요. 30초쯤 걸리니 이 화면을 닫지 말고 기다려 주세요."</string>
     <string name="making_it_yours">"내 것으로 만들기"</string>
+    <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
+    <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"지금 목소리를 만드는 데 잠시 문제가 있어요. 녹음은 저장해 뒀으니, 그 뒤에 앱을 열면 유창해진 내가 내 목소리로 말해요. 그때까지는 아래 목소리 중 하나를 골라 연습하세요."</string>
     <string name="making_your_test">"테스트를 만들고 있어요…"</string>
     <string name="man">"남성"</string>
     <string name="manage_in_the_app_store">"App Store에서 관리"</string>
@@ -1233,6 +1239,10 @@
     <string name="new_talk_lld_10_min">"새 대화 %d/10분"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="new_talks_and_recordings_aren_t_backed_up_to_icloud_right_no_82615e">"지금 새 대화와 녹음이 iCloud에 올라가지 못해서 이 기기에만 있어요. 이 기기에서 앱을 지우면 함께 지워져요."</string>
+    <!-- 'New voices can be made again from %@. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_from_the_voice_you_have_keeps_w_412ed4">"새 목소리는 %s부터 다시 만들 수 있어요. 그때까지 지금 목소리는 그대로 쓸 수 있어요."</string>
+    <!-- 'New voices can be made again in a few days. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_in_a_few_days_the_voice_you_hav_81c7eb">"새 목소리는 며칠 뒤에 다시 만들 수 있어요. 그때까지 지금 목소리는 그대로 쓸 수 있어요."</string>
     <string name="news">"뉴스"</string>
     <string name="news_topic">"뉴스 주제"</string>
     <string name="next">"다음"</string>
@@ -1475,6 +1485,7 @@
     <string name="pick_how_your_fluent_self_looks_and_sounds">"유창해진 나의 모습과 말하는 속도를 골라요."</string>
     <string name="pick_up_where_you_left_off">"하던 데부터 이어서"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"그 시간에 할 걸 골라요. 대화, 단어, 복습 같은 것들이요."</string>
+    <string name="pick_who_you_practice_with">"누구와 연습할지 골라요"</string>
     <string name="place">"순위"</string>
     <string name="plan">"요금제"</string>
     <string name="plan_on_the_timeline">"타임라인에서 계획해요"</string>
@@ -1723,6 +1734,7 @@
     <string name="save_to_expressions">"표현에 저장"</string>
     <string name="save_to_photos">"사진첩에 저장"</string>
     <string name="save_to_sentences">"문장에 저장"</string>
+    <string name="save_your_recording_to_your_account">"녹음을 계정에 저장해 두세요."</string>
     <string name="saved">"저장됨"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"이 기기에는 저장했는데 ElevenLabs가 새 이름을 받지 않았어요: %s 다음에 목소리를 다시 만들 때 반영돼요."</string>
@@ -1837,6 +1849,8 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"모든 챌린지 순위에서 점수 옆에 보여요."</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"상황연습 지도에서 얼굴 위에 떠요. 비워 두면 알아서 써 둬요."</string>
+    <!-- "Sign in, and your voice lands in this account the day it's made." -->
+    <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"로그인하면 목소리가 만들어지는 날 바로 이 계정에 들어와요."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"먼저 설정에서 iCloud에 로그인한 뒤 다시 해 주세요."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"동기화하려면 설정에서 iCloud에 로그인하세요"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"로그인하면 아이폰과 아이패드 사이에서 연습 기록을 맞출 수 있어요."</string>
@@ -2344,10 +2358,20 @@
     <string name="voice_name_0e3b82">"목소리 이름"</string>
     <!-- 'Voice name: %@' -->
     <string name="voice_name_f1c3a3">"목소리 이름: %s"</string>
+    <string name="voice_saved">"목소리 저장 완료"</string>
+    <string name="voice_until_then">"그때까지 쓸 목소리: %s"</string>
     <!-- 'voiced by %@' -->
     <string name="voiced_by_0ed8e5">"목소리: %s"</string>
     <!-- '%@ · voiced by %@' -->
     <string name="voiced_by_2de8fa">"%1$s · 목소리: %2$s"</string>
+    <string name="voicepreset_american">"미국 억양"</string>
+    <string name="voicepreset_british">"영국 억양"</string>
+    <string name="voicepreset_emma">"또렷하고 다정한"</string>
+    <string name="voicepreset_female">"여성"</string>
+    <string name="voicepreset_james">"따뜻하고 편안한"</string>
+    <string name="voicepreset_male">"남성"</string>
+    <string name="voicepreset_mark">"자연스러운 대화체"</string>
+    <string name="voicepreset_paige">"생기 있고 자연스러운"</string>
     <string name="waiting_for_the_first_sync">"첫 동기화를 기다리는 중"</string>
     <string name="warm_and_chatty">"다정한 수다쟁이"</string>
     <string name="watch">"상황연습"</string>
@@ -2669,6 +2693,7 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"대화는 저장했어요. 복습 탭에서 열어 복습 자료를 다시 만들 수 있어요."</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"교정과 노트, 단어 뜻이 이 언어로 나와요. 앱 화면 자체는 영어 그대로고요."</string>
+    <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"지금 목소리는 지워지고, 새로 녹음하게 돼요."</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"매일 전화가 꺼져 있어서 울리지 않아요. 나 → 매일 전화에서 켤 수 있어요."</string>
     <string name="your_daily_call_rings_at_this_time">"이 시간에 매일 전화가 와요."</string>
@@ -2732,6 +2757,8 @@
     <string name="your_name">"내 이름"</string>
     <string name="your_name_on_the_board">"순위에 보일 이름"</string>
     <string name="your_native_language">"지금 쓰는 언어는?"</string>
+    <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
+    <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"이 목소리는 원본 녹음이 남아 있지 않아요. 1분쯤 다시 녹음하면 새 엔진으로 옮겨져요."</string>
     <string name="your_overall_level">"전체 레벨"</string>
     <string name="your_own">"직접 만들기"</string>
     <string name="your_own_review_book">"개인화된 복습교재"</string>
@@ -2813,6 +2840,7 @@
     <string name="your_voice_in_safe_hands">"목소리는 안전하게"</string>
     <string name="your_voice_is_back">"목소리가 돌아왔어요"</string>
     <string name="your_voice_is_handled_with_care">"목소리는 소중히 다룹니다."</string>
+    <string name="your_voice_is_ready">"내 목소리가 준비됐어요"</string>
     <string name="your_voice_is_ready_sign_in_to_keep_it">"목소리가 준비됐어요 — 로그인하면 계속 쓸 수 있어요."</string>
     <string name="your_voice_isn_t_ready_yet">"목소리가 아직 준비되지 않았어요."</string>
     <!-- "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." -->
@@ -2825,6 +2853,8 @@
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"앱과 ElevenLabs 양쪽에서 음성 모델이 지워지고, 되돌릴 수 없어요. 다음 통화 전에 새로 녹음해 달라고 물어볼 거예요."</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"목소리 녹음도 함께 보관돼서, 새 폰에서도 다시 녹음하지 않고 목소리를 만들 수 있어요."</string>
+    <string name="your_voice_will_be_ready_in_a_few_days">"며칠 뒤에 목소리가 준비돼요."</string>
+    <string name="your_voice_will_be_ready_on">"%s에 목소리가 준비돼요."</string>
     <string name="your_week">"한 주 돌아보기"</string>
     <string name="your_week_at_the_top">"위쪽에 있는 한 주"</string>
     <string name="your_week_is_ready">"지난 한 주를 정리했어요"</string>

@@ -140,7 +140,11 @@ import com.roro.futurevoice.ui.brand.DisplayFace
  * the voice survives the sign-up; a sign-in that lands on another account
  * rebuilds the voice there from the take still on disk.
  */
-private enum class CloneAct { INTRO, CONSENT, MIC, SPOT, SCRIPT, RECORDING, REVIEW, UPLOADING, MEET, ACCOUNT }
+private enum class CloneAct {
+    INTRO, CONSENT, MIC, SPOT, SCRIPT, RECORDING, REVIEW, UPLOADING, MEET, ACCOUNT,
+    /** The month's voices are spent: recording kept, voice made later (iOS `.queued`). */
+    QUEUED,
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,6 +181,19 @@ fun CloneFlowScreen(
     redeemedInvite: com.roro.futurevoice.net.ReferralClient.Redeemed? = null,
     /** DEBUG only (iOS `-cloneStage`): open on one act with stand-in data. */
     debugStage: String? = null,
+    /** The voice is a stand-in preset while the learner's own is queued
+     *  (iOS `AppState.voiceIsStandIn`, 2026-10-10). */
+    voiceIsStandIn: Boolean = false,
+    /** When the queued voice will be made (epoch ms), as the server said. */
+    voiceQueuedUntil: Long? = null,
+    /** The first clone was refused for the account's monthly voice
+     *  allowance: keep going on a stand-in (iOS `adoptStandInVoice`). Null —
+     *  a re-record from Me, where the live voice keeps working — shows the
+     *  refusal's date instead. */
+    onQueued: ((until: Long?) -> Unit)? = null,
+    /** The stand-in picked to practice with meanwhile, and the pick. */
+    standInVoiceId: String? = null,
+    onChooseStandIn: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -193,6 +210,7 @@ fun CloneFlowScreen(
             "uploading" -> CloneAct.UPLOADING
             "meet" -> CloneAct.MEET
             "account" -> CloneAct.ACCOUNT
+            "queued" -> CloneAct.QUEUED
             else -> CloneAct.INTRO
         })
     }
@@ -441,7 +459,8 @@ fun CloneFlowScreen(
                 )
             }.onSuccess { adoptVoice(it, null, greet = true) }
                 .onFailure { e ->
-                    error = (e as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context) ?: e.message
+                    error = (e as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context)
+                        ?: (e as? com.roro.futurevoice.data.VoiceQuotaFull)?.line(context) ?: e.message
                 }
             removingAccent = false
             com.roro.futurevoice.data.VoiceChanges.refresh()
@@ -521,6 +540,29 @@ fun CloneFlowScreen(
                 reRecording = false
                 act = CloneAct.MEET
                 openMeet()
+            } catch (e: com.roro.futurevoice.data.VoiceQuotaFull) {
+                val queue = onQueued
+                if (queue == null || !(existingVoiceId == null || voiceIsStandIn) || reRecording) {
+                    com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
+                    error = e.line(context)
+                    act = CloneAct.REVIEW
+                    if (!reRecording) onHold(false)
+                    return@launch
+                }
+                // The month's voices are spent. Keep the take (iOS saves it
+                // to `VoiceSampleStore` before the upload): a stand-in speaks
+                // until the allowance resets, then the voice is built from it.
+                val source = if (takeFile.exists()) takeFile else sampleFile
+                if (source != sampleFile) {
+                    sampleFile.parentFile?.mkdirs()
+                    source.copyTo(sampleFile, overwrite = true)
+                    source.delete()
+                }
+                prefs.edit().remove(PENDING_TAKE_KEY).apply()
+                clonedVoiceId = com.roro.futurevoice.talk.StockPerson.catalog[0].voiceId
+                accentId = null
+                queue(e.until)
+                act = CloneAct.QUEUED
             } catch (e: Exception) {
                 android.util.Log.w("CloneFlow", "clone failed", e)
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
@@ -603,7 +645,11 @@ fun CloneFlowScreen(
     // they heard is theirs.
     LaunchedEffect(signedIn, act) {
         if (!signedIn || act != CloneAct.ACCOUNT || debugStage != null) return@LaunchedEffect
-        if (clonedVoiceId == null || adoptedExistingAccount) performClone() else finishMeet()
+        // A stand-in under an account that already existed: that account's
+        // own voice (if any) is adopted by the restore, and an empty one
+        // keeps the queue — never a clone attempt the spent allowance would
+        // refuse anyway.
+        if (clonedVoiceId == null || (adoptedExistingAccount && !voiceIsStandIn)) performClone() else finishMeet()
     }
 
     BackHandler {
@@ -614,7 +660,8 @@ fun CloneFlowScreen(
             CloneAct.MIC -> act = stepAfterIntro()
             CloneAct.SPOT -> act = CloneAct.MIC
             CloneAct.SCRIPT -> if (reRecording) cancelReRecord() else act = CloneAct.SPOT
-            CloneAct.ACCOUNT -> act = if (clonedVoiceId == null) CloneAct.REVIEW else CloneAct.MEET
+            CloneAct.ACCOUNT -> act = if (clonedVoiceId == null) CloneAct.REVIEW
+                else if (voiceIsStandIn) CloneAct.QUEUED else CloneAct.MEET
             // Mid-take, mid-clone and the meet act have no Back on iOS either.
             else -> {}
         }
@@ -636,6 +683,7 @@ fun CloneFlowScreen(
         CloneAct.UPLOADING -> R.string.becoming_you
         CloneAct.MEET -> R.string.meet_your_fluent_self
         CloneAct.ACCOUNT -> R.string.make_it_yours
+        CloneAct.QUEUED -> R.string.voice_saved
     })
     val timerLine = when (act) {
         // The orb's tap has nothing else pointing at it.
@@ -661,7 +709,8 @@ fun CloneFlowScreen(
                 Row(Modifier.fillMaxWidth().padding(start = 12.dp)) {
                     Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable {
                             error = null
-                            act = if (clonedVoiceId == null) CloneAct.REVIEW else CloneAct.MEET
+                            act = if (clonedVoiceId == null) CloneAct.REVIEW
+                                else if (voiceIsStandIn) CloneAct.QUEUED else CloneAct.MEET
                         }.padding(horizontal = 4.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, Modifier.size(18.dp),
@@ -1053,8 +1102,13 @@ fun CloneFlowScreen(
                     // Nothing here CREATES the voice — it only keeps it.
                     CloneAct.ACCOUNT -> Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(26.dp)) {
-                        StepHeader(stringResource(R.string.save_this_voice_to_your_account),
-                            stringResource(R.string.its_built_and_its_yours))
+                        if (voiceIsStandIn) {
+                            StepHeader(stringResource(R.string.save_your_recording_to_your_account),
+                                stringResource(R.string.sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2))
+                        } else {
+                            StepHeader(stringResource(R.string.save_this_voice_to_your_account),
+                                stringResource(R.string.its_built_and_its_yours))
+                        }
                         // The code was typed on Welcome, several steps back.
                         // Showing it here is the only sign it's still coming.
                         com.roro.futurevoice.data.PendingInvite.code(context)?.let { code ->
@@ -1073,6 +1127,20 @@ fun CloneFlowScreen(
                             Text(it, color = red, style = MaterialTheme.typography.bodySmall,
                                 textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                         }
+                    }
+                    // Queued: the account's voices for the month are spent. The
+                    // take is saved; a stand-in speaks until the date the
+                    // server gave, then the voice is built on its own
+                    // (`AppViewModel.makeQueuedVoiceIfReady`).
+                    CloneAct.QUEUED -> Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StepHeader(com.roro.futurevoice.data.VoiceQuota.readyLine(context, voiceQueuedUntil),
+                            stringResource(R.string.making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0))
+                        StandInVoicePicker(
+                            selection = standInVoiceId ?: clonedVoiceId,
+                            targetLanguage = targetLanguage,
+                            onChoose = onChooseStandIn,
+                        )
                     }
                     else -> {}
                 }
@@ -1197,6 +1265,11 @@ fun CloneFlowScreen(
                     if (signedIn) finishMeet() else { mp3.stop(); act = CloneAct.ACCOUNT }
                 }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (signedIn) R.string.start_talking else R.string.save_this_voice))
+                }
+                CloneAct.QUEUED -> Button(onClick = {
+                    if (signedIn) finishMeet() else act = CloneAct.ACCOUNT
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(if (signedIn) R.string.start_talking else R.string.continue_))
                 }
                 // The two providers stacked full-width at equal size; Back
                 // lives in the page header.

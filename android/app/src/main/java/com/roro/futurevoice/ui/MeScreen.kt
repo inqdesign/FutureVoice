@@ -136,6 +136,11 @@ fun MeScreen(
     onAccentApplied: (voiceId: String, accentId: String) -> Unit = { _, _ -> },
     /** After a rebuild from the saved recording (iOS `MeTab.regenerateFromSavedSample`). */
     onApplyDefaultAccent: suspend () -> Unit = {},
+    /** The voice is a stand-in preset while theirs is queued (iOS
+     *  `voiceIsStandIn`), and the pick of which one. */
+    voiceIsStandIn: Boolean = false,
+    voiceQueuedUntil: Long? = null,
+    onChooseStandIn: (String) -> Unit = {},
     onRerecordVoice: () -> Unit = {},
     onPickAppLanguage: (String) -> Unit = {},
     onEditProfile: () -> Unit,
@@ -241,11 +246,12 @@ fun MeScreen(
             MePage.CORE -> scope.launch { coreProgress = CoreClubClient(AuthRepository()).progress(targetLanguage) }
             else -> Unit
         }
-        page = if (page == MePage.SCENE_VOICE) MePage.VOICE else null
+        page = if (page == MePage.SCENE_VOICE || page == MePage.STAND_IN_VOICE) MePage.VOICE else null
     }
     val meStack: List<Any> = when (val p = page) {
         null -> listOf(MeRoot)
         MePage.SCENE_VOICE -> listOf(MeRoot, MePage.VOICE, MePage.SCENE_VOICE)
+        MePage.STAND_IN_VOICE -> listOf(MeRoot, MePage.VOICE, MePage.STAND_IN_VOICE)
         else -> listOf(MeRoot, p)
     }
     IosNavStack(stack = meStack, onPop = ::popPage) { key ->
@@ -270,8 +276,24 @@ fun MeScreen(
             onPickSceneVoice = { page = MePage.SCENE_VOICE },
             onRebuilt = { onAccentApplied(it, "") },
             onApplyDefaultAccent = onApplyDefaultAccent,
+            voiceIsStandIn = voiceIsStandIn,
+            voiceQueuedUntil = voiceQueuedUntil,
+            onPickStandIn = { page = MePage.STAND_IN_VOICE },
             onBack = { page = null },
         )
+        // The voice that speaks while theirs is queued (iOS pushes
+        // `VoicePresetPickerView` bound to `chooseStandInVoice`).
+        MePage.STAND_IN_VOICE -> {
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground)
+                .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)) {
+                VoicePresetPicker(
+                    selection = voiceId ?: "",
+                    targetLanguage = targetLanguage,
+                    onSelect = onChooseStandIn,
+                    onBack = { page = MePage.VOICE },
+                )
+            }
+        }
         // iOS pushes `VoicePresetPickerView` from the Voice page; back
         // returns there, not to the main list.
         MePage.SCENE_VOICE -> {

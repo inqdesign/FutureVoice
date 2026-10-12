@@ -300,6 +300,34 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         if (accept != null) builder.header("Accept", accept)
         return builder.build()
     }
+
+    @Serializable
+    private data class MovedResponse(val voice_id: String)
+
+    /**
+     * Moves the learner's voice to the new engine from the SERVER's copy of
+     * their recording (`voice-move`, iOS `moveVoiceFromServer`, 2026-10-12)
+     * — for a phone with no saved recording. Returns the new voice id, or
+     * null when no original exists upstream (an accent remix keeps none), in
+     * which case only a new recording can move it.
+     */
+    suspend fun moveVoiceFromServer(): String? = withContext(Dispatchers.IO) {
+        val req = Request.Builder()
+            .url(Config.functionUrl("voice-move"))
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+        val client = Edge.client.newBuilder()
+            .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+            .callTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        client.newCall(req).execute().use { resp ->
+            val raw = resp.body.string()
+            if (resp.code == 409 && raw.contains("no_original")) return@use null
+            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, raw.take(512))
+            Edge.json.decodeFromString(MovedResponse.serializer(), raw).voice_id
+        }
+    }
 }
 
 /**
@@ -394,6 +422,9 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
         return slowClient.newCall(req).execute().use { resp ->
             val raw = resp.body.string()
             com.roro.futurevoice.data.VoiceChangeLimit.from(resp.code, raw)?.let { throw it }
+            // The month's voices are spent: a date in the app language, never
+            // the raw JSON (iOS `VoiceQuota.pausedLine`).
+            if (resp.code !in 200..299) com.roro.futurevoice.data.VoiceQuotaFull.from(raw)?.let { throw it }
             if (resp.code !in 200..299) throw EdgeError.Http(resp.code, raw.take(512))
             raw
         }

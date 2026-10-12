@@ -16,8 +16,8 @@ import com.roro.futurevoice.data.Counterpart
  * gateway `start`, and the phrase-audio cache key. Nothing stored changes, and
  * a person — shared by every target language — speaks natively in each one.
  *
- * Korean voices picked by ear by the founder; Japanese uses the same four;
- * German and English keep the originals. Every id here is in both server
+ * Since 2026-10-12 (iOS `e9fcb2d`) every slot speaks from Cartesia's library
+ * in en/de/ko/ja — a native speaker of each. Every id here is in both server
  * allowlists (gateway `PRESET_VOICE_IDS`, `elevenlabs-tts`) — already deployed.
  */
 object VoicePreset {
@@ -28,13 +28,35 @@ object VoicePreset {
     private const val JAMES = "L0Dsvb3SLTyegXwtm47J"
 
     private val voicedBySlot: Map<String, Map<String, String>> = run {
-        val korean = mapOf(
-            PAIGE to "5n5gqmaQi9Ewevrz7bOS",  // Paige → Sian (F)
-            MARK to "L4az9Gb378GIycFl2nAB",   // Mark  → "KO - Calm, Friendly, Warm" (M)
-            EMMA to "8jHHF8rMqMlg8if2mOUe",   // Emma  → Han (F)
-            JAMES to "AKF7f2y1L8ktV5vxXILw",  // James → Joon (M)
+        // Every selectable target language speaks from Cartesia's library
+        // since 2026-10-12 (iOS `e9fcb2d`; the ElevenLabs voices above are
+        // now only the SLOT ids stored on people and scenarios). English
+        // keeps the slots' American/British split.
+        val english = mapOf(
+            PAIGE to "999df508-4de5-40a7-8bd3-8c12f678c284",  // Paige → Layla (F, US)
+            MARK to "c961b81c-a935-4c17-bfb3-ba2239de8c2f",   // Mark  → Kyle (M, US)
+            EMMA to "e5d4c33a-d8f6-46e8-a10f-b5afecc35648",   // Emma  → Evie (F, GB)
+            JAMES to "3d5ce2fb-e56c-42f0-9ed9-4662484063b4",  // James → Toby (M, GB)
         )
-        mapOf("ko" to korean, "ja" to korean)
+        val german = mapOf(
+            PAIGE to "1ade29fc-6b82-4607-9e70-361720139b12",  // Lea (F)
+            MARK to "dff81230-ff75-49a4-af44-f6b2f43500d8",   // Jonas (M)
+            EMMA to "3f4ade23-6eb4-4279-ab05-6a144947c4d5",   // Karin (F)
+            JAMES to "afa425cf-5489-4a09-8a3f-d3cb1f82150d",  // Nico (M)
+        )
+        val korean = mapOf(
+            PAIGE to "cac92886-4b7c-4bc1-a524-e0f79c0381be",  // 시안 ← Yuna (F)
+            MARK to "537a82ae-4926-4bfb-9aec-aff0b80a12a5",   // 민준 ← Minho (M)
+            EMMA to "cd6c48a9-774b-4397-98b4-9948c0a790f0",   // 한별 ← Soojin (F)
+            JAMES to "f7755efb-1848-4321-aa22-5e5be5d32486",  // 준호 ← Ryeowook (M)
+        )
+        val japanese = mapOf(
+            PAIGE to "c7eafe22-8b71-40cd-850b-c5a3bbd8f8d2",  // 美咲 ← Emi (F)
+            MARK to "b8e1169c-f16a-4064-a6e0-95054169e553",   // 翔太 ← Takashi (M)
+            EMMA to "7be83d14-4707-43ad-9774-e24eb38320f0",   // 陽菜 ← Rin (F)
+            JAMES to "6b92f628-be90-497c-8f4c-3b035002df71",  // 健太 ← Kenji (M)
+        )
+        mapOf("en" to english, "de" to german, "ko" to korean, "ja" to japanese)
     }
 
     /**
@@ -44,6 +66,7 @@ object VoicePreset {
      * scenes), never the app language.
      */
     private val localNames: Map<String, Map<String, String>> = mapOf(
+        "de" to mapOf(PAIGE to "Lea", MARK to "Jonas", EMMA to "Karin", JAMES to "Nico"),
         "ko" to mapOf(PAIGE to "시안", MARK to "민준", EMMA to "한별", JAMES to "준호"),
         "ja" to mapOf(PAIGE to "美咲", MARK to "翔太", EMMA to "陽菜", JAMES to "健太"),
     )
@@ -87,6 +110,70 @@ object VoicePreset {
     /** The preset person this id names, or null for anything else (a library
      *  voice) — iOS `VoicePreset.known(id:)`. */
     fun known(id: String?): StockPerson? = StockPerson.catalog.firstOrNull { it.voiceId == id }
+    /** One of the four preset SLOTS (iOS `VoicePreset.catalog`). Shared by
+     *  every learner, so never deleted, never anyone's own voice. */
+    fun isPreset(id: String?): Boolean = id != null && StockPerson.catalog.any { it.voiceId == id }
+
+    /**
+     * The picker's caption (iOS `VoicePreset.caption(in:)`). The accent and
+     * description are the ENGLISH voice's, so a slot voiced by someone else
+     * in [language] shows only what is still true of it: the gender. Drawn
+     * in the APP language (2026-10-10, iOS `3205350`): it is chrome describing
+     * the voice, while the name and the sample follow the language practised.
+     */
+    fun caption(context: Context, voiceId: String, language: String): String {
+        val male = voiceId == MARK || voiceId == JAMES
+        val gender = context.getString(if (male) com.roro.futurevoice.R.string.voicepreset_male
+            else com.roro.futurevoice.R.string.voicepreset_female)
+        if (isRevoiced(voiceId, language) && !language.startsWith("en")) return gender
+        val accent = context.getString(if (voiceId == EMMA || voiceId == JAMES)
+            com.roro.futurevoice.R.string.voicepreset_british else com.roro.futurevoice.R.string.voicepreset_american)
+        val description = when (voiceId) {
+            PAIGE -> context.getString(com.roro.futurevoice.R.string.voicepreset_paige)
+            MARK -> context.getString(com.roro.futurevoice.R.string.voicepreset_mark)
+            EMMA -> context.getString(com.roro.futurevoice.R.string.voicepreset_emma)
+            JAMES -> context.getString(com.roro.futurevoice.R.string.voicepreset_james)
+            else -> ""
+        }
+        return "$gender · $accent · $description"
+    }
+
+    /**
+     * The preview clip for a preset voice in a target language (iOS
+     * `VoicePresetPickerView.previewAudio`, `bd87569`). The clips SHIP with
+     * the app (`assets/voice_previews`, the same files iOS bundles, made by
+     * `scripts/bundle-voice-previews.sh`): the line and the voice are the
+     * same for everyone, so synthesizing them per learner paid for the same
+     * few seconds over and over. A clip the bundle lacks falls back to the
+     * phone's cache, then to one live synthesis kept in that cache.
+     */
+    suspend fun previewAudio(context: Context, voiceId: String, language: String): ByteArray {
+        val lang = language.substringBefore('-')
+        runCatching {
+            context.assets.open("voice_previews/preview-$lang-$voiceId.mp3").use { it.readBytes() }
+        }.getOrNull()?.let { return it }
+        // The voice speaking NOW — never a take an older voice of this slot
+        // made before it got a native one.
+        return com.roro.futurevoice.data.cachedSynthesis(context, voiceId = voiceId,
+            text = previewLine(language), purpose = "voice_preview", allowLineage = false)
+    }
+
+    /** One neutral greeting per target language — phrasings that avoid
+     *  speaker-gender agreement so any voice can say them (iOS `previewLine`).
+     *  The `<break>` is the pause tag: measured on the Korean line, the
+     *  period after 반가워요 gave NO pause at all. It is spoken as silence,
+     *  never read out; this line is audio only, never drawn as text. */
+    fun previewLine(code: String): String = when (code.substringBefore("-")) {
+        "es" -> "¡Hola! Qué alegría verte. <break time=\"0.5s\" /> ¿Empezamos?"
+        "de" -> "Hallo! Schön, dich zu sehen. <break time=\"0.5s\" /> Sollen wir anfangen?"
+        "fr" -> "Bonjour ! Ça me fait plaisir de te voir. <break time=\"0.5s\" /> On commence ?"
+        "it" -> "Ciao! Che bello vederti. <break time=\"0.5s\" /> Iniziamo?"
+        "pt" -> "Oi! Que bom te ver. <break time=\"0.5s\" /> Vamos começar?"
+        "ja" -> "こんにちは！会えてうれしいです。<break time=\"0.5s\" />始めましょうか？"
+        "ko" -> "안녕하세요! 만나서 반가워요. <break time=\"0.5s\" /> 시작해 볼까요?"
+        "zh" -> "你好！很高兴见到你。<break time=\"0.5s\" />我们开始吧？"
+        else -> "Hi! It's good to see you. <break time=\"0.5s\" /> Shall we get started?"
+    }
 
     /** Me → Voice → "Scene partner voice": who plays a Watch scene with no
      *  saved person (iOS `VoicePreset.sceneDefault`, same defaults key).
@@ -123,12 +210,8 @@ fun StockPerson.nameIn(language: String): String = VoicePreset.name(voiceId, nam
  * the name is the one this language gives the slot.
  */
 fun StockPerson.identityIn(language: String): String {
-    if (!VoicePreset.isRevoiced(voiceId, language)) return identity
+    if (!VoicePreset.isRevoiced(voiceId, language) || language.startsWith("en")) return identity
     val rest = identity.replace(Regex("(American|British), "), "")
     if (!rest.startsWith(name)) return rest
     return nameIn(language) + rest.drop(name.length)
 }
-
-/** The picker's caption — everything after the name, capitalized. */
-fun StockPerson.captionIn(language: String): String =
-    identityIn(language).substringAfter("— ").replaceFirstChar { it.uppercase() }

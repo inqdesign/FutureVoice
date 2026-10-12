@@ -48,6 +48,9 @@ Recordings/
 *.m4a
 *.mp3
 !FutureVoice/Resources/**/*.mp3
+# The preset-voice preview clips the app ships (same files as iOS's
+# Resources/VoicePreviews, scripts/bundle-voice-previews.sh).
+!android/app/src/main/assets/voice_previews/*.mp3
 !FutureVoice/Resources/**/*.wav
 
 # Misc

@@ -79,7 +79,6 @@ import com.roro.futurevoice.data.cast
 import com.roro.futurevoice.data.knowsLearnersLife
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.StockPerson
-import com.roro.futurevoice.talk.captionIn
 import com.roro.futurevoice.talk.nameIn
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.ContinuousShape
@@ -528,14 +527,11 @@ internal fun VoicePresetPicker(
     fun preview(id: String) {
         if (playingId == id) { player.stop(); playingId = null; return }
         player.stop(); playingId = null; error = false
-        val text = voicePreviewLine(targetLanguage)
         scope.launch {
             loadingId = id
+            // The bundled clip first (iOS `bd87569`), then cache, then synthesis.
             val audio = runCatching {
-                // The voice speaking NOW — never a take an older voice of
-                // this slot made before it got a native one (iOS `b49e91b`).
-                com.roro.futurevoice.data.cachedSynthesis(context, voiceId = id, text = text,
-                    purpose = "voice_preview", allowLineage = false)
+                com.roro.futurevoice.talk.VoicePreset.previewAudio(context, id, targetLanguage)
             }.getOrNull()
             loadingId = null
             if (audio == null) { error = true; return@launch }
@@ -586,7 +582,7 @@ internal fun VoicePresetPicker(
                     }
                     Column(Modifier.weight(1f)) {
                         Text(v.nameIn(targetLanguage), style = MaterialTheme.typography.bodyLarge)
-                        Text(v.captionIn(targetLanguage),
+                        Text(com.roro.futurevoice.talk.VoicePreset.caption(context, v.voiceId, targetLanguage),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

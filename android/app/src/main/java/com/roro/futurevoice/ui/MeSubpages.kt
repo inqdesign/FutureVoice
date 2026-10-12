@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.SettingsVoice
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PhoneCallback
@@ -80,7 +82,7 @@ import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
 
 /** The Settings pages a row pushes (iOS `MeTab`'s NavigationLinks). */
-enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, GUIDE, CORE, APP_LANGUAGE, SCENE_VOICE }
+enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, GUIDE, CORE, APP_LANGUAGE, SCENE_VOICE, STAND_IN_VOICE }
 
 /**
  * One pushed Settings page: back arrow, a centred inline title (iOS
@@ -219,6 +221,11 @@ fun VoicePage(
     /** Then into the default accent (iOS `AppState.applyDefaultAccent`),
      *  awaited under the same spinner. */
     onApplyDefaultAccent: suspend () -> Unit = {},
+    /** The month's voices were spent at signup (iOS `voiceIsStandIn`): a
+     *  preset speaks until [voiceQueuedUntil], when theirs is made. */
+    voiceIsStandIn: Boolean = false,
+    voiceQueuedUntil: Long? = null,
+    onPickStandIn: () -> Unit = {},
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -253,8 +260,25 @@ fun VoicePage(
                     }),
                 stringResource(R.string.for_watch_scenes_without_a_saved_person),
                 onClick = onPickSceneVoice)
+            // The month's voices were spent when they signed up: say when
+            // theirs arrives, and hide what would act on a stand-in preset.
+            if (voiceIsStandIn) {
+                GroupedRowDivider()
+                MeRow(Icons.Filled.HourglassTop,
+                    com.roro.futurevoice.data.VoiceQuota.readyLine(context, voiceQueuedUntil),
+                    stringResource(R.string.made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768),
+                    kind = MeRowKind.PLAIN)
+                GroupedRowDivider()
+                MeRow(Icons.Filled.SettingsVoice,
+                    stringResource(R.string.voice_until_then,
+                        com.roro.futurevoice.talk.StockPerson.by(voiceId).let {
+                            com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                        }),
+                    stringResource(R.string.pick_who_you_practice_with),
+                    onClick = onPickStandIn)
+            }
             val accents = VoiceAccentCatalog.options(targetLanguage)
-            if (hasVoice && accents.isNotEmpty()) {
+            if (hasVoice && !voiceIsStandIn && accents.isNotEmpty()) {
                 GroupedRowDivider()
                 val applied = accents.firstOrNull { it.id == voiceAccentId }
                 MeRow(Icons.Outlined.Language,
@@ -282,7 +306,7 @@ fun VoicePage(
                 })
             // Above the re-record: it is the question people arrive with, and
             // most of the time what sounds foreign is the language.
-            if (hasVoice && voiceId != null && hasSample) {
+            if (hasVoice && voiceId != null && !voiceIsStandIn && hasSample) {
                 GroupedRowDivider()
                 MeRow(Icons.Filled.GraphicEq, stringResource(R.string.doesn_t_sound_like_you),
                     stringResource(R.string.hear_your_recording_and_your_clone_side_by_side),
@@ -295,8 +319,8 @@ fun VoicePage(
             MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
                 if (canChange) stringResource(R.string.replace_your_current_clone_with_a_new_one)
                 else againLine,
-                kind = MeRowKind.DESTRUCTIVE, enabled = canChange, onClick = onRerecord)
-            if (hasSample) {
+                kind = MeRowKind.DESTRUCTIVE, enabled = canChange && !voiceIsStandIn, onClick = onRerecord)
+            if (hasSample && !voiceIsStandIn) {
                 GroupedRowDivider()
                 MeRow(Icons.Filled.Sync, stringResource(R.string.regenerate_from_saved_recording),
                     if (canChange) stringResource(R.string.rebuild_the_clone_from_your_last_recording)
@@ -381,6 +405,7 @@ fun VoicePage(
                         }.onSuccess { onRebuilt(it); onApplyDefaultAccent() }
                             .onFailure {
                                 rebuildError = (it as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context)
+                                    ?: (it as? com.roro.futurevoice.data.VoiceQuotaFull)?.line(context)
                                     ?: it.localizedMessage ?: it.toString()
                             }
                         rebuilding = false

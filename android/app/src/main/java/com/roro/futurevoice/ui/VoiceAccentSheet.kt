@@ -313,6 +313,9 @@ fun VoiceAccentSheet(
                         // Someone else's device used it first; say the date.
                         com.roro.futurevoice.data.VoiceChanges.refresh()
                         error = e.line(context)
+                    } else if (e is com.roro.futurevoice.data.VoiceQuotaFull) {
+                        // The month's voices are spent: say when they come back.
+                        error = e.line(context)
                     } else {
                         // A remembered take can go stale upstream; the next
                         // pick of this accent makes fresh ones instead of
@@ -349,6 +352,7 @@ fun VoiceAccentSheet(
                             onDismiss()
                         }.onFailure { e ->
                             error = (e as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context)
+                                ?: (e as? com.roro.futurevoice.data.VoiceQuotaFull)?.line(context)
                                 ?: e.localizedMessage ?: e.toString()
                         }
                         removing = false

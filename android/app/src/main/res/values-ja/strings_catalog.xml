@@ -379,6 +379,7 @@
     <string name="couldn_t_open_that_file">"そのファイルを開けませんでした。"</string>
     <string name="couldn_t_play_audio">"音声を再生できませんでした"</string>
     <string name="couldn_t_play_the_comparison">"比較を再生できませんでした"</string>
+    <string name="couldn_t_play_the_sample_check_your_connection">"サンプルを再生できませんでした。接続を確認してください。"</string>
     <string name="couldn_t_play_the_two_takes_together">"2つの音声を同時に再生できませんでした。"</string>
     <string name="couldn_t_publish">"公開できませんでした"</string>
     <string name="couldn_t_publish_check_your_connection_and_try_again">"公開できませんでした。接続を確認してもう一度お試しください。"</string>
@@ -691,6 +692,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"設定 → 自分の名前 → iCloud で空き容量を作ると、止まったところから再開します。"</string>
     <string name="friends_joined">"参加した友だち"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"A1からC2まで、自分が話した内容から測ります。"</string>
+    <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"これからは流暢な自分が自分の声で話します。"</string>
     <string name="from_scenarios">"シチュエーションから"</string>
     <string name="from_talks">"通話から"</string>
     <string name="from_your_coach">"コーチからひと言"</string>
@@ -1110,11 +1112,15 @@
     <string name="looking_through_your_practice">"練習データを確認中…"</string>
     <string name="looking_through_your_practice_data">"練習データを確認しています…"</string>
     <string name="loop">"%1$s–%2$sをループ"</string>
+    <!-- 'Made from the recording on this phone. A stand-in voice speaks until then.' -->
+    <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"このスマホの録音から作ります。それまでは仮の声が話します。"</string>
     <string name="made_from_this_week_s_talks">"今週のトークから作りました"</string>
     <string name="make_a_situation">"シチュエーションを作る"</string>
     <string name="make_it_yours">"自分のものにする"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"何度か読み上げています。30秒ほどかかるので、この画面を閉じずにお待ちください。"</string>
     <string name="making_it_yours">"自分のものにする"</string>
+    <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
+    <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"現在、声の作成に一時的な問題が起きています。録音は保存したので、その日以降にアプリを開くと、流暢な自分が自分の声で話します。それまでは、下の声から一つ選んで練習してください。"</string>
     <string name="making_your_test">"テストを作っています…"</string>
     <string name="man">"男性"</string>
     <string name="manage_in_the_app_store">"App Storeで管理"</string>
@@ -1232,6 +1238,10 @@
     <string name="new_talk_lld_10_min">"新しい通話 %d/10分"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="new_talks_and_recordings_aren_t_backed_up_to_icloud_right_no_82615e">"いまは新しい会話と録音がiCloudに保存できず、この端末にしかありません。この端末でアプリを削除すると、一緒に消えます。"</string>
+    <!-- 'New voices can be made again from %@. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_from_the_voice_you_have_keeps_w_412ed4">"新しい声は%sから作れるようになります。それまで今の声はそのまま使えます。"</string>
+    <!-- 'New voices can be made again in a few days. The voice you have keeps working until then.' -->
+    <string name="new_voices_can_be_made_again_in_a_few_days_the_voice_you_hav_81c7eb">"新しい声は数日後にまた作れるようになります。それまで今の声はそのまま使えます。"</string>
     <string name="news">"ニュース"</string>
     <string name="news_topic">"ニュースのトピック"</string>
     <string name="next">"次へ"</string>
@@ -1474,6 +1484,7 @@
     <string name="pick_how_your_fluent_self_looks_and_sounds">"流暢な自分の見た目と話す速さを選んでください。"</string>
     <string name="pick_up_where_you_left_off">"続きから"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"その時間にやることを選びます。トーク、単語、復習など。"</string>
+    <string name="pick_who_you_practice_with">"練習する相手を選べます"</string>
     <string name="place">"順位"</string>
     <string name="plan">"プラン"</string>
     <string name="plan_on_the_timeline">"タイムラインで計画"</string>
@@ -1722,6 +1733,7 @@
     <string name="save_to_expressions">"表現に保存"</string>
     <string name="save_to_photos">"写真に保存"</string>
     <string name="save_to_sentences">"文に保存"</string>
+    <string name="save_your_recording_to_your_account">"録音をアカウントに保存しましょう。"</string>
     <string name="saved">"保存済み"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"この端末には保存しましたが、ElevenLabsが新しい名前を受け付けませんでした: %s 次に声を作り直すときに反映されます。"</string>
@@ -1836,6 +1848,8 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"どのチャレンジのランキングでも、点数の横に表示されます。"</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"シーン練習のマップで顔の上に表示されます。空欄なら自動で書きます。"</string>
+    <!-- "Sign in, and your voice lands in this account the day it's made." -->
+    <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"サインインすると、声ができた日にこのアカウントに届きます。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"先に「設定」でiCloudにサインインしてから、もう一度お試しください。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"同期するには「設定」でiCloudにサインインしてください"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"サインインすると、iPhoneとiPadの間で練習データを同期できます。"</string>
@@ -2343,10 +2357,20 @@
     <string name="voice_name_0e3b82">"声の名前"</string>
     <!-- 'Voice name: %@' -->
     <string name="voice_name_f1c3a3">"声の名前: %s"</string>
+    <string name="voice_saved">"声を保存しました"</string>
+    <string name="voice_until_then">"それまでの声：%s"</string>
     <!-- 'voiced by %@' -->
     <string name="voiced_by_0ed8e5">"声: %s"</string>
     <!-- '%@ · voiced by %@' -->
     <string name="voiced_by_2de8fa">"%1$s · 声: %2$s"</string>
+    <string name="voicepreset_american">"アメリカ英語"</string>
+    <string name="voicepreset_british">"イギリス英語"</string>
+    <string name="voicepreset_emma">"はっきりして親しみやすい"</string>
+    <string name="voicepreset_female">"女性"</string>
+    <string name="voicepreset_james">"温かく気さく"</string>
+    <string name="voicepreset_male">"男性"</string>
+    <string name="voicepreset_mark">"自然な話し言葉"</string>
+    <string name="voicepreset_paige">"親しみやすく自然"</string>
     <string name="waiting_for_the_first_sync">"最初の同期を待っています"</string>
     <string name="warm_and_chatty">"あたたかくて話し好き"</string>
     <string name="watch">"シーン練習"</string>
@@ -2668,6 +2692,7 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"会話は保存しました。「復習」で開くと、復習教材をもう一度作れます。"</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"修正やメモ、単語の意味がこの言語で返ってきます。アプリの画面自体は英語のままです。"</string>
+    <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"今の声は削除され、新しく録音します。"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"毎日の電話がオフなので鳴りません。マイページ → 毎日の電話でオンにできます。"</string>
     <string name="your_daily_call_rings_at_this_time">"この時間に毎日の電話が鳴ります。"</string>
@@ -2731,6 +2756,8 @@
     <string name="your_name">"名前"</string>
     <string name="your_name_on_the_board">"ランキングでの名前"</string>
     <string name="your_native_language">"ふだん使う言語は？"</string>
+    <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
+    <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"この声は元の録音が残っていません。1分ほど録音し直すと、新しいエンジンに移ります。"</string>
     <string name="your_overall_level">"総合レベル"</string>
     <string name="your_own">"自分で作る"</string>
     <string name="your_own_review_book">"自分だけの復習ブック"</string>
@@ -2812,6 +2839,7 @@
     <string name="your_voice_in_safe_hands">"声は安全に"</string>
     <string name="your_voice_is_back">"声が戻りました"</string>
     <string name="your_voice_is_handled_with_care">"声は大切に扱います。"</string>
+    <string name="your_voice_is_ready">"声ができあがりました"</string>
     <string name="your_voice_is_ready_sign_in_to_keep_it">"声の準備ができました。ログインすると使い続けられます。"</string>
     <string name="your_voice_isn_t_ready_yet">"声の準備がまだできていません。"</string>
     <!-- "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." -->
@@ -2824,6 +2852,8 @@
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"音声モデルはアプリとElevenLabsの両方から削除され、元に戻せません。次の通話の前に、新しく録音するよう求められます。"</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"声の録音も一緒に保管されるので、新しい端末でも録り直さずに声を作れます。"</string>
+    <string name="your_voice_will_be_ready_in_a_few_days">"数日後に声ができあがります。"</string>
+    <string name="your_voice_will_be_ready_on">"%sに声ができあがります。"</string>
     <string name="your_week">"1週間のふりかえり"</string>
     <string name="your_week_at_the_top">"上に並ぶ1週間"</string>
     <string name="your_week_is_ready">"1週間のふりかえりが届きました"</string>
