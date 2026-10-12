@@ -310,6 +310,11 @@ struct ScenarioComposerSheet: View {
                     if let id = editing?.counterpartId,
                        let found = appState.counterparts.first(where: { $0.id == id }) {
                         partner = found
+                    } else if let held = partnerSync?.wrappedValue {
+                        // The host already picked them (a person's card, their
+                        // bubble): start on them, never on the default first —
+                        // the map would fly to that one and back.
+                        partner = held
                     } else if host == .watch {
                         // A scene needs an other person. Legacy scenarios keep
                         // the character whose voice they already play in; new

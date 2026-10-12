@@ -233,9 +233,11 @@ struct WatchTab: View {
                             if PeopleSky.dockEnabled {
                                 // The same box the "New situation" button opens,
                                 // with them as the person and no chips above it.
+                                // One move: they are set in the same beat the box
+                                // opens, so the map pans once, straight to them.
                                 dockNoChips = true
                                 creating = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dockPerson = p }
+                                dockPerson = p
                             } else {
                                 composer = ComposerConfig(person: p, mode: .custom)
                             }
@@ -369,7 +371,12 @@ struct WatchTab: View {
                 // opens me (the profile).
                 if !creating {
                 Button {
-                    if PeopleSky.dockEnabled { creating = true } else { composer = ComposerConfig(mode: .custom) }
+                    if PeopleSky.dockEnabled {
+                        // Whoever is in the middle is who it's with — the box
+                        // never starts on a default the map would fly to.
+                        creating = true
+                        if let c = skyCentred { dockPerson = c }
+                    } else { composer = ComposerConfig(mode: .custom) }
                 } label: {
                     Label("New situation", systemImage: "square.and.pencil")
                         .font(.body.weight(.semibold))
@@ -459,7 +466,7 @@ struct WatchTab: View {
             dockPerson = person
         } else {
             creating = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dockPerson = person }
+            dockPerson = person
         }
     }
 
