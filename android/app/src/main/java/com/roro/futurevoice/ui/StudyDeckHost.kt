@@ -66,6 +66,12 @@ fun StudyDeckHost(
      *  (iOS `DueReviewView(hand:title:)`). */
     hand: List<StudyDeckItem>? = null,
     handTitle: String? = null,
+    /** A hand's own empty state (the routine's Review block: "All caught
+     *  up") — iOS `DueReviewView(emptyTitle:emptyMessage:)`. */
+    emptyTitle: String? = null,
+    emptyMessage: String? = null,
+    /** What comes after the last card (iOS `StudyDeckView.nextStep`). */
+    nextStep: StudyDeckNextStep? = null,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -86,7 +92,7 @@ fun StudyDeckHost(
     val dealt = items
     if (dealt == null) return
     if (dealt.isEmpty()) {
-        EmptyDeck(kind, onBack, handTitle)
+        EmptyDeck(kind, onBack, handTitle, emptyTitle, emptyMessage)
         return
     }
 
@@ -141,13 +147,15 @@ fun StudyDeckHost(
             }
         },
         onBack = onBack,
+        nextStep = nextStep,
     )
 }
 
 /** Where the material comes from — the deck can't be stocked from this screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit, handTitle: String? = null) {
+private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit, handTitle: String? = null,
+                      emptyTitle: String? = null, emptyMessage: String? = null) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
@@ -172,13 +180,13 @@ private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit, handTi
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (kind == null && handTitle == null) {
+            if (kind == null && (handTitle == null || emptyTitle != null)) {
                 // The put-off pile: it says what lands here, never invents work.
                 Icon(Icons.Filled.CheckCircle, contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(stringResource(R.string.nothing_put_off),
+                Text(emptyTitle ?: stringResource(R.string.nothing_put_off),
                     style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.nothing_put_off_message),
+                Text(emptyMessage ?: stringResource(R.string.nothing_put_off_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center)
@@ -222,3 +230,54 @@ suspend fun putOffDueCount(context: android.content.Context, language: String,
                            now: Long = System.currentTimeMillis()): Int =
     StudyScheduleStore.shared(context).snapshot(language).dueItems(now).size +
         com.roro.futurevoice.data.DrillStore.shared(context).putOffCards(language).count { it.nextReviewAt <= now }
+
+/**
+ * The routine's Review block: ONE sitting of every kind, in a fixed mix
+ * (iOS `DueReviewView.routineDeck`, 2026-10-09, user report: "it's all the
+ * mistakes from my calls — no words, no expressions, no shadow"). Each kind
+ * has a share of the block's count ([com.roro.futurevoice.data.RoutineReviewMix]);
+ * a kind with less to give than its share passes the rest on, so the count is
+ * still met. Within a kind, what is due comes first. The cards are interleaved
+ * so a sitting reads as a mix, not four piles; the shadow lines are spoken,
+ * not dealt, so they follow the deck.
+ */
+suspend fun routineDeck(
+    context: android.content.Context,
+    goal: Int,
+    language: String,
+    level: CefrLevel,
+    now: Long = System.currentTimeMillis(),
+): Pair<List<StudyDeckItem>, List<com.roro.futurevoice.data.ShadowPicks.Pick>> {
+    val due = StudyScheduleStore.shared(context).snapshot(language).dueItems(now)
+        .map { StudyDeckItem(it.kind, it.text) }
+    // Pools are drawn a little past the goal so a kind can absorb another's
+    // unused share.
+    val reach = maxOf(1, goal)
+    val words = (due.filter { it.kind == StudyScheduleStore.Kind.WORD && it.cardId == null } +
+        DailyStudyPick.words(context, reach, language, level, now).map(StudyDeckItem::word))
+        .distinctBy { it.id }
+    val exprs = (due.filter { it.kind == StudyScheduleStore.Kind.EXPRESSION && it.cardId == null } +
+        DailyStudyPick.expressions(context, reach, language, now).map(StudyDeckItem::expression))
+        .distinctBy { it.id }
+    val sentences = com.roro.futurevoice.data.DrillStore.shared(context).due(language, now)
+        .map(StudyDeckItem::sentence)
+    val shadow = com.roro.futurevoice.data.ShadowPicks.pick(
+        sessions = com.roro.futurevoice.data.SessionStore.shared(context).load(language)
+            .filter { it.endedAt != null },
+        attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context).load(language),
+        level = level,
+        language = language,
+        limit = com.roro.futurevoice.data.RoutineReviewMix.MAX_SHADOW,
+    )
+
+    val q = com.roro.futurevoice.data.RoutineReviewMix.quotas(goal,
+        com.roro.futurevoice.data.RoutineReviewMix.Counts(
+            words = words.size, expressions = exprs.size,
+            sentences = sentences.size, shadow = shadow.size))
+    val piles = listOf(words.take(q.words), sentences.take(q.sentences), exprs.take(q.expressions))
+    val cards = ArrayList<StudyDeckItem>()
+    for (i in 0 until (piles.maxOfOrNull { it.size } ?: 0)) {
+        for (pile in piles) if (i < pile.size) cards.add(pile[i])
+    }
+    return cards to shadow.take(q.shadow)
+}

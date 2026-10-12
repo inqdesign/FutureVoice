@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -122,6 +123,10 @@ fun StudyDeckScreen(
     nativeLanguage: String,
     onResolve: suspend (StudyDeckItem, DrillBin) -> Unit,
     onBack: () -> Unit,
+    /** What comes after the last card, if anything (the routine's Review
+     *  block goes on to its shadow lines). Drawn as the done state's button
+     *  (iOS `StudyDeckView.nextStep`). */
+    nextStep: StudyDeckNextStep? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -258,6 +263,7 @@ fun StudyDeckScreen(
                     },
                     onOpen = { openFolder = it },
                     modifier = Modifier.weight(1f),
+                    nextStep = nextStep,
                 )
             } else {
                 Box(Modifier.weight(1f).padding(horizontal = 16.dp)) {
@@ -584,6 +590,13 @@ private fun StudyCard(
     }
 }
 
+/** iOS `StudyDeckView.NextStep`: the done state's button onward. */
+class StudyDeckNextStep(
+    val title: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val action: () -> Unit,
+)
+
 /**
  * The last card is gone — `StudyDeckView.doneState`.
  *
@@ -597,6 +610,7 @@ private fun DeckDoneState(
     folders: List<Pair<DrillBin, Int>>,
     onOpen: (DrillBin) -> Unit,
     modifier: Modifier = Modifier,
+    nextStep: StudyDeckNextStep? = null,
 ) {
     Column(
         modifier.fillMaxWidth().padding(32.dp),
@@ -606,14 +620,25 @@ private fun DeckDoneState(
         Spacer(Modifier.weight(1f))
         Icon(Icons.Filled.Verified, contentDescription = null,
             tint = Color(0xFF34C759), modifier = Modifier.size(44.dp))
-        Text(stringResource(R.string.done_for_today),
+        Text(stringResource(if (nextStep == null) R.string.done_for_today else R.string.cards_done),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold)
-        Text(stringResource(
-            R.string.every_card_in_today_s_hand_is_sorted_come_back_tomorrow_or_k_110a2a),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        if (nextStep == null) {
+            Text(stringResource(
+                R.string.every_card_in_today_s_hand_is_sorted_come_back_tomorrow_or_k_110a2a),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        } else {
+            com.roro.futurevoice.ui.brand.IosButton(
+                onClick = nextStep.action,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            ) {
+                Icon(nextStep.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(nextStep.title, fontWeight = FontWeight.SemiBold)
+            }
+        }
         VerdictRow(
             dragging = false,
             tappable = true,

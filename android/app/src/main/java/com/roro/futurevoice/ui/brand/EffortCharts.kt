@@ -44,9 +44,13 @@ object EffortCharts {
         goal: Float? = null,
         modifier: Modifier = Modifier,
         height: androidx.compose.ui.unit.Dp = 120.dp,
+        /** Label every Nth day (the effort page's week labels every day). */
+        labelEvery: Int = 3,
+        /** The day labels' colour (default: secondary). */
+        labelColor: Color? = null,
     ) {
         if (days.isEmpty()) return
-        val axis = MaterialTheme.colorScheme.onSurfaceVariant
+        val axis = labelColor ?: MaterialTheme.colorScheme.onSurfaceVariant
         // The scale includes the goal, so a week under target still shows the
         // line — a rule drawn off the top of the panel says nothing.
         val peak = maxOf(days.maxOf { it.total }, goal ?: 0f, 1f)
@@ -88,9 +92,11 @@ object EffortCharts {
             Row(Modifier.fillMaxWidth()) {
                 days.forEachIndexed { i, d ->
                     Text(
-                        if (i % 3 == 0) d.label else "",
+                        if (i % labelEvery.coerceAtLeast(1) == 0) d.label else "",
                         style = MaterialTheme.typography.labelSmall,
                         color = axis,
+                        textAlign = if (labelEvery == 1) androidx.compose.ui.text.style.TextAlign.Center
+                            else androidx.compose.ui.text.style.TextAlign.Start,
                         modifier = Modifier.weight(1f),
                     )
                 }

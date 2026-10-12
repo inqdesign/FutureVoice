@@ -33,6 +33,16 @@ object AppUsageLog {
     fun secondsOn(context: Context, dayMillis: Long): Int =
         load(context)[dayKey(dayMillis)] ?: 0
 
+    /** The day's seconds with today's open stint added (iOS
+     *  `AppUsageLog.seconds(on:now:)`) — the effort page reads it live. */
+    fun secondsWithOpenStint(context: Context, dayMillis: Long, now: Long = System.currentTimeMillis()): Int {
+        val stored = secondsOn(context, dayMillis)
+        if (dayKey(dayMillis) != dayKey(now)) return stored
+        val start = enteredAt
+        val open = if (start == 0L) 0 else maxOf(0, ((now - start) / 1000).toInt())
+        return stored + open
+    }
+
     private fun dayKey(now: Long) = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(now))
 
     private fun prune(map: Map<String, Int>): Map<String, Int> {
