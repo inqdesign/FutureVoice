@@ -36,6 +36,14 @@ const MAX_WARN_PER_RUN = 200
 interface Candidate { user_id: string; rule: string; balance: number; idle_since: string }
 
 Deno.serve(async (req) => {
+  // Voice parking is over (2026-10-12): new clones live on Cartesia, which has
+  // no voice limit, so nothing needs freeing. The cron job was removed
+  // (20261012130000); this answers any stray call without touching a voice.
+  if (Deno.env.get("VOICE_PARKING") !== "on") {
+    return new Response(JSON.stringify({ disabled: true }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    })
+  }
   if (req.method !== "POST") {
     return new Response("method not allowed", { status: 405 })
   }
