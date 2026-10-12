@@ -11,6 +11,7 @@ struct RootTabView: View {
     @EnvironmentObject private var auth: AuthService
     /// The ElevenLabs → Cartesia move (VoiceMoveSheet), once a day until done.
     @State private var showingVoiceMove = false
+    @State private var showingWhatsNew = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: Tab = {
         #if DEBUG
@@ -284,7 +285,11 @@ struct RootTabView: View {
                 .environmentObject(appState)
         }
         .onAppear { offerWeekRecap() }
+        .onAppear { offerWhatsNew() }
         .onAppear { offerVoiceMove() }
+        .sheet(isPresented: $showingWhatsNew, onDismiss: { offerVoiceMove() }) {
+            WhatsNewSheet().environmentObject(appState)
+        }
         .sheet(isPresented: $showingVoiceMove) {
             VoiceMoveSheet().fittingDetents([.large])
         }
@@ -512,10 +517,20 @@ struct RootTabView: View {
     /// silently, so it waits its turn instead.
     private var anotherSheetUp: Bool {
         showingAgeCheck || showingPaywall || showingWelcome || showingIntroPreview
-            || showingVoiceMove || weekRecap != nil || freeTalkCallId != nil
+            || showingVoiceMove || showingWhatsNew || weekRecap != nil || freeTalkCallId != nil
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
+    }
+
+    /// What's new in this release, once (WhatsNewSheet). Ahead of the voice
+    /// move, which waits for it to close.
+    private func offerWhatsNew() {
+        Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            guard !showingWhatsNew, !anotherSheetUp, WhatsNew.isDue(appState) else { return }
+            showingWhatsNew = true
+        }
     }
 
     /// The voice move (VoiceMoveSheet): a beat after the app is up, never
