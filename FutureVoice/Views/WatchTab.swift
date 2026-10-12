@@ -380,7 +380,6 @@ struct WatchTab: View {
                 if !creating, PeopleSky.dockEnabled, let card = skyCard {
                     SkyPersonCard(person: appState.counterparts.first { $0.id == card.id } ?? card,
                                   onClose: { skyCard = nil },
-                                  onMore: { skyCard = nil; personCard = card },
                                   onCompose: { composeFromCard(card) },
                                   onWatch: {
                                       BillingGate.startScene(orShow: $skyCardPaywall) {
@@ -1265,28 +1264,46 @@ struct GlassFloatingButton: ViewModifier {
 }
 
 
-/// A person, as a card floating over the bottom of the map: who they are in
-/// a line or three, and what you can do with them. Less than half the
-/// screen, so the map — and them in its middle — stays in view; the full
-/// page (voice, topics, talks together) is one tap further.
+/// A person, as a card floating over the bottom of the map. Closed, it is
+/// who they are in a line or three and one row of actions — less than half
+/// the screen, so the map and them in its middle stay in view. Opened (tap
+/// the text), it grows upward like an accordion into everything the old
+/// full page held: the whole intro, topics, their voice, your talks.
 struct SkyPersonCard: View {
     let person: Counterpart
     let onClose: () -> Void
-    let onMore: () -> Void
     let onCompose: () -> Void
     let onWatch: () -> Void
     let onTalk: () -> Void
 
+    @State private var expanded: Bool = {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "skyCardOpen")
+        #else
+        false
+        #endif
+    }()
+
     private var about: String {
-        if person.personaKind == "user" { return person.commonTopics }
+        if person.personaKind == "user" { return "" }
         return person.intro.isEmpty ? person.background : person.intro
+    }
+
+    private var voiceName: String {
+        VoicePreset.known(id: person.voicePresetId)?.displayName ?? explain("Their own")
+    }
+
+    private var pastTalks: [Session] {
+        SessionStore.shared.load()
+            .filter { $0.counterpartId == person.id && $0.endedAt != nil }
+            .sorted { $0.startedAt > $1.startedAt }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                PersonBubble(name: person.name, photoId: person.id, size: 48)
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 12) {
+                PersonBubble(name: person.name, photoId: person.id, size: 44)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(person.name).font(.headline)
                     let cap = PartnerPickerSheet.caption(for: person)
                     if !cap.isEmpty {
@@ -1294,42 +1311,127 @@ struct SkyPersonCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                Button(action: onMore) {
-                    Image(systemName: "info.circle")
-                        .font(.title3)
-                }
-                .accessibilityLabel(Text("More"))
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(Text("Close"))
             }
-            if !about.isEmpty {
-                Text(about)
-                    .font(.subheadline)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Button(action: onCompose) {
-                Label("Make a situation", systemImage: "square.and.pencil")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            HStack(spacing: 10) {
+
+            details
+
+            HStack(spacing: 8) {
+                Button(action: onCompose) {
+                    Label("Make a situation", systemImage: "square.and.pencil")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
                 Button(action: onWatch) {
-                    Label("Watch", systemImage: "play.fill").frame(maxWidth: .infinity)
+                    Label("Watch", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered)
                 Button(action: onTalk) {
-                    Label("Talk", systemImage: "phone.fill").frame(maxWidth: .infinity)
+                    Label("Talk", systemImage: "phone.fill")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
+            .font(.subheadline.weight(.semibold))
+            .labelStyle(.titleAndIcon)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .controlSize(.regular)
         }
-        .controlSize(.large)
         .padding(16)
         .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 18, y: 6)
+        .animation(.smooth(duration: 0.3), value: expanded)
+    }
+
+    /// The accordion: three lines and a chevron, or everything, scrolling
+    /// inside the card once it would pass ~half the screen.
+    @ViewBuilder private var details: some View {
+        if expanded {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if !about.isEmpty {
+                        Text(about).font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !person.commonTopics.isEmpty {
+                        section("Topics") { Text(person.commonTopics).font(.subheadline) }
+                    }
+                    section("Voice") {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(voiceName).font(.subheadline)
+                            Text("Their own voice, chosen with their introduction. Not a recording of anyone.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    let talks = pastTalks
+                    if !talks.isEmpty {
+                        section("Your talks together") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(talks) { s in
+                                    NavigationLink {
+                                        ConversationDetailView(session: s)
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 1) {
+                                                Text(s.displayTitle).font(.subheadline).lineLimit(1)
+                                                Text(s.startedAt.formatted(date: .abbreviated, time: .shortened))
+                                                    .font(.caption).foregroundStyle(.secondary)
+                                            }
+                                            Spacer(minLength: 0)
+                                            Image(systemName: "chevron.right")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 340)
+            .fixedSize(horizontal: false, vertical: true)
+            toggle(open: false)
+        } else {
+            if !about.isEmpty {
+                Text(about)
+                    .font(.subheadline)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .contentShape(Rectangle())
+                    .onTapGesture { expanded = true }
+            }
+            toggle(open: true)
+        }
+    }
+
+    private func toggle(open: Bool) -> some View {
+        Button { expanded = open } label: {
+            HStack(spacing: 4) {
+                Text(open ? "More" : "Show less")
+                Image(systemName: open ? "chevron.down" : "chevron.up")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func section<C: View>(_ title: LocalizedStringKey, @ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            content()
+        }
     }
 }
