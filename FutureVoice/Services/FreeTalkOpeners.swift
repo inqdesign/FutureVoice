@@ -78,7 +78,9 @@ final class FreeTalkOpeners {
     /// put a guessed topic to the learner — "how's your project", "what's been
     /// worrying you", "got a minute?" — when THEY placed the call and came with
     /// something to say. Lines now only pick up and hand them the floor.
-    private static let poolVersion = 4
+    /// v5 (same day): lines that sound mid-call ("응, 듣고 있어", "I'm
+    /// listening") were replaced by ones said on picking up.
+    private static let poolVersion = 5
 
     private static func key(language: String, personaName: String?) -> String {
         "v\(poolVersion)|\(language)|\(personaName ?? "")"
@@ -182,7 +184,7 @@ final class FreeTalkOpeners {
         "en": [
             "Hey, it's me. What's up?",
             "Oh, hey! What are we talking about today?",
-            "Hey you. Go on, I'm listening.",
+            "Hey, you called! What's going on?",
             "Hi! What's on your mind?",
             "Hey. So, what do you feel like talking about?",
             "There you are. What's new?",
@@ -190,31 +192,31 @@ final class FreeTalkOpeners {
         "de": [
             "Hey, ich bin's. Was gibt's?",
             "Oh, hallo! Worüber reden wir heute?",
-            "Na du. Erzähl, ich hör zu.",
+            "Na du! Schön, dass du anrufst. Was gibt's?",
             "Hi! Was gibt's Neues?",
             "Hey. Worüber willst du reden?",
             "Da bist du ja. Leg los!",
         ],
         "ko": [
             "오, 반가워. 오늘은 무슨 얘기 할까?",
-            "왔네. 뭐든 말해 봐. 듣고 있을게.",
+            "왔네! 오늘은 무슨 얘기 들려줄 거야?",
             "어, 나야. 무슨 얘기 하고 싶어?",
             "좋아. 오늘은 네 얘기부터 들어 볼까?",
-            "응, 듣고 있어. 편하게 말해 봐.",
+            "야, 전화 잘했다. 요즘 별일 없어?",
             "안녕. 오늘은 어떤 얘기부터 해 볼까?",
         ],
         "ja": [
             "もしもし。今日は何の話する？",
             "あ、来たね。今日は何の話しようか？",
-            "やあ。なんでも話してよ。ちゃんと聞いてるから。",
+            "やあ。今日は何から話そうか？",
             "おっ、いいね。今日はどんな話？",
-            "うん、聞いてるよ。気楽に話して。",
+            "お、電話くれたんだ。最近どう？",
             "やあ。なんか話したいことある？",
         ],
         "es": [
             "Hola, soy yo. ¿Qué me cuentas?",
             "¡Hola! ¿De qué hablamos hoy?",
-            "Aquí estoy. Cuéntame, te escucho.",
+            "¡Hola! ¿Cómo va todo?",
             "¡Ey! ¿Qué hay de nuevo?",
             "Hola. ¿De qué tienes ganas de hablar?",
             "¡Qué bien que llamas! ¿Por dónde empezamos?",
@@ -222,7 +224,7 @@ final class FreeTalkOpeners {
         "fr": [
             "Salut, c’est moi. Quoi de neuf\u{00A0}?",
             "Oh, salut\u{00A0}! On parle de quoi aujourd’hui\u{00A0}?",
-            "Je t’écoute. Raconte\u{00A0}!",
+            "Hé, tu m’appelles\u{00A0}! Ça va\u{00A0}?",
             "Coucou\u{00A0}! Qu’est-ce que tu racontes\u{00A0}?",
             "Salut. Tu as envie de parler de quoi\u{00A0}?",
             "Ah, te voilà\u{00A0}! Par quoi on commence\u{00A0}?",
@@ -230,7 +232,7 @@ final class FreeTalkOpeners {
         "it": [
             "Ciao, sono io. Che mi racconti?",
             "Oh, ciao! Di cosa parliamo oggi?",
-            "Eccomi. Racconta, ti ascolto.",
+            "Ciao! Come va tutto?",
             "Ehi! Che c'è di nuovo?",
             "Ciao. Di cosa hai voglia di parlare?",
             "Eccoti! Da dove cominciamo?",
@@ -238,7 +240,7 @@ final class FreeTalkOpeners {
         "pt": [
             "Oi, sou eu. Me conta, o que tem de novo?",
             "Opa, oi! Sobre o que a gente vai conversar hoje?",
-            "Tô aqui. Pode falar, tô ouvindo.",
+            "Oi! Como estão as coisas?",
             "E aí! Quais são as novidades?",
             "Oi. Do que você está a fim de falar?",
             "Olha você aí! Por onde a gente começa?",
@@ -246,7 +248,7 @@ final class FreeTalkOpeners {
         "zh": [
             "喂，是我。想聊点什么？",
             "哎，你来啦！今天聊什么？",
-            "我在呢。你说吧，我听着。",
+            "哎，你打来啦！最近怎么样？",
             "嘿！最近有什么新鲜事？",
             "你好呀。今天想从哪儿聊起？",
             "来啦！有什么想说的，尽管说。",
