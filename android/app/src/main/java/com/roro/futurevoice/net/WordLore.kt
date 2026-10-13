@@ -2,6 +2,7 @@ package com.roro.futurevoice.net
 
 import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.TextScript
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -75,6 +76,10 @@ class WordLore(private val auth: AuthRepository) {
                 if (resp.code !in 200..299) return@runCatching null
                 Edge.json.decodeFromString(ListSerializer(Row.serializer()), resp.body.string())
                     .firstOrNull()?.data
+                    // A cached entry whose examples came back in the NATIVE
+                    // language (the model translated instead of writing them)
+                    // is a miss: the function regenerates and overwrites it.
+                    ?.takeIf { it.materialIsIn(target) }
             }
         }.getOrNull()?.also { remember(native, target, kind, word, it) }
         // A DECODE failure here looks exactly like a miss, and falling through
@@ -106,3 +111,10 @@ class WordLore(private val auth: AuthRepository) {
         synchronized(cache) { cache[listOf(native, target, kind.raw, word).joinToString("|")] = e }
     }
 }
+
+/** Every line meant to be SAID — examples and variants — is in the target
+ *  script. Same rule as `word-entry`'s `materialInTarget`. */
+private fun WordLore.Entry.materialIsIn(target: String): Boolean =
+    (examples.map { it.text } + phrases.map { it.phrase })
+        .filter { it.isNotBlank() }
+        .all { TextScript.isInTargetScript(it, target) }
