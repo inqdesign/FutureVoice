@@ -70907,7 +70907,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "个人文件"
+            "value" : "个人资料"
           }
         },
         "zh-Hant" : {
@@ -93957,6 +93957,52 @@
         }
       }
     },
+    "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Vorstellung, die das Handy anderer Lernender bei „Leute finden“ in deinem Namen spricht. Veröffentlichen oder entfernen kannst du sie in deinem Profil."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La presentación que el teléfono de otra persona dice como tú en Buscar personas. Publícala o retírala desde tu perfil."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La présentation que le téléphone d’une autre personne dit à ta place dans Trouver des gens. Publie-la ou retire-la depuis ton profil."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人を探す で、ほかの学習者のスマホが自分として話す自己紹介です。プロフィールで公開したり取り下げたりできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사람 찾기에서 다른 학습자의 폰이 '나'로 말하는 소개예요. 프로필에서 공개하거나 내릴 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在「找人」里，其他学习者的手机会以你的身份说这段自我介绍。到个人资料可以公开或撤下。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在「找人」裡，其他學習者的手機會以你的身分說這段自我介紹。到個人檔案可以公開或撤下。"
+          }
+        }
+      }
+    },
     "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." : {
       "localizations" : {
         "de" : {
@@ -93999,6 +94045,374 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在「找人」裡，其他學習者的手機會以你的身分說這段自我介紹。到「我的 → 找人」可以修改或撤下。"
+          }
+        }
+      }
+    },
+    "Speech challenges" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rede-Challenges"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retos de discurso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Défis de discours"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スピーチチャレンジ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스피치 챌린지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演讲挑战"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演講挑戰"
+          }
+        }
+      }
+    },
+    "A new Watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Ansehen“ ist neu"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escenas, renovado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les Scènes, en nouveau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しくなったシーン練習"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로워진 상황연습"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全新的情境练习"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全新的情境練習"
+          }
+        }
+      }
+    },
+    "Topics for why you're learning" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Themen für dein Lernziel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temas según tu objetivo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Des sujets selon ton objectif"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学ぶ目的に合わせた話題"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "배우는 목적에 맞춘 주제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配合学习目的的话题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配合學習目的的話題"
+          }
+        }
+      }
+    },
+    "Choose my goal" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziel wählen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir mi objetivo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir mon objectif"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目的を選ぶ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목적 고르기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择目的"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇目的"
+          }
+        }
+      }
+    },
+    "In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Tab „Rede“ lesen alle denselben Text. Lies ihn mit eingeschalteter Kamera, und du landest in der Rangliste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la pestaña Discurso, todos leen el mismo guion. Léelo con la cámara encendida y entras en la clasificación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans l’onglet Discours, tout le monde lit le même texte. Lis-le caméra allumée et tu entres dans le classement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スピーチタブでは、みんなが同じ原稿を読みます。カメラをオンにして読むと、ランキングに載ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스피치 탭에서 모두 같은 원고를 읽어요. 카메라를 켜고 읽으면 순위표에 올라가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在演讲页面，大家读同一篇讲稿。开着相机读，就会登上排行榜。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在演講分頁，大家讀同一篇講稿。開著相機讀，就會登上排行榜。"
+          }
+        }
+      }
+    },
+    "Your people now sit around you on a map. Bring someone to the middle and they greet you in their own voice, then start a scene or a call right from their card." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Leute stehen jetzt auf einer Karte um dich herum. Hol jemanden in die Mitte, und die Person begrüßt dich mit ihrer eigenen Stimme. Von ihrer Karte aus startest du direkt eine Szene oder ein Gespräch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora tu gente está a tu alrededor en un mapa. Lleva a alguien al centro y te saluda con su propia voz; luego empieza una escena o una llamada desde su tarjeta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes proches sont maintenant autour de toi sur une carte. Amène quelqu’un au centre et il te salue avec sa propre voix, puis lance une scène ou un appel depuis sa carte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の周りに人が並ぶマップになりました。誰かを真ん中に連れてくると自分の声であいさつし、カードからそのままシーン練習や通話を始められます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 사람들이 나를 둘러싼 지도로 바뀌었어요. 누군가를 가운데로 데려오면 자기 목소리로 인사하고, 카드에서 바로 상황연습이나 대화를 시작할 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你身边的人现在围着你排在地图上。把某个人拉到中间，他会用自己的声音打招呼，从卡片就能直接开始情境练习或通话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你身邊的人現在圍著你排在地圖上。把某個人拉到中間，他會用自己的聲音打招呼，從卡片就能直接開始情境練習或通話。"
+          }
+        }
+      }
+    },
+    "Tell us what you're learning for, like an exam, work or travel, and the Talk tab fills with topics for it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag uns, wofür du lernst, etwa für eine Prüfung, die Arbeit oder Reisen, und der Tab „Sprechen“ füllt sich mit passenden Themen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuéntanos para qué aprendes, como un examen, el trabajo o un viaje, y la pestaña Hablar se llena de temas para eso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis-nous pourquoi tu apprends, un examen, le travail ou les voyages, et l’onglet Parler se remplit de sujets adaptés."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "試験、仕事、旅行など、何のために学ぶのかを教えると、トークタブがそれに合った話題でいっぱいになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험, 일, 여행처럼 왜 배우는지 알려주면 대화 탭이 그에 맞는 주제로 채워져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "告诉我们你为什么学，比如考试、工作或旅行，对话页面就会出现相关的话题。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "告訴我們你為什麼學，例如考試、工作或旅行，對話分頁就會出現相關的話題。"
+          }
+        }
+      }
+    },
+    "In the Progress tab, see what you practised and how much, over a week or a month." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Tab „Fortschritt“ siehst du, was du in einer Woche oder einem Monat geübt hast und wie viel."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la pestaña Progreso, mira qué practicaste y cuánto en una semana o un mes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans l’onglet Progression, vois ce que tu as pratiqué, et combien, sur une semaine ou un mois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成長タブで、1週間や1か月のあいだに何をどれだけ練習したか見られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "성장 탭에서 한 주, 한 달 동안 무엇을 얼마나 했는지 볼 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在成长页面，可以看到一周或一个月里练了什么、练了多少。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在成長分頁，可以看到一週或一個月裡練了什麼、練了多少。"
           }
         }
       }

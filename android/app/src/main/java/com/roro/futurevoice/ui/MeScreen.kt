@@ -36,7 +36,6 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PanTool
 import androidx.compose.material.icons.outlined.Palette
@@ -103,7 +102,7 @@ import kotlinx.coroutines.launch
  * nothing like iOS; the controls themselves are unchanged, only moved.
  *
  * Order (iOS `body`): profile · Subscribe · Usage + the Core · Learning ·
- * Daily call / Voice / Sound & mic / Find people · Appearance / Practice
+ * Daily call / Voice / Sound & mic · Appearance / Practice
  * data / Privacy · Say hello · Sign out + Delete account · Developer.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -126,8 +125,6 @@ fun MeScreen(
     /** Whether this account has a clone — the Voice page's whole subject. */
     hasVoice: Boolean,
     @Suppress("UNUSED_PARAMETER") onOpenPeople: () -> Unit,
-    /** Writing and publishing YOUR row (iOS pushes `PublicIntroView`). */
-    onOpenPublicIntro: () -> Unit,
     /** Me → Usage: the month, the plan, then help. */
     onOpenPlanPage: () -> Unit,
     /** The live clone, and the accent it was remixed with. */
@@ -143,10 +140,9 @@ fun MeScreen(
     onChooseStandIn: (String) -> Unit = {},
     onRerecordVoice: () -> Unit = {},
     onPickAppLanguage: (String) -> Unit = {},
-    onEditProfile: () -> Unit,
-    /** The remembered lines live in the profile editor (iOS keeps them out
-     *  of this list); kept so the host's wiring still compiles. */
-    @Suppress("UNUSED_PARAMETER") onEditNotes: () -> Unit = onEditProfile,
+    /** The one "me" page (iOS pushes `MyProfileView` from the header):
+     *  the profile, and what strangers see under it. */
+    onOpenProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
     /** Opens the consent read-back and withdrawal page. */
@@ -369,7 +365,7 @@ fun MeScreen(
                     .padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 32.dp),
             ) {
                 // ── Profile ──
-                GroupedCard { ProfileHeader(persona, onEditProfile) }
+                GroupedCard { ProfileHeader(persona, onOpenProfile) }
 
                 // ── Subscribe / Subscription ── on its own and first: the one
                 // control that decides whether the app works at all.
@@ -486,10 +482,6 @@ fun MeScreen(
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.VolumeUp, stringResource(R.string.sound_mic),
                         soundSummary(), onClick = { page = MePage.SOUND })
-                    GroupedRowDivider()
-                    MeRow(Icons.Outlined.Groups, stringResource(R.string.find_people),
-                        stringResource(R.string.publish_your_intro_others_practice_with_you),
-                        onClick = onOpenPublicIntro)
                 }
 
                 // ── Appearance, data, privacy ──
@@ -729,12 +721,12 @@ fun MeScreen(
 
 /**
  * iOS `profileHeader`: avatar, name, ONE line that invites rather than
- * labels. It is a Button in iOS's list, so the whole label wears the tint.
+ * labels. A `NavigationLink` to the one "me" page (`MyProfileView`), so the
+ * name is ink and the line grey, with the list's chevron.
  * The remembered lines are NOT here — they live in the profile editor.
  */
 @Composable
 private fun ProfileHeader(persona: UserPersona?, onClick: () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 20.dp),
@@ -748,7 +740,7 @@ private fun ProfileHeader(persona: UserPersona?, onClick: () -> Unit) {
                     ?: stringResource(R.string.set_up_your_profile),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = accent)
+                color = MaterialTheme.colorScheme.onSurface)
             val complete = persona != null &&
                 persona.displayName.isNotBlank() && persona.city.isNotBlank() &&
                 persona.occupation.isNotBlank() &&
@@ -757,10 +749,10 @@ private fun ProfileHeader(persona: UserPersona?, onClick: () -> Unit) {
                 stringResource(if (complete) R.string.what_your_fluent_self_knows_about_you
                 else R.string.tap_to_complete_your_profile),
                 style = MaterialTheme.typography.bodyMedium,
-                color = accent.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1)
         }
-        MeChevron(tint = accent.copy(alpha = 0.4f))
+        MeChevron()
     }
 }
 

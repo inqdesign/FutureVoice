@@ -50,6 +50,7 @@
     <string name="a_more_natural_way_to_say_it">"더 자연스러운 표현"</string>
     <string name="a_neighbor">"이웃"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"새 평가 시점이 됐어요. 다음 대화가 끝나면 실행돼요."</string>
+    <string name="a_new_watch">"새로워진 상황연습"</string>
     <string name="a_new_week_starts_now_start_small">"새 주가 시작됐어요. 가볍게 시작해요."</string>
     <string name="a_passerby">"지나가는 사람"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -305,6 +306,7 @@
     <string name="choose_a_photo">"사진 고르기"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"주제를 고르면 AI가 내 수준에 맞춰 써 줘요. 가지고 있는 글을 붙여 넣어도 돼요."</string>
+    <string name="choose_my_goal">"목적 고르기"</string>
     <string name="choose_your_plan">"요금제 선택"</string>
     <string name="city">"도시"</string>
     <string name="city_country">"도시, 나라"</string>
@@ -839,6 +841,10 @@
     <string name="in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac">"정리하면, 시간이 줄어드는 건 유창해진 나와 말할 때뿐이에요. 이미 쌓인 걸로 복습하는 건 언제나 무료고요."</string>
     <string name="in_the_core">"코어"</string>
     <string name="in_the_core_lld_days">"코어 · %d일"</string>
+    <!-- 'In the Progress tab, see what you practised and how much, over a week or a month.' -->
+    <string name="in_the_progress_tab_see_what_you_practised_and_how_much_over_25b25f">"성장 탭에서 한 주, 한 달 동안 무엇을 얼마나 했는지 볼 수 있어요."</string>
+    <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
+    <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"스피치 탭에서 모두 같은 원고를 읽어요. 카메라를 켜고 읽으면 순위표에 올라가요."</string>
     <string name="in_this_book">"이 책에는"</string>
     <string name="in_your_life">"내 일상에서"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
@@ -1898,6 +1904,7 @@
     <string name="speaks_at_this_speed">"이 속도로 말해요"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"충분히 구체적이에요 — %s 하거나, 위 경로를 눌러 더 탐색하세요."</string>
+    <string name="speech_challenges">"스피치 챌린지"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"스피치"</string>
     <!-- '+ Speech' -->
@@ -2059,6 +2066,8 @@
     <string name="tell_me_more_about_you">"나에 대해 더 알려주기"</string>
     <string name="tell_me_when_it_s_ready">"준비되면 알려 주세요"</string>
     <string name="tell_me_when_next_week_s_is_ready">"다음 주 돌아보기도 알려 주세요"</string>
+    <!-- "Tell us what you're learning for, like an exam, work or travel, and the Talk tab fills with topics for it." -->
+    <string name="tell_us_what_you_re_learning_for_like_an_exam_work_or_travel_13326b">"시험, 일, 여행처럼 왜 배우는지 알려주면 대화 탭이 그에 맞는 주제로 채워져요."</string>
     <!-- 'Telling my landlord the heating has been broken for three weeks, and getting a date out of them.' -->
     <string name="telling_my_landlord_the_heating_has_been_broken_for_three_we_9a0ae9">"집주인에게 보일러가 3주째 고장이라고 말하고, 언제 고쳐 줄지 날짜를 받아 내기."</string>
     <string name="terms_of_use">"이용약관"</string>
@@ -2113,6 +2122,8 @@
     <string name="the_gist_in_a_few_words">"대략적인 내용을 짧게"</string>
     <!-- "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." -->
     <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f">"사람 찾기에서 다른 학습자의 폰이 '나'로 말하는 소개예요. 나 → 사람 찾기에서 고치거나 내릴 수 있어요."</string>
+    <!-- "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." -->
+    <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_4e45c2">"사람 찾기에서 다른 학습자의 폰이 '나'로 말하는 소개예요. 프로필에서 공개하거나 내릴 수 있어요."</string>
     <!-- "The left button plays the scene once more. The right one opens the scene's book in Review, with its words and expressions. Tap the same situation in Watch again for a new take with new ideas." -->
     <string name="the_left_button_plays_the_scene_once_more_the_right_one_open_f0a919">"왼쪽 버튼은 같은 장면을 한 번 더 보여줘요. 오른쪽 버튼은 이 장면의 교재를 열어요. 단어와 표현이 복습 탭에 담겨 있어요. 상황연습에서 같은 상황을 다시 누르면 새로운 장면과 아이디어가 나와요."</string>
     <!-- 'The lines play one after another, and the one playing is outlined. Your lines are in your voice. Watch how it opens, what it asks and how it gets through the tricky part.' -->
@@ -2267,6 +2278,7 @@
     <string name="too_noisy">"너무 시끄러워요"</string>
     <string name="topic">"주제"</string>
     <string name="topics">"주제"</string>
+    <string name="topics_for_why_you_re_learning">"배우는 목적에 맞춘 주제"</string>
     <string name="total">"합계"</string>
     <string name="touch_and_hold_to_file_it_again">"길게 누르면 다시 정할 수 있어요."</string>
     <string name="transcript">"대화록"</string>
@@ -2768,6 +2780,8 @@
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"말하기 속도가 분당 %d단어예요. 더 자주, 조금 더 길게 말하면 흐름이 붙어요."</string>
     <string name="your_people">"내 사람들"</string>
+    <!-- 'Your people now sit around you on a map. Bring someone to the middle and they greet you in their own voice, then start a scene or a call right from their card.' -->
+    <string name="your_people_now_sit_around_you_on_a_map_bring_someone_to_the_e12a8b">"내 사람들이 나를 둘러싼 지도로 바뀌었어요. 누군가를 가운데로 데려오면 자기 목소리로 인사하고, 카드에서 바로 상황연습이나 대화를 시작할 수 있어요."</string>
     <string name="your_persona_plays_this_scene_in_their_own_voice">"내 페르소나가 자기 목소리로 이 상황을 연기해요."</string>
     <!-- "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="your_phone_rings_at_every_time_you_set_here_even_on_silent_c_b210fc">"여기 정한 시각마다 전화가 울려요. 무음이어도요. 지금 곤란하면 그냥 거절하세요. 불이익은 없어요."</string>

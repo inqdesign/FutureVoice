@@ -50,6 +50,7 @@
     <string name="a_more_natural_way_to_say_it">"更自然的说法"</string>
     <string name="a_neighbor">"邻居"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"该做新的评估了。下一次通话结束后会运行。"</string>
+    <string name="a_new_watch">"全新的情境练习"</string>
     <string name="a_new_week_starts_now_start_small">"新的一周开始了，轻松开始就好。"</string>
     <string name="a_passerby">"路人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -304,6 +305,7 @@
     <string name="choose_a_photo">"选照片"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"选个主题，AI 会按你的水平写好；也可以粘贴你自己的文字。"</string>
+    <string name="choose_my_goal">"选择目的"</string>
     <string name="choose_your_plan">"选择方案"</string>
     <string name="city">"城市"</string>
     <string name="city_country">"城市、国家"</string>
@@ -838,6 +840,10 @@
     <string name="in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac">"简单说，只有和流利的自己说话时才会用掉分钟数。用已经累积的内容复习永远免费。"</string>
     <string name="in_the_core">"核心"</string>
     <string name="in_the_core_lld_days">"核心 · %d天"</string>
+    <!-- 'In the Progress tab, see what you practised and how much, over a week or a month.' -->
+    <string name="in_the_progress_tab_see_what_you_practised_and_how_much_over_25b25f">"在成长页面，可以看到一周或一个月里练了什么、练了多少。"</string>
+    <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
+    <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"在演讲页面，大家读同一篇讲稿。开着相机读，就会登上排行榜。"</string>
     <string name="in_this_book">"本册内容"</string>
     <string name="in_your_life">"你的日常"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
@@ -1525,7 +1531,7 @@
     <string name="privacy">"隐私权"</string>
     <string name="privacy_policy">"隐私权政策"</string>
     <string name="product">"产品"</string>
-    <string name="profile">"个人文件"</string>
+    <string name="profile">"个人资料"</string>
     <string name="progress">"成长"</string>
     <!-- 'Progress never asks you to sit a test. It measures the words, sentence structures and fluency you actually used in your calls, and shows them as a CEFR level.' -->
     <string name="progress_never_asks_you_to_sit_a_test_it_measures_the_words_fa4ef1">"进度页从不要你考试。它测定你在通话中实际用过的单词、句型和流利度，并以 CEFR 水平显示。"</string>
@@ -1897,6 +1903,7 @@
     <string name="speaks_at_this_speed">"以这个速度说话"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"够具体了，可以直接%s，或点上方的路径再探索。"</string>
+    <string name="speech_challenges">"演讲挑战"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"演讲"</string>
     <!-- '+ Speech' -->
@@ -2058,6 +2065,8 @@
     <string name="tell_me_more_about_you">"多说一点关于自己"</string>
     <string name="tell_me_when_it_s_ready">"准备好时通知我"</string>
     <string name="tell_me_when_next_week_s_is_ready">"下周的整理好时提醒我"</string>
+    <!-- "Tell us what you're learning for, like an exam, work or travel, and the Talk tab fills with topics for it." -->
+    <string name="tell_us_what_you_re_learning_for_like_an_exam_work_or_travel_13326b">"告诉我们你为什么学，比如考试、工作或旅行，对话页面就会出现相关的话题。"</string>
     <!-- 'Telling my landlord the heating has been broken for three weeks, and getting a date out of them.' -->
     <string name="telling_my_landlord_the_heating_has_been_broken_for_three_we_9a0ae9">"跟房东说暖气坏了三个星期了，并且问出确切的维修日期。"</string>
     <string name="terms_of_use">"使用条款"</string>
@@ -2112,6 +2121,8 @@
     <string name="the_gist_in_a_few_words">"大概的内容，几个字就好"</string>
     <!-- "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." -->
     <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f">"在「找人」里，其他学习者的手机会以你的身份说这段自我介绍。到「我的 → 找人」可以修改或撤下。"</string>
+    <!-- "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." -->
+    <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_4e45c2">"在「找人」里，其他学习者的手机会以你的身份说这段自我介绍。到个人资料可以公开或撤下。"</string>
     <!-- "The left button plays the scene once more. The right one opens the scene's book in Review, with its words and expressions. Tap the same situation in Watch again for a new take with new ideas." -->
     <string name="the_left_button_plays_the_scene_once_more_the_right_one_open_f0a919">"左边的按钮再播放一次情境。右边的按钮在复习里打开这个情境的教材，里面有单词和用语。在情境里再点一次同一个情况，会生成带新思路的新版本。"</string>
     <!-- 'The lines play one after another, and the one playing is outlined. Your lines are in your voice. Watch how it opens, what it asks and how it gets through the tricky part.' -->
@@ -2266,6 +2277,7 @@
     <string name="too_noisy">"太吵了"</string>
     <string name="topic">"主题"</string>
     <string name="topics">"主题"</string>
+    <string name="topics_for_why_you_re_learning">"配合学习目的的话题"</string>
     <string name="total">"总计"</string>
     <string name="touch_and_hold_to_file_it_again">"长按可以重新归类。"</string>
     <string name="transcript">"对话记录"</string>
@@ -2767,6 +2779,8 @@
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"说话速度是每分钟%d个字。更常说、说久一点，流畅度就会上来。"</string>
     <string name="your_people">"我的人物"</string>
+    <!-- 'Your people now sit around you on a map. Bring someone to the middle and they greet you in their own voice, then start a scene or a call right from their card.' -->
+    <string name="your_people_now_sit_around_you_on_a_map_bring_someone_to_the_e12a8b">"你身边的人现在围着你排在地图上。把某个人拉到中间，他会用自己的声音打招呼，从卡片就能直接开始情境练习或通话。"</string>
     <string name="your_persona_plays_this_scene_in_their_own_voice">"你的角色会用自己的声音演这个场景。"</string>
     <!-- "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="your_phone_rings_at_every_time_you_set_here_even_on_silent_c_b210fc">"每到这里设置的时间，电话就会响，静音也一样。不方便接？直接拒接就好，不会扣分。"</string>

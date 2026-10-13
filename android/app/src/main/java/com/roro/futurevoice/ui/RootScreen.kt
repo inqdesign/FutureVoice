@@ -213,6 +213,12 @@ fun RootScreen() {
         LevelUpSheet(from = from, to = to, onDismiss = app::clearLevelUp)
     }
     var showPublicIntro by remember { mutableStateOf(false) }
+    /** The one "me" page (iOS `MyProfileView`), pushed inside the Me sheet
+     *  from its profile header. */
+    var showMyProfile by remember { mutableStateOf(false) }
+    /** The same page as its own sheet, with Done — iOS opens it so from the
+     *  Watch map's own face (`WatchTab.showingProfile`). */
+    var showMyProfileSheet by remember { mutableStateOf(false) }
     // The one look at the mirrored intro before anything reaches the pool,
     // raised from the Watch tab (iOS `needsIntroDecision`).
     var showIntroPreview by remember { mutableStateOf(false) }
@@ -844,6 +850,7 @@ fun RootScreen() {
         if (showDueReview) add(RootRoute.DueReview)
         studyDeckKind?.let { add(RootRoute.StudyDeck(it)) }
         personDetailId?.let { add(RootRoute.Person(it)) }
+        if (showMyProfileSheet) add(RootRoute.MyProfile(sheet = true))
         if (showPeople) add(RootRoute.People)
         finishedBooks?.let { add(RootRoute.Finished(it)) }
         // Settings is a SHEET over the tabs (iOS `.sheet` from the Talk
@@ -889,6 +896,7 @@ fun RootScreen() {
                     introEditFromPreview = false
                 }
                 RootRoute.Privacy -> showPrivacy = false
+                is RootRoute.MyProfile -> if (top.sheet) showMyProfileSheet = false else showMyProfile = false
                 else -> Unit
             }
     }
@@ -896,6 +904,7 @@ fun RootScreen() {
      *  own NavigationStack), bottom → top. */
     val meSheetStack: List<RootRoute> = buildList {
         add(RootRoute.Me)
+        if (showMyProfile) add(RootRoute.MyProfile(sheet = false))
         if (showPlanPage) add(RootRoute.PlanPage)
         if (showInvite) add(RootRoute.Invite)
         if (showCreditGuide) add(RootRoute.CreditGuide)
@@ -907,6 +916,7 @@ fun RootScreen() {
         showMe = false
         showPlanPage = false; showInvite = false; showCreditGuide = false
         showPrivacy = false
+        showMyProfile = false
         if (showPublicIntro) popRoute(RootRoute.PublicIntro)
     }
     @Composable
@@ -1127,6 +1137,7 @@ fun RootScreen() {
         RootRoute.People -> FindPeopleScreen(
             language = state.targetLanguage,
             persona = state.persona,
+            onEditProfile = { editProfileStep = 0; editProfile = true },
             onOpenPerson = { personDetailId = it },
             onTalk = { p, meet ->
                 callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
@@ -1219,6 +1230,14 @@ fun RootScreen() {
             }) else null,
         )
 
+        is RootRoute.MyProfile -> MyProfileScreen(
+            persona = state.persona,
+            targetLanguage = state.targetLanguage,
+            showsDone = r.sheet,
+            onBack = { if (r.sheet) showMyProfileSheet = false else showMyProfile = false },
+            onEditProfile = { editProfileStep = 0; editProfile = true },
+        )
+
         RootRoute.Privacy -> PrivacyScreen(
             voiceId = state.voiceId,
             // Withdrawing deletes the model, so the app has no voice to hold
@@ -1247,7 +1266,6 @@ fun RootScreen() {
                 (localActivity as? android.app.Activity)?.recreate()
             },
             onOpenPeople = { showMe = false; showPeople = true },
-            onOpenPublicIntro = { showPublicIntro = true },
             onOpenPlanPage = { showPlanPage = true },
             voiceId = state.voiceId,
             voiceAccentId = state.voiceAccentId,
@@ -1256,8 +1274,7 @@ fun RootScreen() {
             voiceIsStandIn = state.voiceIsStandIn,
             voiceQueuedUntil = state.voiceQueuedUntil,
             onChooseStandIn = app::chooseStandInVoice,
-            onEditProfile = { editProfileStep = 0; editProfile = true },
-            onEditNotes = { editProfileStep = 1; editProfile = true },
+            onOpenProfile = { showMyProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
             onOpenPrivacy = { showPrivacy = true },
@@ -2683,6 +2700,9 @@ internal sealed interface RootRoute {
     data object SpeechChallenges : RootRoute { override val key = "speechChallenges" }
     data object PublicIntro : RootRoute { override val key = "publicIntro" }
     data object Privacy : RootRoute { override val key = "privacy" }
+    data class MyProfile(val sheet: Boolean) : RootRoute {
+        override val key = if (sheet) "myProfileSheet" else "myProfile"
+    }
     data object Me : RootRoute { override val key = "me" }
     data object Call : RootRoute { override val key = "call" }
     data object Tabs : RootRoute { override val key = "tabs" }
@@ -2725,6 +2745,8 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         // Usage: the guide and the invite.
         RootRoute.PlanPage, RootRoute.Privacy -> from is RootRoute.Me
         RootRoute.PublicIntro -> from is RootRoute.Me || from is RootRoute.People
+        // Me's profile header pushes the one "me" page; from Watch it is a sheet.
+        is RootRoute.MyProfile -> !to.sheet && from is RootRoute.Me
         RootRoute.CreditGuide, RootRoute.Invite -> from is RootRoute.PlanPage
         else -> false
     }

@@ -49,6 +49,7 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  *   deepen
  *   deepen-full
  *   intro-preview
+ *   my-profile
  *   profile-notes
  *   profile-name
  *
@@ -162,6 +163,21 @@ object CaptureWatch {
                     nativeLanguage = c.getSharedPreferences("futurevoice", 0)
                         .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative(),
                     onPublish = { false }, onEditFirst = {}, onDecline = {}, onDismiss = {},
+                )
+            }
+        },
+        // The one "me" page: profile on top, what strangers see below (iOS
+        // `MyProfileView(showsDone: true)` over the sample persona). Signed
+        // out, so the pool read resolves to "not published".
+        "my-profile" to @Composable { c: Context ->
+            var persona by remember { mutableStateOf<UserPersona?>(null) }
+            Seeded({
+                CaptureSeed.once("sample-persona") { CaptureSeed.seedSamplePersona(c) }
+                persona = PersonaStore.shared(c).load()
+            }) {
+                com.roro.futurevoice.ui.MyProfileScreen(
+                    persona = persona, targetLanguage = lang(c), showsDone = true,
+                    onBack = {}, onEditProfile = {},
                 )
             }
         },

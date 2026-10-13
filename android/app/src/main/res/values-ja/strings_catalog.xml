@@ -50,6 +50,7 @@
     <string name="a_more_natural_way_to_say_it">"もっと自然な言い方"</string>
     <string name="a_neighbor">"近所の人"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"新しい評価の時期です。次の通話が終わると実行されます。"</string>
+    <string name="a_new_watch">"新しくなったシーン練習"</string>
     <string name="a_new_week_starts_now_start_small">"新しい週の始まりです。軽く始めましょう。"</string>
     <string name="a_passerby">"通りがかりの人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -304,6 +305,7 @@
     <string name="choose_a_photo">"写真を選ぶ"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"テーマを選ぶと、AIがレベルに合わせて書きます。手元の文章を貼り付けてもかまいません。"</string>
+    <string name="choose_my_goal">"目的を選ぶ"</string>
     <string name="choose_your_plan">"プランを選ぶ"</string>
     <string name="city">"都市"</string>
     <string name="city_country">"都市、国"</string>
@@ -838,6 +840,10 @@
     <string name="in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac">"まとめると、時間が減るのは流暢な自分と話すときだけです。すでに集まったもので復習するのはいつでも無料です。"</string>
     <string name="in_the_core">"コア"</string>
     <string name="in_the_core_lld_days">"コア · %d日"</string>
+    <!-- 'In the Progress tab, see what you practised and how much, over a week or a month.' -->
+    <string name="in_the_progress_tab_see_what_you_practised_and_how_much_over_25b25f">"成長タブで、1週間や1か月のあいだに何をどれだけ練習したか見られます。"</string>
+    <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
+    <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"スピーチタブでは、みんなが同じ原稿を読みます。カメラをオンにして読むと、ランキングに載ります。"</string>
     <string name="in_this_book">"この本の中身"</string>
     <string name="in_your_life">"自分の日常から"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
@@ -1897,6 +1903,7 @@
     <string name="speaks_at_this_speed">"この速さで話します"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"十分具体的です。%sするか、上のパスをタップしてさらに探しましょう。"</string>
+    <string name="speech_challenges">"スピーチチャレンジ"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"スピーチ"</string>
     <!-- '+ Speech' -->
@@ -2058,6 +2065,8 @@
     <string name="tell_me_more_about_you">"自分についてもっと伝える"</string>
     <string name="tell_me_when_it_s_ready">"できたら知らせてもらう"</string>
     <string name="tell_me_when_next_week_s_is_ready">"来週の振り返りも知らせて"</string>
+    <!-- "Tell us what you're learning for, like an exam, work or travel, and the Talk tab fills with topics for it." -->
+    <string name="tell_us_what_you_re_learning_for_like_an_exam_work_or_travel_13326b">"試験、仕事、旅行など、何のために学ぶのかを教えると、トークタブがそれに合った話題でいっぱいになります。"</string>
     <!-- 'Telling my landlord the heating has been broken for three weeks, and getting a date out of them.' -->
     <string name="telling_my_landlord_the_heating_has_been_broken_for_three_we_9a0ae9">"大家さんに暖房が三週間壊れたままだと伝えて、直す日を約束させる。"</string>
     <string name="terms_of_use">"利用規約"</string>
@@ -2112,6 +2121,8 @@
     <string name="the_gist_in_a_few_words">"だいたいの内容を短く"</string>
     <!-- "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." -->
     <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f">"人を探す で、ほかの学習者のスマホが自分として話す自己紹介です。マイページ → 人を探す で直したり取り下げたりできます。"</string>
+    <!-- "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." -->
+    <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_4e45c2">"人を探す で、ほかの学習者のスマホが自分として話す自己紹介です。プロフィールで公開したり取り下げたりできます。"</string>
     <!-- "The left button plays the scene once more. The right one opens the scene's book in Review, with its words and expressions. Tap the same situation in Watch again for a new take with new ideas." -->
     <string name="the_left_button_plays_the_scene_once_more_the_right_one_open_f0a919">"左のボタンは同じシーンをもう一度再生します。右のボタンはこのシーンの教材を開きます。単語と表現は復習タブに入っています。シーン練習で同じ状況をもう一度タップすると、新しいシーンと新しいアイデアが出てきます。"</string>
     <!-- 'The lines play one after another, and the one playing is outlined. Your lines are in your voice. Watch how it opens, what it asks and how it gets through the tricky part.' -->
@@ -2266,6 +2277,7 @@
     <string name="too_noisy">"うるさすぎます"</string>
     <string name="topic">"テーマ"</string>
     <string name="topics">"トピック"</string>
+    <string name="topics_for_why_you_re_learning">"学ぶ目的に合わせた話題"</string>
     <string name="total">"合計"</string>
     <string name="touch_and_hold_to_file_it_again">"長押しでもう一度振り分けられます。"</string>
     <string name="transcript">"会話記録"</string>
@@ -2767,6 +2779,8 @@
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"話す速さは1分あたり%d語です。もっと頻繁に、少し長く話すと流れがつきます。"</string>
     <string name="your_people">"自分の人たち"</string>
+    <!-- 'Your people now sit around you on a map. Bring someone to the middle and they greet you in their own voice, then start a scene or a call right from their card.' -->
+    <string name="your_people_now_sit_around_you_on_a_map_bring_someone_to_the_e12a8b">"自分の周りに人が並ぶマップになりました。誰かを真ん中に連れてくると自分の声であいさつし、カードからそのままシーン練習や通話を始められます。"</string>
     <string name="your_persona_plays_this_scene_in_their_own_voice">"相手が本人の声でこのシーンを演じます。"</string>
     <!-- "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="your_phone_rings_at_every_time_you_set_here_even_on_silent_c_b210fc">"ここで決めた時刻ごとに電話が鳴ります。マナーモードでもです。都合が悪ければ拒否するだけで大丈夫。ペナルティはありません。"</string>
