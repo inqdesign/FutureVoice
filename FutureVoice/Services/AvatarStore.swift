@@ -27,11 +27,14 @@ final class AvatarStore: ObservableObject {
         guard let data = sized.jpegData(compressionQuality: 0.85) else { return }
         try? data.write(to: url, options: [.atomic])
         image = sized
+        // A published profile wears this face too; no row, no write.
+        Task { await PublicPersonaService.pushMyPhoto() }
     }
 
     func clear() {
         try? FileManager.default.removeItem(at: url)
         image = nil
+        Task { await PublicPersonaService.pushMyPhoto() }
     }
 }
 

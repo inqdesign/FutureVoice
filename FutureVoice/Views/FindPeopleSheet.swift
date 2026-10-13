@@ -347,7 +347,8 @@ struct FindPeopleSheet: View {
             if isMine {
                 ProfileAvatar(initials: p.display_name, size: 44)
             } else {
-                PersonBubble(name: p.display_name, size: 44)
+                PersonBubble(name: p.display_name,
+                             photoId: PublicPersonaService.localId(forRemote: p.id), size: 44)
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {

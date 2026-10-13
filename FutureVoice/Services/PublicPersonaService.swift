@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// The shared "Find people" pool — public personas any learner can pick as a
 /// conversation partner, like meeting a stranger at a language school. Reads
@@ -71,7 +72,90 @@ enum PublicPersonaService {
         if let uid = await myUserId() {
             rows.removeAll { $0.owner_user_id?.lowercased() == uid }
         }
+        await adoptPhotos(for: rows)
         return rows
+    }
+
+    // MARK: - Faces
+
+    /// A published learner's photo (2026-10-13, founder: publishing the
+    /// profile already means it is public). It rides in its OWN read and its
+    /// OWN write, never in `columns` or the publish row: a select or update
+    /// naming a column the database hasn't got fails the WHOLE request, and
+    /// the pool would come back empty or the publish would fail — here a
+    /// missing column just means initials, as before.
+    ///
+    /// ~96 px, re-encoded through `draw(in:)` so nothing of the original file
+    /// survives; base64 in the row, never Supabase Storage.
+    @MainActor
+    static func publicPhoto(_ img: UIImage) -> String? {
+        let side = min(img.size.width, img.size.height)
+        guard side > 0 else { return nil }
+        let target: CGFloat = 96
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let out = UIGraphicsImageRenderer(size: CGSize(width: target, height: target), format: format).image { _ in
+            let scale = target / side
+            let w = img.size.width * scale, h = img.size.height * scale
+            img.draw(in: CGRect(x: (target - w) / 2, y: (target - h) / 2, width: w, height: h))
+        }
+        return out.jpegData(compressionQuality: 0.7)?.base64EncodedString()
+    }
+
+    /// Put the learner's current photo on every row they own (every target
+    /// language), or take it off when they have none. A learner with no row
+    /// updates nothing, so this is safe to call on any avatar change.
+    static func pushMyPhoto() async {
+        guard let uid = await myUserId() else { return }
+        let photo = await MainActor.run { AvatarStore.shared.image.flatMap(publicPhoto) }
+        struct Patch: Encodable { let photo: String? }
+        _ = try? await SupabaseProvider.shared
+            .from("public_personas")
+            .update(Patch(photo: photo))
+            .eq("owner_user_id", value: uid)
+            .execute()
+    }
+
+    /// Which people's photos came from the pool (remote id → a fingerprint
+    /// of the photo), so a re-load rewrites nothing that hasn't changed and a
+    /// photo the author took down is deleted — without ever touching a photo
+    /// the learner picked for someone themselves.
+    private static let adoptedPhotosKey = "futurevoice.poolPhotos"
+
+    /// Save the pool's learner photos into `CounterpartPhotoStore` under each
+    /// person's local id — the one every face on screen already reads
+    /// (`PersonBubble(photoId:)`, the map) — so nothing that draws a person
+    /// needed to change.
+    private static func adoptPhotos(for rows: [PublicPersona]) async {
+        let ids = rows.filter { $0.owner_user_id != nil }.map(\.id)
+        guard !ids.isEmpty else { return }
+        struct PhotoRow: Decodable { let id: String; let photo: String? }
+        guard let got: [PhotoRow] = try? await SupabaseProvider.shared
+            .from("public_personas")
+            .select("id,photo")
+            .in("id", values: ids)
+            .execute()
+            .value else { return }
+        await MainActor.run {
+            let d = UserDefaults.standard
+            var adopted = d.dictionary(forKey: adoptedPhotosKey) as? [String: String] ?? [:]
+            let store = CounterpartPhotoStore.shared
+            for row in got {
+                let local = localId(forRemote: row.id)
+                if let b64 = row.photo, !b64.isEmpty {
+                    let mark = "\(b64.count):\(b64.suffix(24))"
+                    guard adopted[row.id] != mark,
+                          let data = Data(base64Encoded: b64),
+                          let img = UIImage(data: data) else { continue }
+                    store.save(img, for: local)
+                    adopted[row.id] = mark
+                } else if adopted[row.id] != nil {
+                    store.delete(for: local)
+                    adopted[row.id] = nil
+                }
+            }
+            d.set(adopted, forKey: adoptedPhotosKey)
+        }
     }
 
     /// Local substring search over name, intro, interests, occupation.
@@ -251,6 +335,7 @@ enum PublicPersonaService {
                 .insert(row)
                 .execute()
         }
+        await pushMyPhoto()
     }
 
     /// Take the user's intro out of the pool entirely.

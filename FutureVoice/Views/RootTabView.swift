@@ -252,6 +252,9 @@ struct RootTabView: View {
             Task {
                 await PublicPersonaService.autoSyncMyPersona(
                     appState.persona, language: appState.targetLanguage)
+                // A row published before rows carried a face (or by hand,
+                // which the mirror never touches) gets the photo here.
+                await PublicPersonaService.pushMyPhoto()
             }
             // The onboarding choice, mirrored to `profiles`. Here rather than
             // in `completeSetup` because the choice is made before any session
