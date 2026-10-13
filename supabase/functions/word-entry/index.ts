@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       .eq("target_lang", target).eq("kind", kind)
       .limit(1).maybeSingle()
     if (error) return errorResponse(500, "cache read failed", error.message)
-    if (data) return json({ data: data.data })
+    if (data && materialInTarget(data.data, target)) return json({ data: data.data })
   }
   // 1b. The same entry under another capitalization (2026-10-08). Callers
   //     don't agree on case — an expression from the learner's notebook
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       .ilike("word", pattern).eq("native_lang", native)
       .eq("target_lang", target).eq("kind", kind)
       .limit(1).maybeSingle()
-    if (!error && data) return json({ data: data.data })
+    if (!error && data && materialInTarget(data.data, target)) return json({ data: data.data })
   }
 
   // 2. Cache miss → generation. Rate-limit NEW generations per user so the
@@ -121,19 +121,27 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("GEMINI_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing GEMINI_API_KEY")
 
-  const { entry, usage } = await generate(word, native, target, kind, apiKey)
-  // Every generation is on the ledger (2026-10-08) — ~450 a week on 3.6-flash
-  // that only Google's bill knew about. A 0-delta row like every free surface;
-  // the cap is counting, not limiting (the hourly limit above is the limit).
-  if (usage) {
-    const idempotencyKey = `word-entry:${crypto.randomUUID()}`
-    background(recordFreeUsage({
-      supabase: svc, userId: user.id, action: "gemini", purpose: "dictionary",
-      dailyCap: 1_000_000, sourceFn: "word-entry", idempotencyKey,
-      metadata: { model: MODEL, purpose: "dictionary", kind, native_lang: native, target_lang: target },
-    }).then(() => recordProviderUsage({ idempotencyKey, usage })))
+  // The model sometimes TRANSLATES the entry instead of writing it: every
+  // example and variant comes back in the native language, with no
+  // translation line (2026-10-13, "moral cover" → "그들은 탈세를 위한 도덕적
+  // 명분으로…" on an English learner's card; 18 cached entries, ~3% of ko→en
+  // expressions). This is a shared cache, so one slip is every learner's card
+  // forever. One retry with the rule restated; a second miss is returned with
+  // the off-script lines stripped and is NOT cached.
+  let { entry, usage } = await generate(word, native, target, kind, apiKey)
+  let clean = entry != null && materialInTarget(entry, target)
+  if (entry && !clean) {
+    console.warn("word-entry: material not in target script, retrying", word, native, target)
+    if (usage) record(usage)
+    ;({ entry, usage } = await generate(word, native, target, kind, apiKey, true))
+    clean = entry != null && materialInTarget(entry, target)
   }
+  if (usage) record(usage)
   if (!entry) return errorResponse(502, "generation failed")
+  if (!clean) {
+    console.error("word-entry: material still not in target script, serving uncached", word)
+    return json({ data: stripOffScript(entry, target) })
+  }
 
   // Upsert (not insert): a concurrent request for the same word may have won
   // the race — onConflict keeps it idempotent instead of erroring.
@@ -149,6 +157,18 @@ Deno.serve(async (req) => {
   }
 
   return json({ data: entry })
+
+  // Every generation is on the ledger (2026-10-08) — ~450 a week on 3.6-flash
+  // that only Google's bill knew about. A 0-delta row like every free surface;
+  // the cap is counting, not limiting (the hourly limit above is the limit).
+  function record(usage: Record<string, number>) {
+    const idempotencyKey = `word-entry:${crypto.randomUUID()}`
+    background(recordFreeUsage({
+      supabase: svc, userId: user.id, action: "gemini", purpose: "dictionary",
+      dailyCap: 1_000_000, sourceFn: "word-entry", idempotencyKey,
+      metadata: { model: MODEL, purpose: "dictionary", kind, native_lang: native, target_lang: target },
+    }).then(() => recordProviderUsage({ idempotencyKey, usage })))
+  }
 })
 
 function json(payload: unknown, status = 200): Response {
@@ -161,6 +181,66 @@ function json(payload: unknown, status = 200): Response {
 // BCP-47 shape: "ko", "pt-BR", "zh-Hans-CN". Deliberately narrow.
 function isLanguageTag(code: string): boolean {
   return /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8}){0,3}$/.test(code)
+}
+
+// Whether a line is written in the target language's script — the same rule
+// as the app's `TextScript.isInTargetScript` (keep them in step): spaced
+// languages word by word (a word counts when most of its letters match, the
+// line when three words in four do, so a name in Latin letters inside a
+// Korean line survives); unspaced ones letter by letter, plain majority.
+// A native language that shares the target's script (German for an English
+// learner) is invisible to this, which is acceptable: it was never seen.
+function inTargetScript(text: string, target: string): boolean {
+  const base = target.split("-")[0].toLowerCase()
+  const matches = (ch: string): boolean => {
+    const v = ch.codePointAt(0)!
+    const hangul = (v >= 0xAC00 && v <= 0xD7A3) || (v >= 0x1100 && v <= 0x11FF) || (v >= 0x3130 && v <= 0x318F)
+    const kana = (v >= 0x3040 && v <= 0x30FF) || (v >= 0x31F0 && v <= 0x31FF) || (v >= 0xFF66 && v <= 0xFF9F)
+    const han = (v >= 0x4E00 && v <= 0x9FFF) || (v >= 0x3400 && v <= 0x4DBF) || (v >= 0x20000 && v <= 0x2A6DF)
+    const latin = v < 0x0250 || (v >= 0x1E00 && v <= 0x1EFF)
+    switch (base) {
+      case "ko": return hangul
+      case "ja": return kana || han
+      case "zh": return han
+      default: return latin
+    }
+  }
+  const isLetter = (ch: string) => /\p{L}/u.test(ch)
+  if (base !== "ja" && base !== "zh") {
+    const words = text.split(/\s+/).filter((w) => [...w].some(isLetter))
+    if (words.length === 0) return false
+    const ok = words.filter((w) => {
+      const letters = [...w].filter(isLetter)
+      return letters.filter(matches).length * 2 > letters.length
+    }).length
+    return ok / words.length >= 0.75
+  }
+  const letters = [...text].filter(isLetter)
+  if (letters.length === 0) return false
+  return letters.filter(matches).length / letters.length > 0.5
+}
+
+type Material = { examples?: { text?: string }[]; phrases?: { phrase?: string }[] }
+
+// Every line the learner is meant to SAY — examples and variants — is in the
+// target script. Meanings and notes are the native side and aren't checked.
+function materialInTarget(entry: unknown, target: string): boolean {
+  const e = entry as Material
+  if (!e || typeof e !== "object") return false
+  const lines = [
+    ...(e.examples ?? []).map((x) => x?.text ?? ""),
+    ...(e.phrases ?? []).map((x) => x?.phrase ?? ""),
+  ].filter((t) => t.trim() !== "")
+  return lines.every((t) => inTargetScript(t, target))
+}
+
+function stripOffScript(entry: unknown, target: string): unknown {
+  const e = entry as Material
+  return {
+    ...e,
+    examples: (e.examples ?? []).filter((x) => inTargetScript(x?.text ?? "", target)),
+    phrases: (e.phrases ?? []).filter((x) => inTargetScript(x?.phrase ?? "", target)),
+  }
 }
 
 function languageName(code: string): string {
@@ -249,10 +329,17 @@ const MODEL = "gemini-3.6-flash"
 
 async function generate(
   word: string, native: string, target: string, kind: Kind, apiKey: string,
+  retry = false,
 ): Promise<{ entry: unknown | null; usage: Record<string, number> | null }> {
-  const system = kind === "expression"
+  let system = kind === "expression"
     ? expressionPrompt(target, native)
     : wordPrompt(target, native)
+  if (retry) {
+    const t = languageName(target), n = languageName(native)
+    system += `\n\nA previous answer wrote the examples in ${n}. That is wrong: \
+every "text" and every "phrase" is a ${t} sentence or phrase, written in ${t}. \
+Only "meaning", "note" and "pos" are in ${n}.`
+  }
 
   try {
     const upstream = await fetch(
