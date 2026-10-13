@@ -239,7 +239,7 @@ final class FreeTalkOpeners {
         let claimed: Bool = inFlightLock.withLock { inFlight.insert(flight).inserted }
         guard claimed else { return }
         defer { _ = inFlightLock.withLock { inFlight.remove(flight) } }
-        let stale = needsBake(line)
+        let stale = needsBake(line, voiceId: voiceId)
         if stale { PhraseAudioStore.shared.removeAudio(text: line, voiceId: voiceId) }
         guard stale || PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
                                                     allowLineage: false) == nil else { return }
@@ -309,9 +309,18 @@ final class FreeTalkOpeners {
     /// handful of lines; dropping the oldest costs at worst one re-synthesis
     /// of a line nobody is going to hear again.
     private static let maxBakedLines = 60
+    /// Set once a Cartesia voice's openers have been re-made WHOLE
+    /// (2026-10-13): the ones made before were split sentence by sentence
+    /// (`PacedSpeech`), which a Cartesia line must not be.
+    private static let cartesiaWholeKey = "futurevoice.freeTalkOpeners.cartesiaWhole"
 
-    private func needsBake(_ line: String) -> Bool {
+    private func needsBake(_ line: String, voiceId: String) -> Bool {
         let defaults = UserDefaults.standard
+        if VoiceMove.isCartesia(voiceId), !defaults.bool(forKey: Self.cartesiaWholeKey) {
+            defaults.set(true, forKey: Self.cartesiaWholeKey)
+            defaults.removeObject(forKey: Self.bakedLinesKey)
+            return true
+        }
         let current = SpeechSpeed.current.multiplier
         if defaults.object(forKey: Self.bakedSpeedKey) as? Double != current {
             // The speed moved (or this build is the first to ask): every line

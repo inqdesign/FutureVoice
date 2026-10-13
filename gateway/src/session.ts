@@ -950,7 +950,18 @@ export class CallSession implements DurableObject {
       context,
       sampleRate: this.eleven?.sampleRate ?? 22050,
     })
-    this.routeDelta(context, text)
+    if (this.eleven instanceof CartesiaTTS) {
+      // Whole, on Cartesia (2026-10-13): the opener is known in full, and a
+      // Cartesia line already pauses between its sentences (0.15–0.65 s,
+      // measured) — split, the intro's "Hi." went out as a request of its
+      // own and came back a clipped word ("the first sentence is a mess").
+      // Live replies stay one sentence per request: that is their latency.
+      this.recentReplyText = (this.recentReplyText + " " + text).slice(-600)
+      this.emit({ type: "reply_delta", context, text })
+      this.voice(context, text)
+    } else {
+      this.routeDelta(context, text)
+    }
     this.history.push({ role: "model", text })
     this.finishVoice(context)
     this.emit({ type: "reply", context, text })

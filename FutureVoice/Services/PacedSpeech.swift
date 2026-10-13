@@ -19,6 +19,14 @@ import Foundation
 /// are trimmed to the voice, and one fixed gap goes between — the gateway's
 /// median, so the opener and the answers after it breathe alike.
 /// `<break>` tags are not an option: measured, they add seconds and noise.
+///
+/// **ElevenLabs only** (2026-10-13). A Cartesia clone already breathes on a
+/// whole line — measured on the founder's clone, en/ko, two takes each:
+/// 0.15–0.65 s between sentences, ElevenLabs' problem never shows — and
+/// split, its first sentence went alone: "Hi." / "안녕." as a request of
+/// its own, 0.7 s of a word with no line to belong to, cut where its voice
+/// still sounded. Reported by the founder as the intro's first sentence
+/// being a mess, "like it overlaps". So a Cartesia line is made whole.
 enum PacedSpeech {
     /// Silence between two sentences, voice to voice.
     static let sentenceGapSeconds = 0.42
@@ -50,12 +58,13 @@ enum PacedSpeech {
 
     /// Synthesize `text` sentence by sentence and join the takes with
     /// `sentenceGapSeconds` between them. Returns 16-bit mono PCM, or nil
-    /// when the text is a single sentence (the caller's ordinary path is
-    /// already right) or the server answered in MP3 (an edge deploy with no
+    /// when the text is a single sentence or the voice is a Cartesia clone
+    /// (the caller's ordinary path is already right) or the server answered in MP3 (an edge deploy with no
     /// streaming — nothing to join; the caller falls back).
     @MainActor
     static func synthesizePCM(voiceId: String, text: String, modelId: String,
                               purpose: String) async throws -> (pcm: Data, sampleRate: Double)? {
+        guard !VoiceMove.isCartesia(voiceId) else { return nil }
         let parts = sentences(in: text)
         guard parts.count > 1 else { return nil }
         var takes: [Data] = []
