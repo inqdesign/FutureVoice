@@ -1,143 +1,76 @@
 #!/usr/bin/env python3
-"""Lift coach mode's prompt text out of the Swift source at a ref.
+"""Lift coach mode's prompt text out of the Swift source at the pinned iOS ref.
 
-Three literals, byte for byte (iOS 1.1.4 `6e9eb92` + `eaaf3af` + `5b0587a`):
-  - `CoachSuggester.system` — the "try saying" writer's instructions;
-  - `ConversationEngine.speechScale(for:).vocabulary`, the three bands it
-    splices in (Android has no other use for the scale yet);
-  - `ConversationEngine.beginnerQuestions` — the A1/A2 question rules
-    appended to the conversation prompt.
-Retyped, iOS and Android would coach the same learner differently.
+Byte for byte, from FutureVoice/Services/CoachMode.swift:
+  - `CoachSuggester.system(target:native:level:register:)` — the "try saying"
+    writer's instructions, and its two `address` lines (the learner's set
+    speech level, or "the same form the other speaker uses");
+  - `ConversationEngine.coachSteer(for:focus:)` — the COACH MODE and GRAMMAR
+    FOCUS steers the gateway carries on the learner's turn.
+The level's vocabulary is `ConversationPrompt.speechVocabulary`, which
+gen-conversation-prompt.py lifts from the same iOS ref.
 
-    python3 scripts/android/gen-coach-prompts.py --ref ebf848e
+    python3 scripts/android/gen-coach-prompts.py [--check] [--ref <sha>]
 """
-import argparse, json, pathlib, re, subprocess, sys
+import pathlib, sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "promptgen"))
+from iosref import ROOT, REF, show, emit, literal_at, kotlin  # noqa: E402
+
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/talk/CoachPrompts.kt"
-
-ap = argparse.ArgumentParser()
-ap.add_argument("--ref", default="ebf848e")
-args = ap.parse_args()
-
-
-def show(path):
-    return subprocess.run(["git", "-C", str(ROOT), "show", f"{args.ref}:{path}"],
-                          check=True, capture_output=True, text=True).stdout
-
-
-def literal_after(src, anchor, start=0):
-    """The Swift multiline literal that opens on the first `\"\"\"` after
-    `anchor`, as (segments, end). Segments are ('t', text) or ('i', expr)."""
-    i = src.find(anchor, start)
-    if i < 0: sys.exit(f"anchor not found: {anchor!r}")
-    o = src.find('"""', i)
-    body_start = src.find("\n", o) + 1
-    close = re.compile(r'\n([ \t]*)"""').search(src, body_start - 1)
-    raw = src[body_start:close.start() + 1]
-    indent = close.group(1)
-    lines = raw.split("\n")[:-1]
-    out = []
-    for ln in lines:
-        if ln.strip() == "": out.append("")
-        elif ln.startswith(indent): out.append(ln[len(indent):])
-        else: sys.exit(f"bad indent: {ln!r}")
-    text = ""
-    for n, ln in enumerate(out):
-        last = n == len(out) - 1
-        if ln.endswith("\\") and not ln.endswith("\\\\"):
-            text += ln[:-1]
-        else:
-            text += ln + ("" if last else "\n")
-    # Escapes and interpolations.
-    segs, buf, k = [], "", 0
-    while k < len(text):
-        c = text[k]
-        if c == "\\":
-            nxt = text[k + 1]
-            if nxt == "(":
-                depth, j = 1, k + 2
-                while depth:
-                    if text[j] == "(": depth += 1
-                    elif text[j] == ")": depth -= 1
-                    j += 1
-                if buf: segs.append(("t", buf)); buf = ""
-                segs.append(("i", text[k + 2:j - 1]))
-                k = j
-                continue
-            buf += {"\"": "\"", "\\": "\\", "n": "\n", "t": "\t"}[nxt]
-            k += 2
-            continue
-        buf += c
-        k += 1
-    if buf: segs.append(("t", buf))
-    return segs, close.end()
-
-
-def kotlin(segs, interp):
-    parts = []
-    for kind, v in segs:
-        if kind == "t":
-            parts.append(json.dumps(v, ensure_ascii=False).replace("$", "\\$"))
-        else:
-            if v not in interp: sys.exit(f"unmapped interpolation: {v}")
-            parts.append(interp[v])
-    return " +\n        ".join(parts)
-
-
-engine = show("FutureVoice/Services/ConversationEngine.swift")
 coach = show("FutureVoice/Services/CoachMode.swift")
 
-# speechScale: three `vocabulary: """` literals, in band order.
-fn = engine.find("static func speechScale(for level: CEFRLevel)")
-vocab, pos = [], fn
-for _ in range(3):
-    segs, pos = literal_after(engine, "vocabulary: \"\"\"", pos)
-    vocab.append(kotlin(segs, {}))
-
-beg_segs, _ = literal_after(engine, "static func beginnerQuestions(_ level: CEFRLevel)")
-beginner = kotlin(beg_segs, {"level.rawValue.uppercased()": "level.code.uppercase()"})
-
-sys_segs, _ = literal_after(coach, "private static func system(target: String, native: String, level: CEFRLevel)")
-suggester = kotlin(sys_segs, {
+fn = coach.index("private static func system(target: String, native: String, level: CEFRLevel,")
+addr_set = kotlin(literal_at(coach, 'address = """', fn),
+                  {"register.promptDescription(in: target)": "registerDescription"}, "            ")
+addr_any = kotlin(literal_at(coach, 'address = """', coach.index('address = """', fn) + 12), {}, "            ")
+suggester = kotlin(literal_at(coach, 'return """', fn), {
     "level.rawValue.uppercased()": "level.code.uppercase()",
     "targetName": "targetName",
     "nativeName": "nativeName",
-    "scale.vocabulary": "speechVocabulary(level)",
+    "scale.vocabulary": "ConversationPrompt.speechVocabulary(level)",
+    "address": "address",
 })
 
-OUT.write_text(f'''package com.roro.futurevoice.talk
+st = coach.index("static func coachSteer(for items: [TalkGoalItem]")
+steer_items = kotlin(literal_at(coach, 'parts.append("""', st), {"list": "list"}, "            ")
+steer_focus = kotlin(literal_at(coach, 'parts.append("""', coach.index("if let focus", st)), {
+    "focus.pattern.mistake": "mistake",
+    "focus.pattern.correction": "correction",
+    "focus.pattern.context": "context",
+}, "            ")
+
+emit(OUT, f'''package com.roro.futurevoice.talk
 
 import com.roro.futurevoice.data.CefrLevel
 
-// GENERATED by scripts/android/gen-coach-prompts.py --ref {args.ref} — do not edit.
-// Source: FutureVoice/Services/ConversationEngine.swift (speechScale vocabulary,
-// beginnerQuestions) and FutureVoice/Services/CoachMode.swift (CoachSuggester.system).
+// GENERATED by scripts/android/gen-coach-prompts.py --ref {REF} — do not edit.
+// Source: FutureVoice/Services/CoachMode.swift (CoachSuggester.system,
+// ConversationEngine.coachSteer).
 
 object CoachPrompts {{
-    /** iOS `ConversationEngine.speechScale(for:).vocabulary`. */
-    fun speechVocabulary(level: CefrLevel): String = when (level) {{
-        CefrLevel.A1, CefrLevel.A2 ->
-        {vocab[0]}
-        CefrLevel.B1, CefrLevel.B2 ->
-        {vocab[1]}
-        CefrLevel.C1, CefrLevel.C2 ->
-        {vocab[2]}
-    }}
-
     /**
-     * iOS `ConversationEngine.beginnerQuestions`: how the fluent self ASKS an
-     * A1/A2 learner. Empty at B1 and above, so those prompts stay byte for
-     * byte what they were.
+     * iOS `CoachSuggester.system`'s `address` line: [registerDescription] is
+     * the learner's set level (`SpeechRegister.promptDescription`) when the
+     * call has one and the target language marks it; null = follow the other
+     * speaker and keep one form for the call.
      */
-    fun beginnerQuestions(level: CefrLevel): String {{
-        if (level != CefrLevel.A1 && level != CefrLevel.A2) return ""
-        return {beginner}
-    }}
+    fun suggesterAddress(registerDescription: String?): String =
+        if (registerDescription != null)
+            {addr_set}
+        else
+            {addr_any}
 
-    /** iOS `CoachSuggester.system(target:native:level:)`. */
-    fun suggesterSystem(targetName: String, nativeName: String, level: CefrLevel): String =
+    /** iOS `CoachSuggester.system(target:native:level:register:)`. */
+    fun suggesterSystem(targetName: String, nativeName: String, level: CefrLevel, address: String): String =
         {suggester}
+
+    /** iOS `coachSteer`'s COACH MODE paragraph; [list] is the quoted items. */
+    fun steerItems(list: String): String =
+            {steer_items}
+
+    /** iOS `coachSteer`'s GRAMMAR FOCUS paragraph. */
+    fun steerFocus(mistake: String, correction: String, context: String): String =
+            {steer_focus}
 }}
 ''')
-print(f"wrote {OUT.relative_to(ROOT)}")

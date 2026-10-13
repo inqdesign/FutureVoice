@@ -59,6 +59,23 @@ class CoachSuggesterTest {
         assertTrue(c.endsWith("Studied items:\n- latte"))
     }
 
+    /** iOS c3d309ab / 2026-10-09: the last suggestion anchors the speech level. */
+    @Test fun contentCarriesThePreviousSuggestion() {
+        val c = CoachSuggester.content("Und du?", "Ich heiße Mina.", null, null, emptyList(), previousSay = "Ich heiße [Mina].")
+        assertTrue(c.contains("The learner said: \"Ich heiße Mina.\"\nYour previous suggestion was: \"Ich heiße [Mina].\"\nNow the other speaker"))
+    }
+
+    /** iOS `CoachSuggester.system`'s address line: a set level names it; none = follow the line. */
+    @Test fun systemNamesTheSetSpeechLevel() {
+        val set = CoachSuggester.system("ko", "en", CefrLevel.A2, com.roro.futurevoice.data.SpeechRegister.CASUAL)
+        assertTrue(set.contains("- The learner speaks to the other person in "))
+        val none = CoachSuggester.system("ko", "en", CefrLevel.A2, null)
+        assertTrue(none.contains("keep ONE form for the whole call"))
+        // A language with no forms ignores a set level.
+        assertTrue(CoachSuggester.system("en", "ko", CefrLevel.A2, com.roro.futurevoice.data.SpeechRegister.CASUAL)
+            .contains("keep ONE form for the whole call"))
+    }
+
     @Test fun bracketsAreTheFadedExample() {
         assertEquals(listOf("I get up at " to false, "7" to true, "." to false),
             CoachReply.segments("I get up at [7]."))

@@ -3,6 +3,7 @@ package com.roro.futurevoice.talk
 import android.content.Context
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.SpeechRegister
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.TextScript
@@ -184,11 +185,16 @@ object CoachSuggester {
 
     /** iOS builds the user message the same way, line by line. */
     internal fun content(line: String, learnerSaid: String?, earlier: String?, situation: String?,
-                         candidates: List<TalkGoalItem>): String {
+                         candidates: List<TalkGoalItem>, previousSay: String? = null): String {
         var content = ""
         if (!situation.isNullOrEmpty()) content += "Situation: $situation\n"
         if (!earlier.isNullOrEmpty()) content += "Earlier they said: \"$earlier\"\n"
         if (!learnerSaid.isNullOrEmpty()) content += "The learner said: \"$learnerSaid\"\n"
+        // The level was read off this one line, so a line with no clear
+        // ending re-decided it and the suggestions flipped between 반말 and
+        // 존댓말 inside one call. The last suggestion anchors it where the
+        // call has no level of its own (a scene).
+        if (!previousSay.isNullOrEmpty()) content += "Your previous suggestion was: \"$previousSay\"\n"
         content += "Now the other speaker says: \"$line\""
         if (candidates.isNotEmpty()) {
             content += "\n\nStudied items:\n" + candidates.joinToString("\n") { "- ${it.text}" }
@@ -221,6 +227,8 @@ object CoachSuggester {
         learnerSaid: String?,
         earlier: String?,
         situation: String? = null,
+        register: SpeechRegister? = null,
+        previousSay: String? = null,
         candidates: List<TalkGoalItem>,
         target: String,
         native: String,
@@ -230,10 +238,9 @@ object CoachSuggester {
         val payload = withTimeoutOrNull(8_000) {
             runCatching {
                 GeminiClient(AuthRepository()).sendJson(
-                    system = CoachPrompts.suggesterSystem(
-                        LanguageCatalog.englishName(target), LanguageCatalog.englishName(native), level),
+                    system = system(target, native, level, register),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
-                        content(line, learnerSaid, earlier, situation, candidates))),
+                        content(line, learnerSaid, earlier, situation, candidates, previousSay))),
                     serializer = Payload.serializer(),
                     model = GeminiClient.Model.FLASH_36,
                     // Its thinking needs room, or the JSON comes back cut.
@@ -246,6 +253,14 @@ object CoachSuggester {
         }
         return accept(payload, candidates, target, native, turnId)
     }
+
+    /** iOS `CoachSuggester.system(target:native:level:register:)`. */
+    internal fun system(target: String, native: String, level: CefrLevel, register: SpeechRegister?): String {
+        val address = CoachPrompts.suggesterAddress(
+            if (register != null && SpeechRegister.hasForms(target)) register.promptDescription(target) else null)
+        return CoachPrompts.suggesterSystem(
+            LanguageCatalog.englishName(target), LanguageCatalog.englishName(native), level, address)
+    }
 }
 
 /**
@@ -256,25 +271,13 @@ object CoachSuggester {
 fun ConversationEngine.coachSteer(items: List<TalkGoalItem>, focus: GrammarFocus? = null): String {
     val parts = mutableListOf<String>()
     if (items.isNotEmpty()) {
-        val list = items.joinToString(", ") { "\"${it.text}\"" }
-        parts += "COACH MODE. The learner is studying: $list. If — and only if — " +
-            "one of them fits what you are ALREADY talking about, you may end " +
-            "this reply with a question whose most natural answer would use " +
-            "it. Do not say that word yourself, do not mention practice, words " +
-            "or coaching, and never steer the topic toward a word. Most " +
-            "replies should simply continue the conversation as they would " +
-            "have."
+        parts += CoachPrompts.steerItems(items.joinToString(", ") { "\"${it.text}\"" })
     }
     // The grammar focus rides the same permission: a question whose natural
     // answer NEEDS the structure is practice the learner gets without being
     // told. The correction itself stays the card's job.
     if (focus != null) {
-        parts += "GRAMMAR FOCUS. The learner keeps slipping on this: they say " +
-            "\"${focus.pattern.mistake}\" where a fluent speaker says " +
-            "\"${focus.pattern.correction}\" (${focus.pattern.context}). If it " +
-            "fits the conversation, you may ask something whose natural answer " +
-            "needs that structure. Never correct them in your reply, never " +
-            "mention grammar, and don't do it every turn."
+        parts += CoachPrompts.steerFocus(focus.pattern.mistake, focus.pattern.correction, focus.pattern.context)
     }
     return parts.joinToString("\n\n")
 }

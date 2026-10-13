@@ -1,5 +1,7 @@
 package com.roro.futurevoice.talk
 
+import com.roro.futurevoice.data.isClose
+import com.roro.futurevoice.data.effectiveMyRegister
 import android.content.Context
 import android.util.Log
 import com.roro.futurevoice.BuildConfig
@@ -224,6 +226,15 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  "try saying" — "What can I get you?" only has one natural answer once
      *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
     private var coachSituation: String? = null
+    /**
+     * How the learner speaks on this call, for the "try saying" (iOS
+     * `coachRegister`) — the same level the call prompt gives the other side.
+     * With the fluent self it is casual (they are talking to themselves);
+     * with a person, what the learner set for them, else what the
+     * relationship implies. Null in a scene with no person: the scene
+     * decides, and the coach keeps the level of its previous suggestion.
+     */
+    private var coachRegister: com.roro.futurevoice.data.SpeechRegister? = null
 
     /**
      * This call's TALK time, phone-style: the seconds the meter counts — the
@@ -289,12 +300,20 @@ class TalkViewModel(context: Context) : ViewModel() {
         coachPlan = CoachPlan()
         coachSteerSent = ""
         coachSituation = null
+        coachRegister = registerFor(config.cast?.person, inScene = config.scenarioId != null)
         config.scenarioId?.let { id ->
             viewModelScope.launch {
-                coachSituation = runCatching {
+                val scenario = runCatching {
                     com.roro.futurevoice.data.ScenarioStore.shared(appContext)
                         .load(config.targetLanguage).firstOrNull { it.id == id }
-                }.getOrNull()?.let { sc ->
+                }.getOrNull()
+                val person = config.cast?.person ?: scenario?.counterpartId?.let { pid ->
+                    runCatching {
+                        com.roro.futurevoice.data.CounterpartStore.shared(appContext).load().firstOrNull { it.id == pid }
+                    }.getOrNull()
+                }
+                coachRegister = registerFor(person, inScene = scenario != null)
+                coachSituation = scenario?.let { sc ->
                     val role = sc.role.trim()
                     val place = if (role.isEmpty()) sc.environment else "${sc.environment} — talking with $role"
                     // The learner's own side, where the starter says it (iOS
@@ -1432,6 +1451,13 @@ class TalkViewModel(context: Context) : ViewModel() {
         syncCoachSteer()
     }
 
+    /** iOS `coachRegister`. */
+    private fun registerFor(person: com.roro.futurevoice.data.Counterpart?, inScene: Boolean) =
+        if (person != null) person.effectiveMyRegister
+            ?: if (person.isClose) com.roro.futurevoice.data.SpeechRegister.CASUAL
+            else com.roro.futurevoice.data.SpeechRegister.POLITE
+        else if (inScene) null else com.roro.futurevoice.data.SpeechRegister.CASUAL
+
     private fun coachCandidates() =
         coachPlan.candidates(coachPool.filter { it.key !in usedGoalKeys })
 
@@ -1472,11 +1498,14 @@ class TalkViewModel(context: Context) : ViewModel() {
         val turns = _state.value.turns
         val learnerSaid = turns.lastOrNull { it.role == TurnRole.USER }?.transcript
         val earlier = turns.lastOrNull { it.role == TurnRole.FLUENT_SELF && it.id != turnId }?.transcript
+        val previousSay = _state.value.coachReply?.say
         viewModelScope.launch {
             val result = CoachSuggester.suggest(
                 line = text, learnerSaid = learnerSaid,
                 earlier = if (learnerSaid == null) null else earlier,
                 situation = coachSituation,
+                register = coachRegister,
+                previousSay = previousSay,
                 candidates = candidates,
                 target = cfg.targetLanguage, native = cfg.nativeLanguage,
                 level = cfg.level, turnId = turnId,
