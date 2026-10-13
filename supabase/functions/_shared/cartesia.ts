@@ -79,7 +79,12 @@ export async function ensureAccent(uuid: string, accent: string): Promise<{ ok: 
   // No base yet, or the base IS the accent asked for (voices made before the
   // off-menu base): set the off-menu base. The old base stays on the voice as
   // an added accent, so it is now a real change.
-  if (have.length === 0 || (native === accent && base !== accent)) {
+  // A voice can also come back WITH accents but none marked native
+  // (2026-10-13, Android QA): adding one then fails with "Voice has no
+  // native accent set", so it gets the base too — only when the accent
+  // asked for isn't already on it, the one case that could not succeed.
+  if (have.length === 0 || (native === accent && base !== accent) ||
+      (!native && !have.includes(accent))) {
     const p = await fetch(`${HOST}/voices/${uuid}`, {
       method: "PATCH", headers: headers(), body: JSON.stringify({ accent: base }),
     })
